@@ -1458,7 +1458,9 @@ lazy val nettyServerLoom: ProjectMatrix =
       // needed because of https://github.com/coursier/coursier/issues/2016
       useCoursier := false,
       libraryDependencies ++= Seq(
-         "com.softwaremill.ox" %% "core" % Versions.ox
+         "com.softwaremill.ox" %% "core" % Versions.ox,
+         "org.reactivestreams" % "reactive-streams-tck" % Versions.reactiveStreams % Test,
+         "com.disneystreaming" %% "weaver-cats" % "0.8.4" % Test
       )
     )
     .jvmPlatform(scalaVersions = List(scala3))

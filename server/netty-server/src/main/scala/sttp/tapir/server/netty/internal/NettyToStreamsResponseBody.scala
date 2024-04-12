@@ -80,11 +80,12 @@ private[netty] class NettyToStreamsResponseBody[S <: Streams[S]](streamCompatibl
   ): NettyResponse = (ctx: ChannelHandlerContext) => {
     new ReactiveWebSocketProcessorNettyResponseContent(
       ctx.newPromise(),
-      streamCompatible.asWsProcessor(
-        pipe.asInstanceOf[streamCompatible.streams.Pipe[REQ, RESP]],
-        o.asInstanceOf[WebSocketBodyOutput[streamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, _, S]],
-        ctx
-      ),
+      () =>
+        streamCompatible.asWsProcessor(
+          pipe.asInstanceOf[streamCompatible.streams.Pipe[REQ, RESP]],
+          o.asInstanceOf[WebSocketBodyOutput[streamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, _, S]],
+          ctx
+        ),
       ignorePong = o.ignorePong,
       autoPongOnPing = o.autoPongOnPing,
       decodeCloseRequests = o.decodeCloseRequests,

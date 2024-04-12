@@ -25,19 +25,19 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
+import sttp.capabilities.WebSockets
+import ox.Ox
 
-case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions, config: NettyConfig) {
+case class NettyIdServerEndpointListOverridenOptions(ses: List[ServerEndpoint[OxStreams with WebSockets, Id]], overridenOptions: NettyIdServerOptions) 
+case class NettyIdServer(endpoints: List[ServerEndpoint[OxStreams with WebSockets, Id]], endpointsWithOptions: List[NettyIdServerEndpointListOverridenOptions], options: NettyIdServerOptions, config: NettyConfig) {
   private val executor = Executors.newVirtualThreadPerTaskExecutor()
 
-  def addEndpoint(se: ServerEndpoint[Any, Id]): NettyIdServer = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[Any, Id], overrideOptions: NettyIdServerOptions): NettyIdServer =
+  def addEndpoint(se: ServerEndpoint[OxStreams with WebSockets, Id]): NettyIdServer = addEndpoints(List(se))
+  def addEndpoint(se: ServerEndpoint[OxStreams with WebSockets, Id], overrideOptions: NettyIdServerOptions): NettyIdServer =
     addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[Any, Id]]): NettyIdServer = addRoute(NettyIdServerInterpreter(options).toRoute(ses))
-  def addEndpoints(ses: List[ServerEndpoint[Any, Id]], overrideOptions: NettyIdServerOptions): NettyIdServer =
-    addRoute(NettyIdServerInterpreter(overrideOptions).toRoute(ses))
-
-  def addRoute(r: IdRoute): NettyIdServer = copy(routes = routes :+ r)
-  def addRoutes(r: Iterable[IdRoute]): NettyIdServer = copy(routes = routes ++ r)
+  def addEndpoints(ses: List[ServerEndpoint[OxStreams with WebSockets, Id]]): NettyIdServer = copy(endpoints = endpoints ++ ses)
+  def addEndpoints(ses: List[ServerEndpoint[OxStreams with WebSockets, Id]], overrideOptions: NettyIdServerOptions): NettyIdServer =
+    copy(endpointsWithOptions = endpointsWithOptions :+ NettyIdServerEndpointListOverridenOptions(ses, overrideOptions))
 
   def options(o: NettyIdServerOptions): NettyIdServer = copy(options = o)
   def config(c: NettyConfig): NettyIdServer = copy(config = c)
@@ -47,22 +47,32 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
 
   def port(p: Int): NettyIdServer = modifyConfig(_.port(p))
 
-  def start(): NettyIdServerBinding =
+  def start()(using Ox): NettyIdServerBinding =
     startUsingSocketOverride[InetSocketAddress](None) match {
       case (socket, stop) =>
         NettyIdServerBinding(socket, stop)
     }
 
-  def startUsingDomainSocket(path: Option[Path] = None): NettyIdDomainSocketBinding =
+  private[netty] def start(routes: List[Route[Id]]): NettyIdServerBinding = 
+    startUsingSocketOverride[InetSocketAddress](routes, None) match {
+      case (socket, stop) =>
+        NettyIdServerBinding(socket, stop)
+    }
+
+  def startUsingDomainSocket(path: Option[Path] = None)(using Ox): NettyIdDomainSocketBinding =
     startUsingDomainSocket(path.getOrElse(Paths.get(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString)))
 
-  def startUsingDomainSocket(path: Path): NettyIdDomainSocketBinding =
+  def startUsingDomainSocket(path: Path)(using Ox): NettyIdDomainSocketBinding =
     startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile))) match {
       case (socket, stop) =>
         NettyIdDomainSocketBinding(socket, stop)
     }
 
-  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): (SA, () => Unit) = {
+  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) = {
+    val routes = NettyIdServerInterpreter(options).toRoute(endpoints) :: endpointsWithOptions.map(e => NettyIdServerInterpreter(e.overridenOptions).toRoute(e.ses))
+    startUsingSocketOverride(routes, socketOverride)
+  }
+  private def startUsingSocketOverride[SA <: SocketAddress](routes: List[Route[Id]], socketOverride: Option[SA]): (SA, () => Unit) = {
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     val route = Route.combine(routes)
 
@@ -175,16 +185,16 @@ case class NettyIdServer(routes: Vector[IdRoute], options: NettyIdServerOptions,
 }
 
 object NettyIdServer {
-  def apply(): NettyIdServer = NettyIdServer(Vector.empty, NettyIdServerOptions.default, NettyConfig.default)
+  def apply(): NettyIdServer = NettyIdServer(List.empty, List.empty, NettyIdServerOptions.default, NettyConfig.default)
 
   def apply(serverOptions: NettyIdServerOptions): NettyIdServer =
-    NettyIdServer(Vector.empty, serverOptions, NettyConfig.default)
+    NettyIdServer(List.empty, List.empty, serverOptions, NettyConfig.default)
 
   def apply(config: NettyConfig): NettyIdServer =
-    NettyIdServer(Vector.empty, NettyIdServerOptions.default, config)
+    NettyIdServer(List.empty, List.empty, NettyIdServerOptions.default, config)
 
   def apply(serverOptions: NettyIdServerOptions, config: NettyConfig): NettyIdServer =
-    NettyIdServer(Vector.empty, serverOptions, config)
+    NettyIdServer(List.empty, List.empty, serverOptions, config)
 }
 case class NettyIdServerBinding(localSocket: InetSocketAddress, stop: () => Unit) {
   def hostName: String = localSocket.getHostName

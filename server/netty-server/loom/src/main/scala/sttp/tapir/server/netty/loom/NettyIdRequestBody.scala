@@ -11,10 +11,10 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.netty.internal.NettyRequestBody
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
 
-private[netty] class NettyIdRequestBody(val createFile: ServerRequest => TapirFile) extends NettyRequestBody[Id, NoStreams] {
+private[netty] class NettyIdRequestBody(val createFile: ServerRequest => TapirFile) extends NettyRequestBody[Id, OxStreams] {
 
   override implicit val monad: MonadError[Id] = idMonad
-  override val streams: capabilities.Streams[NoStreams] = NoStreams
+  override val streams: capabilities.Streams[OxStreams] = OxStreams
 
   override def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): Array[Byte] =
     SimpleSubscriber.processAllBlocking(publisher, contentLength, maxBytes)
