@@ -1,14 +1,7 @@
 package sttp.tapir
 
-import java.io.InputStream
-import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
-import java.nio.ByteBuffer
-import java.nio.charset.{Charset, StandardCharsets}
-import java.time._
-import java.time.format.{DateTimeFormatter, DateTimeParseException}
-import java.util.{Base64, Date, UUID}
 import sttp.model._
-import sttp.model.headers.{CacheDirective, Cookie, CookieWithMeta, ETag, Range, ContentRange}
+import sttp.model.headers.{CacheDirective, ContentRange, Cookie, CookieWithMeta, ETag, Range}
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult.Error.MultipartDecodeException
 import sttp.tapir.DecodeResult._
@@ -18,6 +11,13 @@ import sttp.tapir.macros.{CodecMacros, FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.{UnsupportedWebSocketFrameException, UsernamePassword}
 import sttp.ws.WebSocketFrame
 
+import java.io.InputStream
+import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
+import java.nio.ByteBuffer
+import java.nio.charset.{Charset, StandardCharsets}
+import java.time._
+import java.time.format.{DateTimeFormatter, DateTimeParseException}
+import java.util.{Base64, Date, UUID}
 import scala.annotation.{implicitNotFound, tailrec}
 import scala.collection.immutable.ListMap
 import scala.concurrent.duration.{Duration => SDuration}
@@ -238,10 +238,13 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
       }
     }(h => OffsetDateTime.of(h, ZoneOffset.UTC).toString)
     .schema(Schema.schemaForLocalDateTime)
+
   implicit val uri: PlainCodec[Uri] =
-    string.mapDecode(raw => Uri.parse(raw).fold(e => DecodeResult.Error(raw, new IllegalArgumentException(e)), DecodeResult.Value(_)))(
-      _.toString()
-    )
+    string
+      .mapDecode(raw => Uri.parse(raw).fold(e => DecodeResult.Error(raw, new IllegalArgumentException(e)), DecodeResult.Value(_)))(
+        _.toString()
+      )
+      .schema(Schema.schemaForUri)
 
   def parsedString[T: Schema](parse: String => T): Codec[String, T, TextPlain] =
     string.map(parse)(_.toString).schema(implicitly[Schema[T]])
