@@ -45,7 +45,7 @@ private[docs] class TSchemaToASchema(
             // the initial list of schemas.
             val propagated = propagateMetadataForOption(schema, opt).element
             val ref = toSchemaReference.map(propagated, name)
-            if (!markOptionsAsNullable) ref else ref.copy(nullable = Some(true))
+            if (!markOptionsAsNullable) ref else ref.nullable
           case TSchemaType.SOption(el)    => apply(el, allowReference = true, isOptionElement = true)
           case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = SchemaFormat.Binary)
           case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = SchemaFormat.Date)
@@ -58,7 +58,7 @@ private[docs] class TSchemaToASchema(
                 .map(apply(_, allowReference = true))
                 .sortBy {
                   case schema if schema.$ref.isDefined => schema.$ref.get
-                  case schema => schema.`type`.collect { case t: BasicSchemaType => t.value }.getOrElse("") + schema.toString
+                  case schema => schema.`type`.collect { case List(t) => t.value }.getOrElse("") + schema.toString
                 },
               d.map(tDiscriminatorToADiscriminator)
             )
@@ -82,7 +82,7 @@ private[docs] class TSchemaToASchema(
       }
 
       var s = result
-      s = if (nullable) s.copy(nullable = Some(true)) else s
+      s = if (nullable) s.nullable else s
       s = addMetadata(s, schema)
       s = addAttributes(s, schema)
       s = addConstraints(s, primitiveValidators, schemaIsWholeNumber)
@@ -111,7 +111,7 @@ private[docs] class TSchemaToASchema(
     oschema.copy(
       description = tschema.description.orElse(oschema.description),
       default = tDefaultToADefault(tschema).orElse(oschema.default),
-      example = tExampleToAExample(tschema).orElse(oschema.example),
+      examples = tExampleToAExample(tschema).map(List(_)).orElse(oschema.examples),
       format = tschema.format.orElse(oschema.format),
       deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated),
       extensions = DocsExtensions.fromIterable(tschema.docsExtensions)
@@ -126,16 +126,14 @@ private[docs] class TSchemaToASchema(
 
   private def addConstraints(aschema: ASchema, v: Validator.Primitive[_], wholeNumbers: Boolean): ASchema = {
     v match {
-      case m @ Validator.Min(v, exclusive) =>
-        aschema.copy(
-          minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)),
-          exclusiveMinimum = Option(exclusive).filter(identity)
-        )
-      case m @ Validator.Max(v, exclusive) =>
-        aschema.copy(
-          maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)),
-          exclusiveMaximum = Option(exclusive).filter(identity)
-        )
+      case m @ Validator.Min(v, false) =>
+        aschema.copy(minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
+      case m @ Validator.Min(v, true) =>
+        aschema.copy(exclusiveMinimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
+      case m @ Validator.Max(v, false) =>
+        aschema.copy(maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
+      case m @ Validator.Max(v, true) =>
+        aschema.copy(exclusiveMaximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
       case Validator.Pattern(value)                  => aschema.copy(pattern = Some(Pattern(value)))
       case Validator.MinLength(value, _)             => aschema.copy(minLength = Some(value))
       case Validator.MaxLength(value, _)             => aschema.copy(maxLength = Some(value))
@@ -148,7 +146,7 @@ private[docs] class TSchemaToASchema(
   }
 
   private def addEnumeration[T](aschema: ASchema, v: List[T], encode: EncodeToRaw[T]): ASchema = {
-    val values = v.flatMap(x => encode(x).map(ExampleSingleValue.apply))
+    val values = v.flatMap(x => encode(x).map(???)) //TODO
     aschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
   }
 

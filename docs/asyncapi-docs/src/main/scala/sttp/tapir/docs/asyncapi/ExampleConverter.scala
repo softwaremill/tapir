@@ -14,7 +14,7 @@ private[asyncapi] object ExampleConverter {
           case _: WebSocketFrame.Control          => None
         }
 
-        exampleValue.map(ExampleSingleValue)
+        exampleValue.map(ExampleValue.string)
       }
   }
 }
