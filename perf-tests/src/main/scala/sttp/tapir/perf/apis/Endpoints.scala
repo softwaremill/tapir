@@ -43,10 +43,6 @@ trait Endpoints {
           .maxRequestBodyLength(LargeInputSize + 1024L)
           .out(stringBody)
           .serverLogicSuccess { body: Array[Byte] =>
-            var x = math.Pi
-            for (_ <- 0 until 10000000) {
-              x = math.sqrt(x) + 0.3
-            }
             reply(s"Ok [$n], bytes length = ${body.length}")
           }
       },
