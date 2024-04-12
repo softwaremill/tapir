@@ -149,7 +149,17 @@ private[docs] class TSchemaToASchema(
   }
 
   private def addEnumeration[T](aschema: ASchema, v: List[T], encode: EncodeToRaw[T]): ASchema = {
-    val values = v.flatMap(x => encode(x).map(???)) //TODO
+    val values = v.flatMap(x => encode(x).map {
+      case null => ExampleValue.Null
+      case v: String => ExampleValue.string(v)
+      case v: Int => ExampleValue.number(v)
+      case v: Long => ExampleValue.number(v)
+      case v: Float => ExampleValue.number(v)
+      case v: Double => ExampleValue.number(v)
+      case v: BigDecimal => ExampleValue.number(v)
+      case v: BigInt => ExampleValue.number(v)
+      case v => ExampleValue.string(v.toString)
+    })
     aschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
   }
 
