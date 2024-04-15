@@ -1,6 +1,6 @@
 package sttp.tapir.docs
 
-import sttp.apispec.{ExampleValue, SecurityScheme}
+import sttp.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
 import sttp.tapir.{AnyEndpoint, Codec, EndpointInput, Schema, SchemaType}
 
 import java.nio.ByteBuffer
@@ -26,9 +26,8 @@ package object apispec {
     case _              => v.toString
   }
 
-  private[docs] def exampleValue(v: String): ExampleValue = ExampleValue.string(v)
-  private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] =
-    exampleValue(codec.schema, codec.encode(e))
+  private[docs] def exampleValue(v: String): ExampleValue = ExampleSingleValue(v)
+  private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
 
   private[docs] def exampleValue(schema: Schema[_], raw: Any): Option[ExampleValue] = {
     // #3581: if there's a delimiter and the encoded value is a string, the codec will have produced a final
@@ -44,10 +43,10 @@ package object apispec {
     }
 
     (rawDelimited, schema.schemaType) match {
-      case (it: Iterable[_], SchemaType.SArray(_)) => Some(ExampleValue.array(it.map(v => ExampleValue.string(rawToString(v)))))
-      case (it: Iterable[_], _)                    => it.headOption.map(v => ExampleValue.string(rawToString(v)))
-      case (it: Option[_], _)                      => it.map(v => ExampleValue.string(rawToString(v)))
-      case (v, _)                                  => Some(ExampleValue.string(rawToString(v)))
+      case (it: Iterable[_], SchemaType.SArray(_)) => Some(ExampleMultipleValue(it.map(rawToString).toList))
+      case (it: Iterable[_], _)                    => it.headOption.map(v => ExampleSingleValue(rawToString(v)))
+      case (it: Option[_], _)                      => it.map(v => ExampleSingleValue(rawToString(v)))
+      case (v, _)                                  => Some(ExampleSingleValue(rawToString(v)))
     }
   }
 
