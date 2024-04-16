@@ -10,14 +10,14 @@ import sttp.tapir.tests.{Test, TestSuite}
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
-class NettyIdServerTest extends TestSuite with EitherValues {
+class NettySyncServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
       Resource
         .make(IO.delay {
           val eventLoopGroup = new NioEventLoopGroup()
 
-          val interpreter = new NettyIdTestServerInterpreter(eventLoopGroup)
+          val interpreter = new NettySyncTestServerInterpreter(eventLoopGroup)
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
           val sleeper: Sleeper[Id] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
 
