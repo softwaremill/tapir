@@ -11,7 +11,7 @@ private[loom] class ChannelSubscription[A](
     oxDispatcher: OxDispatcher,
     subscriber: Subscriber[? >: A],
     source: Source[A],
-    closeCh: () => Unit
+    closeCh: () => Unit,
 ) extends Subscription {
   private val demand: AtomicLong = AtomicLong(0L)
   private val isCompleted = new AtomicBoolean(false)

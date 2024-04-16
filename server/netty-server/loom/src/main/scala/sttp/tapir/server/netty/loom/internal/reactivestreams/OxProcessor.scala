@@ -8,7 +8,15 @@ import org.reactivestreams.Processor
 import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.loom.OxStreams
 
-private[loom] class OxProcessor[A, B](oxDispatcher: OxDispatcher, pipeline: OxStreams.Pipe[A, B]) extends Processor[A, B] {
+/**
+  * A reactive Processor, which is both a Publisher and a Subscriber
+  *
+  * @param oxDispatcher a dispatcher to which async tasks can be submitted (reading from a channel)
+  * @param pipeline user-defined processing pipeline expressed as an Ox Source => Source transformation
+  * @param wrapSubscriber an optional function allowing wrapping external subscribers, can be used to intercept onNext, onComplete and onError with custom handling. Can be just identity.
+  */
+private[loom] class OxProcessor[A, B](oxDispatcher: OxDispatcher, pipeline: OxStreams.Pipe[A, B], wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B])
+    extends Processor[A, B] {
   @volatile private var subscription: Subscription = _
   private val channel = Channel.buffered[A](1)
 
@@ -62,7 +70,8 @@ private[loom] class OxProcessor[A, B](oxDispatcher: OxDispatcher, pipeline: OxSt
     val incomingRequests: Source[A] = oxDispatcher.transformSource[A, A](transformation, internalSource)
     // Applying the user-provided pipe
     val outgoingResponses: Source[B] = oxDispatcher.transformSource[A, B](pipeline, incomingRequests)
-    val subscription = new ChannelSubscription(oxDispatcher, subscriber, outgoingResponses, () => { val _ = channel.doneSafe() })
+    val subscription =
+      new ChannelSubscription(oxDispatcher, wrapSubscriber(subscriber), outgoingResponses, () => { val _ = channel.doneSafe() })
     subscriber.onSubscribe(subscription)
 
   def getAndRequest[B]: Ox ?=> Source[B] => Source[B] = { s =>

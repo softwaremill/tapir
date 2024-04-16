@@ -1,8 +1,12 @@
 package sttp.tapir.server.netty.loom.internal.ws
 
 import io.netty.channel.ChannelHandlerContext
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame
+import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus
 import io.netty.handler.codec.http.websocketx.WebSocketFrame
 import org.reactivestreams.Processor
+import org.reactivestreams.Subscriber
+import org.reactivestreams.Subscription
 import ox.*
 import ox.channels.Source
 import sttp.tapir.model.WebSocketFrameDecodeFailure
@@ -17,7 +21,7 @@ private[loom] object OxSourceWebSocketProcessor {
       oxDispatcher: OxDispatcher,
       pipe: OxStreams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
-      ctx: ChannelHandlerContext
+      ctx: ChannelHandlerContext 
   ): Processor[WebSocketFrame, WebSocketFrame] = {
     val frame2FramePipe: OxStreams.Pipe[WebSocketFrame, WebSocketFrame] = Ox ?=>
       (source: Source[WebSocketFrame]) => {
@@ -37,6 +41,19 @@ private[loom] object OxSourceWebSocketProcessor {
         )
           .map(r => frameToNettyFrame(o.responses.encode(r)))
       }
-    new OxProcessor(oxDispatcher, frame2FramePipe)
+    // We need this kind of interceptor to make Netty reply correctly to closed channel or error
+    def wrapSubscriberWithNettyCallback[B](sub: Subscriber[? >: B]): Subscriber[? >: B] = new Subscriber[B] {
+      override def onSubscribe(s: Subscription): Unit = sub.onSubscribe(s)
+      override def onNext(t: B): Unit = sub.onNext(t)
+      override def onError(t: Throwable): Unit =
+        val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, "Error"))
+        sub.onError(t)
+      override def onComplete(): Unit = 
+        val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "Bye"))
+        sub.onComplete()
+    } 
+    new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
   }
+
+  
 }

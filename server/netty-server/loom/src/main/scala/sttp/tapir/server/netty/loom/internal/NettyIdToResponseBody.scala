@@ -1,8 +1,10 @@
 package sttp.tapir.server.netty.loom.internal
 
 import _root_.ox.*
-import _root_.ox.channels.*
+import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandlerContext
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame
+import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus
 import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.monad.MonadError
@@ -33,8 +35,9 @@ private[loom] class NettyIdToResponseBody(runAsync: RunAsync[Id])(using me: Mona
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams]
   ): NettyResponse = (ctx: ChannelHandlerContext) =>
+    val channelPromise = ctx.newPromise()
     new ReactiveWebSocketProcessorNettyResponseContent(
-      ctx.newPromise(),
+      channelPromise,
       ws.OxSourceWebSocketProcessor[REQ, RESP](
         oxDispatcher,
         pipe.asInstanceOf[OxStreams.Pipe[REQ, RESP]],
