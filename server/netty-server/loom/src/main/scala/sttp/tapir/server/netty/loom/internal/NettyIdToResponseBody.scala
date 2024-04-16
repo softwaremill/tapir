@@ -19,7 +19,7 @@ import java.nio.charset.Charset
 private[loom] class NettyIdToResponseBody(runAsync: RunAsync[Id])(using me: MonadError[Id], ox: Ox)
     extends ToResponseBody[NettyResponse, OxStreams] {
 
-  private val oxDispatcher = Actor.create(new OxDispatcher)
+  private val oxDispatcher = new OxDispatcher
   val delegate = new NettyToResponseBody(runAsync)(me)
 
   override val streams: capabilities.Streams[OxStreams] = OxStreams

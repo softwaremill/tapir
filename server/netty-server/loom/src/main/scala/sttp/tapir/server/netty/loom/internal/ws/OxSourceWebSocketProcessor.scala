@@ -14,7 +14,7 @@ import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 
 private[loom] object OxSourceWebSocketProcessor {
   def apply[REQ, RESP](
-      oxDispatcher: ox.channels.ActorRef[OxDispatcher],
+      oxDispatcher: OxDispatcher,
       pipe: OxStreams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
       ctx: ChannelHandlerContext
