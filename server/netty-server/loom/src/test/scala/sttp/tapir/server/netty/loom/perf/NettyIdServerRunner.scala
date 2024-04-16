@@ -88,7 +88,7 @@ object NettyIdServerRunner {
 
   val wsPipe: OxStreams.Pipe[Long, Long] = Ox ?=> { (in: Source[Long]) =>
     // Source.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis()).zip(in).map(_._1)
-    fork {
+    forkUnsupervised {
       in.drain()
     }
     Source.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis()) 
@@ -110,7 +110,7 @@ object NettyIdServerRunner {
     val declaredPort = 8080
     val declaredHost = "0.0.0.0"
 
-    supervised {
+    scoped {
       val serverBinding: NettyIdServerBinding = useInScope(
         NettyIdServer(NettyIdServerOptions.customiseInterceptors.options)
           .port(declaredPort)

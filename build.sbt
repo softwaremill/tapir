@@ -547,7 +547,6 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     http4sServer,
     nettyServer,
     nettyServerCats,
-    nettyServerLoom,
     playServer,
     vertxServer,
     vertxServerCats,
@@ -1457,10 +1456,11 @@ lazy val nettyServerLoom: ProjectMatrix =
       name := "tapir-netty-server-loom",
       // needed because of https://github.com/coursier/coursier/issues/2016
       useCoursier := false,
+      Test / run / fork := true,
       libraryDependencies ++= Seq(
-         "com.softwaremill.ox" %% "core" % Versions.ox,
-         "org.reactivestreams" % "reactive-streams-tck" % Versions.reactiveStreams % Test,
-         "com.disneystreaming" %% "weaver-cats" % "0.8.4" % Test
+        "com.softwaremill.ox" %% "core" % Versions.ox,
+        "org.reactivestreams" % "reactive-streams-tck" % Versions.reactiveStreams % Test,
+        "com.disneystreaming" %% "weaver-cats" % "0.8.4" % Test
       )
     )
     .jvmPlatform(scalaVersions = List(scala3))

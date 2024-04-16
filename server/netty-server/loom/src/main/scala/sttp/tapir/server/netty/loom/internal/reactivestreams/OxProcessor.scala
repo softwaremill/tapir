@@ -14,7 +14,6 @@ private[loom] class OxProcessor[A, B](oxDispatcher: OxDispatcher, wsPipe: OxStre
 
   override def onError(reason: Throwable): Unit =
     // As per rule 2.13, we need to throw a `java.lang.NullPointerException` if the `Throwable` is `null`
-    println("OnError!")
     if (reason == null) throw null
     val _ = channel.errorSafe(reason)
 
