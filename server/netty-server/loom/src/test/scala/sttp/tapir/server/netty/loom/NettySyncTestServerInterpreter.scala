@@ -10,11 +10,11 @@ import sttp.tapir.tests.Port
 
 import scala.concurrent.duration.FiniteDuration
 
-class NettyIdTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
-    extends TestServerInterpreter[Id, Any, NettyIdServerOptions, IdRoute] {
+class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
+    extends TestServerInterpreter[Id, Any, NettySyncServerOptions, IdRoute] {
   override def route(es: List[ServerEndpoint[Any, Id]], interceptors: Interceptors): IdRoute = {
-    val serverOptions: NettyIdServerOptions = interceptors(NettyIdServerOptions.customiseInterceptors).options
-    NettyIdServerInterpreter(serverOptions).toRoute(es)
+    val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
+    NettySyncServerInterpreter(serverOptions).toRoute(es)
   }
 
   override def serverWithStop(
@@ -24,8 +24,8 @@ class NettyIdTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
-    val options = NettyIdServerOptions.default
-    val bind = IO.blocking(NettyIdServer(options, customizedConfig).addRoutes(routes.toList).start())
+    val options = NettySyncServerOptions.default
+    val bind = IO.blocking(NettySyncServer(options, customizedConfig).addRoutes(routes.toList).start())
 
     Resource
       .make(bind.map(b => (b.port, IO.blocking(b.stop())))) { case (_, stop) => stop }

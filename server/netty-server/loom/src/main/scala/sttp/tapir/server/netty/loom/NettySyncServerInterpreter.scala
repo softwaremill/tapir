@@ -3,8 +3,8 @@ package sttp.tapir.server.netty.loom
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.internal.{NettyToResponseBody, NettyServerInterpreter, RunAsync}
 
-trait NettyIdServerInterpreter {
-  def nettyServerOptions: NettyIdServerOptions
+trait NettySyncServerInterpreter {
+  def nettyServerOptions: NettySyncServerOptions
 
   def toRoute(
       ses: List[ServerEndpoint[Any, Id]]
@@ -12,7 +12,7 @@ trait NettyIdServerInterpreter {
     NettyServerInterpreter.toRoute[Id](
       ses,
       nettyServerOptions.interceptors,
-      new NettyIdRequestBody(nettyServerOptions.createFile),
+      new NettySyncRequestBody(nettyServerOptions.createFile),
       new NettyToResponseBody[Id](RunAsync.Id),
       nettyServerOptions.deleteFile,
       RunAsync.Id
@@ -20,10 +20,10 @@ trait NettyIdServerInterpreter {
   }
 }
 
-object NettyIdServerInterpreter {
-  def apply(serverOptions: NettyIdServerOptions = NettyIdServerOptions.default): NettyIdServerInterpreter = {
-    new NettyIdServerInterpreter {
-      override def nettyServerOptions: NettyIdServerOptions = serverOptions
+object NettySyncServerInterpreter {
+  def apply(serverOptions: NettySyncServerOptions = NettySyncServerOptions.default): NettySyncServerInterpreter = {
+    new NettySyncServerInterpreter {
+      override def nettyServerOptions: NettySyncServerOptions = serverOptions
     }
   }
 }

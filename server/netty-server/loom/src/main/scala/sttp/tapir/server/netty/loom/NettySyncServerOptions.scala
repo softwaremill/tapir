@@ -7,36 +7,36 @@ import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
-case class NettyIdServerOptions(
+case class NettySyncServerOptions(
     interceptors: List[Interceptor[Id]],
     createFile: ServerRequest => TapirFile,
     deleteFile: TapirFile => Unit
 ) {
-  def prependInterceptor(i: Interceptor[Id]): NettyIdServerOptions = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[Id]): NettyIdServerOptions = copy(interceptors = interceptors :+ i)
+  def prependInterceptor(i: Interceptor[Id]): NettySyncServerOptions = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[Id]): NettySyncServerOptions = copy(interceptors = interceptors :+ i)
 }
 
-object NettyIdServerOptions {
+object NettySyncServerOptions {
 
-  /** Default options, using TCP sockets (the most common case). This can be later customised using [[NettyIdServerOptions#nettyOptions()]].
+  /** Default options, using TCP sockets (the most common case). This can be later customised using [[NettySyncServerOptions#nettyOptions()]].
     */
-  def default: NettyIdServerOptions = customiseInterceptors.options
+  def default: NettySyncServerOptions = customiseInterceptors.options
 
   private def default(
       interceptors: List[Interceptor[Id]]
-  ): NettyIdServerOptions =
-    NettyIdServerOptions(
+  ): NettySyncServerOptions =
+    NettySyncServerOptions(
       interceptors,
       _ => Defaults.createTempFile(),
       Defaults.deleteFile()
     )
 
   /** Customise the interceptors that are being used when exposing endpoints as a server. By default uses TCP sockets (the most common
-    * case), but this can be later customised using [[NettyIdServerOptions#nettyOptions()]].
+    * case), but this can be later customised using [[NettySyncServerOptions#nettyOptions()]].
     */
-  def customiseInterceptors: CustomiseInterceptors[Id, NettyIdServerOptions] = {
+  def customiseInterceptors: CustomiseInterceptors[Id, NettySyncServerOptions] = {
     CustomiseInterceptors(
-      createOptions = (ci: CustomiseInterceptors[Id, NettyIdServerOptions]) => default(ci.interceptors)
+      createOptions = (ci: CustomiseInterceptors[Id, NettySyncServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
   }
 
