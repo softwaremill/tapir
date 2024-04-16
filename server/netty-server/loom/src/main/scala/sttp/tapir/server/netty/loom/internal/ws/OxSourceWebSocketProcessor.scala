@@ -1,27 +1,25 @@
-package sttp.tapir.server.netty.loom.ws
+package sttp.tapir.server.netty.loom.internal.ws
 
-import org.reactivestreams.Processor
-import io.netty.handler.codec.http.websocketx.WebSocketFrame
-import sttp.tapir.server.netty.loom.OxStreams
-import sttp.tapir.WebSocketBodyOutput
 import io.netty.channel.ChannelHandlerContext
-import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters._
-import org.reactivestreams.Subscriber
-import org.reactivestreams.Subscription
+import io.netty.handler.codec.http.websocketx.WebSocketFrame
+import org.reactivestreams.Processor
 import ox.*
-import ox.channels.Channel
 import ox.channels.Source
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.tapir.model.WebSocketFrameDecodeFailure
-import sttp.tapir.server.netty.loom.reactivestreams.OxProcessor
+import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters._
+import sttp.tapir.server.netty.loom.OxStreams
+import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
+import sttp.tapir.server.netty.loom.internal.reactivestreams.OxProcessor
+import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 
-object OxSourceWebSocketProcessor {
+private[loom] object OxSourceWebSocketProcessor {
   def apply[REQ, RESP](
+      oxDispatcher: ox.channels.ActorRef[OxDispatcher],
       pipe: OxStreams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
       ctx: ChannelHandlerContext
-  )(using Ox): Processor[WebSocketFrame, WebSocketFrame] = {
-    def frame2FramePipe: OxStreams.Pipe[WebSocketFrame, WebSocketFrame] = Ox ?=>
+  ): Processor[WebSocketFrame, WebSocketFrame] = {
+    val frame2FramePipe: OxStreams.Pipe[WebSocketFrame, WebSocketFrame] = Ox ?=>
       (source: Source[WebSocketFrame]) => {
         pipe(
           source
@@ -39,6 +37,6 @@ object OxSourceWebSocketProcessor {
         )
           .map(r => frameToNettyFrame(o.responses.encode(r)))
       }
-    new OxProcessor(frame2FramePipe)
+    new OxProcessor(oxDispatcher, frame2FramePipe)
   }
 }

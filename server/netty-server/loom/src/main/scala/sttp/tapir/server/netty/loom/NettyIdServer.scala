@@ -1,35 +1,35 @@
 package sttp.tapir.server.netty.loom
 
-import io.netty.channel.Channel
-import io.netty.channel.EventLoopGroup
+import _root_.ox.Ox
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
+import io.netty.channel.{Channel, EventLoopGroup}
 import io.netty.util.concurrent.DefaultEventExecutor
+import sttp.capabilities.WebSockets
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.NettyConfig
-import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.server.netty.Route
-import sttp.tapir.server.netty.internal.NettyBootstrap
-import sttp.tapir.server.netty.internal.NettyServerHandler
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
-import java.net.InetSocketAddress
-import java.net.SocketAddress
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.net.{InetSocketAddress, SocketAddress}
+import java.nio.file.{Path, Paths}
 import java.util.UUID
-import java.util.concurrent.Executors
-import java.util.concurrent.{Future => JFuture}
 import java.util.concurrent.atomic.AtomicBoolean
-import scala.concurrent.Future
-import scala.concurrent.Promise
+import java.util.concurrent.{Executors, Future => JFuture}
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
-import sttp.capabilities.WebSockets
-import ox.Ox
 
-case class NettyIdServerEndpointListOverridenOptions(ses: List[ServerEndpoint[OxStreams with WebSockets, Id]], overridenOptions: NettyIdServerOptions) 
-case class NettyIdServer(endpoints: List[ServerEndpoint[OxStreams with WebSockets, Id]], endpointsWithOptions: List[NettyIdServerEndpointListOverridenOptions], options: NettyIdServerOptions, config: NettyConfig) {
+case class NettyIdServerEndpointListOverridenOptions(
+    ses: List[ServerEndpoint[OxStreams with WebSockets, Id]],
+    overridenOptions: NettyIdServerOptions
+)
+case class NettyIdServer(
+    endpoints: List[ServerEndpoint[OxStreams with WebSockets, Id]],
+    endpointsWithOptions: List[NettyIdServerEndpointListOverridenOptions],
+    options: NettyIdServerOptions,
+    config: NettyConfig
+) {
   private val executor = Executors.newVirtualThreadPerTaskExecutor()
 
   def addEndpoint(se: ServerEndpoint[OxStreams with WebSockets, Id]): NettyIdServer = addEndpoints(List(se))
@@ -53,7 +53,7 @@ case class NettyIdServer(endpoints: List[ServerEndpoint[OxStreams with WebSocket
         NettyIdServerBinding(socket, stop)
     }
 
-  private[netty] def start(routes: List[Route[Id]]): NettyIdServerBinding = 
+  private[netty] def start(routes: List[Route[Id]]): NettyIdServerBinding =
     startUsingSocketOverride[InetSocketAddress](routes, None) match {
       case (socket, stop) =>
         NettyIdServerBinding(socket, stop)
@@ -69,7 +69,9 @@ case class NettyIdServer(endpoints: List[ServerEndpoint[OxStreams with WebSocket
     }
 
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) = {
-    val routes = NettyIdServerInterpreter(options).toRoute(endpoints) :: endpointsWithOptions.map(e => NettyIdServerInterpreter(e.overridenOptions).toRoute(e.ses))
+    val routes = NettyIdServerInterpreter(options).toRoute(endpoints) :: endpointsWithOptions.map(e =>
+      NettyIdServerInterpreter(e.overridenOptions).toRoute(e.ses)
+    )
     startUsingSocketOverride(routes, socketOverride)
   }
   private def startUsingSocketOverride[SA <: SocketAddress](routes: List[Route[Id]], socketOverride: Option[SA]): (SA, () => Unit) = {

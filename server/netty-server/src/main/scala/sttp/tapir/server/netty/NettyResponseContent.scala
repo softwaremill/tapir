@@ -23,7 +23,7 @@ object NettyResponseContent {
       extends NettyResponseContent
   final case class ReactiveWebSocketProcessorNettyResponseContent(
       channelPromise: ChannelPromise,
-      processor: () => Processor[WebSocketFrame, WebSocketFrame],
+      processor: Processor[WebSocketFrame, WebSocketFrame],
       ignorePong: Boolean,
       autoPongOnPing: Boolean,
       decodeCloseRequests: Boolean,

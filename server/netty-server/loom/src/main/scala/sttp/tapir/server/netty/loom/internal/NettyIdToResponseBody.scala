@@ -1,21 +1,25 @@
-package sttp.tapir.server.netty.loom
+package sttp.tapir.server.netty.loom.internal
 
-import sttp.tapir.server.netty.internal.NettyToResponseBody
-import sttp.monad.MonadError
-import sttp.tapir.server.netty.internal.RunAsync
-import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.WebSocketBodyOutput
-import sttp.capabilities
-import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.*
-import sttp.model.HasHeaders
-import java.nio.charset.Charset
-import sttp.tapir.server.netty.NettyResponseContent.ReactiveWebSocketProcessorNettyResponseContent
+import _root_.ox.*
+import _root_.ox.channels.*
 import io.netty.channel.ChannelHandlerContext
-import ox.Ox
+import sttp.capabilities
+import sttp.model.HasHeaders
+import sttp.monad.MonadError
+import sttp.tapir.server.interpreter.ToResponseBody
+import sttp.tapir.server.netty.NettyResponse
+import sttp.tapir.server.netty.NettyResponseContent.ReactiveWebSocketProcessorNettyResponseContent
+import sttp.tapir.server.netty.internal.{NettyToResponseBody, RunAsync}
+import sttp.tapir.server.netty.loom._
+import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
+import sttp.tapir.*
 
-class NettyIdToResponseBody(runAsync: RunAsync[Id])(using me: MonadError[Id], ox: Ox) extends ToResponseBody[NettyResponse, OxStreams] {
+import java.nio.charset.Charset
 
+private[loom] class NettyIdToResponseBody(runAsync: RunAsync[Id])(using me: MonadError[Id], ox: Ox)
+    extends ToResponseBody[NettyResponse, OxStreams] {
+
+  private val oxDispatcher = Actor.create(new OxDispatcher)
   val delegate = new NettyToResponseBody(runAsync)(me)
 
   override val streams: capabilities.Streams[OxStreams] = OxStreams
@@ -31,12 +35,12 @@ class NettyIdToResponseBody(runAsync: RunAsync[Id])(using me: MonadError[Id], ox
   ): NettyResponse = (ctx: ChannelHandlerContext) =>
     new ReactiveWebSocketProcessorNettyResponseContent(
       ctx.newPromise(),
-      () =>
-        ws.OxSourceWebSocketProcessor[REQ, RESP](
-          pipe.asInstanceOf[OxStreams.Pipe[REQ, RESP]],
-          o.asInstanceOf[WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams]],
-          ctx
-        ),
+      ws.OxSourceWebSocketProcessor[REQ, RESP](
+        oxDispatcher,
+        pipe.asInstanceOf[OxStreams.Pipe[REQ, RESP]],
+        o.asInstanceOf[WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams]],
+        ctx
+      ),
       ignorePong = o.ignorePong,
       autoPongOnPing = o.autoPongOnPing,
       decodeCloseRequests = o.decodeCloseRequests,

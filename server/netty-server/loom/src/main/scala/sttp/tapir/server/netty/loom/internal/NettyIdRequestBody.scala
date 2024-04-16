@@ -1,4 +1,4 @@
-package sttp.tapir.server.netty.loom
+package sttp.tapir.server.netty.loom.internal
 
 import io.netty.handler.codec.http.HttpContent
 import org.playframework.netty.http.StreamedHttpRequest
@@ -6,12 +6,12 @@ import org.reactivestreams.Publisher
 import sttp.capabilities
 import sttp.monad.MonadError
 import sttp.tapir.TapirFile
-import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.netty.internal.NettyRequestBody
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
+import sttp.tapir.server.netty.loom.*
 
-private[netty] class NettyIdRequestBody(val createFile: ServerRequest => TapirFile) extends NettyRequestBody[Id, OxStreams] {
+private[loom] class NettyIdRequestBody(val createFile: ServerRequest => TapirFile) extends NettyRequestBody[Id, OxStreams] {
 
   override implicit val monad: MonadError[Id] = idMonad
   override val streams: capabilities.Streams[OxStreams] = OxStreams

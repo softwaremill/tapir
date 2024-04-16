@@ -279,7 +279,7 @@ class NettyServerHandler[F[_]](
       new DefaultWebSocketHttpResponse(
         handshakeReq.protocolVersion(),
         HttpResponseStatus.valueOf(200),
-        r.processor(), // the Processor (Pipe) created by Tapir interpreter will be used by HttpStreamsServerHandler
+        r.processor, // the Processor (Pipe) created by Tapir interpreter will be used by HttpStreamsServerHandler
         new WebSocketServerHandshakerFactory(wsUrl(handshakeReq), null, false)
       )
     )

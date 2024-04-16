@@ -1,6 +1,7 @@
 package sttp.tapir.server.netty.loom
 
-import ox.Ox
+import internal.*
+import _root_.ox.Ox
 import sttp.capabilities.WebSockets
 import sttp.monad.syntax._
 import sttp.tapir.server.ServerEndpoint
