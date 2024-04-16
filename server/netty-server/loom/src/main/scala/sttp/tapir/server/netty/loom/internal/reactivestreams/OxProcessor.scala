@@ -8,7 +8,7 @@ import org.reactivestreams.Processor
 import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.loom.OxStreams
 
-private[loom] class OxProcessor[A, B](oxDispatcher: OxDispatcher, wsPipe: OxStreams.Pipe[A, B]) extends Processor[A, B] {
+private[loom] class OxProcessor[A, B](oxDispatcher: OxDispatcher, pipeline: OxStreams.Pipe[A, B]) extends Processor[A, B] {
   @volatile private var subscription: Subscription = _
   private val channel = Channel.buffered[A](1)
 
@@ -61,7 +61,7 @@ private[loom] class OxProcessor[A, B](oxDispatcher: OxDispatcher, wsPipe: OxStre
     val transformation: Ox ?=> Source[A] => Source[A] = getAndRequest[A]
     val incomingRequests: Source[A] = oxDispatcher.transformSource[A, A](transformation, internalSource)
     // Applying the user-provided pipe
-    val outgoingResponses: Source[B] = oxDispatcher.transformSource[A, B](wsPipe, incomingRequests)
+    val outgoingResponses: Source[B] = oxDispatcher.transformSource[A, B](pipeline, incomingRequests)
     val subscription = new ChannelSubscription(oxDispatcher, subscriber, outgoingResponses, () => { val _ = channel.doneSafe() })
     subscriber.onSubscribe(subscription)
 
