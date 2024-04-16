@@ -27,9 +27,9 @@ components:
   schemas:
     Fail:
       title: Fail
+      type: object
       required:
         - msg
-      type: object
       properties:
         msg:
           type: string

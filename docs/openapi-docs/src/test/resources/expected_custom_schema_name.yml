@@ -82,10 +82,10 @@ components:
   schemas:
     sttp.tapir.tests.data.FruitAmount:
       title: sttp.tapir.tests.data.FruitAmount
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string

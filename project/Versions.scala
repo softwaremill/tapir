@@ -11,7 +11,7 @@ object Versions {
   val sttp = "3.9.5"
   val sttpModel = "1.7.9"
   val sttpShared = "1.3.17"
-  val sttpApispec = "0.8.0+0-5924f9dc+20240411-1227-SNAPSHOT"
+  val sttpApispec = "0.8.0+11-5c623005+20240416-1015-SNAPSHOT"
   val akkaHttp = "10.2.10"
   val akkaStreams = "2.6.20"
   val pekkoHttp = "1.0.1"

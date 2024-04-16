@@ -25,9 +25,9 @@ components:
   schemas:
     Data1:
       title: Data1
+      type: object
       required:
         - x
-      type: object
       properties:
         x:
           type: string
@@ -40,7 +40,7 @@ components:
           items:
             $ref: '#/components/schemas/Data1'
         field2:
+          deprecated: true
           type: array
           items:
             $ref: '#/components/schemas/Data1'
-          deprecated: true
