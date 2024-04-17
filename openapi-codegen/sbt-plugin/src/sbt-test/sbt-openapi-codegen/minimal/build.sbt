@@ -7,7 +7,7 @@ lazy val root = (project in file("."))
 
 libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.10.0"
 libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.0"
-libraryDependencies += "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.8.0"
+libraryDependencies += "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.9.0"
 
 import scala.io.Source
 
