@@ -4,9 +4,9 @@ import ox.*
 import ox.channels.Source
 import ox.channels.Actor
 
-private[loom] class OxDispatcher(using ox: Ox) {
+private[loom] class OxDispatcher()(using ox: Ox) {
   private class Runner(using Ox) {
-    def runAsync(block: () => Unit): Unit = 
+    def runAsync(block: () => Unit): Unit =
       forkUnsupervised(block()).discard
 
     def transformSource[A, B](f: Ox ?=> Source[A] => Source[B], in: Source[A]): Source[B] = f(in)

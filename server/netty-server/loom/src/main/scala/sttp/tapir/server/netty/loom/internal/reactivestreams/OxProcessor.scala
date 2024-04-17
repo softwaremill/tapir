@@ -8,15 +8,21 @@ import org.reactivestreams.Processor
 import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.loom.OxStreams
 
-/**
-  * A reactive Processor, which is both a Publisher and a Subscriber
+/** A reactive Processor, which is both a Publisher and a Subscriber
   *
-  * @param oxDispatcher a dispatcher to which async tasks can be submitted (reading from a channel)
-  * @param pipeline user-defined processing pipeline expressed as an Ox Source => Source transformation
-  * @param wrapSubscriber an optional function allowing wrapping external subscribers, can be used to intercept onNext, onComplete and onError with custom handling. Can be just identity.
+  * @param oxDispatcher
+  *   a dispatcher to which async tasks can be submitted (reading from a channel)
+  * @param pipeline
+  *   user-defined processing pipeline expressed as an Ox Source => Source transformation
+  * @param wrapSubscriber
+  *   an optional function allowing wrapping external subscribers, can be used to intercept onNext, onComplete and onError with custom
+  *   handling. Can be just identity.
   */
-private[loom] class OxProcessor[A, B](oxDispatcher: OxDispatcher, pipeline: OxStreams.Pipe[A, B], wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B])
-    extends Processor[A, B] {
+private[loom] class OxProcessor[A, B](
+    oxDispatcher: OxDispatcher,
+    pipeline: OxStreams.Pipe[A, B],
+    wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B]
+) extends Processor[A, B] {
   @volatile private var subscription: Subscription = _
   private val channel = Channel.buffered[A](1)
 
@@ -31,7 +37,7 @@ private[loom] class OxProcessor[A, B](oxDispatcher: OxDispatcher, pipeline: OxSt
     } else {
       channel.sendSafe(a) match {
         case () => ()
-        case _: ChannelClosed => // Rule 2.13
+        case _: ChannelClosed =>
           done()
           onError(new IllegalStateException("onNext called when the channel is closed"))
       }
