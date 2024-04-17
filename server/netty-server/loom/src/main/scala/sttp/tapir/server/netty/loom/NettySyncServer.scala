@@ -12,65 +12,61 @@ import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
-import java.nio.file.{Path, Paths}
-import java.util.UUID
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, Future => JFuture}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 
-case class NettyIdServerEndpointListOverridenOptions(
-    ses: List[ServerEndpoint[OxStreams with WebSockets, Id]],
-    overridenOptions: NettyIdServerOptions
+case class NettySyncServerEndpointListOverridenOptions(
+    ses: List[ServerEndpoint[OxStreams & WebSockets, Id]],
+    overridenOptions: NettySyncServerOptions
 )
-case class NettyIdServer(
-    endpoints: List[ServerEndpoint[OxStreams with WebSockets, Id]],
-    endpointsWithOptions: List[NettyIdServerEndpointListOverridenOptions],
-    options: NettyIdServerOptions,
+case class NettySyncServer(
+    endpoints: List[ServerEndpoint[OxStreams & WebSockets, Id]],
+    endpointsWithOptions: List[NettySyncServerEndpointListOverridenOptions],
+    options: NettySyncServerOptions,
     config: NettyConfig
 ) {
   private val executor = Executors.newVirtualThreadPerTaskExecutor()
 
-  def addEndpoint(se: ServerEndpoint[OxStreams with WebSockets, Id]): NettyIdServer = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[OxStreams with WebSockets, Id], overrideOptions: NettyIdServerOptions): NettyIdServer =
+  def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Id]): NettySyncServer = addEndpoints(List(se))
+  def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Id], overrideOptions: NettySyncServerOptions): NettySyncServer =
     addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[OxStreams with WebSockets, Id]]): NettyIdServer = copy(endpoints = endpoints ++ ses)
-  def addEndpoints(ses: List[ServerEndpoint[OxStreams with WebSockets, Id]], overrideOptions: NettyIdServerOptions): NettyIdServer =
-    copy(endpointsWithOptions = endpointsWithOptions :+ NettyIdServerEndpointListOverridenOptions(ses, overrideOptions))
+  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Id]]): NettySyncServer = copy(endpoints = endpoints ++ ses)
+  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Id]], overrideOptions: NettySyncServerOptions): NettySyncServer =
+    copy(endpointsWithOptions = endpointsWithOptions :+ NettySyncServerEndpointListOverridenOptions(ses, overrideOptions))
 
-  def options(o: NettyIdServerOptions): NettyIdServer = copy(options = o)
-  def config(c: NettyConfig): NettyIdServer = copy(config = c)
-  def modifyConfig(f: NettyConfig => NettyConfig): NettyIdServer = config(f(config))
+  def options(o: NettySyncServerOptions): NettySyncServer = copy(options = o)
+  def config(c: NettyConfig): NettySyncServer = copy(config = c)
+  def modifyConfig(f: NettyConfig => NettyConfig): NettySyncServer = config(f(config))
 
-  def host(hostname: String): NettyIdServer = modifyConfig(_.host(hostname))
+  def host(hostname: String): NettySyncServer = modifyConfig(_.host(hostname))
 
-  def port(p: Int): NettyIdServer = modifyConfig(_.port(p))
+  def port(p: Int): NettySyncServer = modifyConfig(_.port(p))
 
-  def start()(using Ox): NettyIdServerBinding =
+  def start()(using Ox): NettySyncServerBinding =
     startUsingSocketOverride[InetSocketAddress](None) match {
       case (socket, stop) =>
-        NettyIdServerBinding(socket, stop)
+        NettySyncServerBinding(socket, stop)
     }
 
-  private[netty] def start(routes: List[Route[Id]]): NettyIdServerBinding =
+  private[netty] def start(routes: List[Route[Id]]): NettySyncServerBinding =
     startUsingSocketOverride[InetSocketAddress](routes, None) match {
       case (socket, stop) =>
-        NettyIdServerBinding(socket, stop)
+        NettySyncServerBinding(socket, stop)
     }
 
-  def startUsingDomainSocket(path: Option[Path] = None)(using Ox): NettyIdDomainSocketBinding =
-    startUsingDomainSocket(path.getOrElse(Paths.get(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString)))
-
-  def startUsingDomainSocket(path: Path)(using Ox): NettyIdDomainSocketBinding =
+  def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
     startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile))) match {
       case (socket, stop) =>
-        NettyIdDomainSocketBinding(socket, stop)
+        NettySyncDomainSocketBinding(socket, stop)
     }
 
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) = {
-    val routes = NettyIdServerInterpreter(options).toRoute(endpoints) :: endpointsWithOptions.map(e =>
-      NettyIdServerInterpreter(e.overridenOptions).toRoute(e.ses)
+    val routes = NettySyncServerInterpreter(options).toRoute(endpoints) :: endpointsWithOptions.map(e =>
+      NettySyncServerInterpreter(e.overridenOptions).toRoute(e.ses)
     )
     startUsingSocketOverride(routes, socketOverride)
   }
@@ -186,22 +182,22 @@ case class NettyIdServer(
   }
 }
 
-object NettyIdServer {
-  def apply(): NettyIdServer = NettyIdServer(List.empty, List.empty, NettyIdServerOptions.default, NettyConfig.default)
+object NettySyncServer {
+  def apply(): NettySyncServer = NettySyncServer(List.empty, List.empty, NettySyncServerOptions.default, NettyConfig.default)
 
-  def apply(serverOptions: NettyIdServerOptions): NettyIdServer =
-    NettyIdServer(List.empty, List.empty, serverOptions, NettyConfig.default)
+  def apply(serverOptions: NettySyncServerOptions): NettySyncServer =
+    NettySyncServer(List.empty, List.empty, serverOptions, NettyConfig.default)
 
-  def apply(config: NettyConfig): NettyIdServer =
-    NettyIdServer(List.empty, List.empty, NettyIdServerOptions.default, config)
+  def apply(config: NettyConfig): NettySyncServer =
+    NettySyncServer(List.empty, List.empty, NettySyncServerOptions.default, config)
 
-  def apply(serverOptions: NettyIdServerOptions, config: NettyConfig): NettyIdServer =
-    NettyIdServer(List.empty, List.empty, serverOptions, config)
+  def apply(serverOptions: NettySyncServerOptions, config: NettyConfig): NettySyncServer =
+    NettySyncServer(List.empty, List.empty, serverOptions, config)
 }
-case class NettyIdServerBinding(localSocket: InetSocketAddress, stop: () => Unit) {
+case class NettySyncServerBinding(localSocket: InetSocketAddress, stop: () => Unit) {
   def hostName: String = localSocket.getHostName
   def port: Int = localSocket.getPort
 }
-case class NettyIdDomainSocketBinding(localSocket: DomainSocketAddress, stop: () => Unit) {
+case class NettySyncDomainSocketBinding(localSocket: DomainSocketAddress, stop: () => Unit) {
   def path: String = localSocket.path()
 }

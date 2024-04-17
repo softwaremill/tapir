@@ -11,20 +11,20 @@ import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, Serve
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync}
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
-trait NettyIdServerInterpreter {
-  def nettyServerOptions: NettyIdServerOptions
+trait NettySyncServerInterpreter {
+  def nettyServerOptions: NettySyncServerOptions
 
   /** Requires implicit supervision scope (Ox), because it needs to know in which scope it can start background forks in the Web Sockets
     * processor.
     */
   def toRoute(
-      ses: List[ServerEndpoint[OxStreams with WebSockets, Id]]
+      ses: List[ServerEndpoint[OxStreams & WebSockets, Id]]
   )(using Ox): IdRoute = {
     implicit val bodyListener: BodyListener[Id, NettyResponse] = new NettyBodyListener(RunAsync.Id)
     val serverInterpreter = new ServerInterpreter[OxStreams with WebSockets, Id, NettyResponse, OxStreams](
       FilterServerEndpoints(ses),
-      new NettyIdRequestBody(nettyServerOptions.createFile),
-      new NettyIdToResponseBody(RunAsync.Id),
+      new NettySyncRequestBody(nettyServerOptions.createFile),
+      new NettySyncToResponseBody(RunAsync.Id),
       RejectInterceptor.disableWhenSingleEndpoint(nettyServerOptions.interceptors, ses),
       nettyServerOptions.deleteFile
     )
@@ -41,10 +41,10 @@ trait NettyIdServerInterpreter {
   }
 }
 
-object NettyIdServerInterpreter {
-  def apply(serverOptions: NettyIdServerOptions = NettyIdServerOptions.default): NettyIdServerInterpreter = {
-    new NettyIdServerInterpreter {
-      override def nettyServerOptions: NettyIdServerOptions = serverOptions
+object NettySyncServerInterpreter {
+  def apply(serverOptions: NettySyncServerOptions = NettySyncServerOptions.default): NettySyncServerInterpreter = {
+    new NettySyncServerInterpreter {
+      override def nettyServerOptions: NettySyncServerOptions = serverOptions
     }
   }
 }

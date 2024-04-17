@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import sttp.model.Part
+import sttp.model.{Part, Uri}
 import sttp.tapir.Schema.{SName, Title}
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.{Configuration, Derived}
@@ -297,6 +297,8 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForBigInt: Schema[BigInt] = Schema(SInteger())
   implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SInteger())
   implicit val schemaForFile: Schema[TapirFile] = Schema(SBinary())
+  implicit val schemaForUri: Schema[Uri] = Schema(SString())
+    .encodedExample(Uri("https", "example.com"))
 
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption
   implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray

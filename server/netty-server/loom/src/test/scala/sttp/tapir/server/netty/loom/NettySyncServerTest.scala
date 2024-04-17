@@ -23,15 +23,15 @@ import sttp.tapir.tests.*
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.Future
 
-class NettyIdServerTest extends AsyncFunSuite with BeforeAndAfterAll {
+class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
   val (backend, stopBackend) = backendResource.allocated.unsafeRunSync()
   def testNameFilter: Option[String] = None // define to run a single test (temporarily for debugging)
   {
     val eventLoopGroup = new NioEventLoopGroup()
 
-    val interpreter = new NettyIdTestServerInterpreter(eventLoopGroup)
-    val createServerTest = new NettyIdCreateServerTest(backend, interpreter)
+    val interpreter = new NettySyncTestServerInterpreter(eventLoopGroup)
+    val createServerTest = new NettySyncCreateServerTest(backend, interpreter)
     val sleeper: Sleeper[Id] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
 
     val tests =
@@ -57,10 +57,10 @@ class NettyIdServerTest extends AsyncFunSuite with BeforeAndAfterAll {
   }
 }
 
-class NettyIdCreateServerTest(
+class NettySyncCreateServerTest(
     backend: SttpBackend[IO, Fs2Streams[IO] & WebSockets],
-    interpreter: NettyIdTestServerInterpreter
-) extends CreateServerTest[Id, OxStreams & WebSockets, NettyIdServerOptions, IdRoute] {
+    interpreter: NettySyncTestServerInterpreter
+) extends CreateServerTest[Id, OxStreams & WebSockets, NettySyncServerOptions, IdRoute] {
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -98,7 +98,9 @@ class NettyIdCreateServerTest(
       supervised {
         val binding = interpreter.scopedServerWithInterceptorsStop(e, interceptors, gracefulShutdownTimeout)
         val assertion: Assertion =
-          runTest(IO.blocking(binding.stop()))(backend, uri"http://localhost:${binding.port}").guarantee(IO(logger.info(s"Test completed on port ${binding.port}"))).unsafeRunSync()
+          runTest(IO.blocking(binding.stop()))(backend, uri"http://localhost:${binding.port}")
+            .guarantee(IO(logger.info(s"Test completed on port ${binding.port}")))
+            .unsafeRunSync()
         Future.successful(assertion)
       }
     }
@@ -110,12 +112,14 @@ class NettyIdCreateServerTest(
 
   override def testServer(name: String, rs: => NonEmptyList[IdRoute])(
       runTest: (SttpBackend[IO, Fs2Streams[IO] & WebSockets], Uri) => IO[Assertion]
-  ): Test = 
+  ): Test =
     Test(name) {
       supervised {
         val binding = interpreter.scopedServerWithRoutesStop(rs)
         val assertion: Assertion =
-          runTest(backend, uri"http://localhost:${binding.port}").guarantee(IO(logger.info(s"Test completed on port ${binding.port}"))).unsafeRunSync()
+          runTest(backend, uri"http://localhost:${binding.port}")
+            .guarantee(IO(logger.info(s"Test completed on port ${binding.port}")))
+            .unsafeRunSync()
         Future.successful(assertion)
       }
     }
@@ -127,7 +131,9 @@ class NettyIdCreateServerTest(
       supervised {
         val binding = interpreter.scopedServerWithStop(es)
         val assertion: Assertion =
-          runTest(backend, uri"http://localhost:${binding.port}").guarantee(IO(logger.info(s"Test completed on port ${binding.port}"))).unsafeRunSync()
+          runTest(backend, uri"http://localhost:${binding.port}")
+            .guarantee(IO(logger.info(s"Test completed on port ${binding.port}")))
+            .unsafeRunSync()
         Future.successful(assertion)
       }
     }

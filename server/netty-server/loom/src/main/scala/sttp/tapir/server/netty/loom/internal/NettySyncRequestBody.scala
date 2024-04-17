@@ -11,7 +11,7 @@ import sttp.tapir.server.netty.internal.NettyRequestBody
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
 import sttp.tapir.server.netty.loom.*
 
-private[loom] class NettyIdRequestBody(val createFile: ServerRequest => TapirFile) extends NettyRequestBody[Id, OxStreams] {
+private[loom] class NettySyncRequestBody(val createFile: ServerRequest => TapirFile) extends NettyRequestBody[Id, OxStreams] {
 
   override implicit val monad: MonadError[Id] = idMonad
   override val streams: capabilities.Streams[OxStreams] = OxStreams

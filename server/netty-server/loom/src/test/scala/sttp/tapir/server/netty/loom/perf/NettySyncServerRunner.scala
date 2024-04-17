@@ -2,9 +2,9 @@ package sttp.tapir.server.netty.loom.perf
 
 import ox.*
 import ox.channels.*
-import sttp.tapir.server.netty.loom.NettyIdServerOptions
-import sttp.tapir.server.netty.loom.NettyIdServerBinding
-import sttp.tapir.server.netty.loom.NettyIdServer
+import sttp.tapir.server.netty.loom.NettySyncServerOptions
+import sttp.tapir.server.netty.loom.NettySyncServerBinding
+import sttp.tapir.server.netty.loom.NettySyncServer
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.loom.Id
@@ -16,7 +16,7 @@ import sttp.capabilities.WebSockets
 import scala.concurrent.duration._
 import java.util.concurrent.locks.LockSupport
 
-object NettyIdServerRunner {
+object NettySyncServerRunner {
   val LargeInputSize = 5 * 1024L * 1024L
   val WebSocketSingleResponseLag = 100.millis
 
@@ -73,7 +73,7 @@ object NettyIdServerRunner {
                 sa.pipeTo(c)
               false
             case ChannelClosed.Error(r)       => c.errorSafe(r); false
-            case sa.Received(r: A @unchecked) => c.sendSafe(r).isValue 
+            case sa.Received(r: A @unchecked) => c.sendSafe(r).isValue
             case sa.Received(ChannelClosed)   => c.doneSafe(); false
             case sb.Received(ChannelClosed) =>
               if (sa.isClosedForReceive)
@@ -91,7 +91,7 @@ object NettyIdServerRunner {
     forkUnsupervised {
       in.drain()
     }
-    Source.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis()) 
+    Source.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis())
   }
 
   val wsEndpoint: Endpoint[Unit, Unit, Unit, OxStreams.Pipe[Long, Long], OxStreams with WebSockets] = wsBaseEndpoint
@@ -111,8 +111,8 @@ object NettyIdServerRunner {
     val declaredHost = "0.0.0.0"
 
     scoped {
-      val serverBinding: NettyIdServerBinding = useInScope(
-        NettyIdServer(NettyIdServerOptions.customiseInterceptors.options)
+      val serverBinding: NettySyncServerBinding = useInScope(
+        NettySyncServer(NettySyncServerOptions.customiseInterceptors.options)
           .port(declaredPort)
           .host(declaredHost)
           .addEndpoints(wsServerEndpoint :: endpoints)

@@ -12,18 +12,18 @@ import scala.concurrent.duration.FiniteDuration
 import ox.*
 import sttp.capabilities.WebSockets
 
-class NettyIdTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
-    extends TestServerInterpreter[Id, OxStreams with WebSockets, NettyIdServerOptions, IdRoute] {
+class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
+    extends TestServerInterpreter[Id, OxStreams with WebSockets, NettySyncServerOptions, IdRoute] {
   override def route(es: List[ServerEndpoint[OxStreams with WebSockets, Id]], interceptors: Interceptors): IdRoute = {
-    val serverOptions: NettyIdServerOptions = interceptors(NettyIdServerOptions.customiseInterceptors).options
+    val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
     scoped {
-      NettyIdServerInterpreter(serverOptions).toRoute(es)
+      NettySyncServerInterpreter(serverOptions).toRoute(es)
     }
   }
 
   def route(es: List[ServerEndpoint[OxStreams with WebSockets, Id]], interceptors: Interceptors)(using Ox): IdRoute = {
-    val serverOptions: NettyIdServerOptions = interceptors(NettyIdServerOptions.customiseInterceptors).options
-    NettyIdServerInterpreter(serverOptions).toRoute(es)
+    val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
+    NettySyncServerInterpreter(serverOptions).toRoute(es)
   }
 
   override def serverWithStop(
@@ -33,8 +33,8 @@ class NettyIdTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
-    val options = NettyIdServerOptions.default
-    val bind = IO.blocking(NettyIdServer(options, customizedConfig).start(routes.toList))
+    val options = NettySyncServerOptions.default
+    val bind = IO.blocking(NettySyncServer(options, customizedConfig).start(routes.toList))
 
     Resource
       .make(bind.map(b => (b.port, IO.blocking(b.stop())))) { case (_, stop) => stop }
@@ -43,34 +43,32 @@ class NettyIdTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
   def scopedServerWithRoutesStop(
       routes: NonEmptyList[IdRoute],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
-    )(using Ox): NettyIdServerBinding = 
+  )(using Ox): NettySyncServerBinding =
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
-    val options = NettyIdServerOptions.default
-    val interpreter = NettyIdServerInterpreter(options)
-    useInScope(NettyIdServer(options, customizedConfig).start(routes.toList))(_.stop())
+    val options = NettySyncServerOptions.default
+    useInScope(NettySyncServer(options, customizedConfig).start(routes.toList))(_.stop())
 
   def scopedServerWithInterceptorsStop(
-    endpoint: ServerEndpoint[OxStreams with WebSockets, Id],
-    interceptors: Interceptors = identity,
-    gracefulShutdownTimeout: Option[FiniteDuration] = None
-  )(using Ox): NettyIdServerBinding =
+      endpoint: ServerEndpoint[OxStreams with WebSockets, Id],
+      interceptors: Interceptors = identity,
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  )(using Ox): NettySyncServerBinding =
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
-    val options = interceptors(NettyIdServerOptions.customiseInterceptors).options
-    val interpreter = NettyIdServerInterpreter(options)
-    useInScope(NettyIdServer(customizedConfig).addEndpoint(endpoint, options).start())(_.stop())
+    val options = interceptors(NettySyncServerOptions.customiseInterceptors).options
+    useInScope(NettySyncServer(customizedConfig).addEndpoint(endpoint, options).start())(_.stop())
 
   def scopedServerWithStop(
-    endpoints: NonEmptyList[ServerEndpoint[OxStreams with WebSockets, Id]],
-    gracefulShutdownTimeout: Option[FiniteDuration] = None
-  )(using Ox): NettyIdServerBinding =
+      endpoints: NonEmptyList[ServerEndpoint[OxStreams with WebSockets, Id]],
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  )(using Ox): NettySyncServerBinding =
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
-    val options = NettyIdServerOptions.default
-    val interpreter = NettyIdServerInterpreter(options)
-    useInScope(NettyIdServer(options, customizedConfig).start(List(interpreter.toRoute(endpoints.toList))))(_.stop())
+    val options = NettySyncServerOptions.default
+    val interpreter = NettySyncServerInterpreter(options)
+    useInScope(NettySyncServer(options, customizedConfig).start(List(interpreter.toRoute(endpoints.toList))))(_.stop())
 }
