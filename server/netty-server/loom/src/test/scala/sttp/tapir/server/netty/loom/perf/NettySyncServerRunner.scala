@@ -57,38 +57,9 @@ object NettySyncServerRunner {
   }
 
   val wsBaseEndpoint = endpoint.get.in("ws" / "ts")
-  import ox.channels.ChannelClosedUnion.*
-
-  extension [A](sa: Source[A])
-    def concurrently[B](sb: Source[B])(using Ox): Source[A] =
-      val c = Channel.buffered[A](16)
-
-      fork {
-        repeatWhile {
-          selectSafe(sa.receiveClause, sb.receiveClause) match
-            case ChannelClosed.Done =>
-              if (sa.isClosedForReceive)
-                c.doneSafe()
-              else
-                sa.pipeTo(c)
-              false
-            case ChannelClosed.Error(r)       => c.errorSafe(r); false
-            case sa.Received(r: A @unchecked) => c.sendSafe(r).isValue
-            case sa.Received(ChannelClosed)   => c.doneSafe(); false
-            case sb.Received(ChannelClosed) =>
-              if (sa.isClosedForReceive)
-                c.doneSafe()
-              else
-                sa.pipeTo(c)
-              false
-            case sb.Received(_: B @unchecked) => true
-        }
-      }
-      c
 
   val wsPipe: OxStreams.Pipe[Long, Long] = Ox ?=> { (in: Source[Long]) =>
-    // Source.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis()).zip(in).map(_._1)
-    forkUnsupervised {
+    forkPlain {
       in.drain()
     }
     Source.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis())
@@ -110,7 +81,7 @@ object NettySyncServerRunner {
     val declaredPort = 8080
     val declaredHost = "0.0.0.0"
 
-    scoped {
+    supervised {
       val serverBinding: NettySyncServerBinding = useInScope(
         NettySyncServer(NettySyncServerOptions.customiseInterceptors.options)
           .port(declaredPort)

@@ -11,7 +11,7 @@ private[loom] class ChannelSubscription[A](
     oxDispatcher: OxDispatcher,
     subscriber: Subscriber[? >: A],
     source: Source[A],
-    closeCh: () => Unit,
+    closeCh: () => Unit
 ) extends Subscription {
   private val demand: AtomicLong = AtomicLong(0L)
   private val isCompleted = new AtomicBoolean(false)
@@ -33,13 +33,10 @@ private[loom] class ChannelSubscription[A](
       oxDispatcher.runAsync(() => {
         var chunkDemand: Long = demand.getAndSet(0L)
         while (chunkDemand > 0 && !isCompleted.get()) {
-          source.receiveSafe() match {
+          source.receiveOrClosed() match {
             case ChannelClosed.Done =>
               isCompleted.set(true)
               subscriber.onComplete()
-            case ChannelClosed.Error(e) =>
-              isCompleted.set(true)
-              subscriber.onError(e)
             case elem: A @unchecked =>
               chunkDemand -= 1
               subscriber.onNext(elem)

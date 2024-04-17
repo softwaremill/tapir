@@ -25,7 +25,7 @@ object Versions {
   val json4s = "4.0.7"
   val metrics4Scala = "4.2.9"
   val nettyReactiveStreams = "3.0.2"
-  val ox = "0.0.25"
+  val ox = "0.0.26"
   val reactiveStreams = "1.0.4"
   val sprayJson = "1.3.6"
   val scalaCheck = "1.17.0"

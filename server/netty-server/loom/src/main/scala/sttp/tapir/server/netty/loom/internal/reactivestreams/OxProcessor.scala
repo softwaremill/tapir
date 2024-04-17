@@ -29,13 +29,13 @@ private[loom] class OxProcessor[A, B](
   override def onError(reason: Throwable): Unit =
     // As per rule 2.13, we need to throw a `java.lang.NullPointerException` if the `Throwable` is `null`
     if (reason == null) throw null
-    val _ = channel.errorSafe(reason)
+    val _ = channel.error(reason)
 
   override def onNext(a: A): Unit =
     if (a == null) {
       throw new NullPointerException("Element cannot be null") // Rule 2.13
     } else {
-      channel.sendSafe(a) match {
+      channel.sendOrClosed(a) match {
         case () => ()
         case _: ChannelClosed =>
           done()
@@ -54,10 +54,10 @@ private[loom] class OxProcessor[A, B](
     }
 
   override def onComplete(): Unit =
-    val _ = channel.doneSafe()
+    val _ = channel.done()
 
   def done(): Unit =
-    val _ = channel.doneSafe()
+    val _ = channel.done()
     if (subscription != null)
       try {
         subscription.cancel()
@@ -77,7 +77,7 @@ private[loom] class OxProcessor[A, B](
     // Applying the user-provided pipe
     val outgoingResponses: Source[B] = oxDispatcher.transformSource[A, B](pipeline, incomingRequests)
     val subscription =
-      new ChannelSubscription(oxDispatcher, wrapSubscriber(subscriber), outgoingResponses, () => { val _ = channel.doneSafe() })
+      new ChannelSubscription(oxDispatcher, wrapSubscriber(subscriber), outgoingResponses, () => { val _ = channel.done() })
     subscriber.onSubscribe(subscription)
 
   def getAndRequest[B]: Ox ?=> Source[B] => Source[B] = { s =>

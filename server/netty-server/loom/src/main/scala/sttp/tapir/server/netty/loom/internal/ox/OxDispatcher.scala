@@ -7,7 +7,7 @@ import ox.channels.Actor
 private[loom] class OxDispatcher()(using ox: Ox) {
   private class Runner(using Ox) {
     def runAsync(block: () => Unit): Unit =
-      forkUnsupervised(block()).discard
+      forkPlain(block()).discard
 
     def transformSource[A, B](f: Ox ?=> Source[A] => Source[B], in: Source[A]): Source[B] = f(in)
   }

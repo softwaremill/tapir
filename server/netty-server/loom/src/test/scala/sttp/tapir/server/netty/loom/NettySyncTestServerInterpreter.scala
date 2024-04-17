@@ -16,7 +16,7 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     extends TestServerInterpreter[Id, OxStreams with WebSockets, NettySyncServerOptions, IdRoute] {
   override def route(es: List[ServerEndpoint[OxStreams with WebSockets, Id]], interceptors: Interceptors): IdRoute = {
     val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
-    scoped {
+    supervised {
       NettySyncServerInterpreter(serverOptions).toRoute(es)
     }
   }
