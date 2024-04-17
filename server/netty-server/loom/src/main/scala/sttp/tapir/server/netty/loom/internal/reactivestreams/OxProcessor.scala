@@ -7,7 +7,6 @@ import org.reactivestreams.Subscription
 import org.reactivestreams.Processor
 import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.loom.OxStreams
-import java.util.concurrent.Semaphore
 
 /** A reactive Processor, which is both a Publisher and a Subscriber
   *
