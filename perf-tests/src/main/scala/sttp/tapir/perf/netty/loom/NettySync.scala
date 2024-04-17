@@ -8,15 +8,15 @@ import sttp.tapir.server.ServerEndpoint
 
 object Tapir extends Endpoints
 
-object NettyId {
+object NettySync {
 
   def runServer(endpoints: List[ServerEndpoint[Any, Id]], withServerLog: Boolean = false): IO[ServerRunner.KillSwitch] = {
     val declaredPort = Port
     val declaredHost = "0.0.0.0"
-    val serverOptions = buildOptions(NettyIdServerOptions.customiseInterceptors, withServerLog)
+    val serverOptions = buildOptions(NettySyncServerOptions.customiseInterceptors, withServerLog)
     // Starting netty server
-    val serverBinding: NettyIdServerBinding =
-      NettyIdServer(serverOptions)
+    val serverBinding: NettySyncServerBinding =
+      NettySyncServer(serverOptions)
         .port(declaredPort)
         .host(declaredHost)
         .addEndpoints(endpoints)
@@ -25,8 +25,8 @@ object NettyId {
   }
 }
 
-object TapirServer extends ServerRunner { override def start = NettyId.runServer(Tapir.genEndpointsId(1)) }
-object TapirMultiServer extends ServerRunner { override def start = NettyId.runServer(Tapir.genEndpointsId(128)) }
+object TapirServer extends ServerRunner { override def start = NettySync.runServer(Tapir.genEndpointsId(1)) }
+object TapirMultiServer extends ServerRunner { override def start = NettySync.runServer(Tapir.genEndpointsId(128)) }
 object TapirInterceptorMultiServer extends ServerRunner {
-  override def start = NettyId.runServer(Tapir.genEndpointsId(128), withServerLog = true)
+  override def start = NettySync.runServer(Tapir.genEndpointsId(128), withServerLog = true)
 }

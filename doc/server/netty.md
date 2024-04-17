@@ -19,7 +19,7 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 Then, use:
 
 - `NettyFutureServer().addEndpoints` to expose `Future`-based server endpoints.
-- `NettyIdServer().addEndpoints` to expose `Loom`-based server endpoints.
+- `NettySyncServer().addEndpoints` to expose `Loom`-based server endpoints.
 - `NettyCatsServer().addEndpoints` to expose `F`-based server endpoints, where `F` is any cats-effect supported effect. [Streaming](../endpoint/streaming.md) request and response bodies is supported with fs2.
 - `NettyZioServer().addEndpoints` to expose `ZIO`-based server endpoints, where `R` represents ZIO requirements supported effect. Streaming is supported with ZIO Streams.
 
@@ -48,7 +48,7 @@ The `tapir-netty-server-loom` server uses `Id[T]` as its wrapper effect for comp
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.netty.loom.{Id, NettyIdServer, NettyIdServerBinding}
+import sttp.tapir.server.netty.loom.{Id, NettySyncServer, NettySyncServerBinding}
 
 val helloWorld = endpoint
   .get
@@ -56,8 +56,8 @@ val helloWorld = endpoint
   .out(stringBody)
   .serverLogicSuccess[Id](name => s"Hello, $name!")
 
-val binding: NettyIdServerBinding =
-  NettyIdServer().addEndpoint(helloWorld).start()
+val binding: NettySyncServerBinding =
+  NettySyncServer().addEndpoint(helloWorld).start()
 ```
 
 ## Configuration
