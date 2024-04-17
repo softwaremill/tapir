@@ -3,49 +3,35 @@ package sttp.tapir.server.netty.loom.internal.reactivestreams
 import org.reactivestreams.{Subscriber, Subscription}
 import ox.*
 import ox.channels.*
-import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
-
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 
 private[loom] class ChannelSubscription[A](
-    oxDispatcher: OxDispatcher,
     subscriber: Subscriber[? >: A],
-    source: Source[A],
-    closeCh: () => Unit
+    source: Source[A]
 ) extends Subscription {
-  private val demand: AtomicLong = AtomicLong(0L)
-  private val isCompleted = new AtomicBoolean(false)
-  private val readingInProgress = new AtomicBoolean(false)
+  private val demands: Channel[Long] = Channel.unlimited[Long]
+
+  def runBlocking() =
+    demands.foreach { demand =>
+      for (_ <- 0L until demand) {
+        source.receiveOrClosed() match {
+          case ChannelClosed.Done =>
+            demands.doneOrClosed().discard
+            subscriber.onComplete()
+          case ChannelClosed.Error(e) =>
+            demands.doneOrClosed().discard
+            subscriber.onError(e)
+          case elem: A @unchecked =>
+            subscriber.onNext(elem)
+        }
+      }
+    }
 
   override def cancel(): Unit =
-    isCompleted.set(true)
-    closeCh()
+    demands.doneOrClosed().discard
 
   override def request(n: Long): Unit =
     if (n <= 0) subscriber.onError(new IllegalArgumentException("§3.9: n must be greater than 0"))
     else {
-      demand.addAndGet(n)
-      readNext()
-    }
-
-  def readNext(): Unit =
-    if (demand.get() > 0 && !isCompleted.get() && readingInProgress.compareAndSet(false, true)) {
-      oxDispatcher.runAsync(() => {
-        var chunkDemand: Long = demand.getAndSet(0L)
-        while (chunkDemand > 0 && !isCompleted.get()) {
-          source.receiveOrClosed() match {
-            case ChannelClosed.Done =>
-              isCompleted.set(true)
-              subscriber.onComplete()
-            case elem: A @unchecked =>
-              chunkDemand -= 1
-              subscriber.onNext(elem)
-          }
-        }
-        readingInProgress.set(false)
-        // can start a fork from within this current fork, but this is OK, the "parent" fork will finish while the "child" fork
-        // will run normally
-        readNext()
-      })
+      demands.send(n)
     }
 }

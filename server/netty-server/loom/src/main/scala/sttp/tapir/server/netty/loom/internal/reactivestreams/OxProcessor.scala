@@ -7,6 +7,7 @@ import org.reactivestreams.Subscription
 import org.reactivestreams.Processor
 import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.loom.OxStreams
+import java.util.concurrent.Semaphore
 
 /** A reactive Processor, which is both a Publisher and a Subscriber
   *
@@ -29,7 +30,7 @@ private[loom] class OxProcessor[A, B](
   override def onError(reason: Throwable): Unit =
     // As per rule 2.13, we need to throw a `java.lang.NullPointerException` if the `Throwable` is `null`
     if (reason == null) throw null
-    val _ = channel.error(reason)
+    channel.errorOrClosed(reason).discard
 
   override def onNext(a: A): Unit =
     if (a == null) {
@@ -38,7 +39,18 @@ private[loom] class OxProcessor[A, B](
       channel.sendOrClosed(a) match {
         case () => ()
         case _: ChannelClosed =>
-          done()
+          if (subscription != null)
+            try {
+              subscription.cancel()
+            } catch {
+              case t: Throwable => {
+                (new IllegalStateException(
+                  s"$subscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.",
+                  t
+                ))
+                  .printStackTrace(System.err)
+              }
+            }
           onError(new IllegalStateException("onNext called when the channel is closed"))
       }
     }
@@ -54,36 +66,16 @@ private[loom] class OxProcessor[A, B](
     }
 
   override def onComplete(): Unit =
-    val _ = channel.done()
-
-  def done(): Unit =
-    val _ = channel.done()
-    if (subscription != null)
-      try {
-        subscription.cancel()
-      } catch {
-        case t: Throwable => {
-          (new IllegalStateException(s"$subscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.", t))
-            .printStackTrace(System.err)
-        }
-      }
+    channel.doneOrClosed().discard
 
   override def subscribe(subscriber: Subscriber[? >: B]): Unit =
     if (subscriber == null) throw new NullPointerException("Subscriber cannot be null")
-    val internalSource = (channel: Source[A])
-    // Each time a request is read from the channel where we put it in onNext, we can ask for one more
-    val transformation: Ox ?=> Source[A] => Source[A] = getAndRequest[A]
-    val incomingRequests: Source[A] = oxDispatcher.transformSource[A, A](transformation, internalSource)
-    // Applying the user-provided pipe
-    val outgoingResponses: Source[B] = oxDispatcher.transformSource[A, B](pipeline, incomingRequests)
-    val subscription =
-      new ChannelSubscription(oxDispatcher, wrapSubscriber(subscriber), outgoingResponses, () => { val _ = channel.done() })
-    subscriber.onSubscribe(subscription)
-
-  def getAndRequest[B]: Ox ?=> Source[B] => Source[B] = { s =>
-    s.map { e =>
-      subscription.request(1)
-      e
-    }
-  }
+    oxDispatcher.runAsync(_ ?=> {
+      val outgoingResponses: Source[B] = pipeline((channel: Source[A]).map { e =>
+        subscription.request(1); e
+      })
+      val channelSubscription = new ChannelSubscription(wrapSubscriber(subscriber), outgoingResponses)
+      subscriber.onSubscribe(channelSubscription)
+      channelSubscription.runBlocking()
+    })
 }
