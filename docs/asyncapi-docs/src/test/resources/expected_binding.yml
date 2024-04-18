@@ -16,16 +16,16 @@ channels:
       ws:
         method: POST
         query:
+          type: object
           required:
             - multiplier
-          type: object
           properties:
             multiplier:
               type: string
         headers:
+          type: object
           required:
             - Authorization
-          type: object
           properties:
             Authorization:
               type: string
@@ -33,9 +33,9 @@ components:
   schemas:
     Fruit:
       title: Fruit
+      type: object
       required:
         - f
-      type: object
       properties:
         f:
           type: string

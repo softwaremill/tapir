@@ -27,24 +27,24 @@ components:
   schemas:
     Error1Response:
       title: Error1Response
+      type: object
       required:
         - error
-      type: object
       properties:
         error:
           $ref: '#/components/schemas/ErrorCode'
     Error2Response:
       title: Error2Response
+      type: object
       required:
         - error
-      type: object
       properties:
         error:
           $ref: '#/components/schemas/ErrorCode'
     ErrorCode:
       title: ErrorCode
       type: integer
-      format: int32
       enum:
         - 1
         - 2
+      format: int32

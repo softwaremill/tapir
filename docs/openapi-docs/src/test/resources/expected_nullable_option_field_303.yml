@@ -29,13 +29,13 @@ components:
   schemas:
     ClassWithOptionField:
       title: ClassWithOptionField
+      type: object
       required:
       - requiredStringField
-      type: object
       properties:
         optionalIntField:
           type: integer
-          format: int32
           nullable: true
+          format: int32
         requiredStringField:
           type: string

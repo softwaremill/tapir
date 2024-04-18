@@ -59,10 +59,10 @@ components:
         - PEAR
     FruitWithEnum:
       title: FruitWithEnum
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string

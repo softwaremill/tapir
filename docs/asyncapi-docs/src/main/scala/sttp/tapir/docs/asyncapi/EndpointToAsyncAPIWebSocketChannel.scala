@@ -91,7 +91,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     else
       Some {
         ASchema(
-          `type` = Some(ASchemaType.Object),
+          `type` = Some(List(ASchemaType.Object)),
           required = fields.collect { case ((name, codec), _) if !codec.schema.isOptional => name }.toList,
           properties = fields.map { case ((name, _), schema) => name -> schema }.toListMap
         )

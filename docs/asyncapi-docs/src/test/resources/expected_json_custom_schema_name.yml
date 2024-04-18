@@ -19,9 +19,9 @@ components:
   schemas:
     sttp.tapir.tests.data.Fruit:
       title: sttp.tapir.tests.data.Fruit
+      type: object
       required:
         - f
-      type: object
       properties:
         f:
           type: string

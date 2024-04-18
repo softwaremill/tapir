@@ -22,10 +22,10 @@ components:
         $ref: '#/components/schemas/Person'
     Person:
       title: Person
+      type: object
       required:
         - name
         - age
-      type: object
       properties:
         name:
           type: string
