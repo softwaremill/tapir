@@ -1,6 +1,6 @@
 # Performance tests
 
-To work with performance tests, make sure you are running JDK 21+, and that the `ALSO_LOOM` environment variable is set, because the `perf-tests` project includes `tapir-netty-loom` and `tapir-nima`, which require Loom JDK feature to be available.
+To work with performance tests, make sure you are running JDK 21+, and that the `ALSO_LOOM` environment variable is set, because the `perf-tests` project includes `tapir-nima`, which require Loom JDK feature to be available.
 
 Performance tests are executed by running `PerfTestSuiteRunner`, which is a standard "Main" Scala application, configured by command line parameters. It executes a sequence of tests, where
 each test consist of:
@@ -122,6 +122,12 @@ For WebSockets we want to measure latency distribution, not throughput, so use g
 ```
 perfTests/runMain sttp.tapir.perf.apis.ServerRunner http4s.Tapir
 ```
+If you're testing `NettySyncServer` (tapir-server-netty-loom), its server runner is located elsewhere:
+```
+nettyServerLoom3/Test/runMain sttp.tapir.netty.loom.perf.NettySyncServerRunner
+```
+This is caused by `perf-tests` using Scala 2.13 forced by Gatling, while `NettySyncServer` is written excluisively for Scala 3.
+
 3. Run the simulation using Gatling's task:
 ```
 perfTests/Gatling/testOnly sttp.tapir.perf.WebSocketsSimulation 
