@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty.loom
 
-import _root_.ox.Ox
+import _root_.ox.*
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{Channel, EventLoopGroup}
@@ -19,10 +19,16 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 
+/** Unlike with most typical Tapir backends, adding endpoints doesn't immediatly convert them to a Route, because creating a Route requires
+  * providing an Ox concurrency scope. Instead, it stores Endpoints and defers route creation until server.start() is called. This internal
+  * [[NettySyncServerEndpointListOverriddenOptions]] is an intermediary helper type representing added endpoints, which have custom server
+  * options.
+  */
 private[loom] case class NettySyncServerEndpointListOverridenOptions(
     ses: List[ServerEndpoint[OxStreams & WebSockets, Id]],
     overridenOptions: NettySyncServerOptions
 )
+
 case class NettySyncServer(
     endpoints: List[ServerEndpoint[OxStreams & WebSockets, Id]],
     endpointsWithOptions: List[NettySyncServerEndpointListOverridenOptions],
@@ -46,10 +52,30 @@ case class NettySyncServer(
 
   def port(p: Int): NettySyncServer = modifyConfig(_.port(p))
 
+  /** Use only if you need to manage server lifecycle manually. Otherwise, see [[startAndWait]].
+    * @example
+    * {{{
+    *   import ox.*
+    *
+    *   supervised {
+    *     val serverBinding = useInScope(server.start())(_.stop())
+    *     println(s"Tapir is running on port ${serverBinding.port})
+    *     never
+    *   }
+    * }}}
+    * @return server binding, to be used to control stopping of the server or obtaining metadata like port.
+    */
   def start()(using Ox): NettySyncServerBinding =
     startUsingSocketOverride[InetSocketAddress](None) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop)
+
+  /** Starts the server and blocks current virtual thread. Ensures graceful shutdown if the running server gets interrupted. */
+  def startAndWait(): Unit =
+    supervised {
+      useInScope(start())(_.stop()).discard
+      never
+    }
 
   private[netty] def start(routes: List[Route[Id]]): NettySyncServerBinding =
     startUsingSocketOverride[InetSocketAddress](routes, None) match
@@ -61,19 +87,19 @@ case class NettySyncServer(
       case (socket, stop) =>
         NettySyncDomainSocketBinding(socket, stop)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) = 
+  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) =
     val routes = NettySyncServerInterpreter(options).toRoute(endpoints) :: endpointsWithOptions.map(e =>
       NettySyncServerInterpreter(e.overridenOptions).toRoute(e.ses)
     )
     startUsingSocketOverride(routes, socketOverride)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](routes: List[Route[Id]], socketOverride: Option[SA]): (SA, () => Unit) = 
+  private def startUsingSocketOverride[SA <: SocketAddress](routes: List[Route[Id]], socketOverride: Option[SA]): (SA, () => Unit) =
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     val route = Route.combine(routes)
 
     def unsafeRunF(
         callToExecute: () => Id[ServerResponse[NettyResponse]]
-    ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) = 
+    ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
       val scalaPromise = Promise[ServerResponse[NettyResponse]]()
       val jFuture: JFuture[?] = executor.submit(new Runnable {
         override def run(): Unit = try {
@@ -91,7 +117,7 @@ case class NettySyncServer(
           Future.unit
         }
       )
-    
+
     val eventExecutor = new DefaultEventExecutor()
     val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
@@ -126,7 +152,7 @@ case class NettySyncServer(
       channelGroup: ChannelGroup,
       startNanos: Long,
       gracefulShutdownTimeoutNanos: Option[Long]
-  ): Unit = 
+  ): Unit =
     while !channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos) do Thread.sleep(100)
     val _ = channelGroup.close().get()
 
@@ -137,7 +163,7 @@ case class NettySyncServer(
       eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Unit = 
+  ): Unit =
     isShuttingDown.set(true)
     waitForClosedChannels(
       channelGroup,
@@ -155,7 +181,7 @@ case class NettySyncServer(
       eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Unit = 
+  ): Unit =
     isShuttingDown.set(true)
     waitForClosedChannels(
       channelGroup,
@@ -165,7 +191,6 @@ case class NettySyncServer(
     if config.shutdownEventLoopGroupOnClose then
       val _ = eventLoopGroup.shutdownGracefully().get()
       val _ = eventExecutor.shutdownGracefully().get()
-
 
 object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(List.empty, List.empty, NettySyncServerOptions.default, NettyConfig.default)

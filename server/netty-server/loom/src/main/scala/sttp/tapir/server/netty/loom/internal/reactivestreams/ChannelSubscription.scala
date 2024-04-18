@@ -4,6 +4,11 @@ import org.reactivestreams.{Subscriber, Subscription}
 import ox.*
 import ox.channels.*
 
+/** Can be used together with an [[OxProcessor]] to read from a Source when there's demand.
+  *
+  * @param subscriber
+  * @param source
+  */
 private[loom] class ChannelSubscription[A](
     subscriber: Subscriber[? >: A],
     source: Source[A]
@@ -14,7 +19,7 @@ private[loom] class ChannelSubscription[A](
     demands.foreach { demand =>
       var i = 0L
       while (i < demand)
-        source.receiveOrClosed() match 
+        source.receiveOrClosed() match
           case ChannelClosed.Done =>
             demands.doneOrClosed().discard
             i = demand // break early

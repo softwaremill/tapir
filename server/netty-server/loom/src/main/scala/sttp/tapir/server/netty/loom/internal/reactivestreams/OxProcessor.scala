@@ -23,7 +23,9 @@ private[loom] class OxProcessor[A, B](
     pipeline: OxStreams.Pipe[A, B],
     wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B]
 ) extends Processor[A, B]:
-  @volatile private var subscription: Subscription = _
+  // Incoming requests are read from this subscription into an Ox Channel[A]
+  @volatile private var requestsSubscription: Subscription = _
+  // An internal channel for holding incoming requests (`A`), will be wrapped with user's pipeline to produce responses (`B`)
   private val channel = Channel.buffered[A](1)
 
   override def onError(reason: Throwable): Unit =
@@ -42,9 +44,9 @@ private[loom] class OxProcessor[A, B](
 
   override def onSubscribe(s: Subscription): Unit =
     if s == null then throw new NullPointerException("Subscription cannot be null")
-    else if subscription != null then s.cancel() // Rule 2.5: if onSubscribe is called twice, must cancel the second subscription
+    else if requestsSubscription != null then s.cancel() // Rule 2.5: if onSubscribe is called twice, must cancel the second subscription
     else
-      subscription = s
+      requestsSubscription = s
       s.request(1)
 
   override def onComplete(): Unit =
@@ -53,28 +55,29 @@ private[loom] class OxProcessor[A, B](
   override def subscribe(subscriber: Subscriber[? >: B]): Unit =
     if subscriber == null then throw new NullPointerException("Subscriber cannot be null")
     val wrappedSubscriber = wrapSubscriber(subscriber)
-    oxDispatcher.runAsync {
-      supervised {
+    supervised { // runAsync fork interruption will be limited to this scope
+      oxDispatcher.runAsync {
         val outgoingResponses: Source[B] = pipeline((channel: Source[A]).map { e =>
-          subscription.request(1); e
+          requestsSubscription.request(1)
+          e
         })
         val channelSubscription = new ChannelSubscription(wrappedSubscriber, outgoingResponses)
         subscriber.onSubscribe(channelSubscription)
-        channelSubscription.runBlocking()
+        channelSubscription.runBlocking() // run the main loop which reads from the channel if there's demand
+      } { error =>
+        error.printStackTrace(System.err)
+        wrappedSubscriber.onError(error)
+        onError(error)
       }
-    } { error =>
-      error.printStackTrace(System.err)
-      wrappedSubscriber.onError(error)
-      onError(error)
     }
 
   private def cancelSubscription() =
-    if subscription != null then
-      try subscription.cancel()
+    if requestsSubscription != null then
+      try requestsSubscription.cancel()
       catch
         case t: Throwable =>
           (new IllegalStateException(
-            s"$subscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.",
+            s"$requestsSubscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.",
             t
           ))
             .printStackTrace(System.err)
