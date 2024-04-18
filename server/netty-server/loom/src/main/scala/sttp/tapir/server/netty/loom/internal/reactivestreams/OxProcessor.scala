@@ -55,20 +55,18 @@ private[loom] class OxProcessor[A, B](
   override def subscribe(subscriber: Subscriber[? >: B]): Unit =
     if subscriber == null then throw new NullPointerException("Subscriber cannot be null")
     val wrappedSubscriber = wrapSubscriber(subscriber)
-    supervised { // runAsync fork interruption will be limited to this scope
-      oxDispatcher.runAsync {
-        val outgoingResponses: Source[B] = pipeline((channel: Source[A]).map { e =>
-          requestsSubscription.request(1)
-          e
-        })
-        val channelSubscription = new ChannelSubscription(wrappedSubscriber, outgoingResponses)
-        subscriber.onSubscribe(channelSubscription)
-        channelSubscription.runBlocking() // run the main loop which reads from the channel if there's demand
-      } { error =>
-        error.printStackTrace(System.err)
-        wrappedSubscriber.onError(error)
-        onError(error)
-      }
+    oxDispatcher.runAsync {
+      val outgoingResponses: Source[B] = pipeline((channel: Source[A]).map { e =>
+        requestsSubscription.request(1)
+        e
+      })
+      val channelSubscription = new ChannelSubscription(wrappedSubscriber, outgoingResponses)
+      subscriber.onSubscribe(channelSubscription)
+      channelSubscription.runBlocking() // run the main loop which reads from the channel if there's demand
+    } { error =>
+      error.printStackTrace(System.err)
+      wrappedSubscriber.onError(error)
+      onError(error)
     }
 
   private def cancelSubscription() =

@@ -23,23 +23,23 @@ private[loom] object OxSourceWebSocketProcessor {
       o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
       ctx: ChannelHandlerContext
   ): Processor[WebSocketFrame, WebSocketFrame] = {
-    val frame2FramePipe: OxStreams.Pipe[WebSocketFrame, WebSocketFrame] = Ox ?=>
+    val frame2FramePipe: OxStreams.Pipe[WebSocketFrame, WebSocketFrame] =
       (source: Source[WebSocketFrame]) => {
         pipe(
           source
-            .map { f =>
+            .mapAsView { f =>
               val sttpFrame = nettyFrameToFrame(f)
               f.release()
               sttpFrame
             } // TODO concatenate frames
-            .map(f =>
+            .mapAsView(f =>
               o.requests.decode(f) match {
                 case failure: DecodeResult.Failure         => throw new WebSocketFrameDecodeFailure(f, failure)
                 case x: DecodeResult.Value[REQ] @unchecked => x.v
               }
             )
         )
-          .map(r => frameToNettyFrame(o.responses.encode(r)))
+          .mapAsView(r => frameToNettyFrame(o.responses.encode(r)))
       }
     // We need this kind of interceptor to make Netty reply correctly to closed channel or error
     def wrapSubscriberWithNettyCallback[B](sub: Subscriber[? >: B]): Subscriber[? >: B] = new Subscriber[B] {
