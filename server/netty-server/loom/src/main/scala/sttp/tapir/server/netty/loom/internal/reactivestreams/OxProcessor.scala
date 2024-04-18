@@ -64,7 +64,6 @@ private[loom] class OxProcessor[A, B](
       subscriber.onSubscribe(channelSubscription)
       channelSubscription.runBlocking() // run the main loop which reads from the channel if there's demand
     } { error =>
-      error.printStackTrace(System.err)
       wrappedSubscriber.onError(error)
       onError(error)
     }

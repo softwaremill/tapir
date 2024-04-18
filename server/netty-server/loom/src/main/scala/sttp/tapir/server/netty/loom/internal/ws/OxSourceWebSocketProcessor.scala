@@ -1,20 +1,19 @@
 package sttp.tapir.server.netty.loom.internal.ws
 
 import io.netty.channel.ChannelHandlerContext
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame
-import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus
-import io.netty.handler.codec.http.websocketx.WebSocketFrame
-import org.reactivestreams.Processor
-import org.reactivestreams.Subscriber
-import org.reactivestreams.Subscription
+import io.netty.handler.codec.http.websocketx.{CloseWebSocketFrame, WebSocketCloseStatus, WebSocketFrame}
+import org.reactivestreams.{Processor, Subscriber, Subscription}
+import org.slf4j.LoggerFactory
 import ox.*
-import ox.channels.Source
+import ox.channels.{ChannelClosedException, Source}
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters._
 import sttp.tapir.server.netty.loom.OxStreams
 import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.loom.internal.reactivestreams.OxProcessor
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
+
+import java.io.IOException
 
 private[loom] object OxSourceWebSocketProcessor {
   def apply[REQ, RESP](
@@ -43,9 +42,16 @@ private[loom] object OxSourceWebSocketProcessor {
       }
     // We need this kind of interceptor to make Netty reply correctly to closed channel or error
     def wrapSubscriberWithNettyCallback[B](sub: Subscriber[? >: B]): Subscriber[? >: B] = new Subscriber[B] {
+      private val logger = LoggerFactory.getLogger(getClass.getName)
       override def onSubscribe(s: Subscription): Unit = sub.onSubscribe(s)
       override def onNext(t: B): Unit = sub.onNext(t)
       override def onError(t: Throwable): Unit =
+        t match
+          case ChannelClosedException.Error(e: IOException) =>
+            // Connection reset?
+            logger.info("Web Socket channel closed abnormally", e)
+          case e =>
+            logger.error("Web Socket channel closed abnormally", e)
         val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, "Internal Server Error"))
         sub.onError(t)
       override def onComplete(): Unit =
