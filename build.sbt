@@ -250,7 +250,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   awsCdk.projectRefs
 
 def buildWithLoom(project: String): Boolean =
-  project.contains("Loom") || project.contains("nima") || project.contains("perfTests") || project.toString == ("examples3")
+  project.contains("Loom") || project.contains("nima") || project.contains("perfTests") || project.contains("examples3")
 
 lazy val allAggregates: Seq[ProjectReference] = {
   val filteredByNative = if (sys.env.isDefinedAt("STTP_NATIVE")) {
