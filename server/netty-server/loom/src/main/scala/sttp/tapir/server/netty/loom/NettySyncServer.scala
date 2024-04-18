@@ -52,9 +52,9 @@ case class NettySyncServer(
 
   def port(p: Int): NettySyncServer = modifyConfig(_.port(p))
 
-  /** Use only if you need to manage server lifecycle manually. Otherwise, see [[startAndWait]].
+  /** Use only if you need to manage server lifecycle or concurrency scope manually. Otherwise, see [[startAndWait]].
     * @example
-    * {{{
+    *   {{{
     *   import ox.*
     *
     *   supervised {
@@ -62,15 +62,18 @@ case class NettySyncServer(
     *     println(s"Tapir is running on port ${serverBinding.port})
     *     never
     *   }
-    * }}}
-    * @return server binding, to be used to control stopping of the server or obtaining metadata like port.
+    *   }}}
+    * @return
+    *   server binding, to be used to control stopping of the server or obtaining metadata like port.
     */
   def start()(using Ox): NettySyncServerBinding =
     startUsingSocketOverride[InetSocketAddress](None) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop)
 
-  /** Starts the server and blocks current virtual thread. Ensures graceful shutdown if the running server gets interrupted. */
+  /** Starts the server and blocks current virtual thread. Ensures graceful shutdown if the running server gets interrupted. Use [[start]]
+    * if you need to manually control concurrency scope or server lifecycle.
+    */
   def startAndWait(): Unit =
     supervised {
       useInScope(start())(_.stop()).discard

@@ -14,7 +14,6 @@ import sttp.tapir.server.netty.loom.OxStreams
 import sttp.tapir.Endpoint
 import sttp.capabilities.WebSockets
 import scala.concurrent.duration._
-import java.util.concurrent.locks.LockSupport
 
 object NettySyncServerRunner {
   val LargeInputSize = 5 * 1024L * 1024L
@@ -58,8 +57,8 @@ object NettySyncServerRunner {
 
   val wsBaseEndpoint = endpoint.get.in("ws" / "ts")
 
-  val wsPipe: OxStreams.Pipe[Long, Long] = Ox ?=> { (in: Source[Long]) =>
-    forkPlain {
+  val wsPipe: OxStreams.Pipe[Long, Long] = { in =>
+    fork {
       in.drain()
     }
     Source.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis())
