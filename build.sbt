@@ -249,6 +249,9 @@ lazy val rawAllAggregates = core.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
 
+def buildWithLoom(project: String): Boolean =
+  project.contains("Loom") || project.contains("nima") || project.contains("perfTests") || project.toString == ("examples3")
+
 lazy val allAggregates: Seq[ProjectReference] = {
   val filteredByNative = if (sys.env.isDefinedAt("STTP_NATIVE")) {
     println("[info] STTP_NATIVE defined, including native in the aggregate projects")
@@ -259,13 +262,13 @@ lazy val allAggregates: Seq[ProjectReference] = {
   }
   if (sys.env.isDefinedAt("ONLY_LOOM")) {
     println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(p => (p.toString.contains("Loom") || p.toString.contains("nima") || p.toString.contains("perfTests")))
+    filteredByNative.filter(p => buildWithLoom(p.toString))
   } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
     println("[info] ALSO_LOOM defined, including also loom-based projects")
     filteredByNative
   } else {
     println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(p => (p.toString.contains("Loom") || p.toString.contains("nima") || p.toString.contains("perfTests")))
+    filteredByNative.filterNot(p => buildWithLoom(p.toString))
   }
 
 }
