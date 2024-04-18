@@ -29,15 +29,15 @@ components:
       properties:
         fruits:
           type: array
+          minItems: 1
           items:
             $ref: '#/components/schemas/ValidFruitAmount'
-          minItems: 1
     ValidFruitAmount:
       title: ValidFruitAmount
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string

@@ -17,10 +17,10 @@ components:
   schemas:
     FruitAmount:
       title: FruitAmount
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string
@@ -33,6 +33,6 @@ components:
       properties:
         data:
           type: array
+          uniqueItems: true
           items:
             $ref: '#/components/schemas/FruitAmount'
-          uniqueItems: true

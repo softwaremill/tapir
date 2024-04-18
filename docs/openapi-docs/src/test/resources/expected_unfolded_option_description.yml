@@ -25,17 +25,17 @@ components:
   schemas:
     FruitAmount:
       title: FruitAmount
+      description: Amount of fruits
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string
         amount:
           type: integer
           format: int32
-      description: Amount of fruits
     ObjectWithOption:
       title: ObjectWithOption
       type: object

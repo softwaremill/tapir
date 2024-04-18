@@ -29,9 +29,9 @@ components:
   schemas:
     FruitData:
       title: FruitData
+      type: object
       required:
         - data
-      type: object
       properties:
         data:
           type: string

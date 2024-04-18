@@ -17,10 +17,10 @@ components:
   schemas:
     ColorValue:
       title: ColorValue
+      type: object
       required:
         - color
         - value
-      type: object
       properties:
         color:
           type: string
