@@ -31,13 +31,13 @@ components:
           $ref: '#/components/schemas/Nested'
     Nested:
       title: Nested
+      default:
+        nestedValue: foo
+      examples:
+      - nestedValue: foo
+      type: object
       required:
       - nestedValue
-      type: object
       properties:
         nestedValue:
           type: string
-      default:
-        nestedValue: foo
-      example:
-        nestedValue: foo

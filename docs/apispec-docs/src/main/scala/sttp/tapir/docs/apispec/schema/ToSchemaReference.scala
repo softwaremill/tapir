@@ -19,7 +19,7 @@ private[schema] class ToSchemaReference(
       // the differently customised properties are reset to their default values in ToKeyedSchemas (#1203)
       if (originalSchema.description != schema.description) result = result.copy(description = schema.description)
       if (originalSchema.default != schema.default) result = result.copy(default = tDefaultToADefault(schema))
-      if (originalSchema.encodedExample != schema.encodedExample) result = result.copy(example = tExampleToAExample(schema))
+      if (originalSchema.encodedExample != schema.encodedExample) result = result.copy(examples = tExampleToAExample(schema).map(List(_)))
       if (originalSchema.deprecated != schema.deprecated && schema.deprecated) result = result.copy(deprecated = Some(schema.deprecated))
       if (originalSchema.attributes.get(Title.Attribute) != schema.attributes.get(Title.Attribute))
         result = result.copy(title = schema.attributes.get(Title.Attribute).map(_.value))

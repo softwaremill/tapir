@@ -47,17 +47,17 @@ components:
   schemas:
     TriggerRequest:
       title: TriggerRequest
+      type: object
       required:
       - callbackUrl
-      type: object
       properties:
         callbackUrl:
           type: string
     CallbackRequest:
       title: CallbackRequest
+      type: object
       required:
       - answer
-      type: object
       properties:
         answer:
           type: string

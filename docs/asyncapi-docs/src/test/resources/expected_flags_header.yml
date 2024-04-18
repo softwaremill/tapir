@@ -16,14 +16,14 @@ channels:
       ws:
         method: GET
         headers:
+          type: object
           required:
           - Test
-          type: object
           properties:
             Test:
-              type: string
               description: Test token
               deprecated: true
+              type: string
 components:
   messages:
     string:

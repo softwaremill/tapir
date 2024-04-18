@@ -28,6 +28,7 @@ package object apispec {
 
   private[docs] def exampleValue(v: String): ExampleValue = ExampleSingleValue(v)
   private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
+
   private[docs] def exampleValue(schema: Schema[_], raw: Any): Option[ExampleValue] = {
     // #3581: if there's a delimiter and the encoded value is a string, the codec will have produced a final
     // representation (with the delimiter applied), but in the docs we want to show the split values

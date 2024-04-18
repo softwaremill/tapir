@@ -20,12 +20,12 @@ channels:
           type: object
           properties:
             limit:
-              type: integer
               description: GET `limit` field description
+              type: integer
               format: int32
             offset:
-              type: integer
               description: GET `offset` field description
+              type: integer
               format: int32
 components:
   messages:

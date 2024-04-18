@@ -25,9 +25,9 @@ components:
   schemas:
     Fruit:
       title: Fruit
+      type: object
       required:
         - f
-      type: object
       properties:
         f:
           type: string
