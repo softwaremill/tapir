@@ -19,7 +19,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 
-case class NettySyncServerEndpointListOverridenOptions(
+private[loom] case class NettySyncServerEndpointListOverridenOptions(
     ses: List[ServerEndpoint[OxStreams & WebSockets, Id]],
     overridenOptions: NettySyncServerOptions
 )
@@ -28,7 +28,7 @@ case class NettySyncServer(
     endpointsWithOptions: List[NettySyncServerEndpointListOverridenOptions],
     options: NettySyncServerOptions,
     config: NettyConfig
-) {
+):
   private val executor = Executors.newVirtualThreadPerTaskExecutor()
 
   def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Id]): NettySyncServer = addEndpoints(List(se))
@@ -47,36 +47,33 @@ case class NettySyncServer(
   def port(p: Int): NettySyncServer = modifyConfig(_.port(p))
 
   def start()(using Ox): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](None) match {
+    startUsingSocketOverride[InetSocketAddress](None) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop)
-    }
 
   private[netty] def start(routes: List[Route[Id]]): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](routes, None) match {
+    startUsingSocketOverride[InetSocketAddress](routes, None) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop)
-    }
 
   def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
-    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile))) match {
+    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile))) match
       case (socket, stop) =>
         NettySyncDomainSocketBinding(socket, stop)
-    }
 
-  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) = {
+  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) = 
     val routes = NettySyncServerInterpreter(options).toRoute(endpoints) :: endpointsWithOptions.map(e =>
       NettySyncServerInterpreter(e.overridenOptions).toRoute(e.ses)
     )
     startUsingSocketOverride(routes, socketOverride)
-  }
-  private def startUsingSocketOverride[SA <: SocketAddress](routes: List[Route[Id]], socketOverride: Option[SA]): (SA, () => Unit) = {
+
+  private def startUsingSocketOverride[SA <: SocketAddress](routes: List[Route[Id]], socketOverride: Option[SA]): (SA, () => Unit) = 
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     val route = Route.combine(routes)
 
     def unsafeRunF(
         callToExecute: () => Id[ServerResponse[NettyResponse]]
-    ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) = {
+    ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) = 
       val scalaPromise = Promise[ServerResponse[NettyResponse]]()
       val jFuture: JFuture[?] = executor.submit(new Runnable {
         override def run(): Unit = try {
@@ -94,7 +91,7 @@ case class NettySyncServer(
           Future.unit
         }
       )
-    }
+    
     val eventExecutor = new DefaultEventExecutor()
     val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
@@ -112,34 +109,26 @@ case class NettySyncServer(
       eventLoopGroup,
       socketOverride
     )
-    try {
+    try
       channelIdFuture.sync()
       val channelId = channelIdFuture.channel()
       (
         channelId.localAddress().asInstanceOf[SA],
         () => stop(channelId, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
       )
-    } catch {
+    catch
       case NonFatal(startFailureCause) =>
-        try {
-          stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
-        } catch {
-          case NonFatal(recoveryFailureCause) => startFailureCause.addSuppressed(recoveryFailureCause)
-        }
+        try stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+        catch case NonFatal(recoveryFailureCause) => startFailureCause.addSuppressed(recoveryFailureCause)
         throw startFailureCause
-    }
-  }
 
   private def waitForClosedChannels(
       channelGroup: ChannelGroup,
       startNanos: Long,
       gracefulShutdownTimeoutNanos: Option[Long]
-  ): Unit = {
-    while (!channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos)) {
-      Thread.sleep(100)
-    }
+  ): Unit = 
+    while !channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos) do Thread.sleep(100)
     val _ = channelGroup.close().get()
-  }
 
   private def stop(
       ch: Channel,
@@ -148,7 +137,7 @@ case class NettySyncServer(
       eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Unit = {
+  ): Unit = 
     isShuttingDown.set(true)
     waitForClosedChannels(
       channelGroup,
@@ -156,11 +145,9 @@ case class NettySyncServer(
       gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
     )
     ch.close().get()
-    if (config.shutdownEventLoopGroupOnClose) {
+    if config.shutdownEventLoopGroupOnClose then
       val _ = eventLoopGroup.shutdownGracefully().get()
       val _ = eventExecutor.shutdownGracefully().get()
-    }
-  }
 
   private def stopRecovering(
       eventLoopGroup: EventLoopGroup,
@@ -168,21 +155,19 @@ case class NettySyncServer(
       eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Unit = {
+  ): Unit = 
     isShuttingDown.set(true)
     waitForClosedChannels(
       channelGroup,
       startNanos = System.nanoTime(),
       gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
     )
-    if (config.shutdownEventLoopGroupOnClose) {
+    if config.shutdownEventLoopGroupOnClose then
       val _ = eventLoopGroup.shutdownGracefully().get()
       val _ = eventExecutor.shutdownGracefully().get()
-    }
-  }
-}
 
-object NettySyncServer {
+
+object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(List.empty, List.empty, NettySyncServerOptions.default, NettyConfig.default)
 
   def apply(serverOptions: NettySyncServerOptions): NettySyncServer =
@@ -193,11 +178,10 @@ object NettySyncServer {
 
   def apply(serverOptions: NettySyncServerOptions, config: NettyConfig): NettySyncServer =
     NettySyncServer(List.empty, List.empty, serverOptions, config)
-}
-case class NettySyncServerBinding(localSocket: InetSocketAddress, stop: () => Unit) {
+
+case class NettySyncServerBinding(localSocket: InetSocketAddress, stop: () => Unit):
   def hostName: String = localSocket.getHostName
   def port: Int = localSocket.getPort
-}
-case class NettySyncDomainSocketBinding(localSocket: DomainSocketAddress, stop: () => Unit) {
+
+case class NettySyncDomainSocketBinding(localSocket: DomainSocketAddress, stop: () => Unit):
   def path: String = localSocket.path()
-}

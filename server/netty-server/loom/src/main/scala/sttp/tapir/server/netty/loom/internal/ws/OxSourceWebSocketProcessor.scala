@@ -34,8 +34,8 @@ private[loom] object OxSourceWebSocketProcessor {
             } // TODO concatenate frames
             .map(f =>
               o.requests.decode(f) match {
-                case x: DecodeResult.Value[REQ]    => x.v
-                case failure: DecodeResult.Failure => throw new WebSocketFrameDecodeFailure(f, failure)
+                case failure: DecodeResult.Failure         => throw new WebSocketFrameDecodeFailure(f, failure)
+                case x: DecodeResult.Value[REQ] @unchecked => x.v
               }
             )
         )

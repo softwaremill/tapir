@@ -1,10 +1,7 @@
 package sttp.tapir.server.netty.loom.internal
 
 import _root_.ox.*
-import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandlerContext
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame
-import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus
 import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.monad.MonadError
@@ -19,7 +16,7 @@ import sttp.tapir.*
 import java.nio.charset.Charset
 
 private[loom] class NettySyncToResponseBody(runAsync: RunAsync[Id])(using me: MonadError[Id], ox: Ox)
-    extends ToResponseBody[NettyResponse, OxStreams] {
+    extends ToResponseBody[NettyResponse, OxStreams]:
 
   private val oxDispatcher = new OxDispatcher
   val delegate = new NettyToResponseBody(runAsync)(me)
@@ -49,4 +46,3 @@ private[loom] class NettySyncToResponseBody(runAsync: RunAsync[Id])(using me: Mo
       decodeCloseRequests = o.decodeCloseRequests,
       autoPing = o.autoPing
     )
-}

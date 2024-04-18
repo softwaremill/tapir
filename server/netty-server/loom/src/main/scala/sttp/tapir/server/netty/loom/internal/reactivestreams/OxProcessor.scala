@@ -22,42 +22,36 @@ private[loom] class OxProcessor[A, B](
     oxDispatcher: OxDispatcher,
     pipeline: OxStreams.Pipe[A, B],
     wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B]
-) extends Processor[A, B] {
+) extends Processor[A, B]:
   @volatile private var subscription: Subscription = _
   private val channel = Channel.buffered[A](1)
 
   override def onError(reason: Throwable): Unit =
     // As per rule 2.13, we need to throw a `java.lang.NullPointerException` if the `Throwable` is `null`
-    if (reason == null) throw null
+    if reason == null then throw null
     channel.errorOrClosed(reason).discard
 
   override def onNext(a: A): Unit =
-    if (a == null) {
-      throw new NullPointerException("Element cannot be null") // Rule 2.13
-    } else {
-      channel.sendOrClosed(a) match {
+    if a == null then throw new NullPointerException("Element cannot be null") // Rule 2.13
+    else
+      channel.sendOrClosed(a) match
         case () => ()
         case _: ChannelClosed =>
           cancelSubscription()
           onError(new IllegalStateException("onNext called when the channel is closed"))
-      }
-    }
 
   override def onSubscribe(s: Subscription): Unit =
-    if (s == null) {
-      throw new NullPointerException("Subscription cannot be null")
-    } else if (subscription != null) {
-      s.cancel() // Rule 2.5: if onSubscribe is called twice, must cancel the second subscription
-    } else {
+    if s == null then throw new NullPointerException("Subscription cannot be null")
+    else if subscription != null then s.cancel() // Rule 2.5: if onSubscribe is called twice, must cancel the second subscription
+    else
       subscription = s
       s.request(1)
-    }
 
   override def onComplete(): Unit =
     channel.doneOrClosed().discard
 
   override def subscribe(subscriber: Subscriber[? >: B]): Unit =
-    if (subscriber == null) throw new NullPointerException("Subscriber cannot be null")
+    if subscriber == null then throw new NullPointerException("Subscriber cannot be null")
     val wrappedSubscriber = wrapSubscriber(subscriber)
     oxDispatcher.runAsync {
       supervised {
@@ -69,21 +63,18 @@ private[loom] class OxProcessor[A, B](
         channelSubscription.runBlocking()
       }
     } { error =>
+      error.printStackTrace(System.err)
       wrappedSubscriber.onError(error)
       onError(error)
     }
 
   private def cancelSubscription() =
-    if (subscription != null)
-      try {
-        subscription.cancel()
-      } catch {
-        case t: Throwable => {
+    if subscription != null then
+      try subscription.cancel()
+      catch
+        case t: Throwable =>
           (new IllegalStateException(
             s"$subscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.",
             t
           ))
             .printStackTrace(System.err)
-        }
-      }
-}
