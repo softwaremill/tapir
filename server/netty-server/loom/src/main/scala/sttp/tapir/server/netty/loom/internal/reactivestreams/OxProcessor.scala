@@ -38,18 +38,7 @@ private[loom] class OxProcessor[A, B](
       channel.sendOrClosed(a) match {
         case () => ()
         case _: ChannelClosed =>
-          if (subscription != null)
-            try {
-              subscription.cancel()
-            } catch {
-              case t: Throwable => {
-                (new IllegalStateException(
-                  s"$subscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.",
-                  t
-                ))
-                  .printStackTrace(System.err)
-              }
-            }
+          cancelSubscription()
           onError(new IllegalStateException("onNext called when the channel is closed"))
       }
     }
@@ -69,12 +58,32 @@ private[loom] class OxProcessor[A, B](
 
   override def subscribe(subscriber: Subscriber[? >: B]): Unit =
     if (subscriber == null) throw new NullPointerException("Subscriber cannot be null")
-    oxDispatcher.runAsync(_ ?=> {
-      val outgoingResponses: Source[B] = pipeline((channel: Source[A]).map { e =>
-        subscription.request(1); e
-      })
-      val channelSubscription = new ChannelSubscription(wrapSubscriber(subscriber), outgoingResponses)
-      subscriber.onSubscribe(channelSubscription)
-      channelSubscription.runBlocking()
-    })
+    val wrappedSubscriber = wrapSubscriber(subscriber)
+    oxDispatcher.runAsync {
+      supervised {
+        val outgoingResponses: Source[B] = pipeline((channel: Source[A]).map { e =>
+          subscription.request(1); e
+        })
+        val channelSubscription = new ChannelSubscription(wrappedSubscriber, outgoingResponses)
+        subscriber.onSubscribe(channelSubscription)
+        channelSubscription.runBlocking()
+      }
+    } { error =>
+      wrappedSubscriber.onError(error)
+      onError(error)
+    }
+
+  private def cancelSubscription() =
+    if (subscription != null)
+      try {
+        subscription.cancel()
+      } catch {
+        case t: Throwable => {
+          (new IllegalStateException(
+            s"$subscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.",
+            t
+          ))
+            .printStackTrace(System.err)
+        }
+      }
 }

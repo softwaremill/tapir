@@ -21,7 +21,7 @@ private[loom] object OxSourceWebSocketProcessor {
       oxDispatcher: OxDispatcher,
       pipe: OxStreams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
-      ctx: ChannelHandlerContext 
+      ctx: ChannelHandlerContext
   ): Processor[WebSocketFrame, WebSocketFrame] = {
     val frame2FramePipe: OxStreams.Pipe[WebSocketFrame, WebSocketFrame] = Ox ?=>
       (source: Source[WebSocketFrame]) => {
@@ -46,14 +46,13 @@ private[loom] object OxSourceWebSocketProcessor {
       override def onSubscribe(s: Subscription): Unit = sub.onSubscribe(s)
       override def onNext(t: B): Unit = sub.onNext(t)
       override def onError(t: Throwable): Unit =
-        val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, "Error"))
+        val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, "Internal Server Error"))
         sub.onError(t)
-      override def onComplete(): Unit = 
+      override def onComplete(): Unit =
         val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "Bye"))
         sub.onComplete()
-    } 
+    }
     new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
   }
 
-  
 }

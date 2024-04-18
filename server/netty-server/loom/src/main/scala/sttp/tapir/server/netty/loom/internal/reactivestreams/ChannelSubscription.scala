@@ -12,15 +12,19 @@ private[loom] class ChannelSubscription[A](
 
   def runBlocking() =
     demands.foreach { demand =>
-      for (_ <- 0L until demand) {
+      var i = 0L
+      while (i < demand) {
         source.receiveOrClosed() match {
           case ChannelClosed.Done =>
             demands.doneOrClosed().discard
+            i = demand // break early
             subscriber.onComplete()
           case ChannelClosed.Error(e) =>
             demands.doneOrClosed().discard
+            i = demand
             subscriber.onError(e)
           case elem: A @unchecked =>
+            i = i + 1
             subscriber.onNext(elem)
         }
       }
