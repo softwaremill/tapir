@@ -4,18 +4,14 @@ import org.reactivestreams.{Subscriber, Subscription}
 import ox.*
 import ox.channels.*
 
-/** Can be used together with an [[OxProcessor]] to read from a Source when there's demand.
-  *
-  * @param subscriber
-  * @param source
-  */
+/** Can be used together with an [[OxProcessor]] to read from a Source when there's demand. */
 private[loom] class ChannelSubscription[A](
     subscriber: Subscriber[? >: A],
     source: Source[A]
 ) extends Subscription:
   private val demands: Channel[Long] = Channel.unlimited[Long]
 
-  def runBlocking() =
+  def runBlocking(): Unit =
     demands.foreach { demand =>
       var i = 0L
       while (i < demand)

@@ -15,10 +15,9 @@ import sttp.tapir.*
 
 import java.nio.charset.Charset
 
-private[loom] class NettySyncToResponseBody(runAsync: RunAsync[Id])(using me: MonadError[Id], ox: Ox)
+private[loom] class NettySyncToResponseBody(runAsync: RunAsync[Id], oxDispatcher: OxDispatcher)(using me: MonadError[Id])
     extends ToResponseBody[NettyResponse, OxStreams]:
 
-  private val oxDispatcher = new OxDispatcher
   val delegate = new NettyToResponseBody(runAsync)(me)
 
   override val streams: capabilities.Streams[OxStreams] = OxStreams

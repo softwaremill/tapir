@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.loom
 
-import internal.*
-import _root_.ox.Ox
+import internal.{NettySyncRequestBody, NettySyncToResponseBody}
+import internal.ox.OxDispatcher
 import sttp.capabilities.WebSockets
 import sttp.monad.syntax._
 import sttp.tapir.server.ServerEndpoint
@@ -18,13 +18,14 @@ trait NettySyncServerInterpreter:
     * processor.
     */
   def toRoute(
-      ses: List[ServerEndpoint[OxStreams & WebSockets, Id]]
-  )(using Ox): IdRoute =
+      ses: List[ServerEndpoint[OxStreams & WebSockets, Id]],
+      oxDispatcher: OxDispatcher
+  ): IdRoute =
     implicit val bodyListener: BodyListener[Id, NettyResponse] = new NettyBodyListener(RunAsync.Id)
     val serverInterpreter = new ServerInterpreter[OxStreams with WebSockets, Id, NettyResponse, OxStreams](
       FilterServerEndpoints(ses),
       new NettySyncRequestBody(nettyServerOptions.createFile),
-      new NettySyncToResponseBody(RunAsync.Id),
+      new NettySyncToResponseBody(RunAsync.Id, oxDispatcher),
       RejectInterceptor.disableWhenSingleEndpoint(nettyServerOptions.interceptors, ses),
       nettyServerOptions.deleteFile
     )

@@ -56,7 +56,7 @@ private[loom] class OxProcessor[A, B](
     if subscriber == null then throw new NullPointerException("Subscriber cannot be null")
     val wrappedSubscriber = wrapSubscriber(subscriber)
     oxDispatcher.runAsync {
-      val outgoingResponses: Source[B] = pipeline((channel: Source[A]).map { e =>
+      val outgoingResponses: Source[B] = pipeline((channel: Source[A]).mapAsView { e =>
         requestsSubscription.request(1)
         e
       })
@@ -73,8 +73,7 @@ private[loom] class OxProcessor[A, B](
       try requestsSubscription.cancel()
       catch
         case t: Throwable =>
-          (new IllegalStateException(
+          throw new IllegalStateException(
             s"$requestsSubscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.",
             t
-          ))
-            .printStackTrace(System.err)
+          )

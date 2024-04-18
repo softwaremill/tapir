@@ -1,6 +1,7 @@
 package sttp.tapir.server.netty.loom
 
-import _root_.ox.*
+import ox.*
+import internal.ox.OxDispatcher
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{Channel, EventLoopGroup}
@@ -67,7 +68,7 @@ case class NettySyncServer(
     *   server binding, to be used to control stopping of the server or obtaining metadata like port.
     */
   def start()(using Ox): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](None) match
+    startUsingSocketOverride[InetSocketAddress](None, new OxDispatcher()) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop)
 
@@ -86,13 +87,13 @@ case class NettySyncServer(
         NettySyncServerBinding(socket, stop)
 
   def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
-    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile))) match
+    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), new OxDispatcher()) match
       case (socket, stop) =>
         NettySyncDomainSocketBinding(socket, stop)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) =
-    val routes = NettySyncServerInterpreter(options).toRoute(endpoints) :: endpointsWithOptions.map(e =>
-      NettySyncServerInterpreter(e.overridenOptions).toRoute(e.ses)
+  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA], oxDispatcher: OxDispatcher): (SA, () => Unit) =
+    val routes = NettySyncServerInterpreter(options).toRoute(endpoints, oxDispatcher) :: endpointsWithOptions.map(e =>
+      NettySyncServerInterpreter(e.overridenOptions).toRoute(e.ses, oxDispatcher)
     )
     startUsingSocketOverride(routes, socketOverride)
 

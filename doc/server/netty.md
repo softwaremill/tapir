@@ -46,40 +46,7 @@ val binding: Future[NettyFutureServerBinding] =
 
 The `tapir-netty-server-loom` server uses `Id[T]` as its wrapper effect for compatibility, while `Id[A]` means in fact just `A`, representing direct style. It is 
 available only for Scala 3.
-
-```scala
-import sttp.tapir.*
-import sttp.tapir.server.netty.loom.{Id, NettySyncServer}
-
-val helloWorld = endpoint
-  .get
-  .in("hello").in(query[String]("name"))
-  .out(stringBody)
-  .serverLogicSuccess[Id](name => s"Hello, $name!")
-
-  NettySyncServer().addEndpoint(helloWorld).startAndWait()
-```
-
-If you need manual control of the structured concurrency scope, server lifecycle, or just metadata from `NettySyncServerBinding` (like port number), use `start()`:
-
-```scala
-import ox.*
-import sttp.tapir.*
-import sttp.tapir.server.netty.loom.{Id, NettySyncServer, NettySyncServerBinding}
-
-val helloWorld = endpoint
-  .get
-  .in("hello").in(query[String]("name"))
-  .out(stringBody)
-  .serverLogicSuccess[Id](name => s"Hello, $name!")
-
-  supervised {
-    val serverBinding = useInScope(NettySyncServer().addEndpoint(helloWorld).start())(_.stop())
-    println(s"Tapir is running on port ${serverBiding.port}")
-    never 
-  }
-```
-
+See [examples/HelloWorldNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldNettySyncServer.scala) for a full example.
 To learn more about handling concurrency with Ox, see the [documentation](https://ox.softwaremill.com/).
 
 
@@ -177,62 +144,7 @@ object WebSocketsNettyCatsServer extends ResourceApp.Forever {
 ### tapir-netty-server-loom
 
 In the Loom-based backend, Tapir uses [Ox](https://ox.softwaremill.com) to manage concurrency, and your transformation pipeline should be represented as `Ox ?=> Source[A] => Source[B]`. Any forks started within this function will be run under a safely isolated internal scope.
-
-```scala
-import ox.*
-import ox.channels.*
-import sttp.tapir.*
-import sttp.tapir.server.netty.loom.Id
-import sttp.tapir.server.netty.loom.OxStreams
-import sttp.tapir.server.netty.loom.OxStreams.Pipe // alias for Ox ?=> Source[A] => Source[B]
-import sttp.tapir.server.netty.loom.NettySyncServer
-import sttp.ws.WebSocketFrame
-
-import scala.concurrent.duration.*
-
-object WebSocketsNettySyncServer:
-  // Web socket endpoint
-  val wsEndpoint =
-    endpoint.get
-      .in("ws") 
-      .out(
-        webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams)
-          .concatenateFragmentedFrames(false) // All these options are supported by tapir-netty
-          .ignorePong(true)
-          .autoPongOnPing(true)
-          .decodeCloseRequests(false)
-          .decodeCloseResponses(false)
-          .autoPing(Some((10.seconds, WebSocketFrame.Ping("ping-content".getBytes))))
-      )
-
-  // Your processor transforming a stream of requests into a stream of responses
-  val wsPipe: Pipe[String, String] = requestStream => requestStream.map(_.toUpperCase)
-  // Alternatively, requests and responses can be treated separately, for example to emit frames to the client from another source: 
-  val wsPipe2: Pipe[String, String] = { in =>
-    fork {
-      in.drain() // read and ignore requests
-    }
-    // emit periodic responses
-    Source.tick(1.second).map(_ => System.currentTimeMillis()).map(_.toString)
-  }
-
-  // The WebSocket endpoint, builds the pipeline in serverLogicSuccess
-  val wsServerEndpoint = wsEndpoint.serverLogicSuccess[Id](_ => wsPipe)
-
-  // A regular /GET endpoint
-  val helloWorldEndpoint: PublicEndpoint[String, Unit, String, Any] =
-    endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
-
-  val helloWorldServerEndpoint = helloWorldEndpoint
-    .serverLogicSuccess(name => s"Hello, $name!")
-
-  def main(args: Array[String]): Unit = 
-    NettySyncServer()
-      .host("0.0.0.0")
-      .port(8080)
-      .addEndpoints(List(wsServerEndpoint, helloWorldServerEndpoint))
-      .startAndWait()
-```
+See [examples/websocket/WebSocketNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/websocket/WebSocketNettySyncServer.scala) for a full example.
 
 ## Graceful shutdown
 

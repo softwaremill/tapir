@@ -3,27 +3,30 @@ package sttp.tapir.server.netty.loom
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
+import internal.ox.OxDispatcher
+import ox.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.NettyConfig
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 import scala.concurrent.duration.FiniteDuration
-import ox.*
 import sttp.capabilities.WebSockets
 
 class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     extends TestServerInterpreter[Id, OxStreams with WebSockets, NettySyncServerOptions, IdRoute] {
   override def route(es: List[ServerEndpoint[OxStreams with WebSockets, Id]], interceptors: Interceptors): IdRoute = {
     val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
-    supervised {
-      NettySyncServerInterpreter(serverOptions).toRoute(es)
+    supervised { // not a correct way, but this method is only used in a few tests which don't test anything related to scopes
+      NettySyncServerInterpreter(serverOptions).toRoute(es, new OxDispatcher())
     }
   }
 
   def route(es: List[ServerEndpoint[OxStreams with WebSockets, Id]], interceptors: Interceptors)(using Ox): IdRoute = {
     val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
-    NettySyncServerInterpreter(serverOptions).toRoute(es)
+    supervised { // not a correct way, but this method is only used in a few tests which don't test anything related to scopes
+      NettySyncServerInterpreter(serverOptions).toRoute(es, new OxDispatcher())
+    }
   }
 
   override def serverWithStop(
@@ -70,5 +73,5 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettySyncServerOptions.default
     val interpreter = NettySyncServerInterpreter(options)
-    useInScope(NettySyncServer(options, customizedConfig).start(List(interpreter.toRoute(endpoints.toList))))(_.stop())
+    useInScope(NettySyncServer(options, customizedConfig).addEndpoints(endpoints.toList).start())(_.stop())
 }
