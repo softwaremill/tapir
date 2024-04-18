@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.loom.internal.ws
 
 import io.netty.channel.ChannelHandlerContext
-import io.netty.handler.codec.http.websocketx.{CloseWebSocketFrame, WebSocketCloseStatus, WebSocketFrame}
+import io.netty.handler.codec.http.websocketx.{CloseWebSocketFrame, WebSocketCloseStatus, WebSocketFrame => NettyWebSocketFrame}
 import org.reactivestreams.{Processor, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import ox.*
@@ -12,25 +12,29 @@ import sttp.tapir.server.netty.loom.OxStreams
 import sttp.tapir.server.netty.loom.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.loom.internal.reactivestreams.OxProcessor
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
-
+import sttp.ws.WebSocketFrame
 import java.io.IOException
 
-private[loom] object OxSourceWebSocketProcessor {
+private[loom] object OxSourceWebSocketProcessor:
+
   def apply[REQ, RESP](
       oxDispatcher: OxDispatcher,
       pipe: OxStreams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
       ctx: ChannelHandlerContext
-  ): Processor[WebSocketFrame, WebSocketFrame] = {
-    val frame2FramePipe: OxStreams.Pipe[WebSocketFrame, WebSocketFrame] =
-      (source: Source[WebSocketFrame]) => {
+  ): Processor[NettyWebSocketFrame, NettyWebSocketFrame] =
+    val frame2FramePipe: OxStreams.Pipe[NettyWebSocketFrame, NettyWebSocketFrame] =
+      (source: Source[NettyWebSocketFrame]) => {
         pipe(
-          source
-            .mapAsView { f =>
-              val sttpFrame = nettyFrameToFrame(f)
-              f.release()
-              sttpFrame
-            } // TODO concatenate frames
+          optionallyConcatenateFrames(
+            source
+              .mapAsView { f =>
+                val sttpFrame = nettyFrameToFrame(f)
+                f.release()
+                sttpFrame
+              },
+            o.concatenateFragmentedFrames
+          )
             .mapAsView(f =>
               o.requests.decode(f) match {
                 case failure: DecodeResult.Failure         => throw new WebSocketFrameDecodeFailure(f, failure)
@@ -59,6 +63,19 @@ private[loom] object OxSourceWebSocketProcessor {
         sub.onComplete()
     }
     new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
-  }
 
-}
+  private def optionallyConcatenateFrames(s: Source[WebSocketFrame], doConcatenate: Boolean)(using Ox): Source[WebSocketFrame] =
+    if doConcatenate then
+      type Accumulator = Option[Either[Array[Byte], String]]
+      s.mapStateful(() => None: Accumulator) {
+        case (None, f: WebSocketFrame.Ping)                                  => (None, Some(f))
+        case (None, f: WebSocketFrame.Pong)                                  => (None, Some(f))
+        case (None, f: WebSocketFrame.Close)                                 => (None, Some(f))
+        case (None, f: WebSocketFrame.Data[_]) if f.finalFragment            => (None, Some(f))
+        case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
+        case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
+        case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment   => (None, Some(f.copy(payload = acc + f.payload)))
+        case (Some(Right(acc)), f: WebSocketFrame.Text) if !f.finalFragment  => (Some(Right(acc + f.payload)), None)
+        case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
+      }.collectAsView { case Some(f: WebSocketFrame) => f }
+    else s
