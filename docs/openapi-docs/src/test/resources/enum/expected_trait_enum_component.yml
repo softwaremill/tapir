@@ -27,10 +27,10 @@ components:
   schemas:
     CallOfDuty:
       title: CallOfDuty
+      type: object
       required:
         - game
         - episode
-      type: object
       properties:
         game:
           $ref: '#/components/schemas/Game'
@@ -47,10 +47,10 @@ components:
         - strategy
     TotalWar:
       title: TotalWar
+      type: object
       required:
         - game
         - episode
-      type: object
       properties:
         game:
           $ref: '#/components/schemas/Game'

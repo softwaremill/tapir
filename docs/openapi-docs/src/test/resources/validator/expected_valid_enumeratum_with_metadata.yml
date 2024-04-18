@@ -25,22 +25,22 @@ components:
   schemas:
     MyNumber:
       title: MyNumber
-      type: integer
       description: |-
         * 1 - One
         * 2 - Two
         * 3 - Three
-      format: int32
+      type: integer
       enum:
         - 1
         - 2
         - 3
+      format: int32
     NumberWithMsg:
       title: NumberWithMsg
+      type: object
       required:
         - number
         - msg
-      type: object
       properties:
         number:
           $ref: '#/components/schemas/MyNumber'

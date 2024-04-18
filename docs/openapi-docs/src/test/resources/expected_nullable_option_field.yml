@@ -29,9 +29,9 @@ components:
   schemas:
     ClassWithOptionField:
       title: ClassWithOptionField
+      type: object
       required:
       - requiredStringField
-      type: object
       properties:
         optionalIntField:
           type:

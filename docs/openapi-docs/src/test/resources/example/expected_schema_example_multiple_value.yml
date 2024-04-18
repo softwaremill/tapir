@@ -28,11 +28,11 @@ components:
       type: object
       properties:
         l:
+          examples:
+          - - 1
+            - 2
+            - 3
           type: array
           items:
             type: integer
             format: int32
-          example:
-            - 1
-            - 2
-            - 3

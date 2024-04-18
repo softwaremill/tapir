@@ -25,9 +25,9 @@ components:
   schemas:
     MyClass:
       title: MyClass
+      type: object
       required:
         - my_attribute
-      type: object
       properties:
         my_attribute:
           type: integer

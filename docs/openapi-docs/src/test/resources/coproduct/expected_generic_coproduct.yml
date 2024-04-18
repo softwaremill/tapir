@@ -51,18 +51,18 @@ components:
         - $ref: '#/components/schemas/GenericPerson_String'
     GenericPerson_Int:
       title: GenericPerson_Int
+      type: object
       required:
         - data
-      type: object
       properties:
         data:
           type: integer
           format: int32
     GenericPerson_String:
       title: GenericPerson_String
+      type: object
       required:
         - data
-      type: object
       properties:
         data:
           type: string

@@ -28,9 +28,9 @@ components:
       type: object
       properties:
         name:
-          type: string
           default: foo
+          type: string
         count:
+          default: 12
           type: integer
           format: int32
-          default: 12

@@ -19,10 +19,10 @@ components:
   schemas:
     FruitAmount:
       title: FruitAmount
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string
@@ -31,9 +31,9 @@ components:
           format: int32
     ObjectWrapper:
       title: ObjectWrapper
+      type: object
       required:
         - value
-      type: object
       properties:
         value:
           $ref: '#/components/schemas/FruitAmount'

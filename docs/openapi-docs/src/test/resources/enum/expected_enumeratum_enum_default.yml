@@ -13,7 +13,7 @@ paths:
           schema:
             $ref: '#/components/schemas/FruitType'
             default: PEAR
-            example: APPLE
+          example: APPLE
       responses:
         '200':
           description: ''
@@ -37,10 +37,10 @@ components:
         - PEAR
     FruitWithEnum:
       title: FruitWithEnum
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string

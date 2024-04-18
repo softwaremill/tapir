@@ -46,10 +46,10 @@ components:
   schemas:
     Person:
       title: Person
+      type: object
       required:
         - name
         - age
-      type: object
       properties:
         name:
           type: string

@@ -35,9 +35,9 @@ components:
   schemas:
     Organization:
       title: Organization
+      type: object
       required:
         - name
-      type: object
       properties:
         name:
           type: string

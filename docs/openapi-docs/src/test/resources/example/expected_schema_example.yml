@@ -10,9 +10,10 @@ paths:
         content:
           application/json:
             schema:
+              examples:
+              - '2021-01-01T01:01:01.000000001Z'
               type: string
               format: date-time
-              example: '2021-01-01T01:01:01.000000001Z'
         required: true
       responses:
         '200':
@@ -31,10 +32,10 @@ components:
   schemas:
     Author:
       title: Author
+      type: object
       required:
         - name
         - country
-      type: object
       properties:
         name:
           type: string
@@ -42,12 +43,22 @@ components:
           $ref: '#/components/schemas/Country'
     Book:
       title: Book
+      examples:
+      - title: title
+        genre:
+          name: name
+          description: desc
+        year: 2021
+        author:
+          name: name
+          country:
+            name: country
+      type: object
       required:
         - title
         - genre
         - year
         - author
-      type: object
       properties:
         title:
           type: string
@@ -58,30 +69,20 @@ components:
           format: int32
         author:
           $ref: '#/components/schemas/Author'
-      example:
-        title: title
-        genre:
-          name: name
-          description: desc
-        year: 2021
-        author:
-          name: name
-          country:
-            name: country
     Country:
       title: Country
+      type: object
       required:
         - name
-      type: object
       properties:
         name:
           type: string
     Genre:
       title: Genre
+      type: object
       required:
         - name
         - description
-      type: object
       properties:
         name:
           type: string

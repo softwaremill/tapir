@@ -25,9 +25,9 @@ components:
   schemas:
     Number:
       title: Number
+      type: object
       required:
         - value
-      type: object
       properties:
         value:
           $ref: '#/components/schemas/Numbers'

@@ -22,26 +22,26 @@ components:
         - $ref: '#/components/schemas/Person'
     NestedEntity:
       title: NestedEntity
+      type: object
       required:
         - entity
-      type: object
       properties:
         entity:
           $ref: '#/components/schemas/Entity'
     Organization:
       title: Organization
+      type: object
       required:
         - name
-      type: object
       properties:
         name:
           type: string
     Person:
       title: Person
+      type: object
       required:
         - name
         - age
-      type: object
       properties:
         name:
           type: string

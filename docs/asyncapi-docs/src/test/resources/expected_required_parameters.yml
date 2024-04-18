@@ -16,9 +16,9 @@ channels:
       ws:
         method: GET
         query:
+          type: object
           required:
             - limit
-          type: object
           properties:
             limit:
               type: integer

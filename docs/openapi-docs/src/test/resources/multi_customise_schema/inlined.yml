@@ -25,25 +25,25 @@ components:
   schemas:
     Data2:
       title: Data2
+      type: object
       required:
         - a
         - b
-      type: object
       properties:
         a:
-          required:
-            - x
-          type: object
-          properties:
-            x:
-              type: string
           description: aaa
           deprecated: true
-        b:
+          type: object
           required:
             - x
-          type: object
           properties:
             x:
               type: string
+        b:
           description: bbb
+          type: object
+          required:
+            - x
+          properties:
+            x:
+              type: string

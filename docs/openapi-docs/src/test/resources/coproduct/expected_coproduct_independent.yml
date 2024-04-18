@@ -65,10 +65,10 @@ components:
           person: '#/components/schemas/Person1'
     Organization:
       title: Organization
+      type: object
       required:
         - name
         - kind
-      type: object
       properties:
         name:
           type: string
@@ -76,10 +76,10 @@ components:
           type: string
     Person:
       title: Person
+      type: object
       required:
         - name
         - age
-      type: object
       properties:
         name:
           type: string
@@ -88,11 +88,11 @@ components:
           format: int32
     Person1:
       title: Person
+      type: object
       required:
         - name
         - age
         - kind
-      type: object
       properties:
         name:
           type: string

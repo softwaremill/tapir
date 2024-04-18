@@ -33,10 +33,10 @@ components:
   schemas:
     FruitAmount:
       title: FruitAmount
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string
@@ -45,9 +45,9 @@ components:
           format: int32
     Fruit:
       title: Fruit
+      type: object
       required:
         - f
-      type: object
       properties:
         f:
           type: string

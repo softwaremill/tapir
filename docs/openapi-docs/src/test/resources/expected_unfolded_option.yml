@@ -25,10 +25,10 @@ components:
   schemas:
     FruitAmount:
       title: FruitAmount
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string

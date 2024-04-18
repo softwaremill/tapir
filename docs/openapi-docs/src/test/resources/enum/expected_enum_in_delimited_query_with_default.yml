@@ -12,12 +12,12 @@ paths:
           required: false
           explode: false
           schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/CornerStyle'
             default:
             - rounded
             - straight
+            type: array
+            items:
+              $ref: '#/components/schemas/CornerStyle'
           example:
           - rounded
           - straight

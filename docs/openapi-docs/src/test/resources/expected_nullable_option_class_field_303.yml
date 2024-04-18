@@ -29,22 +29,22 @@ components:
   schemas:
     Bar:
       title: Bar
+      type: object
       required:
         - bar
-      type: object
       properties:
         bar:
           type: integer
           format: int32
     ClassWithOptionClassField:
       title: ClassWithOptionClassField
+      type: object
       required:
         - requiredStringField
-      type: object
       properties:
         optionalObjField:
+          nullable: true
           allOf:
             - $ref: '#/components/schemas/Bar'
-          nullable: true
         requiredStringField:
           type: string

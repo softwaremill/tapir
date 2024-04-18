@@ -31,9 +31,9 @@ components:
         - red
     ColorWrapper:
       title: ColorWrapper
+      type: object
       required:
         - color
-      type: object
       properties:
         color:
           $ref: '#/components/schemas/Color'

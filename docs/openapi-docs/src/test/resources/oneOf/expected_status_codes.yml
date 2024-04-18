@@ -31,26 +31,26 @@ components:
   schemas:
     NotFound:
       title: NotFound
+      type: object
       required:
         - what
-      type: object
       properties:
         what:
           type: string
     Unauthorized:
       title: Unauthorized
+      type: object
       required:
         - realm
-      type: object
       properties:
         realm:
           type: string
     Unknown:
       title: Unknown
+      type: object
       required:
         - code
         - msg
-      type: object
       properties:
         code:
           type: integer

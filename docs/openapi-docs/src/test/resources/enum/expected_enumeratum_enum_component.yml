@@ -37,9 +37,9 @@ components:
   schemas:
     Belgium:
       title: Belgium
+      type: object
       required:
         - countryCode
-      type: object
       properties:
         countryCode:
           $ref: '#/components/schemas/CountryCode'
@@ -52,17 +52,17 @@ components:
         - LU
     Luxembourg:
       title: Luxembourg
+      type: object
       required:
         - countryCode
-      type: object
       properties:
         countryCode:
           $ref: '#/components/schemas/CountryCode'
     Poland:
       title: Poland
+      type: object
       required:
         - countryCode
-      type: object
       properties:
         countryCode:
           $ref: '#/components/schemas/CountryCode'

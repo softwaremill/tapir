@@ -30,17 +30,17 @@ components:
         - $ref: '#/components/schemas/Not'
     Expression:
       title: Expression
+      type: object
       required:
         - v
-      type: object
       properties:
         v:
           type: string
     Not:
       title: Not
+      type: object
       required:
         - not
-      type: object
       properties:
         not:
           $ref: '#/components/schemas/Clause'

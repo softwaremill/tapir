@@ -24,9 +24,9 @@ components:
         - LU
     CountryCollection:
       title: CountryCollection
+      type: object
       required:
         - countryCode
-      type: object
       properties:
         countryCode:
           $ref: '#/components/schemas/CountryCode'

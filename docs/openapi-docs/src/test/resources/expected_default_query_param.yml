@@ -11,8 +11,8 @@ paths:
           in: query
           required: false
           schema:
-            type: string
             default: tom
+            type: string
           example: alan
       responses:
         '200':

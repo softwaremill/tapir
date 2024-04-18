@@ -43,18 +43,18 @@ components:
   schemas:
     G_Int:
       title: G_Int
+      type: object
       required:
         - data
-      type: object
       properties:
         data:
           type: integer
           format: int32
     G_String:
       title: G_String
+      type: object
       required:
         - data
-      type: object
       properties:
         data:
           type: string

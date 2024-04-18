@@ -31,9 +31,9 @@ components:
   schemas:
     Data1:
       title: Data1
+      type: object
       required:
         - x
-      type: object
       properties:
         x:
           type: string

@@ -25,17 +25,17 @@ components:
   schemas:
     Data1:
       title: Data1
+      type: object
       required:
         - x
-      type: object
       properties:
         x:
           type: string
     HasOptionalDeprecated:
       title: HasOptionalDeprecated
+      type: object
       required:
         - field1
-      type: object
       properties:
         field1:
           $ref: '#/components/schemas/Data1'
