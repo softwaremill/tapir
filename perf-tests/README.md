@@ -124,7 +124,7 @@ perfTests/runMain sttp.tapir.perf.apis.ServerRunner http4s.Tapir
 ```
 If you're testing `NettySyncServer` (tapir-server-netty-sync), its server runner is located elsewhere:
 ```
-nettyServersync3/Test/runMain sttp.tapir.netty.sync.perf.NettySyncServerRunner
+nettyServerSync3/Test/runMain sttp.tapir.netty.sync.perf.NettySyncServerRunner
 ```
 This is caused by `perf-tests` using Scala 2.13 forced by Gatling, while `NettySyncServer` is written excluisively for Scala 3.
 
