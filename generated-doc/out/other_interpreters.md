@@ -22,3 +22,7 @@ layer that allows you to create traced http endpoints from tapir Endpoint defini
 ## tapir-http-session
 
 [tapir-http-session](https://github.com/SOFTNETWORK-APP/tapir-http-session) provides integration with functionality of [akka-http-session](https://github.com/softwaremill/akka-http-session), which includes client-side session management in web and mobile applications.
+
+## tapir + kyo
+
+[Kyo](https://github.com/getkyo/kyo/#routes-http-server-via-tapir) includes a tapir integration module.

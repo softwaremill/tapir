@@ -11,7 +11,7 @@
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.10.4")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.10.5")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -35,16 +35,17 @@ defined case-classes and endpoint definitions.
 The generator currently supports these settings, you can override them in the `build.sbt`;
 
 ```eval_rst
-===================================== ==================================== =======================================================================================
+===================================== ==================================== ==================================================================================================
 setting                               default value                        description
-===================================== ==================================== =======================================================================================
+===================================== ==================================== ==================================================================================================
 openapiSwaggerFile                    baseDirectory.value / "swagger.yaml" The swagger file with the api definitions.
 openapiPackage                        sttp.tapir.generated                 The name for the generated package.
 openapiObject                         TapirGeneratedEndpoints              The name for the generated object.
 openapiUseHeadTagForObjectName        false                                If true, put endpoints in separate files based on first declared tag.
 openapiJsonSerdeLib                   circe                                The json serde library to use.
 openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
-===================================== ==================================== =======================================================================================
+openapiMaxSchemasPerFile              400                                  Maximum number of schemas to generate in a single file (tweak if hitting javac class size limits).
+===================================== ==================================== ==================================================================================================
 ```
 
 The general usage is;
