@@ -3,7 +3,6 @@ package sttp.tapir.perf.apis
 import cats.effect.IO
 import sttp.tapir._
 import sttp.tapir.perf.Common._
-import sttp.tapir.server.netty.loom.Id
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.EndpointExtensions._
 
@@ -67,5 +66,4 @@ trait Endpoints {
 
   def genEndpointsFuture(count: Int): List[ServerEndpoint[Any, Future]] = genServerEndpoints(count)(Future.successful)
   def genEndpointsIO(count: Int): List[ServerEndpoint[Any, IO]] = genServerEndpoints(count)(IO.pure)
-  def genEndpointsId(count: Int): List[ServerEndpoint[Any, Id]] = genServerEndpoints[Id](count)(x => x: Id[String])
 }
