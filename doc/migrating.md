@@ -1,6 +1,6 @@
 # Migrating
 
-## From 10.0.4 to 10.0.5
+## From 1.10.4 to 1.10.5
 
 - `tapir-server-netty-loom` has been renamed to `tapir-netty-server-sync`, and is availavble only for Scala 3. Use imports from `sttp.tapir.server.netty.sync`, and start your server using `NettySyncServer()`. See [examples/HelloWorldNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldNettySyncServer.scala) for a full example.
 
