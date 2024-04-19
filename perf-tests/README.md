@@ -122,9 +122,9 @@ For WebSockets we want to measure latency distribution, not throughput, so use g
 ```
 perfTests/runMain sttp.tapir.perf.apis.ServerRunner http4s.Tapir
 ```
-If you're testing `NettySyncServer` (tapir-server-netty-loom), its server runner is located elsewhere:
+If you're testing `NettySyncServer` (tapir-server-netty-sync), its server runner is located elsewhere:
 ```
-nettyServerLoom3/Test/runMain sttp.tapir.netty.loom.perf.NettySyncServerRunner
+nettyServersync3/Test/runMain sttp.tapir.netty.sync.perf.NettySyncServerRunner
 ```
 This is caused by `perf-tests` using Scala 2.13 forced by Gatling, while `NettySyncServer` is written excluisively for Scala 3.
 

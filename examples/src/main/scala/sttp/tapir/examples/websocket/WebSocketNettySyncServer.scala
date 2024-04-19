@@ -4,10 +4,10 @@ import ox.*
 import ox.channels.*
 import sttp.capabilities.WebSockets
 import sttp.tapir.*
-import sttp.tapir.server.netty.loom.Id
-import sttp.tapir.server.netty.loom.OxStreams
-import sttp.tapir.server.netty.loom.OxStreams.Pipe // alias for Ox ?=> Source[A] => Source[B]
-import sttp.tapir.server.netty.loom.NettySyncServer
+import sttp.tapir.server.netty.sync.Id
+import sttp.tapir.server.netty.sync.OxStreams
+import sttp.tapir.server.netty.sync.OxStreams.Pipe // alias for Ox ?=> Source[A] => Source[B]
+import sttp.tapir.server.netty.sync.NettySyncServer
 import sttp.ws.WebSocketFrame
 
 import scala.concurrent.duration.*

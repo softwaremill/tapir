@@ -7,7 +7,7 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 "com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "@VERSION@"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-loom" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "@VERSION@"
 
 // if you are using cats-effect:
 "com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "@VERSION@"
@@ -44,7 +44,7 @@ val binding: Future[NettyFutureServerBinding] =
   NettyFutureServer().addEndpoint(helloWorld).start()
 ```
 
-The `tapir-netty-server-loom` server uses `Id[T]` as its wrapper effect for compatibility, while `Id[A]` means in fact just `A`, representing direct style. It is 
+The `tapir-netty-server-sync` server uses `Id[T]` as its wrapper effect for compatibility, while `Id[A]` means in fact just `A`, representing direct style. It is 
 available only for Scala 3.
 See [examples/HelloWorldNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldNettySyncServer.scala) for a full example.
 To learn more about handling concurrency with Ox, see the [documentation](https://ox.softwaremill.com/).
@@ -141,7 +141,7 @@ object WebSocketsNettyCatsServer extends ResourceApp.Forever {
 }
 ```
 
-### tapir-netty-server-loom
+### tapir-netty-server-sync
 
 In the Loom-based backend, Tapir uses [Ox](https://ox.softwaremill.com) to manage concurrency, and your transformation pipeline should be represented as `Ox ?=> Source[A] => Source[B]`. Any forks started within this function will be run under a safely isolated internal scope.
 See [examples/websocket/WebSocketNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/websocket/WebSocketNettySyncServer.scala) for a full example.
