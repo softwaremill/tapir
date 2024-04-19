@@ -19,16 +19,23 @@ libraryDependencies ++= Seq(
 import scala.io.Source
 
 TaskKey[Unit]("check") := {
-  val generatedCode =
-    Source.fromFile("target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala").getLines.mkString("\n")
-  val expected = Source.fromFile("Expected.scala.txt").getLines.mkString("\n")
-  val generatedTrimmed = generatedCode.linesIterator.zipWithIndex.filterNot(_._1.forall(_.isWhitespace)).map{ case (a, i) => a.trim -> i }.toSeq
-  val expectedTrimmed = expected.linesIterator.filterNot(_.forall(_.isWhitespace)).map(_.trim).toSeq
-  if (generatedTrimmed.size != expectedTrimmed.size)
-    sys.error(s"expected ${expectedTrimmed.size} non-empty lines, found ${generatedTrimmed.size}")
-  generatedTrimmed.zip(expectedTrimmed).foreach { case ((a, i), b) =>
-    if (a != b) sys.error(s"Generated code did not match (expected '$b' on line $i, found '$a')")
+  def check(generatedFileName: String, expectedFileName: String) = {
+    val generatedCode =
+      Source.fromFile(s"target/scala-2.13/src_managed/main/sbt-openapi-codegen/$generatedFileName").getLines.mkString("\n")
+    val expectedCode = Source.fromFile(expectedFileName).getLines.mkString("\n")
+    val generatedTrimmed =
+      generatedCode.linesIterator.zipWithIndex.filterNot(_._1.forall(_.isWhitespace)).map { case (a, i) => a.trim -> i }.toSeq
+    val expectedTrimmed = expectedCode.linesIterator.filterNot(_.forall(_.isWhitespace)).map(_.trim).toSeq
+    if (generatedTrimmed.size != expectedTrimmed.size)
+      sys.error(s"expected ${expectedTrimmed.size} non-empty lines, found ${generatedTrimmed.size}")
+    generatedTrimmed.zip(expectedTrimmed).foreach { case ((a, i), b) =>
+      if (a != b) sys.error(s"Generated code in file $generatedCode did not match (expected '$b' on line $i, found '$a')")
+    }
   }
-  println("Skipping swagger roundtrip for petstore")
+  Seq(
+    "TapirGeneratedEndpoints.scala" -> "Expected.scala.txt",
+    "TapirGeneratedEndpointsJsonSerdes.scala" -> "ExpectedJsonSerdes.scala.txt",
+    "TapirGeneratedEndpointsSchemas.scala" -> "ExpectedSchemas.scala.txt"
+  ).foreach { case (generated, expected) => check(generated, expected) }
   ()
 }

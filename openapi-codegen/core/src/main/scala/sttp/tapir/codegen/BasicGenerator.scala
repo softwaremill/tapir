@@ -34,7 +34,8 @@ object BasicGenerator {
       targetScala3: Boolean,
       useHeadTagForObjectNames: Boolean,
       jsonSerdeLib: String,
-      validateNonDiscriminatedOneOfs: Boolean
+      validateNonDiscriminatedOneOfs: Boolean,
+      maxSchemasPerFile: Int
   ): Map[String, String] = {
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
@@ -47,7 +48,7 @@ object BasicGenerator {
     }
 
     val EndpointDefs(endpointsByTag, queryParamRefs, jsonParamRefs) = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
-    val GeneratedClassDefinitions(classDefns, extras) =
+    val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas) =
       classGenerator
         .classDefs(
           doc = doc,
@@ -56,15 +57,19 @@ object BasicGenerator {
           jsonSerdeLib = normalisedJsonLib,
           jsonParamRefs = jsonParamRefs,
           fullModelPath = s"$packagePath.$objName",
-          validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs
+          validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs,
+          maxSchemasPerFile = maxSchemasPerFile
         )
-        .getOrElse(GeneratedClassDefinitions("", None))
-    val isSplit = extras.nonEmpty
-    val internalImports =
-      if (isSplit)
-        s"""import $packagePath.$objName._
-         |import ${objName}JsonSerdes._""".stripMargin
-      else s"import $objName._"
+        .getOrElse(GeneratedClassDefinitions("", None, Nil))
+    val hasJsonSerdes = jsonSerdes.nonEmpty
+
+    val maybeJsonImport = if (hasJsonSerdes) s"\nimport $packagePath.${objName}JsonSerdes._" else ""
+    val maybeSchemaImport =
+      if (schemas.size > 1) (1 to schemas.size).map(i => s"import ${objName}Schemas$i._").mkString("\n", "\n", "")
+      else if (schemas.size == 1) s"\nimport ${objName}Schemas._"
+      else ""
+    val internalImports = s"import $packagePath.$objName._$maybeJsonImport$maybeSchemaImport"
+
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
         val taggedObj =
@@ -81,14 +86,39 @@ object BasicGenerator {
            |}""".stripMargin
         headTag -> taggedObj
     }
-    val extraObj = extras.map { body =>
+
+    val jsonSerdeObj = jsonSerdes.map { body =>
       s"""package $packagePath
          |
          |object ${objName}JsonSerdes {
          |  import $packagePath.$objName._
+         |  import sttp.tapir.generic.auto._
          |${indent(2)(body)}
          |}""".stripMargin
     }
+
+    val schemaObjs = if (schemas.size > 1) schemas.zipWithIndex.map { case (body, idx) =>
+      val priorImports = (0 until idx).map { i => s"import $packagePath.${objName}Schemas${i + 1}._" }.mkString("\n")
+      val name = s"${objName}Schemas${idx + 1}"
+      name -> s"""package $packagePath
+         |
+         |object $name {
+         |  import $packagePath.$objName._
+         |  import sttp.tapir.generic.auto._
+         |${indent(2)(priorImports)}
+         |${indent(2)(body)}
+         |}""".stripMargin
+    }
+    else if (schemas.size == 1)
+      Seq(s"${objName}Schemas" -> s"""package $packagePath
+         |
+         |object ${objName}Schemas {
+         |  import $packagePath.$objName._
+         |  import sttp.tapir.generic.auto._
+         |${indent(2)(schemas.head)}
+         |}""".stripMargin)
+    else Nil
+
     val endpointsInMain = endpointsByTag.getOrElse(None, "")
 
     val maybeSpecificationExtensionKeys = doc.paths
@@ -100,21 +130,21 @@ object BasicGenerator {
         val values = pairs.map(_._2)
         val `type` = SpecificationExtensionRenderer.renderCombinedType(values)
         val name = strippedToCamelCase(keyName)
-        val uncapitalisedName = name.head.toLower + name.tail
-        val capitalisedName = name.head.toUpper + name.tail
+        val uncapitalisedName = uncapitalise(name)
+        val capitalisedName = uncapitalisedName.capitalize
         s"""type ${capitalisedName}Extension = ${`type`}
            |val ${uncapitalisedName}ExtensionKey = new sttp.tapir.AttributeKey[${capitalisedName}Extension]("$packagePath.$objName.${capitalisedName}Extension")
            |""".stripMargin
       }
       .mkString("\n")
 
-    val serdeImport = if (isSplit && endpointsInMain.nonEmpty) s"\nimport $packagePath.${objName}JsonSerdes._" else ""
-    val mainObj = s"""|
+    val extraImports = if (endpointsInMain.nonEmpty) s"$maybeJsonImport$maybeSchemaImport" else ""
+    val mainObj = s"""
         |package $packagePath
         |
         |object $objName {
         |
-        |${indent(2)(imports(normalisedJsonLib) + serdeImport)}
+        |${indent(2)(imports(normalisedJsonLib) + extraImports)}
         |
         |${indent(2)(classDefns)}
         |
@@ -124,7 +154,7 @@ object BasicGenerator {
         |
         |}
         |""".stripMargin
-    taggedObjs ++ extraObj.map(s"${objName}JsonSerdes" -> _) + (objName -> mainObj)
+    taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ schemaObjs + (objName -> mainObj)
   }
 
   private[codegen] def imports(jsonSerdeLib: JsonSerdeLib.JsonSerdeLib): String = {
@@ -184,4 +214,6 @@ object BasicGenerator {
     .zipWithIndex
     .map { case (part, 0) => part; case (part, _) => part.capitalize }
     .mkString
+
+  def uncapitalise(name: String): String = name.head.toLower +: name.tail
 }
