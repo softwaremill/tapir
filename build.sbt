@@ -219,7 +219,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   vertxServerZio.projectRefs ++
   jdkhttpServer.projectRefs ++
   nettyServer.projectRefs ++
-  nettyServerLoom.projectRefs ++
+  nettyServerSync.projectRefs ++
   nettyServerCats.projectRefs ++
   nettyServerZio.projectRefs ++
   nimaServer.projectRefs ++
@@ -249,8 +249,14 @@ lazy val rawAllAggregates = core.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
 
-def buildWithLoom(project: String): Boolean =
-  project.contains("Loom") || project.contains("nima") || project.contains("perfTests") || project.contains("examples3")
+lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples).flatMap(_.projectRefs).flatMap(projectId)
+
+def projectId(projectRef: ProjectReference): Option[String] = 
+  projectRef match {
+    case ProjectRef(_, id) => Some(id)
+    case LocalProject(id)  => Some(id)
+    case _                 => None
+  }
 
 lazy val allAggregates: Seq[ProjectReference] = {
   val filteredByNative = if (sys.env.isDefinedAt("STTP_NATIVE")) {
@@ -262,15 +268,14 @@ lazy val allAggregates: Seq[ProjectReference] = {
   }
   if (sys.env.isDefinedAt("ONLY_LOOM")) {
     println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(p => buildWithLoom(p.toString))
+    filteredByNative.filter(p => projectId(p).forall(loomProjects.contains))
   } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
     println("[info] ALSO_LOOM defined, including also loom-based projects")
     filteredByNative
   } else {
     println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(p => buildWithLoom(p.toString))
+    filteredByNative.filterNot(p => projectId(p).forall(loomProjects.contains))
   }
-
 }
 
 // separating testing into different Scala versions so that it's not all done at once, as it causes memory problems on CI
@@ -1450,18 +1455,16 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val nettyServerLoom: ProjectMatrix =
-  ProjectMatrix("nettyServerLoom", file("server/netty-server/loom"))
+lazy val nettyServerSync: ProjectMatrix =
+  ProjectMatrix("nettyServerSync", file("server/netty-server/sync"))
     .settings(commonJvmSettings)
     .settings(
-      name := "tapir-netty-server-loom",
+      name := "tapir-netty-server-sync",
       // needed because of https://github.com/coursier/coursier/issues/2016
       useCoursier := false,
       Test / run / fork := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.ox" %% "core" % Versions.ox,
-        "org.reactivestreams" % "reactive-streams-tck" % Versions.reactiveStreams % Test,
-        "com.disneystreaming" %% "weaver-cats" % "0.8.4" % Test
+        "com.softwaremill.ox" %% "core" % Versions.ox
       )
     )
     .jvmPlatform(scalaVersions = List(scala3))
@@ -2149,7 +2152,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     sttpClient,
     swaggerUiBundle,
     http4sServerZio,
-    nettyServerLoom,
+    nettyServerSync,
     nettyServerZio,
     zioHttpServer,
     zioJson,

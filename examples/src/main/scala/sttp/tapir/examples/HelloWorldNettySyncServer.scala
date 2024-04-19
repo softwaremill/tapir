@@ -2,7 +2,7 @@ package sttp.tapir.examples
 
 import ox.*
 import sttp.tapir.*
-import sttp.tapir.server.netty.loom.{Id, NettySyncServer}
+import sttp.tapir.server.netty.sync.{Id, NettySyncServer}
 
 object HelloWorldNettySyncServer:
   val helloWorld = endpoint.get
