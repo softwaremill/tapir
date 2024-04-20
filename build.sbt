@@ -251,7 +251,7 @@ lazy val rawAllAggregates = core.projectRefs ++
 
 lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples).flatMap(_.projectRefs).flatMap(projectId)
 
-def projectId(projectRef: ProjectReference): Option[String] = 
+def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
     case ProjectRef(_, id) => Some(id)
     case LocalProject(id)  => Some(id)
@@ -417,7 +417,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.4")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.5")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.8",
