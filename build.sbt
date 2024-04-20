@@ -251,7 +251,7 @@ lazy val rawAllAggregates = core.projectRefs ++
 
 lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples).flatMap(_.projectRefs).flatMap(projectId)
 
-def projectId(projectRef: ProjectReference): Option[String] = 
+def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
     case ProjectRef(_, id) => Some(id)
     case LocalProject(id)  => Some(id)
@@ -530,7 +530,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       // Needs to match version used by Gatling
       "com.github.scopt" %% "scopt" % "3.7.1",
-      "io.github.classgraph" % "classgraph" % "4.8.168" % Test,
+      "io.github.classgraph" % "classgraph" % "4.8.172" % Test,
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
