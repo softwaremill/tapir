@@ -251,7 +251,7 @@ lazy val rawAllAggregates = core.projectRefs ++
 
 lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples).flatMap(_.projectRefs).flatMap(projectId)
 
-def projectId(projectRef: ProjectReference): Option[String] = 
+def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
     case ProjectRef(_, id) => Some(id)
     case LocalProject(id)  => Some(id)
@@ -524,7 +524,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.4" % "test" exclude (
         "com.fasterxml.jackson.core", "jackson-databind"
       ),
-      "io.gatling" % "gatling-test-framework" % "3.10.4" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      "io.gatling" % "gatling-test-framework" % "3.10.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.0",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
