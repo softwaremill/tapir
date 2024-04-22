@@ -7,7 +7,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
 
-case class GeneratedClassDefinitions(classRepr: String, serdeRepr: Option[String])
+case class GeneratedClassDefinitions(classRepr: String, serdeRepr: Option[String], schemaRepr: Seq[String])
 
 class ClassDefinitionGenerator {
 
@@ -18,7 +18,8 @@ class ClassDefinitionGenerator {
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = JsonSerdeLib.Circe,
       jsonParamRefs: Set[String] = Set.empty,
       fullModelPath: String = "",
-      validateNonDiscriminatedOneOfs: Boolean = true
+      validateNonDiscriminatedOneOfs: Boolean = true,
+      maxSchemasPerFile: Int = 400
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -40,7 +41,8 @@ class ClassDefinitionGenerator {
 
     val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
     val enumQuerySerdeHelper = if (!generatesQueryParamEnums) "" else enumQuerySerdeHelperDefn(targetScala3)
-    val postDefns = JsonSerdeGenerator.serdeDefs(
+    val schemas = SchemaGenerator.generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile)
+    val jsonSerdes = JsonSerdeGenerator.serdeDefs(
       doc,
       jsonSerdeLib,
       jsonParamRefs,
@@ -63,8 +65,8 @@ class ClassDefinitionGenerator {
     val helpers = (enumQuerySerdeHelper + adtTypes).linesIterator
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
-    // Json  serdes live in a separate file from the class defns
-    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, postDefns))
+    // Json serdes & schemas live in separate files from the class defns
+    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas))
   }
 
   private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[String]] =
@@ -219,7 +221,7 @@ class ClassDefinitionGenerator {
        |  case ${obj.items.map(_.value).mkString(", ")}
        |}""".stripMargin :: Nil
   } else {
-    val uncapitalisedName = name.head.toLower +: name.tail
+    val uncapitalisedName = BasicGenerator.uncapitalise(name)
     val members = obj.items.map { i => s"case object ${i.value} extends $name" }
     val maybeCodecExtension = jsonSerdeLib match {
       case _ if !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) => ""

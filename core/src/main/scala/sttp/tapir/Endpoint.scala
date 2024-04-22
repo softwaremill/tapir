@@ -222,7 +222,7 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
 
   /** Same as [[errorOutVariantPrepend]], but allows appending multiple variants in one go. */
   def errorOutVariantsPrepend[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*): EndpointType[A, I, E2, O, R] =
-    withErrorOutputVariant(oneOf[E2](oneOfDefaultVariant(errorOutput), first +: other: _*), identity)
+    withErrorOutputVariant(oneOf[E2](first, other :+ oneOfDefaultVariant(errorOutput): _*), identity)
 
   /** Same as [[errorOutVariant]], but allows appending multiple variants in one go. */
   def errorOutVariants[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*)(implicit

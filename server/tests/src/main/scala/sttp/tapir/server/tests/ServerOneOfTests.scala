@@ -1,27 +1,18 @@
 package sttp.tapir.server.tests
 
 import cats.implicits._
-import org.scalatest.matchers.should.Matchers._
+import io.circe.generic.auto._
 import org.scalatest.EitherValues._
+import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.model._
 import sttp.monad.MonadError
-import sttp.tapir._
-import sttp.tapir.tests.OneOf.{
-  in_int_out_value_form_exact_match,
-  in_string_out_error_detail_nested,
-  in_string_out_status_from_string,
-  in_string_out_status_from_string_one_empty,
-  in_string_out_status_from_type_erasure_using_partial_matcher,
-  out_empty_or_default_json_output,
-  out_json_or_default_json,
-  out_json_or_empty_output_no_content
-}
-import sttp.tapir.tests._
-import sttp.tapir.tests.data._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
-import io.circe.generic.auto._
+import sttp.tapir.tests.OneOf._
+import sttp.tapir.tests._
+import sttp.tapir.tests.data._
+import sttp.tapir.{oneOf, _}
 
 class ServerOneOfTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE]
@@ -135,6 +126,50 @@ class ServerOneOfTests[F[_], OPTIONS, ROUTE](
         r.code shouldBe StatusCode.BadRequest
         r.body shouldBe """{"msg":"unknown"}"""
       }
+    },
+    testServerLogic(
+      endpoint
+        .errorOut(
+          oneOf[FruitErrorDetail](
+            oneOfDefaultVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[FruitErrorDetail.Unknown]))
+          )
+        )
+        .in("test")
+        .out(plainBody[String])
+        .errorOutVariantsPrepend(
+          oneOfVariant(StatusCode.Conflict, jsonBody[FruitErrorDetail.AlreadyPicked]),
+          oneOfVariant(StatusCode.NotFound, jsonBody[FruitErrorDetail.NotYetGrown])
+        )
+        .serverLogic(_ => pureResult(FruitErrorDetail.NotYetGrown(7).asLeft[String])),
+      ".errorOutVariantsPrepend variant takes precedence over devault .errorOut variant"
+    ) { (backend, baseUri) =>
+      basicRequest.response(asStringAlways).get(uri"$baseUri/test").send(backend).map { r =>
+        r.code shouldBe StatusCode.NotFound
+      }
+    },
+    testServerLogic(
+      endpoint
+        .errorOut(
+          oneOf[FruitErrorDetail](
+            oneOfDefaultVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[FruitErrorDetail.Unknown]))
+          )
+        )
+        .in("test")
+        .out(plainBody[String])
+        .errorOutVariantsPrepend(
+          oneOfVariant(StatusCode.Conflict, jsonBody[FruitErrorDetail.AlreadyPicked]),
+          oneOfVariant(StatusCode.NotFound, jsonBody[FruitErrorDetail.NotYetGrown])
+        )
+        .errorOutVariantsPrepend(
+          oneOfVariant(StatusCode.BadRequest, jsonBody[FruitErrorDetail.AlreadyPicked])
+        )
+        .serverLogic(_ => pureResult(FruitErrorDetail.AlreadyPicked("cherry").asLeft[String])),
+      "multiple .errorOutVariantsPrepend variants are executed in right order (a stack)"
+    ) { (backend, baseUri) =>
+      basicRequest.response(asStringAlways).get(uri"$baseUri/test").send(backend).map { r =>
+        r.code shouldBe StatusCode.BadRequest
+      }
     }
+
   )
 }

@@ -59,7 +59,24 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should support multiple the same status codes") {
+  test("should support multiple the same status codes and same content types") {
+    val expectedYaml = load("oneOf/expected_the_same_status_codes_and_content_types.yml")
+
+    val e = endpoint.out(
+      sttp.tapir.oneOf(
+        oneOfVariant(StatusCode.Ok, jsonBody[NotFound].description("not found")),
+        oneOfVariant(StatusCode.Ok, jsonBody[Unauthorized]),
+        oneOfVariant(StatusCode.NoContent, jsonBody[Unknown].description("unknown"))
+      )
+    )
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support multiple the same status codes and different content types") {
     val expectedYaml = load("oneOf/expected_the_same_status_codes.yml")
 
     implicit val unauthorizedTextPlainCodec: Codec[String, Unauthorized, CodecFormat.TextPlain] =

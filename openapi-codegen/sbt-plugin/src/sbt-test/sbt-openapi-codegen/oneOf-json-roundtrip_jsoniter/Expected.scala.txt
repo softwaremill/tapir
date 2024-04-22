@@ -10,6 +10,7 @@ object TapirGeneratedEndpoints {
   import com.github.plokhotnyuk.jsoniter_scala.core._
 
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
+  import TapirGeneratedEndpointsSchemas._
 
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator

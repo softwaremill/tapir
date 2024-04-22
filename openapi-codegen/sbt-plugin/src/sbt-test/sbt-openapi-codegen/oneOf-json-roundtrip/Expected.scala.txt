@@ -7,8 +7,9 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generic.auto._
   import sttp.tapir.json.circe._
   import io.circe.generic.semiauto._
-  
+
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
+  import TapirGeneratedEndpointsSchemas._
 
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator

@@ -54,6 +54,10 @@ object GenScala {
         "v"
       )
       .orFalse
+  private val maxSchemasPerFileOpt: Opts[Option[Int]] =
+    Opts
+      .option[Int]("maxSchemasPerFile", "Maximum number of schemas to generate in a single file.", "m")
+      .orNone
 
   private val jsonLibOpt: Opts[Option[String]] =
     Opts.option[String]("jsonLib", "Json library to use for serdes", "j").orNone
@@ -71,8 +75,8 @@ object GenScala {
       }
 
   val cmd: Command[IO[ExitCode]] = Command("genscala", "Generate Scala classes", helpFlag = true) {
-    (fileOpt, packageNameOpt, destDirOpt, objectNameOpt, targetScala3Opt, headTagForNamesOpt, jsonLibOpt, validateNonDiscriminatedOneOfsOpt)
-      .mapN { case (file, packageName, destDir, maybeObjectName, targetScala3, headTagForNames, jsonLib, validateNonDiscriminatedOneOfs) =>
+    (fileOpt, packageNameOpt, destDirOpt, objectNameOpt, targetScala3Opt, headTagForNamesOpt, jsonLibOpt, validateNonDiscriminatedOneOfsOpt, maxSchemasPerFileOpt)
+      .mapN { case (file, packageName, destDir, maybeObjectName, targetScala3, headTagForNames, jsonLib, validateNonDiscriminatedOneOfs, maxSchemasPerFile) =>
         val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
         def generateCode(doc: OpenapiDocument): IO[Unit] = for {
@@ -84,7 +88,8 @@ object GenScala {
               targetScala3,
               headTagForNames,
               jsonLib.getOrElse("circe"),
-              validateNonDiscriminatedOneOfs
+              validateNonDiscriminatedOneOfs,
+              maxSchemasPerFile.getOrElse(400)
             )
           )
           destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }

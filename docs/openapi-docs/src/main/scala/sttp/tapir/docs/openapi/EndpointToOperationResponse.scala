@@ -84,7 +84,16 @@ private[openapi] class EndpointToOperationResponse(
 
     val description = bodies.headOption.flatMap { case (desc, _) => desc }.getOrElse(statusCodeDescriptions.headOption.getOrElse(""))
 
-    val content = bodies.flatMap { case (_, content) => content }.toListMap
+    val content = bodies
+      .flatMap { case (_, content) => content }
+      .foldLeft(ListMap.empty[String, Vector[MediaType]]) { case (acc, (ct, mt)) =>
+        acc.get(ct) match {
+          case Some(mts) => acc.updated(ct, mts :+ mt)
+          case None      => acc.updated(ct, Vector(mt))
+        }
+      }
+      .mapValues(mergeMediaTypesToAnyOf)
+      .toListMap
 
     if (bodies.nonEmpty || headers.nonEmpty) {
       Some(Response(description, headers.toListMap, content))
@@ -96,6 +105,17 @@ private[openapi] class EndpointToOperationResponse(
       None
     }
   }
+
+  private def mergeMediaTypesToAnyOf(bodies: Vector[MediaType]): MediaType =
+    bodies.toSet.toList match {
+      case List(body) => body
+      case bodies =>
+        MediaType(
+          schema = Some(ASchema(anyOf = bodies.flatMap(_.schema))),
+          example = bodies.flatMap(_.example).headOption,
+          examples = bodies.flatMap(_.examples).toListMap
+        )
+    }
 
   private def collectBodies(outputs: List[EndpointOutput[_]]): List[(Option[String], ListMap[String, MediaType])] = {
     val forcedContentType = extractFixedContentType(outputs)

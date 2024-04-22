@@ -1,0 +1,53 @@
+package sttp.tapir.generated
+
+object TapirGeneratedEndpointsJsonSerdes {
+  import sttp.tapir.generated.TapirGeneratedEndpoints._
+  import sttp.tapir.generic.auto._
+  implicit lazy val aDTWithDiscriminatorJsonEncoder: io.circe.Encoder[ADTWithDiscriminator] = io.circe.Encoder.instance {
+    case x: SubtypeWithD1 => io.circe.Encoder[SubtypeWithD1].apply(x).mapObject(_.add("type", io.circe.Json.fromString("SubA")))
+    case x: SubtypeWithD2 => io.circe.Encoder[SubtypeWithD2].apply(x).mapObject(_.add("type", io.circe.Json.fromString("SubB")))
+  }
+  implicit lazy val aDTWithDiscriminatorJsonDecoder: io.circe.Decoder[ADTWithDiscriminator] = io.circe.Decoder { (c: io.circe.HCursor) =>
+    for {
+      discriminator <- c.downField("type").as[String]
+      res <- discriminator match {
+        case "SubA" => c.as[SubtypeWithD1]
+        case "SubB" => c.as[SubtypeWithD2]
+      }
+    } yield res
+  }
+  implicit lazy val subtypeWithoutD1JsonDecoder: io.circe.Decoder[SubtypeWithoutD1] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithoutD1]
+  implicit lazy val subtypeWithoutD1JsonEncoder: io.circe.Encoder[SubtypeWithoutD1] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithoutD1]
+  implicit lazy val subtypeWithD1JsonDecoder: io.circe.Decoder[SubtypeWithD1] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithD1]
+  implicit lazy val subtypeWithD1JsonEncoder: io.circe.Encoder[SubtypeWithD1] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithD1]
+  implicit lazy val aDTWithDiscriminatorNoMappingJsonEncoder: io.circe.Encoder[ADTWithDiscriminatorNoMapping] = io.circe.Encoder.instance {
+    case x: SubtypeWithD1 => io.circe.Encoder[SubtypeWithD1].apply(x).mapObject(_.add("type", io.circe.Json.fromString("SubtypeWithD1")))
+    case x: SubtypeWithD2 => io.circe.Encoder[SubtypeWithD2].apply(x).mapObject(_.add("type", io.circe.Json.fromString("SubtypeWithD2")))
+  }
+  implicit lazy val aDTWithDiscriminatorNoMappingJsonDecoder: io.circe.Decoder[ADTWithDiscriminatorNoMapping] = io.circe.Decoder { (c: io.circe.HCursor) =>
+    for {
+      discriminator <- c.downField("type").as[String]
+      res <- discriminator match {
+        case "SubtypeWithD1" => c.as[SubtypeWithD1]
+        case "SubtypeWithD2" => c.as[SubtypeWithD2]
+      }
+    } yield res
+  }
+  implicit lazy val subtypeWithoutD3JsonDecoder: io.circe.Decoder[SubtypeWithoutD3] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithoutD3]
+  implicit lazy val subtypeWithoutD3JsonEncoder: io.circe.Encoder[SubtypeWithoutD3] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithoutD3]
+  implicit lazy val subtypeWithoutD2JsonDecoder: io.circe.Decoder[SubtypeWithoutD2] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithoutD2]
+  implicit lazy val subtypeWithoutD2JsonEncoder: io.circe.Encoder[SubtypeWithoutD2] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithoutD2]
+  implicit lazy val subtypeWithD2JsonDecoder: io.circe.Decoder[SubtypeWithD2] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithD2]
+  implicit lazy val subtypeWithD2JsonEncoder: io.circe.Encoder[SubtypeWithD2] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithD2]
+  implicit lazy val aDTWithoutDiscriminatorJsonEncoder: io.circe.Encoder[ADTWithoutDiscriminator] = io.circe.Encoder.instance {
+    case x: SubtypeWithoutD1 => io.circe.Encoder[SubtypeWithoutD1].apply(x)
+    case x: SubtypeWithoutD2 => io.circe.Encoder[SubtypeWithoutD2].apply(x)
+    case x: SubtypeWithoutD3 => io.circe.Encoder[SubtypeWithoutD3].apply(x)
+  }
+  implicit lazy val aDTWithoutDiscriminatorJsonDecoder: io.circe.Decoder[ADTWithoutDiscriminator] =
+    List[io.circe.Decoder[ADTWithoutDiscriminator]](
+      io.circe.Decoder[SubtypeWithoutD1].asInstanceOf[io.circe.Decoder[ADTWithoutDiscriminator]],
+      io.circe.Decoder[SubtypeWithoutD2].asInstanceOf[io.circe.Decoder[ADTWithoutDiscriminator]],
+      io.circe.Decoder[SubtypeWithoutD3].asInstanceOf[io.circe.Decoder[ADTWithoutDiscriminator]]
+    ).reduceLeft(_ or _)
+}

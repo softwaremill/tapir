@@ -287,11 +287,15 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
 
     val gen = new ClassDefinitionGenerator()
+    def concatted(res: GeneratedClassDefinitions): String = {
+      (res.classRepr + res.serdeRepr.fold("")("\n" + _)).linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
+    }
     val res = gen
       .classDefs(doc, true, jsonParamRefs = Set("Test"))
-      .map(_.classRepr.linesIterator.filterNot(_.trim.isEmpty).mkString("\n"))
-    val resWithQueryParamCodec = gen.classDefs(doc, true, queryParamRefs = Set("Test"), jsonParamRefs = Set("Test"))
-      .map(_.classRepr.linesIterator.filterNot(_.trim.isEmpty).mkString("\n"))
+      .map(concatted)
+    val resWithQueryParamCodec = gen
+      .classDefs(doc, true, queryParamRefs = Set("Test"), jsonParamRefs = Set("Test"))
+      .map(concatted)
     // can't just check whether these compile, because our tests only run on scala 2.12 - so instead just eyeball it...
     res shouldBe Some("""enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
       |  case enum1, enum2
@@ -481,15 +485,26 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   }
 
   it should "generate ADTs for oneOf schemas (jsoniter)" in {
+    val imports =
+      """import sttp.tapir.generic.auto._
+        |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, extra) =
-        gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Jsoniter, jsonParamRefs = Set("ReqWithVariants")).get
+      val GeneratedClassDefinitions(res, jsonSerdes, schemas) =
+        gen
+          .classDefs(
+            doc,
+            false,
+            jsonSerdeLib = JsonSerdeLib.Jsoniter,
+            jsonParamRefs = Set("ReqWithVariants"),
+            fullModelPath = "foo.bar.baz"
+          )
+          .get
 
-      val fullRes = (res + "\n" + extra.get)
+      val fullRes = imports + res + "\n" + jsonSerdes.get
       res shouldCompile ()
       fullRes shouldCompile ()
-      extra.get should include(
+      jsonSerdes.get should include(
         """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
       )
     }
@@ -503,13 +518,16 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   }
 
   it should "generate ADTs for oneOf schemas (circe)" in {
+    val imports =
+      """import sttp.tapir.generic.auto._
+        |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, extra) =
+      val GeneratedClassDefinitions(res, jsonSerdes, schemas) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
-      val fullRes = (res + "\n" + extra.get)
-      fullRes shouldCompile ()
+      val fullRes = (res + "\n" + jsonSerdes.get)
+      (imports + fullRes) shouldCompile ()
       val expectedLines = Seq(
         """implicit lazy val reqWithVariantsJsonEncoder: io.circe.Encoder[ReqWithVariants]""",
         """case x: ReqSubtype1 => io.circe.Encoder[ReqSubtype1].apply(x).mapObject(_.add("type", io.circe.Json.fromString("ReqSubtype1")))""",
