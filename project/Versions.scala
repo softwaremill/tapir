@@ -30,7 +30,7 @@ object Versions {
   val sprayJson = "1.3.6"
   val scalaCheck = "1.17.1"
   val scalaTest = "3.2.18"
-  val scalaTags = "0.12.0"
+  val scalaTags = "0.13.1"
   val scalaTestPlusScalaCheck = "3.2.18.0"
   val refined = "0.11.1"
   val iron = "2.5.0"
