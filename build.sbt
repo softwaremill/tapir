@@ -1838,10 +1838,6 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings
-  )
   .dependsOn(tests)
 
 lazy val clientCore: ProjectMatrix = (projectMatrix in file("client/core"))
@@ -1912,15 +1908,6 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
         "com.softwaremill.sttp.client3" %%% "zio" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared % Optional,
         "com.softwaremill.sttp.shared" %%% "zio" % Versions.sttpShared % Optional
-      )
-    )
-  )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings ++ Seq(
-      libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime % Test,
-        "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.nativeScalaJavaTime % Test
       )
     )
   )
