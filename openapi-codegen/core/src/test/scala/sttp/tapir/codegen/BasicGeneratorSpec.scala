@@ -16,7 +16,8 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       targetScala3 = false,
       useHeadTagForObjectNames = useHeadTagForObjectNames,
       jsonSerdeLib = jsonSerdeLib,
-      validateNonDiscriminatedOneOfs = true
+      validateNonDiscriminatedOneOfs = true,
+      maxSchemasPerFile = 400
     )
   }
   def gen(
@@ -30,14 +31,13 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       jsonSerdeLib = jsonSerdeLib
     )
     val main = genned("TapirGeneratedEndpoints")
-    val maybeJson = genned.get("TapirGeneratedEndpointsJsonSerdes")
-    main + maybeJson.map("\n" + _).getOrElse("")
+    val schemaKeys = genned.keys.filter(_.startsWith("TapirGeneratedEndpointsSchemas")).toSeq.sorted
+    val maybeExtra = (schemaKeys.map(genned) ++ genned.get("TapirGeneratedEndpointsJsonSerdes")).mkString("\n")
+    main + "\n" + maybeExtra
   }
   def testJsonLib(jsonSerdeLib: String) = {
     it should s"generate the bookshop example using ${jsonSerdeLib} serdes" in {
-      val res = gen(TestHelpers.myBookshopDoc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
-//      println(res)
-      res shouldCompile ()
+      gen(TestHelpers.myBookshopDoc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib) shouldCompile ()
     }
 
     it should s"split outputs by tag if useHeadTagForObjectNames = true using ${jsonSerdeLib} serdes" in {
@@ -46,20 +46,22 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
         useHeadTagForObjectNames = true,
         jsonSerdeLib = jsonSerdeLib
       )
-      val schemas = generated("TapirGeneratedEndpoints")
+      val models = generated("TapirGeneratedEndpoints")
       val serdes = generated("TapirGeneratedEndpointsJsonSerdes")
+      val schemas = generated("TapirGeneratedEndpointsSchemas")
       val endpoints = generated("Bookshop")
       // schema file on its own should compile
-      schemas shouldCompile ()
+      models shouldCompile ()
       // schema file should contain no endpoint definitions
-      schemas.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 0
+      models.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 0
       // schema file with serde file should compile
-      (schemas + "\n" + serdes) shouldCompile ()
+      (models + "\n" + serdes) shouldCompile ()
+      // schema file with serde file & schema file should compile
+      (models + "\n" + serdes + "\n" + schemas) shouldCompile ()
       // Bookshop file should contain all endpoint definitions
       endpoints.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 3
-      // endpoint file depends on schema file. For simplicity of testing, just strip the package declaration from the
-      // endpoint file, and concat the two, before testing for compilation
-      (schemas + "\n" + serdes + "\n" + endpoints) shouldCompile ()
+      // endpoint file depends on models, serdes & schemas
+      (models + "\n" + serdes + "\n" + schemas + "\n" + endpoints) shouldCompile ()
     }
 
     it should s"compile endpoints with enum query params using ${jsonSerdeLib} serdes" in {
