@@ -447,14 +447,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
   )
   .nativePlatform(
     scalaVersions = List(scala3),
-    settings = {
-      commonNativeSettings ++ Seq(
-        libraryDependencies ++= Seq(
-          "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime,
-          "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.nativeScalaJavaTime % Test
-        )
-      )
-    }
+    settings = commonNativeSettings
   )
 //.enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
@@ -867,11 +860,7 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
   )
   .nativePlatform(
     scalaVersions = List(scala3),
-    settings = commonNativeSettings ++ Seq(
-      libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime % Test
-      )
-    )
+    settings = commonNativeSettings
   )
   .dependsOn(core)
 
