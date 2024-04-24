@@ -28,7 +28,7 @@ object Versions {
   val ox = "0.0.26"
   val reactiveStreams = "1.0.4"
   val sprayJson = "1.3.6"
-  val scalaCheck = "1.17.1"
+  val scalaCheck = "1.18.0"
   val scalaTest = "3.2.18"
   val scalaTags = "0.13.1"
   val scalaTestPlusScalaCheck = "3.2.18.0"
