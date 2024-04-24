@@ -482,7 +482,6 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
-  .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
   .dependsOn(core, circeJson % Test)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
