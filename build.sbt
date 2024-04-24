@@ -417,10 +417,10 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.4")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.5")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.8",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.9",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -501,10 +501,6 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
-  )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings
   )
   .dependsOn(core, files, circeJson, cats)
 
@@ -592,14 +588,6 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       )
     )
   )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings ++ Seq(
-      libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
-      )
-    )
-  )
   .dependsOn(core)
 
 lazy val catsEffect: ProjectMatrix = (projectMatrix in file("integrations/cats-effect"))
@@ -617,10 +605,6 @@ lazy val catsEffect: ProjectMatrix = (projectMatrix in file("integrations/cats-e
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
-  )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings
   )
   .dependsOn(core)
 
@@ -789,10 +773,6 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings
-  )
   .dependsOn(core)
 
 lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
@@ -937,10 +917,6 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
-  )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings
   )
   .dependsOn(core)
 
@@ -1318,12 +1294,6 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     scalaVersions = scala2And3Versions,
     libraryDependencies ++= Seq(
       "org.http4s" %%% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
-    )
-  )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings ++ Seq(
-      Test / skip := true
     )
   )
   .dependsOn(serverCore, cats, catsEffect)
