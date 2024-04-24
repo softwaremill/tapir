@@ -4,22 +4,22 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.10.4"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.10.5"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-loom" % "1.10.4"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.10.5"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.10.4"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.10.5"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.10.4"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.10.5"
 ```
 
 Then, use:
 
 - `NettyFutureServer().addEndpoints` to expose `Future`-based server endpoints.
-- `NettyIdServer().addEndpoints` to expose `Loom`-based server endpoints.
+- `NettySyncServer().addEndpoints` to expose `Loom`-based server endpoints.
 - `NettyCatsServer().addEndpoints` to expose `F`-based server endpoints, where `F` is any cats-effect supported effect. [Streaming](../endpoint/streaming.md) request and response bodies is supported with fs2.
 - `NettyZioServer().addEndpoints` to expose `ZIO`-based server endpoints, where `R` represents ZIO requirements supported effect. Streaming is supported with ZIO Streams.
 
@@ -44,21 +44,11 @@ val binding: Future[NettyFutureServerBinding] =
   NettyFutureServer().addEndpoint(helloWorld).start()
 ```
 
-The `tapir-netty-server-loom` server uses `Id[T]` as its wrapper effect for compatibility, while `Id[A]` means in fact just `A`, representing direct style.
+The `tapir-netty-server-sync` server uses `Id[T]` as its wrapper effect for compatibility, while `Id[A]` means in fact just `A`, representing direct style. It is 
+available only for Scala 3.
+See [examples/HelloWorldNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldNettySyncServer.scala) for a full example.
+To learn more about handling concurrency with Ox, see the [documentation](https://ox.softwaremill.com/).
 
-```scala
-import sttp.tapir._
-import sttp.tapir.server.netty.loom.{Id, NettyIdServer, NettyIdServerBinding}
-
-val helloWorld = endpoint
-  .get
-  .in("hello").in(query[String]("name"))
-  .out(stringBody)
-  .serverLogicSuccess[Id](name => s"Hello, $name!")
-
-val binding: NettyIdServerBinding =
-  NettyIdServer().addEndpoint(helloWorld).start()
-```
 
 ## Configuration
 
@@ -85,7 +75,10 @@ NettyFutureServer(NettyConfig.default.socketBacklog(256))
 
 ## Web sockets
 
-The netty-cats interpreter supports web sockets, with pipes of type `fs2.Pipe[F, REQ, RESP]`. See [web sockets](../endpoint/websockets.md) 
+
+### tapir-netty-server-cats
+
+The Cats Effects interpreter supports web sockets, with pipes of type `fs2.Pipe[F, REQ, RESP]`. See [web sockets](../endpoint/websockets.md) 
 for more details.
 
 To create a web socket endpoint, use Tapir's `out(webSocketBody)` output type:
@@ -147,6 +140,11 @@ object WebSocketsNettyCatsServer extends ResourceApp.Forever {
     }
 }
 ```
+
+### tapir-netty-server-sync
+
+In the Loom-based backend, Tapir uses [Ox](https://ox.softwaremill.com) to manage concurrency, and your transformation pipeline should be represented as `Ox ?=> Source[A] => Source[B]`. Any forks started within this function will be run under a safely isolated internal scope.
+See [examples/websocket/WebSocketNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/websocket/WebSocketNettySyncServer.scala) for a full example.
 
 ## Graceful shutdown
 

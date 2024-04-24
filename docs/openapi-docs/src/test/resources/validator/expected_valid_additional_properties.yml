@@ -30,10 +30,10 @@ components:
         $ref: '#/components/schemas/ValidFruitAmount'
     ValidFruitAmount:
       title: ValidFruitAmount
+      type: object
       required:
         - fruit
         - amount
-      type: object
       properties:
         fruit:
           type: string

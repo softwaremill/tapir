@@ -12,10 +12,10 @@ paths:
           required: true
           schema:
             type: integer
-            format: int32
             enum:
               - 1
               - 2
+            format: int32
       responses:
         '200':
           description: ''

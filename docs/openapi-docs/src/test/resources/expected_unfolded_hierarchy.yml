@@ -29,10 +29,10 @@ components:
   schemas:
     Author:
       title: Author
+      type: object
       required:
         - name
         - country
-      type: object
       properties:
         name:
           type: string
@@ -40,12 +40,12 @@ components:
           $ref: '#/components/schemas/Country'
     Book:
       title: Book
+      type: object
       required:
         - title
         - genre
         - year
         - author
-      type: object
       properties:
         title:
           type: string
@@ -58,18 +58,18 @@ components:
           $ref: '#/components/schemas/Author'
     Country:
       title: Country
+      type: object
       required:
         - name
-      type: object
       properties:
         name:
           type: string
     Genre:
       title: Genre
+      type: object
       required:
         - name
         - description
-      type: object
       properties:
         name:
           type: string

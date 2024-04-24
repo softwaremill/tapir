@@ -25,10 +25,10 @@ components:
           Square: '#/components/schemas/Square'
     Square:
       title: Square
+      type: object
       required:
         - color
         - shapeType
-      type: object
       properties:
         color:
           type: string

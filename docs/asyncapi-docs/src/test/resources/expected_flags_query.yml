@@ -16,18 +16,18 @@ channels:
       ws:
         method: GET
         query:
+          type: object
           required:
           - limit
           - offset
-          type: object
           properties:
             limit:
               type: integer
               format: int32
             offset:
+              deprecated: true
               type: integer
               format: int32
-              deprecated: true
 components:
   messages:
     string:

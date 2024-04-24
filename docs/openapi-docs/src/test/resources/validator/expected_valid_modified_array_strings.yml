@@ -21,6 +21,6 @@ components:
       properties:
         data:
           type: array
+          maxItems: 1
           items:
             type: string
-          maxItems: 1

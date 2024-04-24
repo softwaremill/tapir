@@ -29,17 +29,17 @@ components:
   schemas:
     Pet:
       title: Pet
+      type: object
       required:
         - name
-      type: object
       properties:
         name:
           type: string
     Pet1:
       title: Pet
+      type: object
       required:
         - legsCount
-      type: object
       properties:
         legsCount:
           type: integer

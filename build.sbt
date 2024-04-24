@@ -219,7 +219,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   vertxServerZio.projectRefs ++
   jdkhttpServer.projectRefs ++
   nettyServer.projectRefs ++
-  nettyServerLoom.projectRefs ++
+  nettyServerSync.projectRefs ++
   nettyServerCats.projectRefs ++
   nettyServerZio.projectRefs ++
   nimaServer.projectRefs ++
@@ -249,6 +249,15 @@ lazy val rawAllAggregates = core.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
 
+lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples).flatMap(_.projectRefs).flatMap(projectId)
+
+def projectId(projectRef: ProjectReference): Option[String] =
+  projectRef match {
+    case ProjectRef(_, id) => Some(id)
+    case LocalProject(id)  => Some(id)
+    case _                 => None
+  }
+
 lazy val allAggregates: Seq[ProjectReference] = {
   val filteredByNative = if (sys.env.isDefinedAt("STTP_NATIVE")) {
     println("[info] STTP_NATIVE defined, including native in the aggregate projects")
@@ -259,15 +268,14 @@ lazy val allAggregates: Seq[ProjectReference] = {
   }
   if (sys.env.isDefinedAt("ONLY_LOOM")) {
     println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(p => (p.toString.contains("Loom") || p.toString.contains("nima") || p.toString.contains("perfTests")))
+    filteredByNative.filter(p => projectId(p).forall(loomProjects.contains))
   } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
     println("[info] ALSO_LOOM defined, including also loom-based projects")
     filteredByNative
   } else {
     println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(p => (p.toString.contains("Loom") || p.toString.contains("nima") || p.toString.contains("perfTests")))
+    filteredByNative.filterNot(p => projectId(p).forall(loomProjects.contains))
   }
-
 }
 
 // separating testing into different Scala versions so that it's not all done at once, as it causes memory problems on CI
@@ -513,16 +521,16 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
       // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.4" % "test" exclude (
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.10.5" % "test" exclude (
         "com.fasterxml.jackson.core", "jackson-databind"
       ),
-      "io.gatling" % "gatling-test-framework" % "3.10.4" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      "io.gatling" % "gatling-test-framework" % "3.10.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.0",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       // Needs to match version used by Gatling
       "com.github.scopt" %% "scopt" % "3.7.1",
-      "io.github.classgraph" % "classgraph" % "4.8.168" % Test,
+      "io.github.classgraph" % "classgraph" % "4.8.172" % Test,
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -545,7 +553,6 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     http4sServer,
     nettyServer,
     nettyServerCats,
-    nettyServerLoom,
     playServer,
     vertxServer,
     vertxServerCats,
@@ -1448,15 +1455,19 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
-lazy val nettyServerLoom: ProjectMatrix =
-  ProjectMatrix("nettyServerLoom", file("server/netty-server/loom"))
+lazy val nettyServerSync: ProjectMatrix =
+  ProjectMatrix("nettyServerSync", file("server/netty-server/sync"))
     .settings(commonJvmSettings)
     .settings(
-      name := "tapir-netty-server-loom",
+      name := "tapir-netty-server-sync",
       // needed because of https://github.com/coursier/coursier/issues/2016
-      useCoursier := false
+      useCoursier := false,
+      Test / run / fork := true,
+      libraryDependencies ++= Seq(
+        "com.softwaremill.ox" %% "core" % Versions.ox
+      )
     )
-    .jvmPlatform(scalaVersions = scala2_13And3Versions)
+    .jvmPlatform(scalaVersions = List(scala3))
     .dependsOn(nettyServer, serverTests % Test)
 
 lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
@@ -2141,6 +2152,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     sttpClient,
     swaggerUiBundle,
     http4sServerZio,
+    nettyServerSync,
     nettyServerZio,
     zioHttpServer,
     zioJson,
