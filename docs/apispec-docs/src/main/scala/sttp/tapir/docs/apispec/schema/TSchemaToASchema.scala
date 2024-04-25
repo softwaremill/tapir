@@ -47,9 +47,9 @@ private[docs] class TSchemaToASchema(
             val ref = toSchemaReference.map(propagated, name)
             if (!markOptionsAsNullable) ref else ref.nullable
           case TSchemaType.SOption(el)    => apply(el, allowReference = true, isOptionElement = true)
-          case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = SchemaFormat.Binary)
-          case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = SchemaFormat.Date)
-          case TSchemaType.SDateTime()    => ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime)
+          case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary))
+          case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Date))
+          case TSchemaType.SDateTime()    => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime))
           case TSchemaType.SRef(fullName) => toSchemaReference.mapDirect(fullName)
           case TSchemaType.SCoproduct(schemas, d) =>
             ASchema.oneOf(
