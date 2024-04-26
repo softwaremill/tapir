@@ -41,8 +41,9 @@ class CatsVertxServerTest extends TestSuite {
           createServerTest,
           Fs2Streams.apply[IO],
           autoPing = false,
-          failingPipe = true,
-          handlePong = true
+          failingPipe = false,
+          handlePong = true,
+          expectCloseResponse = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => Stream.empty

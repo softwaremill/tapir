@@ -27,7 +27,9 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     val streams: S,
     autoPing: Boolean,
     failingPipe: Boolean,
-    handlePong: Boolean
+    handlePong: Boolean,
+    // Disabled for eaxmple for vert.x, which sometimes drops connection without returning Close
+    expectCloseResponse: Boolean = true
 )(implicit
     m: MonadError[F]
 ) extends EitherValues {
@@ -52,12 +54,21 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             m1 <- ws.receiveText()
             m2 <- ws.receiveText()
             _ <- ws.close()
-            m3 <- ws.eitherClose(ws.receiveText())
+            m3 <- if (expectCloseResponse) ws.eitherClose(ws.receiveText()).map(Some(_)) else IO.pure(None)
           } yield List(m1, m2, m3)
         })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map(_.body shouldBe Right(List("echo: test1", "echo: test2", Left(WebSocketFrame.Close(1000, "normal closure")))))
+        .map { r =>
+          r.body.map(_.take(2)) shouldBe Right(List("echo: test1", "echo: test2"))
+          assert(
+            r.body
+              .map(_.last)
+              .value
+              .asInstanceOf[Option[Either[WebSocketFrame, String]]]
+              .forall(_ == Left(WebSocketFrame.Close(1000, "normal closure")))
+          )
+        }
     },
     testServer(
       endpoint.in("elsewhere").out(stringBody),
