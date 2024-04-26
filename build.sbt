@@ -478,7 +478,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     name := "tapir-tests",
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-generic" % Versions.circe,
-      "com.softwaremill.common" %%% "tagging" % "2.3.4",
+      "com.softwaremill.common" %%% "tagging" % "2.3.5",
       scalaTest.value,
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       logback
