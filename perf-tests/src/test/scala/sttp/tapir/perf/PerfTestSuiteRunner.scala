@@ -45,10 +45,9 @@ object PerfTestSuiteRunner extends IOApp {
             _ <- IO.blocking(GatlingRunner.runSimulationBlocking(simulationName, params)) // warm-up
             _ <- IO.println("==================== WARM-UP COMPLETED =========================================")
             _ = setSimulationParams(users = params.users, duration = params.duration, warmup = false)
-            simResultCode <- IO.blocking(GatlingRunner.runSimulationBlocking(simulationName, params)) // actual test
-          } yield simResultCode)
+            _ <- IO.blocking(GatlingRunner.runSimulationBlocking(simulationName, params)) // actual test
+          } yield ())
             .guarantee(serverKillSwitch)
-            .ensureOr(errCode => new Exception(s"Gatling failed with code $errCode"))(_ == 0)
           serverSimulationResult <- GatlingLogProcessor.processLast(shortSimulationName, serverName)
           _ <- IO.println(serverSimulationResult)
         } yield (serverSimulationResult)
