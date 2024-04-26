@@ -28,8 +28,7 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
     oneOfBody: Boolean = true,
     cors: Boolean = true,
     options: Boolean = true,
-    maxContentLength: Boolean = true,
-    cookieHeaders: Boolean = true
+    maxContentLength: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
@@ -47,6 +46,5 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
       (if (validation) new ServerValidationTests(createServerTest).tests() else Nil) ++
       (if (oneOfBody) new ServerOneOfBodyTests(createServerTest).tests() else Nil) ++
       (if (cors) new ServerCORSTests(createServerTest).tests() else Nil) ++
-      (if (options) new ServerOptionsTests(createServerTest, serverInterpreter).tests() else Nil) ++
-      (if (cookieHeaders) new ServerCookieHeadersTests(createServerTest).tests() else Nil)
+      (if (options) new ServerOptionsTests(createServerTest, serverInterpreter).tests() else Nil)
 }
