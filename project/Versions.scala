@@ -20,7 +20,7 @@ object Versions {
   val upickle = "3.3.0"
   val playJson = "3.0.1"
   val play29Json = "3.0.3"
-  val finatra = "23.11.0"
+  val finatra = "24.2.0"
   val catbird = "21.12.0"
   val json4s = "4.0.7"
   val metrics4Scala = "4.2.9"
