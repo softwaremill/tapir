@@ -1,7 +1,7 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.13",
+    scalaVersion := "2.13.14",
     version := "0.1",
     openapiPackage := "com.example.generated.apis",
     openapiObject := "MyExampleEndpoints",
@@ -18,7 +18,9 @@ TaskKey[Unit]("check") := {
   val reference = Source.fromFile("example_swagger.yaml").getLines.mkString("\n")
   val out = Source.fromFile("target/swagger.yaml").getLines.mkString("\n")
   if (out != reference) {
-    sys.error("unexpected output:\n" + out + "\n== Out diff ref ==\n" + (out diff reference) + "\n== Ref diff out ==\n" + (reference diff out))
+    sys.error(
+      "unexpected output:\n" + out + "\n== Out diff ref ==\n" + (out diff reference) + "\n== Ref diff out ==\n" + (reference diff out)
+    )
   }
   ()
 }
