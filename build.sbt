@@ -15,7 +15,7 @@ import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
 val scala2_12 = "2.12.19"
-val scala2_13 = "2.13.13"
+val scala2_13 = "2.13.14"
 val scala3 = "3.3.3"
 
 // The `idea.managed` property is set automatically by IntelliJ when it runs sbt for build or import
