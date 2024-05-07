@@ -507,13 +507,11 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.12" % "test" exclude (
         "com.fasterxml.jackson.core", "jackson-databind"
       ),
-      "io.gatling" % "gatling-test-framework" % "3.11.2" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      "io.gatling" % "gatling-test-framework" % "3.11.12" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
-      // Needs to match version used by Gatling
-      "com.github.scopt" %% "scopt" % "3.7.1",
-      "io.github.classgraph" % "classgraph" % "4.8.172" % Test,
+      "io.github.classgraph" % "classgraph" % "4.8.172",
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,

@@ -19,7 +19,9 @@ object ServerRunner extends IOApp {
   private val runtimeMirror = universe.runtimeMirror(getClass.getClassLoader)
 
   def run(args: List[String]): IO[ExitCode] = {
-    val shortServerName = args.head
+    val shortServerName = args.headOption.getOrElse {
+      throw new IllegalArgumentException(s"Unspecified server name. Use one of: ${TypeScanner.allServers}")
+    }
     for {
       killSwitch <- startServerByTypeName(ServerName.fromShort(shortServerName))
       _ <- IO.never.guarantee(killSwitch)
