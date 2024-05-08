@@ -1,27 +1,30 @@
 package sttp.tapir.server.netty.sync
 
 import cats.data.NonEmptyList
-import cats.effect.unsafe.implicits.global
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalactic.source.Position
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.compatible.Assertion
 import org.scalatest.funsuite.AsyncFunSuite
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers.*
 import org.slf4j.LoggerFactory
 import ox.*
-import ox.channels.Source
+import ox.channels.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3.*
 import sttp.model.*
-import sttp.tapir.PublicEndpoint
+import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.*
 import sttp.tapir.tests.*
+import sttp.ws.{WebSocket, WebSocketFrame}
 
-import scala.concurrent.duration.FiniteDuration
+import java.util.concurrent.{CompletableFuture, TimeUnit}
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
 class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
@@ -41,6 +44,39 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, failingPipe = true, handlePong = true) {
           override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = ox ?=> in => in.map(f)
           override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Source.empty
+
+          import createServerTest._
+          override def tests(): List[Test] = super.tests() ++ List({
+            val released: CompletableFuture[Boolean] = new CompletableFuture[Boolean]()
+            testServer(
+              endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain].apply(streams)),
+              "closes supervision scope when client closes Web Socket without getting any responses"
+            )((_: Unit) =>
+              val pipe: OxStreams.Pipe[String, String] = in => {
+                val outgoing = Channel.bufferedDefault[String]
+                releaseAfterScope {
+                  released.complete(true).discard
+                }
+                outgoing
+              }
+              Right(pipe)
+            ) { (backend, baseUri) =>
+              basicRequest
+                .response(asWebSocket { (ws: WebSocket[IO]) =>
+                  for {
+                    _ <- ws.sendText("test1")
+                    _ <- ws.close()
+                    closeResponse <- ws.eitherClose(ws.receiveText())
+                  } yield closeResponse
+                })
+                .get(baseUri.scheme("ws"))
+                .send(backend)
+                .map { r =>
+                  r.body.value shouldBe Left(WebSocketFrame.Close(1000, "normal closure"))
+                  released.get(15, TimeUnit.SECONDS) shouldBe true
+                }
+            }
+          })
         }.tests()
 
     tests.foreach { t =>

@@ -7,6 +7,9 @@ import org.reactivestreams.Subscription
 import org.reactivestreams.Processor
 import sttp.tapir.server.netty.sync.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.sync.OxStreams
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import scala.util.control.NonFatal
 
 /** A reactive Processor, which is both a Publisher and a Subscriber
   *
@@ -28,10 +31,14 @@ private[sync] class OxProcessor[A, B](
   // An internal channel for holding incoming requests (`A`), will be wrapped with user's pipeline to produce responses (`B`)
   private val channel = Channel.buffered[A](1)
 
+  private val pipelineCancelationTimeoutMs = 5000
+  private val pipelineFork: CompletableFuture[CancellableFork[Unit]] = new CompletableFuture[CancellableFork[Unit]]()
+
   override def onError(reason: Throwable): Unit =
     // As per rule 2.13, we need to throw a `java.lang.NullPointerException` if the `Throwable` is `null`
     if reason == null then throw null
     channel.errorOrClosed(reason).discard
+    cancelPipelineFork()
 
   override def onNext(a: A): Unit =
     if a == null then throw new NullPointerException("Element cannot be null") // Rule 2.13
@@ -51,6 +58,7 @@ private[sync] class OxProcessor[A, B](
 
   override def onComplete(): Unit =
     channel.doneOrClosed().discard
+    cancelPipelineFork()
 
   override def subscribe(subscriber: Subscriber[? >: B]): Unit =
     if subscriber == null then throw new NullPointerException("Subscriber cannot be null")
@@ -63,10 +71,14 @@ private[sync] class OxProcessor[A, B](
       val channelSubscription = new ChannelSubscription(wrappedSubscriber, outgoingResponses)
       subscriber.onSubscribe(channelSubscription)
       channelSubscription.runBlocking() // run the main loop which reads from the channel if there's demand
-    } { error =>
+    }(pipelineFork) { error =>
       wrappedSubscriber.onError(error)
       onError(error)
     }
+
+  private def cancelPipelineFork(): Unit =
+    try { pipelineFork.get(pipelineCancelationTimeoutMs, TimeUnit.MILLISECONDS).cancelNow() }
+    catch case NonFatal(_) => ()
 
   private def cancelSubscription() =
     if requestsSubscription != null then

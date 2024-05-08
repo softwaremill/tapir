@@ -3,6 +3,9 @@ package sttp.tapir.server.netty.sync.internal.ox
 import ox.*
 import ox.channels.Actor
 
+import java.util.concurrent.CompletableFuture
+import scala.util.control.NonFatal
+
 /** A dispatcher that can start arbitrary forks. Useful when one needs to start an asynchronous task from a thread outside of an Ox scope.
   * Normally Ox doesn't allow to start forks from other threads, for example in callbacks of external libraries. If you create an
   * OxDispatcher inside a scope and pass it for potential handling on another thread, that thread can call
@@ -20,12 +23,13 @@ import ox.channels.Actor
   */
 private[sync] class OxDispatcher()(using ox: Ox):
   private class Runner:
-    def runAsync(thunk: Ox ?=> Unit, onError: Throwable => Unit): Unit =
-      fork {
+    def runAsync(thunk: Ox ?=> Unit, onError: Throwable => Unit, cf: CompletableFuture[CancellableFork[Unit]]): Unit =
+      cf.complete(forkCancellable {
         try supervised(thunk)
-        catch case e => onError(e)
-      }.discard
+        catch case NonFatal(e) => onError(e)
+      }).discard
 
   private val actor = Actor.create(new Runner)
 
-  def runAsync(thunk: Ox ?=> Unit)(onError: Throwable => Unit): Unit = actor.tell(_.runAsync(thunk, onError))
+  def runAsync(thunk: Ox ?=> Unit)(forkFuture: CompletableFuture[CancellableFork[Unit]])(onError: Throwable => Unit): Unit =
+    actor.tell(_.runAsync(thunk, onError, forkFuture))
