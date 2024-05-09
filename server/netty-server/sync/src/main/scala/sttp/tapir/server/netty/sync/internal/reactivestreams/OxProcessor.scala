@@ -1,12 +1,15 @@
 package sttp.tapir.server.netty.sync.internal.reactivestreams
 
-import org.reactivestreams.Subscriber
+import org.reactivestreams.{Processor, Subscriber, Subscription}
+import org.slf4j.LoggerFactory
 import ox.*
 import ox.channels.*
-import org.reactivestreams.Subscription
-import org.reactivestreams.Processor
-import sttp.tapir.server.netty.sync.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.sync.OxStreams
+import sttp.tapir.server.netty.sync.internal.ox.OxDispatcher
+
+import scala.concurrent.duration.*
+import scala.concurrent.{Await, Future}
+import scala.util.control.NonFatal
 
 /** A reactive Processor, which is both a Publisher and a Subscriber
   *
@@ -23,15 +26,20 @@ private[sync] class OxProcessor[A, B](
     pipeline: OxStreams.Pipe[A, B],
     wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B]
 ) extends Processor[A, B]:
+  private val logger = LoggerFactory.getLogger(getClass.getName)
   // Incoming requests are read from this subscription into an Ox Channel[A]
   @volatile private var requestsSubscription: Subscription = _
   // An internal channel for holding incoming requests (`A`), will be wrapped with user's pipeline to produce responses (`B`)
   private val channel = Channel.buffered[A](1)
 
+  private val pipelineCancelationTimeout = 5.seconds
+  @volatile private var pipelineForkFuture: Future[CancellableFork[Unit]] = _
+
   override def onError(reason: Throwable): Unit =
     // As per rule 2.13, we need to throw a `java.lang.NullPointerException` if the `Throwable` is `null`
     if reason == null then throw null
     channel.errorOrClosed(reason).discard
+    cancelPipelineFork()
 
   override def onNext(a: A): Unit =
     if a == null then throw new NullPointerException("Element cannot be null") // Rule 2.13
@@ -51,11 +59,12 @@ private[sync] class OxProcessor[A, B](
 
   override def onComplete(): Unit =
     channel.doneOrClosed().discard
+    cancelPipelineFork()
 
   override def subscribe(subscriber: Subscriber[? >: B]): Unit =
     if subscriber == null then throw new NullPointerException("Subscriber cannot be null")
     val wrappedSubscriber = wrapSubscriber(subscriber)
-    oxDispatcher.runAsync {
+    pipelineForkFuture = oxDispatcher.runAsync {
       val outgoingResponses: Source[B] = pipeline((channel: Source[A]).mapAsView { e =>
         requestsSubscription.request(1)
         e
@@ -67,6 +76,23 @@ private[sync] class OxProcessor[A, B](
       wrappedSubscriber.onError(error)
       onError(error)
     }
+
+  private def cancelPipelineFork(): Unit =
+    if (pipelineForkFuture != null) try {
+      val pipelineFork = Await.result(pipelineForkFuture, pipelineCancelationTimeout)
+      oxDispatcher.runAsync {
+        race(
+          {
+            ox.sleep(pipelineCancelationTimeout)
+            logger.error(s"Pipeline fork cancelation did not complete in time ($pipelineCancelationTimeout).")
+          },
+          pipelineFork.cancel()
+        ) match {
+          case Left(NonFatal(e)) => logger.error("Error when canceling pipeline fork", e)
+          case _       => ()
+        }
+      } { e => logger.error("Error when canceling pipeline fork", e) }.discard
+    } catch case NonFatal(e) => logger.error("Error when waiting for pipeline fork to start", e)
 
   private def cancelSubscription() =
     if requestsSubscription != null then
