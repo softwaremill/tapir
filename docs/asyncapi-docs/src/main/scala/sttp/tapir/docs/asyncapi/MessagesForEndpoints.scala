@@ -53,7 +53,7 @@ private[asyncapi] class MessagesForEndpoints(tschemaToASchema: TSchemaToASchema,
       Nil,
       None,
       Nil,
-      if (convertedExamples.isEmpty) Nil else List(Map("payload" -> convertedExamples)),
+      convertedExamples.map(example => Map("payload" -> (example :: Nil))),
       Nil
     )
   }
