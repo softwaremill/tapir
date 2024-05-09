@@ -18,7 +18,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
 
 object JsonSerdeLib extends Enumeration {
-  val Circe, Jsoniter = Value
+  val Circe, Jsoniter, Zio = Value
   type JsonSerdeLib = Value
 }
 
@@ -40,6 +40,7 @@ object BasicGenerator {
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
       case "jsoniter" => JsonSerdeLib.Jsoniter
+      case "zio"      => JsonSerdeLib.Zio
       case _ =>
         System.err.println(
           s"!!! Unrecognised value $jsonSerdeLib for json serde lib -- should be one of circe, jsoniter. Defaulting to circe !!!"
@@ -166,6 +167,9 @@ object BasicGenerator {
         """import sttp.tapir.json.jsoniter._
           |import com.github.plokhotnyuk.jsoniter_scala.macros._
           |import com.github.plokhotnyuk.jsoniter_scala.core._""".stripMargin
+      case JsonSerdeLib.Zio =>
+        """import sttp.tapir.json.zio._
+          |import zio.json._""".stripMargin
     }
     s"""import sttp.tapir._
        |import sttp.tapir.model._

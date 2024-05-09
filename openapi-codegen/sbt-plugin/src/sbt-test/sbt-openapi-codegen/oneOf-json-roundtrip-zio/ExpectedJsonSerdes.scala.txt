@@ -1,0 +1,63 @@
+package sttp.tapir.generated
+
+object TapirGeneratedEndpointsJsonSerdes {
+  import sttp.tapir.generated.TapirGeneratedEndpoints._
+  import sttp.tapir.generic.auto._
+  implicit lazy val aDTWithDiscriminatorJsonEncoder: zio.json.JsonEncoder[ADTWithDiscriminator] = zio.json.JsonEncoder[zio.json.ast.Json].contramap {
+    case x: SubtypeWithD1 => zio.json.ast.Json.decoder.decodeJson(zio.json.JsonEncoder[SubtypeWithD1].encodeJson(x)).getOrElse(throw new RuntimeException("Unable to encode tagged ADT type ADTWithDiscriminator to json")).mapObject(_.add("type", zio.json.ast.Json.Str("SubA")))
+    case x: SubtypeWithD2 => zio.json.ast.Json.decoder.decodeJson(zio.json.JsonEncoder[SubtypeWithD2].encodeJson(x)).getOrElse(throw new RuntimeException("Unable to encode tagged ADT type ADTWithDiscriminator to json")).mapObject(_.add("type", zio.json.ast.Json.Str("SubB")))
+  }
+  implicit lazy val aDTWithDiscriminatorJsonDecoder: zio.json.JsonDecoder[ADTWithDiscriminator] = zio.json.JsonDecoder[zio.json.ast.Json].mapOrFail {
+    case json@zio.json.ast.Json.Obj(fields) =>
+      (fields.find(_._1 == "type") match {
+        case None => Left("Unable to decode json to tagged ADT type ADTWithDiscriminator")
+        case Some(r) => Right(r._2)
+      }).flatMap {
+        case zio.json.ast.Json.Str("SubA") => zio.json.JsonDecoder[SubtypeWithD1].fromJsonAST(json)
+        case zio.json.ast.Json.Str("SubB") => zio.json.JsonDecoder[SubtypeWithD2].fromJsonAST(json)
+        case _ => Left("Unable to decode json to tagged ADT type ADTWithDiscriminator")
+      }
+    case _ => Left("Unable to decode json to tagged ADT type ADTWithDiscriminator")
+  }
+  implicit lazy val subtypeWithoutD1JsonDecoder: zio.json.JsonDecoder[SubtypeWithoutD1] = zio.json.DeriveJsonDecoder.gen[SubtypeWithoutD1]
+  implicit lazy val subtypeWithoutD1JsonEncoder: zio.json.JsonEncoder[SubtypeWithoutD1] = zio.json.DeriveJsonEncoder.gen[SubtypeWithoutD1]
+  implicit lazy val subtypeWithD1JsonDecoder: zio.json.JsonDecoder[SubtypeWithD1] = zio.json.DeriveJsonDecoder.gen[SubtypeWithD1]
+  implicit lazy val subtypeWithD1JsonEncoder: zio.json.JsonEncoder[SubtypeWithD1] = zio.json.DeriveJsonEncoder.gen[SubtypeWithD1]
+  implicit lazy val aDTWithDiscriminatorNoMappingJsonEncoder: zio.json.JsonEncoder[ADTWithDiscriminatorNoMapping] = zio.json.JsonEncoder[zio.json.ast.Json].contramap {
+    case x: SubtypeWithD1 => zio.json.ast.Json.decoder.decodeJson(zio.json.JsonEncoder[SubtypeWithD1].encodeJson(x)).getOrElse(throw new RuntimeException("Unable to encode tagged ADT type ADTWithDiscriminatorNoMapping to json")).mapObject(_.add("type", zio.json.ast.Json.Str("SubtypeWithD1")))
+    case x: SubtypeWithD2 => zio.json.ast.Json.decoder.decodeJson(zio.json.JsonEncoder[SubtypeWithD2].encodeJson(x)).getOrElse(throw new RuntimeException("Unable to encode tagged ADT type ADTWithDiscriminatorNoMapping to json")).mapObject(_.add("type", zio.json.ast.Json.Str("SubtypeWithD2")))
+  }
+  implicit lazy val aDTWithDiscriminatorNoMappingJsonDecoder: zio.json.JsonDecoder[ADTWithDiscriminatorNoMapping] = zio.json.JsonDecoder[zio.json.ast.Json].mapOrFail {
+    case json@zio.json.ast.Json.Obj(fields) =>
+      (fields.find(_._1 == "type") match {
+        case None => Left("Unable to decode json to tagged ADT type ADTWithDiscriminatorNoMapping")
+        case Some(r) => Right(r._2)
+      }).flatMap {
+        case zio.json.ast.Json.Str("SubtypeWithD1") => zio.json.JsonDecoder[SubtypeWithD1].fromJsonAST(json)
+        case zio.json.ast.Json.Str("SubtypeWithD2") => zio.json.JsonDecoder[SubtypeWithD2].fromJsonAST(json)
+        case _ => Left("Unable to decode json to tagged ADT type ADTWithDiscriminatorNoMapping")
+      }
+    case _ => Left("Unable to decode json to tagged ADT type ADTWithDiscriminatorNoMapping")
+  }
+  implicit lazy val subtypeWithoutD3JsonDecoder: zio.json.JsonDecoder[SubtypeWithoutD3] = zio.json.DeriveJsonDecoder.gen[SubtypeWithoutD3]
+  implicit lazy val subtypeWithoutD3JsonEncoder: zio.json.JsonEncoder[SubtypeWithoutD3] = zio.json.DeriveJsonEncoder.gen[SubtypeWithoutD3]
+  implicit lazy val subtypeWithoutD2JsonDecoder: zio.json.JsonDecoder[SubtypeWithoutD2] = zio.json.DeriveJsonDecoder.gen[SubtypeWithoutD2]
+  implicit lazy val subtypeWithoutD2JsonEncoder: zio.json.JsonEncoder[SubtypeWithoutD2] = zio.json.DeriveJsonEncoder.gen[SubtypeWithoutD2]
+  implicit lazy val subtypeWithD2JsonDecoder: zio.json.JsonDecoder[SubtypeWithD2] = zio.json.DeriveJsonDecoder.gen[SubtypeWithD2]
+  implicit lazy val subtypeWithD2JsonEncoder: zio.json.JsonEncoder[SubtypeWithD2] = zio.json.DeriveJsonEncoder.gen[SubtypeWithD2]
+  implicit lazy val aDTWithoutDiscriminatorJsonEncoder: zio.json.JsonEncoder[ADTWithoutDiscriminator] = new zio.json.JsonEncoder[ADTWithoutDiscriminator] {
+    override def unsafeEncode(v: ADTWithoutDiscriminator, indent: Option[Int], out: zio.json.internal.Write): Unit = {
+      v match {
+        case x: SubtypeWithoutD1 => zio.json.JsonEncoder[SubtypeWithoutD1].unsafeEncode(x, indent, out)
+        case x: SubtypeWithoutD2 => zio.json.JsonEncoder[SubtypeWithoutD2].unsafeEncode(x, indent, out)
+        case x: SubtypeWithoutD3 => zio.json.JsonEncoder[SubtypeWithoutD3].unsafeEncode(x, indent, out)
+      }
+    }
+  }
+  implicit lazy val aDTWithoutDiscriminatorJsonDecoder: zio.json.JsonDecoder[ADTWithoutDiscriminator] =
+    List[zio.json.JsonDecoder[ADTWithoutDiscriminator]](
+      zio.json.JsonDecoder[SubtypeWithoutD1].asInstanceOf[zio.json.JsonDecoder[ADTWithoutDiscriminator]],
+      zio.json.JsonDecoder[SubtypeWithoutD2].asInstanceOf[zio.json.JsonDecoder[ADTWithoutDiscriminator]],
+      zio.json.JsonDecoder[SubtypeWithoutD3].asInstanceOf[zio.json.JsonDecoder[ADTWithoutDiscriminator]]
+    ).reduceLeft(_ orElse _)
+}
