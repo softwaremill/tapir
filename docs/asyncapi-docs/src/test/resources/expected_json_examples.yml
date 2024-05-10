@@ -41,4 +41,5 @@ components:
       examples:
         - payload:
             - 10
+        - payload:
             - 42
