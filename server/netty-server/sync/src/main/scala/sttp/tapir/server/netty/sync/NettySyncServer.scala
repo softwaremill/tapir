@@ -68,7 +68,7 @@ case class NettySyncServer(
     *   server binding, to be used to control stopping of the server or obtaining metadata like port.
     */
   def start()(using Ox): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](None, new OxDispatcher()) match
+    startUsingSocketOverride[InetSocketAddress](None, OxDispatcher.create) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop)
 
@@ -87,7 +87,7 @@ case class NettySyncServer(
         NettySyncServerBinding(socket, stop)
 
   def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
-    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), new OxDispatcher()) match
+    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), OxDispatcher.create) match
       case (socket, stop) =>
         NettySyncDomainSocketBinding(socket, stop)
 
