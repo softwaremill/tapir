@@ -17,12 +17,10 @@ components:
   schemas:
     FruitConst:
       title: FruitConst
-      default:
-        fruitConstName: default fruit
       type: object
       required:
-        - fruitConstName
+        - fruitType
       properties:
-        fruitConstName:
+        fruitType:
           type: string
-          const: Red Apple Const
+          const: Golden Delicious
