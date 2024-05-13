@@ -3,9 +3,9 @@ package sttp.tapir.docs.openapi
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.capabilities.Streams
 import sttp.apispec.openapi.Info
 import sttp.apispec.openapi.circe.yaml._
+import sttp.capabilities.Streams
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
 import sttp.tapir.generic.Derived
@@ -24,7 +24,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("example/expected_single_example_with_const.yml")
     val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
-        endpoint.get.out(jsonBody[FruitConst].default(FruitConst("default fruit"))),
+        endpoint.get.out(jsonBody[FruitConst]),
         Info("Entities", "1.0")
       )
       .toYaml
