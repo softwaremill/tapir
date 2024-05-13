@@ -11,7 +11,7 @@ import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
 import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.tests.data.{Entity, Organization, Person}
+import sttp.tapir.tests.data.{Entity, FruitConst, Organization, Person}
 import sttp.tapir.{endpoint, _}
 
 import java.nio.ByteBuffer
@@ -19,6 +19,19 @@ import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 
 class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
+
+  test("support const attribute") {
+    val expectedYaml = load("example/expected_single_example_with_const.yml")
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(
+        endpoint.get.out(jsonBody[FruitConst].default(FruitConst("default fruit"))),
+        Info("Entities", "1.0")
+      )
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 
   test("support example of list and not-list types") {
     val expectedYaml = load("example/expected_examples_of_list_and_not_list_types.yml")
