@@ -40,83 +40,83 @@ case class Schema[T](
     hidden: Boolean = false,
     validator: Validator[T] = Validator.pass[T],
     attributes: AttributeMap = AttributeMap.Empty,
-    // The default value together with the value encoded to a raw format, which will then be directly rendered in the
+    // The const value together with the value encoded to a raw format, which will then be directly rendered in the
     // documentation. This is needed as codecs for nested types aren't available. Similar to Validator.EncodeToRaw
     const: Option[(T, Option[Any])] = None
 ) extends SchemaMacros[T] {
 
   // required for binary compatibility
-  def this(
-      schemaType: SchemaType[T],
-      name: Option[SName],
-      isOptional: Boolean,
-      description: Option[String],
-      default: Option[(T, Option[Any])],
-      format: Option[String],
-      encodedExample: Option[Any],
-      deprecated: Boolean,
-      hidden: Boolean,
-      validator: Validator[T],
-      attributes: AttributeMap
-  ) =
-    this(schemaType, name, isOptional, description, default, format, encodedExample, deprecated, hidden, validator, attributes, None)
+//  def this(
+//      schemaType: SchemaType[T],
+//      name: Option[SName],
+//      isOptional: Boolean,
+//      description: Option[String],
+//      default: Option[(T, Option[Any])],
+//      format: Option[String],
+//      encodedExample: Option[Any],
+//      deprecated: Boolean,
+//      hidden: Boolean,
+//      validator: Validator[T],
+//      attributes: AttributeMap
+//  ) =
+//    this(schemaType, name, isOptional, description, default, format, encodedExample, deprecated, hidden, validator, attributes, None)
 
-  def copy(
-      schemaType: SchemaType[T] = this.schemaType,
-      name: Option[SName] = this.name,
-      isOptional: Boolean = this.isOptional,
-      description: Option[String] = this.description,
-      default: Option[(T, Option[Any])] = this.default,
-      format: Option[String] = this.format,
-      encodedExample: Option[Any] = this.encodedExample,
-      deprecated: Boolean = this.deprecated,
-      hidden: Boolean = this.hidden,
-      validator: Validator[T] = this.validator,
-      attributes: AttributeMap = this.attributes,
-      const: Option[(T, Option[Any])] = this.const
-  ): Schema[T] = new Schema(
-    schemaType,
-    name,
-    isOptional,
-    description,
-    default,
-    format,
-    encodedExample,
-    deprecated,
-    hidden,
-    validator,
-    attributes,
-    const
-  )
+//  def copy(
+//      schemaType: SchemaType[T] = this.schemaType,
+//      name: Option[SName] = this.name,
+//      isOptional: Boolean = this.isOptional,
+//      description: Option[String] = this.description,
+//      default: Option[(T, Option[Any])] = this.default,
+//      format: Option[String] = this.format,
+//      encodedExample: Option[Any] = this.encodedExample,
+//      deprecated: Boolean = this.deprecated,
+//      hidden: Boolean = this.hidden,
+//      validator: Validator[T] = this.validator,
+//      attributes: AttributeMap = this.attributes,
+//      const: Option[(T, Option[Any])] = this.const
+//  ): Schema[T] = new Schema(
+//    schemaType,
+//    name,
+//    isOptional,
+//    description,
+//    default,
+//    format,
+//    encodedExample,
+//    deprecated,
+//    hidden,
+//    validator,
+//    attributes,
+//    const
+//  )
 
-  // required for binary compatibility
-  def copy(
-      schemaType: SchemaType[T],
-      name: Option[SName],
-      isOptional: Boolean,
-      description: Option[String],
-      default: Option[(T, Option[Any])],
-      format: Option[String],
-      encodedExample: Option[Any],
-      deprecated: Boolean,
-      hidden: Boolean,
-      validator: Validator[T],
-      attributes: AttributeMap
-  ): Schema[T] =
-    new Schema(
-      schemaType,
-      name,
-      isOptional,
-      description,
-      default,
-      format,
-      encodedExample,
-      deprecated,
-      hidden,
-      validator,
-      attributes,
-      this.const
-    )
+//  // required for binary compatibility
+//  def copy(
+//      schemaType: SchemaType[T],
+//      name: Option[SName],
+//      isOptional: Boolean,
+//      description: Option[String],
+//      default: Option[(T, Option[Any])],
+//      format: Option[String],
+//      encodedExample: Option[Any],
+//      deprecated: Boolean,
+//      hidden: Boolean,
+//      validator: Validator[T],
+//      attributes: AttributeMap
+//  ): Schema[T] =
+//    new Schema(
+//      schemaType,
+//      name,
+//      isOptional,
+//      description,
+//      default,
+//      format,
+//      encodedExample,
+//      deprecated,
+//      hidden,
+//      validator,
+//      attributes,
+//      this.const
+//    )
 
   def map[TT](f: T => Option[TT])(g: TT => T): Schema[TT] = Schema(
     schemaType = schemaType.contramap(g),
@@ -337,21 +337,21 @@ case class Schema[T](
 }
 
 object Schema extends LowPrioritySchema with SchemaCompanionMacros {
-  // required for binary compatibility
-  def apply[T](
-      schemaType: SchemaType[T],
-      name: Option[SName],
-      isOptional: Boolean,
-      description: Option[String],
-      default: Option[(T, Option[Any])],
-      format: Option[String],
-      encodedExample: Option[Any],
-      deprecated: Boolean,
-      hidden: Boolean,
-      validator: Validator[T],
-      attributes: AttributeMap
-  ): Schema[T] =
-    new Schema(schemaType, name, isOptional, description, default, format, encodedExample, deprecated, hidden, validator, attributes, None)
+//  // required for binary compatibility
+//  def apply[T](
+//      schemaType: SchemaType[T],
+//      name: Option[SName],
+//      isOptional: Boolean,
+//      description: Option[String],
+//      default: Option[(T, Option[Any])],
+//      format: Option[String],
+//      encodedExample: Option[Any],
+//      deprecated: Boolean,
+//      hidden: Boolean,
+//      validator: Validator[T],
+//      attributes: AttributeMap
+//  ): Schema[T] =
+//    new Schema(schemaType, name, isOptional, description, default, format, encodedExample, deprecated, hidden, validator, attributes, None)
 
   val ModifyCollectionElements = "each"
 
@@ -405,7 +405,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
 
   implicit def schemaForEither[A, B](implicit sa: Schema[A], sb: Schema[B]): Schema[Either[A, B]] = {
     Schema[Either[A, B]](
-      SchemaType.SCoproduct(List(sa, sb), None) {
+      SchemaType.SCoproduct[Either[A, B]](List(sa, sb), None) {
         case Left(v)  => Some(SchemaWithValue(sa, v))
         case Right(v) => Some(SchemaWithValue(sb, v))
       },
