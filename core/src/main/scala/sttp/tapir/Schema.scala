@@ -46,20 +46,20 @@ case class Schema[T](
 ) extends SchemaMacros[T] {
 
   // required for binary compatibility
-//  def this(
-//      schemaType: SchemaType[T],
-//      name: Option[SName],
-//      isOptional: Boolean,
-//      description: Option[String],
-//      default: Option[(T, Option[Any])],
-//      format: Option[String],
-//      encodedExample: Option[Any],
-//      deprecated: Boolean,
-//      hidden: Boolean,
-//      validator: Validator[T],
-//      attributes: AttributeMap
-//  ) =
-//    this(schemaType, name, isOptional, description, default, format, encodedExample, deprecated, hidden, validator, attributes, None)
+  def this(
+      schemaType: SchemaType[T],
+      name: Option[SName],
+      isOptional: Boolean,
+      description: Option[String],
+      default: Option[(T, Option[Any])],
+      format: Option[String],
+      encodedExample: Option[Any],
+      deprecated: Boolean,
+      hidden: Boolean,
+      validator: Validator[T],
+      attributes: AttributeMap
+  ) =
+    this(schemaType, name, isOptional, description, default, format, encodedExample, deprecated, hidden, validator, attributes, None)
 
 //  def copy(
 //      schemaType: SchemaType[T] = this.schemaType,
