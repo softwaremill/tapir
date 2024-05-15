@@ -3,6 +3,7 @@
 
 .cache
 .history
+.env/
 .lib/
 /cdk
 /aws-cdk-tests
