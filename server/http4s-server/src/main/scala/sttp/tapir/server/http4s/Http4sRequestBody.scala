@@ -15,6 +15,7 @@ import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 import java.io.ByteArrayInputStream
 import org.http4s.Media
 import org.http4s.Headers
+import java.nio.charset.StandardCharsets
 
 private[http4s] class Http4sRequestBody[F[_]: Async](
     serverOptions: Http4sServerOptions[F]
@@ -42,12 +43,13 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
 
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        asByteArray.map(new String(_, charset.map(_.nioCharset).getOrElse(defaultCharset))).map(RawValue(_))
-      case RawBodyType.ByteArrayBody        => asByteArray.map(RawValue(_))
-      case RawBodyType.ByteBufferBody       => asChunk.map(c => RawValue(c.toByteBuffer))
-      case RawBodyType.InputStreamBody      => asByteArray.map(b => RawValue(new ByteArrayInputStream(b)))
-      case RawBodyType.InputStreamRangeBody => asByteArray.map(b => RawValue(InputStreamRange(() => new ByteArrayInputStream(b))))
-
+        body.through(fs2.text.decodeWithCharset(charset.map(_.nioCharset).getOrElse(defaultCharset))).compile.foldMonoid.map(RawValue(_))
+      case RawBodyType.ByteArrayBody  => asByteArray.map(RawValue(_))
+      case RawBodyType.ByteBufferBody => asChunk.map(c => RawValue(c.toByteBuffer))
+      case RawBodyType.InputStreamBody =>
+        fs2.io.toInputStreamResource(body).allocated.map { case (is, _) => RawValue(is) }
+      case RawBodyType.InputStreamRangeBody =>
+        fs2.io.toInputStreamResource(body).allocated.map { case (is, _) => RawValue(InputStreamRange(() => is)) }
       case RawBodyType.FileBody =>
         serverOptions.createFile(serverRequest).flatMap { file =>
           val fileSink = Files[F].writeAll(file.toPath)
