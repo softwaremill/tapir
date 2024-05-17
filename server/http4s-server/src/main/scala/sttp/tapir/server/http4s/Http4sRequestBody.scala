@@ -5,17 +5,13 @@ import cats.syntax.all._
 import fs2.Chunk
 import fs2.io.file.Files
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
-import org.http4s.{Charset, EntityDecoder, Request, multipart}
+import org.http4s.{Charset, EntityDecoder, Headers, Media, Request, multipart}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 
-import java.io.ByteArrayInputStream
-import org.http4s.Media
-import org.http4s.Headers
-import java.nio.charset.StandardCharsets
 
 private[http4s] class Http4sRequestBody[F[_]: Async](
     serverOptions: Http4sServerOptions[F]
