@@ -40,7 +40,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
 
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        body.through(decodeWithCharset(charset.map(_.nioCharset).getOrElse(defaultCharset))).compile.foldMonoid.map(RawValue(_))
+        body.through(decodeWithCharset(charset.map(_.nioCharset).getOrElse(defaultCharset))).compile.string.map(RawValue(_))
       case RawBodyType.ByteArrayBody  => asByteArray.map(RawValue(_))
       case RawBodyType.ByteBufferBody => asChunk.map(c => RawValue(c.toByteBuffer))
       case RawBodyType.InputStreamBody =>
