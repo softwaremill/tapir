@@ -196,6 +196,14 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
       case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, true))), _) =>
     }
   }
+  "Generated validator for intersection of constraints" should "use tapir Validator.min(1, false) and Validator.max(3, false)" in {
+    type IntConstraint = GreaterEqual[1] & LessEqual[3]
+    type LimitedInt = Int :| IntConstraint
+
+    summon[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, false))), _) =>
+    }
+  }
 
   "Generated validator for union of constraints" should "use tapir Validator.min and Validator.max" in {
     type IntConstraint = Less[1] | Greater[3]
@@ -203,6 +211,22 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
 
     summon[Schema[LimitedInt]].validator should matchPattern {
       case Validator.Mapped(Validator.Any(List(Validator.Max(1, true), Validator.Min(3, true))), _) =>
+    }
+  }
+  "Generated validator for union of constraints" should "use tapir Validator.enumeration" in {
+    type IntConstraint = In[(
+        110354433,
+        110354454,
+        122483323
+      )]
+    type LimitedInt = Int :| IntConstraint
+
+    summon[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.Enumeration(List(
+      110354433,
+      110354454,
+      122483323
+      ), _, _), _) =>
     }
   }
 
