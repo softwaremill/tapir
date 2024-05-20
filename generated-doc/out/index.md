@@ -112,7 +112,7 @@ Thank you!
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
 <a href="https://www.moia.io/en"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moia.png" alt="moia" width="160"/></a>
-<a href="https://www.pitsdatarecovery.net"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/pits.svg" alt="pits" width="160"/></a>
+<a href="https://www.pitsdatarecovery.net"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/pits.svg" alt="pits" width="100"/></a>
 <a href="https://www.hootsuite.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hootsuite.png" alt="hootsuite" width="160"/></a>
 </div>
 
