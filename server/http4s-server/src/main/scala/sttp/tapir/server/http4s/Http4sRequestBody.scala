@@ -4,17 +4,15 @@ import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import fs2.Chunk
 import fs2.io.file.Files
+import fs2.io.toInputStreamResource
+import fs2.text.decodeWithCharset
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
-import org.http4s.{Charset, EntityDecoder, Request, multipart}
+import org.http4s.{Charset, EntityDecoder, Headers, Media, Request, multipart}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
-
-import java.io.ByteArrayInputStream
-import org.http4s.Media
-import org.http4s.Headers
 
 private[http4s] class Http4sRequestBody[F[_]: Async](
     serverOptions: Http4sServerOptions[F]
@@ -42,12 +40,13 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
 
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        asByteArray.map(new String(_, charset.map(_.nioCharset).getOrElse(defaultCharset))).map(RawValue(_))
-      case RawBodyType.ByteArrayBody        => asByteArray.map(RawValue(_))
-      case RawBodyType.ByteBufferBody       => asChunk.map(c => RawValue(c.toByteBuffer))
-      case RawBodyType.InputStreamBody      => asByteArray.map(b => RawValue(new ByteArrayInputStream(b)))
-      case RawBodyType.InputStreamRangeBody => asByteArray.map(b => RawValue(InputStreamRange(() => new ByteArrayInputStream(b))))
-
+        body.through(decodeWithCharset(charset.map(_.nioCharset).getOrElse(defaultCharset))).compile.string.map(RawValue(_))
+      case RawBodyType.ByteArrayBody  => asByteArray.map(RawValue(_))
+      case RawBodyType.ByteBufferBody => asChunk.map(c => RawValue(c.toByteBuffer))
+      case RawBodyType.InputStreamBody =>
+        toInputStreamResource(body).allocated.map { case (is, _) => RawValue(is) }
+      case RawBodyType.InputStreamRangeBody =>
+        toInputStreamResource(body).allocated.map { case (is, _) => RawValue(InputStreamRange(() => is)) }
       case RawBodyType.FileBody =>
         serverOptions.createFile(serverRequest).flatMap { file =>
           val fileSink = Files[F].writeAll(file.toPath)
