@@ -47,8 +47,9 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
           createServerTest,
           ZioStreams,
           autoPing = true,
-          failingPipe = true,
-          handlePong = false
+          failingPipe = false,
+          handlePong = false,
+          expectCloseResponse = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty

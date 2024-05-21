@@ -1,7 +1,7 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.13",
+    scalaVersion := "2.13.14",
     version := "0.1"
   )
 
@@ -9,7 +9,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.10.0",
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.0",
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.8.0",
-  "io.circe" %% "circe-generic" % "0.14.6",
+  "io.circe" %% "circe-generic" % "0.14.7",
   "com.beachape" %% "enumeratum" % "1.7.3",
   "com.beachape" %% "enumeratum-circe" % "1.7.3",
   "org.scalatest" %% "scalatest" % "3.2.18" % Test,

@@ -43,6 +43,7 @@ object JsonSerdeGenerator {
           if (fullModelPath.isEmpty) None else Some(fullModelPath),
           validateNonDiscriminatedOneOfs
         )
+      case JsonSerdeLib.Zio => genZioSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs)
     }
   }
 
@@ -365,6 +366,120 @@ object JsonSerdeGenerator {
              |  def nullValue: $name = ${childSerdes.head}.nullValue
              |}""".stripMargin
         serde
+    }
+  }
+
+  ///
+  /// Zio
+  ///
+  private def genZioSerdes(
+      doc: OpenapiDocument,
+      allSchemas: Map[String, OpenapiSchemaType],
+      allTransitiveJsonParamRefs: Set[String],
+      validateNonDiscriminatedOneOfs: Boolean
+  ): Option[String] = {
+    doc.components
+      .map(_.schemas.flatMap {
+        // Enum serdes are generated at the declaration site
+        case (_, _: OpenapiSchemaEnum) => None
+        // We generate the serde if it's referenced in any json model
+        case (name, schema: OpenapiSchemaObject) if allTransitiveJsonParamRefs.contains(name) =>
+          Some(genZioObjectSerde(name, schema))
+        case (name, schema: OpenapiSchemaMap) if allTransitiveJsonParamRefs.contains(name) =>
+          Some(genZioMapSerde(name, schema))
+        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
+          Some(genZioAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
+        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
+        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
+      })
+      .map(_.mkString("\n"))
+  }
+
+  private def genZioObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
+    val subs = schema.properties.collect {
+      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => genZioObjectSerde(s"$name${k.capitalize}", `type`)
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _), _)) =>
+        genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
+        genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
+    } match {
+      case Nil => ""
+      case s   => s.mkString("", "\n", "\n")
+    }
+    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: zio.json.JsonDecoder[$name] = zio.json.DeriveJsonDecoder.gen[$name]
+       |implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = zio.json.DeriveJsonEncoder.gen[$name]""".stripMargin
+  }
+
+  private def genZioMapSerde(name: String, schema: OpenapiSchemaMap): String = {
+    val subs = schema.items match {
+      case `type`: OpenapiSchemaObject => Some(genZioObjectSerde(s"${name}ObjectsItem", `type`))
+      case _                           => None
+    }
+    subs.fold("")("\n" + _)
+  }
+
+  private def genZioAdtSerde(
+      allSchemas: Map[String, OpenapiSchemaType],
+      schema: OpenapiSchemaOneOf,
+      name: String,
+      validateNonDiscriminatedOneOfs: Boolean
+  ): String = {
+    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+
+    schema match {
+      case OpenapiSchemaOneOf(_, Some(discriminator)) =>
+        val subtypeNames = schema.types.map {
+          case ref: OpenapiSchemaRef => ref.stripped
+          case other => throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
+        }
+        val schemaToJsonMapping = discriminator.mapping match {
+          case Some(mapping) =>
+            mapping.map { case (jsonValue, fullRef) => fullRef.stripPrefix("#/components/schemas/") -> jsonValue }
+          case None => subtypeNames.map(s => s -> s).toMap
+        }
+        val encoders = subtypeNames
+          .map { t =>
+            val jsonTypeName = schemaToJsonMapping(t)
+            s"""case x: $t => zio.json.ast.Json.decoder.decodeJson(zio.json.JsonEncoder[$t].encodeJson(x)).getOrElse(throw new RuntimeException("Unable to encode tagged ADT type ${name} to json")).mapObject(_.add("${discriminator.propertyName}", zio.json.ast.Json.Str("$jsonTypeName")))"""
+          }
+          .mkString("\n")
+        val decoders = subtypeNames
+          .map { t => s"""case zio.json.ast.Json.Str("${schemaToJsonMapping(t)}") => zio.json.JsonDecoder[$t].fromJsonAST(json)""" }
+          .mkString("\n")
+        s"""implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = zio.json.JsonEncoder[zio.json.ast.Json].contramap {
+           |${indent(2)(encoders)}
+           |}
+           |implicit lazy val ${uncapitalisedName}JsonDecoder: zio.json.JsonDecoder[$name] = zio.json.JsonDecoder[zio.json.ast.Json].mapOrFail {
+           |  case json@zio.json.ast.Json.Obj(fields) =>
+           |    (fields.find(_._1 == "type") match {
+           |      case None => Left("Unable to decode json to tagged ADT type ${name}")
+           |      case Some(r) => Right(r._2)
+           |    }).flatMap {
+           |${indent(6)(decoders)}
+           |      case _ => Left("Unable to decode json to tagged ADT type ${name}")
+           |    }
+           |  case _ => Left("Unable to decode json to tagged ADT type ${name}")
+           |}""".stripMargin
+      case OpenapiSchemaOneOf(_, None) =>
+        val subtypeNames = schema.types.map {
+          case ref: OpenapiSchemaRef => ref.stripped
+          case other => throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
+        }
+        if (validateNonDiscriminatedOneOfs) checkForSoundness(allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
+        val encoders = subtypeNames.map(t => s"case x: $t => zio.json.JsonEncoder[$t].unsafeEncode(x, indent, out)").mkString("\n")
+        val decoders = subtypeNames.map(t => s"zio.json.JsonDecoder[$t].asInstanceOf[zio.json.JsonDecoder[$name]]").mkString(",\n")
+        s"""implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = new zio.json.JsonEncoder[$name] {
+           |  override def unsafeEncode(v: $name, indent: Option[Int], out: zio.json.internal.Write): Unit = {
+           |    v match {
+           |${indent(6)(encoders)}
+           |    }
+           |  }
+           |}
+           |implicit lazy val ${uncapitalisedName}JsonDecoder: zio.json.JsonDecoder[$name] =
+           |  List[zio.json.JsonDecoder[$name]](
+           |${indent(4)(decoders)}
+           |  ).reduceLeft(_ orElse _)""".stripMargin
     }
   }
 }

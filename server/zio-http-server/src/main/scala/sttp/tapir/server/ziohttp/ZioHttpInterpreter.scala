@@ -2,19 +2,15 @@ package sttp.tapir.server.ziohttp
 
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
-import sttp.model.Method
 import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.FilterServerEndpoints
-import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.ztapir._
 import zio._
-import zio.http.{Header => ZioHttpHeader}
-import zio.http.{Headers => ZioHttpHeaders}
-import zio.http._
+import zio.http.{Header => ZioHttpHeader, Headers => ZioHttpHeaders, _}
 
 trait ZioHttpInterpreter[R] {
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
@@ -88,7 +84,7 @@ trait ZioHttpInterpreter[R] {
       resp: ServerResponse[ZioResponseBody],
       body: Option[ZioHttpResponseBody]
   ): UIO[Response] = {
-    val baseHeaders = resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList
+    val baseHeaders = resp.headers.groupBy(_.name).flatMap(sttpToZioHttpHeader).toList
     val allHeaders = body.flatMap(_.contentLength) match {
       case Some(contentLength) if resp.contentLength.isEmpty => ZioHttpHeader.ContentLength(contentLength) :: baseHeaders
       case _                                                 => baseHeaders
@@ -110,8 +106,17 @@ trait ZioHttpInterpreter[R] {
     )
   }
 
-  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
-    ZioHttpHeader.Custom(hl._1, hl._2.map(_.value).mkString(", "))
+  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): Seq[ZioHttpHeader] = {
+    hl._1.toLowerCase match {
+      case "set-cookie" =>
+        hl._2.map(_.value).map { rawValue =>
+          ZioHttpHeader.SetCookie.parse(rawValue).toOption.getOrElse {
+            ZioHttpHeader.Custom(hl._1, rawValue)
+          }
+        }
+      case _ => List(ZioHttpHeader.Custom(hl._1, hl._2.map(_.value).mkString(", ")))
+    }
+  }
 }
 
 object ZioHttpInterpreter {
