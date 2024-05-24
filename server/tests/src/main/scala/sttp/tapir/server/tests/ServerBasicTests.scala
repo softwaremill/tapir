@@ -29,17 +29,17 @@ import java.nio.ByteBuffer
 import sttp.tapir.tests.Files.in_file_out_file
 
 class ServerBasicTests[F[_], OPTIONS, ROUTE](
-                                              createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
-                                              serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
-                                              multipleValueHeaderSupport: Boolean = true,
-                                              inputStreamSupport: Boolean = true,
-                                              supportsUrlEncodedPathSegments: Boolean = true,
-                                              supportsMultipleSetCookieHeaders: Boolean = true,
-                                              invulnerableToUnsanitizedHeaders: Boolean = true,
-                                              maxContentLength: Boolean = true
-                                            )(implicit
-                                              m: MonadError[F]
-                                            ) {
+    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
+    multipleValueHeaderSupport: Boolean = true,
+    inputStreamSupport: Boolean = true,
+    supportsUrlEncodedPathSegments: Boolean = true,
+    supportsMultipleSetCookieHeaders: Boolean = true,
+    invulnerableToUnsanitizedHeaders: Boolean = true,
+    maxContentLength: Boolean = true
+)(implicit
+    m: MonadError[F]
+) {
   import createServerTest._
   import serverInterpreter._
 
@@ -767,9 +767,9 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
   )
 
   def testPayloadTooLarge[I](
-                              testedEndpoint: PublicEndpoint[I, Unit, I, Any],
-                              maxLength: Int
-                            ) = testServer(
+      testedEndpoint: PublicEndpoint[I, Unit, I, Any],
+      maxLength: Int
+  ) = testServer(
     testedEndpoint.maxRequestBodyLength(maxLength.toLong),
     "checks payload limit and returns 413 on exceeded max content length (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
@@ -777,9 +777,9 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     basicRequest.post(uri"$baseUri/api/echo").body(tooLargeBody).send(backend).map(_.code shouldBe StatusCode.PayloadTooLarge)
   }
   def testPayloadWithinLimit[I](
-                                 testedEndpoint: PublicEndpoint[I, Unit, I, Any],
-                                 maxLength: Int
-                               ) = testServer(
+      testedEndpoint: PublicEndpoint[I, Unit, I, Any],
+      maxLength: Int
+  ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
     "checks payload limit and returns OK on content length  below or equal max (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
