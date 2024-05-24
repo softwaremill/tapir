@@ -18,18 +18,18 @@ class ZioHttpTestServerInterpreter(
     channelFactory: ZLayer[Any, Nothing, ChannelFactory[ServerChannel]]
 )(implicit
     trace: Trace
-) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], HttpApp[Any]] {
+) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], Routes[Any, Response]] {
 
   override def route(
       es: List[ServerEndpoint[ZioStreams with WebSockets, Task]],
       interceptors: Interceptors
-  ): HttpApp[Any] = {
+  ): Routes[Any, Response] = {
     val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customiseInterceptors).options
     ZioHttpInterpreter(serverOptions).toHttp(es)
   }
 
   override def serverWithStop(
-      routes: NonEmptyList[HttpApp[Any]],
+      routes: NonEmptyList[Routes[Any, Response]],
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, (Port, KillSwitch)] = {
     implicit val r: Runtime[Any] = Runtime.default
