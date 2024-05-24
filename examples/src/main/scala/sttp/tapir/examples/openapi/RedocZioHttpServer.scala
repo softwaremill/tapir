@@ -6,8 +6,7 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir.*
-import zio.http.HttpApp
-import zio.http.Server
+import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.Console.{printLine, readLine}
 import zio.{Task, ZIO, ZIOAppDefault, ZLayer}
 
@@ -20,9 +19,9 @@ object RedocZioHttpServer extends ZIOAppDefault {
       else ZIO.fail("Unknown pet id")
     }
 
-  val petRoutes: HttpApp[Any] = ZioHttpInterpreter().toHttp(petEndpoint)
+  val petRoutes: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter().toHttp(petEndpoint)
 
-  val redocRoutes: HttpApp[Any] =
+  val redocRoutes: Routes[Any, ZioHttpResponse] =
     ZioHttpInterpreter().toHttp(RedocInterpreter().fromServerEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
   val app = (petRoutes ++ redocRoutes)
