@@ -5,8 +5,7 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.zio.ZioMetrics
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.ztapir.ZServerEndpoint
-import zio.http.HttpApp
-import zio.http.Server
+import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.{Task, ZIO, _}
 
 /** Based on https://adopt-tapir.softwaremill.com zio version. */
@@ -31,7 +30,7 @@ object ZioMetricsExample extends ZIOAppDefault {
   override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
     val serverOptions: ZioHttpServerOptions[Any] =
       ZioHttpServerOptions.customiseInterceptors.metricsInterceptor(metricsInterceptor).options
-    val app: HttpApp[Any] = ZioHttpInterpreter(serverOptions).toHttp(all)
+    val app: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter(serverOptions).toHttp(all)
 
     val port = sys.env.get("http.port").map(_.toInt).getOrElse(8080)
 
