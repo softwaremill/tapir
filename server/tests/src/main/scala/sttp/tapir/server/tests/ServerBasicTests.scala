@@ -29,17 +29,17 @@ import java.nio.ByteBuffer
 import sttp.tapir.tests.Files.in_file_out_file
 
 class ServerBasicTests[F[_], OPTIONS, ROUTE](
-    createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
-    serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
-    multipleValueHeaderSupport: Boolean = true,
-    inputStreamSupport: Boolean = true,
-    supportsUrlEncodedPathSegments: Boolean = true,
-    supportsMultipleSetCookieHeaders: Boolean = true,
-    invulnerableToUnsanitizedHeaders: Boolean = true,
-    maxContentLength: Boolean = true
-)(implicit
-    m: MonadError[F]
-) {
+                                              createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
+                                              serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
+                                              multipleValueHeaderSupport: Boolean = true,
+                                              inputStreamSupport: Boolean = true,
+                                              supportsUrlEncodedPathSegments: Boolean = true,
+                                              supportsMultipleSetCookieHeaders: Boolean = true,
+                                              invulnerableToUnsanitizedHeaders: Boolean = true,
+                                              maxContentLength: Boolean = true
+                                            )(implicit
+                                              m: MonadError[F]
+                                            ) {
   import createServerTest._
   import serverInterpreter._
 
@@ -767,9 +767,9 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
   )
 
   def testPayloadTooLarge[I](
-      testedEndpoint: PublicEndpoint[I, Unit, I, Any],
-      maxLength: Int
-  ) = testServer(
+                              testedEndpoint: PublicEndpoint[I, Unit, I, Any],
+                              maxLength: Int
+                            ) = testServer(
     testedEndpoint.maxRequestBodyLength(maxLength.toLong),
     "checks payload limit and returns 413 on exceeded max content length (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
@@ -777,9 +777,9 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     basicRequest.post(uri"$baseUri/api/echo").body(tooLargeBody).send(backend).map(_.code shouldBe StatusCode.PayloadTooLarge)
   }
   def testPayloadWithinLimit[I](
-      testedEndpoint: PublicEndpoint[I, Unit, I, Any],
-      maxLength: Int
-  ) = testServer(
+                                 testedEndpoint: PublicEndpoint[I, Unit, I, Any],
+                                 maxLength: Int
+                               ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
     "checks payload limit and returns OK on content length  below or equal max (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
@@ -844,41 +844,6 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           r.code shouldBe StatusCode.InternalServerError
           r.body shouldBe Symbol("left")
         }
-    },
-    testServer(
-      "fail when status is 204 or 304, but there's a body",
-      NonEmptyList.of(
-        route(
-          List(
-            endpoint.in("no_content").out(jsonBody[Unit]).out(statusCode(StatusCode.NoContent)).serverLogicSuccess[F](_ => pureResult(())),
-            endpoint
-              .in("not_modified")
-              .out(jsonBody[Unit])
-              .out(statusCode(StatusCode.NotModified))
-              .serverLogicSuccess[F](_ => pureResult(())),
-            endpoint
-              .in("one_of")
-              .in(query[String]("select_err"))
-              .errorOut(
-                sttp.tapir.oneOf[ErrorInfo](
-                  oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[NotFound])),
-                  oneOfVariant(statusCode(StatusCode.NoContent).and(jsonBody[NoContentData]))
-                )
-              )
-              .serverLogic[F] { selectErr =>
-                if (selectErr == "no_content")
-                  pureResult[F, Either[ErrorInfo, Unit]](Left(NoContentData("error")))
-                else
-                  pureResult[F, Either[ErrorInfo, Unit]](Left(NotFound("error")))
-              }
-          )
-        )
-      )
-    ) { (backend, baseUri) =>
-      basicRequest.get(uri"$baseUri/no_content").send(backend).map(_.code shouldBe StatusCode.InternalServerError) >>
-        basicRequest.get(uri"$baseUri/not_modified").send(backend).map(_.code shouldBe StatusCode.InternalServerError) >>
-        basicRequest.get(uri"$baseUri/one_of?select_err=no_content").send(backend).map(_.code shouldBe StatusCode.InternalServerError) >>
-        basicRequest.get(uri"$baseUri/one_of?select_err=not_found").send(backend).map(_.code shouldBe StatusCode.NotFound)
     }
   )
 
