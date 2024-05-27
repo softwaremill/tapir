@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty.internal
 
-import sttp.tapir.Id
+import sttp.tapir.Identity
 
 import scala.concurrent.Future
 
@@ -8,8 +8,8 @@ trait RunAsync[F[_]] {
   def apply(f: => F[Unit]): Unit
 }
 object RunAsync {
-  final val Id: RunAsync[Id] = new RunAsync[Id] {
-    override def apply(f: => Id[Unit]): Unit = f
+  final val Id: RunAsync[Identity] = new RunAsync[Identity] {
+    override def apply(f: => Identity[Unit]): Unit = f
   }
 
   final val Future: RunAsync[Future] = new RunAsync[Future] {

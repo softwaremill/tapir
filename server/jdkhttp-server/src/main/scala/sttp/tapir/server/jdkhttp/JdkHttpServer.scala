@@ -1,15 +1,15 @@
 package sttp.tapir.server.jdkhttp
 
 import com.sun.net.httpserver._
-import sttp.tapir.Id
+import sttp.tapir.Identity
 import sttp.tapir.server.ServerEndpoint
 
 import java.net.InetSocketAddress
 import java.util.concurrent.Executor
 
 case class JdkHttpServer(
-    endpoints: Vector[ServerEndpoint[Any, Id]] = Vector.empty,
-    options: JdkHttpServerOptions = JdkHttpServerOptions.Default
+                          endpoints: Vector[ServerEndpoint[Any, Identity]] = Vector.empty,
+                          options: JdkHttpServerOptions = JdkHttpServerOptions.Default
 ) {
 
   /** Sets the port to which the server will be bound. */
@@ -56,9 +56,9 @@ case class JdkHttpServer(
     */
   def options(o: JdkHttpServerOptions): JdkHttpServer = copy(options = o)
 
-  def addEndpoint(se: ServerEndpoint[Any, Id]): JdkHttpServer = addEndpoints(List(se))
+  def addEndpoint(se: ServerEndpoint[Any, Identity]): JdkHttpServer = addEndpoints(List(se))
 
-  def addEndpoints(ses: List[ServerEndpoint[Any, Id]]): JdkHttpServer =
+  def addEndpoints(ses: List[ServerEndpoint[Any, Identity]]): JdkHttpServer =
     copy(endpoints = endpoints ++ ses)
 
   /** Use this if you want to add more routes manually, outside of the routes defined with tapir. Afterwards it is necessary to call

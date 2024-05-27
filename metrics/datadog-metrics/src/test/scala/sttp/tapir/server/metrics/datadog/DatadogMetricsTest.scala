@@ -9,7 +9,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.tagobjects.Retryable
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Canceled, Failed, Outcome}
-import sttp.tapir.Id
+import sttp.tapir.Identity
 import sttp.tapir.TestUtil._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
@@ -76,9 +76,9 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
         .port(statsdServerPort)
         .build()
 
-    val metrics = DatadogMetrics[Id](client).addRequestsActive()
+    val metrics = DatadogMetrics[Identity](client).addRequestsActive()
     val interpreter =
-      new ServerInterpreter[Any, Id, Unit, NoStreams](
+      new ServerInterpreter[Any, Identity, Unit, NoStreams](
         _ => List(serverEp),
         TestRequestBody,
         UnitToResponseBody,
@@ -111,13 +111,13 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
         .port(statsdServerPort)
         .build()
 
-    val metrics = DatadogMetrics[Id](client).addRequestsTotal()
+    val metrics = DatadogMetrics[Identity](client).addRequestsTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, Unit, NoStreams](
+      new ServerInterpreter[Any, Identity, Unit, NoStreams](
         _ => List(serverEp),
         TestRequestBody,
         UnitToResponseBody,
-        List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
+        List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Identity])),
         _ => ()
       )
 
@@ -138,15 +138,15 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     // given
     val clock = new TestClock()
 
-    val waitServerEp: Long => ServerEndpoint[Any, Id] = millis => {
+    val waitServerEp: Long => ServerEndpoint[Any, Identity] = millis => {
       PersonsApi { name =>
         clock.forward(millis)
         PersonsApi.defaultLogic(name)
       }.serverEp
     }
-    val waitBodyListener: Long => BodyListener[Id, String] = millis =>
-      new BodyListener[Id, String] {
-        override def onComplete(body: String)(cb: Try[Unit] => Id[Unit]): String = {
+    val waitBodyListener: Long => BodyListener[Identity, String] = millis =>
+      new BodyListener[Identity, String] {
+        override def onComplete(body: String)(cb: Try[Unit] => Identity[Unit]): String = {
           clock.forward(millis)
           cb(Success(()))
           body
@@ -158,9 +158,9 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
         .port(statsdServerPort)
         .build()
 
-    val metrics = DatadogMetrics[Id](client).addRequestsDuration(clock = clock)
+    val metrics = DatadogMetrics[Identity](client).addRequestsDuration(clock = clock)
     def interpret(sleepHeaders: Long, sleepBody: Long) =
-      new ServerInterpreter[Any, Id, String, NoStreams](
+      new ServerInterpreter[Any, Identity, String, NoStreams](
         _ => List(waitServerEp(sleepHeaders)),
         TestRequestBody,
         StringToResponseBody,
@@ -209,9 +209,9 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
         .port(statsdServerPort)
         .build()
 
-    val metrics = DatadogMetrics[Id](client).addRequestsTotal(labels)
+    val metrics = DatadogMetrics[Identity](client).addRequestsTotal(labels)
     val interpreter =
-      new ServerInterpreter[Any, Id, Unit, NoStreams](
+      new ServerInterpreter[Any, Identity, Unit, NoStreams](
         _ => List(serverEp),
         TestRequestBody,
         UnitToResponseBody,
@@ -237,12 +237,12 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
         .port(statsdServerPort)
         .build()
 
-    val metrics = DatadogMetrics[Id](client).addRequestsTotal()
-    val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
+    val metrics = DatadogMetrics[Identity](client).addRequestsTotal()
+    val interpreter = new ServerInterpreter[Any, Identity, Unit, NoStreams](
       _ => List(serverEp),
       TestRequestBody,
       UnitToResponseBody,
-      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler[Id])),
+      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler[Identity])),
       _ => ()
     )
 

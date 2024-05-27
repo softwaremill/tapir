@@ -9,7 +9,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Seconds, Span}
-import sttp.tapir.Id
+import sttp.tapir.Identity
 import sttp.tapir.TestUtil._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.TestUtil._
@@ -34,9 +34,9 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       Thread.sleep(2000)
       PersonsApi.defaultLogic(name)
     }.serverEp
-    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsActive()
+    val metrics = OpenTelemetryMetrics[Identity](meter).addRequestsActive()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](
+      new ServerInterpreter[Any, Identity, String, NoStreams](
         _ => List(serverEp),
         TestRequestBody,
         StringToResponseBody,
@@ -67,12 +67,12 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
     val serverEp = PersonsApi().serverEp
-    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsTotal()
-    val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
+    val metrics = OpenTelemetryMetrics[Identity](meter).addRequestsTotal()
+    val interpreter = new ServerInterpreter[Any, Identity, Unit, NoStreams](
       _ => List(serverEp),
       TestRequestBody,
       UnitToResponseBody,
-      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
+      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Identity])),
       _ => ()
     )
 
@@ -114,16 +114,16 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val reader = InMemoryMetricReader.create()
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
-    val waitServerEp: Int => ServerEndpoint[Any, Id] = millis => {
+    val waitServerEp: Int => ServerEndpoint[Any, Identity] = millis => {
       PersonsApi { name =>
         Thread.sleep(millis)
         PersonsApi.defaultLogic(name)
       }.serverEp
     }
 
-    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsDuration()
+    val metrics = OpenTelemetryMetrics[Identity](meter).addRequestsDuration()
     def interpret(sleep: Int) =
-      new ServerInterpreter[Any, Id, String, NoStreams](
+      new ServerInterpreter[Any, Identity, String, NoStreams](
         _ => List(waitServerEp(sleep)),
         TestRequestBody,
         StringToResponseBody,
@@ -159,9 +159,9 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val reader = InMemoryMetricReader.create()
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
-    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsTotal(labels)
+    val metrics = OpenTelemetryMetrics[Identity](meter).addRequestsTotal(labels)
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](
+      new ServerInterpreter[Any, Identity, String, NoStreams](
         _ => List(serverEp),
         TestRequestBody,
         StringToResponseBody,
@@ -182,12 +182,12 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val reader = InMemoryMetricReader.create()
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")
-    val metrics = OpenTelemetryMetrics[Id](meter).addRequestsTotal()
-    val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
+    val metrics = OpenTelemetryMetrics[Identity](meter).addRequestsTotal()
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
       _ => List(serverEp),
       TestRequestBody,
       StringToResponseBody,
-      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler[Id])),
+      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler[Identity])),
       _ => ()
     )
 

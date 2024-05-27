@@ -12,5 +12,5 @@ package object tapir extends Tapir {
   type AnyEndpoint = Endpoint[_, _, _, _, _]
   type PublicEndpoint[INPUT, ERROR_OUTPUT, OUTPUT, -R] = Endpoint[Unit, INPUT, ERROR_OUTPUT, OUTPUT, R]
 
-  type Id[X] = X
+  type Identity[X] = X
 }

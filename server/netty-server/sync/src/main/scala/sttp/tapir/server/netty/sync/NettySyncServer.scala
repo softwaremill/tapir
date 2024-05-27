@@ -7,7 +7,7 @@ import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{Channel, EventLoopGroup}
 import io.netty.util.concurrent.DefaultEventExecutor
 import sttp.capabilities.WebSockets
-import sttp.tapir.Id
+import sttp.tapir.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
@@ -27,23 +27,23 @@ import scala.util.control.NonFatal
   * options.
   */
 private[sync] case class NettySyncServerEndpointListOverridenOptions(
-    ses: List[ServerEndpoint[OxStreams & WebSockets, Id]],
-    overridenOptions: NettySyncServerOptions
+                                                                      ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
+                                                                      overridenOptions: NettySyncServerOptions
 )
 
 case class NettySyncServer(
-    endpoints: List[ServerEndpoint[OxStreams & WebSockets, Id]],
-    endpointsWithOptions: List[NettySyncServerEndpointListOverridenOptions],
-    options: NettySyncServerOptions,
-    config: NettyConfig
+                            endpoints: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
+                            endpointsWithOptions: List[NettySyncServerEndpointListOverridenOptions],
+                            options: NettySyncServerOptions,
+                            config: NettyConfig
 ):
   private val executor = Executors.newVirtualThreadPerTaskExecutor()
 
-  def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Id]): NettySyncServer = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Id], overrideOptions: NettySyncServerOptions): NettySyncServer =
+  def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Identity]): NettySyncServer = addEndpoints(List(se))
+  def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Identity], overrideOptions: NettySyncServerOptions): NettySyncServer =
     addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Id]]): NettySyncServer = copy(endpoints = endpoints ++ ses)
-  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Id]], overrideOptions: NettySyncServerOptions): NettySyncServer =
+  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]]): NettySyncServer = copy(endpoints = endpoints ++ ses)
+  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]], overrideOptions: NettySyncServerOptions): NettySyncServer =
     copy(endpointsWithOptions = endpointsWithOptions :+ NettySyncServerEndpointListOverridenOptions(ses, overrideOptions))
 
   def options(o: NettySyncServerOptions): NettySyncServer = copy(options = o)
@@ -82,7 +82,7 @@ case class NettySyncServer(
       never
     }
 
-  private[netty] def start(routes: List[Route[Id]]): NettySyncServerBinding =
+  private[netty] def start(routes: List[Route[Identity]]): NettySyncServerBinding =
     startUsingSocketOverride[InetSocketAddress](routes, None) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop)
@@ -98,12 +98,12 @@ case class NettySyncServer(
     )
     startUsingSocketOverride(routes, socketOverride)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](routes: List[Route[Id]], socketOverride: Option[SA]): (SA, () => Unit) =
+  private def startUsingSocketOverride[SA <: SocketAddress](routes: List[Route[Identity]], socketOverride: Option[SA]): (SA, () => Unit) =
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     val route = Route.combine(routes)
 
     def unsafeRunF(
-        callToExecute: () => Id[ServerResponse[NettyResponse]]
+        callToExecute: () => Identity[ServerResponse[NettyResponse]]
     ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
       val scalaPromise = Promise[ServerResponse[NettyResponse]]()
       val jFuture: JFuture[?] = executor.submit(new Runnable {

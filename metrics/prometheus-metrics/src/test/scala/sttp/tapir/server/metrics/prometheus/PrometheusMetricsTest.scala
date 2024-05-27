@@ -12,7 +12,7 @@ import sttp.tapir.TestUtil._
 import sttp.tapir.server.TestUtil._
 import PrometheusMetrics._
 import PrometheusMetricsTest._
-import sttp.tapir.{AttributeKey, Id}
+import sttp.tapir.{AttributeKey, Identity}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
@@ -36,9 +36,9 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       Thread.sleep(2000)
       PersonsApi.defaultLogic(name)
     }.serverEp
-    val metrics = PrometheusMetrics[Id]("tapir", new PrometheusRegistry()).addRequestsActive()
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsActive()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](
+      new ServerInterpreter[Any, Identity, String, NoStreams](
         _ => List(serverEp),
         TestRequestBody,
         StringToResponseBody,
@@ -64,12 +64,12 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect requests total" in {
     // given
     val serverEp = PersonsApi().serverEp
-    val metrics = PrometheusMetrics[Id]("tapir", new PrometheusRegistry()).addRequestsTotal()
-    val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsTotal()
+    val interpreter = new ServerInterpreter[Any, Identity, Unit, NoStreams](
       _ => List(serverEp),
       TestRequestBody,
       UnitToResponseBody,
-      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
+      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Identity])),
       _ => ()
     )
 
@@ -88,24 +88,24 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect requests duration" in {
     // given
     val clock = new TestClock()
-    val waitServerEp: Long => ServerEndpoint[Any, Id] = millis => {
+    val waitServerEp: Long => ServerEndpoint[Any, Identity] = millis => {
       PersonsApi { name =>
         clock.forward(millis)
         PersonsApi.defaultLogic(name)
       }.serverEp
     }
-    val waitBodyListener: Long => BodyListener[Id, String] = millis =>
-      new BodyListener[Id, String] {
-        override def onComplete(body: String)(cb: Try[Unit] => Id[Unit]): String = {
+    val waitBodyListener: Long => BodyListener[Identity, String] = millis =>
+      new BodyListener[Identity, String] {
+        override def onComplete(body: String)(cb: Try[Unit] => Identity[Unit]): String = {
           clock.forward(millis)
           cb(Success(()))
           body
         }
       }
 
-    val metrics = PrometheusMetrics[Id]("tapir", new PrometheusRegistry()).addRequestsDuration(clock = clock)
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsDuration(clock = clock)
     def interpret(sleepHeaders: Long, sleepBody: Long) =
-      new ServerInterpreter[Any, Id, String, NoStreams](
+      new ServerInterpreter[Any, Identity, String, NoStreams](
         _ => List(waitServerEp(sleepHeaders)),
         TestRequestBody,
         StringToResponseBody,
@@ -148,9 +148,9 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi().serverEp
     val labels = MetricLabels(forRequest = List("key" -> { case (_, _) => "value" }), forResponse = Nil)
 
-    val metrics = PrometheusMetrics[Id]("tapir", new PrometheusRegistry()).addRequestsTotal(labels)
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsTotal(labels)
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](
+      new ServerInterpreter[Any, Identity, String, NoStreams](
         _ => List(serverEp),
         TestRequestBody,
         StringToResponseBody,
@@ -168,9 +168,9 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "interceptor" should "not collect metrics from prometheus endpoint" in {
     // given
     val serverEp = PersonsApi().serverEp
-    val metrics = PrometheusMetrics[Id]("tapir", new PrometheusRegistry()).addRequestsTotal()
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](
+      new ServerInterpreter[Any, Identity, String, NoStreams](
         _ => List(metrics.metricsEndpoint, serverEp),
         TestRequestBody,
         StringToResponseBody,
@@ -188,9 +188,9 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
   "metrics server endpoint" should "return encoded registry" in {
     // given
-    val metrics = PrometheusMetrics[Id]("tapir", new PrometheusRegistry()).addRequestsTotal()
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, NoStreams](
+      new ServerInterpreter[Any, Identity, String, NoStreams](
         _ => List(metrics.metricsEndpoint),
         TestRequestBody,
         StringToResponseBody,
@@ -211,12 +211,12 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "metrics" should "be collected on exception when response from exception handler" in {
     // given
     val serverEp = PersonsApi { _ => throw new RuntimeException("Ups") }.serverEp
-    val metrics = PrometheusMetrics[Id]("tapir", new PrometheusRegistry()).addRequestsTotal()
-    val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsTotal()
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
       _ => List(serverEp),
       TestRequestBody,
       StringToResponseBody,
-      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler[Id])),
+      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler[Identity])),
       _ => ()
     )
 

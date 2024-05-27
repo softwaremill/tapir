@@ -17,7 +17,7 @@ using `serverSecurityLogic` and then the main logic.
 .. note::
 
   If you are using a synchronous server (e.g. netty-sync, nima, or jdkhttp) the ``F[_]`` "effect" type is set to be 
-  the identity type constructor, ``type Id[X] = X``. For such cases, the server logic can be provided using the 
+  the identity type constructor, ``type Identity[X] = X``. For such cases, the server logic can be provided using the 
   ``.handle(f: I => Either[E, O])`` and ``.handleSecurity`` methods, which provide better type inference and 
   readability.
 ```

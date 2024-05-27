@@ -93,5 +93,5 @@ object NettySyncServerRunner {
   }
   def genServerEndpoints[F[_]](routeCount: Int)(reply: String => F[String]): List[ServerEndpoint[Any, F]] =
     serverEndpoints[F](reply).flatMap(gen => (0 to routeCount).map(i => gen(i)))
-  def genEndpointsId(count: Int): List[ServerEndpoint[Any, Id]] = genServerEndpoints[Id](count)(x => x: Id[String])
+  def genEndpointsId(count: Int): List[ServerEndpoint[Any, Identity]] = genServerEndpoints[Identity](count)(x => x: Identity[String])
 }

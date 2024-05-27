@@ -5,7 +5,7 @@ import sttp.tapir.internal._
 
 import scala.reflect.ClassTag
 
-/** Direct-style variant of [[PartialServerEndpointWithSecurityOutput]], using the [[Id]] "effect". */
+/** Direct-style variant of [[PartialServerEndpointWithSecurityOutput]], using the [[Identity]] "effect". */
 case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, SECURITY_OUTPUT, OUTPUT, -R](
     securityOutput: EndpointOutput[SECURITY_OUTPUT],
     endpoint: Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R],
@@ -49,8 +49,8 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
 
   def handle(
       f: PRINCIPAL => INPUT => Either[ERROR_OUTPUT, OUTPUT]
-  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id] =
-    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id](
+  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Identity] =
+    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Identity](
       endpoint.prependOut(securityOutput),
       _ => securityLogic,
       _ => so_u => i => f(so_u._2)(i).right.map(o => (so_u._1, o))
@@ -58,8 +58,8 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
 
   def handleSuccess(
       f: PRINCIPAL => INPUT => OUTPUT
-  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id] =
-    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id](
+  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Identity] =
+    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Identity](
       endpoint.prependOut(securityOutput),
       _ => securityLogic,
       _ => so_u => i => Right((so_u._1, f(so_u._2)(i)))
@@ -67,8 +67,8 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
 
   def handleError(
       f: PRINCIPAL => INPUT => ERROR_OUTPUT
-  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id] =
-    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id](
+  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Identity] =
+    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Identity](
       endpoint.prependOut(securityOutput),
       _ => securityLogic,
       _ => so_u => i => Left(f(so_u._2)(i))
@@ -79,12 +79,12 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
   )(implicit
       eIsThrowable: ERROR_OUTPUT <:< Throwable,
       eClassTag: ClassTag[ERROR_OUTPUT]
-  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id] =
-    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id](
+  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Identity] =
+    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Identity](
       endpoint.prependOut(securityOutput),
       _ => securityLogic,
       _ =>
-        recoverErrors2[(SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), Id](so_u =>
+        recoverErrors2[(SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), Identity](so_u =>
           i => (so_u._1, f(so_u._2)(i))
         )(
           implicitly,
@@ -94,10 +94,10 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
 
   def handleOption(f: PRINCIPAL => INPUT => Option[OUTPUT])(implicit
       eIsUnit: ERROR_OUTPUT =:= Unit
-  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, Unit, (SECURITY_OUTPUT, OUTPUT), R, Id] =
-    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, Unit, (SECURITY_OUTPUT, OUTPUT), R, Id](
+  ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, Unit, (SECURITY_OUTPUT, OUTPUT), R, Identity] =
+    ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, Unit, (SECURITY_OUTPUT, OUTPUT), R, Identity](
       endpoint.prependOut(securityOutput).asInstanceOf[Endpoint[SECURITY_INPUT, INPUT, Unit, (SECURITY_OUTPUT, OUTPUT), R]],
-      _ => securityLogic.asInstanceOf[SECURITY_INPUT => Id[Either[Unit, (SECURITY_OUTPUT, PRINCIPAL)]]],
+      _ => securityLogic.asInstanceOf[SECURITY_INPUT => Identity[Either[Unit, (SECURITY_OUTPUT, PRINCIPAL)]]],
       _ =>
         so_u =>
           i =>

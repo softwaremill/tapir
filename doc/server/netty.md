@@ -46,8 +46,8 @@ val binding: Future[NettyFutureServerBinding] =
 
 ## Direct-style
 
-The `tapir-netty-server-sync` server uses `Id[T]` as its wrapper effect for compatibility, while `Id[A]` means in fact 
-just `A`, representing direct style. It is available only for Scala 3.
+The `tapir-netty-server-sync` server uses `Identity[T]` as its wrapper effect for compatibility, while `Id[A]` means in 
+fact just `A`, representing direct style. It is available only for Scala 3.
 
 See [examples/HelloWorldNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldNettySyncServer.scala) for a full example.
 

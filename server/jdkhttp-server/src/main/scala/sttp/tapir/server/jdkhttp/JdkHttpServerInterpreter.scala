@@ -2,7 +2,7 @@ package sttp.tapir.server.jdkhttp
 
 import com.sun.net.httpserver.{HttpExchange, HttpHandler}
 import sttp.model.{Header, HeaderNames}
-import sttp.tapir.Id
+import sttp.tapir.Identity
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
@@ -15,15 +15,15 @@ import scala.jdk.CollectionConverters._
 trait JdkHttpServerInterpreter {
   def jdkHttpServerOptions: JdkHttpServerOptions
 
-  def toHandler(ses: List[ServerEndpoint[Any, Id]]): HttpHandler = {
-    val filteredEndpoints = FilterServerEndpoints[Any, Id](ses)
+  def toHandler(ses: List[ServerEndpoint[Any, Identity]]): HttpHandler = {
+    val filteredEndpoints = FilterServerEndpoints[Any, Identity](ses)
     val requestBody = new JdkHttpRequestBody(jdkHttpServerOptions.createFile, jdkHttpServerOptions.multipartFileThresholdBytes)
     val responseBody = new JdkHttpToResponseBody
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(jdkHttpServerOptions.interceptors, ses)
 
-    implicit val bodyListener: BodyListener[Id, JdkHttpResponseBody] = new JdkHttpBodyListener
+    implicit val bodyListener: BodyListener[Identity, JdkHttpResponseBody] = new JdkHttpBodyListener
 
-    val serverInterpreter = new ServerInterpreter[Any, Id, JdkHttpResponseBody, NoStreams](
+    val serverInterpreter = new ServerInterpreter[Any, Identity, JdkHttpResponseBody, NoStreams](
       filteredEndpoints,
       requestBody,
       responseBody,

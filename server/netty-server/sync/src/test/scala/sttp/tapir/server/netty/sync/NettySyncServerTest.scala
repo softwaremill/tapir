@@ -35,7 +35,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
     val interpreter = new NettySyncTestServerInterpreter(eventLoopGroup)
     val createServerTest = new NettySyncCreateServerTest(backend, interpreter)
-    val sleeper: Sleeper[Id] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
+    val sleeper: Sleeper[Identity] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
 
     val tests =
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false)
@@ -96,7 +96,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 class NettySyncCreateServerTest(
     backend: SttpBackend[IO, Fs2Streams[IO] & WebSockets],
     interpreter: NettySyncTestServerInterpreter
-) extends CreateServerTest[Id, OxStreams & WebSockets, NettySyncServerOptions, IdRoute] {
+) extends CreateServerTest[Identity, OxStreams & WebSockets, NettySyncServerOptions, IdRoute] {
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -105,13 +105,13 @@ class NettySyncCreateServerTest(
       testNameSuffix: String = "",
       interceptors: Interceptors = identity
   )(
-      fn: I => Id[Either[E, O]]
+      fn: I => Identity[Either[E, O]]
   )(runTest: (SttpBackend[IO, Fs2Streams[IO] & WebSockets], Uri) => IO[Assertion]): Test = {
     testServerLogic(e.serverLogic(fn), testNameSuffix, interceptors)(runTest)
   }
 
   override def testServerLogic(
-      e: ServerEndpoint[OxStreams & WebSockets, Id],
+      e: ServerEndpoint[OxStreams & WebSockets, Identity],
       testNameSuffix: String = "",
       interceptors: Interceptors = identity
   )(
@@ -121,7 +121,7 @@ class NettySyncCreateServerTest(
   }
 
   override def testServerLogicWithStop(
-      e: ServerEndpoint[OxStreams & WebSockets, Id],
+      e: ServerEndpoint[OxStreams & WebSockets, Identity],
       testNameSuffix: String = "",
       interceptors: Interceptors = identity,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
@@ -160,7 +160,7 @@ class NettySyncCreateServerTest(
       }
     }
 
-  def testServer(name: String, es: NonEmptyList[ServerEndpoint[OxStreams & WebSockets, Id]])(
+  def testServer(name: String, es: NonEmptyList[ServerEndpoint[OxStreams & WebSockets, Identity]])(
       runTest: (SttpBackend[IO, Fs2Streams[IO] & WebSockets], Uri) => IO[Assertion]
   ): Test = {
     Test(name) {

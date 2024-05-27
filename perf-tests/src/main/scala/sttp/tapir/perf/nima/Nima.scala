@@ -2,19 +2,19 @@ package sttp.tapir.perf.nima
 
 import cats.effect.IO
 import io.helidon.webserver.WebServer
-import sttp.tapir.Id
+import sttp.tapir.Identity
 import sttp.tapir.perf.apis._
 import sttp.tapir.perf.Common._
 import sttp.tapir.server.nima.{NimaServerInterpreter, NimaServerOptions}
 import sttp.tapir.server.ServerEndpoint
 
 object Tapir extends Endpoints {
-  def genEndpointsNId(count: Int): List[ServerEndpoint[Any, Id]] = genServerEndpoints[Id](count)(x => x: Id[String])
+  def genEndpointsNId(count: Int): List[ServerEndpoint[Any, Identity]] = genServerEndpoints[Identity](count)(x => x: Identity[String])
 }
 
 object Nima {
 
-  def runServer(endpoints: List[ServerEndpoint[Any, Id]], withServerLog: Boolean = false): IO[ServerRunner.KillSwitch] = {
+  def runServer(endpoints: List[ServerEndpoint[Any, Identity]], withServerLog: Boolean = false): IO[ServerRunner.KillSwitch] = {
     val declaredPort = Port
     val serverOptions = buildOptions(NimaServerOptions.customiseInterceptors, withServerLog)
     // Starting Nima server

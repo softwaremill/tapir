@@ -2,7 +2,7 @@ package sttp.tapir.server.nima
 
 import io.helidon.http.Status
 import io.helidon.webserver.http.{Handler, ServerRequest => HelidonServerRequest, ServerResponse => HelidonServerResponse}
-import sttp.tapir.Id
+import sttp.tapir.Identity
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
@@ -15,16 +15,16 @@ import java.io.InputStream
 trait NimaServerInterpreter {
   def nimaServerOptions: NimaServerOptions
 
-  def toHandler(ses: List[ServerEndpoint[Any, Id]]): Handler = {
-    val filteredEndpoints = FilterServerEndpoints[Any, Id](ses)
+  def toHandler(ses: List[ServerEndpoint[Any, Identity]]): Handler = {
+    val filteredEndpoints = FilterServerEndpoints[Any, Identity](ses)
     val requestBody = new NimaRequestBody(nimaServerOptions.createFile)
     val responseBody = new NimaToResponseBody
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(nimaServerOptions.interceptors, ses)
 
     (helidonRequest: HelidonServerRequest, helidonResponse: HelidonServerResponse) => {
-      implicit val bodyListener: BodyListener[Id, InputStream] = new NimaBodyListener(helidonResponse)
+      implicit val bodyListener: BodyListener[Identity, InputStream] = new NimaBodyListener(helidonResponse)
 
-      val serverInterpreter = new ServerInterpreter[Any, Id, InputStream, NoStreams](
+      val serverInterpreter = new ServerInterpreter[Any, Identity, InputStream, NoStreams](
         filteredEndpoints,
         requestBody,
         responseBody,

@@ -13,10 +13,10 @@ import scala.collection.immutable
 object TestUtil {
   def field[T, U](_name: FieldName, _schema: Schema[U]): SchemaType.SProductField[T] = SProductField[T, U](_name, _schema, _ => None)
 
-  implicit val idMonad: MonadError[Id] = sttp.tapir.internal.idMonad
+  implicit val idMonad: MonadError[Identity] = sttp.tapir.internal.idMonad
 
-  case class PersonsApi(logic: String => Id[Either[String, String]] = PersonsApi.defaultLogic) {
-    def serverEp: ServerEndpoint[Any, Id] = endpoint
+  case class PersonsApi(logic: String => Identity[Either[String, String]] = PersonsApi.defaultLogic) {
+    def serverEp: ServerEndpoint[Any, Identity] = endpoint
       .in("person")
       .in(query[String]("name"))
       .out(stringBody)
@@ -25,7 +25,7 @@ object TestUtil {
   }
 
   object PersonsApi {
-    val defaultLogic: String => Id[Either[String, String]] = name => (if (name == "Jacob") Right("hello") else Left(":(")).unit
+    val defaultLogic: String => Identity[Either[String, String]] = name => (if (name == "Jacob") Right("hello") else Left(":(")).unit
 
     val request: String => ServerRequest = name => {
       new ServerRequest {

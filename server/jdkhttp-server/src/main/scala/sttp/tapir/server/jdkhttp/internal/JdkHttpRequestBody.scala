@@ -8,14 +8,14 @@ import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.jdkhttp.internal.ParsedMultiPart.parseMultipartBody
-import sttp.tapir.{FileRange, Id, InputStreamRange, RawBodyType, RawPart, TapirFile}
+import sttp.tapir.{FileRange, Identity, InputStreamRange, RawBodyType, RawPart, TapirFile}
 
 import java.io._
 import java.nio.ByteBuffer
 import java.nio.file.{Files, StandardCopyOption}
 
 private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile, multipartFileThresholdBytes: Long)
-    extends RequestBody[Id, NoStreams] {
+    extends RequestBody[Identity, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {
