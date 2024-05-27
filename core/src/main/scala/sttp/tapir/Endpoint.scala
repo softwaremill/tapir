@@ -29,7 +29,8 @@ import scala.reflect.ClassTag
   * When interpreting an endpoint as a server, the inputs are decoded and the security logic is run first, before decoding the body in the
   * regular inputs. This allows short-circuiting further processing in case security checks fail. Server logic can be provided using
   * [[EndpointServerLogicOps.serverSecurityLogic]] variants for secure endpoints, and [[EndpointServerLogicOps.serverLogic]] variants for
-  * public endpoints.
+  * public endpoints; when using a synchronous server, you can also use the more concise [[EndpointServerLogicOps.handle]] methods, which
+  * work the save as above, but have the "effect" type fixed to [[Id]].
   *
   * A concise description of an endpoint can be generated using the [[EndpointMetaOps.show]] method.
   *
