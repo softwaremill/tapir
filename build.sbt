@@ -44,6 +44,7 @@ concurrentRestrictions in Global ++= Seq(
 excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
 val CompileAndTest = "compile->compile;test->test"
+val CompileAndTestAndProvided = "compile->compile;test->test;provided->provided"
 
 def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
@@ -535,7 +536,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     nettyServer,
     nettyServerCats,
     playServer,
-    vertxServer,
+    vertxServer % CompileAndTestAndProvided,
     vertxServerCats,
     nimaServer
   )
@@ -1461,7 +1462,8 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-serve
   .settings(
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
-      "io.vertx" % "vertx-web" % Versions.vertx
+      "io.vertx" % "vertx-web" % Versions.vertx,
+      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided"
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1477,7 +1479,7 @@ lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-s
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test, catsEffect % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, serverTests % Test, catsEffect % Test)
 
 lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio"))
   .settings(commonJvmSettings)
@@ -1488,7 +1490,7 @@ lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-se
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % CompileAndTest, zio, serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, zio, serverTests % Test)
 
 lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-server"))
   .settings(commonJvmSettings)
