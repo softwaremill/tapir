@@ -47,11 +47,11 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
 
       override lazy val writer: Writer[T] =
         new TaggedWriter.Node[T](childReadWriters.map(_._2.asInstanceOf[TaggedWriter[T]]): _*) {
-          override def findWriter(v: Any): (String, ObjectWriter[T]) =
-            val (t, writer) = super.findWriter(v)
+          override def findWriterWithKey(v: Any): (String, String, ObjectWriter[T]) =
+            val (tagKey, tagValue, writer) = super.findWriterWithKey(v)
             // Here our custom encoding transforms the value of a singleton object
             val overriddenTag = encode(v.asInstanceOf[T]).toString
-            (overriddenTag, writer)
+            (tagKey, overriddenTag, writer)
         }
     }
     new Pickler[T](tapirPickle, schema)
@@ -77,10 +77,14 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
       // https://github.com/softwaremill/tapir/issues/3192
       override lazy val writer = annotate[C](
         SingletonWriter[C](null.asInstanceOf[C]),
+        Annotator.defaultTagKey, // not used in enumerations
         upickleMacros.tagName[C],
         Annotator.Checker.Val(upickleMacros.getSingleton[C])
       )
-      override lazy val reader = annotate[C](SingletonReader[C](upickleMacros.getSingleton[C]), upickleMacros.tagName[C])
+      override lazy val reader = annotate[C](SingletonReader[C](upickleMacros.getSingleton[C]), 
+        Annotator.defaultTagKey, // not used in enumerations
+        upickleMacros.tagName[C]
+      )
     }
     (pickle.reader, pickle.writer)
 
