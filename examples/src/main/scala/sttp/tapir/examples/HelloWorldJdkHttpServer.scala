@@ -15,9 +15,9 @@ object HelloWorldJdkHttpServer extends App {
     endpoint.get.in("second").out(stringBody)
 
   // Providing the server logic for the endpoints: here, just returning the passed name with `Hello, ` prepended
-  val helloWorldServerEndpoint = helloWorldEndpoint.handle(name => Right(s"Hello, $name!"))
+  val helloWorldServerEndpoint = helloWorldEndpoint.serverLogicSync(name => Right(s"Hello, $name!"))
 
-  val secondServerEndpoint = secondEndpoint.handle(_ => Right("IT WORKS!"))
+  val secondServerEndpoint = secondEndpoint.serverLogicSync(_ => Right("IT WORKS!"))
 
   private val declaredPort = 9090
   private val declaredHost = "localhost"

@@ -25,7 +25,7 @@ import sttp.tapir.server.nima.{Id, NimaServerInterpreter}
 val helloEndpoint = endpoint.get
   .in("hello")
   .out(stringBody)
-  .serverLogicSuccess[Id] { _ =>
+  .serverLogicSuccessSync { _ =>
     Thread.sleep(1000)
     "hello, world!"
   }

@@ -38,14 +38,14 @@ object WebSocketNettySyncServer:
   }
 
   // The WebSocket endpoint, builds the pipeline in serverLogicSuccess
-  val wsServerEndpoint = wsEndpoint.serverLogicSuccess[Id](_ => wsPipe)
+  val wsServerEndpoint = wsEndpoint.serverLogicSuccessSync(_ => wsPipe)
 
   // A regular /GET endpoint
   val helloWorldEndpoint =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   val helloWorldServerEndpoint = helloWorldEndpoint
-    .serverLogicSuccess[Id](name => s"Hello, $name!")
+    .serverLogicSuccessSync(name => s"Hello, $name!")
 
   def main(args: Array[String]): Unit =
     NettySyncServer()
