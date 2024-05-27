@@ -156,12 +156,27 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
   ): ValidatorForPredicate[N, P] =
     validatorForAnd[N, id.Predicate].asInstanceOf[ValidatorForPredicate[N, P]]
 
-  inline given validatorForDescribedOr[N, P](using
+  inline given validatorForDescribedOr[N, P, Num](using
       id: IsDescription[P],
-      mirror: UnionTypeMirror[id.Predicate]
+      mirror: UnionTypeMirror[id.Predicate],
+      notGe: NotGiven[P =:= GreaterEqual[Num]],
+      notLe: NotGiven[P =:= LessEqual[Num]]
   ): ValidatorForPredicate[N, P] =
     validatorForOr[N, id.Predicate].asInstanceOf[ValidatorForPredicate[N, P]]
 
+  inline given validatorForDescribedOrGe[N: Numeric, P, Num <: N](using
+      id: IsDescription[P],
+      notGe: P =:= GreaterEqual[Num],
+      singleton: ValueOf[Num]
+  ): ValidatorForPredicate[N, P] =
+    validatorForGreaterEqual[N, Num].asInstanceOf[ValidatorForPredicate[N, P]]
+
+  inline given validatorForDescribedOrLe[N: Numeric, P, Num <: N](using
+      id: IsDescription[P],
+      notGe: P =:= LessEqual[Num],
+      singleton: ValueOf[Num]
+  ): ValidatorForPredicate[N, P] =
+    validatorForLessEqual[N, Num].asInstanceOf[ValidatorForPredicate[N, P]]
   inline given validatorForDescribedPrimitive[N, P](using
       id: IsDescription[P],
       notUnion: NotGiven[UnionTypeMirror[id.Predicate]],
