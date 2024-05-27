@@ -535,7 +535,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     nettyServer,
     nettyServerCats,
     playServer,
-    vertxServer,
+    vertxServer % "compile->compile;provided->provided",
     vertxServerCats,
     nimaServer
   )
