@@ -1474,7 +1474,8 @@ lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-s
     name := "tapir-vertx-server-cats",
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
+      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided"
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1485,7 +1486,8 @@ lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-se
   .settings(
     name := "tapir-vertx-server-zio",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test,
+      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided"
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
