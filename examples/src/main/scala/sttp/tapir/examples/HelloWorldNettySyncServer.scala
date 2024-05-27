@@ -9,7 +9,7 @@ object HelloWorldNettySyncServer:
     .in("hello")
     .in(query[String]("name"))
     .out(stringBody)
-    .serverLogicSuccessSync(name => s"Hello, $name!")
+    .handleSuccess(name => s"Hello, $name!")
 
   NettySyncServer().addEndpoint(helloWorld).startAndWait()
 
@@ -20,7 +20,7 @@ object HelloWorldNettySyncServer2:
     .in("hello")
     .in(query[String]("name"))
     .out(stringBody)
-    .serverLogicSuccessSync(name => s"Hello, $name!")
+    .handleSuccess(name => s"Hello, $name!")
 
   supervised {
     val serverBinding = useInScope(NettySyncServer().addEndpoint(helloWorld).start())(_.stop())

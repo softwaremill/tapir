@@ -44,30 +44,42 @@ case class PartialServerEndpointSync[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUT
 
   override protected def showType: String = "PartialServerEndpoint"
 
-  def serverLogic(
+  def handle(
       f: PRINCIPAL => INPUT => Either[ERROR_OUTPUT, OUTPUT]
   ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id] =
     ServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id](endpoint, _ => securityLogic, _ => f)
 
-  def serverLogicSuccess(
+  def handleSuccess(
       f: PRINCIPAL => INPUT => OUTPUT
   ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id] =
-    ServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id](endpoint, _ => securityLogic, _ => u => i => Right(f(u)(i)))
+    ServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id](
+      endpoint,
+      _ => securityLogic,
+      _ => u => i => Right(f(u)(i))
+    )
 
-  def serverLogicError(
+  def handleError(
       f: PRINCIPAL => INPUT => ERROR_OUTPUT
   ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id] =
-    ServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id](endpoint, _ => securityLogic, _ => u => i => Left(f(u)(i)))
+    ServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id](
+      endpoint,
+      _ => securityLogic,
+      _ => u => i => Left(f(u)(i))
+    )
 
-  def serverLogicRecoverErrors(
+  def handleRecoverErrors(
       f: PRINCIPAL => INPUT => OUTPUT
   )(implicit
       eIsThrowable: ERROR_OUTPUT <:< Throwable,
       eClassTag: ClassTag[ERROR_OUTPUT]
   ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id] =
-    ServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id](endpoint, _ => securityLogic, recoverErrors2[PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, Id](f))
+    ServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, R, Id](
+      endpoint,
+      _ => securityLogic,
+      recoverErrors2[PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, Id](f)
+    )
 
-  def serverLogicOption(f: PRINCIPAL => INPUT => Option[OUTPUT])(implicit
+  def handleOption(f: PRINCIPAL => INPUT => Option[OUTPUT])(implicit
       eIsUnit: ERROR_OUTPUT =:= Unit
   ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, Unit, OUTPUT, R, Id] =
     ServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, Unit, OUTPUT, R, Id](
@@ -85,7 +97,7 @@ case class PartialServerEndpointSync[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUT
   /** If the error type is an `Either`, e.g. when using `errorOutEither`, this method accepts server logic that returns either success or
     * the `Right` error type. Use of this method avoids having to wrap the returned error in `Right`.
     */
-  def serverLogicRightErrorOrSuccess[LE, RE](
+  def handleRightErrorOrSuccess[LE, RE](
       f: PRINCIPAL => INPUT => Either[RE, OUTPUT]
   )(implicit
       eIsEither: Either[LE, RE] =:= ERROR_OUTPUT
@@ -106,7 +118,7 @@ case class PartialServerEndpointSync[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUT
   /** If the error type is an `Either`, e.g. when using `errorOutEither`, this method accepts server logic that returns either success or
     * the `Left` error type. Use of this method avoids having to wrap the returned error in `Left`.
     */
-  def serverLogicLeftErrorOrSuccess[LE, RE](
+  def handleLeftErrorOrSuccess[LE, RE](
       f: PRINCIPAL => INPUT => Either[LE, OUTPUT]
   )(implicit
       eIsEither: Either[LE, RE] =:= ERROR_OUTPUT

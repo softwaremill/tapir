@@ -32,7 +32,7 @@ val helloWorld = endpoint
   .get
   .in("hello").in(query[String]("name"))
   .out(stringBody)
-  .serverLogicSync(name => Right(s"Hello, $name!"))
+  .handle(name => Right(s"Hello, $name!"))
 
 val server: HttpServer = 
   JdkHttpServer().addEndpoint(helloWorld).start()

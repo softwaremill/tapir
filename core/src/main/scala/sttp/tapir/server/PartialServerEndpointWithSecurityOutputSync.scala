@@ -47,7 +47,7 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
 
   override protected def showType: String = "PartialServerEndpointWithSecurityOutput"
 
-  def serverLogic(
+  def handle(
       f: PRINCIPAL => INPUT => Either[ERROR_OUTPUT, OUTPUT]
   ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id] =
     ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id](
@@ -56,7 +56,7 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
       _ => so_u => i => f(so_u._2)(i).right.map(o => (so_u._1, o))
     )
 
-  def serverLogicSuccess(
+  def handleSuccess(
       f: PRINCIPAL => INPUT => OUTPUT
   ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id] =
     ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id](
@@ -65,7 +65,7 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
       _ => so_u => i => Right((so_u._1, f(so_u._2)(i)))
     )
 
-  def serverLogicError(
+  def handleError(
       f: PRINCIPAL => INPUT => ERROR_OUTPUT
   ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id] =
     ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id](
@@ -74,7 +74,7 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
       _ => so_u => i => Left(f(so_u._2)(i))
     )
 
-  def serverLogicRecoverErrors(
+  def handleRecoverErrors(
       f: PRINCIPAL => INPUT => OUTPUT
   )(implicit
       eIsThrowable: ERROR_OUTPUT <:< Throwable,
@@ -83,15 +83,16 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
     ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), R, Id](
       endpoint.prependOut(securityOutput),
       _ => securityLogic,
-      _ => recoverErrors2[(SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), Id](so_u =>
-        i => (so_u._1, f(so_u._2)(i))
-      )(
-        implicitly,
-        implicitly
-      )(idMonad)
+      _ =>
+        recoverErrors2[(SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), Id](so_u =>
+          i => (so_u._1, f(so_u._2)(i))
+        )(
+          implicitly,
+          implicitly
+        )(idMonad)
     )
 
-  def serverLogicOption(f: PRINCIPAL => INPUT => Option[OUTPUT])(implicit
+  def handleOption(f: PRINCIPAL => INPUT => Option[OUTPUT])(implicit
       eIsUnit: ERROR_OUTPUT =:= Unit
   ): ServerEndpoint.Full[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, Unit, (SECURITY_OUTPUT, OUTPUT), R, Id] =
     ServerEndpoint[SECURITY_INPUT, (SECURITY_OUTPUT, PRINCIPAL), INPUT, Unit, (SECURITY_OUTPUT, OUTPUT), R, Id](

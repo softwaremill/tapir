@@ -51,7 +51,7 @@ just `A`, representing direct style. It is available only for Scala 3.
 
 See [examples/HelloWorldNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldNettySyncServer.scala) for a full example.
 
-To provide server logic for an endpoint when using the `-sync` server, you can use the dedicated `serverLogicSync`
+To provide server logic for an endpoint when using the `-sync` server, you can use the dedicated `handle`
 methods, and its variants. This provides better type inference.
 
 To learn more about handling concurrency with Ox, see the [documentation](https://ox.softwaremill.com/).

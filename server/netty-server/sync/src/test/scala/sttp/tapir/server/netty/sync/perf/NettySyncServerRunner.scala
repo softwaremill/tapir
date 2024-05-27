@@ -71,7 +71,7 @@ object NettySyncServerRunner {
         .ignorePong(true)
         .autoPing(None)
     )
-  val wsServerEndpoint = wsEndpoint.serverLogicSuccessSync(_ => wsPipe)
+  val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe)
 
   val endpoints = genEndpointsId(1)
 

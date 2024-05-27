@@ -52,7 +52,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
     val interpreter =
       new ServerInterpreter[Any, Id, Unit, NoStreams](
-        _ => List(endpoint.in(query[String]("x")).serverLogicSync(_ => Right(()))),
+        _ => List(endpoint.in(query[String]("x")).handle(_ => Right(()))),
         TestRequestBody,
         UnitToResponseBody,
         List(interceptor1, interceptor2, interceptor3),
