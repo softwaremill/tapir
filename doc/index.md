@@ -213,7 +213,8 @@ We offer commercial support for sttp and related technologies, as well as develo
    :maxdepth: 2
    :caption: Tutorials
    
-   tutorials/01_hello_world.md
+   tutorials/01_hello_world
+   tutorials/02_openapi_docs
 
 .. toctree::
    :maxdepth: 2
