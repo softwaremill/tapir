@@ -1,5 +1,6 @@
 package sttp.tapir.server.metrics.zio
 
+import sttp.tapir.Id
 import sttp.tapir.TestUtil._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.TestUtil._

@@ -7,6 +7,7 @@ import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{Channel, EventLoopGroup}
 import io.netty.util.concurrent.DefaultEventExecutor
 import sttp.capabilities.WebSockets
+import sttp.tapir.Id
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}

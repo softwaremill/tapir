@@ -1,6 +1,7 @@
 package sttp.tapir.server.jdkhttp
 package internal
 
+import sttp.tapir.Id
 import sttp.tapir.server.interpreter.BodyListener
 
 import java.io.InputStream

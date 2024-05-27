@@ -2,9 +2,10 @@ package sttp.tapir.perf.nima
 
 import cats.effect.IO
 import io.helidon.webserver.WebServer
+import sttp.tapir.Id
 import sttp.tapir.perf.apis._
 import sttp.tapir.perf.Common._
-import sttp.tapir.server.nima.{Id, NimaServerInterpreter, NimaServerOptions}
+import sttp.tapir.server.nima.{NimaServerInterpreter, NimaServerOptions}
 import sttp.tapir.server.ServerEndpoint
 
 object Tapir extends Endpoints {

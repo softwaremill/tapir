@@ -8,7 +8,7 @@ import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.jdkhttp.internal.ParsedMultiPart.parseMultipartBody
-import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart, TapirFile}
+import sttp.tapir.{FileRange, Id, InputStreamRange, RawBodyType, RawPart, TapirFile}
 
 import java.io._
 import java.nio.ByteBuffer

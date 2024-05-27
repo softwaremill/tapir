@@ -5,7 +5,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
-import sttp.tapir.{Defaults, TapirFile}
+import sttp.tapir.{Defaults, Id, TapirFile}
 
 case class NettySyncServerOptions(
     interceptors: List[Interceptor[Id]],

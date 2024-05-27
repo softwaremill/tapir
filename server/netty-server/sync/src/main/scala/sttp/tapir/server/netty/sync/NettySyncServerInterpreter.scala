@@ -4,6 +4,7 @@ import internal.{NettySyncRequestBody, NettySyncToResponseBody}
 import internal.ox.OxDispatcher
 import sttp.capabilities.WebSockets
 import sttp.monad.syntax._
+import sttp.tapir.Id
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.RequestResult

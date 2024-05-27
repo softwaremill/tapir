@@ -1,6 +1,6 @@
 package sttp.tapir.server
 
-import sttp.tapir.Endpoint
+import sttp.tapir.{Endpoint, Id}
 
 import java.io.InputStream
 import scala.reflect.ClassTag
@@ -11,8 +11,6 @@ package object jdkhttp {
   type HttpsConfigurator = com.sun.net.httpserver.HttpsConfigurator
 
   type JdkHttpResponseBody = (InputStream, Option[Long])
-
-  type Id[A] = A
 
   implicit class IdEndpointOps[A, I, E, O, R](private val endpoint: Endpoint[A, I, E, O, R]) extends AnyVal {
     def handle(f: I => Either[E, O])(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, Id] =

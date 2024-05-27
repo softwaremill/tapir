@@ -2,6 +2,7 @@ package sttp.tapir.server.jdkhttp
 
 import com.sun.net.httpserver.{HttpExchange, HttpHandler}
 import sttp.model.{Header, HeaderNames}
+import sttp.tapir.Id
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult

@@ -7,7 +7,6 @@ import sttp.tapir.server.netty.sync.NettySyncServerBinding
 import sttp.tapir.server.netty.sync.NettySyncServer
 
 import sttp.tapir.*
-import sttp.tapir.server.netty.sync.Id
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.EndpointExtensions.*
 import sttp.tapir.server.netty.sync.OxStreams

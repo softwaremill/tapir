@@ -1,6 +1,7 @@
 package sttp.tapir.server.jdkhttp
 
 import com.sun.net.httpserver._
+import sttp.tapir.Id
 import sttp.tapir.server.ServerEndpoint
 
 import java.net.InetSocketAddress

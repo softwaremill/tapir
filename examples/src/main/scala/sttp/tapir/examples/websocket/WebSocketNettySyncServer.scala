@@ -4,7 +4,6 @@ import ox.*
 import ox.channels.*
 import sttp.capabilities.WebSockets
 import sttp.tapir.*
-import sttp.tapir.server.netty.sync.Id
 import sttp.tapir.server.netty.sync.OxStreams
 import sttp.tapir.server.netty.sync.OxStreams.Pipe // alias for Ox ?=> Source[A] => Source[B]
 import sttp.tapir.server.netty.sync.NettySyncServer

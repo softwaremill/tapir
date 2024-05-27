@@ -1,8 +1,8 @@
 package sttp.tapir.server.nima.internal
 
 import io.helidon.webserver.http.{ServerResponse => JavaNimaServerResponse}
+import sttp.tapir.Id
 import sttp.tapir.server.interpreter.BodyListener
-import sttp.tapir.server.nima.Id
 
 import java.io.InputStream
 import scala.util.{Success, Try}

@@ -136,7 +136,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
             ctx: DecodeSuccessContext[Id, A, U, I]
         )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[ServerResponse[B]] = {
           addCallTrail(s"$prefix success")
-          endpointHandler.onDecodeSuccess(ctx)(idMonadError, bodyListener)
+          endpointHandler.onDecodeSuccess(ctx)(idMonad, bodyListener)
         }
 
         override def onSecurityFailure[A](ctx: SecurityFailureContext[Id, A])(implicit
@@ -144,14 +144,14 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
             bodyListener: BodyListener[Id, B]
         ): Id[ServerResponse[B]] = {
           addCallTrail(s"$prefix security failure")
-          endpointHandler.onSecurityFailure(ctx)(idMonadError, bodyListener)
+          endpointHandler.onSecurityFailure(ctx)(idMonad, bodyListener)
         }
 
         override def onDecodeFailure(
             ctx: DecodeFailureContext
         )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, B]): Id[Option[ServerResponse[B]]] = {
           addCallTrail(s"$prefix failure")
-          endpointHandler.onDecodeFailure(ctx)(idMonadError, bodyListener)
+          endpointHandler.onDecodeFailure(ctx)(idMonad, bodyListener)
         }
       }
   }

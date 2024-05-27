@@ -1,7 +1,7 @@
 package sttp.tapir.server.nima
 
 import org.slf4j.LoggerFactory
-import sttp.tapir.{Defaults, TapirFile}
+import sttp.tapir.{Defaults, Id, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}

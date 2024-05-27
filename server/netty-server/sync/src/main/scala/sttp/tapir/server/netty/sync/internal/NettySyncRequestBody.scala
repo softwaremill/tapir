@@ -5,7 +5,8 @@ import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.capabilities
 import sttp.monad.MonadError
-import sttp.tapir.TapirFile
+import sttp.tapir.{Id, TapirFile}
+import sttp.tapir.internal.idMonad
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.netty.internal.NettyRequestBody
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
