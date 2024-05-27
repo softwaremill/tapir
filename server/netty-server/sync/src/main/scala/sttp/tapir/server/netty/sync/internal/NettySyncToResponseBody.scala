@@ -5,6 +5,7 @@ import io.netty.channel.ChannelHandlerContext
 import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.monad.MonadError
+import sttp.shared.Identity
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
 import sttp.tapir.server.netty.NettyResponseContent.ReactiveWebSocketProcessorNettyResponseContent

@@ -1,8 +1,9 @@
 package sttp.tapir.client.sttp
 
 import sttp.capabilities.Streams
-import sttp.client3.{Identity => _, _} // tapir has its own Identity type alias
+import sttp.client3._
 import sttp.model._
+import sttp.shared.Identity
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
 import sttp.tapir.client.ClientOutputParams

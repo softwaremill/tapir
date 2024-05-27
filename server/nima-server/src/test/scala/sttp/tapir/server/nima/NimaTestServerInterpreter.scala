@@ -4,7 +4,7 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import io.helidon.webserver.WebServer
 import io.helidon.webserver.http.{Handler, HttpRouting}
-import sttp.tapir.Identity
+import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._

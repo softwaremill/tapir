@@ -8,6 +8,7 @@ import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
 import sttp.client3.*
 import sttp.model.StatusCode
+import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.tapir.json.circe.*

@@ -2,18 +2,14 @@ package sttp.tapir
 
 import sttp.capabilities.WebSockets
 import sttp.model.Method
+import sttp.monad.IdentityMonad
 import sttp.monad.syntax._
+import sttp.shared.Identity
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture, Query}
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
-import sttp.tapir.server.{
-  PartialServerEndpoint,
-  PartialServerEndpointSync,
-  PartialServerEndpointWithSecurityOutput,
-  PartialServerEndpointWithSecurityOutputSync,
-  ServerEndpoint
-}
+import sttp.tapir.server.{PartialServerEndpoint, PartialServerEndpointSync, PartialServerEndpointWithSecurityOutput, PartialServerEndpointWithSecurityOutputSync, ServerEndpoint}
 import sttp.tapir.typelevel.{ErasureSameAsType, ParamConcat}
 
 import scala.reflect.ClassTag
@@ -634,7 +630,7 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   def handleSecurityRecoverErrors[PRINCIPAL](
       f: A => PRINCIPAL
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpointSync[A, PRINCIPAL, I, E, O, R] =
-    PartialServerEndpointSync(this, recoverErrors1[A, E, PRINCIPAL, Identity](f)(implicitly, implicitly)(idMonad))
+    PartialServerEndpointSync(this, recoverErrors1[A, E, PRINCIPAL, Identity](f)(implicitly, implicitly)(IdentityMonad))
 
   /** Direct-style variant of [[serverSecurityLogicOption]], using the [[Identity]] "effect". */
   def handleSecurityOption[PRINCIPAL](f: A => Option[PRINCIPAL])(implicit
@@ -674,7 +670,7 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
     PartialServerEndpointWithSecurityOutputSync(
       this.output,
       this.copy(output = emptyOutput),
-      recoverErrors1[A, E, (O, PRINCIPAL), Identity](f)(implicitly, implicitly)(idMonad)
+      recoverErrors1[A, E, (O, PRINCIPAL), Identity](f)(implicitly, implicitly)(IdentityMonad)
     )
 
   /** Direct-style variant of [[serverSecurityLogicOptionWithOutput]], using the [[Identity]] "effect". */

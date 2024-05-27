@@ -2,7 +2,7 @@ package sttp.tapir.server.nima
 
 import io.helidon.http.Status
 import io.helidon.webserver.http.{Handler, ServerRequest => HelidonServerRequest, ServerResponse => HelidonServerResponse}
-import sttp.tapir.Identity
+import sttp.shared.Identity
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult

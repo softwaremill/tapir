@@ -1,5 +1,7 @@
 package sttp.tapir.server
 
+import sttp.monad.IdentityMonad
+import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.internal._
 
@@ -89,7 +91,7 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
         )(
           implicitly,
           implicitly
-        )(idMonad)
+        )(IdentityMonad)
     )
 
   def handleOption(f: PRINCIPAL => INPUT => Option[OUTPUT])(implicit

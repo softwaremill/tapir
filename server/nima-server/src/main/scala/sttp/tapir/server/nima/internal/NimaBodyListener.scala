@@ -1,7 +1,7 @@
 package sttp.tapir.server.nima.internal
 
 import io.helidon.webserver.http.{ServerResponse => JavaNimaServerResponse}
-import sttp.tapir.Identity
+import sttp.shared.Identity
 import sttp.tapir.server.interpreter.BodyListener
 
 import java.io.InputStream

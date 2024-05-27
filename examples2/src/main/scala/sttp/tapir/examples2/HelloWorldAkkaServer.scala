@@ -3,12 +3,13 @@ package sttp.tapir.examples2
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
+import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import sttp.client3.{Identity => _, _} // tapir has its own Identity type alias
+import sttp.client3._
 
 object HelloWorldAkkaServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()

@@ -2,8 +2,9 @@ package sttp.tapir
 
 import sttp.model.Uri._
 import sttp.model._
-import sttp.monad.MonadError
+import sttp.monad.{IdentityMonad, MonadError}
 import sttp.monad.syntax._
+import sttp.shared.Identity
 import sttp.tapir.SchemaType.SProductField
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
@@ -13,7 +14,7 @@ import scala.collection.immutable
 object TestUtil {
   def field[T, U](_name: FieldName, _schema: Schema[U]): SchemaType.SProductField[T] = SProductField[T, U](_name, _schema, _ => None)
 
-  implicit val idMonad: MonadError[Identity] = sttp.tapir.internal.idMonad
+  implicit val idMonad: MonadError[Identity] = IdentityMonad
 
   case class PersonsApi(logic: String => Identity[Either[String, String]] = PersonsApi.defaultLogic) {
     def serverEp: ServerEndpoint[Any, Identity] = endpoint

@@ -2,23 +2,16 @@ package sttp.tapir.server.tests
 
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers
-import sttp.client3.{Identity => _, _} // tapir has its own Identity type alias
+import sttp.client3._
 import sttp.model.Uri.QuerySegment
 import sttp.model.headers.WWWAuthenticateChallenge
 import sttp.model.{StatusCode, _}
 import sttp.monad.MonadError
+import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
-import sttp.tapir.tests.Security.{
-  in_security_apikey_header_in_amount_out_string,
-  in_security_apikey_header_out_string,
-  in_security_apikey_query_out_string,
-  in_security_basic_out_string,
-  in_security_bearer_out_string,
-  in_security_option_basic_option_bearer_out_string,
-  in_security_option_basic_out_string
-}
+import sttp.tapir.tests.Security.{in_security_apikey_header_in_amount_out_string, in_security_apikey_header_out_string, in_security_apikey_query_out_string, in_security_basic_out_string, in_security_bearer_out_string, in_security_option_basic_option_bearer_out_string, in_security_option_basic_out_string}
 import sttp.tapir.tests.Test
 
 class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServerTest[F, S, OPTIONS, ROUTE])(implicit m: MonadError[F])

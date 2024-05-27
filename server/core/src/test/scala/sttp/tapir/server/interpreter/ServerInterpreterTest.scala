@@ -5,6 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.model.Uri._
 import sttp.model._
 import sttp.monad.MonadError
+import sttp.shared.Identity
 import sttp.tapir.TestUtil._
 import sttp.tapir._
 import sttp.tapir.capabilities.NoStreams

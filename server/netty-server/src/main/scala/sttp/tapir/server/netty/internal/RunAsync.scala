@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty.internal
 
-import sttp.tapir.Identity
+import sttp.shared.Identity
 
 import scala.concurrent.Future
 

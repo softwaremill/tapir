@@ -5,7 +5,7 @@ import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import internal.ox.OxDispatcher
 import ox.*
-import sttp.tapir.Identity
+import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.NettyConfig
 import sttp.tapir.server.tests.TestServerInterpreter

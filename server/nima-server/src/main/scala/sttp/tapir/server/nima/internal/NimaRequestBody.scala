@@ -2,7 +2,8 @@ package sttp.tapir.server.nima.internal
 
 import io.helidon.webserver.http.{ServerRequest => JavaNimaServerRequest}
 import sttp.capabilities
-import sttp.tapir.{FileRange, Identity, InputStreamRange, RawBodyType, TapirFile}
+import sttp.shared.Identity
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}

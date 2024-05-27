@@ -1,5 +1,6 @@
 package sttp.tapir.server
 
+import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.internal._
 

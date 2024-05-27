@@ -9,7 +9,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.tagobjects.Retryable
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Canceled, Failed, Outcome}
-import sttp.tapir.Identity
+import sttp.shared.Identity
 import sttp.tapir.TestUtil._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint

@@ -2,7 +2,7 @@ package sttp.tapir.server.jdkhttp
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer}
-import sttp.tapir.Identity
+import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._

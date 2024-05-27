@@ -1,8 +1,8 @@
 package sttp.tapir.server.netty
 
-import sttp.monad.MonadError
-import sttp.tapir.Identity
+import sttp.monad.{MonadError, IdentityMonad}
+import sttp.shared.Identity
 
 package object sync:
   type IdRoute = Route[Identity]
-  private[sync] implicit val idMonad: MonadError[Identity] = sttp.tapir.internal.idMonad
+  private[sync] implicit val idMonad: MonadError[Identity] = IdentityMonad

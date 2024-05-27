@@ -8,7 +8,7 @@ import org.http4s.server.Router
 import org.scalatest.Assertion
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.client3.{Identity => _, _} // tapir has its own Identity type alias
+import sttp.client3._
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.redoc.RedocUIOptions

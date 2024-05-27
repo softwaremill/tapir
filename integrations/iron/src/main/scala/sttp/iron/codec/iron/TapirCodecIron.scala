@@ -10,6 +10,8 @@ import io.github.iltotore.iron.constraint.string.*
 import io.github.iltotore.iron.constraint.collection.*
 import io.github.iltotore.iron.constraint.numeric.*
 
+import sttp.shared.Identity
+
 import sttp.tapir.Codec
 import sttp.tapir.CodecFormat
 import sttp.tapir.DecodeResult

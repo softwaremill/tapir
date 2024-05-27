@@ -12,7 +12,8 @@ import sttp.tapir.TestUtil._
 import sttp.tapir.server.TestUtil._
 import PrometheusMetrics._
 import PrometheusMetricsTest._
-import sttp.tapir.{AttributeKey, Identity}
+import sttp.shared.Identity
+import sttp.tapir.AttributeKey
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint

@@ -6,6 +6,7 @@ import sttp.client3._
 import sttp.client3.monad.IdMonad
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
+import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler

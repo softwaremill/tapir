@@ -1,7 +1,8 @@
 package sttp.tapir.examples
 
-import sttp.client3.{HttpURLConnectionBackend, Identity, Response, SttpBackend, UriContext, asStringAlways, basicRequest}
+import sttp.client3.{HttpURLConnectionBackend, Response, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
+import sttp.shared.Identity
 import sttp.tapir.server.jdkhttp.*
 import sttp.tapir.*
 

@@ -2,6 +2,7 @@ package sttp.tapir.server
 
 import sttp.capabilities.Streams
 import sttp.model._
+import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest

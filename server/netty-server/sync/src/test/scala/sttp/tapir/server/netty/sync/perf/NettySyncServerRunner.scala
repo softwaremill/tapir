@@ -2,6 +2,7 @@ package sttp.tapir.server.netty.sync.perf
 
 import ox.*
 import ox.channels.*
+import sttp.shared.Identity
 import sttp.tapir.server.netty.sync.NettySyncServerOptions
 import sttp.tapir.server.netty.sync.NettySyncServerBinding
 import sttp.tapir.server.netty.sync.NettySyncServer

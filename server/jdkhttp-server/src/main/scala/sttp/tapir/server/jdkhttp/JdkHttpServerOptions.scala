@@ -1,7 +1,8 @@
 package sttp.tapir.server.jdkhttp
 
 import com.sun.net.httpserver.HttpsConfigurator
-import sttp.tapir.{Defaults, Identity, TapirFile}
+import sttp.shared.Identity
+import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
