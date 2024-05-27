@@ -12,10 +12,10 @@ You'll also need Java 21 or higher, as we'll be using virtual threads, which all
 model, without sacrificing performance. If you don't have Java 21 installed, we recommend using 
 [sdkman](https://sdkman.io/) to manage multiple Java versions locally.
 
-Going forward, we'll be editing a `hello.scala` file. Let's start by adding the tapir dependency. You'll need the 
-`tapir-core` module to describe the endpoint, and a server implementation. Tapir integrates with multiple servers, but 
-we'll choose the simplest (and also one of the fastest!), which is based on Netty. This is available through the 
-`tapir-netty-server-sync` module:
+Going forward, we'll be editing a `hello.scala` file. Let's start by adding the tapir dependency. First, you'll need the 
+`tapir-core` module to describe the endpoint. Secondly, you'll need an HTTP server implementation. Tapir integrates with 
+multiple servers, but we'll choose the simplest (and also one of the fastest!), which is based on Netty. This is 
+available through the `tapir-netty-server-sync` module:
 
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
@@ -64,7 +64,7 @@ GET /hello /world -> -/-
 
 So far, we've added 3 inputs to the endpoint: a constant method (`GET`), with `.get`; and two constant path inputs, 
 combined using `/`. Next, we'll add a query parameter input, but this time, it will extract the provided value, instead 
-of requiring it to be constant:
+of requiring it to be a fixed value (a constant):
 
 {emphasize-lines="10"}
 ```scala
@@ -112,19 +112,18 @@ import sttp.tapir.*
 ## Server-side logic
 
 Let's now proceed to adding the logic, that should be run once the endpoint is invoked. This can be done using
-the `.serverLogicSuccess`  method on the endpoint. We're using the "success" variant, since in this simple endpoint
+the `.handleSuccess`  method on the endpoint. We're using the "success" variant, since in this simple endpoint
 we don't differentiate between success and failure cases (200 and 4xx responses).
 
 The server logic needs to take the `String`, extracted from the query parameter, and return another `String`, which
 will be sent as a response:
 
-{emphasize-lines="13"}
+{emphasize-lines="12"}
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:@VERSION@
 
 import sttp.tapir.*
-import sttp.tapir.server.netty.sync.Id // TODO
 
 @main def helloWorldTapir(): Unit =
   val helloWorldEndpoint = endpoint
@@ -132,14 +131,15 @@ import sttp.tapir.server.netty.sync.Id // TODO
     .in("hello" / "world")
     .in(query[String]("name"))
     .out(stringBody)
-    .serverLogicSuccess[Id](name => s"Hello, $name!")
+    .handleSuccess(name => s"Hello, $name!")
 
   println(helloWorldEndpoint.show)
 ```
 
 Nothing changes in the output provided by `.show`. however the `helloWorldEndpoint` is now an instance of the
 `ServerEndpoint` class, which combines an endpoint description with a matching server logic. It's checked at 
-compile-time, that the shape of the server's logic function matches, what we've defined in the endpoints!
+compile-time, that the shape of the server's logic function matches the types of inputs & outputs that we've defined in 
+the endpoint!
 
 ## Exposing the server
 
@@ -147,13 +147,12 @@ We can now expose the server to the outside world. First, we'll need to import t
 using the `NettySyncServer()` builder class, we can add endpoints, which should be exposed by the server. In our
 example, we'll bind to `localhost` (which is the default), and to the port 8080:
 
-{emphasize-lines="6, 16-19"}
+{emphasize-lines="5, 15-18"}
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:@VERSION@
 
 import sttp.tapir.*
-import sttp.tapir.server.netty.sync.Id // TODO
 import sttp.tapir.server.netty.sync.NettySyncServer
 
 @main def helloWorldTapir(): Unit =
@@ -162,7 +161,7 @@ import sttp.tapir.server.netty.sync.NettySyncServer
     .in("hello" / "world")
     .in(query[String]("name"))
     .out(stringBody)
-    .serverLogicSuccess[Id](name => s"Hello, $name!")
+    .handleSuccess(name => s"Hello, $name!")
 
   NettySyncServer()
     .port(8080)
@@ -176,3 +175,5 @@ The `startAndWait()` method blocks indefinitely. Once the above code compiles su
 % curl "http://localhost:8080/hello/world?name=Alice"
 Hello, Alice!
 ```
+
+And that's it - we've got our first tapir endpoint exposed as an HTTP server!
