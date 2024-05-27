@@ -7,7 +7,13 @@ import sttp.tapir.EndpointInput.{FixedMethod, PathCapture, Query}
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
-import sttp.tapir.server.{PartialServerEndpoint, PartialServerEndpointWithSecurityOutput, ServerEndpoint}
+import sttp.tapir.server.{
+  PartialServerEndpoint,
+  PartialServerEndpointSync,
+  PartialServerEndpointWithSecurityOutput,
+  PartialServerEndpointWithSecurityOutputSync,
+  ServerEndpoint
+}
 import sttp.tapir.typelevel.{ErasureSameAsType, ParamConcat}
 
 import scala.reflect.ClassTag
@@ -580,6 +586,108 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
             case None    => Left(())
             case Some(v) => Right(v)
           }
+    )
+  }
+
+  // Direct-style
+
+  /** Direct-style variant of [[serverLogic]], using the [[Id]] "effect". */
+  def serverLogicSync(f: I => Either[E, O])(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, Id] =
+    serverLogic[Id](f)
+
+  /** Direct-style variant of [[serverLogicSuccess]], using the [[Id]] "effect". */
+  def serverLogicSuccessSync(f: I => O)(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, Id] =
+    serverLogicSuccess[Id](f)
+
+  /** Direct-style variant of [[serverLogicError]], using the [[Id]] "effect". */
+  def serverLogicErrorSync(f: I => E)(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, Id] =
+    serverLogicError[Id](f)
+
+  /** Direct-style variant of [[serverLogicRecoverErrors]], using the [[Id]] "effect". */
+  def serverLogicRecoverErrorsSync(
+      f: I => O
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, Id] =
+    serverLogicRecoverErrors[Id](f)
+
+  /** Direct-style variant of [[serverLogicOption]], using the [[Id]] "effect". */
+  def serverLogicOptionSync(
+      f: I => Option[O]
+  )(implicit aIsUnit: A =:= Unit, eIsUnit: E =:= Unit): ServerEndpoint.Full[Unit, Unit, I, Unit, O, R, Id] =
+    serverLogicOption[Id](f)
+
+  //
+
+  /** Direct-style variant of [[serverSecurityLogic]], using the [[Id]] "effect". */
+  def serverSecurityLogicSync[PRINCIPAL](f: A => Either[E, PRINCIPAL]): PartialServerEndpointSync[A, PRINCIPAL, I, E, O, R] =
+    PartialServerEndpointSync(this, f)
+
+  /** Direct-style variant of [[serverSecurityLogicSuccess]], using the [[Id]] "effect". */
+  def serverSecurityLogicSuccessSync[PRINCIPAL](f: A => PRINCIPAL): PartialServerEndpointSync[A, PRINCIPAL, I, E, O, R] =
+    PartialServerEndpointSync(this, a => Right(f(a)))
+
+  /** Direct-style variant of [[serverSecurityLogicError]], using the [[Id]] "effect". */
+  def serverSecurityLogicErrorSync[PRINCIPAL](f: A => E): PartialServerEndpointSync[A, PRINCIPAL, I, E, O, R] =
+    PartialServerEndpointSync(this, a => Left(f(a)))
+
+  /** Direct-style variant of [[serverSecurityLogicRecoverErrors]], using the [[Id]] "effect". */
+  def serverSecurityLogicRecoverErrorsSync[PRINCIPAL](
+      f: A => PRINCIPAL
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpointSync[A, PRINCIPAL, I, E, O, R] =
+    PartialServerEndpointSync(this, recoverErrors1[A, E, PRINCIPAL, Id](f)(implicitly, implicitly)(idMonad))
+
+  /** Direct-style variant of [[serverSecurityLogicOption]], using the [[Id]] "effect". */
+  def serverSecurityLogicOptionSync[PRINCIPAL](f: A => Option[PRINCIPAL])(implicit
+      eIsUnit: E =:= Unit
+  ): PartialServerEndpointSync[A, PRINCIPAL, I, Unit, O, R] = {
+    PartialServerEndpointSync(
+      this.asInstanceOf[Endpoint[A, I, Unit, O, R]],
+      a =>
+        f(a) match {
+          case None    => Left(())
+          case Some(v) => Right(v)
+        }
+    )
+  }
+
+  //
+
+  /** Direct-style variant of [[serverSecurityLogicWithOutput]], using the [[Id]] "effect". */
+  def serverSecurityLogicWithOutputSync[PRINCIPAL](
+      f: A => Either[E, (O, PRINCIPAL)]
+  ): PartialServerEndpointWithSecurityOutputSync[A, PRINCIPAL, I, E, O, Unit, R] =
+    PartialServerEndpointWithSecurityOutputSync(this.output, this.copy(output = emptyOutput), f)
+
+  /** Direct-style variant of [[serverSecurityLogicSuccessWithOutput]], using the [[Id]] "effect". */
+  def serverSecurityLogicSuccessWithOutputSync[PRINCIPAL](
+      f: A => (O, PRINCIPAL)
+  ): PartialServerEndpointWithSecurityOutputSync[A, PRINCIPAL, I, E, O, Unit, R] =
+    PartialServerEndpointWithSecurityOutputSync(this.output, this.copy(output = emptyOutput), a => Right(f(a)))
+
+  /** Direct-style variant of [[serverSecurityLogicRecoverErrorsWithOutput]], using the [[Id]] "effect". */
+  def serverSecurityLogicRecoverErrorsWithOutputSync[PRINCIPAL](
+      f: A => (O, PRINCIPAL)
+  )(implicit
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E]
+  ): PartialServerEndpointWithSecurityOutputSync[A, PRINCIPAL, I, E, O, Unit, R] =
+    PartialServerEndpointWithSecurityOutputSync(
+      this.output,
+      this.copy(output = emptyOutput),
+      recoverErrors1[A, E, (O, PRINCIPAL), Id](f)(implicitly, implicitly)(idMonad)
+    )
+
+  /** Direct-style variant of [[serverSecurityLogicOptionWithOutput]], using the [[Id]] "effect". */
+  def serverSecurityLogicOptionWithOutputSync[PRINCIPAL](
+      f: A => Option[(O, PRINCIPAL)]
+  )(implicit eIsUnit: E =:= Unit): PartialServerEndpointWithSecurityOutputSync[A, PRINCIPAL, I, Unit, O, Unit, R] = {
+    PartialServerEndpointWithSecurityOutputSync(
+      this.output,
+      this.copy(output = emptyOutput).asInstanceOf[Endpoint[A, I, Unit, Unit, R]],
+      a =>
+        f(a) match {
+          case None    => Left(())
+          case Some(v) => Right(v)
+        }
     )
   }
 }
