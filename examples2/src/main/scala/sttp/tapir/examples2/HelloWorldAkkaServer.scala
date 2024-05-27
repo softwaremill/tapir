@@ -8,7 +8,7 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import sttp.client3._
+import sttp.client3.{Identity => _, _} // tapir has its own Identity type alias
 
 object HelloWorldAkkaServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()

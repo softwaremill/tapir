@@ -2,7 +2,7 @@ package sttp.tapir.server.tests
 
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers
-import sttp.client3._
+import sttp.client3.{Identity => _, _} // tapir has its own Identity type alias
 import sttp.model.Uri.QuerySegment
 import sttp.model.headers.WWWAuthenticateChallenge
 import sttp.model.{StatusCode, _}
