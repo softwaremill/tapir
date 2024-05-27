@@ -44,6 +44,7 @@ concurrentRestrictions in Global ++= Seq(
 excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
 val CompileAndTest = "compile->compile;test->test"
+val CompileAndTestAndProvided = "compile->compile;test->test;provided->provided"
 
 def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
@@ -535,7 +536,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     nettyServer,
     nettyServerCats,
     playServer,
-    vertxServer % "compile->compile;provided->provided",
+    vertxServer % CompileAndTestAndProvided,
     vertxServerCats,
     nimaServer
   )
@@ -1474,24 +1475,22 @@ lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-s
     name := "tapir-vertx-server-cats",
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
-      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided"
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test, catsEffect % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, serverTests % Test, catsEffect % Test)
 
 lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-vertx-server-zio",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test,
-      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided"
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % CompileAndTest, zio, serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, zio, serverTests % Test)
 
 lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-server"))
   .settings(commonJvmSettings)
