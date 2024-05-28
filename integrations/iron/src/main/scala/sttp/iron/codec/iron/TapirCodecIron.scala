@@ -128,27 +128,43 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
 
     }
 
-  inline given validatorForOr[N, Predicates](using mirror: UnionTypeMirror[Predicates]): ValidatorForPredicate[N, Predicates] =
-    new ValidatorForPredicate[N, Predicates] {
+  private inline def strictValues[N, V <: Tuple]: List[N] = {
+    inline erasedValue[V] match
+      case _: EmptyTuple => Nil
+      case _: (StrictEqual[t] *: ts) =>
+        inline erasedValue[t] match
+          case e: N => e :: strictValues[N, ts]
+          case _ => Nil
+      case _ => Nil
+  }
 
-      val unionConstraint = new Constraint.UnionConstraint[N, Predicates]
-      val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
+  inline given validatorForOr[N, Predicates](using
+      mirror: UnionTypeMirror[Predicates]
+  ): ValidatorForPredicate[N, Predicates] =
+    val strictEqualsOnly = strictValues[N, mirror.ElementTypes]
+    if (strictEqualsOnly.nonEmpty)
+      ValidatorForPredicate.fromPrimitiveValidator(Validator.enumeration[N](strictEqualsOnly))
+    else
+      new ValidatorForPredicate[N, Predicates] {
 
-      override def validator: Validator[N] = Validator.any(validatorsForPredicates.map(_.validator): _*)
+        val unionConstraint = new Constraint.UnionConstraint[N, Predicates]
+        val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
 
-      override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] =
-        if (!unionConstraint.test(value))
-          List(
-            ValidationError[N](
-              Validator.Custom(_ =>
-                ValidationResult.Invalid(unionConstraint.message) // at this point the validator is already failed anyway
-              ),
-              value
+        override def validator: Validator[N] = Validator.any(validatorsForPredicates.map(_.validator): _*)
+
+        override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] =
+          if (!unionConstraint.test(value))
+            List(
+              ValidationError[N](
+                Validator.Custom(_ =>
+                  ValidationResult.Invalid(unionConstraint.message) // at this point the validator is already failed anyway
+                ),
+                value
+              )
             )
-          )
-        else Nil
+          else Nil
 
-    }
+      }
 
   inline given validatorForDescribedAnd[N, P](using
       id: IsDescription[P],
@@ -166,14 +182,14 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
 
   inline given validatorForDescribedOrGe[N: Numeric, P, Num <: N](using
       id: IsDescription[P],
-      notGe: P =:= GreaterEqual[Num],
+      isGe: P =:= GreaterEqual[Num],
       singleton: ValueOf[Num]
   ): ValidatorForPredicate[N, P] =
     validatorForGreaterEqual[N, Num].asInstanceOf[ValidatorForPredicate[N, P]]
 
   inline given validatorForDescribedOrLe[N: Numeric, P, Num <: N](using
       id: IsDescription[P],
-      notGe: P =:= LessEqual[Num],
+      isLe: P =:= LessEqual[Num],
       singleton: ValueOf[Num]
   ): ValidatorForPredicate[N, P] =
     validatorForLessEqual[N, Num].asInstanceOf[ValidatorForPredicate[N, P]]

@@ -142,8 +142,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
-      case Validator.Mapped(
-        Validator.All(List(Validator.Min(1, false), Validator.Max(3, false))), _) =>
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, false))), _) =>
     }
   }
 
@@ -152,8 +151,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
-      case Validator.Mapped(
-        Validator.All(List(Validator.Min(1, true), Validator.Max(3, false))), _) =>
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, false))), _) =>
     }
   }
 
@@ -162,8 +160,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
-      case Validator.Mapped(
-        Validator.All(List(Validator.Min(1, false), Validator.Max(3, true))), _) =>
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, true))), _) =>
     }
   }
 
@@ -193,19 +190,28 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     }
   }
   "Generated validator for union of constraints" should "use tapir Validator.enumeration" in {
-    type IntConstraint = In[(
-        110354433,
-        110354454,
-        122483323
-      )]
+    type IntConstraint = In[
+      (
+          110354433,
+          110354454,
+          122483323
+      )
+    ]
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
-      case Validator.Mapped(Validator.Enumeration(List(
-      110354433,
-      110354454,
-      122483323
-      ), _, _), _) =>
+      case Validator.Mapped(
+            Validator.Enumeration(
+              List(
+                110354433,
+                110354454,
+                122483323
+              ),
+              _,
+              _
+            ),
+            _
+          ) =>
     }
   }
 

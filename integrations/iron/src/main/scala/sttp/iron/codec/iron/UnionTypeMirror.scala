@@ -6,11 +6,11 @@ import scala.quoted.*
 
 trait UnionTypeMirror[A] {
 
-  type ElementTypes <: Tuple
+  type ElementTypes <: NonEmptyTuple
 }
 
 // Building a class is more convenient to instantiate using macros
-class UnionTypeMirrorImpl[A, T <: Tuple] extends UnionTypeMirror[A] {
+class UnionTypeMirrorImpl[A, T <: NonEmptyTuple] extends UnionTypeMirror[A] {
 
   override type ElementTypes = T
 }
