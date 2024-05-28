@@ -44,6 +44,7 @@ concurrentRestrictions in Global ++= Seq(
 excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
 val CompileAndTest = "compile->compile;test->test"
+val CompileAndTestAndProvided = "compile->compile;test->test;provided->provided"
 
 def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
@@ -417,10 +418,10 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.6")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.7")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.9",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.10",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -504,10 +505,10 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
       // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.2" % "test" exclude (
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.3" % "test" exclude (
         "com.fasterxml.jackson.core", "jackson-databind"
       ),
-      "io.gatling" % "gatling-test-framework" % "3.11.2" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      "io.gatling" % "gatling-test-framework" % "3.11.3" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
@@ -535,7 +536,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     nettyServer,
     nettyServerCats,
     playServer,
-    vertxServer,
+    vertxServer % CompileAndTestAndProvided,
     vertxServerCats,
     nimaServer
   )
@@ -551,7 +552,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "org.typelevel" %%% "discipline-scalatest" % "2.2.0" % Test,
+      "org.typelevel" %%% "discipline-scalatest" % "2.3.0" % Test,
       "org.typelevel" %%% "cats-laws" % "2.10.0" % Test
     )
   )
@@ -986,8 +987,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.3.0",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.0",
+      "io.prometheus" % "prometheus-metrics-core" % "1.3.1",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.1",
       scalaTest.value % Test
     )
   )
@@ -1461,7 +1462,8 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-serve
   .settings(
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
-      "io.vertx" % "vertx-web" % Versions.vertx
+      "io.vertx" % "vertx-web" % Versions.vertx,
+      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided"
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1477,7 +1479,7 @@ lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-s
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % CompileAndTest, serverTests % Test, catsEffect % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, serverTests % Test, catsEffect % Test)
 
 lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-server/zio"))
   .settings(commonJvmSettings)
@@ -1488,7 +1490,7 @@ lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-se
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
-  .dependsOn(serverCore, vertxServer % CompileAndTest, zio, serverTests % Test)
+  .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, zio, serverTests % Test)
 
 lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-server"))
   .settings(commonJvmSettings)

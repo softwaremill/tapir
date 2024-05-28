@@ -10,6 +10,7 @@ import io.vertx.core.http.{ServerWebSocket, WebSocketFrameType}
 import io.vertx.core.streams.ReadStream
 import sttp.ws.WebSocketFrame
 import scala.annotation.tailrec
+import java.util.concurrent.Callable
 
 package object encoders {
 
@@ -23,7 +24,7 @@ package object encoders {
       case _: ByteArrayInputStream =>
         Future.succeededFuture(inputStreamToBufferUnsafe(is, byteLimit))
       case _ =>
-        vertx.executeBlocking { promise => promise.complete(inputStreamToBufferUnsafe(is, byteLimit)) }
+        vertx.executeBlocking(new Callable[Buffer] { override def call(): Buffer = inputStreamToBufferUnsafe(is, byteLimit) })
     }
   }
 

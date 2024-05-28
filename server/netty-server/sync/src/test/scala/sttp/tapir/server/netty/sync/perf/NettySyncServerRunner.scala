@@ -2,12 +2,12 @@ package sttp.tapir.server.netty.sync.perf
 
 import ox.*
 import ox.channels.*
+import sttp.shared.Identity
 import sttp.tapir.server.netty.sync.NettySyncServerOptions
 import sttp.tapir.server.netty.sync.NettySyncServerBinding
 import sttp.tapir.server.netty.sync.NettySyncServer
 
 import sttp.tapir.*
-import sttp.tapir.server.netty.sync.Id
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.EndpointExtensions.*
 import sttp.tapir.server.netty.sync.OxStreams
@@ -72,7 +72,7 @@ object NettySyncServerRunner {
         .ignorePong(true)
         .autoPing(None)
     )
-  val wsServerEndpoint = wsEndpoint.serverLogicSuccess[Id](_ => wsPipe)
+  val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe)
 
   val endpoints = genEndpointsId(1)
 
@@ -94,5 +94,5 @@ object NettySyncServerRunner {
   }
   def genServerEndpoints[F[_]](routeCount: Int)(reply: String => F[String]): List[ServerEndpoint[Any, F]] =
     serverEndpoints[F](reply).flatMap(gen => (0 to routeCount).map(i => gen(i)))
-  def genEndpointsId(count: Int): List[ServerEndpoint[Any, Id]] = genServerEndpoints[Id](count)(x => x: Id[String])
+  def genEndpointsId(count: Int): List[ServerEndpoint[Any, Identity]] = genServerEndpoints[Identity](count)(x => x: Identity[String])
 }

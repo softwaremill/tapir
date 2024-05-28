@@ -45,7 +45,7 @@ example:
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.ztapir._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zio.http.{HttpApp, Request, Response}
+import zio.http.{Request, Response, Routes}
 import zio._
 
 def countCharacters(s: String): ZIO[Any, Nothing, Int] =
@@ -54,7 +54,7 @@ def countCharacters(s: String): ZIO[Any, Nothing, Int] =
 val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersHttp: HttpApp[Any] =
+val countCharactersHttp: Routes[Any, Response] =
   ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
 ```
 

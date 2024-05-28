@@ -15,10 +15,10 @@ import zio.http.{Header => ZioHttpHeader, Headers => ZioHttpHeaders, _}
 trait ZioHttpInterpreter[R] {
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  def toHttp[R2](se: ZServerEndpoint[R2, ZioStreams with WebSockets]): HttpApp[R & R2] =
+  def toHttp[R2](se: ZServerEndpoint[R2, ZioStreams with WebSockets]): Routes[R & R2, Response] =
     toHttp(List(se))
 
-  def toHttp[R2](ses: List[ZServerEndpoint[R2, ZioStreams with WebSockets]]): HttpApp[R & R2] = {
+  def toHttp[R2](ses: List[ZServerEndpoint[R2, ZioStreams with WebSockets]]): Routes[R & R2, Response] = {
     implicit val bodyListener: ZioHttpBodyListener[R & R2] = new ZioHttpBodyListener[R & R2]
     implicit val monadError: MonadError[RIO[R & R2, *]] = new RIOMonadError[R & R2]
     val widenedSes = ses.map(_.widen[R & R2])
@@ -27,42 +27,40 @@ trait ZioHttpInterpreter[R] {
     val zioHttpResponseBody = new ZioHttpToResponseBody
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes)
 
-    HttpApp(
-      Routes.singleton {
-        Handler.fromFunctionZIO[(Path, Request)] { case (_: Path, request: Request) =>
-          val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], ZioResponseBody, ZioStreams](
-            FilterServerEndpoints(widenedSes),
-            zioHttpRequestBody,
-            zioHttpResponseBody,
-            interceptors,
-            zioHttpServerOptions.deleteFile
-          )
+    Routes.singleton {
+      Handler.fromFunctionZIO[(Path, Request)] { case (_: Path, request: Request) =>
+        val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], ZioResponseBody, ZioStreams](
+          FilterServerEndpoints(widenedSes),
+          zioHttpRequestBody,
+          zioHttpResponseBody,
+          interceptors,
+          zioHttpServerOptions.deleteFile
+        )
 
-          if (request.url.encode.trim.isEmpty) {
-            ZIO.logError("Received an apparently empty request URI, not handling: " + request) *>
-              ZIO.fail(Response.internalServerError("Empty request URI"))
-          } else {
-            val serverRequest = ZioHttpServerRequest(request)
-            interpreter
-              .apply(serverRequest)
-              .foldCauseZIO(
-                cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
-                {
-                  case RequestResult.Response(resp) =>
-                    resp.body match {
-                      case None              => handleHttpResponse(resp, None)
-                      case Some(Right(body)) => handleHttpResponse(resp, Some(body))
-                      case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
-                    }
+        if (request.url.encode.trim.isEmpty) {
+          ZIO.logError("Received an apparently empty request URI, not handling: " + request) *>
+            ZIO.fail(Response.internalServerError("Empty request URI"))
+        } else {
+          val serverRequest = ZioHttpServerRequest(request)
+          interpreter
+            .apply(serverRequest)
+            .foldCauseZIO(
+              cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
+              {
+                case RequestResult.Response(resp) =>
+                  resp.body match {
+                    case None              => handleHttpResponse(resp, None)
+                    case Some(Right(body)) => handleHttpResponse(resp, Some(body))
+                    case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
+                  }
 
-                  case RequestResult.Failure(_) =>
-                    ZIO.fail(Response.notFound)
-                }
-              )
-          }
+                case RequestResult.Failure(_) =>
+                  ZIO.fail(Response.notFound)
+              }
+            )
         }
       }
-    )
+    }
   }
 
   private def handleWebSocketResponse(

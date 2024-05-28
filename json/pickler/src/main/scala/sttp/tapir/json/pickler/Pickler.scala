@@ -14,10 +14,8 @@ import scala.quoted.*
 import scala.reflect.ClassTag
 import scala.util.{Failure, NotGiven, Success, Try}
 import java.math.{BigDecimal as JBigDecimal, BigInteger as JBigInteger}
-import macros.*
 
 import scala.annotation.implicitNotFound
-import sttp.tapir.json.pickler.SubtypeDiscriminator
 import sttp.tapir.generic.Configuration
 
 object Pickler:
@@ -56,7 +54,7 @@ object Pickler:
     type ParamV = V
     val subtypeDiscriminator: SubtypeDiscriminator[T] = new CustomSubtypeDiscriminator[T] {
       type V = ParamV
-      override lazy val fieldName = c.discriminator.getOrElse(SubtypeDiscriminator.DefaultFieldName)
+      override lazy val fieldName = c.discriminator
       override def extractor = extractorFn
       override def asString = asStringFn
       override lazy val mapping = paramMapping
@@ -353,8 +351,6 @@ object Pickler:
     val childDefaults = enrichedChildSchemas.map(_.default.map(_._1))
 
     val tapirPickle = new TapirPickle[T] {
-      override def tagName = config.discriminator.getOrElse(super.tagName)
-
       override lazy val writer: Writer[T] =
         macroProductW[T](
           schema,
@@ -367,7 +363,8 @@ object Pickler:
           schema,
           childPicklers.map([a] => (obj: a) => obj.asInstanceOf[Pickler[a]].innerUpickle.reader),
           childDefaults,
-          product
+          product,
+          config
         )
     }
     Pickler[T](tapirPickle, schema)
@@ -387,7 +384,6 @@ object Pickler:
   ): Pickler[T] =
     val childPicklersList = childPicklers.productIterator.toList.asInstanceOf[List[Pickler[_ <: T]]]
     val tapirPickle = new TapirPickle[T] {
-      override def tagName = subtypeDiscriminator.fieldName
       override lazy val writer: Writer[T] =
         macroSumW[T](
           childPicklersList,

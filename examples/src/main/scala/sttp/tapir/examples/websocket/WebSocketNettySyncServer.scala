@@ -4,7 +4,6 @@ import ox.*
 import ox.channels.*
 import sttp.capabilities.WebSockets
 import sttp.tapir.*
-import sttp.tapir.server.netty.sync.Id
 import sttp.tapir.server.netty.sync.OxStreams
 import sttp.tapir.server.netty.sync.OxStreams.Pipe // alias for Ox ?=> Source[A] => Source[B]
 import sttp.tapir.server.netty.sync.NettySyncServer
@@ -39,14 +38,14 @@ object WebSocketNettySyncServer:
   }
 
   // The WebSocket endpoint, builds the pipeline in serverLogicSuccess
-  val wsServerEndpoint = wsEndpoint.serverLogicSuccess[Id](_ => wsPipe)
+  val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe)
 
   // A regular /GET endpoint
   val helloWorldEndpoint =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   val helloWorldServerEndpoint = helloWorldEndpoint
-    .serverLogicSuccess[Id](name => s"Hello, $name!")
+    .handleSuccess(name => s"Hello, $name!")
 
   def main(args: Array[String]): Unit =
     NettySyncServer()

@@ -8,12 +8,12 @@ import sttp.capabilities.Streams
 import sttp.model.HeaderNames
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.netty.internal.reactivestreams.SubscriberInputStream
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.InputStream
 import java.nio.ByteBuffer
 
 /** Common logic for processing request body in all Netty backends. It requires particular backends to implement a few operations. */

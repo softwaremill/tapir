@@ -1,5 +1,6 @@
 package sttp.tapir.server.metrics.zio
 
+import sttp.shared.Identity
 import sttp.tapir.TestUtil._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.TestUtil._
@@ -21,13 +22,13 @@ object ZioMetricsTest extends ZIOSpecDefault {
           Thread.sleep(100)
           PersonsApi.defaultLogic(name)
         }.serverEp
-        val metrics: ZioMetrics[Id] = ZioMetrics(DefaultNamespace, List.empty).addRequestsActive()
+        val metrics: ZioMetrics[Identity] = ZioMetrics(DefaultNamespace, List.empty).addRequestsActive()
         val interpreter =
-          new ServerInterpreter[Any, Id, Unit, NoStreams](
+          new ServerInterpreter[Any, Identity, Unit, NoStreams](
             _ => List(serverEp),
             TestRequestBody,
             UnitToResponseBody,
-            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
+            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Identity])),
             _ => ()
           )
 
@@ -56,13 +57,13 @@ object ZioMetricsTest extends ZIOSpecDefault {
         val serverEp = PersonsApi { name =>
           PersonsApi.defaultLogic(name)
         }.serverEp
-        val metrics: ZioMetrics[Id] = ZioMetrics(DefaultNamespace, List.empty).addRequestsTotal()
+        val metrics: ZioMetrics[Identity] = ZioMetrics(DefaultNamespace, List.empty).addRequestsTotal()
         val interpreter =
-          new ServerInterpreter[Any, Id, Unit, NoStreams](
+          new ServerInterpreter[Any, Identity, Unit, NoStreams](
             _ => List(serverEp),
             TestRequestBody,
             UnitToResponseBody,
-            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
+            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Identity])),
             _ => ()
           )
 
@@ -95,13 +96,13 @@ object ZioMetricsTest extends ZIOSpecDefault {
         val serverEp = PersonsApi { name =>
           PersonsApi.defaultLogic(name)
         }.serverEp
-        val metrics: ZioMetrics[Id] = ZioMetrics(DefaultNamespace, List.empty).addRequestsDuration()
+        val metrics: ZioMetrics[Identity] = ZioMetrics(DefaultNamespace, List.empty).addRequestsDuration()
         val interpreter =
-          new ServerInterpreter[Any, Id, Unit, NoStreams](
+          new ServerInterpreter[Any, Identity, Unit, NoStreams](
             _ => List(serverEp),
             TestRequestBody,
             UnitToResponseBody,
-            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Id])),
+            List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler[Identity])),
             _ => ()
           )
 

@@ -3,6 +3,7 @@ package sttp.tapir.examples.streaming
 import sttp.capabilities.zio.ZioStreams
 import sttp.client3.*
 import sttp.model.HeaderNames
+import sttp.shared.Identity
 import sttp.tapir.{CodecFormat, PublicEndpoint}
 import sttp.tapir.server.netty.zio.NettyZioServer
 import sttp.tapir.ztapir.*

@@ -5,7 +5,7 @@ import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import sttp.model.HeaderNames
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
-import zio.http.{HttpApp, Server}
+import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.{Console, ExitCode, IO, Scope, Task, ZIO, ZIOAppDefault, ZLayer}
 
 object ServerSecurityLogicZio extends ZIOAppDefault {
@@ -55,7 +55,7 @@ object ServerSecurityLogicZio extends ZIOAppDefault {
   // ---
 
   // interpreting as an app
-  val routes: HttpApp[Any] = ZioHttpInterpreter().toHttp(secureHelloWorldWithLogic)
+  val routes: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter().toHttp(secureHelloWorldWithLogic)
 
   override def run: ZIO[Scope, Throwable, ExitCode] = {
     def testWith(backend: SttpBackend[Task, Any], port: Int, path: String, salutation: String, token: String): Task[String] =

@@ -25,11 +25,17 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
     override def findReader(s: String) = if (s == leafTagValue) r else null
   }
 
-  override def annotate[V](rw: Reader[V], n: String) = {
-    LeafWrapper(new TaggedReader.Leaf[V](n, rw), rw, n)
+  override def annotate[V](rw: Reader[V], key: String, value: String) = {
+    LeafWrapper(new TaggedReader.Leaf[V](key, value, rw), rw, value)
   }
 
-  inline def macroProductR[T](schema: Schema[T], childReaders: Tuple, childDefaults: List[Option[Any]], m: Mirror.ProductOf[T]): Reader[T] =
+  inline def macroProductR[T](
+      schema: Schema[T],
+      childReaders: Tuple,
+      childDefaults: List[Option[Any]],
+      m: Mirror.ProductOf[T],
+      config: PicklerConfiguration
+  ): Reader[T] =
     val schemaFields = schema.schemaType.asInstanceOf[SchemaType.SProduct[T]].fields
 
     val reader = new CaseClassReadereader[T](upickleMacros.paramsCount[T], upickleMacros.checkErrorMissingKeysCount[T]()) {
@@ -44,8 +50,9 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
       }
     }
 
-    inline if upickleMacros.isSingleton[T] then annotate[T](SingletonReader[T](upickleMacros.getSingleton[T]), upickleMacros.tagName[T])
-    else if upickleMacros.isMemberOfSealedHierarchy[T] then annotate[T](reader, upickleMacros.tagName[T])
+    inline if upickleMacros.isSingleton[T] then
+      annotate[T](SingletonReader[T](upickleMacros.getSingleton[T]), config.discriminator, upickleMacros.tagName[T])
+    else if upickleMacros.isMemberOfSealedHierarchy[T] then annotate[T](reader, config.discriminator, upickleMacros.tagName[T])
     else reader
 
   inline def macroSumR[T](childPicklers: List[Pickler[_]], subtypeDiscriminator: SubtypeDiscriminator[T]): Reader[T] =
@@ -60,18 +67,20 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
           .map { case (k, v) => (k, v.innerUpickle.reader) }
           .map {
             case (k, leaf) if leaf.isInstanceOf[LeafWrapper[_]] =>
-              TaggedReader.Leaf[T](discriminator.asString(k), leaf.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
+              TaggedReader
+                .Leaf[T](discriminator.fieldName, discriminator.asString(k), leaf.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
             case (_, otherKindOfReader) =>
               otherKindOfReader
           }
 
-        new TaggedReader.Node[T](readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]: _*)
+        new TaggedReader.Node[T](discriminator.fieldName, readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]: _*)
 
       case discriminator: DefaultSubtypeDiscriminator[T] =>
         val readers = childPicklers.map(cp => {
           (cp.schema.name, cp.innerUpickle.reader) match {
             case (Some(sName), wrappedReader: Readers#LeafWrapper[_]) =>
               TaggedReader.Leaf[T](
+                discriminator.fieldName,
                 discriminator.toValue(sName),
                 wrappedReader.r.asInstanceOf[Reader[T]]
               )
@@ -79,6 +88,6 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
               cp.innerUpickle.reader.asInstanceOf[Reader[T]]
           }
         })
-        Reader.merge(readers: _*)
+        Reader.merge(subtypeDiscriminator.fieldName, readers: _*)
     }
 }

@@ -5,10 +5,10 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.client3._
-import sttp.client3.monad._
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.{Header, MediaType, StatusCode}
-import sttp.monad.MonadError
+import sttp.monad.{IdentityMonad, MonadError}
+import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.client.sttp._
 import sttp.tapir.generic.auto._
@@ -17,7 +17,7 @@ import sttp.tapir.json.circe._
 class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
   behavior of "SttpStubServer"
-  implicit val idMonad: MonadError[Identity] = IdMonad
+  implicit val idMonad: MonadError[Identity] = IdentityMonad
 
   it should "combine tapir endpoint with sttp stub" in {
     // given

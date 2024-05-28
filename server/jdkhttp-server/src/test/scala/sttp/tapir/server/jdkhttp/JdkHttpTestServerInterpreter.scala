@@ -2,6 +2,7 @@ package sttp.tapir.server.jdkhttp
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer}
+import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
@@ -10,8 +11,8 @@ import java.net.InetSocketAddress
 import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
 
-class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Id, Any, JdkHttpServerOptions, HttpHandler] {
-  override def route(es: List[ServerEndpoint[Any, Id]], interceptors: Interceptors): HttpHandler = {
+class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Identity, Any, JdkHttpServerOptions, HttpHandler] {
+  override def route(es: List[ServerEndpoint[Any, Identity]], interceptors: Interceptors): HttpHandler = {
     val serverOptions: JdkHttpServerOptions =
       interceptors(JdkHttpServerOptions.customiseInterceptors).options.copy(send404WhenRequestNotHandled = false)
     JdkHttpServerInterpreter(serverOptions).toHandler(es)

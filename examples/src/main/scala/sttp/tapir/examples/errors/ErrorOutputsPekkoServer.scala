@@ -4,6 +4,7 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
 import sttp.client3.*
+import sttp.shared.Identity
 import sttp.tapir.generic.auto.*
 import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.*

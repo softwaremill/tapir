@@ -2,7 +2,7 @@ package sttp.tapir.server
 
 import sttp.capabilities.Streams
 import sttp.model._
-import sttp.tapir.TestUtil.Id
+import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
@@ -12,9 +12,9 @@ import java.nio.charset.Charset
 import scala.util.{Success, Try}
 
 object TestUtil {
-  object TestRequestBody extends RequestBody[Id, NoStreams] {
+  object TestRequestBody extends RequestBody[Identity, NoStreams] {
     override val streams: Streams[NoStreams] = NoStreams
-    override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Id[RawValue[R]] = ???
+    override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Identity[RawValue[R]] = ???
     override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = ???
   }
 
@@ -44,15 +44,15 @@ object TestUtil {
     ): String = ""
   }
 
-  implicit val unitBodyListener: BodyListener[Id, Unit] = new BodyListener[Id, Unit] {
-    override def onComplete(body: Unit)(cb: Try[Unit] => Id[Unit]): Unit = {
+  implicit val unitBodyListener: BodyListener[Identity, Unit] = new BodyListener[Identity, Unit] {
+    override def onComplete(body: Unit)(cb: Try[Unit] => Identity[Unit]): Unit = {
       cb(Success(()))
       ()
     }
   }
 
-  implicit val stringBodyListener: BodyListener[Id, String] = new BodyListener[Id, String] {
-    override def onComplete(body: String)(cb: Try[Unit] => Id[Unit]): String = {
+  implicit val stringBodyListener: BodyListener[Identity, String] = new BodyListener[Identity, String] {
+    override def onComplete(body: String)(cb: Try[Unit] => Identity[Unit]): String = {
       cb(Success(()))
       body
     }

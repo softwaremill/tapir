@@ -3,6 +3,7 @@ package sttp.tapir.examples
 import com.linecorp.armeria.server.Server
 import sttp.capabilities.armeria.ArmeriaStreams
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
+import sttp.shared.Identity
 import sttp.tapir.server.armeria.{ArmeriaFutureServerInterpreter, TapirService}
 import sttp.tapir.*
 

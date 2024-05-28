@@ -1,7 +1,8 @@
 package sttp.tapir.examples
 
-import sttp.client3.{HttpURLConnectionBackend, Identity, Response, SttpBackend, UriContext, asStringAlways, basicRequest}
+import sttp.client3.{HttpURLConnectionBackend, Response, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
+import sttp.shared.Identity
 import sttp.tapir.server.jdkhttp.*
 import sttp.tapir.*
 
@@ -15,9 +16,9 @@ object HelloWorldJdkHttpServer extends App {
     endpoint.get.in("second").out(stringBody)
 
   // Providing the server logic for the endpoints: here, just returning the passed name with `Hello, ` prepended
-  val helloWorldServerEndpoint = helloWorldEndpoint.handle(name => Right(s"Hello, $name!"))
+  val helloWorldServerEndpoint = helloWorldEndpoint.handleSuccess(name => s"Hello, $name!")
 
-  val secondServerEndpoint = secondEndpoint.handle(_ => Right("IT WORKS!"))
+  val secondServerEndpoint = secondEndpoint.handleSuccess(_ => "IT WORKS!")
 
   private val declaredPort = 9090
   private val declaredHost = "localhost"

@@ -5,6 +5,7 @@ import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
 import sttp.client3.*
 import sttp.model.StatusCode
+import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.files.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
