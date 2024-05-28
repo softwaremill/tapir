@@ -169,9 +169,14 @@ import sttp.tapir.server.netty.sync.NettySyncServer
     .startAndWait()
 ```
 
-The `startAndWait()` method blocks indefinitely. Once the above code compiles successfully, we can test our endpoint:
+The `startAndWait()` method blocks indefinitely. Once the above code compiles and runs successfully, we can test our 
+endpoint:
 
 ```bash
+# first console
+% scala-cli hello.scala
+
+# another console
 % curl "http://localhost:8080/hello/world?name=Alice"
 Hello, Alice!
 ```
