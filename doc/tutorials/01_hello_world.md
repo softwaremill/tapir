@@ -1,4 +1,4 @@
-# Hello, world!
+# 1. Hello, world!
 
 To start our adventure with tapir, we'll define a single endpoint and expose it using an HTTP server.
 

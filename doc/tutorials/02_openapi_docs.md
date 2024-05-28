@@ -1,4 +1,4 @@
-# Auto-generating OpenAPI docs
+# 2. Auto-generating OpenAPI docs
 
 We already know how to expose an endpoint as an HTTP server. Let's now generate documentation for the API in the 
 [OpenAPI](https://swagger.io/specification/) format, and expose it using the [Swagger UI](https://swagger.io).
@@ -187,12 +187,6 @@ paths:
       responses:
         '200':
           description: ''
-          content:
-            text/plain:
-              schema:
-                type: string
-        '400':
-          description: 'Invalid value for: body'
           content:
             text/plain:
               schema:
