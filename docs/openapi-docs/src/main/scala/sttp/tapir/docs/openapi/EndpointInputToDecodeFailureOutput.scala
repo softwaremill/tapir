@@ -20,6 +20,7 @@ private[openapi] object EndpointInputToDecodeFailureOutput {
     case EndpointIO.Empty(_, _)                 => false
     case EndpointInput.PathCapture(_, codec, _) => decodingMayFail(codec)
     case EndpointIO.OneOfBody(variants, _)      => variants.exists(variant => decodingMayFail(variant.codec))
+    case i: EndpointIO.Body[_, _]               => decodingMayFail(i.codec)
     case i: EndpointInput.Atom[_]               => decodingMayFail(i.codec) || !i.codec.schema.isOptional
   }
 

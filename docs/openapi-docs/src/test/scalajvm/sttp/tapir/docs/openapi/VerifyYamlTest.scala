@@ -869,6 +869,19 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  test("should not include '400 invalid value for: body' response if a simple string body is used") {
+    val e = endpoint.post.in("double").in(stringBody)
+
+    val expectedYaml = load("expected_string_body_response.yml")
+    val codec = Codec.listHead(Codec.json[String](DecodeResult.Value(_))(identity))
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0")).toYaml
+
+    println(actualYaml)
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlTest {

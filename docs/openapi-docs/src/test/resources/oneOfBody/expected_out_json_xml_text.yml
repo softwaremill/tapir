@@ -25,12 +25,6 @@ paths:
             text/plain:
               schema:
                 type: string
-        '400':
-          description: 'Invalid value for: body'
-          content:
-            text/plain:
-              schema:
-                type: string
 components:
   schemas:
     Fruit:
