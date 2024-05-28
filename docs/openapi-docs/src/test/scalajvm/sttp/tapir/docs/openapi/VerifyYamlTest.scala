@@ -877,8 +877,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val codec = Codec.listHead(Codec.json[String](DecodeResult.Value(_))(identity))
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0")).toYaml
 
-    println(actualYaml)
-
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
