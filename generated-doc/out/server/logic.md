@@ -13,6 +13,15 @@ For public endpoints (where the type of the security inputs is `Unit`), the serv
 `serverLogic(f: I => F[Either[E, O]]` method. For secure endpoints, you first need to provide the security logic
 using `serverSecurityLogic` and then the main logic.
 
+```eval_rst
+.. note::
+
+  If you are using a synchronous server (e.g. netty-sync, nima, or jdkhttp) the ``F[_]`` "effect" type is set to be 
+  the identity type constructor, ``type Identity[X] = X``. For such cases, the server logic can be provided using the 
+  ``.handle(f: I => Either[E, O])`` and ``.handleSecurity`` methods, which provide better type inference and 
+  readability.
+```
+
 Hence, apart from a `Endpoint[A, I, E, O, R]`, the server endpoint contains:
 
 * the server logic of type `I => F[Either[E, O]]` for public endpoint
