@@ -8,9 +8,9 @@ be later used to generate client code in a given programming language, server st
 documentation. In our case, we'll use the last option, with the help of Swagger UI, which allows both browsing and 
 invoking the endpoints. There are also alternative UIs, such as Redoc.
 
-The process of generating the OpenAPI specification exposing the Swagger UI might be done separately. However, we'll use
-a bundle, which first interprets tapir endpoints into OpenAPI, and then returns endpoints, which expose the UI together
-with the generated specification. We'll need to add a dependency:
+The process of generating the OpenAPI specification and exposing the Swagger UI might be done separately. However, we'll 
+use a bundle, which first interprets the provided tapir endpoints into OpenAPI, and then returns another set of 
+endpoints, which expose the UI together with the generated specification. We'll need to add a dependency:
 
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:@VERSION@
@@ -35,8 +35,11 @@ import sttp.tapir.server.netty.sync.NettySyncServer
 
   val e2 = endpoint
     .post.in("double").in(stringBody)
+    .errorOut(stringBody)
     .out(stringBody)
-    .handle { s => s.toIntOption.fold(Left(s"$s is not a number"))(n => Right((n*2).toString)) }
+    .handle { s => 
+      s.toIntOption.fold(Left(s"$s is not a number"))(n => Right((n*2).toString)) 
+    }
 
   NettySyncServer().port(8080)
     .addEndpoints(List(e1, e2))
@@ -65,16 +68,17 @@ documentation.
 
 One possibility is to generate the YAML or JSON file and save it to disk, share with other projects etc. But in our 
 case, as mentioned at the beginning, we'll use the rendered specification to expose a UI, which will allow browsing
-our API. The UI itself needs to be exposed using HTTP. Hence, we'll need to generate some tapir endpoints, which will
-serve the appropriate resources (such as the UI's `index.html`, the CSS file, the generated OpenAPI specification).
+our API. The UI itself needs to be exposed using HTTP. Hence, we'll need to generate tapir endpoints, which will serve 
+the appropriate resources (such as the UI's `index.html`, the CSS files, the generated OpenAPI specification).
 
 This amounts to invoking the `SwaggerInterpreter`:
 
 ```scala
-val swaggerEndpoints = SwaggerInterpreter().fromEndpoints[Identity](List(e1, e2), "My App", "1.0")
+val swaggerEndpoints = SwaggerInterpreter()
+  .fromEndpoints[Identity](List(e1, e2), "My App", "1.0")
 ```
 
-By default, the generated endpoints will expose the UI using the `/docs` path, but this can be customising using the
+By default, the generated endpoints will expose the UI using the `/docs` path, but this can be customised using the
 options.
 
 ```{note}
@@ -98,7 +102,7 @@ computations run synchronously, in a blocking way.
 And that's almost all the code changes that we need to introduce! We only need to additionally expose the 
 `swaggerEndpoints` using our HTTP server:
 
-{emphasize-lines="3, 5, 20, 24"}
+{emphasize-lines="3, 5, 8, 24-25, 29"}
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:@VERSION@
@@ -107,6 +111,7 @@ And that's almost all the code changes that we need to introduce! We only need t
 import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
+import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 @main def tapirDocs(): Unit =
   val e1 = endpoint
@@ -117,9 +122,13 @@ import sttp.tapir.server.netty.sync.NettySyncServer
   val e2 = endpoint
     .post.in("double").in(stringBody)
     .out(stringBody)
-    .handle { s => s.toIntOption.fold(Left(s"$s is not a number"))(n => Right((n*2).toString)) }
+    .errorOut(stringBody)
+    .handle { s => 
+      s.toIntOption.fold(Left(s"$s is not a number"))(n => Right((n*2).toString)) 
+    }
 
-  val swaggerEndpoints = SwaggerInterpreter().fromEndpoints[Identity](List(e1, e2), "My App", "1.0")
+  val swaggerEndpoints = SwaggerInterpreter()
+    .fromServerEndpoints[Identity](List(e1, e2), "My App", "1.0")
  
   NettySyncServer().port(8080)
     .addEndpoints(List(e1, e2))
@@ -139,7 +148,61 @@ Browse the Swagger UI and invoking the endpoints. The generated OpenAPI specific
 [`http://localhost:8080/docs/docs.yaml`](http://localhost:8080/docs/docs.yaml):
 
 ```yaml
-
+openapi: 3.1.0
+info:
+  title: My App
+  version: '1.0'
+paths:
+  /hello/world:
+    get:
+      operationId: getHelloWorld
+      parameters:
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: 'Invalid value for: query parameter name'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /double:
+    post:
+      operationId: postDouble
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+        default:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
 ```
 
 This wraps up the tutorial on generating and exposing OpenAPI documentation. If you'd like to customise some of the

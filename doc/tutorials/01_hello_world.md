@@ -57,8 +57,8 @@ endpoint's structure, so you should see the following:
 
 ```bash
 % scala-cli hello.scala
-Compiling project (Scala 3.4.1, JVM (21))
-Compiled project (Scala 3.4.1, JVM (21))
+Compiling project (Scala 3.4.2, JVM (21))
+Compiled project (Scala 3.4.2, JVM (21))
 GET /hello /world -> -/-
 ```
 
@@ -175,6 +175,8 @@ endpoint:
 ```bash
 # first console
 % scala-cli hello.scala
+Compiling project (Scala 3.4.2, JVM (21))
+Compiled project (Scala 3.4.2, JVM (21))
 
 # another console
 % curl "http://localhost:8080/hello/world?name=Alice"
