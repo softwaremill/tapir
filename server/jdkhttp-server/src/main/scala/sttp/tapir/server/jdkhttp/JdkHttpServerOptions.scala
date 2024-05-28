@@ -1,6 +1,7 @@
 package sttp.tapir.server.jdkhttp
 
 import com.sun.net.httpserver.HttpsConfigurator
+import sttp.shared.Identity
 import sttp.tapir.{Defaults, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
@@ -45,21 +46,21 @@ import java.util.logging.{Level, Logger}
   *   entirely in memory. Default is 50MB.
   */
 case class JdkHttpServerOptions(
-    interceptors: List[Interceptor[Id]],
-    createFile: ServerRequest => TapirFile,
-    deleteFile: TapirFile => Unit,
-    send404WhenRequestNotHandled: Boolean = true,
-    basePath: String = "/",
-    port: Int = 0,
-    host: String = "0.0.0.0",
-    executor: Option[Executor] = None,
-    httpsConfigurator: Option[HttpsConfigurator] = None,
-    backlogSize: Int = 0,
-    multipartFileThresholdBytes: Long = 52_428_800
+                                 interceptors: List[Interceptor[Identity]],
+                                 createFile: ServerRequest => TapirFile,
+                                 deleteFile: TapirFile => Unit,
+                                 send404WhenRequestNotHandled: Boolean = true,
+                                 basePath: String = "/",
+                                 port: Int = 0,
+                                 host: String = "0.0.0.0",
+                                 executor: Option[Executor] = None,
+                                 httpsConfigurator: Option[HttpsConfigurator] = None,
+                                 backlogSize: Int = 0,
+                                 multipartFileThresholdBytes: Long = 52_428_800
 ) {
   require(0 <= port && port <= 65535, "Port has to be in 1-65535 range or 0 if random!")
-  def prependInterceptor(i: Interceptor[Id]): JdkHttpServerOptions = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[Id]): JdkHttpServerOptions = copy(interceptors = interceptors :+ i)
+  def prependInterceptor(i: Interceptor[Identity]): JdkHttpServerOptions = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[Identity]): JdkHttpServerOptions = copy(interceptors = interceptors :+ i)
 }
 
 object JdkHttpServerOptions {
@@ -80,18 +81,18 @@ object JdkHttpServerOptions {
     )
   }
 
-  private def default(interceptors: List[Interceptor[Id]]): JdkHttpServerOptions =
+  private def default(interceptors: List[Interceptor[Identity]]): JdkHttpServerOptions =
     JdkHttpServerOptions(interceptors, _ => Defaults.createTempFile(), Defaults.deleteFile())
 
-  def customiseInterceptors: CustomiseInterceptors[Id, JdkHttpServerOptions] =
+  def customiseInterceptors: CustomiseInterceptors[Identity, JdkHttpServerOptions] =
     CustomiseInterceptors(
-      createOptions = (ci: CustomiseInterceptors[Id, JdkHttpServerOptions]) => default(ci.interceptors)
+      createOptions = (ci: CustomiseInterceptors[Identity, JdkHttpServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog)
 
   private val log = Logger.getLogger(classOf[JdkHttpServerInterpreter].getName)
 
-  lazy val defaultServerLog: ServerLog[Id] =
-    DefaultServerLog[Id](
+  lazy val defaultServerLog: ServerLog[Identity] =
+    DefaultServerLog[Identity](
       doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,
       doLogAllDecodeFailures = debugLog,

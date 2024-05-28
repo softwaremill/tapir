@@ -9,6 +9,7 @@ import io.github.iltotore.iron.{Constraint, refineEither}
 import io.circe.generic.auto.*
 import io.circe.{Decoder, Encoder}
 import sttp.client3.*
+import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.DecodeResult.Error
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
@@ -16,7 +17,7 @@ import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.FailureMessages
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 
-import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
+import sttp.client3.{HttpURLConnectionBackend, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
 import sttp.tapir.server.netty.cats.NettyCatsServer
 import sttp.tapir.json.circe.*

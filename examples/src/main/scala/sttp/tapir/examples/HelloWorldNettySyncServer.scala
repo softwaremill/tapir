@@ -2,14 +2,14 @@ package sttp.tapir.examples
 
 import ox.*
 import sttp.tapir.*
-import sttp.tapir.server.netty.sync.{Id, NettySyncServer}
+import sttp.tapir.server.netty.sync.NettySyncServer
 
 object HelloWorldNettySyncServer:
   val helloWorld = endpoint.get
     .in("hello")
     .in(query[String]("name"))
     .out(stringBody)
-    .serverLogicSuccess[Id](name => s"Hello, $name!")
+    .handleSuccess(name => s"Hello, $name!")
 
   NettySyncServer().addEndpoint(helloWorld).startAndWait()
 
@@ -20,7 +20,7 @@ object HelloWorldNettySyncServer2:
     .in("hello")
     .in(query[String]("name"))
     .out(stringBody)
-    .serverLogicSuccess[Id](name => s"Hello, $name!")
+    .handleSuccess(name => s"Hello, $name!")
 
   supervised {
     val serverBinding = useInScope(NettySyncServer().addEndpoint(helloWorld).start())(_.stop())

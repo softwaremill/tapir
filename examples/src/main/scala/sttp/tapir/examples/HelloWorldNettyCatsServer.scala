@@ -1,8 +1,9 @@
 package sttp.tapir.examples
 
 import cats.effect.{IO, IOApp}
-import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
+import sttp.client3.{HttpURLConnectionBackend, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
+import sttp.shared.Identity
 import sttp.tapir.server.netty.cats.NettyCatsServer
 import sttp.tapir.*
 

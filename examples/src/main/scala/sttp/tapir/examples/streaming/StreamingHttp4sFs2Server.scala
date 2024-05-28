@@ -9,6 +9,7 @@ import org.http4s.server.Router
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3.*
 import sttp.model.HeaderNames
+import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
