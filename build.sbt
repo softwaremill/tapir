@@ -41,6 +41,8 @@ concurrentRestrictions in Global ++= Seq(
   Tags.limit(ScalaJSTags.Link, 1)
 )
 
+ThisBuild / usePipelining := true
+
 excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
 val CompileAndTest = "compile->compile;test->test"
