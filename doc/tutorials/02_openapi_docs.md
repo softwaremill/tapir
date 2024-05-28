@@ -27,7 +27,7 @@ starting setup of `docs.scala` is as follows:
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
 
-@main def helloWorldTapir(): Unit =
+@main def tapirDocs(): Unit =
   val e1 = endpoint
     .get.in("hello" / "world").in(query[String]("name"))
     .out(stringBody)
@@ -108,7 +108,7 @@ import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
 
-@main def helloWorldTapir(): Unit =
+@main def tapirDocs(): Unit =
   val e1 = endpoint
     .get.in("hello" / "world").in(query[String]("name"))
     .out(stringBody)
