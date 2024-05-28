@@ -5,8 +5,7 @@ import sttp.model.HeaderNames
 import sttp.tapir.{CodecFormat, PublicEndpoint}
 import sttp.tapir.ztapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zio.http.HttpApp
-import zio.http.Server
+import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.{ExitCode, Schedule, URIO, ZIO, ZIOAppDefault, ZLayer}
 import zio.stream.*
 
@@ -36,7 +35,7 @@ object StreamingZioHttpServer extends ZIOAppDefault {
     ZIO.succeed((size, stream))
   }
 
-  val routes: HttpApp[Any] = ZioHttpInterpreter().toHttp(streamingServerEndpoint)
+  val routes: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter().toHttp(streamingServerEndpoint)
 
   // Test using: curl http://localhost:8080/receive
   override def run: URIO[Any, ExitCode] =
