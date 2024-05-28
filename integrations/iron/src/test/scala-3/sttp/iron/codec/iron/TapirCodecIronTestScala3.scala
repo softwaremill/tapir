@@ -142,15 +142,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
-      case Validator.Mapped(
-            Validator.All(
-              List(
-                Validator.Any(List(Validator.Min(1, true), Validator.Enumeration(List(1), _, _))),
-                Validator.Any(List(Validator.Max(3, true), Validator.Enumeration(List(3), _, _)))
-              )
-            ),
-            _
-          ) =>
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, false))), _) =>
     }
   }
 
@@ -159,15 +151,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
-      case Validator.Mapped(
-            Validator.All(
-              List(
-                Validator.Min(1, true),
-                Validator.Any(List(Validator.Max(3, true), Validator.Enumeration(List(3), _, _)))
-              )
-            ),
-            _
-          ) =>
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, false))), _) =>
     }
   }
 
@@ -176,15 +160,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
-      case Validator.Mapped(
-            Validator.All(
-              List(
-                Validator.Any(List(Validator.Min(1, true), Validator.Enumeration(List(1), _, _))),
-                Validator.Max(3, true)
-              )
-            ),
-            _
-          ) =>
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, true))), _) =>
     }
   }
 
@@ -194,6 +170,14 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
 
     summon[Schema[LimitedInt]].validator should matchPattern {
       case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, true))), _) =>
+    }
+  }
+  "Generated validator for intersection of constraints" should "use tapir Validator.min(1, false) and Validator.max(3, false)" in {
+    type IntConstraint = GreaterEqual[1] & LessEqual[3]
+    type LimitedInt = Int :| IntConstraint
+
+    summon[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, false))), _) =>
     }
   }
 
@@ -206,12 +190,75 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     }
   }
 
+  "Generated validator for union of constraints" should "use tapir Validator.min and strict equality (enumeration)" in {
+    type IntConstraint = StrictEqual[3] | Greater[5] 
+    type LimitedInt = Int :| IntConstraint
+
+    summon[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.Any(List(Validator.Enumeration(List(3), _, _), Validator.Min(5, true))), _) =>
+    }
+  }
+  
+  "Generated validator for union of constraints" should "put muiltiple StrictEquality into a single enum and follow with the rest of constrains" in {
+    type IntConstraint = StrictEqual[3] | StrictEqual[4] | StrictEqual[13] | GreaterEqual[23] 
+    type LimitedInt = Int :| IntConstraint
+
+    summon[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.Any(List(Validator.Enumeration(List(3, 4, 13), _, _), Validator.Min(23, false))), _) =>
+    }
+  }
+
+  "Generated validator for union of constraints" should "use tapir Validator.enumeration" in {
+    type IntConstraint = In[
+      (
+          110354433,
+          110354454,
+          122483323
+      )
+    ]
+    type LimitedInt = Int :| IntConstraint
+
+    summon[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(
+            Validator.Enumeration(
+              List(
+                110354433,
+                110354454,
+                122483323
+              ),
+              _,
+              _
+            ),
+            _
+          ) =>
+    }
+  }
+
   "Generated validator for described union" should "use tapir Validator.min and Validator.max" in {
     type IntConstraint = (Less[1] | Greater[3]) DescribedAs ("Should be included in less than 1 or more than 3")
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
       case Validator.Mapped(Validator.Any(List(Validator.Max(1, true), Validator.Min(3, true))), _) =>
+    }
+  }
+  
+  "Generated validator for described union" should "work with strings" in {
+    type StrConstraint = (Match["[a-c]*"] | Match["[x-z]*"]) DescribedAs ("Some description")
+    type LimitedStr = String :| StrConstraint
+
+    val identifierCodec = implicitly[PlainCodec[LimitedStr]]
+    identifierCodec.decode("aac") shouldBe DecodeResult.Value("aac")
+    identifierCodec.decode("yzx") shouldBe DecodeResult.Value("yzx")
+    identifierCodec.decode("aax") shouldBe a[DecodeResult.InvalidValue]
+  }
+  
+  "Generated validator for described single constraint" should "use tapir Validator.max" in {
+    type IntConstraint = (Less[1]) DescribedAs ("Should be included in less than 1 or more than 3")
+    type LimitedInt = Int :| IntConstraint
+
+    summon[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.Max(1, true), _) =>
     }
   }
 
