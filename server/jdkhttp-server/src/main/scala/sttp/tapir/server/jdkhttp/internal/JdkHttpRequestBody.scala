@@ -4,6 +4,7 @@ package internal
 import com.sun.net.httpserver.HttpExchange
 import sttp.capabilities
 import sttp.model.Part
+import sttp.shared.Identity
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -15,7 +16,7 @@ import java.nio.ByteBuffer
 import java.nio.file.{Files, StandardCopyOption}
 
 private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile, multipartFileThresholdBytes: Long)
-    extends RequestBody[Id, NoStreams] {
+    extends RequestBody[Identity, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {

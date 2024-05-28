@@ -2,16 +2,16 @@ package sttp.tapir.server.nima.internal
 
 import io.helidon.webserver.http.{ServerRequest => JavaNimaServerRequest}
 import sttp.capabilities
+import sttp.shared.Identity
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.server.nima.Id
 
 import java.nio.ByteBuffer
 import java.nio.file.{Files, StandardCopyOption}
 
-private[nima] class NimaRequestBody(createFile: ServerRequest => TapirFile) extends RequestBody[Id, NoStreams] {
+private[nima] class NimaRequestBody(createFile: ServerRequest => TapirFile) extends RequestBody[Identity, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {

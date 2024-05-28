@@ -6,6 +6,7 @@ import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import sttp.client3.*
+import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 

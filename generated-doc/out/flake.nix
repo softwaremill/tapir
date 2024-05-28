@@ -1,35 +1,31 @@
 {
   description = "Python shell flake";
 
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  inputs.flake-utils.url = "github:numtide/flake-utils";
 
-    mach-nix.url = "github:davhau/mach-nix";
-  };
-
-  outputs = { self, nixpkgs, mach-nix, flake-utils, ... }:
-    let
-      pythonVersion = "python37";
-    in
+  outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        mach = mach-nix.lib.${system};
-
-        pythonEnv = mach.mkPython {
-          python = pythonVersion;
-          requirements = builtins.readFile ./requirements.txt;
-        };
-      in
+        python = pkgs.python3.withPackages (ps: with ps; [
+          pip
+        ]);
+      in 
       {
-        devShells.default = pkgs.mkShellNoCC {
-          packages = [ pythonEnv ];
-
-          shellHook = ''
-            export PYTHONPATH="${pythonEnv}/bin/python"
+        devShell = pkgs.mkShell {
+          buildInputs = [ python ];
+  
+            shellHook = ''
+            # Create a Python virtual environment and activate it
+            python -m venv .env
+            source .env/bin/activate
+            # Install the Python dependencies from requirements.txt
+            if [ -f requirements.txt ]; then
+              pip install -r requirements.txt
+            fi
           '';
         };
       }
     );
-}
+} 
