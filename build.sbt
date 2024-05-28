@@ -175,6 +175,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   circeJson.projectRefs ++
   files.projectRefs ++
   jsoniterScala.projectRefs ++
+  jsoniterScalaBundle.projectRefs ++
   prometheusMetrics.projectRefs ++
   opentelemetryMetrics.projectRefs ++
   datadogMetrics.projectRefs ++
@@ -897,6 +898,22 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
     settings = commonJsSettings
   )
   .dependsOn(core)
+
+lazy val jsoniterScalaBundle: ProjectMatrix = (projectMatrix in file("json/jsoniter-bundle"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-jsoniter-scala-bundle",
+    libraryDependencies ++= Seq(
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.28.5",
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = List(scala3))
+  .jsPlatform(
+    scalaVersions = List(scala3),
+    settings = commonJsSettings
+  )
+  .dependsOn(jsoniterScala)
 
 lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   .settings(commonSettings)

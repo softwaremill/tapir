@@ -225,6 +225,33 @@ import sttp.tapir.json.jsoniter._
 
 Jsoniter Scala requires `JsonValueCodec` implicit value in scope for each type you want to serialize.
 
+## Jsoniter Scala for Scala 3
+
+If you are using Scala 3 and would like to use the `... derives` syntax for deriving codecs, some additional glue code
+is required in case of jsoniter. It's packaged in the `tapir-jsoniter-bundle` module:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala-bundle" % "@VERSION@"
+```
+
+You can then use the module as follows:
+
+```scala
+import sttp.tapir.*
+import sttp.tapir.json.jsoniter.bundle.*
+
+case class Test(v1: String, v2: Int) derives ConfiguredJsonValueCodec
+
+endpoint.in(jsonBody[Test])
+```
+
+Configuration can be provided by an `inline given CodecMakerConfig` value, which needs to be visible in scope, and 
+defined/imported before the `... derives` usage. The bundle is an addition, not a replacement to the usual 
+jsoniter-scala functionality, hence e.g. `JsonValueCodec`s can also be derived using `JsonCodecMaker`.
+
+Note that adding the bundle as a dependency will cause the jsoniter's macros module to be included as a runtime 
+dependency, which is not required when deriving codecs using `JsonCodecMaker` directly.
+
 ## Json4s
 
 To use [json4s](https://github.com/json4s/json4s) add the following dependencies to your project:

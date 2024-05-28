@@ -71,17 +71,18 @@ The modules are categorised using the following levels:
 
 ## JSON modules
 
-| Module     | Level        |
-|------------|--------------|
-| circe      | stabilising  |
-| json4s     | stabilising  |
-| jsoniter   | stabilising  |
-| play-json  | stabilising  |
-| spray-json | stabilising  |
-| tethys     | stabilising  |
-| upickle    | stabilising  |
-| pickler    | experimental |
-| zio-json   | experimental |
+| Module          | Level        |
+|-----------------|--------------|
+| circe           | stabilising  |
+| json4s          | stabilising  |
+| jsoniter        | stabilising  |
+| jsoniter-bundle | experimental |
+| play-json       | stabilising  |
+| spray-json      | stabilising  |
+| tethys          | stabilising  |
+| upickle         | stabilising  |
+| pickler         | experimental |
+| zio-json        | experimental |
 
 ## Testing modules
 
