@@ -134,21 +134,29 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
       case _: (StrictEqual[t] *: ts) =>
         inline erasedValue[t] match
           case e: N => e :: strictValues[N, ts]
-          case _ => Nil
+          case _    => Nil
       case _ => Nil
   }
 
   inline given validatorForOr[N, Predicates](using
       mirror: UnionTypeMirror[Predicates]
   ): ValidatorForPredicate[N, Predicates] =
-    val strictEqualsOnly = strictValues[N, mirror.ElementTypes]
-    if (strictEqualsOnly.nonEmpty)
-      ValidatorForPredicate.fromPrimitiveValidator(Validator.enumeration[N](strictEqualsOnly))
+    val strictEqualsValues = strictValues[N, mirror.ElementTypes]
+    if (strictEqualsValues.length == mirror.size)
+      // All elements of union type were StrictEqual[_], so it's simply an enumeration
+      ValidatorForPredicate.fromPrimitiveValidator(Validator.enumeration[N](strictEqualsValues))
     else
       new ValidatorForPredicate[N, Predicates] {
 
         val unionConstraint = new Constraint.UnionConstraint[N, Predicates]
-        val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
+        val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] =
+          if strictEqualsValues.isEmpty then summonValidators[N, mirror.ElementTypes]
+          else
+            // There were some strict equals at the beginning of union type - putting them into a Validator.enumeration and attaching the rest of the validators as a normal list
+            ValidatorForPredicate
+              .fromPrimitiveValidator(Validator.enumeration[N](strictEqualsValues)) :: summonValidators[N, mirror.ElementTypes].drop(
+              strictEqualsValues.length
+            )
 
         override def validator: Validator[N] = Validator.any(validatorsForPredicates.map(_.validator): _*)
 

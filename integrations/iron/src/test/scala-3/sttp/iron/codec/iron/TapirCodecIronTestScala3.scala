@@ -189,6 +189,25 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
       case Validator.Mapped(Validator.Any(List(Validator.Max(1, true), Validator.Min(3, true))), _) =>
     }
   }
+
+  "Generated validator for union of constraints" should "use tapir Validator.min and strict equality (enumeration)" in {
+    type IntConstraint = StrictEqual[3] | Greater[5] 
+    type LimitedInt = Int :| IntConstraint
+
+    summon[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.Any(List(Validator.Enumeration(List(3), _, _), Validator.Min(5, true))), _) =>
+    }
+  }
+  
+  "Generated validator for union of constraints" should "put muiltiple StrictEquality into a single enum and follow with the rest of constrains" in {
+    type IntConstraint = StrictEqual[3] | StrictEqual[4] | StrictEqual[13] | GreaterEqual[23] 
+    type LimitedInt = Int :| IntConstraint
+
+    summon[Schema[LimitedInt]].validator should matchPattern {
+      case Validator.Mapped(Validator.Any(List(Validator.Enumeration(List(3, 4, 13), _, _), Validator.Min(23, false))), _) =>
+    }
+  }
+
   "Generated validator for union of constraints" should "use tapir Validator.enumeration" in {
     type IntConstraint = In[
       (
