@@ -35,4 +35,23 @@ object WebSocketFrameConverters {
     case WebSocketFrame.Binary(payload, finalFragment, rsvOpt) =>
       new BinaryWebSocketFrame(finalFragment, rsvOpt.getOrElse(0), Unpooled.wrappedBuffer(payload))
   }
+
+  type Accumulator = Option[Either[Array[Byte], String]]
+  val accumulateFrameState: (Accumulator, WebSocketFrame) => (Accumulator, Option[WebSocketFrame]) = {
+        case (None, f: WebSocketFrame.Ping)                                  => (None, Some(f))
+        case (None, f: WebSocketFrame.Pong)                                  => (None, Some(f))
+        case (None, f: WebSocketFrame.Close)                                 => (None, Some(f))
+        case (None, f: WebSocketFrame.Data[_]) if f.finalFragment            => (None, Some(f))
+        case (None, f: WebSocketFrame.Text)                                  => (Some(Right(f.payload)), None)
+        case (None, f: WebSocketFrame.Binary)                                => (Some(Left(f.payload)), None)
+        case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
+        case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
+        case (Some(Right(acc)), f: WebSocketFrame.Binary) if f.finalFragment =>
+          // Netty's ContinuationFrame is translated to Binary, so we need to handle a Binary frame received after accumulating Text
+          (None, Some(WebSocketFrame.Text(payload = acc + new String(f.payload), finalFragment = true, rsv = f.rsv)))
+        case (Some(Right(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Right(acc + new String(f.payload))), None)
+        case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment    => (None, Some(f.copy(payload = acc + f.payload)))
+        case (Some(Right(acc)), f: WebSocketFrame.Text) if !f.finalFragment   => (Some(Right(acc + f.payload)), None)
+        case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
+  }
 }

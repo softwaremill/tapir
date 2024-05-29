@@ -101,6 +101,8 @@ private[http4s] object Http4sWebSockets {
         case (None, f: WebSocketFrame.Pong)                                  => (None, Some(f))
         case (None, f: WebSocketFrame.Close)                                 => (None, Some(f))
         case (None, f: WebSocketFrame.Data[_]) if f.finalFragment            => (None, Some(f))
+        case (None, f: WebSocketFrame.Text)                                  => (Some(Right(f.payload)), None)
+        case (None, f: WebSocketFrame.Binary)                                => (Some(Left(f.payload)), None)
         case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
         case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
         case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment   => (None, Some(f.copy(payload = acc + f.payload)))

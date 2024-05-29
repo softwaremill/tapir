@@ -66,16 +66,5 @@ private[sync] object OxSourceWebSocketProcessor:
 
   private def optionallyConcatenateFrames(s: Source[WebSocketFrame], doConcatenate: Boolean)(using Ox): Source[WebSocketFrame] =
     if doConcatenate then
-      type Accumulator = Option[Either[Array[Byte], String]]
-      s.mapStateful(() => None: Accumulator) {
-        case (None, f: WebSocketFrame.Ping)                                  => (None, Some(f))
-        case (None, f: WebSocketFrame.Pong)                                  => (None, Some(f))
-        case (None, f: WebSocketFrame.Close)                                 => (None, Some(f))
-        case (None, f: WebSocketFrame.Data[_]) if f.finalFragment            => (None, Some(f))
-        case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
-        case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
-        case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment   => (None, Some(f.copy(payload = acc + f.payload)))
-        case (Some(Right(acc)), f: WebSocketFrame.Text) if !f.finalFragment  => (Some(Right(acc + f.payload)), None)
-        case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
-      }.collectAsView { case Some(f: WebSocketFrame) => f }
+      s.mapStateful(() => None: Accumulator)(accumulateFrameState).collectAsView { case Some(f: WebSocketFrame) => f }
     else s
