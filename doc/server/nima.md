@@ -12,7 +12,8 @@ dependency:
 ```
 
 Loom-managed concurrency uses direct style instead of effect wrappers like `Future[T]` or `IO[T]`. Because of this,
-Tapir endpoints defined for Nima server use `Id[T]`, which provides compatibility, while effectively means just `T`.
+Tapir endpoints defined for Nima server use `Identity[T]`, which provides compatibility, while effectively means just 
+`T`.
 
 Such endpoints are then processed through `NimaServerInterpreter` in order to obtain an `io.helidon.webserver.http.Handler`:
 
@@ -24,7 +25,7 @@ import sttp.tapir.server.nima.{Id, NimaServerInterpreter}
 val helloEndpoint = endpoint.get
   .in("hello")
   .out(stringBody)
-  .serverLogicSuccess[Id] { _ =>
+  .handleSuccess { _ =>
     Thread.sleep(1000)
     "hello, world!"
   }

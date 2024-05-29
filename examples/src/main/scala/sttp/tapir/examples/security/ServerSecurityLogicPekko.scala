@@ -5,6 +5,7 @@ import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Directives.*
 import org.apache.pekko.http.scaladsl.server.Route
 import sttp.client3.*
+import sttp.shared.Identity
 import sttp.model.HeaderNames
 import sttp.tapir.*
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}

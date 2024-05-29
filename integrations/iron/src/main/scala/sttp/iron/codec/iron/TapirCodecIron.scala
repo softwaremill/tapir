@@ -10,6 +10,8 @@ import io.github.iltotore.iron.constraint.string.*
 import io.github.iltotore.iron.constraint.collection.*
 import io.github.iltotore.iron.constraint.numeric.*
 
+import sttp.shared.Identity
+
 import sttp.tapir.Codec
 import sttp.tapir.CodecFormat
 import sttp.tapir.DecodeResult
@@ -128,27 +130,51 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
 
     }
 
-  inline given validatorForOr[N, Predicates](using mirror: UnionTypeMirror[Predicates]): ValidatorForPredicate[N, Predicates] =
-    new ValidatorForPredicate[N, Predicates] {
+  private inline def strictValues[N, V <: Tuple]: List[N] = {
+    inline erasedValue[V] match
+      case _: EmptyTuple => Nil
+      case _: (StrictEqual[t] *: ts) =>
+        inline erasedValue[t] match
+          case e: N => e :: strictValues[N, ts]
+          case _    => Nil
+      case _ => Nil
+  }
 
-      val unionConstraint = new Constraint.UnionConstraint[N, Predicates]
-      val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
+  inline given validatorForOr[N, Predicates](using
+      mirror: UnionTypeMirror[Predicates]
+  ): ValidatorForPredicate[N, Predicates] =
+    val strictEqualsValues = strictValues[N, mirror.ElementTypes]
+    if (strictEqualsValues.length == mirror.size)
+      // All elements of union type were StrictEqual[_], so it's simply an enumeration
+      ValidatorForPredicate.fromPrimitiveValidator(Validator.enumeration[N](strictEqualsValues))
+    else
+      new ValidatorForPredicate[N, Predicates] {
 
-      override def validator: Validator[N] = Validator.any(validatorsForPredicates.map(_.validator): _*)
-
-      override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] =
-        if (!unionConstraint.test(value))
-          List(
-            ValidationError[N](
-              Validator.Custom(_ =>
-                ValidationResult.Invalid(unionConstraint.message) // at this point the validator is already failed anyway
-              ),
-              value
+        val unionConstraint = new Constraint.UnionConstraint[N, Predicates]
+        val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] =
+          if strictEqualsValues.isEmpty then summonValidators[N, mirror.ElementTypes]
+          else
+            // There were some strict equals at the beginning of union type - putting them into a Validator.enumeration and attaching the rest of the validators as a normal list
+            ValidatorForPredicate
+              .fromPrimitiveValidator(Validator.enumeration[N](strictEqualsValues)) :: summonValidators[N, mirror.ElementTypes].drop(
+              strictEqualsValues.length
             )
-          )
-        else Nil
 
-    }
+        override def validator: Validator[N] = Validator.any(validatorsForPredicates.map(_.validator): _*)
+
+        override def makeErrors(value: N, errorMessage: String): List[ValidationError[_]] =
+          if (!unionConstraint.test(value))
+            List(
+              ValidationError[N](
+                Validator.Custom(_ =>
+                  ValidationResult.Invalid(unionConstraint.message) // at this point the validator is already failed anyway
+                ),
+                value
+              )
+            )
+          else Nil
+
+      }
 
   inline given validatorForDescribedAnd[N, P](using
       id: IsDescription[P],
@@ -156,12 +182,27 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
   ): ValidatorForPredicate[N, P] =
     validatorForAnd[N, id.Predicate].asInstanceOf[ValidatorForPredicate[N, P]]
 
-  inline given validatorForDescribedOr[N, P](using
+  inline given validatorForDescribedOr[N, P, Num](using
       id: IsDescription[P],
-      mirror: UnionTypeMirror[id.Predicate]
+      mirror: UnionTypeMirror[id.Predicate],
+      notGe: NotGiven[P =:= GreaterEqual[Num]],
+      notLe: NotGiven[P =:= LessEqual[Num]]
   ): ValidatorForPredicate[N, P] =
     validatorForOr[N, id.Predicate].asInstanceOf[ValidatorForPredicate[N, P]]
 
+  inline given validatorForDescribedOrGe[N: Numeric, P, Num <: N](using
+      id: IsDescription[P],
+      isGe: P =:= GreaterEqual[Num],
+      singleton: ValueOf[Num]
+  ): ValidatorForPredicate[N, P] =
+    validatorForGreaterEqual[N, Num].asInstanceOf[ValidatorForPredicate[N, P]]
+
+  inline given validatorForDescribedOrLe[N: Numeric, P, Num <: N](using
+      id: IsDescription[P],
+      isLe: P =:= LessEqual[Num],
+      singleton: ValueOf[Num]
+  ): ValidatorForPredicate[N, P] =
+    validatorForLessEqual[N, Num].asInstanceOf[ValidatorForPredicate[N, P]]
   inline given validatorForDescribedPrimitive[N, P](using
       id: IsDescription[P],
       notUnion: NotGiven[UnionTypeMirror[id.Predicate]],

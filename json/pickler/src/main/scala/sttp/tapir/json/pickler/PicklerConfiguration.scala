@@ -1,9 +1,12 @@
 package sttp.tapir.json.pickler
 
 import sttp.tapir.generic.Configuration
+import upickle.core.Annotator
 
 final case class PicklerConfiguration(genericDerivationConfig: Configuration) {
-  export genericDerivationConfig.{toEncodedName, discriminator, toDiscriminatorValue}
+  export genericDerivationConfig.{toEncodedName, toDiscriminatorValue}
+
+  def discriminator: String = genericDerivationConfig.discriminator.getOrElse(Annotator.defaultTagKey)
 
   def withSnakeCaseMemberNames: PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withSnakeCaseMemberNames)
   def withScreamingSnakeCaseMemberNames: PicklerConfiguration = PicklerConfiguration(
@@ -32,6 +35,6 @@ final case class PicklerConfiguration(genericDerivationConfig: Configuration) {
 
 object PicklerConfiguration {
   given default: PicklerConfiguration = PicklerConfiguration(
-    Configuration.default.copy(discriminator = Some(SubtypeDiscriminator.DefaultFieldName))
+    Configuration.default.copy(discriminator = Some(Annotator.defaultTagKey))
   )
 }

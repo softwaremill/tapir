@@ -4,6 +4,7 @@ import internal.{NettySyncRequestBody, NettySyncToResponseBody}
 import internal.ox.OxDispatcher
 import sttp.capabilities.WebSockets
 import sttp.monad.syntax._
+import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.RequestResult
@@ -18,18 +19,18 @@ trait NettySyncServerInterpreter:
     * processor.
     */
   def toRoute(
-      ses: List[ServerEndpoint[OxStreams & WebSockets, Id]],
-      oxDispatcher: OxDispatcher
+               ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
+               oxDispatcher: OxDispatcher
   ): IdRoute =
-    implicit val bodyListener: BodyListener[Id, NettyResponse] = new NettyBodyListener(RunAsync.Id)
-    val serverInterpreter = new ServerInterpreter[OxStreams with WebSockets, Id, NettyResponse, OxStreams](
+    implicit val bodyListener: BodyListener[Identity, NettyResponse] = new NettyBodyListener(RunAsync.Id)
+    val serverInterpreter = new ServerInterpreter[OxStreams with WebSockets, Identity, NettyResponse, OxStreams](
       FilterServerEndpoints(ses),
       new NettySyncRequestBody(nettyServerOptions.createFile),
       new NettySyncToResponseBody(RunAsync.Id, oxDispatcher),
       RejectInterceptor.disableWhenSingleEndpoint(nettyServerOptions.interceptors, ses),
       nettyServerOptions.deleteFile
     )
-    val handler: Route[Id] = { (request: NettyServerRequest) =>
+    val handler: Route[Identity] = { (request: NettyServerRequest) =>
       serverInterpreter(request)
         .map {
           case RequestResult.Response(response) => Some(response)

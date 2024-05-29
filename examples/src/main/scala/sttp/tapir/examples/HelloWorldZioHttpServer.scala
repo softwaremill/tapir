@@ -6,7 +6,7 @@ import sttp.tapir.json.zio.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir.*
 import zio.*
-import zio.http.{HttpApp, Server}
+import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
 object HelloWorldZioHttpServer extends ZIOAppDefault {
@@ -31,7 +31,7 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
       .out(jsonBody[AddResult])
 
   // converting the endpoint descriptions to the Http type
-  val app: HttpApp[Any] =
+  val app: Routes[Any, ZioHttpResponse] =
     ZioHttpInterpreter().toHttp(helloWorld.zServerLogic(name => ZIO.succeed(s"Hello, $name!"))) ++
       ZioHttpInterpreter().toHttp(add.zServerLogic { case (x, y) => ZIO.succeed(AddResult(x, y, x + y)) })
 

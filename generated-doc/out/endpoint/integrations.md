@@ -14,7 +14,7 @@ The `tapir-cats` module contains additional instances for some [cats](https://ty
 datatypes as well as additional syntax:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats" % "1.10.7"
+"com.softwaremill.sttp.tapir" %% "tapir-cats" % "1.10.8"
 ```
 
 - `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
@@ -24,7 +24,7 @@ Additionally, the `tapir-cats-effect` module contains an implementation of the `
 between the sttp-internal `MonadError` and the cats-effect `Sync` typeclass:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats-effect" % "1.10.7"
+"com.softwaremill.sttp.tapir" %% "tapir-cats-effect" % "1.10.8"
 ```
 
 ## Refined integration
@@ -33,7 +33,7 @@ If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` mo
 validators for `T Refined P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-refined" % "1.10.7"
+"com.softwaremill.sttp.tapir" %% "tapir-refined" % "1.10.8"
 ```
 
 You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
@@ -54,7 +54,7 @@ If you use [iron](https://github.com/Iltotore/iron), the `tapir-iron` module wil
 validators for `T :| P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-iron" % "1.10.7"
+"com.softwaremill.sttp.tapir" %% "tapir-iron" % "1.10.8"
 ```
 
 The module is only available for Scala 3 since iron is not designed to work with Scala 2.
@@ -146,7 +146,7 @@ The `tapir-enumeratum` module provides schemas, validators and codecs for [Enume
 enumerations. To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "1.10.7"
+"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "1.10.8"
 ```
 
 Then, `import sttp.tapir.codec.enumeratum._`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
@@ -159,7 +159,7 @@ If you use [scala-newtype](https://github.com/estatico/scala-newtype), the `tapi
 schemas for types with a `@newtype` and `@newsubtype` annotations as long as a codec and schema for its underlying value already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "1.10.7"
+"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "1.10.8"
 ```
 
 Then, `import sttp.tapir.codec.newtype._`, or extend the `sttp.tapir.codec.newtype.TapirCodecNewType` trait to bring the implicit values into scope.
@@ -170,7 +170,7 @@ If you use [monix newtypes](https://github.com/monix/newtypes), the `tapir-monix
 schemas for types which extend `NewtypeWrapped` and `NewsubtypeWrapped` annotations as long as a codec and schema for its underlying value already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-monix-newtype" % "1.10.7"
+"com.softwaremill.sttp.tapir" %% "tapir-monix-newtype" % "1.10.8"
 ```
 
 Then, `import sttp.tapir.codec.monix.newtype._`, or extend the `sttp.tapir.codec.monix.newtype.TapirCodecMonixNewType` trait to bring the implicit values into scope.
@@ -181,7 +181,7 @@ If you use [ZIO Prelude Newtypes](https://zio.github.io/zio-prelude/docs/newtype
 schemas for types defined using `Newtype` and `Subtype` as long as a codec and a schema for the underlying type already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-prelude" % "1.10.7"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-prelude" % "1.10.8"
 ```
 
 Then, mix in `sttp.tapir.codec.zio.prelude.newtype.TapirNewtypeSupport` into your newtype to bring the implicit values into scope:
@@ -220,7 +220,7 @@ For details refer to [derevo documentation](https://github.com/tofu-tf/derevo#in
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.10.7"
+"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "1.10.8"
 ```
 
 Then you can derive schema for your ADT along with other typeclasses besides ADT declaration itself:

@@ -6,9 +6,6 @@ import sttp.tapir.Schema.SName
 private[pickler] sealed trait SubtypeDiscriminator[T]:
   def fieldName: String
 
-object SubtypeDiscriminator:
-  val DefaultFieldName = "$type"
-
 /** Describes non-standard encoding/decoding for subtypes in sealed hierarchies. Allows specifying an extractor function, for example to
   * read subtype discriminator from a field. Requires also mapping in the opposite direction, to specify how to read particular
   * discriminator values into concrete subtype picklers.
@@ -27,4 +24,4 @@ private[pickler] case class DefaultSubtypeDiscriminator[T](fieldName: String, to
 
 private[pickler] object DefaultSubtypeDiscriminator:
   def apply[T](config: PicklerConfiguration): DefaultSubtypeDiscriminator[T] =
-    new DefaultSubtypeDiscriminator[T](config.discriminator.getOrElse(SubtypeDiscriminator.DefaultFieldName), config.toDiscriminatorValue)
+    new DefaultSubtypeDiscriminator[T](config.discriminator, config.toDiscriminatorValue)

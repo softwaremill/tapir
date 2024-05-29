@@ -68,13 +68,14 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
     inline if upickleMacros.isMemberOfSealedHierarchy[T] && !isEnumeration[T] then
       annotate[T](
         writer,
+        config.discriminator,
         schema.name.map(config.toDiscriminatorValue).getOrElse(upickleMacros.tagName[T]),
         Annotator.Checker.Cls(implicitly[ClassTag[T]].runtimeClass)
       ) // tagName is responsible for extracting the @tag annotation meaning the discriminator value
     else if upickleMacros.isSingleton[T]
     then // moved after "if MemberOfSealed" to handle case objects in hierarchy as case classes - with discriminator, for consistency
       // here we handle enums
-      annotate[T](SingletonWriter[T](null.asInstanceOf[T]), upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
+      annotate[T](SingletonWriter[T](null.asInstanceOf[T]), config.discriminator, upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
     else writer
 
   inline def macroSumW[T: ClassTag](childPicklers: => List[Pickler[? <: T]], subtypeDiscriminator: SubtypeDiscriminator[T])(using
@@ -84,14 +85,14 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
     val writers: List[TaggedWriter[_ <: T]] = childPicklers.map(_.innerUpickle.writer.asInstanceOf[TaggedWriter[_ <: T]])
 
     new TaggedWriter.Node[T](writers: _*) {
-      override def findWriter(v: Any): (String, ObjectWriter[T]) = {
+      override def findWriterWithKey(v: Any): (String, String, ObjectWriter[T]) = {
         subtypeDiscriminator match {
           case discriminator: CustomSubtypeDiscriminator[T] =>
-            val (tag, w) = super.findWriter(v)
+            val (tagKey, tagValue, w) = super.findWriterWithKey(v)
             val overriddenTag = discriminator.writeUnsafe(v) // here we use our discirminator instead of uPickle's
-            (overriddenTag, w)
+            (tagKey, overriddenTag, w)
           case _ =>
-            super.findWriter(v)
+            super.findWriterWithKey(v)
         }
       }
     }
