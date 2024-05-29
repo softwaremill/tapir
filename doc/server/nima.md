@@ -21,7 +21,8 @@ Such endpoints are then processed through `NimaServerInterpreter` in order to ob
 ```scala
 import io.helidon.webserver.WebServer
 import sttp.tapir._
-import sttp.tapir.server.nima.{Id, NimaServerInterpreter}
+import sttp.shared.Identity
+import sttp.tapir.server.nima.NimaServerInterpreter
 
 val helloEndpoint = endpoint.get
   .in("hello")
