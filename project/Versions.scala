@@ -36,7 +36,7 @@ object Versions {
   val iron = "2.5.0"
   val enumeratum = "1.7.3"
   val zio = "2.1.1"
-  val zioHttp = "3.0.0-RC7"
+  val zioHttp = "3.0.0-RC8"
   val zioInteropCats = "23.0.0.8"
   val zioInteropReactiveStreams = "2.0.2"
   val zioJson = "0.6.2"
