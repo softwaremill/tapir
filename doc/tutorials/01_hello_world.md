@@ -184,3 +184,14 @@ Hello, Alice!
 ```
 
 And that's it - our first tapir endpoint is exposed as an HTTP server!
+
+## Recap
+
+In this tutorial, we learned the basic concepts needed to bootstrap a tapir-based application:
+
+* endpoints are defined as **values**, which describe the API. Such a description captures the **types** that are
+  specified when creating the inputs/outputs.
+* before exposing an endpoint, **server logic** needs to be attached to the description. It's function that transforms 
+  the data extracted from the request, to data that will be used to create the response. It must match the types used
+  for the inputs & outputs.
+* a **server** can be started by providing basic configuration and a list of server endpoints.
