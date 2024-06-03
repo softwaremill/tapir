@@ -12,25 +12,27 @@ documentation (so that our endpoints are described in OpenAPI accurately), and f
 ## Deriving JSON codecs
 
 First, we need to pick a JSON library. There's a lot to choose from, but we'll go with [jsoniter](https://github.com/plokhotnyuk/jsoniter-scala),
-the fastest JSON library for Scala. We'll need to add two dependencies:
+the fastest JSON library for Scala. We'll need to add a dependency, which will help us in defining the JSON codecs -
+we'll see how in a moment:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:@VERSION@
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 ```
 
-Firstly, this brings in the `tapir` <-> `jsoniter-scala` integration. Secondly, there's a dependency that helps in
-defining the JSON codecs - we'll see how in a moment.  Once we have that, let's define our data model, which we'll use
-for requests and responses. We'll define a single endpoint, transforming a `Meal` class into a `Nutrition` one:
+Once we have that, let's define our data model, which we'll use for requests and responses. We'll define a single 
+endpoint, transforming a `Meal` class into a `Nutrition` one:
 
+{emphasize-lines="3-4"}
 ```scala
+//> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
+
 case class Meal(name: String, servings: Int, ingredients: List[String])
 case class Nutrition(name: String, healthy: Boolean, calories: Int)
 ```
 
-The first step is to define the functions that will enable the serialization and deserialization of these classes to JSON. This
-can be done by hand, but most of the time, we can rely on derivation: a compile-time process that generates the
-code needed to transform a `String` into a `Meal` (or an error) and to transform a `Nutrition` into a `String.`
+The first step is to define the functions that will enable the serialization and deserialization of these classes to 
+JSON. This can be done by hand, but most of the time, we can rely on derivation: a compile-time process that generates 
+the code needed to transform a `String` into a `Meal` (or an error) and to transform a `Nutrition` into a `String.`
 
 This is the task of our chosen JSON library. By adding a `... derives` clause, an instance of a `JsonValueCodec` will
 be generated at compile-time (with compile-time errors if the library can't figure out how to serialize/deserialize some
@@ -39,7 +41,6 @@ component).
 We can also test the serialization of an example object. Let's put this in a `json.scala` file:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:@VERSION@
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 
 import com.github.plokhotnyuk.jsoniter_scala.core.* // needed for `writeToString`
@@ -76,15 +77,15 @@ JSON codecs.
 
 In our case, deriving the schemas will amount to adding a `... derives Schema` clause. Let's run a quick test:
 
-{emphasize-lines="7, 10, 12, 16"}
+{emphasize-lines="1, 7, 10, 12, 16"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:@VERSION@
+//> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*   // needed for `writeToString`
 import com.github.plokhotnyuk.jsoniter_scala.macros.* // needed for ... derives
 
-import sttp.tapir.*
+import sttp.tapir.* // needed for `Schema`
 
 case class Meal(name: String, servings: Int, ingredients: List[String]) 
   derives ConfiguredJsonValueCodec, Schema
@@ -110,14 +111,17 @@ consumed by interpreters (e.g., the documentation interpreter), not by human bei
 ## Exposing the endpoint
 
 We can now expose a JSON-based endpoint with both JSON codes and schemas in place. We'll try to read a `Meal` instance
-from the request and write a `Nutrition` instance as a response. The `jsonBody` method creates a description of a JSON
-body, which can be used both as an endpoint input and output.
+from the request and write a `Nutrition` instance as a response. In order to do this, we'll need to add a dependency
+which provides `tapir` <-> `jsoniter-scala` integration.
+
+The integration defines a `jsonBody` method that creates a description of a JSON body, which can be used both as an 
+endpoint input and output.
 
 To create a `jsonBody[T]`, both a JSON codec and a `Schema[T]` must be in scope - and that's the case since these
-values are attached to the companion objects of `Meal` and `Nutrition`: thanks to the `... derives` mechanism. Notice
+values are attached to the companion objects of `Meal` and `Nutrition`, thanks to the `... derives` mechanism. Notice
 how the `jsonBody[T]` method is used in the endpoint definition. We'll also expose Swagger UI documentation:
 
-{emphasize-lines="1-3, 10-15, 23-39"}
+{emphasize-lines="2-4, 10-15, 23-39"}
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:@VERSION@
