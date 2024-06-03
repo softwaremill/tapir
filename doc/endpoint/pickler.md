@@ -235,7 +235,9 @@ you can proceed with `Pickler.derived[T]`.
 
 ## Divergences from default µPickle behavior
 
-* Tapir pickler serialises None values as `null`, instead of wrapping the value in an array
+* Tapir pickler serialises fields of type `Option[T]` as direct value `T` or skips serialisation if field value is `None`. 
+  This default behavior can be changed by setting `.withTransientNone(false)` in `PicklerConfiguration`, which would result in serialising `None` as `null`.
+  This differs from uPickle, where optional values are wrapped in arrays.
 * Value classes (case classes extending AnyVal) will be serialised as simple values
 * Discriminator field value is a short class name, instead of full package with class name
 
