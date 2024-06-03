@@ -1,7 +1,7 @@
 # 3. Using JSON bodies
 
 The endpoints we defined in the previous tutorials all used `String` bodies. Quite naturally, tapir supports
-much more than that - using appropriate **codecs**, it's possible to serialiZe and deserialize to arbitrary types.
+much more than that - using appropriate **codecs**, it's possible to serialize and deserialize to arbitrary types.
 The most popular format on the web is JSON; hence, let's see how to expose a JSON-based endpoint using tapir.
 
 Tapir's support for JSON is twofold. First, we've got integrations with various JSON libraries, which provide the
