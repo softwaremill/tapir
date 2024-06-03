@@ -1,26 +1,26 @@
 # 3. Using JSON bodies
 
-The endpoints that we've defined in the previous tutorials all used `String` bodies. Quite naturally, tapir supports 
+The endpoints we defined in the previous tutorials all used `String` bodies. Quite naturally, tapir supports
 much more than that - using appropriate **codecs**, it's possible to serialiZe and deserialize to arbitrary types.
-The most popular format on the web is JSON, hence let's see how to expose a JSON-based endpoint using tapir.
+The most popular format on the web is JSON; hence, let's see how to expose a JSON-based endpoint using tapir.
 
 Tapir's support for JSON is twofold. First, we've got integrations with various JSON libraries, which provide the
-logic of converting between a `String` (that's read from the network), and a high-level type, such as a `case class`.
-Second, we've got the generation of **schemas**, which describe the high-level types. Schemas are used for 
+logic of converting between a `String` (that's read from the network) and a high-level type, such as a `case class`.
+Second, we've got the generation of **schemas**, which describe the high-level types. Schemas are used for
 documentation (so that our endpoints are described in OpenAPI accurately), and for validation of incoming requests.
 
 ## Deriving JSON codecs
 
 First, we need to pick a JSON library. There's a lot to choose from, but we'll go with [jsoniter](https://github.com/plokhotnyuk/jsoniter-scala),
-which is the fastest JSON library for Scala. We'll need to add two dependencies:
+the fastest JSON library for Scala. We'll need to add two dependencies:
 
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:@VERSION@
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.29.0
 ```
 
-Firstly, this brings in the `tapir` <-> `jsoniter-scala` integration. Secondly, there's a dependency that helps in 
-defining the JSON codecs - we'll see how in a moment.  Once we have that, let's define our data model, which we'll use 
+Firstly, this brings in the `tapir` <-> `jsoniter-scala` integration. Secondly, there's a dependency that helps in
+defining the JSON codecs - we'll see how in a moment.  Once we have that, let's define our data model, which we'll use
 for requests and responses. We'll define a single endpoint, transforming a `Meal` class into a `Nutrition` one:
 
 ```scala
@@ -28,9 +28,9 @@ case class Meal(name: String, servings: Int, ingredients: List[String])
 case class Nutrition(name: String, healthy: Boolean, calories: Int)
 ```
 
-The first step is to define the functions, which will be able to serialize and deserialize these classes to JSON. This
-can be done by hand, but most of the time we can rely on derivation: a compile-time process which generates the
-code, needed to transform a `String` into a `Meal` (or an error), and to transform a `Nutrition` into a `String`.
+The first step is to define the functions that will enable the serialization and deserialization of these classes to JSON. This
+can be done by hand, but most of the time, we can rely on derivation: a compile-time process that generates the
+code needed to transform a `String` into a `Meal` (or an error) and to transform a `Nutrition` into a `String.`
 
 This is the task of our chosen JSON library. By adding a `... derives` clause, an instance of a `JsonValueCodec` will
 be generated at compile-time (with compile-time errors if the library can't figure out how to serialize/deserialize some
@@ -69,9 +69,9 @@ This should output the following:
 
 ## Deriving schema
 
-With the functions translating between JSON strings and our high-level types ready, we can take care of the second 
-component: schemas. As mentioned in the beginning, schemas are needed to generate accurate OpenAPI documentation, and
-for validation. They can be defined by hand, but most of the time you can use compile-time derivation - just as with 
+With the functions translating between JSON strings and our high-level types ready, we can take care of the second
+component: schemas. As mentioned in the beginning, schemas are needed to generate accurate OpenAPI documentation and
+validation. They can be defined by hand, but most of the time, you can use compile-time derivation - just as with
 JSON codecs.
 
 In our case, deriving the schemas will amount to adding a `... derives Schema` clause. Let's run a quick test:
@@ -105,17 +105,17 @@ Schema(SProduct(List(SProductField(FieldName(name,name),Schema(SString(),None,fa
 ```
 
 As you can see, the string representation of the schema isn't the most beautiful, but its primary purpose is to be
-consumed by interpreters (e.g. the documentation interpreter), not by human beings.
+consumed by interpreters (e.g., the documentation interpreter), not by human beings.
 
 ## Exposing the endpoint
 
-With both JSON codes and schemas in place, we can now expose a JSON-based endpoint. We'll try to read a `Meal` instance
-from the request, and write a `Nutrition` instance as a response. The `jsonBody` method creates a description of a JSON 
-body, which can be used both as an endpoint input, and as an output.
+We can now expose a JSON-based endpoint with both JSON codes and schemas in place. We'll try to read a `Meal` instance
+from the request and write a `Nutrition` instance as a response. The `jsonBody` method creates a description of a JSON
+body, which can be used both as an endpoint input and output.
 
-To create a `jsonBody[T]`, both a JSON codec and a `Schema[T]` must be in scope - and that's the case, since these 
-values are attached to the companion objects of `Meal` and `Nutrition`: thanks to the `... derives` mechanism. Notice 
-how the `jsonBody[T]` method is  being used in the endpoint definition. We'll also expose Swagger UI documentation:
+To create a `jsonBody[T]`, both a JSON codec and a `Schema[T]` must be in scope - and that's the case since these
+values are attached to the companion objects of `Meal` and `Nutrition`: thanks to the `... derives` mechanism. Notice
+how the `jsonBody[T]` method is used in the endpoint definition. We'll also expose Swagger UI documentation:
 
 {emphasize-lines="1-3, 10-15, 23-39"}
 ```scala
@@ -160,7 +160,7 @@ case class Nutrition(name: String, healthy: Boolean, calories: Int)
     .startAndWait()
 ```
 
-We can now test the endpoint both from the command line, and via the browser:
+We can now test the endpoint both from the command line and via the browser:
 
 ```bash
 # first console
@@ -170,14 +170,14 @@ We can now test the endpoint both from the command line, and via the browser:
 % curl -XPOST "http://localhost:8080" -d '{"name": "salad", "servings": 1, "ingredients": ["lettuce", "tomato", "cucumber"]}'
 {"name":"salad","healthy":true,"calories":42}
 
-# Now open http://localhost:8080/docs in your browser, and browse the generated documentation!
+# Now open http://localhost:8080/docs in your browser and browse the generated documentation!
 ```
 
 Try to provide some invalid JSON values - you should see `400 Bad Request` responses.
 
 ## More on JSON
 
-To find out more on schema derivation and JSON support in tapir, the following reference documentation pages might
+To find out more about schema derivation and JSON support in tapir, the following reference documentation pages might
 be useful:
 
 * [](../endpoint/schemas.md)
