@@ -1,8 +1,7 @@
 # Running as a Helidon Níma server
 
-```eval_rst
-.. note::
-  Helidon Níma requires JDK supporting Project Loom threading (JDK21 or newer).
+```{note}
+Helidon Níma requires JDK supporting Project Loom threading (JDK21 or newer).
 ```
 
 To expose an endpoint as a [Helidon Níma](https://helidon.io/nima) server, first add the following 
