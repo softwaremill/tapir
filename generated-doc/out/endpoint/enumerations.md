@@ -150,12 +150,10 @@ properly represented in [OpenAPI](../docs/openapi.md) documentation.
 
 You can take a look at a runnable example [here](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/custom_types).
 
-```eval_rst
-.. warning::
-
-  ``Delimited`` and ``CommaSeparated`` rely on literal types, which are only available in Scala 2.13+.
+```{warning}
+`Delimited` and `CommaSeparated` rely on literal types, which are only available in Scala 2.13+.
   
-  If you're using an older version of Scala, a workaround is creating a comma-separated codec locally.
+If you're using an older version of Scala, a workaround is creating a comma-separated codec locally.
 ```
 
 ## Using enumerations as part of bodies

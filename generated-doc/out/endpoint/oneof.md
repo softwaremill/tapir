@@ -5,15 +5,13 @@ There are two kind of one-of inputs/outputs:
 * `oneOf` outputs where the arbitrary-output variants can represent different content using different outputs, and
 * `oneOfBody` input/output where the body-only variants represent the same content, but with different content types
 
-```eval_rst
-.. note::
+```{note}
+`oneOf` and `oneOfBody` outputs are not related to `oneOf:` schemas when 
+[generating](https://tapir.softwaremill.com/en/latest/docs/openapi.html) OpenAPI documentation.
 
-  ``oneOf`` and ``oneOfBody`` outputs are not related to ``oneOf:`` schemas when 
-  `generating <https://tapir.softwaremill.com/en/latest/docs/openapi.html>`_ OpenAPI documentation.
-  
-  Such schemas are generated for coproducts - e.g. ``sealed trait`` families - given an appropriate codec. See the
-  documentation on 
-  `coproducts <https://tapir.softwaremill.com/en/latest/endpoint/schemas.html#sealed-traits-coproducts>`_ for details.
+Such schemas are generated for coproducts - e.g. `sealed trait` families - given an appropriate codec. See the
+documentation on [coproducts](https://tapir.softwaremill.com/en/latest/endpoint/schemas.html#sealed-traits-coproducts) 
+for details.
 ```
 
 ## `oneOf` outputs
@@ -218,17 +216,13 @@ on streaming bodies, which "lifts" them to an `EndpointIO` type, forgetting the 
 type safety, as a run-time error might occur if an incompatible interpreter is used, however allows describing 
 endpoints which require including streaming bodies in output variants.
 
-```eval_rst
-.. note::
-
-  If the same streaming body description is used in all branches of a ``oneOf``, this can be refactored into
-  a regular streaming body output + a varying set of output headers, expressed using ``oneOf``.
+```{note}
+If the same streaming body description is used in all branches of a `oneOf`, this can be refactored into
+a regular streaming body output + a varying set of output headers, expressed using `oneOf`.
 ```
 
-```eval_rst
-.. warning::
-
-  Mixed streaming and non-streaming bodies defined as ``oneOf`` variants currently won't work with client interpreters.
+```{warning}
+Mixed streaming and non-streaming bodies defined as `oneOf` variants currently won't work with client interpreters.
 ```
 
 ## Next

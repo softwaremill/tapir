@@ -11,13 +11,11 @@ an implicit `Schema[T]` instance, which can be automatically derived. For more d
 [schema derivation](schemas.md) and on supporting [custom types](customtypes.md) in general. Such a design provides
 better error reporting, in case one of the components required to create the json codec is missing.
 
-```eval_rst
-.. note::
-
-  Note that the process of deriving schemas, and deriving library-specific json encoders and decoders is entirely
-  separate (unless you're using the pickler module - see below). The first is controlled by tapir, the second - by the
-  json library. Any customisation, e.g. for field naming or inheritance strategies, must be done separately for both
-  derivations.
+```{note}
+Note that the process of deriving schemas, and deriving library-specific json encoders and decoders is entirely
+separate (unless you're using the pickler module - see below). The first is controlled by tapir, the second - by the
+json library. Any customisation, e.g. for field naming or inheritance strategies, must be done separately for both
+derivations.
 ```
 
 ## Pickler

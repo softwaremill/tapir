@@ -32,6 +32,8 @@
 # ones.
 extensions = ['myst_parser', 'sphinx_rtd_theme']
 
+myst_enable_extensions = ['attrs_block']
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -39,9 +41,6 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-from recommonmark.parser import CommonMarkParser
-from recommonmark.transform import AutoStructify
-
 source_suffix = {
     '.rst': 'restructuredtext',
     '.txt': 'markdown',
@@ -53,7 +52,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'tapir'
-copyright = u'2023, SoftwareMill'
+copyright = u'2024, SoftwareMill'
 author = u'SoftwareMill'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -70,7 +69,7 @@ release = u'1.x'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -78,7 +77,7 @@ language = None
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'default'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
@@ -184,11 +183,3 @@ html_context = {
     'github_version': 'master', # Version
     'conf_py_path': '/doc/', # Path in the checkout to the docs root
 }
-
-# app setup hook
-def setup(app):
-    app.add_config_value('recommonmark_config', {
-        'auto_toc_tree_section': 'Contents',
-        'enable_auto_doc_ref': False
-    }, True)
-    app.add_transform(AutoStructify)

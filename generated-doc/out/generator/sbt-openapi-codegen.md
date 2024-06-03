@@ -1,9 +1,7 @@
 # Generate endpoint definitions from an OpenAPI YAML
 
-```eval_rst
-.. note::
-
-  This is a really early alpha implementation.
+```{note}
+This is a really early alpha implementation.
 ```
 
 ## Installation steps
@@ -34,7 +32,7 @@ defined case-classes and endpoint definitions.
 
 The generator currently supports these settings, you can override them in the `build.sbt`;
 
-```eval_rst
+```{eval-rst}
 ===================================== ==================================== ==================================================================================================
 setting                               default value                        description
 ===================================== ==================================== ==================================================================================================
@@ -92,7 +90,7 @@ having no tags, would be output to the `TapirGeneratedEndpoints` file, along wit
 
 ### Json Support
 
-```eval_rst
+```{eval-rst}
 ===================== ================================================================== ===================================================================
  openapiJsonSerdeLib         required dependencies                                       Conditional requirements
 ===================== ================================================================== ===================================================================

@@ -43,7 +43,7 @@ val userEndpoint: PublicEndpoint[(UUID, Int), String, User, Any] = ???
 You can think of an endpoint as a function which takes input parameters of type `A` and `I` and returns a result of type 
 `Either[E, O]`.
 
-### Infallible endpoints
+## Infallible endpoints
 
 Note that the empty `endpoint` description maps no values to either error and success outputs, however errors
 are still represented and allowed to occur. In case of the error output, the single member of the unit type, `(): Unit`, 

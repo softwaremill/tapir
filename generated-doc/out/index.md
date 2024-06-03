@@ -49,7 +49,7 @@ for a more detailed description of how tapir works! ScalaDocs are available at [
 
 ## Adopt a tapir
 
-```eval_rst
+```{eval-rst}
 .. raw:: html
 
    <iframe
@@ -200,7 +200,7 @@ We offer commercial support for sttp and related technologies, as well as develo
 
 ## Table of contents
 
-```eval_rst
+```{eval-rst}
 .. toctree::
    :maxdepth: 2
    :caption: Getting started
@@ -208,6 +208,14 @@ We offer commercial support for sttp and related technologies, as well as develo
    quickstart
    examples
    stability
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+   
+   tutorials/01_hello_world
+   tutorials/02_openapi_docs
+   tutorials/03_json
 
 .. toctree::
    :maxdepth: 2

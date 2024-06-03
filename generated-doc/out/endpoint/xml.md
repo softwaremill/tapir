@@ -4,14 +4,12 @@ Enabling support for XML is a matter of implementing proper [`XmlCodec[T]`](code
 This enables encoding objects to XML strings, and decoding XML strings to objects.
 Implementation is fairly easy, and for now, one guide on how to integrate with scalaxb is provided.
 
-```eval_rst
-.. note::
-
-  Note, that implementing ``XmlCodec[T]`` would require deriving not only XML library encoders/decoders, 
-  but also tapir related ``Schema[T]``. These are completely separate - any customization e.g. for field
-  naming or inheritance strategies must be done separately for both derivations.
-  For more details see sections on `schema derivation <https://tapir.softwaremill.com/en/latest/endpoint/schemas.html>`_ 
-  and on supporting `custom types <https://tapir.softwaremill.com/en/latest/endpoint/customtypes.html>`_ in general.
+```{note}
+Note, that implementing `XmlCodec[T]` would require deriving not only XML library encoders/decoders, 
+but also tapir related `Schema[T]`. These are completely separate - any customization e.g. for field
+naming or inheritance strategies must be done separately for both derivations.
+For more details see sections on [schema derivation](schemas.md) and on supporting [custom types](customtypes.md) in 
+general.
 ```
 
 ## Scalaxb
