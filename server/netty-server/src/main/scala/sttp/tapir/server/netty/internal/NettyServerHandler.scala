@@ -6,7 +6,7 @@ import io.netty.channel.group.ChannelGroup
 import io.netty.handler.codec.http._
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
-import io.netty.handler.timeout.ReadTimeoutHandler
+import io.netty.handler.timeout.{IdleState, IdleStateEvent, IdleStateHandler}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, DefaultWebSocketHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
@@ -21,8 +21,9 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ReactiveWebSocketProcessorNettyResponseContent
 }
 import sttp.tapir.server.netty.internal.ws.{NettyControlFrameHandler, WebSocketAutoPingHandler}
-import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{Queue => MutableQueue}
@@ -40,8 +41,7 @@ class NettyServerHandler[F[_]](
     unsafeRunAsync: (() => F[ServerResponse[NettyResponse]]) => (Future[ServerResponse[NettyResponse]], () => Future[Unit]),
     channelGroup: ChannelGroup,
     isShuttingDown: AtomicBoolean,
-    serverHeader: Option[String],
-    isSsl: Boolean = false
+    config: NettyConfig
 )(implicit
     me: MonadError[F]
 ) extends SimpleChannelInboundHandler[HttpRequest] {
@@ -82,7 +82,9 @@ class NettyServerHandler[F[_]](
     if (eventLoopContext == null) {
       // Initialize our ExecutionContext
       eventLoopContext = ExecutionContext.fromExecutor(ctx.channel.eventLoop)
-
+      config.idleTimeout.foreach { idleTimeout =>
+        ctx.pipeline().addFirst(new IdleStateHandler(0, 0, idleTimeout.toMillis.toInt, TimeUnit.MILLISECONDS))
+      }
       // When the channel closes we want to cancel any pending dispatches.
       // Since the listener will be executed from the channels EventLoop everything is thread safe.
       val _ = ctx.channel.closeFuture.addListener { (_: ChannelFuture) =>
@@ -93,6 +95,29 @@ class NettyServerHandler[F[_]](
           pendingResponses.dequeue().apply()
         }
       }
+    }
+  }
+
+  def writeError503ThenClose(ctx: ChannelHandlerContext): Unit = {
+    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE)
+    res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+    res.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+    val _ = ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
+  }
+
+  override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
+    evt match {
+      case e: IdleStateEvent =>
+        if (e.state() == IdleState.WRITER_IDLE) {
+          logger.error(s"Closing connection due to exceeded response timeout of ${config.requestTimeout}")
+          writeError503ThenClose(ctx)
+        }
+        if (e.state() == IdleState.ALL_IDLE) {
+          logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout}")
+          val _ = ctx.close()
+        }
+      case other =>
+        super.userEventTriggered(ctx, evt)
     }
   }
 
@@ -107,14 +132,11 @@ class NettyServerHandler[F[_]](
       ctx.writeAndFlush(res).closeIfNeeded(req)
     }
 
-    def writeError503(req: HttpRequest): Unit = {
-      val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE)
-      res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
-      res.handleCloseAndKeepAliveHeaders(req)
-      ctx.writeAndFlush(res).closeIfNeeded(req)
-    }
-
     def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
+      val idleHandler = config.requestTimeout.map { requestTimeout =>
+        new IdleStateHandler(0, requestTimeout.toMillis.toInt, 0, TimeUnit.MILLISECONDS)
+      }
+      idleHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
         route(NettyServerRequest(req))
           .map {
@@ -124,34 +146,38 @@ class NettyServerHandler[F[_]](
       }
       pendingResponses.enqueue(cancellationSwitch)
       lastResponseSent = lastResponseSent.flatMap { _ =>
-        runningFuture.transform {
-          case Success(serverResponse) =>
-            pendingResponses.dequeue()
-            try {
-              handleResponse(ctx, req, serverResponse)
-              Success(())
-            } catch {
-              case NonFatal(ex) =>
+        runningFuture
+          .andThen { case _ =>
+            idleHandler.foreach(ctx.pipeline().remove)
+          }(eventLoopContext)
+          .transform {
+            case Success(serverResponse) =>
+              pendingResponses.dequeue()
+              try {
+                handleResponse(ctx, req, serverResponse)
+                Success(())
+              } catch {
+                case NonFatal(ex) =>
+                  writeError500(req, ex)
+                  Failure(ex)
+              } finally {
+                val _ = releaseReq()
+              }
+            case Failure(NonFatal(ex)) =>
+              try {
                 writeError500(req, ex)
                 Failure(ex)
-            } finally {
-              val _ = releaseReq()
-            }
-          case Failure(NonFatal(ex)) =>
-            try {
-              writeError500(req, ex)
-              Failure(ex)
-            } finally {
-              val _ = releaseReq()
-            }
-          case Failure(fatalException) => Failure(fatalException)
-        }(eventLoopContext)
+              } finally {
+                val _ = releaseReq()
+              }
+            case Failure(fatalException) => Failure(fatalException)
+          }(eventLoopContext)
       }(eventLoopContext)
     }
 
     if (isShuttingDown.get()) {
       logger.info("Rejecting request, server is shutting down")
-      writeError503(request)
+      writeError503ThenClose(ctx)
     } else if (HttpUtil.is100ContinueExpected(request)) {
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
       ()
@@ -250,7 +276,6 @@ class NettyServerHandler[F[_]](
       handshakeReq: HttpRequest
   ) = {
     ctx.pipeline().remove(this)
-    ctx.pipeline().remove(classOf[ReadTimeoutHandler])
     ctx
       .pipeline()
       .addAfter(
@@ -291,7 +316,7 @@ class NettyServerHandler[F[_]](
 
   // Only ancient WS protocol versions will use this in the response header.
   private def wsUrl(req: HttpRequest): String = {
-    val scheme = if (isSsl) "wss" else "ws"
+    val scheme = if (config.isSsl) "wss" else "ws"
     s"$scheme://${req.headers().get(HttpHeaderNames.HOST)}${req.uri()}"
   }
   private implicit class RichServerNettyResponse(r: ServerResponse[NettyResponse]) {
@@ -323,7 +348,7 @@ class NettyServerHandler[F[_]](
 
   private implicit class RichHttpMessage(m: HttpMessage) {
     def setHeadersFrom(response: ServerResponse[_]): Unit = {
-      serverHeader.foreach(m.headers().set(HttpHeaderNames.SERVER, _))
+      config.serverHeader.foreach(m.headers().set(HttpHeaderNames.SERVER, _))
       response.headers
         .groupBy(_.name)
         .foreach { case (k, v) =>
