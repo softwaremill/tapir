@@ -873,12 +873,12 @@ lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
     name := "tapir-json-tethys",
     libraryDependencies ++= Seq(
       "com.tethys-json" %% "tethys-core" % Versions.tethys,
-      "com.tethys-json" %% "tethys-jackson" % Versions.tethys,
+      "com.tethys-json" %% "tethys-jackson213" % Versions.tethys,
       scalaTest.value % Test,
       "com.tethys-json" %% "tethys-derivation" % Versions.tethys % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
 
 lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
