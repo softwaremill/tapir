@@ -4,7 +4,6 @@ import _root_.upickle.core.Annotator.Checker
 import _root_.upickle.core.{ObjVisitor, Visitor, _}
 import _root_.upickle.implicits.{WritersVersionSpecific, macros => upickleMacros}
 import sttp.tapir.Schema
-import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.EnumerationMacros.*
@@ -47,7 +46,8 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
             v,
             ctx,
             childWriters,
-            childDefaults
+            childDefaults,
+            config.transientNone
           )
           ctx.visitEnd(-1)
         }
@@ -61,7 +61,8 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
           v,
           ctx,
           childWriters,
-          childDefaults
+          childDefaults,
+          config.transientNone                  
         )
     }
 
