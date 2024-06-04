@@ -4,6 +4,7 @@ import sttp.model.Method
 import sttp.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.apispec.openapi._
 import sttp.tapir._
+import sttp.tapir.EndpointIO.{Atom, OneOfBody, OneOfBodyVariant}
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.{RichEndpointIOInfo, RichEndpointInfo}
 import sttp.tapir.docs.apispec.schema.TSchemaToASchema
 import sttp.tapir.docs.apispec.{DocsExtensions, SecurityRequirementsForEndpoints, SecuritySchemes, namedPathComponents}
@@ -23,7 +24,7 @@ private[openapi] class EndpointToOpenAPIPaths(
   def pathItem(e: AnyEndpoint): (String, PathItem) = {
     import Method._
 
-    val inputs = e.asVectorOfBasicInputs(includeAuth = false)
+    val inputs = filterOutHiddenInputs(e.asVectorOfBasicInputs(includeAuth = false))
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 
@@ -43,6 +44,23 @@ private[openapi] class EndpointToOpenAPIPaths(
 
     (e.showPathTemplate(showQueryParam = None, includeAuth = false, showNoPathAs = "/", showPathsAs = None), pathItem)
   }
+
+  private def filterOutHiddenInputs(inputs: Vector[EndpointInput.Basic[_]]) = inputs
+    .filter {
+      case a: Atom[_] if a.codec.schema.hidden => false
+      case _                                   => true
+    }
+    .map {
+      case OneOfBody(variants, mapping) =>
+        OneOfBody(
+          variants.filter {
+            case a: OneOfBodyVariant[_] if a.codec.schema.hidden => false
+            case _                                               => true
+          },
+          mapping
+        )
+      case other => other
+    }
 
   private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[_]]): Operation = {
     val parameters = operationParameters(inputs).distinct.toList

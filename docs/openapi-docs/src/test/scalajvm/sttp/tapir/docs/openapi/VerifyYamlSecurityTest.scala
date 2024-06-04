@@ -4,8 +4,14 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.apispec.openapi.Info
 import sttp.apispec.openapi.circe.yaml._
+import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.model.UsernamePassword
+import sttp.tapir.tests.data.FruitAmount
 import sttp.tapir.{auth, endpoint, header, path, stringBody, _}
+import sttp.tapir.generic.Derived
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+import io.circe.generic.auto._
 
 import scala.collection.immutable.{ListMap, Seq}
 
@@ -165,4 +171,19 @@ class VerifyYamlSecurityTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should respect hidden annotation for security body") {
+    val e = endpoint.post
+      .securityIn(byteArrayBody.schema(_.hidden(true)))
+      .in("api" / "echo")
+      .in(jsonBody[FruitAmount])
+      .out(header[List[String]]("Set-Cookie"))
+
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(e, Info("Hide security body", "1.0"))
+      .toYaml
+
+    val expectedYaml = load("security/expected_hide_security_body.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }

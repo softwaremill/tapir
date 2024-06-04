@@ -26,6 +26,15 @@ object OneOfBody {
     )
     .out(stringBody)
 
+  val in_one_of_json_xml_hidden_out_string: PublicEndpoint[Fruit, Unit, String, Any] = endpoint.post
+    .in(
+      oneOfBody(
+        jsonBody[Fruit],
+        xmlBody[Fruit].schema(_.hidden(true))
+      )
+    )
+    .out(stringBody)
+
   val in_one_of_json_text_range_out_string: PublicEndpoint[Fruit, Unit, String, Any] = endpoint.post
     .in(
       oneOfBody(
