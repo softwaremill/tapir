@@ -63,19 +63,18 @@ private[sync] object OxSourceWebSocketProcessor:
         val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "normal closure"))
         sub.onComplete()
     }
-    val isFinalElement: NettyWebSocketFrame => Boolean = {
-      case _: CloseWebSocketFrame => true
-      case _                      => false
-    }
-    new OxProcessor(oxDispatcher, frame2FramePipe, isFinalElement, wrapSubscriberWithNettyCallback)
+    new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
 
   private def optionallyConcatenateFrames(doConcatenate: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
     if doConcatenate then s.mapStateful(() => None: Accumulator)(accumulateFrameState).collectAsView { case Some(f: WebSocketFrame) => f }
     else s
 
-  private def optionallyPassThroughCloseFrame(doPassThrough: Boolean)(s: Source[WebSocketFrame]): Source[WebSocketFrame] =
-    if doPassThrough then s
-    else s.filterAsView { 
-      case _: WebSocketFrame.Close => false
-      case _ => true 
-    }
+  private def optionallyPassThroughCloseFrame(doPassThrough: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
+    s.takeWhile(
+      _ match {
+        case _: WebSocketFrame.Close => false
+        case _                       => true
+      },
+      includeFailed = doPassThrough
+    )
+    

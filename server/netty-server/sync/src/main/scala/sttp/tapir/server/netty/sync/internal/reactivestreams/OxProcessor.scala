@@ -17,9 +17,6 @@ import scala.util.control.NonFatal
   *   a dispatcher to which async tasks can be submitted (reading from a channel)
   * @param pipeline
   *   user-defined processing pipeline expressed as an Ox Source => Source transformation
-  * @param isFinalElement
-  *  a function that determines if the given element should trigger completion of processing (after this element is processed).
-  *  Can be used for cases like a WebSocket Close frame.
   * @param wrapSubscriber
   *   an optional function allowing wrapping external subscribers, can be used to intercept onNext, onComplete and onError with custom
   *   handling. Can be just identity.
@@ -27,7 +24,6 @@ import scala.util.control.NonFatal
 private[sync] class OxProcessor[A, B](
     oxDispatcher: OxDispatcher,
     pipeline: OxStreams.Pipe[A, B],
-    isFinalElement: A => Boolean,
     wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B]
 ) extends Processor[A, B]:
   private val logger = LoggerFactory.getLogger(getClass.getName)
@@ -49,10 +45,10 @@ private[sync] class OxProcessor[A, B](
     if a == null then throw new NullPointerException("Element cannot be null") // Rule 2.13
     else
       channel.sendOrClosed(a) match
-        case () => 
-          if isFinalElement(a) then 
-            channel.doneOrClosed().discard
-        case _: ChannelClosed => ()
+        case () => ()
+        case _: ChannelClosed =>
+          cancelSubscription()
+          onError(new IllegalStateException("onNext called when the channel is closed"))
 
   override def onSubscribe(s: Subscription): Unit =
     if s == null then throw new NullPointerException("Subscription cannot be null")
@@ -73,6 +69,7 @@ private[sync] class OxProcessor[A, B](
         requestsSubscription.request(1)
         e
       })
+      
       val channelSubscription = new ChannelSubscription(wrappedSubscriber, outgoingResponses)
       subscriber.onSubscribe(channelSubscription)
       channelSubscription.runBlocking() // run the main loop which reads from the channel if there's demand
@@ -107,3 +104,4 @@ private[sync] class OxProcessor[A, B](
             s"$requestsSubscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.",
             t
           )
+
