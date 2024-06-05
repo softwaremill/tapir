@@ -104,8 +104,7 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
     } else s
 
   private def optionallyPassThroughCloseFrame(doPassThrough: Boolean)(s: Stream[F, WebSocketFrame]): Stream[F, WebSocketFrame] =
-    s.takeWhile(
-      _ match {
+    s.takeWhile({
         case _: WebSocketFrame.Close => false
         case _                       => true
       },
