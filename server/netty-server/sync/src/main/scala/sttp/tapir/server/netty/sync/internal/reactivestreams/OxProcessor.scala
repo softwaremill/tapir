@@ -17,6 +17,9 @@ import scala.util.control.NonFatal
   *   a dispatcher to which async tasks can be submitted (reading from a channel)
   * @param pipeline
   *   user-defined processing pipeline expressed as an Ox Source => Source transformation
+  * @param isFinalElement
+  *  a function that determines if the given element should trigger completion of processing (after this element is processed).
+  *  Can be used for cases like a WebSocket Close frame.
   * @param wrapSubscriber
   *   an optional function allowing wrapping external subscribers, can be used to intercept onNext, onComplete and onError with custom
   *   handling. Can be just identity.
@@ -24,6 +27,7 @@ import scala.util.control.NonFatal
 private[sync] class OxProcessor[A, B](
     oxDispatcher: OxDispatcher,
     pipeline: OxStreams.Pipe[A, B],
+    isFinalElement: A => Boolean,
     wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B]
 ) extends Processor[A, B]:
   private val logger = LoggerFactory.getLogger(getClass.getName)
@@ -45,10 +49,10 @@ private[sync] class OxProcessor[A, B](
     if a == null then throw new NullPointerException("Element cannot be null") // Rule 2.13
     else
       channel.sendOrClosed(a) match
-        case () => ()
-        case _: ChannelClosed =>
-          cancelSubscription()
-          onError(new IllegalStateException("onNext called when the channel is closed"))
+        case () => 
+          if isFinalElement(a) then 
+            channel.doneOrClosed().discard
+        case _: ChannelClosed => ()
 
   override def onSubscribe(s: Subscription): Unit =
     if s == null then throw new NullPointerException("Subscription cannot be null")
