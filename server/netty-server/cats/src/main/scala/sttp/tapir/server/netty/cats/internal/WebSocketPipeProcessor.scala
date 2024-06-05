@@ -45,7 +45,7 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
       sttpFrame
     }
     val stream: Stream[F, NettyWebSocketFrame] =
-      optionallyConcatenateFrames(sttpFrames, o.concatenateFragmentedFrames)
+      optionallyConcatenateFrames(o.concatenateFragmentedFrames)(optionallyPassThroughCloseFrame(o.decodeCloseRequests)(sttpFrames))
         .map(f =>
           o.requests.decode(f) match {
             case x: DecodeResult.Value[REQ]    => x.v
@@ -98,10 +98,19 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
 
   }
 
-  private def optionallyConcatenateFrames(s: Stream[F, WebSocketFrame], doConcatenate: Boolean): Stream[F, WebSocketFrame] =
+  private def optionallyConcatenateFrames(doConcatenate: Boolean)(s: Stream[F, WebSocketFrame]): Stream[F, WebSocketFrame] =
     if (doConcatenate) {
       s.mapAccumulate(None: Accumulator)(accumulateFrameState).collect { case (_, Some(f)) => f }
     } else s
+
+  private def optionallyPassThroughCloseFrame(doPassThrough: Boolean)(s: Stream[F, WebSocketFrame]): Stream[F, WebSocketFrame] =
+    s.takeWhile(
+      _ match {
+        case _: WebSocketFrame.Close => false
+        case _                       => true
+      },
+      takeFailure = doPassThrough
+    )
 }
 
 /** A special wrapper used to override internal logic of fs2, which calls cancel() silently when internal stream failures happen, causing
