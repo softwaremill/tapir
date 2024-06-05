@@ -69,7 +69,6 @@ private[sync] class OxProcessor[A, B](
         requestsSubscription.request(1)
         e
       })
-      
       val channelSubscription = new ChannelSubscription(wrappedSubscriber, outgoingResponses)
       subscriber.onSubscribe(channelSubscription)
       channelSubscription.runBlocking() // run the main loop which reads from the channel if there's demand
@@ -104,4 +103,3 @@ private[sync] class OxProcessor[A, B](
             s"$requestsSubscription violated the Reactive Streams rule 3.15 by throwing an exception from cancel.",
             t
           )
-
