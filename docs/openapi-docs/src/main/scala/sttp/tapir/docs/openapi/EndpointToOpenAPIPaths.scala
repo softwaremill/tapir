@@ -46,6 +46,7 @@ private[openapi] class EndpointToOpenAPIPaths(
   }
 
   private def filterOutHiddenInputs(inputs: Vector[EndpointInput.Basic[_]]) = inputs.collect {
+    // EndpointInput.Basic is either OneOfBody or Atom
     case OneOfBody(variants, mapping) =>
       OneOfBody(
         variants.filterNot(_.codec.schema.hidden),
