@@ -30,9 +30,8 @@ import scala.concurrent.duration._
   *   contains tapir's server processing logic.
   *
   * @param requestTimeout
-  *   The maximum duration, to wait for a response before considering the request timed out.
-  * @throws ReadTimeoutException
-  *   when no data is read from Netty within the specified period of time for a request.
+  *   The maximum duration to wait for a response to be produced. If exceeded, the server will return a HTTP 503 response and close the
+  *   connection. This timeout is ignored in Web Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
   *
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
@@ -44,6 +43,10 @@ import scala.concurrent.duration._
   * @param gracefulShutdownTimeout
   *   If set, attempts to wait for a given time for all in-flight requests to complete, before proceeding with shutting down the server. If
   *   `None`, closes the channels and terminates the server without waiting.
+  *
+  * @param idleTimeout
+  *   Maximum inactivity time of a given connection. If nothing is sent or received within this timeout, the connection closes. Make sure
+  *   it's greater than `requestTimeout`, which should be the first one to be triggered if it's taking too long to produce a response.
   *
   * @param serverHeader
   *   If set, send this value in the 'Server' response header. If None, don't set the header.
@@ -64,6 +67,7 @@ case class NettyConfig(
     socketConfig: NettySocketConfig,
     initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit,
     gracefulShutdownTimeout: Option[FiniteDuration],
+    idleTimeout: Option[FiniteDuration],
     serverHeader: Option[String]
 ) {
   def host(h: String): NettyConfig = copy(host = h)
@@ -80,7 +84,8 @@ case class NettyConfig(
 
   def requestTimeout(r: FiniteDuration): NettyConfig = copy(requestTimeout = Some(r))
   def connectionTimeout(c: FiniteDuration): NettyConfig = copy(connectionTimeout = Some(c))
-  def lingerTimeout(l: FiniteDuration): NettyConfig = copy(requestTimeout = Some(l))
+  def lingerTimeout(l: FiniteDuration): NettyConfig = copy(lingerTimeout = Some(l))
+  def idleTimeout(r: FiniteDuration): NettyConfig = copy(idleTimeout = Some(r))
 
   def withSocketKeepAlive: NettyConfig = copy(socketKeepAlive = true)
   def withNoSocketKeepAlive: NettyConfig = copy(socketKeepAlive = false)
@@ -119,6 +124,7 @@ object NettyConfig {
     connectionTimeout = Some(10.seconds),
     lingerTimeout = None, // see #3576
     gracefulShutdownTimeout = Some(10.seconds),
+    idleTimeout = Some(60.seconds),
     maxConnections = None,
     addLoggingHandler = false,
     sslContext = None,

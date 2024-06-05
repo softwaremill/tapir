@@ -78,7 +78,7 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
     val channelFuture =
       NettyBootstrap(
         config,
-        new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config.serverHeader, config.isSsl),
+        new NettyServerHandler(route, unsafeRunAsync, channelGroup, isShuttingDown, config),
         eventLoopGroup,
         socketOverride
       )
