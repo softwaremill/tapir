@@ -66,6 +66,12 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
   inline given PrimitiveValidatorForPredicate[String, Not[Empty]] =
     ValidatorForPredicate.fromPrimitiveValidator[String, Not[Empty]](Validator.minLength(1))
 
+  inline given validatorForPure[T]: ValidatorForPredicate[T, Pure] =
+    new ValidatorForPredicate[T, Pure] {
+      override val validator: Validator[T] = Validator.pass
+      override def makeErrors(value: T, errorMessage: String): List[ValidationError[_]] = Nil
+    }
+
   inline given validatorForMatchesRegexpString[S <: String](using witness: ValueOf[S]): PrimitiveValidatorForPredicate[String, Match[S]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern[String](witness.value))
 

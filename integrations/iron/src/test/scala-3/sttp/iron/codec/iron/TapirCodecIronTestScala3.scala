@@ -266,4 +266,9 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     summon[Schema[RefinedInt]]
     summon[Codec[String, RefinedInt, TextPlain]]
 
+  "Instances for newtypes" should "be correctly derived" in:
+    type NewtypeInt = Int :| Pure
+    summon[Schema[NewtypeInt]]
+    summon[Codec[String, NewtypeInt, TextPlain]]
+
 }
