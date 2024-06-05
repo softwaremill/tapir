@@ -133,10 +133,10 @@ class NettyServerHandler[F[_]](
     }
 
     def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
-      val idleHandler = config.requestTimeout.map { requestTimeout =>
+      val requestTimeoutHandler = config.requestTimeout.map { requestTimeout =>
         new IdleStateHandler(0, requestTimeout.toMillis.toInt, 0, TimeUnit.MILLISECONDS)
       }
-      idleHandler.foreach(h => ctx.pipeline().addFirst(h))
+      requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
         route(NettyServerRequest(req))
           .map {
@@ -148,7 +148,7 @@ class NettyServerHandler[F[_]](
       lastResponseSent = lastResponseSent.flatMap { _ =>
         runningFuture
           .andThen { case _ =>
-            idleHandler.foreach(ctx.pipeline().remove)
+            requestTimeoutHandler.foreach(ctx.pipeline().remove)
           }(eventLoopContext)
           .transform {
             case Success(serverResponse) =>
