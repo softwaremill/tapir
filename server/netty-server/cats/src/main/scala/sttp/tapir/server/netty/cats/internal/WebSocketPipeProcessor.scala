@@ -45,7 +45,9 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
       sttpFrame
     }
     val stream: Stream[F, NettyWebSocketFrame] =
-      optionallyConcatenateFrames(o.concatenateFragmentedFrames)(optionallyPassThroughCloseFrame(o.decodeCloseRequests)(sttpFrames))
+      optionallyConcatenateFrames(o.concatenateFragmentedFrames)(
+        takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests)(sttpFrames)
+      )
         .map(f =>
           o.requests.decode(f) match {
             case x: DecodeResult.Value[REQ]    => x.v
@@ -103,12 +105,13 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
       s.mapAccumulate(None: Accumulator)(accumulateFrameState).collect { case (_, Some(f)) => f }
     } else s
 
-  private def optionallyPassThroughCloseFrame(doPassThrough: Boolean)(s: Stream[F, WebSocketFrame]): Stream[F, WebSocketFrame] =
-    s.takeWhile({
+  private def takeUntilCloseFrame(passAlongCloseFrame: Boolean)(s: Stream[F, WebSocketFrame]): Stream[F, WebSocketFrame] =
+    s.takeWhile(
+      {
         case _: WebSocketFrame.Close => false
         case _                       => true
       },
-      takeFailure = doPassThrough
+      takeFailure = passAlongCloseFrame
     )
 }
 

@@ -27,7 +27,7 @@ private[sync] object OxSourceWebSocketProcessor:
       (source: Source[NettyWebSocketFrame]) => {
         pipe(
           optionallyConcatenateFrames(o.concatenateFragmentedFrames)(
-            optionallyPassThroughCloseFrame(o.decodeCloseRequests)(
+            takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests)(
               source
                 .mapAsView { f =>
                   val sttpFrame = nettyFrameToFrame(f)
@@ -69,11 +69,11 @@ private[sync] object OxSourceWebSocketProcessor:
     if doConcatenate then s.mapStateful(() => None: Accumulator)(accumulateFrameState).collectAsView { case Some(f: WebSocketFrame) => f }
     else s
 
-  private def optionallyPassThroughCloseFrame(doPassThrough: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
+  private def takeUntilCloseFrame(passAlongCloseFrame: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
     s.takeWhile({
         case _: WebSocketFrame.Close => false
         case _                       => true
       },
-      includeFailed = doPassThrough
+      includeFailed = passAlongCloseFrame
     )
     
