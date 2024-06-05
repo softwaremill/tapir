@@ -70,8 +70,7 @@ private[sync] object OxSourceWebSocketProcessor:
     else s
 
   private def optionallyPassThroughCloseFrame(doPassThrough: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
-    s.takeWhile(
-      _ match {
+    s.takeWhile({
         case _: WebSocketFrame.Close => false
         case _                       => true
       },
