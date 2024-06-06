@@ -120,6 +120,7 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
   Test / testOptions += Tests.Argument("-oD"), // js has other options which conflict with timings
+  testListeners += TimingTestListener,
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, _)) => Seq("-target:jvm-1.8") // some users are on java 8
