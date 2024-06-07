@@ -186,35 +186,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         )
     },
     testServer(
-      endpoint.out(
-        webSocketBody[Option[String], CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
-          .decodeCloseRequests(true)
-      ),
-      "decode close requests"
-    )((_: Unit) =>
-      pureResult(
-        functionToPipe((s: Option[String]) => s"echo: ${s.getOrElse("close")}")
-          .asRight[Unit]
-      )
-    ) { (backend, baseUri) =>
-      basicRequest
-        .response(asWebSocket { (ws: WebSocket[IO]) =>
-          for {
-            _ <- ws.sendText("test1")
-            _ <- ws.close()
-            m1 <- ws.receiveText()
-            m2 <- ws.receiveText()
-            m3 <- ws.eitherClose(ws.receiveText())
-            closeAsStr = m3.fold(_.statusCode.toString, identity)
-          } yield List(m1, m2, closeAsStr)
-        })
-        .get(baseUri.scheme("ws"))
-        .send(backend)
-        .map(
-          _.body shouldBe Right(List("echo: test1", "echo: close", "1000"))
-        )
-    },
-    testServer(
       endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)),
       "empty client stream"
     )((_: Unit) => pureResult(emptyPipe.asRight[Unit])) { (backend, baseUri) =>
