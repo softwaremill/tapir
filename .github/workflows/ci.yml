@@ -21,7 +21,7 @@ jobs:
       matrix:
         scala-version: [ "2.12", "2.13", "3" ]
         target-platform: [ "JVM", "JS", "Native" ]
-        java: [ "11", "21" ]
+        java: [ "21" ]
         exclude:
           - java: "21"
           - scala-version: "2.12"
@@ -70,7 +70,7 @@ jobs:
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Enable Loom-specific modules
       if: matrix.java == '21'
-      run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
+      run: echo "ALSO_LOOM=1" >> $GITHUB_ENV
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     - name: Compile documentation
