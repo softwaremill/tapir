@@ -2,6 +2,10 @@
 
 To start our adventure with tapir, we'll define and expose a single endpoint using an HTTP server.
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=WV1bZaGrdQQ).
+```
+
 ## Prerequisites
 
 We'll use [scala-cli](https://scala-cli.virtuslab.org) to run the code, so you'll need to install it beforehand.
