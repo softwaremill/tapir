@@ -20,7 +20,7 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ReactivePublisherNettyResponseContent,
   ReactiveWebSocketProcessorNettyResponseContent
 }
-import sttp.tapir.server.netty.internal.ws.{NettyControlFrameHandler, WebSocketAutoPingHandler}
+import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
 import java.util.concurrent.TimeUnit
@@ -281,10 +281,9 @@ class NettyServerHandler[F[_]](
       .addAfter(
         ServerCodecHandlerName,
         WebSocketControlFrameHandlerName,
-        new NettyControlFrameHandler(
+        new WebSocketPingPongFrameHandler(
           ignorePong = r.ignorePong,
-          autoPongOnPing = r.autoPongOnPing,
-          decodeCloseRequests = r.decodeCloseRequests
+          autoPongOnPing = r.autoPongOnPing
         )
       )
     r.autoPing.foreach { case (interval, pingMsg) =>
