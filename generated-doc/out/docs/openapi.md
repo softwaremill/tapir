@@ -239,12 +239,10 @@ security requirements will be created for them. However, this will not include t
 mandatory. If authentication should be optional, an empty security requirement will be added if an `emptyAuth` input
 is added (which doesn't map to any values in the request, but only serves as a marker).
 
-```eval_rst
-.. note::
-
-  Note that even though multiple optional authentication methods might be rendered as alternatives in the documentation,
-  when running the server, you'll need to additionally check that at least one authentication input is provided. This 
-  can be done in the security logic, server logic, or by mapping the inputs using .mapDecode, as in the below example: 
+```{note}
+Note that even though multiple optional authentication methods might be rendered as alternatives in the documentation,
+when running the server, you'll need to additionally check that at least one authentication input is provided. This 
+can be done in the security logic, server logic, or by mapping the inputs using .mapDecode, as in the below example: 
 ```
 
 ```scala

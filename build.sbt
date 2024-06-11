@@ -512,7 +512,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
-      "io.github.classgraph" % "classgraph" % "4.8.172",
+      "io.github.classgraph" % "classgraph" % "4.8.173",
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -553,7 +553,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.3.0" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.10.0" % Test
+      "org.typelevel" %%% "cats-laws" % "2.12.0" % Test
     )
   )
   .jvmPlatform(
@@ -873,12 +873,12 @@ lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
     name := "tapir-json-tethys",
     libraryDependencies ++= Seq(
       "com.tethys-json" %% "tethys-core" % Versions.tethys,
-      "com.tethys-json" %% "tethys-jackson" % Versions.tethys,
+      "com.tethys-json" %% "tethys-jackson213" % Versions.tethys,
       scalaTest.value % Test,
       "com.tethys-json" %% "tethys-derivation" % Versions.tethys % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
 
 lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
@@ -886,8 +886,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.28.5",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.28.5" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.30.1",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.30.1" % Test,
       scalaTest.value % Test
     )
   )
@@ -2066,7 +2066,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       scalaTest.value,
       logback
     ),
-    publishArtifact := false
+    publishArtifact := false,
+    Compile / run / fork := true
   )
   .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(

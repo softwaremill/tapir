@@ -43,7 +43,8 @@ class CatsVertxServerTest extends TestSuite {
           autoPing = false,
           failingPipe = false,
           handlePong = true,
-          expectCloseResponse = false
+          expectCloseResponse = false,
+          frameConcatenation = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => Stream.empty

@@ -271,7 +271,8 @@ class ZioHttpServerTest extends TestSuite {
             ZioStreams,
             autoPing = true,
             failingPipe = false,
-            handlePong = false
+            handlePong = false,
+            frameConcatenation = false
           ) {
             override def functionToPipe[A, B](f: A => B): ZioStreams.Pipe[A, B] = in => in.map(f)
             override def emptyPipe[A, B]: ZioStreams.Pipe[A, B] = _ => ZStream.empty

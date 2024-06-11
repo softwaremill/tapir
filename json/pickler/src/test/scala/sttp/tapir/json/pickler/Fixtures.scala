@@ -44,7 +44,7 @@ object Fixtures:
       fieldC: InnerCaseClass
   )
   case class InnerCaseClass(fieldInner: String, @default(4) fieldInnerInt: Int)
-  case class FlatClassWithOption(fieldA: String, fieldB: Option[Int])
+  case class FlatClassWithOption(fieldA: String, fieldB: Option[Int], fieldC: Boolean)
   case class NestedClassWithOption(innerField: Option[FlatClassWithOption])
 
   case class FlatClassWithList(fieldA: String, fieldB: List[Int])

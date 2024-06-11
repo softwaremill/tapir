@@ -25,11 +25,9 @@ import sttp.tapir.ztapir._
 
 This brings into scope all of the [basic](../endpoint/basics.md) input/output descriptions, which can be used to define an endpoint.
 
-```eval_rst
-.. note::
-
-  You should have only one of these imports in your source file. Otherwise, you'll get naming conflicts. The
-  ``import sttp.tapir.ztapir._`` import is meant as a complete replacement of ``import sttp.tapir._``.
+```{note}
+You should have only one of these imports in your source file. Otherwise, you'll get naming conflicts. The
+`import sttp.tapir.ztapir._` import is meant as a complete replacement of `import sttp.tapir._`.
 ```
 
 ## Server logic
@@ -43,11 +41,9 @@ When defining the business logic for an endpoint, the following methods are avai
 The first defines complete server logic, while the second allows defining first the security server logic, and then the 
 rest.
 
-```eval_rst
-.. note::
-
-  When using Scala 3, it's best to provide the type of the environment explicitly to avoid type inferencing issues.
-  E.g.: ``myEndpoint.zServerLogic[Any](...)``.
+```{note}
+When using Scala 3, it's best to provide the type of the environment explicitly to avoid type inferencing issues.
+E.g.: `myEndpoint.zServerLogic[Any](...)`.
 ```
 
 ## Exposing endpoints using the http4s server

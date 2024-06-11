@@ -5,13 +5,11 @@ must implement the `Streams[S]` capability, and determines the precise type of t
 non-blocking streams implementation. The interpreter must then support the given capability. Refer to the documentation 
 of server/client interpreters for more information.
 
-```eval_rst
-.. note::
-
-  Here, streams refer to asynchronous, non-blocking, "reactive" stream implementations, such as `akka-streams <https://doc.akka.io/docs/akka/current/stream/index.html>`_,
-  `fs2 <https://fs2.io>`_ or `zio-streams <https://zio.dev/docs/datatypes/datatypes_stream>`_. If you'd like to use
-  blocking streams (such as ``InputStream``), these are available through e.g. ``inputStreamBody`` without any 
-  additional requirements on the interpreter.
+```{note}
+Here, streams refer to asynchronous, non-blocking, "reactive" stream implementations, such as [akka-streams](https://doc.akka.io/docs/akka/current/stream/index.html),
+[fs2](https://fs2.io) or [zio-streams](https://zio.dev/docs/datatypes/datatypes_stream). If you'd like to use
+blocking streams (such as `InputStream`), these are available through e.g. `inputStreamBody` without any 
+additional requirements on the interpreter.
 ```
 
 Adding a stream body input/output influences both the type of the input/output, as well as the 5th type parameter

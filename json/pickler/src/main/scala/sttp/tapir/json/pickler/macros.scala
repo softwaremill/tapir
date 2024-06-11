@@ -2,12 +2,10 @@ package sttp.tapir.json.pickler
 
 import _root_.upickle.implicits.*
 import _root_.upickle.implicits.{macros => uMacros}
-import sttp.tapir.internal.EnumerationMacros.*
 import sttp.tapir.SchemaType
 import sttp.tapir.SchemaType.SProduct
 
 import scala.quoted.*
-import compiletime.*
 
 /** Macros, mostly copied from uPickle, and modified to allow our customizations like passing writers/readers as parameters, adjusting
   * encoding/decoding logic to make it coherent with the schema.
@@ -22,9 +20,10 @@ private[pickler] object macros:
       inline v: T,
       inline ctx: _root_.upickle.core.ObjVisitor[_, R],
       childWriters: List[Any],
-      childDefaults: List[Option[Any]]
+      childDefaults: List[Option[Any]],
+      transientNone: Boolean
   ): Unit =
-    ${ writeSnippetsImpl[R, T]('sProduct, 'thisOuter, 'self, 'v, 'ctx, 'childWriters, 'childDefaults) }
+    ${ writeSnippetsImpl[R, T]('sProduct, 'thisOuter, 'self, 'v, 'ctx, 'childWriters, 'childDefaults, 'transientNone) }
 
   private[pickler] def writeSnippetsImpl[R, T](
       sProduct: Expr[SProduct[T]],
@@ -33,20 +32,23 @@ private[pickler] object macros:
       v: Expr[T],
       ctx: Expr[_root_.upickle.core.ObjVisitor[_, R]],
       childWriters: Expr[List[?]],
-      childDefaults: Expr[List[Option[?]]]
+      childDefaults: Expr[List[Option[?]]],
+      transientNone: Expr[Boolean]
   )(using Quotes, Type[T], Type[R]): Expr[Unit] =
 
     import quotes.reflect.*
+    val optionSymbol = TypeRepr.of[Option[_]].typeSymbol
     Expr.block(
       for (((rawLabel, label), i) <- uMacros.fieldLabelsImpl0[T].zipWithIndex) yield {
-        val tpe0 = TypeRepr.of[T].memberType(rawLabel).asType
+        val memberTypeRepr = TypeRepr.of[T].memberType(rawLabel)
+        val tpe0 = memberTypeRepr.asType
         tpe0 match
           case '[tpe] =>
             Literal(IntConstant(i)).tpe.asType match
               case '[IsInt[index]] =>
                 val encodedName = '{ ${ sProduct }.fields(${ Expr(i) }).name.encodedName }
                 val select = Select.unique(v.asTerm, rawLabel.name).asExprOf[Any]
-                '{
+                val snippet = '{
                   ${ self }.writeSnippetMappedName[R, tpe](
                     ${ ctx },
                     ${ encodedName },
@@ -54,6 +56,8 @@ private[pickler] object macros:
                     ${ select }
                   )
                 }
+                if memberTypeRepr.typeSymbol == optionSymbol then '{ if !${ transientNone } || ${ select } != None then $snippet }
+                else snippet
       },
       '{ () }
     )
@@ -72,7 +76,9 @@ private[pickler] object macros:
   ) = {
     import quotes.reflect.*
 
+    val optionSymbol = TypeRepr.of[Option[_]].typeSymbol
     val defaults = uMacros.getDefaultParamsImpl0[T]
+    val members = TypeRepr.of[T].typeSymbol.caseFields
     val statements = uMacros
       .fieldLabelsImpl0[T]
       .zipWithIndex
@@ -86,7 +92,18 @@ private[pickler] object macros:
             }
           }),
           if (defaults.contains(label)) '{ ${ x }.storeValueIfNotFound(${ Expr(i) }, ${ defaults(label) }) }
-          else '{}
+          else {
+            members
+              .find(_.name == label)
+              .collect { case member =>
+                member.tree match {
+                  case v: ValDef if v.tpt.tpe.typeSymbol == optionSymbol =>
+                    '{ ${ x }.storeValueIfNotFound(${ Expr(i) }, None) }
+                  case _ => '{}
+                }
+              }
+              .getOrElse('{})
+          }
         )
       }
 

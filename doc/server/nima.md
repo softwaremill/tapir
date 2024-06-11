@@ -1,8 +1,7 @@
 # Running as a Helidon Níma server
 
-```eval_rst
-.. note::
-  Helidon Níma requires JDK supporting Project Loom threading (JDK21 or newer).
+```{note}
+Helidon Níma requires JDK supporting Project Loom threading (JDK21 or newer).
 ```
 
 To expose an endpoint as a [Helidon Níma](https://helidon.io/nima) server, first add the following 
@@ -21,7 +20,8 @@ Such endpoints are then processed through `NimaServerInterpreter` in order to ob
 ```scala
 import io.helidon.webserver.WebServer
 import sttp.tapir._
-import sttp.tapir.server.nima.{Id, NimaServerInterpreter}
+import sttp.shared.Identity
+import sttp.tapir.server.nima.NimaServerInterpreter
 
 val helloEndpoint = endpoint.get
   .in("hello")

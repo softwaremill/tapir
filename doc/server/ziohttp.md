@@ -25,11 +25,9 @@ import sttp.tapir.ztapir._
 
 This brings into scope all the [basic](../endpoint/basics.md) input/output descriptions, which can be used to define an endpoint.
 
-```eval_rst
-.. note::
-
-  You should have only one of these imports in your source file. Otherwise, you'll get naming conflicts. The
-  ``import sttp.tapir.ztapir._`` import is meant as a complete replacement of ``import sttp.tapir._``.
+```{note}
+You should have only one of these imports in your source file. Otherwise, you'll get naming conflicts. The
+`import sttp.tapir.ztapir._` import is meant as a complete replacement of `import sttp.tapir._`.
 ```
 
 ## Exposing endpoints
@@ -58,14 +56,12 @@ val countCharactersHttp: Routes[Any, Response] =
   ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
 ```
 
-```eval_rst
-.. note::
-
-  A single ZIO-Http application can contain both tapir-managed and ZIO-Http-managed routes. However, because of the 
-  routing implementation in ZIO Http, the shape of the paths that tapir and other ZIO Http handlers serve should not 
-  overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling 
-  will throw an exception. We don't expect users to encounter this as a problem, however the implementation here 
-  diverges a bit comparing to other interpreters.
+```{note}
+A single ZIO-Http application can contain both tapir-managed and ZIO-Http-managed routes. However, because of the 
+routing implementation in ZIO Http, the shape of the paths that tapir and other ZIO Http handlers serve should not 
+overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling 
+will throw an exception. We don't expect users to encounter this as a problem, however the implementation here 
+diverges a bit comparing to other interpreters.
 ```
 
 ## Server logic
@@ -78,11 +74,9 @@ When defining the business logic for an endpoint, the following methods are avai
 
 The first defines complete server logic, while the second and third allow defining server logic in parts.
 
-```eval_rst
-.. note::
-
-  When using Scala 3, it's best to provide the type of the environment explicitly to avoid type inferencing issues.
-  E.g.: ``myEndpoint.zServerLogic[Any](...)``.
+```{note}
+When using Scala 3, it's best to provide the type of the environment explicitly to avoid type inferencing issues.
+E.g.: `myEndpoint.zServerLogic[Any](...)`.
 ```
 
 ## Streaming

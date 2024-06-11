@@ -75,14 +75,12 @@ val countCharactersRoutes: Routes =
   PlayServerInterpreter().toRoutes(countCharactersEndpoint.serverLogic(countCharacters _))
 ```
 
-```eval_rst
-.. note::
-
-  A single Play application can contain both tapir-managed and Play-managed routes. However, because of the
-  routing implementation in Play, the shape of the paths that tapir and other Play handlers serve should not
-  overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling
-  will throw an exception. We don't expect users to encounter this as a problem, however the implementation here
-  diverges a bit comparing to other interpreters.
+```{note}
+A single Play application can contain both tapir-managed and Play-managed routes. However, because of the
+routing implementation in Play, the shape of the paths that tapir and other Play handlers serve should not
+overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling
+will throw an exception. We don't expect users to encounter this as a problem, however the implementation here
+diverges a bit comparing to other interpreters.
 ```
 
 ## Bind the routes

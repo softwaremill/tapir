@@ -26,14 +26,15 @@ private[sync] object OxSourceWebSocketProcessor:
     val frame2FramePipe: OxStreams.Pipe[NettyWebSocketFrame, NettyWebSocketFrame] =
       (source: Source[NettyWebSocketFrame]) => {
         pipe(
-          optionallyConcatenateFrames(
-            source
-              .mapAsView { f =>
-                val sttpFrame = nettyFrameToFrame(f)
-                f.release()
-                sttpFrame
-              },
-            o.concatenateFragmentedFrames
+          optionallyConcatenateFrames(o.concatenateFragmentedFrames)(
+            takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests)(
+              source
+                .mapAsView { f =>
+                  val sttpFrame = nettyFrameToFrame(f)
+                  f.release()
+                  sttpFrame
+                }
+            )
           )
             .mapAsView(f =>
               o.requests.decode(f) match {
@@ -59,23 +60,20 @@ private[sync] object OxSourceWebSocketProcessor:
         val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, "Internal Server Error"))
         sub.onError(t)
       override def onComplete(): Unit =
-        val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "Bye"))
+        val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "normal closure"))
         sub.onComplete()
     }
     new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
 
-  private def optionallyConcatenateFrames(s: Source[WebSocketFrame], doConcatenate: Boolean)(using Ox): Source[WebSocketFrame] =
-    if doConcatenate then
-      type Accumulator = Option[Either[Array[Byte], String]]
-      s.mapStateful(() => None: Accumulator) {
-        case (None, f: WebSocketFrame.Ping)                                  => (None, Some(f))
-        case (None, f: WebSocketFrame.Pong)                                  => (None, Some(f))
-        case (None, f: WebSocketFrame.Close)                                 => (None, Some(f))
-        case (None, f: WebSocketFrame.Data[_]) if f.finalFragment            => (None, Some(f))
-        case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
-        case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
-        case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment   => (None, Some(f.copy(payload = acc + f.payload)))
-        case (Some(Right(acc)), f: WebSocketFrame.Text) if !f.finalFragment  => (Some(Right(acc + f.payload)), None)
-        case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
-      }.collectAsView { case Some(f: WebSocketFrame) => f }
+  private def optionallyConcatenateFrames(doConcatenate: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
+    if doConcatenate then s.mapStateful(() => None: Accumulator)(accumulateFrameState).collectAsView { case Some(f: WebSocketFrame) => f }
     else s
+
+  private def takeUntilCloseFrame(passAlongCloseFrame: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
+    s.takeWhile({
+        case _: WebSocketFrame.Close => false
+        case _                       => true
+      },
+      includeFailed = passAlongCloseFrame
+    )
+    

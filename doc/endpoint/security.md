@@ -15,12 +15,10 @@ Inputs which map to authentication credentials can be created using methods avai
 inputs in addition to the base input (such as an `Authorization` header or a cookie), contain security-related metadata, 
 for example the name of the security scheme that should be used for documentation.
 
-```eval_rst
-.. note::
-
-  Note that security inputs added using ``.securityIn`` can contain both dedicated auth credentials inputs created
-  using one of the methods from ``auth``, and arbitrary "regular" inputs, such as path components. Similarly, regular 
-  inputs can contain inputs created through ``auth``, though typically this shouldn't be the case.
+```{note}
+Note that security inputs added using `.securityIn` can contain both dedicated auth credentials inputs created
+using one of the methods from `auth`, and arbitrary "regular" inputs, such as path components. Similarly, regular 
+inputs can contain inputs created through `auth`, though typically this shouldn't be the case.
 ```
 
 Currently, the following authentication inputs are available (assuming `import sttp.tapir._`):

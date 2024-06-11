@@ -38,7 +38,7 @@ val server: HttpServer =
   JdkHttpServer().addEndpoint(helloWorld).start()
 ```
 
-#### Important notice:
+## Important notice:
 
 **This server runs on a single worker thread by default.** This is ok for testing, toy projects and things that never see any load. 
 If you want it to scale please read about the `executor` configuration option below and set it accordingly. 

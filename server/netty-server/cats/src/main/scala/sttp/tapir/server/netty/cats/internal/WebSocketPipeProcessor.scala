@@ -45,7 +45,9 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
       sttpFrame
     }
     val stream: Stream[F, NettyWebSocketFrame] =
-      optionallyConcatenateFrames(sttpFrames, o.concatenateFragmentedFrames)
+      optionallyConcatenateFrames(o.concatenateFragmentedFrames)(
+        takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests)(sttpFrames)
+      )
         .map(f =>
           o.requests.decode(f) match {
             case x: DecodeResult.Value[REQ]    => x.v
@@ -98,22 +100,19 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
 
   }
 
-  private def optionallyConcatenateFrames(s: Stream[F, WebSocketFrame], doConcatenate: Boolean): Stream[F, WebSocketFrame] =
+  private def optionallyConcatenateFrames(doConcatenate: Boolean)(s: Stream[F, WebSocketFrame]): Stream[F, WebSocketFrame] =
     if (doConcatenate) {
-      type Accumulator = Option[Either[Array[Byte], String]]
-
-      s.mapAccumulate(None: Accumulator) {
-        case (None, f: WebSocketFrame.Ping)                                  => (None, Some(f))
-        case (None, f: WebSocketFrame.Pong)                                  => (None, Some(f))
-        case (None, f: WebSocketFrame.Close)                                 => (None, Some(f))
-        case (None, f: WebSocketFrame.Data[_]) if f.finalFragment            => (None, Some(f))
-        case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
-        case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
-        case (Some(Right(acc)), f: WebSocketFrame.Text) if f.finalFragment   => (None, Some(f.copy(payload = acc + f.payload)))
-        case (Some(Right(acc)), f: WebSocketFrame.Text) if !f.finalFragment  => (Some(Right(acc + f.payload)), None)
-        case (acc, f) => throw new IllegalStateException(s"Cannot accumulate web socket frames. Accumulator: $acc, frame: $f.")
-      }.collect { case (_, Some(f)) => f }
+      s.mapAccumulate(None: Accumulator)(accumulateFrameState).collect { case (_, Some(f)) => f }
     } else s
+
+  private def takeUntilCloseFrame(passAlongCloseFrame: Boolean)(s: Stream[F, WebSocketFrame]): Stream[F, WebSocketFrame] =
+    s.takeWhile(
+      {
+        case _: WebSocketFrame.Close => false
+        case _                       => true
+      },
+      takeFailure = passAlongCloseFrame
+    )
 }
 
 /** A special wrapper used to override internal logic of fs2, which calls cancel() silently when internal stream failures happen, causing

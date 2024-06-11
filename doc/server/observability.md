@@ -19,7 +19,7 @@ There are three callbacks in `EndpointMetric`:
 3. `onException` - called after exception is thrown (in underlying streamed body, and/or on any other exception when
    there's no default response)
 
-### Labels
+## Labels
 
 By default, request metrics are labeled by path and method. Response labels are additionally labelled by status code
 group. For example GET endpoint like `http://h:p/api/persons?name=Mike` returning 200 response will be labeled

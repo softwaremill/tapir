@@ -3,7 +3,13 @@ package sttp.tapir.json.pickler
 import sttp.tapir.generic.Configuration
 import upickle.core.Annotator
 
-final case class PicklerConfiguration(genericDerivationConfig: Configuration) {
+/** Configuration parameters for Pickler.
+  * @param genericDerivationConfig
+  *   basic configuration for schema and codec derivation
+  * @param transientNone
+  *   skip serialization of Option fields if their value is None. If false, None will be serialized as null.
+  */
+final case class PicklerConfiguration(genericDerivationConfig: Configuration, transientNone: Boolean = true) {
   export genericDerivationConfig.{toEncodedName, toDiscriminatorValue}
 
   def discriminator: String = genericDerivationConfig.discriminator.getOrElse(Annotator.defaultTagKey)
@@ -31,6 +37,7 @@ final case class PicklerConfiguration(genericDerivationConfig: Configuration) {
   def withFullKebabCaseDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(
     genericDerivationConfig.withFullKebabCaseDiscriminatorValues
   )
+  def withTransientNone(transientNone: Boolean): PicklerConfiguration = copy(transientNone = transientNone)
 }
 
 object PicklerConfiguration {

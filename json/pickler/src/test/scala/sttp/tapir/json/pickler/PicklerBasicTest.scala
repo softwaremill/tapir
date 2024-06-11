@@ -102,18 +102,36 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
     // when
     val pickler1 = Pickler.derived[FlatClassWithOption]
     val pickler2 = Pickler.derived[NestedClassWithOption]
-    val jsonStr1 = pickler1.toCodec.encode(FlatClassWithOption("fieldA value", Some(-4018)))
-    val jsonStr2 = pickler2.toCodec.encode(NestedClassWithOption(Some(FlatClassWithOption("fieldA value2", Some(-3014)))))
-    val jsonStr3 = pickler1.toCodec.encode(FlatClassWithOption("fieldA value", None))
+    val jsonStr1 = pickler1.toCodec.encode(FlatClassWithOption("fieldA value", Some(-4018), true))
+    val jsonStr2 = pickler2.toCodec.encode(NestedClassWithOption(Some(FlatClassWithOption("fieldA value2", None, true))))
+    val jsonStr3 = pickler1.toCodec.encode(FlatClassWithOption("fieldA value", None, true))
 
     // then
     {
       given derivedFlatClassSchema: Schema[FlatClassWithOption] = Schema.derived[FlatClassWithOption]
       pickler1.schema shouldBe derivedFlatClassSchema
       pickler2.schema shouldBe Schema.derived[NestedClassWithOption]
-      jsonStr1 shouldBe """{"fieldA":"fieldA value","fieldB":-4018}"""
-      jsonStr2 shouldBe """{"innerField":{"fieldA":"fieldA value2","fieldB":-3014}}"""
-      jsonStr3 shouldBe """{"fieldA":"fieldA value","fieldB":null}"""
+      jsonStr1 shouldBe """{"fieldA":"fieldA value","fieldB":-4018,"fieldC":true}"""
+      jsonStr2 shouldBe """{"innerField":{"fieldA":"fieldA value2","fieldC":true}}"""
+      jsonStr3 shouldBe """{"fieldA":"fieldA value","fieldC":true}"""
+      pickler1.toCodec.decode("""{"fieldA":"fieldA value3","fieldC":true}""") shouldBe Value(FlatClassWithOption("fieldA value3", None, true))
+      pickler1.toCodec.decode("""{"fieldA":"fieldA value4", "fieldB": null, "fieldC": true}""") shouldBe Value(FlatClassWithOption("fieldA value4", None, true))
+    }
+  }
+  
+  it should "serialize Options to nulls if transientNone = false" in {
+    import generic.auto.* // for Pickler auto-derivation
+
+    // when
+    given PicklerConfiguration = PicklerConfiguration.default.withTransientNone(false)
+    val pickler = Pickler.derived[FlatClassWithOption]
+    val jsonStr1 = pickler.toCodec.encode(FlatClassWithOption("fieldA value", Some(-2545), true))
+    val jsonStr2 = pickler.toCodec.encode(FlatClassWithOption("fieldA value2", None, true))
+
+    // then
+    {
+      jsonStr1 shouldBe """{"fieldA":"fieldA value","fieldB":-2545,"fieldC":true}"""
+      jsonStr2 shouldBe """{"fieldA":"fieldA value2","fieldB":null,"fieldC":true}"""
     }
   }
 

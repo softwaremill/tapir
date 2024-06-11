@@ -15,6 +15,10 @@ object websocket {
         (None, Some(f))
       case (None, f: WebSocketFrame.Data[_]) if f.finalFragment =>
         (None, Some(f))
+      case (None, f: WebSocketFrame.Text) =>
+        (Some(Right(f.payload)), None)
+      case (None, f: WebSocketFrame.Binary) =>
+        (Some(Left(f.payload)), None)
       case (Some(Left(acc)), f: WebSocketFrame.Binary) if f.finalFragment =>
         (None, Some(f.copy(payload = acc ++ f.payload)))
       case (Some(Left(acc)), f: WebSocketFrame.Binary) if !f.finalFragment =>

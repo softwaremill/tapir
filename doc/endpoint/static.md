@@ -3,10 +3,9 @@
 Tapir contains predefined endpoints, server logic and server endpoints which allow serving static content, originating
 from local files or application resources. These endpoints respect etags, byte ranges as well as if-modified-since headers.
 
-```eval_rst
-.. note::
-  Since Tapir 1.3.0, static content is supported via the new `tapir-files` module. If you're looking for
-  the API documentation of the old static content API, switch documentation to an older version.
+```{note}
+Since Tapir 1.3.0, static content is supported via the new `tapir-files` module. If you're looking for
+the API documentation of the old static content API, switch documentation to an older version.
 ```
 
 In order to use static content endpoints, add the module to your dependencies:

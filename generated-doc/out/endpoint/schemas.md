@@ -149,16 +149,14 @@ implicit val anotherSchemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaT
 Schema derivation for coproduct types (sealed hierarchies) is supported as well. By default, such hierarchies
 will be represented as a coproduct which contains a list of child schemas, without any discriminators.
 
-```eval_rst
-.. note::
+```{note}
+Note that whichever approach you choose to define the coproduct schema, it has to match the way the value is 
+encoded and decoded by the codec. E.g. when the schema is for a json body, the discriminator must be separately
+configured in the json library, matching the configuration of the schema.
 
-  Note that whichever approach you choose to define the coproduct schema, it has to match the way the value is 
-  encoded and decoded by the codec. E.g. when the schema is for a json body, the discriminator must be separately
-  configured in the json library, matching the configuration of the schema.
-  
-  Alternatively, instead of deriving schemas and json codecs separately, you can use the experimental
-  `pickler <https://tapir.softwaremill.com/en/latest/endpoint/pickler.html>`_ 
-  module, which provides a higher level ``Pickler`` concept, which takes care of consistent derivation.  
+Alternatively, instead of deriving schemas and json codecs separately, you can use the experimental
+[pickler](https://tapir.softwaremill.com/en/latest/endpoint/pickler.html) 
+module, which provides a higher level `Pickler` concept, which takes care of consistent derivation.  
 ```
 
 ### Field discriminators

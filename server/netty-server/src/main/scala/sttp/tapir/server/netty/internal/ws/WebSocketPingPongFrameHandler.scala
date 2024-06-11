@@ -1,13 +1,12 @@
 package sttp.tapir.server.netty.internal.ws
 
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
-import io.netty.handler.codec.http.websocketx.{CloseWebSocketFrame, PingWebSocketFrame, PongWebSocketFrame}
+import io.netty.handler.codec.http.websocketx.{PingWebSocketFrame, PongWebSocketFrame}
 import sttp.tapir.server.netty.internal._
 
-/** Handles Ping, Pong, and Close frames for WebSockets.
+/** Handles incoming Ping and Pong frames for WebSockets.
   */
-class NettyControlFrameHandler(ignorePong: Boolean, autoPongOnPing: Boolean, decodeCloseRequests: Boolean)
-    extends ChannelInboundHandlerAdapter {
+class WebSocketPingPongFrameHandler(ignorePong: Boolean, autoPongOnPing: Boolean) extends ChannelInboundHandlerAdapter {
 
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
     msg match {
@@ -22,16 +21,6 @@ class NettyControlFrameHandler(ignorePong: Boolean, autoPongOnPing: Boolean, dec
           val _ = ctx.fireChannelRead(pong)
         } else {
           val _ = pong.content().release()
-        }
-      case close: CloseWebSocketFrame =>
-        if (decodeCloseRequests) {
-          // Passing the Close frame for further processing
-          val _ = ctx.fireChannelRead(close)
-        } else {
-          // Responding with Close immediately
-          val _ = ctx
-            .writeAndFlush(close)
-            .close()
         }
       case other =>
         val _ = ctx.fireChannelRead(other)

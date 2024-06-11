@@ -27,15 +27,15 @@ import scala.util.control.NonFatal
   * options.
   */
 private[sync] case class NettySyncServerEndpointListOverridenOptions(
-                                                                      ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
-                                                                      overridenOptions: NettySyncServerOptions
+    ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
+    overridenOptions: NettySyncServerOptions
 )
 
 case class NettySyncServer(
-                            endpoints: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
-                            endpointsWithOptions: List[NettySyncServerEndpointListOverridenOptions],
-                            options: NettySyncServerOptions,
-                            config: NettyConfig
+    endpoints: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
+    endpointsWithOptions: List[NettySyncServerEndpointListOverridenOptions],
+    options: NettySyncServerOptions,
+    config: NettyConfig
 ):
   private val executor = Executors.newVirtualThreadPerTaskExecutor()
 
@@ -134,8 +134,7 @@ case class NettySyncServer(
         unsafeRunF,
         channelGroup,
         isShuttingDown,
-        config.serverHeader,
-        config.isSsl
+        config
       ),
       eventLoopGroup,
       socketOverride

@@ -1,0 +1,44 @@
+openapi: 3.1.0
+info:
+  title: Hide security body
+  version: '1.0'
+paths:
+  /api/echo:
+    post:
+      operationId: postApiEcho
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FruitAmount'
+        required: true
+      responses:
+        '200':
+          description: ''
+          headers:
+            Set-Cookie:
+              required: false
+              schema:
+                type: array
+                items:
+                  type: string
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    FruitAmount:
+      title: FruitAmount
+      type: object
+      required:
+        - fruit
+        - amount
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
+          format: int32

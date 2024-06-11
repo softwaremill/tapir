@@ -6,11 +6,13 @@ import scala.quoted.*
 
 trait UnionTypeMirror[A] {
 
-  type ElementTypes <: Tuple
+  type ElementTypes <: NonEmptyTuple
+  // Number of elements in the union
+  def size: Int
 }
-
+ 
 // Building a class is more convenient to instantiate using macros
-class UnionTypeMirrorImpl[A, T <: Tuple] extends UnionTypeMirror[A] {
+class UnionTypeMirrorImpl[A, T <: NonEmptyTuple](val size: Int) extends UnionTypeMirror[A] {
 
   override type ElementTypes = T
 }
@@ -31,15 +33,20 @@ object UnionTypeMirror {
     def concatTypes(left: TypeRepr, right: TypeRepr): TypeRepr =
       AppliedType(tplConcatType, List(left, right))
 
-    def rec(tpe: TypeRepr): TypeRepr =
+    def rec(tpe: TypeRepr): (Int, TypeRepr) =
       tpe.dealias match {
-        case OrType(left, right) => concatTypes(rec(left), rec(right))
-        case t                   => prependTypes(t, TypeRepr.of[EmptyTuple])
+        case OrType(left, right) =>
+          val (c1, rec1) = rec(left)
+          val (c2, rec2) = rec(right)
+          (c1 + c2, concatTypes(rec1, rec2))
+        case t => (1, prependTypes(t, TypeRepr.of[EmptyTuple]))
       }
-    val tupled =
+    val (size, tupled) =
       TypeRepr.of[A].dealias match {
-        case or: OrType => rec(or).asType.asInstanceOf[Type[Elems]]
-        case tpe        => report.errorAndAbort(s"${tpe.show} is not a union type")
+        case or: OrType =>
+          val (s, r) = rec(or)
+          (s, r.asType.asInstanceOf[Type[Elems]])
+        case tpe => report.errorAndAbort(s"${tpe.show} is not a union type")
       }
 
     type Elems
@@ -65,7 +72,7 @@ object UnionTypeMirror {
           TypeTree.of[Elems]
         )
       ),
-      Nil
+      List(Literal(IntConstant((size))))
     ).asExprOf[UnionTypeMirror[A]]
   }
 }
