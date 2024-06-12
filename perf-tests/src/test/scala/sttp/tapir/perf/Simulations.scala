@@ -76,7 +76,7 @@ object CommonSimulations {
     )
       .exec(handleLatencyHistogram(histogram, warmup))
 
-    scenario(s"Repeatedly invoke POST with short string body")
+    scenario(s"${namePrefix(warmup)} Repeatedly invoke POST with short string body")
       .during(duration(warmup))(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -92,7 +92,7 @@ object CommonSimulations {
     )
       .exec(handleLatencyHistogram(histogram, warmup))
 
-    scenario(s"Repeatedly invoke POST with short byte array body")
+    scenario(s"${namePrefix(warmup)} Repeatedly invoke POST with short byte array body")
       .during(duration(warmup))(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -108,7 +108,7 @@ object CommonSimulations {
     )
       .exec(handleLatencyHistogram(histogram, warmup))
 
-    scenario(s"Repeatedly invoke POST with large byte array")
+    scenario(s"${namePrefix(warmup)} Repeatedly invoke POST with large byte array")
       .during(duration(warmup))(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
@@ -124,7 +124,7 @@ object CommonSimulations {
     )
       .exec(handleLatencyHistogram(histogram, warmup))
 
-    scenario(s"Repeatedly invoke POST with large byte array, interpreted to a String")
+    scenario(s"${namePrefix(warmup)} Repeatedly invoke POST with large byte array, interpreted to a String")
       .during(duration(warmup))(execHttpPost)
       .inject(atOnceUsers(userCount))
       .protocols(httpProtocol)
