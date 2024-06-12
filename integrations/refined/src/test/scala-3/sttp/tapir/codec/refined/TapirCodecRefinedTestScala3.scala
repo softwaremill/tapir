@@ -3,8 +3,8 @@ package sttp.tapir.codec.refined
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.boolean.Or
 import eu.timepit.refined.collection.{MaxSize, MinSize, NonEmpty}
-import eu.timepit.refined.numeric.{Greater, GreaterEqual, Interval, Less, LessEqual, Negative, NonNegative, NonPositive, Positive}
-import eu.timepit.refined.string.{IPv4, MatchesRegex}
+import eu.timepit.refined.numeric.{Greater, GreaterEqual, Interval, Less, LessEqual}
+import eu.timepit.refined.string.MatchesRegex
 import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.refineV
 import org.scalatest.flatspec.AnyFlatSpec

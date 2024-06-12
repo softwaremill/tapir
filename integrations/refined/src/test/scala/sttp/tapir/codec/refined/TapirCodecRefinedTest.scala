@@ -1,6 +1,8 @@
 package sttp.tapir.codec.refined
 
 import eu.timepit.refined.api.Refined
+import eu.timepit.refined.boolean._
+import eu.timepit.refined.collection._
 import eu.timepit.refined.numeric.{Negative, NonNegative, NonPositive, Positive}
 import eu.timepit.refined.string.IPv4
 import eu.timepit.refined.types.string.NonEmptyString
@@ -59,6 +61,17 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Max(0, true), _) => }
   }
 
+  "Generated schema for NonEmpty and MinSize" should "not be optional" in {    
+    assert(implicitly[Schema[List[Int]]].isOptional)
+    assert(!implicitly[Schema[List[Int] Refined NonEmpty]].isOptional)
+    assert(!implicitly[Schema[Set[Int] Refined NonEmpty]].isOptional)
+    assert(!implicitly[Schema[List[Int] Refined MinSize[3]]].isOptional)
+    assert(!implicitly[Schema[List[Int] Refined (MinSize[3] And MaxSize[6])]].isOptional)
+    assert(implicitly[Schema[List[Int] Refined MinSize[0]]].isOptional)
+    assert(implicitly[Schema[List[Int] Refined MaxSize[5]]].isOptional)
+    assert(implicitly[Schema[Option[List[Int] Refined NonEmpty]]].isOptional)
+  }
+  
   "Using refined" should "compile when using tapir endpoints" in {
     // this used to cause a:
     // [error] java.lang.StackOverflowError
