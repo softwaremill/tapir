@@ -43,6 +43,16 @@ trait PlayServerInterpreter {
     val filterServerEndpoints = FilterServerEndpoints(serverEndpoints)
     val singleEndpoint = serverEndpoints.size == 1
 
+    implicit val bodyListener: BodyListener[Future, PlayResponseBody] = new PlayBodyListener
+
+    val interpreter = new ServerInterpreter(
+      filterServerEndpoints,
+      new PlayRequestBody(playServerOptions),
+      new PlayToResponseBody,
+      playServerOptions.interceptors,
+      playServerOptions.deleteFile
+    )
+
     new PartialFunction[RequestHeader, Handler] {
       override def isDefinedAt(request: RequestHeader): Boolean = {
         val filtered = filterServerEndpoints(PlayServerRequest(request, request))
@@ -76,15 +86,7 @@ trait PlayServerInterpreter {
           header: RequestHeader,
           request: Request[PekkoStreams.BinaryStream]
       ): Future[Either[Result, Flow[Message, Message, Any]]] = {
-        implicit val bodyListener: BodyListener[Future, PlayResponseBody] = new PlayBodyListener
         val serverRequest = PlayServerRequest(header, request)
-        val interpreter = new ServerInterpreter(
-          filterServerEndpoints,
-          new PlayRequestBody(playServerOptions),
-          new PlayToResponseBody,
-          playServerOptions.interceptors,
-          playServerOptions.deleteFile
-        )
 
         interpreter(serverRequest)
           .map {
