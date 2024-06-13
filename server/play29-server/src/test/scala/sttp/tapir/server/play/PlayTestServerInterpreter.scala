@@ -31,8 +31,6 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
     PlayServerInterpreter(serverOptions).toRoutes(es)
   }
 
-  import play.core.server.AkkaHttpServer
-
   override def serverWithStop(
       routes: NonEmptyList[Routes],
       gracefulShutdownTimeout: Option[FiniteDuration]
@@ -48,7 +46,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
         initialServerConfig.copy(configuration = customConf.withFallback(initialServerConfig.configuration))
       override lazy val actorSystem: ActorSystem =
         ActorSystem("tapir", defaultExecutionContext = Some(PlayTestServerInterpreter.this.actorSystem.dispatcher))
-      override def router: Router =
+      override lazy val router: Router =
         Router.from(
           routes.reduce((a: Routes, b: Routes) => {
             val handler: PartialFunction[RequestHeader, Handler] = { case request =>
