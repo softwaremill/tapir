@@ -51,14 +51,13 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
             val released: CompletableFuture[Boolean] = new CompletableFuture[Boolean]()
             testServer(
               endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain].apply(streams)),
-              "closes supervision scope when client closes Web Socket without getting any responses"
+              "closes supervision scope when client closes Web Socket"
             )((_: Unit) =>
               val pipe: OxStreams.Pipe[String, String] = in => {
-                val outgoing = Channel.bufferedDefault[String]
                 releaseAfterScope {
                   released.complete(true).discard
                 }
-                outgoing
+                in
               }
               Right(pipe)
             ) { (backend, baseUri) =>
@@ -67,6 +66,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
                   for {
                     _ <- ws.sendText("test1")
                     _ <- ws.close()
+                    _ <- ws.receiveText()
                     closeResponse <- ws.eitherClose(ws.receiveText())
                   } yield closeResponse
                 })

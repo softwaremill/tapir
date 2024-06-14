@@ -26,14 +26,15 @@ private[sync] object OxSourceWebSocketProcessor:
     val frame2FramePipe: OxStreams.Pipe[NettyWebSocketFrame, NettyWebSocketFrame] =
       (source: Source[NettyWebSocketFrame]) => {
         pipe(
-          optionallyConcatenateFrames(
-            source
-              .mapAsView { f =>
-                val sttpFrame = nettyFrameToFrame(f)
-                f.release()
-                sttpFrame
-              },
-            o.concatenateFragmentedFrames
+          optionallyConcatenateFrames(o.concatenateFragmentedFrames)(
+            takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests)(
+              source
+                .mapAsView { f =>
+                  val sttpFrame = nettyFrameToFrame(f)
+                  f.release()
+                  sttpFrame
+                }
+            )
           )
             .mapAsView(f =>
               o.requests.decode(f) match {
@@ -59,12 +60,20 @@ private[sync] object OxSourceWebSocketProcessor:
         val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, "Internal Server Error"))
         sub.onError(t)
       override def onComplete(): Unit =
-        val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "Bye"))
+        val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "normal closure"))
         sub.onComplete()
     }
     new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
 
-  private def optionallyConcatenateFrames(s: Source[WebSocketFrame], doConcatenate: Boolean)(using Ox): Source[WebSocketFrame] =
-    if doConcatenate then
-      s.mapStateful(() => None: Accumulator)(accumulateFrameState).collectAsView { case Some(f: WebSocketFrame) => f }
+  private def optionallyConcatenateFrames(doConcatenate: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
+    if doConcatenate then s.mapStateful(() => None: Accumulator)(accumulateFrameState).collectAsView { case Some(f: WebSocketFrame) => f }
     else s
+
+  private def takeUntilCloseFrame(passAlongCloseFrame: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
+    s.takeWhile({
+        case _: WebSocketFrame.Close => false
+        case _                       => true
+      },
+      includeFailed = passAlongCloseFrame
+    )
+    

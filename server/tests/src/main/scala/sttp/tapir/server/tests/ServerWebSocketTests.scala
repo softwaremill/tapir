@@ -190,10 +190,12 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       "empty client stream"
     )((_: Unit) => pureResult(emptyPipe.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
-        .response(asWebSocketAlways { (ws: WebSocket[IO]) => ws.eitherClose(ws.receiveText()) })
+        .response(asWebSocketAlways { (ws: WebSocket[IO]) =>
+          if (expectCloseResponse) ws.eitherClose(ws.receiveText()).map(Some(_)) else IO.pure(None)
+        })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map(_.body.left.map(_.statusCode) shouldBe Left(WebSocketFrame.close.statusCode))
+        .map(r => assert(r.body.forall(_.left.map(_.statusCode) == Left(1000))))
     },
     testServer(
       endpoint
@@ -315,52 +317,55 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       )
     else List.empty
 
-  val frameConcatenationTests = if (frameConcatenation) List(
-    testServer(
-      endpoint.out(
-        webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
-          .autoPing(None)
-          .autoPongOnPing(false)
-          .concatenateFragmentedFrames(true)
-      ),
-      "concatenate fragmented text frames"
-    )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
-      basicRequest
-        .response(asWebSocket { (ws: WebSocket[IO]) =>
-          for {
-            _ <- ws.send(WebSocketFrame.Text("f1", finalFragment = false, None))
-            _ <- ws.sendText("f2")
-            r <- ws.receiveText()
-            _ <- ws.close()
-          } yield r
-        })
-        .get(baseUri.scheme("ws"))
-        .send(backend)
-        .map { _.body shouldBe (Right("echo: f1f2")) }
-    },
-    testServer(
-      endpoint.out(
-        webSocketBody[Array[Byte], CodecFormat.OctetStream, String, CodecFormat.TextPlain](streams)
-          .autoPing(None)
-          .autoPongOnPing(false)
-          .concatenateFragmentedFrames(true)
-      ),
-      "concatenate fragmented binary frames"
-    )((_: Unit) => pureResult(functionToPipe((bs: Array[Byte]) => s"echo: ${new String(bs)}").asRight[Unit])) { (backend, baseUri) =>
-      basicRequest
-        .response(asWebSocket { (ws: WebSocket[IO]) =>
-          for {
-            _ <- ws.send(WebSocketFrame.Binary("frame1-bytes;".getBytes(), finalFragment = false, None))
-            _ <- ws.sendBinary("frame2-bytes".getBytes())
-            r <- ws.receiveText()
-            _ <- ws.close()
-          } yield r
-        })
-        .get(baseUri.scheme("ws"))
-        .send(backend)
-        .map { _.body shouldBe (Right("echo: frame1-bytes;frame2-bytes")) }
-    }
-  ) else Nil
+  val frameConcatenationTests =
+    if (frameConcatenation)
+      List(
+        testServer(
+          endpoint.out(
+            webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
+              .autoPing(None)
+              .autoPongOnPing(false)
+              .concatenateFragmentedFrames(true)
+          ),
+          "concatenate fragmented text frames"
+        )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
+          basicRequest
+            .response(asWebSocket { (ws: WebSocket[IO]) =>
+              for {
+                _ <- ws.send(WebSocketFrame.Text("f1", finalFragment = false, None))
+                _ <- ws.sendText("f2")
+                r <- ws.receiveText()
+                _ <- ws.close()
+              } yield r
+            })
+            .get(baseUri.scheme("ws"))
+            .send(backend)
+            .map { _.body shouldBe (Right("echo: f1f2")) }
+        },
+        testServer(
+          endpoint.out(
+            webSocketBody[Array[Byte], CodecFormat.OctetStream, String, CodecFormat.TextPlain](streams)
+              .autoPing(None)
+              .autoPongOnPing(false)
+              .concatenateFragmentedFrames(true)
+          ),
+          "concatenate fragmented binary frames"
+        )((_: Unit) => pureResult(functionToPipe((bs: Array[Byte]) => s"echo: ${new String(bs)}").asRight[Unit])) { (backend, baseUri) =>
+          basicRequest
+            .response(asWebSocket { (ws: WebSocket[IO]) =>
+              for {
+                _ <- ws.send(WebSocketFrame.Binary("frame1-bytes;".getBytes(), finalFragment = false, None))
+                _ <- ws.sendBinary("frame2-bytes".getBytes())
+                r <- ws.receiveText()
+                _ <- ws.close()
+              } yield r
+            })
+            .get(baseUri.scheme("ws"))
+            .send(backend)
+            .map { _.body shouldBe (Right("echo: frame1-bytes;frame2-bytes")) }
+        }
+      )
+    else Nil
 
   val handlePongTests =
     if (handlePong)
