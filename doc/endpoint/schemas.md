@@ -119,7 +119,9 @@ the union type, as it's not possible to generate a runtime check for the generic
 
 ### Derivation for string-based constant union types
 
-If a union type is a string-based constant union type, it can be auto-derived as field type or manually derived by using the `Schema.derivedStringUnion[T]` method.
+If a union type is a string-based constant union type, it can be auto-derived as field type or manually derived by using the `Schema.derivedStringBasedUnionEnumeration[T]` method.
+
+Constant strings can be derived by using the `Schema.constStringToEnum[T]` method.
 
 Examples:
 ```scala
