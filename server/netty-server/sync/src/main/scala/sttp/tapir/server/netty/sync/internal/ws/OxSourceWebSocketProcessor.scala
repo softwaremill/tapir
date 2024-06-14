@@ -65,15 +65,15 @@ private[sync] object OxSourceWebSocketProcessor:
     }
     new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
 
-  private def optionallyConcatenateFrames(doConcatenate: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
+  private def optionallyConcatenateFrames(s: Source[WebSocketFrame], doConcatenate: Boolean)(using Ox): Source[WebSocketFrame] =
     if doConcatenate then s.mapStateful(() => None: Accumulator)(accumulateFrameState).collectAsView { case Some(f: WebSocketFrame) => f }
     else s
 
   private def takeUntilCloseFrame(passAlongCloseFrame: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
-    s.takeWhile({
+    s.takeWhile(
+      {
         case _: WebSocketFrame.Close => false
         case _                       => true
       },
       includeFailed = passAlongCloseFrame
     )
-    
