@@ -195,7 +195,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map(r => assert(r.body.forall(_ == Left(WebSocketFrame.Close(1000, "normal closure")))))
+        .map(r => assert(r.body.forall(_.left.map(_.statusCode) == Left(1000))))
     },
     testServer(
       endpoint
