@@ -190,10 +190,12 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       "empty client stream"
     )((_: Unit) => pureResult(emptyPipe.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
-        .response(asWebSocketAlways { (ws: WebSocket[IO]) => ws.eitherClose(ws.receiveText()) })
+        .response(asWebSocketAlways { (ws: WebSocket[IO]) =>
+          if (expectCloseResponse) ws.eitherClose(ws.receiveText()).map(Some(_)) else IO.pure(None)
+        })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map(_.body.left.map(_.statusCode) shouldBe Left(WebSocketFrame.close.statusCode))
+        .map(r => assert(r.body.forall(_ == Left(WebSocketFrame.Close(1000, "normal closure")))))
     },
     testServer(
       endpoint
