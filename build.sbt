@@ -1411,6 +1411,7 @@ lazy val nettyServerSync: ProjectMatrix =
       name := "tapir-netty-server-sync",
       // needed because of https://github.com/coursier/coursier/issues/2016
       useCoursier := false,
+      Test / run / fork := true,
       libraryDependencies ++= Seq(
         "com.softwaremill.ox" %% "core" % Versions.ox
       )
