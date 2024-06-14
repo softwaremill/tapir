@@ -118,21 +118,9 @@ If any of the components of the union type is a generic type, any of its validat
 the union type, as it's not possible to generate a runtime check for the generic type.
 
 ### Derivation for string-based constant union types
+e.g. `type AorB = "a" | "b"`
 
-If a union type is a string-based constant union type, it can be auto-derived as field type or manually derived by using the `Schema.derivedStringBasedUnionEnumeration[T]` method.
-
-Constant strings can be derived by using the `Schema.constStringToEnum[T]` method.
-
-Examples:
-```scala
-val aOrB: Schema["a" | "b"] = Schema.derivedStringBasedUnionEnumeration
-```
-```scala
-val a: Schema["a"] = Schema.constStringToEnum
-```
-```scala
-case class Foo(aOrB: "a" | "b", optA: Option["a"]) derives Schema
-```
+See [enumerations](enumerations.md#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
 
 ## Configuring derivation
 

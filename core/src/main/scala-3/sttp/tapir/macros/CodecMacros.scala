@@ -3,6 +3,10 @@ package sttp.tapir.macros
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.{Codec, SchemaAnnotations, Validator}
 import sttp.tapir.internal.CodecValueClassMacro
+import sttp.tapir.Mapping
+import sttp.tapir.DecodeResult
+import sttp.tapir.DecodeResult.Value
+import sttp.tapir.Schema
 
 trait CodecMacros {
 
@@ -35,6 +39,11 @@ trait CodecMacros {
     */
   inline def derivedEnumerationValueCustomise[L, T <: scala.Enumeration#Value]: CreateDerivedEnumerationCodec[L, T] =
     new CreateDerivedEnumerationCodec(derivedEnumerationValueValidator[T], SchemaAnnotations.derived[T])
+
+  inline given derivedStringBasedUnionEnumeration[T](using IsUnionOf[String, T]): Codec[String, T, TextPlain] =
+    lazy val values = UnionDerivation.constValueUnionTuple[String, T]
+    lazy val validator = Validator.enumeration(values.toList.asInstanceOf[List[T]])
+    Codec.string.validate(validator.asInstanceOf[Validator[String]]).map(_.asInstanceOf[T])(_.asInstanceOf[String])
 
   /** A default codec for enumerations, which returns a string-based enumeration codec, using the enum's `.toString` to encode values, and
     * performing a case-insensitive search through the possible values, converted to strings using `.toString`.

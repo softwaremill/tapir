@@ -5,7 +5,7 @@ import sttp.tapir.Schema.{SName, Title}
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
-import sttp.tapir.macros.{LowPrioSchemaMacrosVersionSpecific, SchemaCompanionMacros, SchemaMacros}
+import sttp.tapir.macros.{SchemaCompanionMacrosExtensions, SchemaCompanionMacros, SchemaMacros}
 import sttp.tapir.model.Delimited
 
 import java.io.InputStream
@@ -422,6 +422,6 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   def anyObject[T]: Schema[T] = Schema(SProduct(Nil), None)
 }
 
-trait LowPrioritySchema extends LowPrioSchemaMacrosVersionSpecific {
+trait LowPrioritySchema extends SchemaCompanionMacrosExtensions {
   implicit def derivedSchema[T](implicit derived: Derived[Schema[T]]): Schema[T] = derived.value
 }
