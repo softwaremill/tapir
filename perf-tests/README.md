@@ -31,7 +31,7 @@ sbt -Dtapir.perf.user-count=100 -Dtapir.perf.duration-seconds=60
 ```
 or within an already running interactive sbt session:
 ```
-set ThisBuild/javaOptions += ""-Dtapir.perf.user-count=100"
+set ThisBuild/javaOptions += "-Dtapir.perf.user-count=100"
 ```
 If not set, default values will be used (see `sttp.tapir.perf.CommonSimulations`).
 

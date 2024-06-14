@@ -1,5 +1,9 @@
 # 2. Auto-generating OpenAPI docs
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=rfwEJvFZT28).
+```
+
 We already know how to expose an endpoint as an HTTP server. Let's now generate documentation for the API in the
 [OpenAPI](https://swagger.io/specification/) format, and expose it using the [Swagger UI](https://swagger.io).
 

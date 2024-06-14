@@ -27,7 +27,7 @@ class PlayServerWithContextTest(backend: SttpBackend[IO, Fs2Streams[IO] with Web
       val components = new DefaultPekkoHttpServerComponents {
         override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
         override lazy val actorSystem: ActorSystem = ActorSystem("tapir", defaultExecutionContext = Some(_actorSystem.dispatcher))
-        override def router: Router = Router.from(PlayServerInterpreter().toRoutes(e)).withPrefix("/test")
+        override lazy val router: Router = Router.from(PlayServerInterpreter().toRoutes(e)).withPrefix("/test")
       }
       val s = components.server
       val r = Future.successful(()).flatMap { _ =>
@@ -49,7 +49,7 @@ class PlayServerWithContextTest(backend: SttpBackend[IO, Fs2Streams[IO] with Web
       val components = new DefaultPekkoHttpServerComponents {
         override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
         override lazy val actorSystem: ActorSystem = ActorSystem("tapir", defaultExecutionContext = Some(_actorSystem.dispatcher))
-        override def router: Router = Router.from(PlayServerInterpreter().toRoutes(e)).withPrefix("/test")
+        override lazy val router: Router = Router.from(PlayServerInterpreter().toRoutes(e)).withPrefix("/test")
       }
       val s = components.server
       val r = basicRequest

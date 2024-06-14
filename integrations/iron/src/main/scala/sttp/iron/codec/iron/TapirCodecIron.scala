@@ -10,11 +10,10 @@ import io.github.iltotore.iron.constraint.string.*
 import io.github.iltotore.iron.constraint.collection.*
 import io.github.iltotore.iron.constraint.numeric.*
 
-import sttp.shared.Identity
-
 import sttp.tapir.Codec
 import sttp.tapir.CodecFormat
 import sttp.tapir.DecodeResult
+import sttp.tapir.internal.*
 import sttp.tapir.Schema
 import sttp.tapir.Validator
 import sttp.tapir.Validator.Primitive
@@ -34,6 +33,16 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
       inline validatorTranslation: ValidatorForPredicate[Value, Predicate]
   ): Schema[Value :| Predicate] =
     vSchema.validate(validatorTranslation.validator).map[Value :| Predicate](v => v.refineOption[Predicate])(identity)
+
+  inline given ironTypeSchemaIterable[X, C[X] <: Iterable[X], Predicate](using
+      inline vSchema: Schema[C[X]],
+      inline constraint: Constraint[C[X], Predicate],
+      inline validatorTranslation: ValidatorForPredicate[C[X], Predicate]
+  ): Schema[C[X] :| Predicate] =
+    vSchema
+      .validate(validatorTranslation.validator)
+      .map[C[X] :| Predicate](v => v.refineOption[Predicate])(identity)
+      .copy(isOptional = if (validatorTranslation.containsMinSizePositive) false else vSchema.isOptional)
 
   inline given ironTypeCodec[Representation, Value, Predicate, CF <: CodecFormat](using
       inline tm: Codec[Representation, Value, CF],
@@ -85,6 +94,19 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
   ): PrimitiveValidatorForPredicate[T, MinLength[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.minLength[T](witness.value))
 
+  inline given validatorForMinLengthOnIterable[X, C[X] <: Iterable[X], NM <: Int](using
+      witness: ValueOf[NM]
+  ): PrimitiveValidatorForPredicate[C[X], MinLength[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.minSize[X, C](witness.value))
+  
+  inline given validatorForNonEmptyIterable[X, C[X] <: Iterable[X], NM <: Int]: PrimitiveValidatorForPredicate[C[X], Not[Empty]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.minSize[X, C](1))
+  
+  inline given validatorForMaxLengthOnIterable[X, C[X] <: Iterable[X], NM <: Int](using
+      witness: ValueOf[NM]
+  ): PrimitiveValidatorForPredicate[C[X], MaxLength[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.maxSize[X, C](witness.value))
+
   inline given validatorForLess[N: Numeric, NM <: N](using witness: ValueOf[NM]): PrimitiveValidatorForPredicate[N, Less[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.max(witness.value, exclusive = true))
 
@@ -110,8 +132,11 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
     inline erasedValue[A] match
       case _: EmptyTuple => Nil
       case _: (head *: tail) =>
-        summonInline[ValidatorForPredicate[N, head]]
-          .asInstanceOf[ValidatorForPredicate[N, Any]] :: summonValidators[N, tail]
+        val headValidator: ValidatorForPredicate[N, ?] = summonFrom {
+          case pv: PrimitiveValidatorForPredicate[N, head] => pv
+          case _ => summonInline[ValidatorForPredicate[N, head]]
+        }
+        headValidator.asInstanceOf[ValidatorForPredicate[N, Any]] :: summonValidators[N, tail]
   }
 
   inline given validatorForAnd[N, Predicates](using mirror: IntersectionTypeMirror[Predicates]): ValidatorForPredicate[N, Predicates] =
@@ -222,6 +247,10 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
 private[iron] trait ValidatorForPredicate[Value, Predicate] {
   def validator: Validator[Value]
   def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]]
+  lazy val containsMinSizePositive: Boolean = validator.asPrimitiveValidators.exists {
+    case Validator.MinSize(a) => a > 0
+    case _                    => false
+  }
 }
 
 private[iron] trait PrimitiveValidatorForPredicate[Value, Predicate] extends ValidatorForPredicate[Value, Predicate] {
