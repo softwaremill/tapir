@@ -53,7 +53,7 @@ object SwaggerUI {
         // #2396: although application/yaml is not official, that's what swagger ui sends in the accept header
         override def mediaType: MediaType = MediaType("application", "yaml")
       })))
-      .serverLogicPure[F](_ => Right(yaml))
+      .serverLogicSuccessPure[F](_ => yaml)
 
     // swagger-ui webjar comes with the petstore pre-configured; this cannot be changed at runtime
     // (see https://github.com/softwaremill/tapir/issues/1695), hence replacing the address in the served document
@@ -69,7 +69,7 @@ object SwaggerUI {
 
     val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
-      baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicPure[F](_ => Right(swaggerInitializerJsWithOptions))
+      baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicSuccessPure[F](_ => swaggerInitializerJsWithOptions)
 
     val resourcesEndpoint = staticResourcesGetServerEndpoint[F](prefixInput)(
       SwaggerUI.getClass.getClassLoader,
@@ -84,10 +84,10 @@ object SwaggerUI {
         .in(queryParams)
         .in(lastSegmentInput)
         .out(redirectOutput)
-        .serverLogicPure[F] { case (params, lastSegment) =>
+        .serverLogicSuccessPure[F] { case (params, lastSegment) =>
           val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
           val path = if (options.useRelativePaths) lastSegment.map(str => s"$str/").getOrElse("") else ""
-          Right(s"${concat(fullPathPrefix, path + queryString)}")
+          s"${concat(fullPathPrefix, path + queryString)}"
         }
 
       List(yamlEndpoint, redirectToSlashEndpoint, swaggerInitializerJsEndpoint, resourcesEndpoint)
