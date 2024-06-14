@@ -316,7 +316,10 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       for {
         na <- sa.name
         nb <- sb.name
-      } yield Schema.SName("Either", List(na.show, nb.show))
+      } yield Schema.SName(
+        "Either",
+        na.typeParameterShortNames.prepended(na.fullName) ++ nb.typeParameterShortNames.prepended(nb.fullName)
+      )
     )
   }
 
