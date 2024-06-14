@@ -7,9 +7,8 @@ object SchemaCompanionMacrosExtensions extends SchemaCompanionMacrosExtensions
 
 trait SchemaCompanionMacrosExtensions:
   inline given derivedStringBasedUnionEnumeration[S](using IsUnionOf[String, S]): Schema[S] =
-    lazy val values = UnionDerivation.constValueUnionTuple[String, S]
-    lazy val validator = Validator.enumeration(values.toList.asInstanceOf[List[S]])
+    lazy val validator = Validator.derivedStringBasedUnionEnumeration[S]
     Schema
       .string[S]
-      .name(SName(values.toList.mkString("_or_")))
+      .name(SName(validator.possibleValues.toList.mkString("_or_")))
       .validate(validator)

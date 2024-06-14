@@ -40,9 +40,14 @@ trait CodecMacros {
   inline def derivedEnumerationValueCustomise[L, T <: scala.Enumeration#Value]: CreateDerivedEnumerationCodec[L, T] =
     new CreateDerivedEnumerationCodec(derivedEnumerationValueValidator[T], SchemaAnnotations.derived[T])
 
+  /** Creates a codec for a string-based union of constant values, where the validator is derived using
+    * [[sttp.tapir.Validator.derivedStringBasedUnionEnumeration]]. This requires that the union is a union of string literals.
+    *
+    * @tparam T
+    *   The type of the union.
+    */
   inline given derivedStringBasedUnionEnumeration[T](using IsUnionOf[String, T]): Codec[String, T, TextPlain] =
-    lazy val values = UnionDerivation.constValueUnionTuple[String, T]
-    lazy val validator = Validator.enumeration(values.toList.asInstanceOf[List[T]])
+    lazy val validator = Validator.derivedStringBasedUnionEnumeration[T]
     Codec.string.validate(validator.asInstanceOf[Validator[String]]).map(_.asInstanceOf[T])(_.asInstanceOf[String])
 
   /** A default codec for enumerations, which returns a string-based enumeration codec, using the enum's `.toString` to encode values, and
