@@ -46,17 +46,17 @@ import java.util.logging.{Level, Logger}
   *   entirely in memory. Default is 50MB.
   */
 case class JdkHttpServerOptions(
-                                 interceptors: List[Interceptor[Identity]],
-                                 createFile: ServerRequest => TapirFile,
-                                 deleteFile: TapirFile => Unit,
-                                 send404WhenRequestNotHandled: Boolean = true,
-                                 basePath: String = "/",
-                                 port: Int = 0,
-                                 host: String = "0.0.0.0",
-                                 executor: Option[Executor] = None,
-                                 httpsConfigurator: Option[HttpsConfigurator] = None,
-                                 backlogSize: Int = 0,
-                                 multipartFileThresholdBytes: Long = 52_428_800
+    interceptors: List[Interceptor[Identity]],
+    createFile: ServerRequest => TapirFile,
+    deleteFile: TapirFile => Unit,
+    send404WhenRequestNotHandled: Boolean = true,
+    basePath: String = "/",
+    port: Int = 0,
+    host: String = "0.0.0.0",
+    executor: Option[Executor] = None,
+    httpsConfigurator: Option[HttpsConfigurator] = None,
+    backlogSize: Int = 0,
+    multipartFileThresholdBytes: Long = 52_428_800
 ) {
   require(0 <= port && port <= 65535, "Port has to be in 1-65535 range or 0 if random!")
   def prependInterceptor(i: Interceptor[Identity]): JdkHttpServerOptions = copy(interceptors = i :: interceptors)

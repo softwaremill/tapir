@@ -62,7 +62,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
           ctx,
           childWriters,
           childDefaults,
-          config.transientNone                  
+          config.transientNone
         )
     }
 
@@ -76,7 +76,12 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
     else if upickleMacros.isSingleton[T]
     then // moved after "if MemberOfSealed" to handle case objects in hierarchy as case classes - with discriminator, for consistency
       // here we handle enums
-      annotate[T](SingletonWriter[T](null.asInstanceOf[T]), config.discriminator, upickleMacros.tagName[T], Annotator.Checker.Val(upickleMacros.getSingleton[T]))
+      annotate[T](
+        SingletonWriter[T](null.asInstanceOf[T]),
+        config.discriminator,
+        upickleMacros.tagName[T],
+        Annotator.Checker.Val(upickleMacros.getSingleton[T])
+      )
     else writer
 
   inline def macroSumW[T: ClassTag](childPicklers: => List[Pickler[? <: T]], subtypeDiscriminator: SubtypeDiscriminator[T])(using

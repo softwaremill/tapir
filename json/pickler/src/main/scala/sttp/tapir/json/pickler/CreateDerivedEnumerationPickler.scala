@@ -81,7 +81,8 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
         upickleMacros.tagName[C],
         Annotator.Checker.Val(upickleMacros.getSingleton[C])
       )
-      override lazy val reader = annotate[C](SingletonReader[C](upickleMacros.getSingleton[C]), 
+      override lazy val reader = annotate[C](
+        SingletonReader[C](upickleMacros.getSingleton[C]),
         Annotator.defaultTagKey, // not used in enumerations
         upickleMacros.tagName[C]
       )

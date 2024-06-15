@@ -68,7 +68,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
 
     locally {
       val reqBody: ADTWithoutDiscriminator = SubtypeWithoutD3("a string", Some(123), Some(23.4))
-      val reqJsonBody  = reqBody.toJson(TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder)
+      val reqJsonBody = reqBody.toJson(TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder)
       val respBody: ADTWithoutDiscriminator = SubtypeWithoutD3("a string+SubtypeWithoutD3", Some(123), Some(23.4))
       val respJsonBody = respBody.toJson(TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder)
       reqJsonBody shouldEqual """{"s":"a string","i":123,"d":23.4}"""

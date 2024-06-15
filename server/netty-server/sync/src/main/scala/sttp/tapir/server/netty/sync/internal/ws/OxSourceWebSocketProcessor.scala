@@ -70,10 +70,10 @@ private[sync] object OxSourceWebSocketProcessor:
     else s
 
   private def takeUntilCloseFrame(passAlongCloseFrame: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
-    s.takeWhile({
+    s.takeWhile(
+      {
         case _: WebSocketFrame.Close => false
         case _                       => true
       },
       includeFailed = passAlongCloseFrame
     )
-    
