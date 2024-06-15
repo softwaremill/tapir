@@ -9,7 +9,7 @@ In [other](json.md) tapir-JSON integrations, you have to keep the `Schema` (whic
 To use pickler, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-pickler" % "1.10.8"
+"com.softwaremill.sttp.tapir" %% "tapir-json-pickler" % "1.10.9"
 ```
 
 Please note that it is available only for Scala 3 and Scala.JS 3.
@@ -235,7 +235,9 @@ you can proceed with `Pickler.derived[T]`.
 
 ## Divergences from default µPickle behavior
 
-* Tapir pickler serialises None values as `null`, instead of wrapping the value in an array
+* Tapir pickler serialises fields of type `Option[T]` as direct value `T` or skips serialisation if field value is `None`. 
+  This default behavior can be changed by setting `.withTransientNone(false)` in `PicklerConfiguration`, which would result in serialising `None` as `null`.
+  This differs from uPickle, where optional values are wrapped in arrays.
 * Value classes (case classes extending AnyVal) will be serialised as simple values
 * Discriminator field value is a short class name, instead of full package with class name
 

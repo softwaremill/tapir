@@ -1,7 +1,6 @@
 package sttp.tapir.server.play
 
 import akka.actor.ActorSystem
-import enumeratum._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
@@ -17,8 +16,6 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
-import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
-import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 
 class PlayServerTest extends TestSuite {
 

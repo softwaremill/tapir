@@ -89,19 +89,19 @@ object Play {
 
   def runServer(routes: ActorSystem => Routes): IO[ServerRunner.KillSwitch] = {
     implicit lazy val perfActorSystem: ActorSystem = ActorSystem(s"tapir-play")
+    val playRouter =
+      Router.from(
+        List(routes(perfActorSystem)).reduce((a: Routes, b: Routes) => {
+          val handler: PartialFunction[RequestHeader, Handler] = { case request =>
+            a.applyOrElse(request, b)
+          }
+          handler
+        })
+      )
     val components = new DefaultPekkoHttpServerComponents {
       override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(Port), address = "127.0.0.1", mode = Mode.Test)
       override lazy val actorSystem: ActorSystem = perfActorSystem
-      override def router: Router =
-        Router.from(
-          List(routes(actorSystem)).reduce((a: Routes, b: Routes) => {
-            val handler: PartialFunction[RequestHeader, Handler] = { case request =>
-              a.applyOrElse(request, b)
-            }
-
-            handler
-          })
-        )
+      override def router: Router = playRouter
     }
     IO(components.server).map(server => IO(server.stop()))
   }

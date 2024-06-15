@@ -1,7 +1,7 @@
 package sttp.tapir.codec.refined
 
 import eu.timepit.refined.api.Refined
-import eu.timepit.refined.boolean.Or
+import eu.timepit.refined.boolean._
 import eu.timepit.refined.collection.{MaxSize, MinSize, NonEmpty}
 import eu.timepit.refined.numeric.{Greater, GreaterEqual, Interval, Less, LessEqual}
 import eu.timepit.refined.string.MatchesRegex
@@ -157,6 +157,17 @@ class TapirCodecRefinedTestScala2 extends AnyFlatSpec with Matchers with TapirCo
     implicitly[Schema[LimitedInt]].validator should matchPattern {
       case Validator.Mapped(Validator.Any(List(Validator.Min(3, true), Validator.Max(-3, true))), _) =>
     }
+  }
+
+  "Generated schema for NonEmpty and MinSize" should "not be optional" in {
+    assert(implicitly[Schema[List[Int]]].isOptional)
+    assert(!implicitly[Schema[List[Int] Refined NonEmpty]].isOptional)
+    assert(!implicitly[Schema[Set[Int] Refined NonEmpty]].isOptional)
+    assert(!implicitly[Schema[List[Int] Refined MinSize[W.`3`.T]]].isOptional)
+    assert(!implicitly[Schema[List[Int] Refined (MinSize[W.`3`.T] And MaxSize[W.`6`.T])]].isOptional)
+    assert(implicitly[Schema[List[Int] Refined MinSize[W.`0`.T]]].isOptional)
+    assert(implicitly[Schema[List[Int] Refined MaxSize[W.`5`.T]]].isOptional)
+    assert(implicitly[Schema[Option[List[Int] Refined NonEmpty]]].isOptional)
   }
 
   "TapirCodecRefined" should "compile using implicit schema for refined types" in {

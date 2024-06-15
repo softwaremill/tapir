@@ -67,7 +67,7 @@ object Redoc {
       else if (specNameLowerCase.endsWith(".yaml") || specNameLowerCase.endsWith(".yml")) MediaType("text", "yaml")
       else MediaType("text", "plain")
 
-    val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicPure[F](_ => Right(spec))
+    val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicSuccessPure[F](_ => spec)
 
     val specPrefix = if (options.useRelativePaths) "." else "/" + (options.contextPath ++ options.pathPrefix).mkString("/")
     val html: String = redocHtml(
@@ -77,7 +77,7 @@ object Redoc {
       options.redocOptions,
       options.redocThemeOptionsJson
     )
-    val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicPure[F](_ => Right(html))
+    val htmlEndpoint = contentEndpoint(htmlName, MediaType.TextHtml).serverLogicSuccessPure[F](_ => html)
 
     val lastSegmentInput: EndpointInput[Option[String]] = extractFromRequest(_.uri.path.lastOption)
 
@@ -85,18 +85,18 @@ object Redoc {
       baseEndpoint
         .in(lastSegmentInput)
         .out(redirectOutput)
-        .serverLogicPure[F] { lastSegment =>
+        .serverLogicSuccessPure[F] { lastSegment =>
           if (options.useRelativePaths) {
             val pathFromLastSegment: String = lastSegment match {
               case Some(s) if s.nonEmpty => s + "/"
               case _                     => ""
             }
-            Right(s"./$pathFromLastSegment$htmlName")
+            s"./$pathFromLastSegment$htmlName"
           } else
-            Right(options.contextPath ++ options.pathPrefix match {
+            options.contextPath ++ options.pathPrefix match {
               case Nil      => s"/$htmlName"
               case segments => s"/${segments.mkString("/")}/$htmlName"
-            })
+            }
         }
 
     List(specEndpoint, htmlEndpoint, redirectToHtmlEndpoint)

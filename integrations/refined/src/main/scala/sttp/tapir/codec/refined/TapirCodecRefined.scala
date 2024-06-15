@@ -8,6 +8,7 @@ import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
 import eu.timepit.refined.refineV
 import eu.timepit.refined.string.{MatchesRegex, Uuid}
 import sttp.tapir._
+import sttp.tapir.internal._
 
 import scala.reflect.ClassTag
 
@@ -18,6 +19,17 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
       refinedValidatorTranslation: ValidatorForPredicate[V, P]
   ): Schema[V Refined P] =
     vSchema.validate(refinedValidatorTranslation.validator).map[V Refined P](v => refineV[P](v).toOption)(_.value)
+
+  implicit def refinedTapirSchemaIterable[X, C[X] <: Iterable[X], P](implicit
+      vSchema: Schema[C[X]],
+      refinedValidator: Validate[C[X], P],
+      refinedValidatorTranslation: ValidatorForPredicate[C[X], P]
+  ): Schema[C[X] Refined P] = {
+    vSchema
+      .validate(refinedValidatorTranslation.validator)
+      .map[C[X] Refined P](v => refineV[P](v).toOption)(_.value)
+      .copy(isOptional = if (refinedValidatorTranslation.containsMinSizePositive) false else vSchema.isOptional)
+  }
 
   implicit def codecForRefined[R, V, P, CF <: CodecFormat](implicit
       tm: Codec[R, V, CF],
@@ -61,6 +73,19 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
       ws: WitnessAs[NM, Int]
   ): PrimitiveValidatorForPredicate[T, MinSize[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.minLength[T](ws.snd))
+
+  implicit def validatorForNonEmptyOnIterable[X, T[X] <: Iterable[X]]: PrimitiveValidatorForPredicate[T[X], NonEmpty] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.minSize[X, T](1))
+
+  implicit def validatorForMinSizeOnIterable[X, T[X] <: Iterable[X], NM](implicit
+      ws: WitnessAs[NM, Int]
+  ): PrimitiveValidatorForPredicate[T[X], MinSize[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.minSize[X, T](ws.snd))
+
+  implicit def validatorForMaxSizeOnIterable[X, T[X] <: Iterable[X], NM](implicit
+      ws: WitnessAs[NM, Int]
+  ): PrimitiveValidatorForPredicate[T[X], MaxSize[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.maxSize[X, T](ws.snd))
 
   implicit def validatorForLess[N: Numeric, NM](implicit ws: WitnessAs[NM, N]): PrimitiveValidatorForPredicate[N, Less[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.max(ws.snd, exclusive = true))
@@ -133,6 +158,10 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
 
 trait ValidatorForPredicate[V, P] {
   def validator: Validator[V]
+  lazy val containsMinSizePositive: Boolean = validator.asPrimitiveValidators.exists {
+    case Validator.MinSize(a) => a > 0
+    case _                    => false
+  }
   def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]]
 }
 

@@ -49,7 +49,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.10.8"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.10.9"
 ```
 
 `PrometheusMetrics` encapsulates `PrometheusReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -128,7 +128,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.de
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.10.8"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.10.9"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -155,7 +155,7 @@ val metricsInterceptor = metrics.metricsInterceptor() // add to your server opti
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.10.8"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.10.9"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -222,7 +222,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.10.8"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.10.9"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.

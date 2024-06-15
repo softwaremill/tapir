@@ -9,7 +9,13 @@ import sttp.tapir.EndpointInput.{FixedMethod, PathCapture, Query}
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros, EndpointSecurityInputsMacros}
-import sttp.tapir.server.{PartialServerEndpoint, PartialServerEndpointSync, PartialServerEndpointWithSecurityOutput, PartialServerEndpointWithSecurityOutputSync, ServerEndpoint}
+import sttp.tapir.server.{
+  PartialServerEndpoint,
+  PartialServerEndpointSync,
+  PartialServerEndpointWithSecurityOutput,
+  PartialServerEndpointWithSecurityOutputSync,
+  ServerEndpoint
+}
 import sttp.tapir.typelevel.{ErasureSameAsType, ParamConcat}
 
 import scala.reflect.ClassTag
@@ -446,6 +452,18 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   def serverLogicPure[F[_]](f: I => Either[E, O])(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
     ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).unit)
 
+  /** Like [[serverLogic]], but specialised to the case when the result is always a pure success (`Right`), that is doesn't have any side
+    * effects.
+    */
+  def serverLogicSuccessPure[F[_]](f: I => O)(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
+    ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).unit.map(Right(_)))
+
+  /** Like [[serverLogic]], but specialised to the case when the result is always a pure error (`Left`), that is doesn't have any side
+    * effects.
+    */
+  def serverLogicErrorPure[F[_]](f: I => E)(implicit aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, F] =
+    ServerEndpoint.public(this.asInstanceOf[Endpoint[Unit, I, E, O, R]], implicit m => i => f(i).unit.map(Left(_)))
+
   /** Same as [[serverLogic]], but requires `E` to be a throwable, and converts failed effects of type `E` to endpoint errors. */
   def serverLogicRecoverErrors[F[_]](
       f: I => F[O]
@@ -603,7 +621,11 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   /** Direct-style variant of [[serverLogicRecoverErrors]], using the [[Identity]] "effect". */
   def handleRecoverErrors(
       f: I => O
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], aIsUnit: A =:= Unit): ServerEndpoint.Full[Unit, Unit, I, E, O, R, Identity] =
+  )(implicit
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E],
+      aIsUnit: A =:= Unit
+  ): ServerEndpoint.Full[Unit, Unit, I, E, O, R, Identity] =
     serverLogicRecoverErrors[Identity](f)
 
   /** Direct-style variant of [[serverLogicOption]], using the [[Identity]] "effect". */

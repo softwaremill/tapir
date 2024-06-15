@@ -191,16 +191,16 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   }
 
   "Generated validator for union of constraints" should "use tapir Validator.min and strict equality (enumeration)" in {
-    type IntConstraint = StrictEqual[3] | Greater[5] 
+    type IntConstraint = StrictEqual[3] | Greater[5]
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
       case Validator.Mapped(Validator.Any(List(Validator.Enumeration(List(3), _, _), Validator.Min(5, true))), _) =>
     }
   }
-  
+
   "Generated validator for union of constraints" should "put muiltiple StrictEquality into a single enum and follow with the rest of constrains" in {
-    type IntConstraint = StrictEqual[3] | StrictEqual[4] | StrictEqual[13] | GreaterEqual[23] 
+    type IntConstraint = StrictEqual[3] | StrictEqual[4] | StrictEqual[13] | GreaterEqual[23]
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
@@ -242,7 +242,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
       case Validator.Mapped(Validator.Any(List(Validator.Max(1, true), Validator.Min(3, true))), _) =>
     }
   }
-  
+
   "Generated validator for described union" should "work with strings" in {
     type StrConstraint = (Match["[a-c]*"] | Match["[x-z]*"]) DescribedAs ("Some description")
     type LimitedStr = String :| StrConstraint
@@ -252,14 +252,24 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     identifierCodec.decode("yzx") shouldBe DecodeResult.Value("yzx")
     identifierCodec.decode("aax") shouldBe a[DecodeResult.InvalidValue]
   }
-  
+
   "Generated validator for described single constraint" should "use tapir Validator.max" in {
     type IntConstraint = (Less[1]) DescribedAs ("Should be included in less than 1 or more than 3")
     type LimitedInt = Int :| IntConstraint
 
-    summon[Schema[LimitedInt]].validator should matchPattern {
-      case Validator.Mapped(Validator.Max(1, true), _) =>
+    summon[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Max(1, true), _) =>
     }
+  }
+
+  "Generated schema for NonEmpty and MinSize" should "not be optional" in {
+    assert(implicitly[Schema[List[Int]]].isOptional)
+    assert(!implicitly[Schema[List[Int] :| Not[Empty]]].isOptional)
+    assert(!implicitly[Schema[Set[Int] :| Not[Empty]]].isOptional)
+    assert(!implicitly[Schema[List[Int] :| MinLength[3]]].isOptional)
+    assert(!implicitly[Schema[List[Int] :| (MinLength[3] & MaxLength[6])]].isOptional)
+    assert(implicitly[Schema[List[Int] :| MinLength[0]]].isOptional)
+    assert(implicitly[Schema[List[Int] :| MaxLength[5]]].isOptional)
+    assert(implicitly[Schema[Option[List[Int] :| Not[Empty]]]].isOptional)
   }
 
   "Instances for opaque refined type" should "be correctly derived" in:

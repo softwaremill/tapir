@@ -48,7 +48,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
         initialServerConfig.copy(configuration = customConf.withFallback(initialServerConfig.configuration))
       override lazy val actorSystem: ActorSystem =
         ActorSystem("tapir", defaultExecutionContext = Some(PlayTestServerInterpreter.this.actorSystem.dispatcher))
-      override def router: Router =
+      override lazy val router: Router =
         Router.from(
           routes.reduce((a: Routes, b: Routes) => {
             val handler: PartialFunction[RequestHeader, Handler] = { case request =>

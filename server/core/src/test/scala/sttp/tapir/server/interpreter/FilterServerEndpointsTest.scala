@@ -137,7 +137,7 @@ class FilterServerEndpointsTest extends AnyFlatSpec with Matchers {
   }
 
   implicit class NoLogic[I, E](e: PublicEndpoint[I, E, Unit, Any]) {
-    def noLogic: ServerEndpoint[Any, Future] = e.serverLogicPure[Future](_ => Right(()))
+    def noLogic: ServerEndpoint[Any, Future] = e.serverLogicSuccessPure[Future](_ => ())
   }
 
   def requestWithPath(path: String): ServerRequest = new ServerRequest {
