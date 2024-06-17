@@ -117,6 +117,11 @@ val s: Schema[StringOrInt] = Schema.derivedUnion[StringOrInt]
 If any of the components of the union type is a generic type, any of its validations will be skipped when validating
 the union type, as it's not possible to generate a runtime check for the generic type.
 
+### Derivation for string-based constant union types
+e.g. `type AorB = "a" | "b"`
+
+See [enumerations](enumerations.md#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
+
 ## Configuring derivation
 
 It is possible to configure Magnolia's automatic derivation to use `snake_case`, `kebab-case` or a custom field naming

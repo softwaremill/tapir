@@ -8,8 +8,8 @@ import java.net.InetSocketAddress
 import java.util.concurrent.Executor
 
 case class JdkHttpServer(
-                          endpoints: Vector[ServerEndpoint[Any, Identity]] = Vector.empty,
-                          options: JdkHttpServerOptions = JdkHttpServerOptions.Default
+    endpoints: Vector[ServerEndpoint[Any, Identity]] = Vector.empty,
+    options: JdkHttpServerOptions = JdkHttpServerOptions.Default
 ) {
 
   /** Sets the port to which the server will be bound. */

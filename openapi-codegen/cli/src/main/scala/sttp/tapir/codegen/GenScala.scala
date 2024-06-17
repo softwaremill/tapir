@@ -75,34 +75,55 @@ object GenScala {
       }
 
   val cmd: Command[IO[ExitCode]] = Command("genscala", "Generate Scala classes", helpFlag = true) {
-    (fileOpt, packageNameOpt, destDirOpt, objectNameOpt, targetScala3Opt, headTagForNamesOpt, jsonLibOpt, validateNonDiscriminatedOneOfsOpt, maxSchemasPerFileOpt)
-      .mapN { case (file, packageName, destDir, maybeObjectName, targetScala3, headTagForNames, jsonLib, validateNonDiscriminatedOneOfs, maxSchemasPerFile) =>
-        val objectName = maybeObjectName.getOrElse(DefaultObjectName)
-
-        def generateCode(doc: OpenapiDocument): IO[Unit] = for {
-          contents <- IO.pure(
-            BasicGenerator.generateObjects(
-              doc,
+    (
+      fileOpt,
+      packageNameOpt,
+      destDirOpt,
+      objectNameOpt,
+      targetScala3Opt,
+      headTagForNamesOpt,
+      jsonLibOpt,
+      validateNonDiscriminatedOneOfsOpt,
+      maxSchemasPerFileOpt
+    )
+      .mapN {
+        case (
+              file,
               packageName,
-              objectName,
+              destDir,
+              maybeObjectName,
               targetScala3,
               headTagForNames,
-              jsonLib.getOrElse("circe"),
+              jsonLib,
               validateNonDiscriminatedOneOfs,
-              maxSchemasPerFile.getOrElse(400)
-            )
-          )
-          destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }
-          _ <- IO.println(s"Generated endpoints written to: ${destFiles.mkString(", ")}")
-        } yield ()
+              maxSchemasPerFile
+            ) =>
+          val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
-        for {
-          parsed <- readFile(file).map(YamlParser.parseFile)
-          exitCode <- parsed match {
-            case Left(err)  => IO.println(s"Invalid YAML file: ${err.getMessage}").as(ExitCode.Error)
-            case Right(doc) => generateCode(doc).as(ExitCode.Success)
-          }
-        } yield exitCode
+          def generateCode(doc: OpenapiDocument): IO[Unit] = for {
+            contents <- IO.pure(
+              BasicGenerator.generateObjects(
+                doc,
+                packageName,
+                objectName,
+                targetScala3,
+                headTagForNames,
+                jsonLib.getOrElse("circe"),
+                validateNonDiscriminatedOneOfs,
+                maxSchemasPerFile.getOrElse(400)
+              )
+            )
+            destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }
+            _ <- IO.println(s"Generated endpoints written to: ${destFiles.mkString(", ")}")
+          } yield ()
+
+          for {
+            parsed <- readFile(file).map(YamlParser.parseFile)
+            exitCode <- parsed match {
+              case Left(err)  => IO.println(s"Invalid YAML file: ${err.getMessage}").as(ExitCode.Error)
+              case Right(doc) => generateCode(doc).as(ExitCode.Success)
+            }
+          } yield exitCode
       }
   }
 

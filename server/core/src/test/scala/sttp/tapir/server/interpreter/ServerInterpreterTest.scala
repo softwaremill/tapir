@@ -42,8 +42,8 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     // added to the endpoint interceptor stack in the correct place
     val interceptor2 = new RequestInterceptor[Identity] {
       override def apply[R, B](
-                                responder: Responder[Identity, B],
-                                requestHandler: EndpointInterceptor[Identity] => RequestHandler[Identity, R, B]
+          responder: Responder[Identity, B],
+          requestHandler: EndpointInterceptor[Identity] => RequestHandler[Identity, R, B]
       ): RequestHandler[Identity, R, B] = RequestHandler.from { (request, endpoints, monad) =>
         callTrail.append("2 request")
         requestHandler(new AddToTrailInterceptor(callTrail.append(_: String), "2")).apply(request, endpoints)(monad)
@@ -141,8 +141,8 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
         }
 
         override def onSecurityFailure[A](ctx: SecurityFailureContext[Identity, A])(implicit
-                                                                                    monad: MonadError[Identity],
-                                                                                    bodyListener: BodyListener[Identity, B]
+            monad: MonadError[Identity],
+            bodyListener: BodyListener[Identity, B]
         ): Identity[ServerResponse[B]] = {
           addCallTrail(s"$prefix security failure")
           endpointHandler.onSecurityFailure(ctx)(idMonad, bodyListener)

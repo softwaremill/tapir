@@ -15,6 +15,16 @@ class ValidatorScala3EnumTest extends AnyFlatSpec with Matchers {
     """)
   }
 
+  it should "derive a validator for a string-based union type" in {
+    // given
+    val validator = Validator.derivedStringBasedUnionEnumeration["Apple" | "Banana"].asInstanceOf[Validator.Primitive[String]]
+
+    // then
+    validator.doValidate("Apple") shouldBe ValidationResult.Valid
+    validator.doValidate("Banana") shouldBe ValidationResult.Valid
+    validator.doValidate("Orange") shouldBe ValidationResult.Invalid()
+  }
+
 }
 
 enum ColorEnum {

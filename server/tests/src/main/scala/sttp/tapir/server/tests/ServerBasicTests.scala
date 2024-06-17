@@ -236,7 +236,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       "should not fold multiple Set-Cookie headers"
     ) { (backend, baseUri) =>
       basicRequest.response(asStringAlways).get(uri"$baseUri/cookies-test").send(backend).map { r =>
-        r.headers should contain allOf(
+        r.headers should contain allOf (
           Header.setCookie(CookieWithMeta.unsafeApply("name1", "value1", path = Some("/path1"))),
           Header.setCookie(CookieWithMeta.unsafeApply("name2", "value2", path = Some("/path2")))
         )

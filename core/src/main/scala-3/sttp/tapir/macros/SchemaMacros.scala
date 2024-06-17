@@ -164,6 +164,13 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     */
   inline def derivedEnumeration[T]: CreateDerivedEnumerationSchema[T] =
     new CreateDerivedEnumerationSchema(Validator.derivedEnumeration[T], SchemaAnnotations.derived[T])
+
+  inline given derivedStringBasedUnionEnumeration[S](using IsUnionOf[String, S]): Schema[S] =
+    lazy val validator = Validator.derivedStringBasedUnionEnumeration[S]
+    Schema
+      .string[S]
+      .name(SName(validator.possibleValues.toList.mkString("_or_")))
+      .validate(validator)
 }
 
 private[tapir] object SchemaCompanionMacros {

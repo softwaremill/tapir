@@ -506,7 +506,8 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     libraryDependencies ++= Seq(
       // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
       "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.3" % "test" exclude (
-        "com.fasterxml.jackson.core", "jackson-databind"
+        "com.fasterxml.jackson.core",
+        "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.3" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.1",

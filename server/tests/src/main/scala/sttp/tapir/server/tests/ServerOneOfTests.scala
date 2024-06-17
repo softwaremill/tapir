@@ -170,6 +170,5 @@ class ServerOneOfTests[F[_], OPTIONS, ROUTE](
         r.code shouldBe StatusCode.BadRequest
       }
     }
-
   )
 }

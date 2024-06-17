@@ -9,9 +9,9 @@ import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 case class NettySyncServerOptions(
-                                   interceptors: List[Interceptor[Identity]],
-                                   createFile: ServerRequest => TapirFile,
-                                   deleteFile: TapirFile => Unit
+    interceptors: List[Interceptor[Identity]],
+    createFile: ServerRequest => TapirFile,
+    deleteFile: TapirFile => Unit
 ):
   def prependInterceptor(i: Interceptor[Identity]): NettySyncServerOptions = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[Identity]): NettySyncServerOptions = copy(interceptors = interceptors :+ i)

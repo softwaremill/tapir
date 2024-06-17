@@ -10,7 +10,7 @@ trait UnionTypeMirror[A] {
   // Number of elements in the union
   def size: Int
 }
- 
+
 // Building a class is more convenient to instantiate using macros
 class UnionTypeMirrorImpl[A, T <: NonEmptyTuple](val size: Int) extends UnionTypeMirror[A] {
 

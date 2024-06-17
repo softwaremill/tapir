@@ -55,9 +55,9 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     useInScope(NettySyncServer(options, customizedConfig).start(routes.toList))(_.stop())
 
   def scopedServerWithInterceptorsStop(
-                                        endpoint: ServerEndpoint[OxStreams with WebSockets, Identity],
-                                        interceptors: Interceptors = identity,
-                                        gracefulShutdownTimeout: Option[FiniteDuration] = None
+      endpoint: ServerEndpoint[OxStreams with WebSockets, Identity],
+      interceptors: Interceptors = identity,
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(using Ox): NettySyncServerBinding =
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
@@ -66,8 +66,8 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     useInScope(NettySyncServer(customizedConfig).addEndpoint(endpoint, options).start())(_.stop())
 
   def scopedServerWithStop(
-                            endpoints: NonEmptyList[ServerEndpoint[OxStreams with WebSockets, Identity]],
-                            gracefulShutdownTimeout: Option[FiniteDuration] = None
+      endpoints: NonEmptyList[ServerEndpoint[OxStreams with WebSockets, Identity]],
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(using Ox): NettySyncServerBinding =
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
