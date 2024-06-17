@@ -118,4 +118,26 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     // then
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft-04/schema#","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"MyChild","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
   }
+
+  it should "Generate correct names for Eithers with parameterized types" in {
+    case class SomeValueString[A](value: String, v2: A)
+    final case class SomeValueInt(value: Int)
+
+    final case class Node[A](values: List[A])
+
+    TapirSchemaToJsonSchema(implicitly[Schema[Either[Int, Int]]], true).title shouldBe None
+    TapirSchemaToJsonSchema(implicitly[Schema[Either[SomeValueInt, Int]]], true).title shouldBe None
+    TapirSchemaToJsonSchema(implicitly[Schema[Either[SomeValueInt, SomeValueInt]]], true).title shouldBe Some(
+      "Either_SomeValueInt_SomeValueInt"
+    )
+    TapirSchemaToJsonSchema(implicitly[Schema[Either[SomeValueInt, Node[SomeValueString[Boolean]]]]], true).title shouldBe Some(
+      "Either_SomeValueInt_Node_SomeValueString_Boolean"
+    )
+    TapirSchemaToJsonSchema(implicitly[Schema[Either[SomeValueInt, Node[String]]]], true).title shouldBe Some(
+      "Either_SomeValueInt_Node_String"
+    )
+    TapirSchemaToJsonSchema(implicitly[Schema[Either[Node[Boolean], SomeValueInt]]], true).title shouldBe Some(
+     "Either_Node_Boolean_SomeValueInt" 
+    )
+  }
 }
