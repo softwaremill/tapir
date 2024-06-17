@@ -98,10 +98,10 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
       witness: ValueOf[NM]
   ): PrimitiveValidatorForPredicate[C[X], MinLength[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.minSize[X, C](witness.value))
-  
+
   inline given validatorForNonEmptyIterable[X, C[X] <: Iterable[X], NM <: Int]: PrimitiveValidatorForPredicate[C[X], Not[Empty]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.minSize[X, C](1))
-  
+
   inline given validatorForMaxLengthOnIterable[X, C[X] <: Iterable[X], NM <: Int](using
       witness: ValueOf[NM]
   ): PrimitiveValidatorForPredicate[C[X], MaxLength[NM]] =
@@ -134,7 +134,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
       case _: (head *: tail) =>
         val headValidator: ValidatorForPredicate[N, ?] = summonFrom {
           case pv: PrimitiveValidatorForPredicate[N, head] => pv
-          case _ => summonInline[ValidatorForPredicate[N, head]]
+          case _                                           => summonInline[ValidatorForPredicate[N, head]]
         }
         headValidator.asInstanceOf[ValidatorForPredicate[N, Any]] :: summonValidators[N, tail]
   }

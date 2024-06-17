@@ -89,7 +89,7 @@ private[sync] class OxProcessor[A, B](
           pipelineFork.cancel()
         ) match {
           case Left(NonFatal(e)) => logger.error("Error when canceling pipeline fork", e)
-          case _       => ()
+          case _                 => ()
         }
       } { e => logger.error("Error when canceling pipeline fork", e) }.discard
     } catch case NonFatal(e) => logger.error("Error when waiting for pipeline fork to start", e)

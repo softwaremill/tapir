@@ -161,8 +161,8 @@ class TapirCodecRefinedTestScala3 extends AnyFlatSpec with Matchers with TapirCo
       case Validator.Mapped(Validator.Any(List(Validator.Min(3, true), Validator.Max(-3, true))), _) =>
     }
   }
-  
-  "Generated schema for NonEmpty and MinSize" should "not be optional" in {    
+
+  "Generated schema for NonEmpty and MinSize" should "not be optional" in {
     assert(implicitly[Schema[List[Int]]].isOptional)
     assert(!implicitly[Schema[List[Int] Refined NonEmpty]].isOptional)
     assert(!implicitly[Schema[Set[Int] Refined NonEmpty]].isOptional)

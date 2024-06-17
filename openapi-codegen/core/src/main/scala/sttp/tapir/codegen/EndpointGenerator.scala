@@ -102,7 +102,7 @@ class EndpointGenerator {
           m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
           .collect { case (contentType, schema) if contentType == "application/json" => schema }
           .collect {
-            case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
+            case ref: OpenapiSchemaRef if ref.isSchema                        => ref.stripped
             case OpenapiSchemaArray(ref: OpenapiSchemaRef, _) if ref.isSchema => ref.stripped
             case OpenapiSchemaArray(OpenapiSchemaAny(_), _) =>
               bail("Cannot generate schema for 'Any' with jsoniter library")
