@@ -5,6 +5,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
 import sttp.tapir.TestUtil.field
+import javax.swing.plaf.ListUI
 
 class SchemaTest extends AnyFlatSpec with Matchers {
   it should "modify basic schema" in {
@@ -201,6 +202,30 @@ class SchemaTest extends AnyFlatSpec with Matchers {
 
   it should "propagate format for optional schemas" in {
     implicitly[Schema[Option[Double]]].format shouldBe Some("double")
+  }
+
+  case class SomeValueString[A](value: String, v2: A)
+  final case class SomeValueInt(value: Int)
+  final case class Node[A](values: List[A])
+  it should "generate correct names for Eithers with parameterized types" in {
+
+    import sttp.tapir.generic.auto._
+
+    implicitly[Schema[Either[Int, Int]]].name shouldBe None    
+    implicitly[Schema[Either[SomeValueInt, Int]]].name shouldBe None
+    implicitly[Schema[Either[SomeValueInt, SomeValueInt]]].name shouldBe Some(
+      SName("Either", List("sttp.tapir.SchemaTest.SomeValueInt", "sttp.tapir.SchemaTest.SomeValueInt"))
+    )
+    implicitly[Schema[Either[SomeValueInt, Node[SomeValueString[Boolean]]]]].name shouldBe Some(
+      SName("Either", List("sttp.tapir.SchemaTest.SomeValueInt", "sttp.tapir.SchemaTest.Node", "sttp.tapir.SchemaTest.SomeValueString", "scala.Boolean"))
+    )
+    implicitly[Schema[Either[SomeValueInt, Node[String]]]].name shouldBe Some(
+      SName("Either", List("sttp.tapir.SchemaTest.SomeValueInt", "sttp.tapir.SchemaTest.Node", "java.lang.String"))
+    )
+    implicitly[Schema[Either[Node[Boolean], SomeValueInt]]].name shouldBe Some(
+      SName("Either", List("sttp.tapir.SchemaTest.Node", "scala.Boolean", "sttp.tapir.SchemaTest.SomeValueInt"))
+    )
+
   }
 
 }
