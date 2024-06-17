@@ -366,17 +366,16 @@ lazy val rootProject = (project in file("."))
 // start a test server before running tests of a client interpreter; this is required both for JS tests run inside a
 // nodejs/browser environment, as well as for JVM tests where akka-http isn't available (e.g. dotty).
 val clientTestServerSettings = Seq(
-  Test / test := {}
-  // (Test / test)
-  //   .dependsOn(clientTestServer2_13 / startClientTestServer)
-  //   .value,
-  // Test / testOnly := (Test / testOnly)
-  //   .dependsOn(clientTestServer2_13 / startClientTestServer)
-  //   .evaluated,
-  // Test / testOptions += Tests.Setup(() => {
-  //   val port = (clientTestServer2_13 / clientTestServerPort).value
-  //   PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
-  // })
+  (Test / test)
+    .dependsOn(clientTestServer2_13 / startClientTestServer)
+    .value,
+  Test / testOnly := (Test / testOnly)
+    .dependsOn(clientTestServer2_13 / startClientTestServer)
+    .evaluated,
+  Test / testOptions += Tests.Setup(() => {
+    val port = (clientTestServer2_13 / clientTestServerPort).value
+    PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
+  })
 )
 
 lazy val clientTestServer = (projectMatrix in file("client/testserver"))
@@ -1255,8 +1254,8 @@ lazy val armeriaServerZio: ProjectMatrix =
       name := "tapir-armeria-server-zio",
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
-      ),
-    Test/test := {}
+      )
+      // Test / test := {}
     )
     .jvmPlatform(scalaVersions = scala2And3Versions)
     .dependsOn(armeriaServer % CompileAndTest, zio, serverTests % Test)
@@ -1289,8 +1288,8 @@ lazy val http4sServerZio: ProjectMatrix = (projectMatrix in file("server/http4s-
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
-    ),
-    Test / test := {}
+    )
+    // Test / test := {}
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
@@ -1436,7 +1435,7 @@ lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
     ),
-    Test / test := {},
+    Test / test := {}
   )
 
 def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
@@ -1493,7 +1492,7 @@ lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-se
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     ),
-    Test/test := {}
+    Test / test := {}
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, zio, serverTests % Test)
