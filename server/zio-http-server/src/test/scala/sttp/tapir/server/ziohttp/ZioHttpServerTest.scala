@@ -141,6 +141,28 @@ class ZioHttpServerTest extends TestSuite {
 
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
+          Test("zio http middlewares only run once, with two endpoints") {
+            val test: UIO[Assertion] = for {
+              ref <- Ref.make("")
+              ep1 = endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ref.updateAndGet(_ + "1"))
+              ep2 = endpoint.get.in("p2").out(stringBody).zServerLogic[Any](_ => ref.updateAndGet(_ + "2"))
+              route = ZioHttpInterpreter().toHttp(ep1) ++ ZioHttpInterpreter().toHttp(ep2)
+              app = route @@ Middleware.allowZIO((_: Request) => ref.update(_ + "M").as(true))
+              _ <- app
+                .runZIO(Request.get(url = URL(Path.empty / "p1")))
+                .flatMap(response => response.body.asString)
+                .map(_ shouldBe "M1")
+                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+              _ <- ref.set("")
+              result <- app
+                .runZIO(Request.get(url = URL(Path.empty / "p2")))
+                .flatMap(response => response.body.asString)
+                .map(_ shouldBe "M2")
+                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+            } yield result
+
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
           // https://github.com/softwaremill/tapir/issues/2849
           Test("Streaming works through the stub backend") {
             // given
