@@ -41,7 +41,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               methodType = "get",
               parameters = Seq(
                 Resolved(OpenapiParameter("asd-id", "path", Some(true), None, OpenapiSchemaString(false))),
-                Resolved(OpenapiParameter("fgh-id", "query", Some(false), None, OpenapiSchemaString(false)))),
+                Resolved(OpenapiParameter("fgh-id", "query", Some(false), None, OpenapiSchemaString(false))),
                 Resolved(OpenapiParameter("jkl-id", "header", Some(false), None, OpenapiSchemaString(false)))),
               responses = Seq(
                 OpenapiResponse(
