@@ -84,16 +84,16 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
   inline given validatorForMatchesRegexpString[S <: String](using witness: ValueOf[S]): PrimitiveValidatorForPredicate[String, Match[S]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern[String](witness.value))
 
-  inline given validatorForMaxSizeOnString[T <: String, NM <: Int](using
+  inline given validatorForMaxLengthOnString[T <: String, NM <: Int](using
       witness: ValueOf[NM]
   ): PrimitiveValidatorForPredicate[T, MaxLength[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.maxLength[T](witness.value))
-
-  inline given validatorForMinSizeOnString[T <: String, NM <: Int](using
+ 
+  inline given validatorForMinLengthOnString[T <: String, NM <: Int](using
       witness: ValueOf[NM]
   ): PrimitiveValidatorForPredicate[T, MinLength[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.minLength[T](witness.value))
-
+  
   inline given validatorForMinLengthOnIterable[X, C[X] <: Iterable[X], NM <: Int](using
       witness: ValueOf[NM]
   ): PrimitiveValidatorForPredicate[C[X], MinLength[NM]] =
@@ -133,8 +133,8 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
       case _: EmptyTuple => Nil
       case _: (head *: tail) =>
         val headValidator: ValidatorForPredicate[N, ?] = summonFrom {
-          case pv: PrimitiveValidatorForPredicate[N, head] => pv
-          case _                                           => summonInline[ValidatorForPredicate[N, head]]
+          case pv: PrimitiveValidatorForPredicate[N, `head`] => pv
+          case _                                             => summonInline[ValidatorForPredicate[N, head]]
         }
         headValidator.asInstanceOf[ValidatorForPredicate[N, Any]] :: summonValidators[N, tail]
   }
@@ -234,14 +234,14 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
       singleton: ValueOf[Num]
   ): ValidatorForPredicate[N, P] =
     validatorForLessEqual[N, Num].asInstanceOf[ValidatorForPredicate[N, P]]
+
   inline given validatorForDescribedPrimitive[N, P](using
       id: IsDescription[P],
       notUnion: NotGiven[UnionTypeMirror[id.Predicate]],
       notIntersection: NotGiven[IntersectionTypeMirror[id.Predicate]],
-      inline validator: ValidatorForPredicate[N, id.Predicate]
-  ): ValidatorForPredicate[N, P] =
-    validator.asInstanceOf[ValidatorForPredicate[N, P]]
-
+      inline validator: PrimitiveValidatorForPredicate[N, id.Predicate]
+  ): PrimitiveValidatorForPredicate[N, P] =
+    validator.asInstanceOf[PrimitiveValidatorForPredicate[N, P]]
 }
 
 private[iron] trait ValidatorForPredicate[Value, Predicate] {

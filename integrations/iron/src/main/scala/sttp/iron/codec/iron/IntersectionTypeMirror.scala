@@ -33,7 +33,7 @@ object IntersectionTypeMirror {
     def rec(tpe: TypeRepr): TypeRepr = {
       tpe.dealias match
         case AndType(left, right) => concatTypes(rec(left), rec(right))
-        case t                    => prependTypes(t, TypeRepr.of[EmptyTuple])
+        case t                    => prependTypes(tpe, TypeRepr.of[EmptyTuple])
     }
     val tupled =
       TypeRepr.of[A].dealias match {

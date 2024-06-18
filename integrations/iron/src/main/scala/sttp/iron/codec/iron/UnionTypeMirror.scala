@@ -39,7 +39,7 @@ object UnionTypeMirror {
           val (c1, rec1) = rec(left)
           val (c2, rec2) = rec(right)
           (c1 + c2, concatTypes(rec1, rec2))
-        case t => (1, prependTypes(t, TypeRepr.of[EmptyTuple]))
+        case t => (1, prependTypes(tpe, TypeRepr.of[EmptyTuple]))
       }
     val (size, tupled) =
       TypeRepr.of[A].dealias match {

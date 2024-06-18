@@ -76,6 +76,49 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     }
   }
 
+  "Generated schema for described Int with extra constrains" should "apply given constrains" in {
+    val schema = implicitly[Schema[Int :| (Positive DescribedAs "Age should be positive")]]
+
+    schema.validator should matchPattern {
+      case Validator.Mapped(Validator.Min(0, true), _) =>
+    }
+  }
+  
+  "Generated schema for described String with extra constrains" should "apply given constrains" in {
+    type Constraint      = (Not[Empty] & Alphanumeric) DescribedAs "name should not be empty and only made of alphanumeric characters"
+    type VariableString = String :| Constraint
+    val schema = implicitly[Schema[VariableString]]
+
+    schema.validator should matchPattern {
+      case Validator.Mapped(Validator.All(List(Validator.MinLength(1, false), Validator.Custom(_, _))), _) =>
+    }
+    val codec = implicitly[PlainCodec[VariableString]]
+    codec.decode("alpha1") shouldBe a[DecodeResult.Value[_]]
+    codec.decode("bad!") shouldBe a[DecodeResult.InvalidValue]
+    codec.decode("") shouldBe a[DecodeResult.InvalidValue]
+    codec.decode("954") shouldBe a[DecodeResult.Value[_]]
+    codec.decode("spaces not allowed") shouldBe a[DecodeResult.InvalidValue]
+  }
+  
+  "Generated schema for non empty string" should "use a MinLength validator" in {
+    type VariableString = String :| Not[Empty]
+    val schema = implicitly[Schema[VariableString]]
+
+    schema.validator should matchPattern {
+      case Validator.Mapped(Validator.MinLength(1, false), _) =>
+    }
+  }
+
+  "Generated schema for union and intersection on string" should "use a list of tapir validations" in {
+    type VariableString = String :| (MinLength[33] & MaxLength[83])
+    val schema = implicitly[Schema[VariableString]]
+
+    schema.validator should matchPattern {
+      case Validator.Mapped(Validator.All(List(Validator.MinLength(33, false), Validator.MaxLength(83, false))), _) =>
+    }
+  }
+  
+
   "Generated codec for Less" should "use tapir Validator.max" in {
     type IntConstraint = Less[3]
     type LimitedInt = Int :| IntConstraint
