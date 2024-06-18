@@ -10,9 +10,10 @@ specific response. These errors are most often caused by invalid input from the 
 of the HTTP request). For such requests, we should return responses with error codes between 400 and 499, which are 
 designated in the HTTP specification as "client errors".
 
-On the other hand, there are "unexpected errors", that we didn't foresee. When they occur, they signal a bug in
-the server's logic. When this happens, we should respond with a status code between 500 and 599, and log the error
-for the developer to inspect. These are "server errors".
+On the other hand, there are "unexpected errors", that we didn't foresee. When they occur, they signal some kind of 
+problem with the server: a bug in the server's logic, hitting a limit of requests in progress, etc. When this 
+happens, we should respond with a status code between 500 and 599, and log the error for the developer to inspect. These 
+are "server errors".
 
 Which error codes exactly are returned, and what's the content of the response body that accompanies them is part of
 each endpoint's description and Tapir's configuration. 
