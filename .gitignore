@@ -21,6 +21,7 @@ metals.sbt
 template.yaml
 aws-lambda-cats-effect-template.yaml
 aws-lambda-zio-template.yaml
+.scala-build
 
 .bsp
 .idea*
