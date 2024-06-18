@@ -42,6 +42,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(
                 Resolved(OpenapiParameter("asd-id", "path", Some(true), None, OpenapiSchemaString(false))),
                 Resolved(OpenapiParameter("fgh-id", "query", Some(false), None, OpenapiSchemaString(false)))),
+                Resolved(OpenapiParameter("jkl-id", "header", Some(false), None, OpenapiSchemaString(false)))),
               responses = Seq(
                 OpenapiResponse(
                   "200",
@@ -63,6 +64,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
     generatedCode should include(""".in(query[Option[String]]("fgh-id"))""")
+    generatedCode should include(""".in(header[Option[String]]("jkl-id"))""")
     generatedCode shouldCompile ()
   }
 

@@ -182,8 +182,7 @@ class EndpointGenerator {
         param.schema match {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            val required = (param.in != "query") || param.required.getOrElse(true)
-            val req = if (required) t else s"Option[$t]"
+            val req = if (param.required.getOrElse(true)) t else s"Option[$t]"
             val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
             s""".in(${param.in}[$req]("${param.name}")$desc)"""
           case x => bail(s"Can't create non-simple params to input - found $x")
