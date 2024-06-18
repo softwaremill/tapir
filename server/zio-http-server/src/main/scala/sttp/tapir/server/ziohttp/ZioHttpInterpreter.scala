@@ -27,37 +27,60 @@ trait ZioHttpInterpreter[R] {
     val zioHttpResponseBody = new ZioHttpToResponseBody
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes)
 
-    Routes.singleton {
-      Handler.fromFunctionZIO[(Path, Request)] { case (_: Path, request: Request) =>
+    def handleRequest(req: Request, filteredEndpoints: List[ZServerEndpoint[R & R2, ZioStreams with WebSockets]]) =
+      Handler.fromZIO {
         val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], ZioResponseBody, ZioStreams](
-          FilterServerEndpoints(widenedSes),
+          _ => filteredEndpoints,
           zioHttpRequestBody,
           zioHttpResponseBody,
           interceptors,
           zioHttpServerOptions.deleteFile
         )
+        val serverRequest = ZioHttpServerRequest(req)
 
-        if (request.url.encode.trim.isEmpty) {
-          ZIO.logError("Received an apparently empty request URI, not handling: " + request) *>
-            ZIO.fail(Response.internalServerError("Empty request URI"))
-        } else {
-          val serverRequest = ZioHttpServerRequest(request)
-          interpreter
-            .apply(serverRequest)
-            .foldCauseZIO(
-              cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
-              {
-                case RequestResult.Response(resp) =>
-                  resp.body match {
-                    case None              => handleHttpResponse(resp, None)
-                    case Some(Right(body)) => handleHttpResponse(resp, Some(body))
-                    case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
-                  }
+        interpreter
+          .apply(serverRequest)
+          .foldCauseZIO(
+            cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
+            {
+              case RequestResult.Response(resp) =>
+                resp.body match {
+                  case None              => handleHttpResponse(resp, None)
+                  case Some(Right(body)) => handleHttpResponse(resp, Some(body))
+                  case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
+                }
 
-                case RequestResult.Failure(_) =>
-                  ZIO.fail(Response.notFound)
-              }
-            )
+              case RequestResult.Failure(_) =>
+                ZIO.logError(
+                  s"The path: ${req.path} matches the shape of some endpoint, but none of the " +
+                    s"endpoints decoded the request successfully, and the decode failure handler didn't provide a " +
+                    s"response. ZIO Http requires that if the path shape matches some endpoints, the request " +
+                    s"should be handled by tapir."
+                ) *> ZIO.fail(Response.internalServerError)
+            }
+          )
+      }
+
+    val serverEndpointsFilter = FilterServerEndpoints[ZioStreams with WebSockets, RIO[R & R2, *]](widenedSes)
+    val singleEndpoint = widenedSes.size == 1
+
+    Routes.singleton {
+      Handler.fromFunctionHandler { case (_: Path, request: Request) =>
+        // pre-filtering the endpoints by shape to determine, if this request should be handled by tapir
+        val filteredEndpoints = serverEndpointsFilter.apply(ZioHttpServerRequest(request))
+        val filteredEndpoints2 = if (singleEndpoint) {
+          // If we are interpreting a single endpoint, we verify that the method matches as well; in case it doesn't,
+          // we refuse to handle the request, allowing other ZIO Http routes to handle it. Otherwise even if the method
+          // doesn't match, this will be handled by the RejectInterceptor
+          filteredEndpoints.filter { e =>
+            val m = e.endpoint.method
+            m.isEmpty || m.contains(sttp.model.Method(request.method.toString()))
+          }
+        } else filteredEndpoints
+
+        filteredEndpoints2 match {
+          case Nil => Handler.fail(Response.notFound)
+          case _   => handleRequest(request, filteredEndpoints2)
         }
       }
     }
