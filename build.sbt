@@ -1254,8 +1254,8 @@ lazy val armeriaServerZio: ProjectMatrix =
       name := "tapir-armeria-server-zio",
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
-      )
-      // Test / test := {}
+      ),
+      Test / test := {}
     )
     .jvmPlatform(scalaVersions = scala2And3Versions)
     .dependsOn(armeriaServer % CompileAndTest, zio, serverTests % Test)
@@ -1288,8 +1288,8 @@ lazy val http4sServerZio: ProjectMatrix = (projectMatrix in file("server/http4s-
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
-    ),
-    Test / test := {}
+    )
+    // Test / test := {}
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
