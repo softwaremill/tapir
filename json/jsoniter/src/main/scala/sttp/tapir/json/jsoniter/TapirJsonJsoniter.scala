@@ -2,7 +2,7 @@ package sttp.tapir.json.jsoniter
 
 import com.github.plokhotnyuk.jsoniter_scala.core._
 import sttp.tapir.Codec.JsonCodec
-import sttp.tapir.DecodeResult.Error.JsonDecodeException
+import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir._
 
@@ -21,6 +21,12 @@ trait TapirJsonJsoniter {
   implicit def jsoniterCodec[T: JsonValueCodec: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json { s =>
       Try(readFromString[T](s)) match {
+        case Failure(error: JsonReaderException) =>
+          val errMsg = Option(error.getMessage).flatMap { s => 
+            val offsetIndex = s.indexOf(", offset: 0x")
+            if (offsetIndex == -1) None else Some(s.substring(0, offsetIndex).trim)
+          }
+          Error(s, JsonDecodeException(errors = errMsg.toList.map(e => JsonError(e, Nil)), error))
         case Failure(error) => Error(s, JsonDecodeException(errors = List.empty, error))
         case Success(v)     => Value(v)
       }

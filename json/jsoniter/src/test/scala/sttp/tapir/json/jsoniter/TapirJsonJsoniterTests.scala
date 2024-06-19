@@ -5,7 +5,7 @@ import com.github.plokhotnyuk.jsoniter_scala.macros._
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult
-import sttp.tapir.DecodeResult.Error.JsonDecodeException
+import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.generic.auto._
 
 object TapirJsoniterCodec extends TapirJsonJsoniter
@@ -26,7 +26,7 @@ class TapirJsonJsoniterTests extends AnyFlatSpecLike with Matchers {
     failure.error shouldBe a[JsonDecodeException]
 
     val error = failure.error.asInstanceOf[JsonDecodeException]
-    error.errors shouldEqual List.empty
+    error.errors shouldEqual List(JsonError("missing required field \"name\"", Nil))
     error.underlying shouldBe a[JsonReaderException]
   }
 
