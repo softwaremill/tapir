@@ -9,7 +9,7 @@ import sttp.tapir._
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonJsoniter {
-  def readerConfig = ReaderConfig.withAppendHexDumpToParseException(false)
+  lazy val readerConfig = ReaderConfig.withAppendHexDumpToParseException(false)
   def jsonBody[T: JsonValueCodec: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(jsoniterCodec[T])
 
   def jsonBodyWithRaw[T: JsonValueCodec: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(

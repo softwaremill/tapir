@@ -10,7 +10,7 @@ import sttp.tapir.generic.auto._
 
 object TapirJsoniterCodec extends TapirJsonJsoniter
 object TapirJsoniterCustomCodec extends TapirJsonJsoniter {
-  override def readerConfig: ReaderConfig = ReaderConfig.withAppendHexDumpToParseException(true)
+  override lazy val readerConfig: ReaderConfig = ReaderConfig.withAppendHexDumpToParseException(true)
 }
 
 class TapirJsonJsoniterTests extends AnyFlatSpecLike with Matchers {
