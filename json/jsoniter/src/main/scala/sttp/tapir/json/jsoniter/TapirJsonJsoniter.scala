@@ -9,6 +9,7 @@ import sttp.tapir._
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonJsoniter {
+  def readerConfig = ReaderConfig.withAppendHexDumpToParseException(false)
   def jsonBody[T: JsonValueCodec: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(jsoniterCodec[T])
 
   def jsonBodyWithRaw[T: JsonValueCodec: Schema]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
@@ -20,12 +21,9 @@ trait TapirJsonJsoniter {
 
   implicit def jsoniterCodec[T: JsonValueCodec: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json { s =>
-      Try(readFromString[T](s)) match {
+      Try(readFromString[T](s, readerConfig)) match {
         case Failure(error: JsonReaderException) =>
-          val errMsg = Option(error.getMessage).flatMap { s => 
-            val offsetIndex = s.indexOf(", offset: 0x")
-            if (offsetIndex == -1) None else Some(s.substring(0, offsetIndex).trim)
-          }
+          val errMsg = Option(error.getMessage)
           Error(s, JsonDecodeException(errors = errMsg.toList.map(e => JsonError(e, Nil)), error))
         case Failure(error) => Error(s, JsonDecodeException(errors = List.empty, error))
         case Success(v)     => Value(v)
