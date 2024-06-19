@@ -19,7 +19,7 @@ object EnumGenerator {
         if (queryParamRefs contains name) {
           def helperImpls =
             s"""  given enumCodecSupport${name.capitalize}: QueryParamSupport[$name] =
-               |    queryCodecSupport[$name](enumMap[$name])""".stripMargin
+               |    queryCodecSupport[$name]""".stripMargin
           s"""
              |object $name {
              |$helperImpls

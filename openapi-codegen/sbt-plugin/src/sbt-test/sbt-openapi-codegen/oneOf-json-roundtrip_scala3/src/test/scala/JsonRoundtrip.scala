@@ -169,7 +169,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       Await.result(
         sttp.client3.basicRequest
           .post(
-            uri"http://test.com/inline/enum/test?query-enum=bar1&query-opt-enum=bar2&query-seq-enum=baz1,baz2&query-opt-seq-enum=baz1,baz2"
+            uri"http://test.com/inline/enum/test?query-enum=bar1&query-opt-enum=bar2&query-seq-enum=baz1&query-seq-enum=baz2&query-opt-seq-enum=baz1,baz2"
           )
           .body(reqJsonBody)
           .send(stub)
@@ -194,7 +194,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       reqJsonBody shouldEqual s"""{"id":"$id","inlineEnum":"foo3"}"""
       Await.result(
         sttp.client3.basicRequest
-          .post(uri"http://test.com/inline/enum/test?query-enum=bar1&query-seq-enum=baz1,baz2")
+          .post(uri"http://test.com/inline/enum/test?query-enum=bar1&query-seq-enum=baz1&query-seq-enum=baz2")
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>

@@ -325,7 +325,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |  EnumQueryParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
       |object Test {
       |  given enumCodecSupportTest: QueryParamSupport[Test] =
-      |    queryCodecSupport[Test](enumMap[Test])
+      |    queryCodecSupport[Test]
       |}
       |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror {
       |  case enum1, enum2

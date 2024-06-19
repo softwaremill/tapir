@@ -12,6 +12,41 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
 
+
+  case class CommaSeparatedValues[T](values: List[T])
+  case class ExplodedValues[T](values: List[T])
+  trait QueryParamSupport[T] {
+    def decode(s: String): sttp.tapir.DecodeResult[T]
+    def encode(t: T): String
+  }
+  implicit def makeQueryCodecFromSupport[T](implicit support: QueryParamSupport[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(support.decode)(support.encode)
+  }
+  implicit def makeQueryOptCodecFromSupport[T](implicit support: QueryParamSupport[T]): sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(maybeV => DecodeResult.sequence(maybeV.toSeq.map(support.decode)).map(_.headOption))(_.map(support.encode))
+  }
+  implicit def makeUnexplodedQuerySeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], CommaSeparatedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(values => DecodeResult.sequence(values.split(',').map(e => support.rawDecode(List(e)))).map(s => CommaSeparatedValues(s.toList)))(_.values.map(support.encode).mkString(","))
+  }
+  implicit def makeUnexplodedQueryOptSeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], Option[CommaSeparatedValues[T]], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode{
+        case None => DecodeResult.Value(None)
+        case Some(values) => DecodeResult.sequence(values.split(',').map(e => support.rawDecode(List(e)))).map(r => Some(CommaSeparatedValues(r.toList)))
+      }(_.map(_.values.map(support.encode).mkString(",")))
+  }
+  implicit def makeExplodedQuerySeqCodecFromSupport[T](implicit support: QueryParamSupport[T]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.list[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(values => DecodeResult.sequence(values.map(support.decode)).map(s => ExplodedValues(s.toList)))(_.values.map(support.encode))
+  }
+  implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+    support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
+  }
+
+
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
@@ -48,6 +83,8 @@ object TapirGeneratedEndpoints {
     case object Bar extends AnEnum
     case object Baz extends AnEnum
   }
+
+
 
   lazy val putAdtTest =
     endpoint

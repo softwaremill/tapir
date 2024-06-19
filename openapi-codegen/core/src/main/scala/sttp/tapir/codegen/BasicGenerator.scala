@@ -184,7 +184,7 @@ object BasicGenerator {
         |
         |${indent(2)(imports(normalisedJsonLib) + extraImports)}
         |
-        |$queryParamSupport
+        |${indent(2)(queryParamSupport)}
         |
         |${indent(2)(classDefns)}
         |

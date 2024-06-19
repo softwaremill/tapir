@@ -65,6 +65,7 @@ paths:
           in: query
           description: A sequence of enums, inline, in a query string
           required: true
+          explode: false
           schema:
             type: array
             items:
@@ -78,6 +79,7 @@ paths:
           in: query
           description: An optional sequence of enums, inline, in a query string
           required: false
+          explode: false
           schema:
             type: array
             items:
