@@ -71,8 +71,11 @@ object OpenapiModels {
       in: String,
       required: Option[Boolean],
       description: Option[String],
-      schema: OpenapiSchemaType
-  )
+      schema: OpenapiSchemaType,
+      explode: Option[Boolean] = None
+  ) {
+    def isExploded: Boolean = explode.contains(true) // default is false
+  }
 
   case class OpenapiResponse(
       code: String,

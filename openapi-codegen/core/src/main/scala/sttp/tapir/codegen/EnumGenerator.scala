@@ -18,14 +18,8 @@ object EnumGenerator {
       val maybeCompanion =
         if (queryParamRefs contains name) {
           def helperImpls =
-            s"""  given plainList${name}Codec: sttp.tapir.Codec[List[String], $name, sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQueryCodecForEnum[$name]
-               |  given plainListOpt${name}Codec: sttp.tapir.Codec[List[String], Option[$name], sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQueryOptCodecForEnum[$name]
-               |  given plainListList${name}Codec: sttp.tapir.Codec[List[String], List[$name], sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQuerySeqCodecForEnum[$name]
-               |  given plainListOptList${name}Codec: sttp.tapir.Codec[List[String], Option[List[$name]], sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQueryOptSeqCodecForEnum[$name]""".stripMargin
+            s"""  given enumCodecSupport${name.capitalize}: QueryParamSupport[$name] =
+               |    queryCodecSupport[$name](enumMap[$name])""".stripMargin
           s"""
              |object $name {
              |$helperImpls
@@ -44,7 +38,6 @@ object EnumGenerator {
          |  case ${obj.items.map(_.value).mkString(", ")}
          |}""".stripMargin :: Nil
     } else {
-      val uncapitalisedName = BasicGenerator.uncapitalise(name)
       val members = obj.items.map { i => s"case object ${i.value} extends $name" }
       val maybeCodecExtension = jsonSerdeLib match {
         case _ if !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) => ""
@@ -54,14 +47,8 @@ object EnumGenerator {
       val maybeQueryCodecDefn =
         if (queryParamRefs contains name) {
           s"""
-               |  implicit val ${uncapitalisedName}QueryCodec: sttp.tapir.Codec[List[String], $name, sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQueryCodecForEnum("${name}", ${name})
-               |  implicit val ${uncapitalisedName}OptQueryCodec: sttp.tapir.Codec[List[String], Option[$name], sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQueryOptCodecForEnum("${name}", ${name})
-               |  implicit val ${uncapitalisedName}SeqQueryCodec: sttp.tapir.Codec[List[String], List[$name], sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQuerySeqCodecForEnum("${name}", ${name})
-               |  implicit val ${uncapitalisedName}OptSeqQueryCodec: sttp.tapir.Codec[List[String], Option[List[$name]], sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQueryOptSeqCodecForEnum("${name}", ${name})""".stripMargin
+               |  implicit val enumCodecSupport${name.capitalize}: QueryParamSupport[$name] =
+               |    queryCodecSupport[$name]("${name}", ${name})""".stripMargin
         } else ""
       s"""
          |sealed trait $name extends enumeratum.EnumEntry

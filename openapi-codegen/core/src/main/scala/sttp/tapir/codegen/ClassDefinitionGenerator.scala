@@ -97,86 +97,55 @@ class ClassDefinitionGenerator {
       .groupBy(_._1)
       .mapValues(_.map(_._2))
 
-  private def enumQuerySerdeHelperDefn(targetScala3: Boolean): String = if (targetScala3)
-    """
-      |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
-      |  Map.from(
-      |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
-      |  )
-      |
-      |// Case-insensitive mapping
-      |def decodeEnum[T: enumextensions.EnumMirror](eMap: Map[String, T])(s: String): sttp.tapir.DecodeResult[T] =
-      |  scala.util
-      |    .Try(eMap(s.toUpperCase))
-      |    .fold(
-      |      _ =>
-      |        sttp.tapir.DecodeResult.Error(
-      |          s,
-      |          new NoSuchElementException(
-      |            s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
-      |          )
-      |        ),
-      |      sttp.tapir.DecodeResult.Value(_)
-      |    )
-      |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
-      |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
-      |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(decodeEnum[T](eMap))(_.name)
-      |}
-      |def makeQueryOptCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] = {
-      |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
-      |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(maybeV => DecodeResult.sequence(maybeV.toSeq.map(decodeEnum[T](eMap))).map(_.headOption))(_.map(_.name))
-      |}
-      |def makeQuerySeqCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain] = {
-      |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
-      |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(values => DecodeResult.sequence(values.split(',').map(decodeEnum[T](eMap))).map(_.toList))(_.map(_.name).mkString(","))
-      |}
-      |def makeQueryOptSeqCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], Option[List[T]], sttp.tapir.CodecFormat.TextPlain] = {
-      |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
-      |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode{
-      |      case None => DecodeResult.Value(None)
-      |      case Some(values) => DecodeResult.sequence(values.split(',').map(decodeEnum[T](eMap))).map(r => Some(r.toList))
-      |    }(_.map(_.map(_.name).mkString(",")))
-      |}
-      |""".stripMargin
-  else
-    """
-      |// Case-insensitive mapping
-      |def decodeEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T])(s: String): sttp.tapir.DecodeResult[T] =
-      |  scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
-      |    .fold(
-      |      _ =>
-      |        sttp.tapir.DecodeResult.Error(
-      |          s,
-      |          new NoSuchElementException(
-      |            s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
-      |          )
-      |        ),
-      |      sttp.tapir.DecodeResult.Value(_)
-      |    )
-      |def makeQueryCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
-      |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(decodeEnum[T](enumName, T))(_.entryName)
-      |
-      |def makeQueryOptCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] =
-      |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(values => DecodeResult.sequence(values.toSeq.map(decodeEnum[T](enumName, T))).map(_.headOption))(_.map(_.entryName))
-      |
-      |def makeQuerySeqCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain] =
-      |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(values => DecodeResult.sequence(values.split(',').map(decodeEnum[T](enumName, T))).map(_.toList))(_.map(_.entryName).mkString(","))
-      |
-      |def makeQueryOptSeqCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], Option[List[T]], sttp.tapir.CodecFormat.TextPlain] = {
-      |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode{
-      |      case None => DecodeResult.Value(None)
-      |      case Some(values) => DecodeResult.sequence(values.split(',').map(decodeEnum[T](enumName, T))).map(r => Some(r.toList))
-      |    }(_.map(_.map(_.entryName).mkString(",")))
-      |}
-      |""".stripMargin
+  private def enumQuerySerdeHelperDefn(targetScala3: Boolean): String = {
+    if (targetScala3)
+      """
+        |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
+        |  Map.from(
+        |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
+        |  )
+        |case class EnumQueryParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends QueryParamSupport[T] {
+        |  // Case-insensitive mapping
+        |  def decode(s: String): sttp.tapir.DecodeResult[T] =
+        |    scala.util
+        |      .Try(eMap(s.toUpperCase))
+        |      .fold(
+        |        _ =>
+        |          sttp.tapir.DecodeResult.Error(
+        |            s,
+        |            new NoSuchElementException(
+        |              s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
+        |            )
+        |          ),
+        |        sttp.tapir.DecodeResult.Value(_)
+        |      )
+        |  def encode(t: T): String = t.name
+        |}
+        |def queryCodecSupport[T: enumextensions.EnumMirror]: QueryParamSupport[T] =
+        |  EnumQueryParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
+        |""".stripMargin
+    else
+      """
+        |case class EnumQueryParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends QueryParamSupport[T] {
+        |  // Case-insensitive mapping
+        |  def decode(s: String): sttp.tapir.DecodeResult[T] =
+        |    scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
+        |      .fold(
+        |        _ =>
+        |          sttp.tapir.DecodeResult.Error(
+        |            s,
+        |            new NoSuchElementException(
+        |              s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
+        |            )
+        |          ),
+        |        sttp.tapir.DecodeResult.Value(_)
+        |      )
+        |  def encode(t: T): String = t.entryName
+        |}
+        |def queryCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): QueryParamSupport[T] =
+        |  EnumQueryParamSupport(enumName, T)
+        |""".stripMargin
+  }
 
   @tailrec
   final def recursiveFindAllReferencedSchemaTypes(
