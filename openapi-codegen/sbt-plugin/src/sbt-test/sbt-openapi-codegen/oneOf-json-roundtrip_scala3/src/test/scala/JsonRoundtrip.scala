@@ -7,6 +7,7 @@ import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJso
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
 
+import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -140,5 +141,74 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       )
     }
 
+  }
+
+  "enum query param support" in {
+    var lastValues: (
+      PostInlineEnumTestQueryEnum,
+        Option[PostInlineEnumTestQueryOptEnum],
+        List[PostInlineEnumTestQuerySeqEnum],
+        Option[List[PostInlineEnumTestQueryOptSeqEnum]],
+        ObjectWithInlineEnum
+      ) = null
+    val route = TapirGeneratedEndpoints.postInlineEnumTest.serverLogic[Future]({ case (a, b, c, d, e) =>
+      lastValues = (a, b, c, d, e)
+      Future successful Right[Unit, Unit](())
+    })
+
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+
+    locally {
+      val id = UUID.randomUUID()
+      val reqBody = ObjectWithInlineEnum(id, ObjectWithInlineEnumInlineEnum.foo3)
+      val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.objectWithInlineEnumJsonEncoder(reqBody).noSpacesSortKeys
+      reqJsonBody shouldEqual s"""{"id":"$id","inlineEnum":"foo3"}"""
+      Await.result(
+        sttp.client3.basicRequest
+          .post(
+            uri"http://test.com/inline/enum/test?query-enum=bar1&query-opt-enum=bar2&query-seq-enum=baz1,baz2&query-opt-seq-enum=baz1,baz2"
+          )
+          .body(reqJsonBody)
+          .send(stub)
+          .map { resp =>
+            resp.code.code === 200
+            resp.body shouldEqual Right("")
+          },
+        1.second
+      )
+      val (a, b, c, d, e) = lastValues
+      a shouldEqual PostInlineEnumTestQueryEnum.bar1
+      b shouldEqual Some(PostInlineEnumTestQueryOptEnum.bar2)
+      c shouldEqual Seq(PostInlineEnumTestQuerySeqEnum.baz1, PostInlineEnumTestQuerySeqEnum.baz2)
+      d shouldEqual Some(Seq(PostInlineEnumTestQueryOptSeqEnum.baz1, PostInlineEnumTestQueryOptSeqEnum.baz2))
+      e shouldEqual reqBody
+    }
+
+    locally {
+      val id = UUID.randomUUID()
+      val reqBody = ObjectWithInlineEnum(id, ObjectWithInlineEnumInlineEnum.foo3)
+      val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.objectWithInlineEnumJsonEncoder(reqBody).noSpacesSortKeys
+      reqJsonBody shouldEqual s"""{"id":"$id","inlineEnum":"foo3"}"""
+      Await.result(
+        sttp.client3.basicRequest
+          .post(uri"http://test.com/inline/enum/test?query-enum=bar1&query-seq-enum=baz1,baz2")
+          .body(reqJsonBody)
+          .send(stub)
+          .map { resp =>
+            resp.code.code === 200
+            resp.body shouldEqual Right("")
+          },
+        1.second
+      )
+      val (a, b, c, d, e) = lastValues
+      a shouldEqual PostInlineEnumTestQueryEnum.bar1
+      b shouldEqual None
+      c shouldEqual Seq(PostInlineEnumTestQuerySeqEnum.baz1, PostInlineEnumTestQuerySeqEnum.baz2)
+      d shouldEqual None
+      e shouldEqual reqBody
+    }
   }
 }

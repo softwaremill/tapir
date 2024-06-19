@@ -23,7 +23,9 @@ object EnumGenerator {
                |  given plainListOpt${name}Codec: sttp.tapir.Codec[List[String], Option[$name], sttp.tapir.CodecFormat.TextPlain] =
                |    makeQueryOptCodecForEnum[$name]
                |  given plainListList${name}Codec: sttp.tapir.Codec[List[String], List[$name], sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQuerySeqCodecForEnum[$name]""".stripMargin
+               |    makeQuerySeqCodecForEnum[$name]
+               |  given plainListOptList${name}Codec: sttp.tapir.Codec[List[String], Option[List[$name]], sttp.tapir.CodecFormat.TextPlain] =
+               |    makeQueryOptSeqCodecForEnum[$name]""".stripMargin
           s"""
              |object $name {
              |$helperImpls
@@ -57,7 +59,9 @@ object EnumGenerator {
                |  implicit val ${uncapitalisedName}OptQueryCodec: sttp.tapir.Codec[List[String], Option[$name], sttp.tapir.CodecFormat.TextPlain] =
                |    makeQueryOptCodecForEnum("${name}", ${name})
                |  implicit val ${uncapitalisedName}SeqQueryCodec: sttp.tapir.Codec[List[String], List[$name], sttp.tapir.CodecFormat.TextPlain] =
-               |    makeQuerySeqCodecForEnum("${name}", ${name})""".stripMargin
+               |    makeQuerySeqCodecForEnum("${name}", ${name})
+               |  implicit val ${uncapitalisedName}OptSeqQueryCodec: sttp.tapir.Codec[List[String], Option[List[$name]], sttp.tapir.CodecFormat.TextPlain] =
+               |    makeQueryOptSeqCodecForEnum("${name}", ${name})""".stripMargin
         } else ""
       s"""
          |sealed trait $name extends enumeratum.EnumEntry

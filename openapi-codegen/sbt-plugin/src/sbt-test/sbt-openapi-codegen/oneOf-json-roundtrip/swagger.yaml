@@ -51,10 +51,33 @@ paths:
               - bar1
               - bar2
               - bar3
+        - name: query-opt-enum
+          in: query
+          description: An optional enum, inline, in a query string
+          required: false
+          schema:
+            type: string
+            enum:
+              - bar1
+              - bar2
+              - bar3
         - name: query-seq-enum
           in: query
           description: A sequence of enums, inline, in a query string
           required: true
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - baz1
+                - baz2
+                - baz3
+              default: baz2
+        - name: query-opt-seq-enum
+          in: query
+          description: An optional sequence of enums, inline, in a query string
+          required: false
           schema:
             type: array
             items:

@@ -330,8 +330,16 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |}
       |def makeQuerySeqCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain] = {
       |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
-      |  sttp.tapir.Codec.list[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(values => DecodeResult.sequence(values.map(decodeEnum[T](eMap))).map(_.toList))(_.map(_.name))
+      |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(values => DecodeResult.sequence(values.split(',').map(decodeEnum[T](eMap))).map(_.toList))(_.map(_.name).mkString(","))
+      |}
+      |def makeQueryOptSeqCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], Option[List[T]], sttp.tapir.CodecFormat.TextPlain] = {
+      |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
+      |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode{
+      |      case None => DecodeResult.Value(None)
+      |      case Some(values) => DecodeResult.sequence(values.split(',').map(decodeEnum[T](eMap))).map(r => Some(r.toList))
+      |    }(_.map(_.map(_.name).mkString(",")))
       |}
       |object Test {
       |  given plainListTestCodec: sttp.tapir.Codec[List[String], Test, sttp.tapir.CodecFormat.TextPlain] =
@@ -340,6 +348,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |    makeQueryOptCodecForEnum[Test]
       |  given plainListListTestCodec: sttp.tapir.Codec[List[String], List[Test], sttp.tapir.CodecFormat.TextPlain] =
       |    makeQuerySeqCodecForEnum[Test]
+      |  given plainListOptListTestCodec: sttp.tapir.Codec[List[String], Option[List[Test]], sttp.tapir.CodecFormat.TextPlain] =
+      |    makeQueryOptSeqCodecForEnum[Test]
       |}
       |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror {
       |  case enum1, enum2

@@ -11,38 +11,35 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
 
+  // Case-insensitive mapping
+  def decodeEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T])(s: String): sttp.tapir.DecodeResult[T] =
+    scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
+      .fold(
+        _ =>
+          sttp.tapir.DecodeResult.Error(
+            s,
+            new NoSuchElementException(
+              s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
+            )
+          ),
+        sttp.tapir.DecodeResult.Value(_)
+      )
   def makeQueryCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
     sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-      .mapDecode(s =>
-        // Case-insensitive mapping
-        scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
-          .fold(
-            _ =>
-              sttp.tapir.DecodeResult.Error(
-                s,
-                new NoSuchElementException(
-                  s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
-                )
-              ),
-            sttp.tapir.DecodeResult.Value(_)
-          )
-      )(_.entryName)
+      .mapDecode(decodeEnum[T](enumName, T))(_.entryName)
+  def makeQueryOptCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] =
+    sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(values => DecodeResult.sequence(values.toSeq.map(decodeEnum[T](enumName, T))).map(_.headOption))(_.map(_.entryName))
   def makeQuerySeqCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain] =
-      sttp.tapir.Codec.list[String, String, sttp.tapir.CodecFormat.TextPlain]
-        .mapDecode(values =>
-          // Case-insensitive mapping
-          scala.util.Try(values.map(s => T.upperCaseNameValuesToMap(s.toUpperCase)))
-            .fold(
-              _ =>
-                sttp.tapir.DecodeResult.Error(
-                  values.mkString(","),
-                  new NoSuchElementException(
-                    s"Could not find all values $values for enum ${enumName}, available values: ${T.values.mkString(", ")}"
-                  )
-                ),
-              sttp.tapir.DecodeResult.Value(_)
-            )
-        )(_.map(_.entryName))
+    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(values => DecodeResult.sequence(values.split(',').map(decodeEnum[T](enumName, T))).map(_.toList))(_.map(_.entryName).mkString(","))
+  def makeQueryOptSeqCodecForEnum[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): sttp.tapir.Codec[List[String], Option[List[T]], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode{
+        case None => DecodeResult.Value(None)
+        case Some(values) => DecodeResult.sequence(values.split(',').map(decodeEnum[T](enumName, T))).map(r => Some(r.toList))
+      }(_.map(_.map(_.entryName).mkString(",")))
+  }
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
@@ -112,7 +109,9 @@ object TapirGeneratedEndpoints {
       .post
       .in(("inline" / "enum" / "test"))
       .in(query[PostInlineEnumTestQueryEnum]("query-enum").description("An enum, inline, in a query string"))
+      .in(query[Option[PostInlineEnumTestQueryOptEnum]]("query-opt-enum").description("An optional enum, inline, in a query string"))
       .in(query[List[PostInlineEnumTestQuerySeqEnum]]("query-seq-enum").description("A sequence of enums, inline, in a query string"))
+      .in(query[Option[List[PostInlineEnumTestQueryOptSeqEnum]]]("query-opt-seq-enum").description("An optional sequence of enums, inline, in a query string"))
       .in(jsonBody[ObjectWithInlineEnum])
       .out(statusCode(sttp.model.StatusCode(204)).description("No Content"))
 
@@ -124,6 +123,28 @@ object TapirGeneratedEndpoints {
     case object bar3 extends PostInlineEnumTestQueryEnum
     implicit val postInlineEnumTestQueryEnumQueryCodec: sttp.tapir.Codec[List[String], PostInlineEnumTestQueryEnum, sttp.tapir.CodecFormat.TextPlain] =
       makeQueryCodecForEnum("PostInlineEnumTestQueryEnum", PostInlineEnumTestQueryEnum)
+    implicit val postInlineEnumTestQueryEnumOptQueryCodec: sttp.tapir.Codec[List[String], Option[PostInlineEnumTestQueryEnum], sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryOptCodecForEnum("PostInlineEnumTestQueryEnum", PostInlineEnumTestQueryEnum)
+    implicit val postInlineEnumTestQueryEnumSeqQueryCodec: sttp.tapir.Codec[List[String], List[PostInlineEnumTestQueryEnum], sttp.tapir.CodecFormat.TextPlain] =
+      makeQuerySeqCodecForEnum("PostInlineEnumTestQueryEnum", PostInlineEnumTestQueryEnum)
+    implicit val postInlineEnumTestQueryEnumOptSeqQueryCodec: sttp.tapir.Codec[List[String], Option[List[PostInlineEnumTestQueryEnum]], sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryOptSeqCodecForEnum("PostInlineEnumTestQueryEnum", PostInlineEnumTestQueryEnum)
+  }
+
+  sealed trait PostInlineEnumTestQueryOptEnum extends enumeratum.EnumEntry
+  object PostInlineEnumTestQueryOptEnum extends enumeratum.Enum[PostInlineEnumTestQueryOptEnum] with enumeratum.CirceEnum[PostInlineEnumTestQueryOptEnum] {
+    val values = findValues
+    case object bar1 extends PostInlineEnumTestQueryOptEnum
+    case object bar2 extends PostInlineEnumTestQueryOptEnum
+    case object bar3 extends PostInlineEnumTestQueryOptEnum
+    implicit val postInlineEnumTestQueryOptEnumQueryCodec: sttp.tapir.Codec[List[String], PostInlineEnumTestQueryOptEnum, sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryCodecForEnum("PostInlineEnumTestQueryOptEnum", PostInlineEnumTestQueryOptEnum)
+    implicit val postInlineEnumTestQueryOptEnumOptQueryCodec: sttp.tapir.Codec[List[String], Option[PostInlineEnumTestQueryOptEnum], sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryOptCodecForEnum("PostInlineEnumTestQueryOptEnum", PostInlineEnumTestQueryOptEnum)
+    implicit val postInlineEnumTestQueryOptEnumSeqQueryCodec: sttp.tapir.Codec[List[String], List[PostInlineEnumTestQueryOptEnum], sttp.tapir.CodecFormat.TextPlain] =
+      makeQuerySeqCodecForEnum("PostInlineEnumTestQueryOptEnum", PostInlineEnumTestQueryOptEnum)
+    implicit val postInlineEnumTestQueryOptEnumOptSeqQueryCodec: sttp.tapir.Codec[List[String], Option[List[PostInlineEnumTestQueryOptEnum]], sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryOptSeqCodecForEnum("PostInlineEnumTestQueryOptEnum", PostInlineEnumTestQueryOptEnum)
   }
 
   sealed trait PostInlineEnumTestQuerySeqEnum extends enumeratum.EnumEntry
@@ -132,8 +153,30 @@ object TapirGeneratedEndpoints {
     case object baz1 extends PostInlineEnumTestQuerySeqEnum
     case object baz2 extends PostInlineEnumTestQuerySeqEnum
     case object baz3 extends PostInlineEnumTestQuerySeqEnum
-    implicit val postInlineEnumTestQuerySeqEnumQueryCodec: sttp.tapir.Codec[List[String], List[PostInlineEnumTestQuerySeqEnum], sttp.tapir.CodecFormat.TextPlain] =
+    implicit val postInlineEnumTestQuerySeqEnumQueryCodec: sttp.tapir.Codec[List[String], PostInlineEnumTestQuerySeqEnum, sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryCodecForEnum("PostInlineEnumTestQuerySeqEnum", PostInlineEnumTestQuerySeqEnum)
+    implicit val postInlineEnumTestQuerySeqEnumOptQueryCodec: sttp.tapir.Codec[List[String], Option[PostInlineEnumTestQuerySeqEnum], sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryOptCodecForEnum("PostInlineEnumTestQuerySeqEnum", PostInlineEnumTestQuerySeqEnum)
+    implicit val postInlineEnumTestQuerySeqEnumSeqQueryCodec: sttp.tapir.Codec[List[String], List[PostInlineEnumTestQuerySeqEnum], sttp.tapir.CodecFormat.TextPlain] =
       makeQuerySeqCodecForEnum("PostInlineEnumTestQuerySeqEnum", PostInlineEnumTestQuerySeqEnum)
+    implicit val postInlineEnumTestQuerySeqEnumOptSeqQueryCodec: sttp.tapir.Codec[List[String], Option[List[PostInlineEnumTestQuerySeqEnum]], sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryOptSeqCodecForEnum("PostInlineEnumTestQuerySeqEnum", PostInlineEnumTestQuerySeqEnum)
+  }
+
+  sealed trait PostInlineEnumTestQueryOptSeqEnum extends enumeratum.EnumEntry
+  object PostInlineEnumTestQueryOptSeqEnum extends enumeratum.Enum[PostInlineEnumTestQueryOptSeqEnum] with enumeratum.CirceEnum[PostInlineEnumTestQueryOptSeqEnum] {
+    val values = findValues
+    case object baz1 extends PostInlineEnumTestQueryOptSeqEnum
+    case object baz2 extends PostInlineEnumTestQueryOptSeqEnum
+    case object baz3 extends PostInlineEnumTestQueryOptSeqEnum
+    implicit val postInlineEnumTestQueryOptSeqEnumQueryCodec: sttp.tapir.Codec[List[String], PostInlineEnumTestQueryOptSeqEnum, sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryCodecForEnum("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
+    implicit val postInlineEnumTestQueryOptSeqEnumOptQueryCodec: sttp.tapir.Codec[List[String], Option[PostInlineEnumTestQueryOptSeqEnum], sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryOptCodecForEnum("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
+    implicit val postInlineEnumTestQueryOptSeqEnumSeqQueryCodec: sttp.tapir.Codec[List[String], List[PostInlineEnumTestQueryOptSeqEnum], sttp.tapir.CodecFormat.TextPlain] =
+      makeQuerySeqCodecForEnum("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
+    implicit val postInlineEnumTestQueryOptSeqEnumOptSeqQueryCodec: sttp.tapir.Codec[List[String], Option[List[PostInlineEnumTestQueryOptSeqEnum]], sttp.tapir.CodecFormat.TextPlain] =
+      makeQueryOptSeqCodecForEnum("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
   }
 
 
