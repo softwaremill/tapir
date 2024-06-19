@@ -212,12 +212,12 @@ class EndpointGenerator {
         targetScala3,
         queryParamRefs,
         jsonSerdeLib,
-        Set.empty,
-        isArray
+        Set.empty
       )
       val tpe = if (isArray) s"List[$enumName]" else enumName
+      val req = if (param.required.getOrElse(true)) tpe else s"Option[$tpe]"
       val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-      s""".in(${param.in}[$tpe]("${param.name}")$desc)""" -> Some(enumDefn)
+      s""".in(${param.in}[$req]("${param.name}")$desc)""" -> Some(enumDefn)
     }
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     // .in(header[AuthToken]("X-Auth-Token"))
@@ -232,8 +232,10 @@ class EndpointGenerator {
             s""".in(${param.in}[$req]("${param.name}")$desc)""" -> None
           case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
+            val arr = s"List[$t]"
+            val req = if (param.required.getOrElse(true)) arr else s"Option[$arr]"
             val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-            s""".in(${param.in}[List[$t]]("${param.name}")$desc)""" -> None
+            s""".in(${param.in}[$req]("${param.name}")$desc)""" -> None
           case e @ OpenapiSchemaEnum(_, _, _)              => getEnumParamDefn(param, e, isArray = false)
           case OpenapiSchemaArray(e: OpenapiSchemaEnum, _) => getEnumParamDefn(param, e, isArray = true)
           case x                                           => bail(s"Can't create non-simple params to input - found $x")

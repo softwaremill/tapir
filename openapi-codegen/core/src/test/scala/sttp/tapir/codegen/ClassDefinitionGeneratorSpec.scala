@@ -304,46 +304,42 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |  Map.from(
       |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
       |  )
+      |// Case-insensitive mapping
+      |def decodeEnum[T: enumextensions.EnumMirror](eMap: Map[String, T])(s: String): sttp.tapir.DecodeResult[T] =
+      |  scala.util
+      |    .Try(eMap(s.toUpperCase))
+      |    .fold(
+      |      _ =>
+      |        sttp.tapir.DecodeResult.Error(
+      |          s,
+      |          new NoSuchElementException(
+      |            s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
+      |          )
+      |        ),
+      |      sttp.tapir.DecodeResult.Value(_)
+      |    )
       |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
       |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
-      |  sttp.tapir.Codec
-      |    .listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(s =>
-      |      // Case-insensitive mapping
-      |      scala.util
-      |        .Try(eMap(s.toUpperCase))
-      |        .fold(
-      |          _ =>
-      |            sttp.tapir.DecodeResult.Error(
-      |              s,
-      |              new NoSuchElementException(
-      |                s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
-      |              )
-      |            ),
-      |          sttp.tapir.DecodeResult.Value(_)
-      |        )
-      |    )(_.name)
+      |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(decodeEnum[T](eMap))(_.name)
+      |}
+      |def makeQueryOptCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] = {
+      |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
+      |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(maybeV => DecodeResult.sequence(maybeV.toSeq.map(decodeEnum[T](eMap))).map(_.headOption))(_.map(_.name))
       |}
       |def makeQuerySeqCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain] = {
       |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
-      |  sttp.tapir.Codec
-      |    .list[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(values =>
-      |      // Case-insensitive mapping
-      |      scala.util
-      |        .Try(values.map(s => eMap(s.toUpperCase)))
-      |        .fold(
-      |          _ =>
-      |            sttp.tapir.DecodeResult.Error(
-      |              values.mkString(","),
-      |              new NoSuchElementException(
-      |                s"Could not find all values $values for enum ${enumextensions.EnumMirror[
-      |                  T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}")),
-      |          sttp.tapir.DecodeResult.Value(_)))(_.map(_.name))
+      |  sttp.tapir.Codec.list[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(values => DecodeResult.sequence(values.map(decodeEnum[T](eMap))).map(_.toList))(_.map(_.name))
       |}
       |object Test {
-      |  given stringListTestCodec: sttp.tapir.Codec[List[String], Test, sttp.tapir.CodecFormat.TextPlain] =
+      |  given plainListTestCodec: sttp.tapir.Codec[List[String], Test, sttp.tapir.CodecFormat.TextPlain] =
       |    makeQueryCodecForEnum[Test]
+      |  given plainListOptTestCodec: sttp.tapir.Codec[List[String], Option[Test], sttp.tapir.CodecFormat.TextPlain] =
+      |    makeQueryOptCodecForEnum[Test]
+      |  given plainListListTestCodec: sttp.tapir.Codec[List[String], List[Test], sttp.tapir.CodecFormat.TextPlain] =
+      |    makeQuerySeqCodecForEnum[Test]
       |}
       |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror {
       |  case enum1, enum2
