@@ -14,6 +14,11 @@ object EnumGenerator {
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
       jsonParamRefs: Set[String]
   ): Seq[String] = {
+    val legalRegex = "([a-zA-Z][a-zA-Z0-9_]*)".r
+    def maybeEscaped(s: String) = s match {
+      case legalRegex(l) => l
+      case illegal       => s"`$illegal`"
+    }
     if (targetScala3) {
       val maybeCompanion =
         if (queryParamRefs contains name) {
@@ -35,10 +40,10 @@ object EnumGenerator {
       }
       s"""$maybeCompanion
          |enum $name$maybeCodecExtensions {
-         |  case ${obj.items.map(_.value).mkString(", ")}
+         |  case ${obj.items.map(i => maybeEscaped(i.value)).mkString(", ")}
          |}""".stripMargin :: Nil
     } else {
-      val members = obj.items.map { i => s"case object ${i.value} extends $name" }
+      val members = obj.items.map { i => s"case object ${maybeEscaped(i.value)} extends $name" }
       val maybeCodecExtension = jsonSerdeLib match {
         case _ if !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) => ""
         case JsonSerdeLib.Circe                                                   => s" with enumeratum.CirceEnum[$name]"
