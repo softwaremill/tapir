@@ -56,12 +56,14 @@ paths:
           description: A sequence of enums, inline, in a query string
           required: true
           schema:
-            type: string
-            enum:
-              - baz1
-              - baz2
-              - baz3
-            default: baz2
+            type: array
+            items:
+              type: string
+              enum:
+                - baz1
+                - baz2
+                - baz3
+              default: baz2
       responses:
         '204':
           description: No Content

@@ -112,7 +112,7 @@ object TapirGeneratedEndpoints {
       .post
       .in(("inline" / "enum" / "test"))
       .in(query[PostInlineEnumTestQueryEnum]("query-enum").description("An enum, inline, in a query string"))
-      .in(query[PostInlineEnumTestQuerySeqEnum]("query-seq-enum").description("A sequence of enums, inline, in a query string"))
+      .in(query[List[PostInlineEnumTestQuerySeqEnum]]("query-seq-enum").description("A sequence of enums, inline, in a query string"))
       .in(jsonBody[ObjectWithInlineEnum])
       .out(statusCode(sttp.model.StatusCode(204)).description("No Content"))
 
@@ -132,8 +132,8 @@ object TapirGeneratedEndpoints {
     case object baz1 extends PostInlineEnumTestQuerySeqEnum
     case object baz2 extends PostInlineEnumTestQuerySeqEnum
     case object baz3 extends PostInlineEnumTestQuerySeqEnum
-    implicit val postInlineEnumTestQuerySeqEnumQueryCodec: sttp.tapir.Codec[List[String], PostInlineEnumTestQuerySeqEnum, sttp.tapir.CodecFormat.TextPlain] =
-      makeQueryCodecForEnum("PostInlineEnumTestQuerySeqEnum", PostInlineEnumTestQuerySeqEnum)
+    implicit val postInlineEnumTestQuerySeqEnumQueryCodec: sttp.tapir.Codec[List[String], List[PostInlineEnumTestQuerySeqEnum], sttp.tapir.CodecFormat.TextPlain] =
+      makeQuerySeqCodecForEnum("PostInlineEnumTestQuerySeqEnum", PostInlineEnumTestQuerySeqEnum)
   }
 
 
