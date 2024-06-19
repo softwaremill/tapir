@@ -250,7 +250,7 @@ class EndpointGenerator {
     (params ++ rqBody).mkString("\n") -> maybeEnumDefns.foldLeft(Option.empty[String]) {
       case (acc, None)            => acc
       case (None, Some(nxt))      => Some(nxt.mkString("\n"))
-      case (Some(acc), Some(nxt)) => Some(acc + "\n" + nxt)
+      case (Some(acc), Some(nxt)) => Some(acc + "\n" + nxt.mkString("\n"))
     }
   }
 
@@ -331,15 +331,6 @@ class EndpointGenerator {
         s"jsonBody[$req]"
 
       case "multipart/form-data" =>
-        schema match {
-          case _: OpenapiSchemaBinary =>
-            "multipartBody"
-          case schemaRef: OpenapiSchemaRef =>
-            val (t, _) = mapSchemaSimpleTypeToType(schemaRef, multipartForm = true)
-            s"multipartBody[$t]"
-          case x => bail(s"$contentType only supports schema ref or binary. Found $x")
-        }
-      case "application/octet-stream" =>
         schema match {
           case _: OpenapiSchemaBinary =>
             "multipartBody"

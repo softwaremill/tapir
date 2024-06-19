@@ -4,6 +4,8 @@ object TapirGeneratedEndpointsSchemas {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
   implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derived
+  implicit lazy val objectWithInlineEnumInlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnumInlineEnum] = sttp.tapir.Schema.derived
+  implicit lazy val objectWithInlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnum] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithD1TapirSchema: sttp.tapir.Schema[SubtypeWithD1] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithD2TapirSchema: sttp.tapir.Schema[SubtypeWithD2] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD1TapirSchema: sttp.tapir.Schema[SubtypeWithoutD1] = sttp.tapir.Schema.derived

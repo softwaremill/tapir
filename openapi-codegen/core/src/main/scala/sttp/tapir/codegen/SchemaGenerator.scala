@@ -195,6 +195,11 @@ object SchemaGenerator {
         schemaForObject(s"$name${k.capitalize}Item", `type`)
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
         schemaForObject(s"$name${k.capitalize}Item", `type`)
+      case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _)) => schemaForEnum(s"$name${k.capitalize}")
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(_: OpenapiSchemaEnum, _), _)) =>
+        schemaForEnum(s"$name${k.capitalize}Item")
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(_: OpenapiSchemaEnum, _), _)) =>
+        schemaForEnum(s"$name${k.capitalize}Item")
     } match {
       case Nil => ""
       case s   => s.mkString("", "\n", "\n")
@@ -208,6 +213,9 @@ object SchemaGenerator {
     }
     subs.fold("")("\n" + _)
   }
+  private def schemaForEnum(name: String): String =
+    s"""implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"""
+
   private def genADTSchema(name: String, schema: OpenapiSchemaOneOf, fullModelPath: Option[String]): String = {
     val schemaImpl = schema match {
       case OpenapiSchemaOneOf(_, None) => "sttp.tapir.Schema.derived"
