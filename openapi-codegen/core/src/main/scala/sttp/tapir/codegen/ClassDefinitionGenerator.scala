@@ -50,7 +50,8 @@ class ClassDefinitionGenerator {
       allTransitiveJsonParamRefs,
       fullModelPath,
       validateNonDiscriminatedOneOfs,
-      adtInheritanceMap
+      adtInheritanceMap,
+      targetScala3
     )
     val defns = doc.components
       .map(_.schemas.flatMap {

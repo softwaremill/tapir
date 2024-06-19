@@ -28,7 +28,7 @@ object TapirGeneratedEndpoints {
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
-    d: Option[Double] = None,
+    e: Option[AnEnum] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
   case class SubtypeWithoutD2 (
@@ -40,6 +40,9 @@ object TapirGeneratedEndpoints {
     a: Option[Seq[String]] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
 
+  enum AnEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    case Foo, Bar, Baz
+  }
 
 
   lazy val putAdtTest =

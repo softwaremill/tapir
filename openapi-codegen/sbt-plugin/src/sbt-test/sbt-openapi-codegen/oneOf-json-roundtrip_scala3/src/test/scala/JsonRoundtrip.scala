@@ -18,7 +18,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD1(foo.s + "+SubtypeWithoutD1", foo.i, foo.a))
       case foo: SubtypeWithoutD2 => Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD2(foo.a :+ "+SubtypeWithoutD2"))
       case foo: SubtypeWithoutD3 =>
-        Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD3(foo.s + "+SubtypeWithoutD3", foo.i, foo.d))
+        Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD3(foo.s + "+SubtypeWithoutD3", foo.i, foo.e))
     })
 
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
@@ -68,12 +68,12 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     }
 
     locally {
-      val reqBody = SubtypeWithoutD3("a string", Some(123), Some(23.4))
+      val reqBody = SubtypeWithoutD3("a string", Some(123), Some(AnEnum.Foo))
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(reqBody).noSpacesSortKeys
-      val respBody = SubtypeWithoutD3("a string+SubtypeWithoutD3", Some(123), Some(23.4))
+      val respBody = SubtypeWithoutD3("a string+SubtypeWithoutD3", Some(123), Some(AnEnum.Foo))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"absent":null,"d":23.4,"i":123,"s":"a string"}"""
-      respJsonBody shouldEqual """{"absent":null,"d":23.4,"i":123,"s":"a string+SubtypeWithoutD3"}"""
+      reqJsonBody shouldEqual """{"absent":null,"e":"Foo","i":123,"s":"a string"}"""
+      respJsonBody shouldEqual """{"absent":null,"e":"Foo","i":123,"s":"a string+SubtypeWithoutD3"}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")
