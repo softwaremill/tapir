@@ -304,13 +304,14 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |  Map.from(
       |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
       |  )
-      |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
+      |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
+      |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
       |  sttp.tapir.Codec
       |    .listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
       |    .mapDecode(s =>
       |      // Case-insensitive mapping
       |      scala.util
-      |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase))
+      |        .Try(eMap(s.toUpperCase))
       |        .fold(
       |          _ =>
       |            sttp.tapir.DecodeResult.Error(
@@ -322,6 +323,24 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |          sttp.tapir.DecodeResult.Value(_)
       |        )
       |    )(_.name)
+      |}
+      |def makeQuerySeqCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain] = {
+      |  val eMap = enumMap[T](using enumextensions.EnumMirror[T])
+      |  sttp.tapir.Codec
+      |    .list[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(values =>
+      |      // Case-insensitive mapping
+      |      scala.util
+      |        .Try(values.map(s => eMap(s.toUpperCase)))
+      |        .fold(
+      |          _ =>
+      |            sttp.tapir.DecodeResult.Error(
+      |              values.mkString(","),
+      |              new NoSuchElementException(
+      |                s"Could not find all values $values for enum ${enumextensions.EnumMirror[
+      |                  T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}")),
+      |          sttp.tapir.DecodeResult.Value(_)))(_.map(_.name))
+      |}
       |object Test {
       |  given stringListTestCodec: sttp.tapir.Codec[List[String], Test, sttp.tapir.CodecFormat.TextPlain] =
       |    makeQueryCodecForEnum[Test]
@@ -388,7 +407,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val res: String = parserRes match {
       case Left(value) => throw new Exception(value)
-      case Right(doc)  => new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
+      case Right(doc) =>
+        new EndpointGenerator()
+          .endpointDefs(doc, useHeadTagForObjectNames = false, targetScala3 = false, jsonSerdeLib = JsonSerdeLib.Circe)
+          .endpointDecls(None)
     }
 
     val compileUnit =
@@ -490,7 +512,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, schemas) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _) =
         gen
           .classDefs(
             doc,
@@ -523,7 +545,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, schemas) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
       val fullRes = (res + "\n" + jsonSerdes.get)

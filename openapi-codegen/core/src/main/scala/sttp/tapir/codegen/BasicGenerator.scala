@@ -48,7 +48,8 @@ object BasicGenerator {
         JsonSerdeLib.Circe
     }
 
-    val EndpointDefs(endpointsByTag, queryParamRefs, jsonParamRefs) = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
+    val EndpointDefs(endpointsByTag, queryParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams) =
+      endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames, targetScala3, normalisedJsonLib)
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas) =
       classGenerator
         .classDefs(
@@ -59,7 +60,8 @@ object BasicGenerator {
           jsonParamRefs = jsonParamRefs,
           fullModelPath = s"$packagePath.$objName",
           validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs,
-          maxSchemasPerFile = maxSchemasPerFile
+          maxSchemasPerFile = maxSchemasPerFile,
+          enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams
         )
         .getOrElse(GeneratedClassDefinitions("", None, Nil))
     val hasJsonSerdes = jsonSerdes.nonEmpty

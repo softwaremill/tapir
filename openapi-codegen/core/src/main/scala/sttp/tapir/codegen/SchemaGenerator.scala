@@ -152,40 +152,40 @@ object SchemaGenerator {
     }
     res.toSeq
   }
-  // find all simple reference loops starting at a a single schema (e.g. A -> B -> C -> A)
+  // find all simple reference loops starting at a single schema (e.g. A -> B -> C -> A)
   private def getReferencesToXInY(
       allSchemas: Map[String, OpenapiSchemaType],
-      referrent: String, // The stripped ref of the schema we're looking for references to
-      referenceCandidate: OpenapiSchemaType, // candidate for mutually-recursive referrence
+      referent: String, // The stripped ref of the schema we're looking for references to
+      referenceCandidate: OpenapiSchemaType, // candidate for mutually-recursive reference
       checked: Set[String], // refs we've already checked
-      maybeRefs: Seq[String] // chain of refs from referrent -> [...maybeRefs] -> referenceCandidate
+      maybeRefs: Seq[String] // chain of refs from referent -> [...maybeRefs] -> referenceCandidate
   ): Set[String] = referenceCandidate match {
     case ref: OpenapiSchemaRef =>
       val stripped = ref.stripped
-      // in this case, we have a chain of referrences from referrent -> [...maybeRefs] -> referrent, creating a mutually-recursive loop
-      if (stripped == referrent) maybeRefs.toSet
+      // in this case, we have a chain of references from referent -> [...maybeRefs] -> referent, creating a mutually-recursive loop
+      if (stripped == referent) maybeRefs.toSet
       // if already checked, skip
       else if (checked contains stripped) Set.empty
       // else add the ref to 'maybeRefs' chain and descend
       else {
         allSchemas
           .get(ref.stripped)
-          .map(getReferencesToXInY(allSchemas, referrent, _, checked + stripped, maybeRefs :+ stripped))
+          .map(getReferencesToXInY(allSchemas, referent, _, checked + stripped, maybeRefs :+ stripped))
           .toSet
           .flatten
       }
-    // these types cannot contain a referrence
+    // these types cannot contain a reference
     case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString => Set.empty
     // descend into the sole child type
-    case OpenapiSchemaArray(items, _) => getReferencesToXInY(allSchemas, referrent, items, checked, maybeRefs)
-    case OpenapiSchemaNot(items)      => getReferencesToXInY(allSchemas, referrent, items, checked, maybeRefs)
-    case OpenapiSchemaMap(items, _)   => getReferencesToXInY(allSchemas, referrent, items, checked, maybeRefs)
+    case OpenapiSchemaArray(items, _) => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
+    case OpenapiSchemaNot(items)      => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
+    case OpenapiSchemaMap(items, _)   => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
     // descend into all child types
-    case OpenapiSchemaOneOf(items, _) => items.flatMap(getReferencesToXInY(allSchemas, referrent, _, checked, maybeRefs)).toSet
-    case OpenapiSchemaAllOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referrent, _, checked, maybeRefs)).toSet
-    case OpenapiSchemaAnyOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referrent, _, checked, maybeRefs)).toSet
+    case OpenapiSchemaOneOf(items, _) => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
+    case OpenapiSchemaAllOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
+    case OpenapiSchemaAnyOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
     case OpenapiSchemaObject(kvs, _, _) =>
-      kvs.values.flatMap(v => getReferencesToXInY(allSchemas, referrent, v.`type`, checked, maybeRefs)).toSet
+      kvs.values.flatMap(v => getReferencesToXInY(allSchemas, referent, v.`type`, checked, maybeRefs)).toSet
   }
 
   private def schemaForObject(name: String, schema: OpenapiSchemaObject): String = {

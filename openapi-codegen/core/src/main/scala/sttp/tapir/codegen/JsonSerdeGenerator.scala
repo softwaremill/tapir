@@ -240,7 +240,7 @@ object JsonSerdeGenerator {
     val additionalExplicitSerdes = jsonParamRefs.toSeq
       .filter(x => !allSchemas.contains(x))
       .map { s =>
-        val name = s.replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
+        val name = s.replace(" ","").replace(",","_").replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
         s"""implicit lazy val $name: $jsoniterPkgCore.JsonValueCodec[$s] =
            |  $jsoniterPkgMacros.JsonCodecMaker.make[$s]""".stripMargin
       }
