@@ -88,12 +88,12 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
       witness: ValueOf[NM]
   ): PrimitiveValidatorForPredicate[T, MaxLength[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.maxLength[T](witness.value))
- 
+
   inline given validatorForMinLengthOnString[T <: String, NM <: Int](using
       witness: ValueOf[NM]
   ): PrimitiveValidatorForPredicate[T, MinLength[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.minLength[T](witness.value))
-  
+
   inline given validatorForMinLengthOnIterable[X, C[X] <: Iterable[X], NM <: Int](using
       witness: ValueOf[NM]
   ): PrimitiveValidatorForPredicate[C[X], MinLength[NM]] =
