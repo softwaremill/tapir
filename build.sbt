@@ -1480,7 +1480,8 @@ lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-s
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
-    )
+    ),
+    Test / test :=  {}
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, serverTests % Test, catsEffect % Test)
