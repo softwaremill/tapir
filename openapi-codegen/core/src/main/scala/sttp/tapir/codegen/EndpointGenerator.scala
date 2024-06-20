@@ -217,9 +217,11 @@ class EndpointGenerator {
       def arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
       val tpe = if (isArray) s"$arrayType[$enumName]" else enumName
       val required = param.required.getOrElse(true)
-      val req = if (required) tpe else s"Option[$tpe]"
+      // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
+      val noOptionWrapper = required || (isArray && param.isExploded)
+      val req = if (noOptionWrapper) tpe else s"Option[$tpe]"
       def mapToList =
-        if (!isArray) "" else if (required) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
+        if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
       val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
       s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""" -> Some(enumDefn)
     }
@@ -239,8 +241,10 @@ class EndpointGenerator {
             val arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
             val arr = s"$arrayType[$t]"
             val required = param.required.getOrElse(true)
-            val req = if (required) arr else s"Option[$arr]"
-            def mapToList = if (required) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
+            // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
+            val noOptionWrapper = required || param.isExploded
+            val req = if (noOptionWrapper) arr else s"Option[$arr]"
+            def mapToList = if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
             val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
             s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""" -> None
           case e @ OpenapiSchemaEnum(_, _, _)              => getEnumParamDefn(param, e, isArray = false)

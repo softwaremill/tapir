@@ -132,7 +132,7 @@ object TapirGeneratedEndpoints {
       .in(query[PostInlineEnumTestQueryEnum]("query-enum").description("An enum, inline, in a query string"))
       .in(query[Option[PostInlineEnumTestQueryOptEnum]]("query-opt-enum").description("An optional enum, inline, in a query string"))
       .in(query[ExplodedValues[PostInlineEnumTestQuerySeqEnum]]("query-seq-enum").map(_.values)(ExplodedValues(_)).description("A sequence of enums, inline, in a query string"))
-      .in(query[Option[CommaSeparatedValues[PostInlineEnumTestQueryOptSeqEnum]]]("query-opt-seq-enum").map(_.map(_.values))(_.map(CommaSeparatedValues(_))).description("An optional sequence of enums, inline, in a query string"))
+      .in(query[ExplodedValues[PostInlineEnumTestQueryOptSeqEnum]]("query-opt-seq-enum").map(_.values)(ExplodedValues(_)).description("An optional sequence of enums, inline, in a query string"))
       .in(jsonBody[ObjectWithInlineEnum])
       .out(statusCode(sttp.model.StatusCode(204)).description("No Content"))
 

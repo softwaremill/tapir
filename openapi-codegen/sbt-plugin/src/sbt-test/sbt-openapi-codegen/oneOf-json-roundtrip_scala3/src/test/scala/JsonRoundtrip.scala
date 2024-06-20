@@ -145,12 +145,12 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
 
   "enum query param support" in {
     var lastValues: (
-      PostInlineEnumTestQueryEnum,
+        PostInlineEnumTestQueryEnum,
         Option[PostInlineEnumTestQueryOptEnum],
         List[PostInlineEnumTestQuerySeqEnum],
-        Option[List[PostInlineEnumTestQueryOptSeqEnum]],
+        List[PostInlineEnumTestQueryOptSeqEnum],
         ObjectWithInlineEnum
-      ) = null
+    ) = null
     val route = TapirGeneratedEndpoints.postInlineEnumTest.serverLogic[Future]({ case (a, b, c, d, e) =>
       lastValues = (a, b, c, d, e)
       Future successful Right[Unit, Unit](())
@@ -169,7 +169,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       Await.result(
         sttp.client3.basicRequest
           .post(
-            uri"http://test.com/inline/enum/test?query-enum=bar1&query-opt-enum=bar2&query-seq-enum=baz1&query-seq-enum=baz2&query-opt-seq-enum=baz1,baz2"
+            uri"http://test.com/inline/enum/test?query-enum=bar1&query-opt-enum=bar2&query-seq-enum=baz1&query-seq-enum=baz2&query-opt-seq-enum=baz1&query-opt-seq-enum=baz2"
           )
           .body(reqJsonBody)
           .send(stub)
@@ -183,7 +183,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       a shouldEqual PostInlineEnumTestQueryEnum.bar1
       b shouldEqual Some(PostInlineEnumTestQueryOptEnum.bar2)
       c shouldEqual Seq(PostInlineEnumTestQuerySeqEnum.baz1, PostInlineEnumTestQuerySeqEnum.baz2)
-      d shouldEqual Some(Seq(PostInlineEnumTestQueryOptSeqEnum.baz1, PostInlineEnumTestQueryOptSeqEnum.baz2))
+      d shouldEqual Seq(PostInlineEnumTestQueryOptSeqEnum.baz1, PostInlineEnumTestQueryOptSeqEnum.baz2)
       e shouldEqual reqBody
     }
 
@@ -207,7 +207,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       a shouldEqual PostInlineEnumTestQueryEnum.bar1
       b shouldEqual None
       c shouldEqual Seq(PostInlineEnumTestQuerySeqEnum.baz1, PostInlineEnumTestQuerySeqEnum.baz2)
-      d shouldEqual None
+      d shouldEqual Nil
       e shouldEqual reqBody
     }
   }
