@@ -19,15 +19,21 @@ case class Location(path: String, method: String) {
   override def toString: String = s"${method.toUpperCase} ${path}"
 }
 
+case class GeneratedEndpoint(name: String, definition: String, maybeLocalEnums: Option[String])
+case class GeneratedEndpointsForFile(maybeFileName: Option[String], generatedEndpoints: Seq[GeneratedEndpoint])
+
 case class GeneratedEndpoints(
-    namesBodiesAndEnums: Seq[(Option[String], Seq[(String, String, Option[String])])],
+    namesBodiesAndEnums: Seq[GeneratedEndpointsForFile],
     queryParamRefs: Set[String],
     jsonParamRefs: Set[String],
     definesEnumQueryParam: Boolean
 ) {
   def merge(that: GeneratedEndpoints): GeneratedEndpoints =
     GeneratedEndpoints(
-      (namesBodiesAndEnums ++ that.namesBodiesAndEnums).groupBy(_._1).mapValues(_.map(_._2).reduce(_ ++ _)).toSeq,
+      (namesBodiesAndEnums ++ that.namesBodiesAndEnums)
+        .groupBy(_.maybeFileName)
+        .map { case (fileName, endpoints) => GeneratedEndpointsForFile(fileName, endpoints.map(_.generatedEndpoints).reduce(_ ++ _)) }
+        .toSeq,
       queryParamRefs ++ that.queryParamRefs,
       jsonParamRefs ++ that.jsonParamRefs,
       definesEnumQueryParam || that.definesEnumQueryParam
@@ -52,19 +58,19 @@ class EndpointGenerator {
       jsonSerdeLib: JsonSerdeLib
   ): EndpointDefs = {
     val components = Option(doc.components).flatten
-    val GeneratedEndpoints(geMap, queryParamRefs, jsonParamRefs, definesEnumQueryParam) =
+    val GeneratedEndpoints(endpointsByFile, queryParamRefs, jsonParamRefs, definesEnumQueryParam) =
       doc.paths
         .map(generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib))
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false))(_ merge _)
-    val endpointDecls = geMap.map { case (k, ge) =>
+    val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
       val definitions = ge
-        .map { case (name, definition, maybeEnums) =>
+        .map { case GeneratedEndpoint(name, definition, maybeEnums) =>
           s"""lazy val $name =
              |${indent(2)(definition)}${maybeEnums.fold("")("\n" + _)}
              |""".stripMargin
         }
         .mkString("\n")
-      val allEP = s"lazy val $allEndpoints = List(${ge.map(_._1).mkString(", ")})"
+      val allEP = s"lazy val $allEndpoints = List(${ge.map(_.name).mkString(", ")})"
 
       k -> s"""|$definitions
           |
@@ -135,14 +141,18 @@ class EndpointGenerator {
               s"Map[String, $name]"
           }
           .toSet
-        ((maybeTargetFileName, (name, definition, maybeLocalEnums)), (queryParamRefs, jsonParamRefs), maybeLocalEnums.isDefined)
+        (
+          (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums)),
+          (queryParamRefs, jsonParamRefs),
+          maybeLocalEnums.isDefined
+        )
       }
       .unzip3
     val (unflattenedQueryParamRefs, unflattenedJsonParamRefs) = unflattenedParamRefs.unzip
     val namesAndParamsByFile = fileNamesAndParams
       .groupBy(_._1)
       .toSeq
-      .map { case (maybeTargetFileName, defns) => maybeTargetFileName -> defns.map(_._2) }
+      .map { case (maybeTargetFileName, defns) => GeneratedEndpointsForFile(maybeTargetFileName, defns.map(_._2)) }
     GeneratedEndpoints(
       namesAndParamsByFile,
       unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _),

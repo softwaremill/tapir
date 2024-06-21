@@ -4,6 +4,7 @@ import sttp.tapir.codegen.BasicGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaEnum
 
 object EnumGenerator {
+  val legalEnumName = "([a-zA-Z][a-zA-Z0-9_]*)".r
 
   // Uses enumeratum for scala 2, but generates scala 3 enums instead where it can
   private[codegen] def generateEnum(
@@ -14,10 +15,9 @@ object EnumGenerator {
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
       jsonParamRefs: Set[String]
   ): Seq[String] = {
-    val legalRegex = "([a-zA-Z][a-zA-Z0-9_]*)".r
     def maybeEscaped(s: String) = s match {
-      case legalRegex(l) => l
-      case illegal       => s"`$illegal`"
+      case legalEnumName(l) => l
+      case illegal          => s"`$illegal`"
     }
     if (targetScala3) {
       val maybeCompanion =

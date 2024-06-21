@@ -241,7 +241,7 @@ class ClassDefinitionGenerator {
         case ps  => ps.mkString(" extends ", " with ", "")
       }
 
-      val enumDefn = maybeEnums.collect { case Some(defn) => defn }.toList
+      val enumDefn = maybeEnums.flatten.toList
       s"""|case class $name (
           |${indent(2)(properties.mkString(",\n"))}
           |)$parents""".stripMargin :: innerClasses ::: enumDefn ::: acc
