@@ -43,6 +43,7 @@ openapiUseHeadTagForObjectName        false                                If tr
 openapiJsonSerdeLib                   circe                                The json serde library to use.
 openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
 openapiMaxSchemasPerFile              400                                  Maximum number of schemas to generate in a single file (tweak if hitting javac class size limits).
+openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
 ===================================== ==================================== ==================================================================================================
 ```
 
