@@ -140,4 +140,13 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
      "Either_Node_Boolean_SomeValueInt" 
     )
   }
+  
+  it should "Generate correct names for Maps with parameterized types" in {
+    type Tree[A] = Either[A, Node[A]]
+    final case class Node[A](values: List[A])
+    val schema1: Schema[Map[Int, Tree[String]]] = Schema.schemaForMap(_.toString)
+    TapirSchemaToJsonSchema(schema1, true).title shouldBe Some("Map_Int_Either_String_Node_String")
+    val schema2: Schema[Map[Tree[Int], String]] = Schema.schemaForMap(_.toString)
+    TapirSchemaToJsonSchema(schema2, true).title shouldBe Some("Map_Either_Int_Node_Int_String")
+  }
 }
