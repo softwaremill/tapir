@@ -23,14 +23,14 @@ case class GeneratedEndpoint(name: String, definition: String, maybeLocalEnums: 
 case class GeneratedEndpointsForFile(maybeFileName: Option[String], generatedEndpoints: Seq[GeneratedEndpoint])
 
 case class GeneratedEndpoints(
-    namesBodiesAndEnums: Seq[GeneratedEndpointsForFile],
+    namesAndParamsByFile: Seq[GeneratedEndpointsForFile],
     queryParamRefs: Set[String],
     jsonParamRefs: Set[String],
     definesEnumQueryParam: Boolean
 ) {
   def merge(that: GeneratedEndpoints): GeneratedEndpoints =
     GeneratedEndpoints(
-      (namesBodiesAndEnums ++ that.namesBodiesAndEnums)
+      (namesAndParamsByFile ++ that.namesAndParamsByFile)
         .groupBy(_.maybeFileName)
         .map { case (fileName, endpoints) => GeneratedEndpointsForFile(fileName, endpoints.map(_.generatedEndpoints).reduce(_ ++ _)) }
         .toSeq,
