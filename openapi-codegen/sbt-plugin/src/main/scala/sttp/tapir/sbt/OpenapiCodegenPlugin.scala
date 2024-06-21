@@ -29,7 +29,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiUseHeadTagForObjectName := false,
     openapiJsonSerdeLib := "circe",
     openapiValidateNonDiscriminatedOneOfs := true,
-    openapiMaxSchemasPerFile := 400
+    openapiMaxSchemasPerFile := 400,
+    openapiAdditionalPackages := Nil
   )
 
   private def codegen = Def.task {
@@ -43,6 +44,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiJsonSerdeLib,
       openapiValidateNonDiscriminatedOneOfs,
       openapiMaxSchemasPerFile,
+      openapiAdditionalPackages,
       sourceManaged,
       streams,
       scalaVersion
@@ -55,22 +57,29 @@ object OpenapiCodegenPlugin extends AutoPlugin {
           jsonSerdeLib: String,
           validateNonDiscriminatedOneOfs: Boolean,
           maxSchemasPerFile: Int,
+          additionalPackages: List[(String, File)],
           srcDir: File,
           taskStreams: TaskStreams,
           sv: String
       ) =>
-        OpenapiCodegenTask(
-          swaggerFile,
-          packageName,
-          objectName,
-          useHeadTagForObjectName,
-          jsonSerdeLib,
-          validateNonDiscriminatedOneOfs,
-          maxSchemasPerFile,
-          srcDir,
-          taskStreams.cacheDirectory,
-          sv.startsWith("3")
-        ).file
+        def genTask(swaggerFile: File, packageName: String, directoryName: Option[String] = None) =
+          OpenapiCodegenTask(
+            swaggerFile,
+            packageName,
+            objectName,
+            useHeadTagForObjectName,
+            jsonSerdeLib,
+            validateNonDiscriminatedOneOfs,
+            maxSchemasPerFile,
+            srcDir,
+            taskStreams.cacheDirectory,
+            sv.startsWith("3"),
+            directoryName
+          )
+        (genTask(swaggerFile, packageName).file +: additionalPackages.map { case (pkg, defns) =>
+          genTask(defns, pkg, Some(pkg.replace('.', '/'))).file
+        })
+          .reduceLeft((l, r) => l.flatMap(_l => r.map(_l ++ _)))
     }) map (Seq(_))).value
   }
 }

@@ -13,6 +13,7 @@ trait OpenapiCodegenKeys {
   lazy val openapiValidateNonDiscriminatedOneOfs =
     settingKey[Boolean]("Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated..")
   lazy val openapiMaxSchemasPerFile = settingKey[Int]("Maximum number of schemas to generate for a single file")
+  lazy val openapiAdditionalPackages = taskKey[List[(String, File)]]("Addition package -> spec mappings to generate.")
 
   lazy val generateTapirDefinitions = taskKey[Unit]("The task that generates tapir definitions based on the input swagger file.")
 }
