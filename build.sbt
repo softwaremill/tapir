@@ -1254,8 +1254,7 @@ lazy val armeriaServerZio: ProjectMatrix =
       name := "tapir-armeria-server-zio",
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
-      ),
-      Test / test := {}
+      )
     )
     .jvmPlatform(scalaVersions = scala2And3Versions)
     .dependsOn(armeriaServer % CompileAndTest, zio, serverTests % Test)
@@ -1289,7 +1288,6 @@ lazy val http4sServerZio: ProjectMatrix = (projectMatrix in file("server/http4s-
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
     )
-    // Test / test := {}
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
@@ -1434,8 +1432,7 @@ lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
-    ),
-    Test / test := {}
+    )
   )
 
 def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
@@ -1481,7 +1478,7 @@ lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-s
       "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     ),
-    Test / test :=  {}
+    Test / test := {}
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, serverTests % Test, catsEffect % Test)
@@ -1492,8 +1489,7 @@ lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-se
     name := "tapir-vertx-server-zio",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
-    ),
-    Test / test := {}
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, zio, serverTests % Test)
@@ -1505,8 +1501,7 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test,
       "dev.zio" %% "zio-http" % Versions.zioHttp
-    ),
-    Test / test := {}
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
@@ -1528,8 +1523,7 @@ lazy val awsLambdaZio: ProjectMatrix = (projectMatrix in file("serverless/aws/la
     name := "tapir-aws-lambda-zio",
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
-    ),
-    Test / test := {}
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, awsLambdaCore, zio, zioHttpServer, circeJson, tests % "test")
@@ -1586,8 +1580,7 @@ lazy val awsLambdaZioTests: ProjectMatrix = (projectMatrix in file("serverless/a
         })
       )
     },
-    Test / parallelExecution := false,
-    Test / test := {}
+    Test / parallelExecution := false
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, zio, circeJson, awsLambdaZio, awsSam, sttpStubServer, serverTests)

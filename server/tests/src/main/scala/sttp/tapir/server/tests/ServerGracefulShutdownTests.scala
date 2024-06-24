@@ -18,8 +18,7 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
 ) extends EitherValues {
   import createServerTest._
 
-  def tests(): List[Test] = Nil // TODO just checking if this affects hanging builds
-  List(
+  def tests(): List[Test] = List(
     testServerLogicWithStop(
       endpoint
         .out(plainBody[String])
