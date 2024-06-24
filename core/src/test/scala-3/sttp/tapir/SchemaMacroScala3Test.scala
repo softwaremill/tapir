@@ -88,6 +88,42 @@ class SchemaMacroScala3Test extends AnyFlatSpec with Matchers:
     coproduct.subtypeSchema(true).map(_.schema.schemaType) shouldBe Some(SchemaType.SBoolean())
   }
 
+  it should "derive schema for a string-based union type" in {
+    // when
+    val s: Schema["a" | "b"] = Schema.derivedStringBasedUnionEnumeration
+
+    // then
+    s.name.map(_.show) shouldBe Some("a_or_b")
+
+    s.schemaType should matchPattern { case SchemaType.SString() => }
+    s.validator should matchPattern { case Validator.Enumeration(List("a", "b"), _, _) => }
+  }
+
+  it should "derive schema for a const as a string-based union type" in {
+    // when
+    val s: Schema["a"] = Schema.derivedStringBasedUnionEnumeration
+
+    // then
+    s.name.map(_.show) shouldBe Some("a")
+
+    s.schemaType should matchPattern { case SchemaType.SString() => }
+    s.validator should matchPattern { case Validator.Enumeration(List("a"), _, _) => }
+  }
+
+  it should "derive a schema for a union of unions when all are string-based constants" in {
+    // when
+    type AorB = "a" | "b"
+    type C = "c"
+    type AorBorC = AorB | C
+    val s: Schema[AorBorC] = Schema.derivedStringBasedUnionEnumeration[AorBorC]
+
+    // then
+    s.name.map(_.show) shouldBe Some("a_or_b_or_c")
+
+    s.schemaType should matchPattern { case SchemaType.SString() => }
+    s.validator should matchPattern { case Validator.Enumeration(List("a", "b", "c"), _, _) => }
+  }
+
 object SchemaMacroScala3Test:
   enum Fruit:
     case Apple, Banana

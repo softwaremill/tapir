@@ -114,11 +114,15 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
       jsonStr1 shouldBe """{"fieldA":"fieldA value","fieldB":-4018,"fieldC":true}"""
       jsonStr2 shouldBe """{"innerField":{"fieldA":"fieldA value2","fieldC":true}}"""
       jsonStr3 shouldBe """{"fieldA":"fieldA value","fieldC":true}"""
-      pickler1.toCodec.decode("""{"fieldA":"fieldA value3","fieldC":true}""") shouldBe Value(FlatClassWithOption("fieldA value3", None, true))
-      pickler1.toCodec.decode("""{"fieldA":"fieldA value4", "fieldB": null, "fieldC": true}""") shouldBe Value(FlatClassWithOption("fieldA value4", None, true))
+      pickler1.toCodec.decode("""{"fieldA":"fieldA value3","fieldC":true}""") shouldBe Value(
+        FlatClassWithOption("fieldA value3", None, true)
+      )
+      pickler1.toCodec.decode("""{"fieldA":"fieldA value4", "fieldB": null, "fieldC": true}""") shouldBe Value(
+        FlatClassWithOption("fieldA value4", None, true)
+      )
     }
   }
-  
+
   it should "serialize Options to nulls if transientNone = false" in {
     import generic.auto.* // for Pickler auto-derivation
 

@@ -13,6 +13,11 @@ trait ValidatorMacros {
     * first place (the decoder has no other option than to fail).
     */
   inline def derivedEnumeration[T]: Validator.Enumeration[T] = ${ ValidatorMacros.derivedEnumerationImpl[T] }
+
+  inline def derivedStringBasedUnionEnumeration[T](using IsUnionOf[String, T]): Validator.Enumeration[T] = {
+    lazy val values = UnionDerivation.constValueUnionTuple[String, T]
+    Validator.enumeration(values.toList.asInstanceOf[List[T]])
+  }
 }
 
 private[tapir] object ValidatorMacros {

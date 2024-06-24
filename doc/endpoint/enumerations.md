@@ -263,6 +263,23 @@ enum ColorEnum {
 given Schema[ColorEnum] = Schema.derivedEnumeration.defaultStringBased
 ```
 
+### Scala 3 string-based constant union types to enum
+
+If a union type is a string-based constant union type, it can be auto-derived as field type or manually derived by using the `Schema.derivedStringBasedUnionEnumeration[T]` method.
+
+Constant strings can be derived by using the `Schema.constStringToEnum[T]` method.
+
+Examples:
+```scala
+val aOrB: Schema["a" | "b"] = Schema.derivedStringBasedUnionEnumeration
+```
+```scala
+val a: Schema["a"] = Schema.constStringToEnum
+```
+```scala
+case class Foo(aOrB: "a" | "b", optA: Option["a"]) derives Schema
+```
+
 ### Creating an enum schema by hand
 
 Creating an enumeration [schema](schema.md) by hand is exactly the same as for any other type. The only difference

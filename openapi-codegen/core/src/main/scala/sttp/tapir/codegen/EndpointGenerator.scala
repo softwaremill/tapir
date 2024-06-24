@@ -102,7 +102,7 @@ class EndpointGenerator {
           m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
           .collect { case (contentType, schema) if contentType == "application/json" => schema }
           .collect {
-            case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
+            case ref: OpenapiSchemaRef if ref.isSchema                        => ref.stripped
             case OpenapiSchemaArray(ref: OpenapiSchemaRef, _) if ref.isSchema => ref.stripped
             case OpenapiSchemaArray(OpenapiSchemaAny(_), _) =>
               bail("Cannot generate schema for 'Any' with jsoniter library")
@@ -182,8 +182,9 @@ class EndpointGenerator {
         param.schema match {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
+            val req = if (param.required.getOrElse(true)) t else s"Option[$t]"
             val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-            s""".in(${param.in}[$t]("${param.name}")$desc)"""
+            s""".in(${param.in}[$req]("${param.name}")$desc)"""
           case x => bail(s"Can't create non-simple params to input - found $x")
         }
       }

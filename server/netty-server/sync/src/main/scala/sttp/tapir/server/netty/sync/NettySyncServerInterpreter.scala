@@ -19,8 +19,8 @@ trait NettySyncServerInterpreter:
     * processor.
     */
   def toRoute(
-               ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
-               oxDispatcher: OxDispatcher
+      ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
+      oxDispatcher: OxDispatcher
   ): IdRoute =
     implicit val bodyListener: BodyListener[Identity, NettyResponse] = new NettyBodyListener(RunAsync.Id)
     val serverInterpreter = new ServerInterpreter[OxStreams with WebSockets, Identity, NettyResponse, OxStreams](

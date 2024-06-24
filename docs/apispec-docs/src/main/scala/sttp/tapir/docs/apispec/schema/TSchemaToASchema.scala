@@ -58,10 +58,13 @@ private[docs] class TSchemaToASchema(
                 .map(apply(_, allowReference = true))
                 .sortBy {
                   case schema if schema.$ref.isDefined => schema.$ref.get
-                  case schema => schema.`type`.collect {
-                    case List(t) => t.value
-                    case List(t, SchemaType.Null) => t.value
-                  }.getOrElse("") + schema.toString
+                  case schema =>
+                    schema.`type`
+                      .collect {
+                        case List(t)                  => t.value
+                        case List(t, SchemaType.Null) => t.value
+                      }
+                      .getOrElse("") + schema.toString
                 },
               d.map(tDiscriminatorToADiscriminator)
             )
