@@ -106,7 +106,6 @@ jsoniter              "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala
 Currently, string-like enums in Scala 2 depend upon the enumeratum library (`"com.beachape" %% "enumeratum"`).
 For Scala 3 we derive native enums, and depend on `"io.github.bishabosha" %% "enum-extensions"` for generating query
 param serdes.
-Other forms of OpenApi enum are not currently supported.
 
 Models containing binary data cannot be re-used between json and multi-part form endpoints, due to having different
 representation types for the binary data
