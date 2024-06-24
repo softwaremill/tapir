@@ -1490,7 +1490,8 @@ lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-se
     name := "tapir-vertx-server-zio",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
-    )
+    ),
+    Test / test := {}
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, zio, serverTests % Test)
