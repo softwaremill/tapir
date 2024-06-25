@@ -221,9 +221,10 @@ object JsonSerdeGenerator {
   // By default:
   // - permit recursive schema definitions
   // - force serialization of empty collections if 'required' (non-required T will be typed as 'Option[T]' to which this will not apply)
+  // - force serialization of default values
   // - require presence of collections when decoding if 'required'
   private val jsoniterBaseConfig =
-    s"$jsoniterPkgMacros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withRequireCollectionFields(true)"
+    s"$jsoniterPkgMacros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true)"
   private val jsoniteEnumConfig = s"$jsoniterBaseConfig.withDiscriminatorFieldName(scala.None)"
   private def genJsoniterSerdes(
       doc: OpenapiDocument,

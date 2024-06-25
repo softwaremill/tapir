@@ -16,8 +16,6 @@ import scala.concurrent.duration.FiniteDuration
 class ZioHttpTestServerInterpreter(
     eventLoopGroup: ZLayer[Any, Nothing, EventLoopGroup],
     channelFactory: ZLayer[Any, Nothing, ChannelFactory[ServerChannel]]
-)(implicit
-    trace: Trace
 ) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], Routes[Any, Response]] {
 
   override def route(
@@ -37,7 +35,7 @@ class ZioHttpTestServerInterpreter(
     val effect: ZIO[Scope, Throwable, Port] =
       (for {
         driver <- ZIO.service[Driver]
-        result <- driver.start(trace)
+        result <- driver.start
         _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _), ZEnvironment())
       } yield result.port)
         .provideSome[Scope](

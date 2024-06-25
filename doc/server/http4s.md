@@ -47,7 +47,7 @@ The http4s interpreter accepts streaming bodies of type `Stream[F, Byte]`, as de
 capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(Fs2Streams[F])(schema, format)`.
 
 The capability can be added to the classpath independently of the interpreter through the 
-`"com.softwaremill.sttp.shared" %% "http4s"` dependency.
+`"com.softwaremill.sttp.shared" %% "fs2"` [dependency](https://mvnrepository.com/artifact/com.softwaremill.sttp.shared/fs2).
 
 ## Http4s backends
 

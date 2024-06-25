@@ -216,6 +216,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    tutorials/01_hello_world
    tutorials/02_openapi_docs
    tutorials/03_json
+   tutorials/04_errors
 
 .. toctree::
    :maxdepth: 2

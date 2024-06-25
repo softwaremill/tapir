@@ -1,5 +1,9 @@
 # 3. Using JSON bodies
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=NG8XWS7ijHU).
+```
+
 The endpoints we defined in the previous tutorials all used `String` bodies. Quite naturally, tapir supports
 much more than that - using appropriate **codecs**, it's possible to serialize and deserialize to arbitrary types.
 The most popular format on the web is JSON; hence, let's see how to expose a JSON-based endpoint using tapir.
@@ -20,7 +24,7 @@ we'll see how in a moment:
 ```
 
 Once we have that, let's define our data model, which we'll use for requests and responses. We'll define a single 
-endpoint, transforming a `Meal` class into a `Nutrition` one:
+endpoint, transforming a `Meal` instance into a `Nutrition` one:
 
 {emphasize-lines="3-4"}
 ```scala
@@ -79,7 +83,7 @@ In our case, deriving the schemas will amount to adding a `... derives Schema` c
 
 {emphasize-lines="1, 7, 10, 12, 16"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.9
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.10
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*   // needed for `writeToString`
@@ -123,10 +127,10 @@ how the `jsonBody[T]` method is used in the endpoint definition. We'll also expo
 
 {emphasize-lines="2-4, 10-15, 23-39"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.9
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.9
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.9
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.10.9
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.10
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.10
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.10
+//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.10.10
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 
 import com.github.plokhotnyuk.jsoniter_scala.macros.* // needed for ... derives

@@ -33,7 +33,12 @@ object IntersectionTypeMirror {
     def rec(tpe: TypeRepr): TypeRepr = {
       tpe.dealias match
         case AndType(left, right) => concatTypes(rec(left), rec(right))
-        case t                    => prependTypes(t, TypeRepr.of[EmptyTuple])
+        case t                    =>
+          // Intentionally using `tpe` instead of `t`. Dealiased representation `t` "loses" information 
+          // about the original type from the intersection. For example, an Iron predicate `MinLength[N]` 
+          // would be dealiased to `DescribedAs[Length[GreaterEqual[N]], _]`. 
+          // Then, a given `ValidatorForPredicate[T, MinLength[N]]` would not be used in implicit resolution.
+          prependTypes(tpe, TypeRepr.of[EmptyTuple])
     }
     val tupled =
       TypeRepr.of[A].dealias match {

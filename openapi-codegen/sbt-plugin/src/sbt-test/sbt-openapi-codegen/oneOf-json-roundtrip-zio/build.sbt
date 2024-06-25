@@ -10,7 +10,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "1.10.0",
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.0",
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.8.0",
-  "org.scalatest" %% "scalatest" % "3.2.18" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test
 )
 

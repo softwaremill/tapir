@@ -12,7 +12,7 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-generic" % "0.14.7",
   "org.latestbit" %% "circe-tagged-adt-codec" % "0.11.0",
   "io.github.bishabosha" %% "enum-extensions" % "0.1.1",
-  "org.scalatest" %% "scalatest" % "3.2.18" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test
 )
 

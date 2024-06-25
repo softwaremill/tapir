@@ -1,5 +1,9 @@
 # 3. Using JSON bodies
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=NG8XWS7ijHU).
+```
+
 The endpoints we defined in the previous tutorials all used `String` bodies. Quite naturally, tapir supports
 much more than that - using appropriate **codecs**, it's possible to serialize and deserialize to arbitrary types.
 The most popular format on the web is JSON; hence, let's see how to expose a JSON-based endpoint using tapir.
@@ -20,7 +24,7 @@ we'll see how in a moment:
 ```
 
 Once we have that, let's define our data model, which we'll use for requests and responses. We'll define a single 
-endpoint, transforming a `Meal` class into a `Nutrition` one:
+endpoint, transforming a `Meal` instance into a `Nutrition` one:
 
 {emphasize-lines="3-4"}
 ```scala
