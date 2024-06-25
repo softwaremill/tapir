@@ -6,7 +6,7 @@ object Versions {
   val catsEffect = "3.5.4"
   val circe = "0.14.7"
   val circeGenericExtras = "0.14.3"
-  val circeYaml = "0.15.1"
+  val circeYaml = "0.15.2"
   val helidon = "4.0.0"
   val sttp = "3.9.7"
   val sttpModel = "1.7.11"
