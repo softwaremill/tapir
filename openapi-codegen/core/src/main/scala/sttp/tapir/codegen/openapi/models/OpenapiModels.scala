@@ -71,8 +71,12 @@ object OpenapiModels {
       in: String,
       required: Option[Boolean],
       description: Option[String],
-      schema: OpenapiSchemaType
-  )
+      schema: OpenapiSchemaType,
+      explode: Option[Boolean] = None
+  ) {
+    // default is true for query params, but headers must always be 'simple' style -- see https://swagger.io/docs/specification/serialization/
+    def isExploded: Boolean = in != "header" && !explode.contains(false)
+  }
 
   case class OpenapiResponse(
       code: String,

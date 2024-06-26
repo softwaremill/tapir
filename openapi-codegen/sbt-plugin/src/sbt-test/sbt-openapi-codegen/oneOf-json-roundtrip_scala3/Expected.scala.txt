@@ -11,6 +11,64 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
 
+
+  case class CommaSeparatedValues[T](values: List[T])
+  case class ExplodedValues[T](values: List[T])
+  trait QueryParamSupport[T] {
+    def decode(s: String): sttp.tapir.DecodeResult[T]
+    def encode(t: T): String
+  }
+  implicit def makeQueryCodecFromSupport[T](implicit support: QueryParamSupport[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(support.decode)(support.encode)
+  }
+  implicit def makeQueryOptCodecFromSupport[T](implicit support: QueryParamSupport[T]): sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(maybeV => DecodeResult.sequence(maybeV.toSeq.map(support.decode)).map(_.headOption))(_.map(support.encode))
+  }
+  implicit def makeUnexplodedQuerySeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], CommaSeparatedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(values => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(s => CommaSeparatedValues(s.toList)))(_.values.map(support.encode).mkString(","))
+  }
+  implicit def makeUnexplodedQueryOptSeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], Option[CommaSeparatedValues[T]], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode{
+        case None => DecodeResult.Value(None)
+        case Some(values) => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(r => Some(CommaSeparatedValues(r.toList)))
+      }(_.map(_.values.map(support.encode).mkString(",")))
+  }
+  implicit def makeExplodedQuerySeqCodecFromSupport[T](implicit support: QueryParamSupport[T]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.list[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(values => DecodeResult.sequence(values.map(support.decode)).map(s => ExplodedValues(s.toList)))(_.values.map(support.encode))
+  }
+  implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+    support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
+  }
+
+
+  def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
+    Map.from(
+      for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
+    )
+  case class EnumQueryParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends QueryParamSupport[T] {
+    // Case-insensitive mapping
+    def decode(s: String): sttp.tapir.DecodeResult[T] =
+      scala.util
+        .Try(eMap(s.toUpperCase))
+        .fold(
+          _ =>
+            sttp.tapir.DecodeResult.Error(
+              s,
+              new NoSuchElementException(
+                s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
+              )
+            ),
+          sttp.tapir.DecodeResult.Value(_)
+        )
+    def encode(t: T): String = t.name
+  }
+  def queryCodecSupport[T: enumextensions.EnumMirror]: QueryParamSupport[T] =
+    EnumQueryParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
@@ -28,9 +86,17 @@ object TapirGeneratedEndpoints {
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
-    d: Option[Double] = None,
+    e: Option[AnEnum] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  case class ObjectWithInlineEnum (
+    id: java.util.UUID,
+    inlineEnum: ObjectWithInlineEnumInlineEnum
+  )
+
+  enum ObjectWithInlineEnumInlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    case foo1, foo2, foo3, foo4
+  }
   case class SubtypeWithoutD2 (
     a: Seq[String],
     absent: Option[String] = None
@@ -40,6 +106,9 @@ object TapirGeneratedEndpoints {
     a: Option[Seq[String]] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
 
+  enum AnEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    case Foo, Bar, Baz
+  }
 
 
   lazy val putAdtTest =
@@ -56,7 +125,50 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping])
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
+  lazy val postInlineEnumTest =
+    endpoint
+      .post
+      .in(("inline" / "enum" / "test"))
+      .in(query[PostInlineEnumTestQueryEnum]("query-enum").description("An enum, inline, in a query string"))
+      .in(query[Option[PostInlineEnumTestQueryOptEnum]]("query-opt-enum").description("An optional enum, inline, in a query string"))
+      .in(query[ExplodedValues[PostInlineEnumTestQuerySeqEnum]]("query-seq-enum").map(_.values)(ExplodedValues(_)).description("A sequence of enums, inline, in a query string"))
+      .in(query[ExplodedValues[PostInlineEnumTestQueryOptSeqEnum]]("query-opt-seq-enum").map(_.values)(ExplodedValues(_)).description("An optional sequence of enums, inline, in a query string"))
+      .in(jsonBody[ObjectWithInlineEnum])
+      .out(statusCode(sttp.model.StatusCode(204)).description("No Content"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest)
+  object PostInlineEnumTestQueryEnum {
+    given enumCodecSupportPostInlineEnumTestQueryEnum: QueryParamSupport[PostInlineEnumTestQueryEnum] =
+      queryCodecSupport[PostInlineEnumTestQueryEnum]
+  }
+  enum PostInlineEnumTestQueryEnum derives enumextensions.EnumMirror {
+    case bar1, bar2, bar3
+  }
+
+  object PostInlineEnumTestQueryOptEnum {
+    given enumCodecSupportPostInlineEnumTestQueryOptEnum: QueryParamSupport[PostInlineEnumTestQueryOptEnum] =
+      queryCodecSupport[PostInlineEnumTestQueryOptEnum]
+  }
+  enum PostInlineEnumTestQueryOptEnum derives enumextensions.EnumMirror {
+    case bar1, bar2, bar3
+  }
+
+  object PostInlineEnumTestQuerySeqEnum {
+    given enumCodecSupportPostInlineEnumTestQuerySeqEnum: QueryParamSupport[PostInlineEnumTestQuerySeqEnum] =
+      queryCodecSupport[PostInlineEnumTestQuerySeqEnum]
+  }
+  enum PostInlineEnumTestQuerySeqEnum derives enumextensions.EnumMirror {
+    case baz1, baz2, baz3
+  }
+
+  object PostInlineEnumTestQueryOptSeqEnum {
+    given enumCodecSupportPostInlineEnumTestQueryOptSeqEnum: QueryParamSupport[PostInlineEnumTestQueryOptSeqEnum] =
+      queryCodecSupport[PostInlineEnumTestQueryOptSeqEnum]
+  }
+  enum PostInlineEnumTestQueryOptSeqEnum derives enumextensions.EnumMirror {
+    case baz1, baz2, baz3
+  }
+
+
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postInlineEnumTest)
 
 }
