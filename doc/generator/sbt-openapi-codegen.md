@@ -43,6 +43,7 @@ openapiUseHeadTagForObjectName        false                                If tr
 openapiJsonSerdeLib                   circe                                The json serde library to use.
 openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
 openapiMaxSchemasPerFile              400                                  Maximum number of schemas to generate in a single file (tweak if hitting javac class size limits).
+openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
 ===================================== ==================================== ==================================================================================================
 ```
 
@@ -87,6 +88,16 @@ single `object TapirGeneratedEndpoints`.
 If `openapiUseHeadTagForObjectName = true`, then the  `GET /foo` and `GET /bar` endpoints would be output to a
 `Baz.scala` file, containing a single `object Baz` with those endpoint definitions; the `PUT /foo` endpoint, by dint of
 having no tags, would be output to the `TapirGeneratedEndpoints` file, along with any schema and parameter definitions.
+
+Files can be generated from multiple openapi schemas if `openapiAdditionalPackages` is configured; for example
+```sbt
+openapiAdditionalPackages := List(
+      "sttp.tapir.generated.v1" -> baseDirectory.value / "src" / "main" / "resources" / "openapi_v1.yml")
+```
+would generate files in the package `sttp.tapir.generated.v1` based on the `openapi_v1.yml` schema at the provided
+location. This would be in addition to files generated in `openapiPackage` from the specs configured by
+`openapiSwaggerFile`
+
 
 ### Json Support
 
