@@ -18,6 +18,9 @@ object TapirGeneratedEndpoints {
     def decode(s: String): sttp.tapir.DecodeResult[T]
     def encode(t: T): String
   }
+  implicit def makePathCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[String, T, sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.string.mapDecode(support.decode)(support.encode)
+  }
   implicit def makeQueryCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
     sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
       .mapDecode(support.decode)(support.encode)
