@@ -14,7 +14,7 @@ class ClassDefinitionGenerator {
   def classDefs(
       doc: OpenapiDocument,
       targetScala3: Boolean = false,
-      queryParamRefs: Set[String] = Set.empty,
+      queryOrPathParamRefs: Set[String] = Set.empty,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = JsonSerdeLib.Circe,
       jsonParamRefs: Set[String] = Set.empty,
       fullModelPath: String = "",
@@ -25,10 +25,10 @@ class ClassDefinitionGenerator {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
     val adtInheritanceMap: Map[String, Seq[String]] = mkMapParentsByChild(allOneOfSchemas)
-    val generatesQueryParamEnums = enumsDefinedOnEndpointParams ||
+    val generatesQueryOrPathParamEnums = enumsDefinedOnEndpointParams ||
       allSchemas
         .collect { case (name, _: OpenapiSchemaEnum) => name }
-        .exists(queryParamRefs.contains)
+        .exists(queryOrPathParamRefs.contains)
 
     def fetchJsonParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
@@ -41,7 +41,7 @@ class ClassDefinitionGenerator {
     )
 
     val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
-    val enumQuerySerdeHelper = if (!generatesQueryParamEnums) "" else enumQuerySerdeHelperDefn(targetScala3)
+    val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemas = SchemaGenerator.generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile)
     val jsonSerdes = JsonSerdeGenerator.serdeDefs(
       doc,
@@ -58,13 +58,13 @@ class ClassDefinitionGenerator {
         case (name, obj: OpenapiSchemaObject) =>
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
         case (name, obj: OpenapiSchemaEnum) =>
-          EnumGenerator.generateEnum(name, obj, targetScala3, queryParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
+          EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
         case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema)
         case (_, _: OpenapiSchemaOneOf)               => Nil
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
-    val helpers = (enumQuerySerdeHelper + adtTypes).linesIterator
+    val helpers = (enumSerdeHelper + adtTypes).linesIterator
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
     // Json serdes & schemas live in separate files from the class defns
@@ -97,14 +97,14 @@ class ClassDefinitionGenerator {
       .groupBy(_._1)
       .mapValues(_.map(_._2))
 
-  private def enumQuerySerdeHelperDefn(targetScala3: Boolean): String = {
+  private def enumSerdeHelperDefn(targetScala3: Boolean): String = {
     if (targetScala3)
       """
         |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
         |  Map.from(
         |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
         |  )
-        |case class EnumQueryParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends QueryParamSupport[T] {
+        |case class EnumExtraParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends ExtraParamSupport[T] {
         |  // Case-insensitive mapping
         |  def decode(s: String): sttp.tapir.DecodeResult[T] =
         |    scala.util
@@ -121,12 +121,12 @@ class ClassDefinitionGenerator {
         |      )
         |  def encode(t: T): String = t.name
         |}
-        |def queryCodecSupport[T: enumextensions.EnumMirror]: QueryParamSupport[T] =
-        |  EnumQueryParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
+        |def extraCodecSupport[T: enumextensions.EnumMirror]: ExtraParamSupport[T] =
+        |  EnumExtraParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
         |""".stripMargin
     else
       """
-        |case class EnumQueryParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends QueryParamSupport[T] {
+        |case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
         |  // Case-insensitive mapping
         |  def decode(s: String): sttp.tapir.DecodeResult[T] =
         |    scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
@@ -142,8 +142,8 @@ class ClassDefinitionGenerator {
         |      )
         |  def encode(t: T): String = t.entryName
         |}
-        |def queryCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): QueryParamSupport[T] =
-        |  EnumQueryParamSupport(enumName, T)
+        |def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
+        |  EnumExtraParamSupport(enumName, T)
         |""".stripMargin
   }
 

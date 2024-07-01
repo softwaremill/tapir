@@ -48,14 +48,14 @@ object BasicGenerator {
         JsonSerdeLib.Circe
     }
 
-    val EndpointDefs(endpointsByTag, queryParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams) =
+    val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams) =
       endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames, targetScala3, normalisedJsonLib)
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas) =
       classGenerator
         .classDefs(
           doc = doc,
           targetScala3 = targetScala3,
-          queryParamRefs = queryParamRefs,
+          queryOrPathParamRefs = queryOrPathParamRefs,
           jsonSerdeLib = normalisedJsonLib,
           jsonParamRefs = jsonParamRefs,
           fullModelPath = s"$packagePath.$objName",
@@ -146,15 +146,18 @@ object BasicGenerator {
       """
       |case class CommaSeparatedValues[T](values: List[T])
       |case class ExplodedValues[T](values: List[T])
-      |trait QueryParamSupport[T] {
+      |trait ExtraParamSupport[T] {
       |  def decode(s: String): sttp.tapir.DecodeResult[T]
       |  def encode(t: T): String
       |}
-      |implicit def makeQueryCodecFromSupport[T](implicit support: QueryParamSupport[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
+      |implicit def makePathCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[String, T, sttp.tapir.CodecFormat.TextPlain] = {
+      |  sttp.tapir.Codec.string.mapDecode(support.decode)(support.encode)
+      |}
+      |implicit def makeQueryCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
       |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
       |    .mapDecode(support.decode)(support.encode)
       |}
-      |implicit def makeQueryOptCodecFromSupport[T](implicit support: QueryParamSupport[T]): sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] = {
+      |implicit def makeQueryOptCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] = {
       |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
       |    .mapDecode(maybeV => DecodeResult.sequence(maybeV.toSeq.map(support.decode)).map(_.headOption))(_.map(support.encode))
       |}
@@ -169,7 +172,7 @@ object BasicGenerator {
       |      case Some(values) => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(r => Some(CommaSeparatedValues(r.toList)))
       |    }(_.map(_.values.map(support.encode).mkString(",")))
       |}
-      |implicit def makeExplodedQuerySeqCodecFromSupport[T](implicit support: QueryParamSupport[T]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+      |implicit def makeExplodedQuerySeqCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
       |  sttp.tapir.Codec.list[String, String, sttp.tapir.CodecFormat.TextPlain]
       |    .mapDecode(values => DecodeResult.sequence(values.map(support.decode)).map(s => ExplodedValues(s.toList)))(_.values.map(support.encode))
       |}
