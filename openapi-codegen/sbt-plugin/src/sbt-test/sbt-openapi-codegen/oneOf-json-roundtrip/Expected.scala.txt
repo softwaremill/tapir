@@ -40,10 +40,6 @@ object TapirGeneratedEndpoints {
         case Some(values) => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(r => Some(CommaSeparatedValues(r.toList)))
       }(_.map(_.values.map(support.encode).mkString(",")))
   }
-  implicit def makeExplodedQuerySeqCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
-    sttp.tapir.Codec.list[String, String, sttp.tapir.CodecFormat.TextPlain]
-      .mapDecode(values => DecodeResult.sequence(values.map(support.decode)).map(s => ExplodedValues(s.toList)))(_.values.map(support.encode))
-  }
   implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
   }
