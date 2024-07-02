@@ -166,6 +166,12 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
     res shouldBe Right(
       OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")), false)
     )
+    parser
+      .parse(TestHelpers.enumQueryParamYaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument]) shouldBe Right(
+      TestHelpers.enumQueryParamDocs
+    )
   }
 
   it should "parse endpoint with defaults" in {

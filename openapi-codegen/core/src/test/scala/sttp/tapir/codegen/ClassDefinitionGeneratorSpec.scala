@@ -294,7 +294,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       .classDefs(doc, true, jsonParamRefs = Set("Test"))
       .map(concatted)
     val resWithQueryParamCodec = gen
-      .classDefs(doc, true, queryParamRefs = Set("Test"), jsonParamRefs = Set("Test"))
+      .classDefs(doc, true, queryOrPathParamRefs = Set("Test"), jsonParamRefs = Set("Test"))
       .map(concatted)
     // can't just check whether these compile, because our tests only run on scala 2.12 - so instead just eyeball it...
     res shouldBe Some("""enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
@@ -304,27 +304,28 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |  Map.from(
       |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
       |  )
-      |def makeQueryCodecForEnum[T: enumextensions.EnumMirror]: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] =
-      |  sttp.tapir.Codec
-      |    .listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(s =>
-      |      // Case-insensitive mapping
-      |      scala.util
-      |        .Try(enumMap[T](using enumextensions.EnumMirror[T])(s.toUpperCase))
-      |        .fold(
-      |          _ =>
-      |            sttp.tapir.DecodeResult.Error(
-      |              s,
-      |              new NoSuchElementException(
-      |                s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
-      |              )
-      |            ),
-      |          sttp.tapir.DecodeResult.Value(_)
-      |        )
-      |    )(_.name)
+      |case class EnumExtraParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends ExtraParamSupport[T] {
+      |  // Case-insensitive mapping
+      |  def decode(s: String): sttp.tapir.DecodeResult[T] =
+      |    scala.util
+      |      .Try(eMap(s.toUpperCase))
+      |      .fold(
+      |        _ =>
+      |          sttp.tapir.DecodeResult.Error(
+      |            s,
+      |            new NoSuchElementException(
+      |              s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
+      |            )
+      |          ),
+      |        sttp.tapir.DecodeResult.Value(_)
+      |      )
+      |  def encode(t: T): String = t.name
+      |}
+      |def extraCodecSupport[T: enumextensions.EnumMirror]: ExtraParamSupport[T] =
+      |  EnumExtraParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
       |object Test {
-      |  given stringListTestCodec: sttp.tapir.Codec[List[String], Test, sttp.tapir.CodecFormat.TextPlain] =
-      |    makeQueryCodecForEnum[Test]
+      |  given enumCodecSupportTest: ExtraParamSupport[Test] =
+      |    extraCodecSupport[Test]
       |}
       |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror {
       |  case enum1, enum2
@@ -388,7 +389,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val res: String = parserRes match {
       case Left(value) => throw new Exception(value)
-      case Right(doc)  => new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
+      case Right(doc) =>
+        new EndpointGenerator()
+          .endpointDefs(doc, useHeadTagForObjectNames = false, targetScala3 = false, jsonSerdeLib = JsonSerdeLib.Circe)
+          .endpointDecls(None)
     }
 
     val compileUnit =
@@ -490,7 +494,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, schemas) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _) =
         gen
           .classDefs(
             doc,
@@ -505,7 +509,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       res shouldCompile ()
       fullRes shouldCompile ()
       jsonSerdes.get should include(
-        """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
+        """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
       )
     }
     testOK(TestHelpers.oneOfDocsWithMapping)
@@ -523,7 +527,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, schemas) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
       val fullRes = (res + "\n" + jsonSerdes.get)

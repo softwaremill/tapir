@@ -39,7 +39,11 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           Seq(
             OpenapiPathMethod(
               methodType = "get",
-              parameters = Seq(Resolved(OpenapiParameter("asd-id", "path", Some(true), None, OpenapiSchemaString(false)))),
+              parameters = Seq(
+                Resolved(OpenapiParameter("asd-id", "path", Some(true), None, OpenapiSchemaString(false))),
+                Resolved(OpenapiParameter("fgh-id", "query", Some(false), None, OpenapiSchemaString(false))),
+                Resolved(OpenapiParameter("jkl-id", "header", Some(false), None, OpenapiSchemaString(false)))
+              ),
               responses = Seq(
                 OpenapiResponse(
                   "200",
@@ -58,8 +62,12 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null
     )
     val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
-      new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
+      new EndpointGenerator()
+        .endpointDefs(doc, useHeadTagForObjectNames = false, targetScala3 = false, jsonSerdeLib = JsonSerdeLib.Circe)
+        .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
+    generatedCode should include(""".in(query[Option[String]]("fgh-id"))""")
+    generatedCode should include(""".in(header[Option[String]]("jkl-id"))""")
     generatedCode shouldCompile ()
   }
 
@@ -133,7 +141,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       )
     )
     BasicGenerator.imports(JsonSerdeLib.Circe) ++
-      new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None) shouldCompile ()
+      new EndpointGenerator()
+        .endpointDefs(doc, useHeadTagForObjectNames = false, targetScala3 = false, jsonSerdeLib = JsonSerdeLib.Circe)
+        .endpointDecls(None) shouldCompile ()
   }
 
   it should "handle status codes" in {
@@ -177,7 +187,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null
     )
     val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
-      new EndpointGenerator().endpointDefs(doc, useHeadTagForObjectNames = false).endpointDecls(None)
+      new EndpointGenerator()
+        .endpointDefs(doc, useHeadTagForObjectNames = false, targetScala3 = false, jsonSerdeLib = JsonSerdeLib.Circe)
+        .endpointDecls(None)
     generatedCode should include(
       """.out(stringBody.description("Processing").and(statusCode(sttp.model.StatusCode(202))))"""
     ) // status code with body

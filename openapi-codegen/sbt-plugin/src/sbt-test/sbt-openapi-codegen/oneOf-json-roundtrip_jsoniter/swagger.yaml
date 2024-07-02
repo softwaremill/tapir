@@ -126,8 +126,13 @@ components:
           type: string
         i:
           type: integer
-        d:
-          type: number
-          format: double
+        e:
+          $ref: '#/components/schemas/AnEnum'
         absent:
           type: string
+    AnEnum:
+      type: string
+      enum:
+        - Foo
+        - Bar
+        - Baz
