@@ -526,10 +526,25 @@ object TestHelpers {
       |          $ref: '#/components/schemas/Test'
       |    post:
       |      responses: {}
+      |  /pathTest/{test2}:
+      |    parameters:
+      |      - name: test2
+      |        in: path
+      |        required: true
+      |        schema:
+      |          $ref: '#/components/schemas/Test2'
+      |    post:
+      |      responses: {}
       |
       |components:
       |  schemas:
       |    Test:
+      |      title: Test
+      |      type: string
+      |      enum:
+      |        - paperback
+      |        - hardback
+      |    Test2:
       |      title: Test
       |      type: string
       |      enum:
@@ -555,7 +570,24 @@ object TestHelpers {
           )
         ),
         parameters = Seq(
-          Resolved(OpenapiParameter("test", "query", None, None, OpenapiSchemaRef("#/components/schemas/Test")))
+          Resolved(OpenapiParameter("test", "query", Some(false), None, OpenapiSchemaRef("#/components/schemas/Test")))
+        )
+      ),
+      OpenapiPath(
+        "/pathTest/{test2}",
+        Seq(
+          OpenapiPathMethod(
+            methodType = "post",
+            parameters = Seq(),
+            responses = Seq(),
+            requestBody = None,
+            summary = None,
+            tags = None,
+            operationId = None
+          )
+        ),
+        parameters = Seq(
+          Resolved(OpenapiParameter("test2", "path", Some(true), None, OpenapiSchemaRef("#/components/schemas/Test2")))
         )
       )
     ),
@@ -563,6 +595,11 @@ object TestHelpers {
       OpenapiComponent(
         Map(
           "Test" -> OpenapiSchemaEnum(
+            "string",
+            Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
+            false
+          ),
+          "Test2" -> OpenapiSchemaEnum(
             "string",
             Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
             false

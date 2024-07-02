@@ -446,6 +446,17 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       )
     )
   )
+  .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = {
+      commonNativeSettings ++ Seq(
+        libraryDependencies ++= Seq(
+          "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime,
+          "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.nativeScalaJavaTime % Test
+        )
+      )
+    }
+  )
 //.enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
 lazy val files: ProjectMatrix = (projectMatrix in file("files"))
@@ -458,6 +469,7 @@ lazy val files: ProjectMatrix = (projectMatrix in file("files"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions)
+  .nativePlatform(scalaVersions = List(scala3))
   .dependsOn(core)
 
 lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
@@ -471,6 +483,7 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
   .dependsOn(core, circeJson % Test)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
@@ -505,11 +518,11 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     name := "tapir-perf-tests",
     libraryDependencies ++= Seq(
       // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.4" % "test" exclude (
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.5" % "test" exclude (
         "com.fasterxml.jackson.core",
         "jackson-databind"
       ),
-      "io.gatling" % "gatling-test-framework" % "3.11.4" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
@@ -570,6 +583,14 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
+      )
+    )
+  )
+ .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = commonNativeSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
@@ -760,6 +781,10 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
+  .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = commonNativeSettings
+  )
   .dependsOn(core)
 
 lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
@@ -850,6 +875,14 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
+      )
+    )
+  )
+  .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = commonNativeSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime % Test
       )
     )
   )
@@ -1157,6 +1190,7 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
   .dependsOn(core % CompileAndTest)
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonJvmSettings)
@@ -1829,6 +1863,7 @@ lazy val clientCore: ProjectMatrix = (projectMatrix in file("client/core"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(scalaVersions = scala2And3Versions)
+  .nativePlatform(scalaVersions = List(scala3))
   .dependsOn(core)
 
 lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-client"))

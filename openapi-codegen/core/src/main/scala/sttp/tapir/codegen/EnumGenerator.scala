@@ -23,8 +23,8 @@ object EnumGenerator {
       val maybeCompanion =
         if (queryParamRefs contains name) {
           def helperImpls =
-            s"""  given enumCodecSupport${name.capitalize}: QueryParamSupport[$name] =
-               |    queryCodecSupport[$name]""".stripMargin
+            s"""  given enumCodecSupport${name.capitalize}: ExtraParamSupport[$name] =
+               |    extraCodecSupport[$name]""".stripMargin
           s"""
              |object $name {
              |$helperImpls
@@ -52,8 +52,8 @@ object EnumGenerator {
       val maybeQueryCodecDefn =
         if (queryParamRefs contains name) {
           s"""
-               |  implicit val enumCodecSupport${name.capitalize}: QueryParamSupport[$name] =
-               |    queryCodecSupport[$name]("${name}", ${name})""".stripMargin
+               |  implicit val enumCodecSupport${name.capitalize}: ExtraParamSupport[$name] =
+               |    extraCodecSupport[$name]("${name}", ${name})""".stripMargin
         } else ""
       s"""
          |sealed trait $name extends enumeratum.EnumEntry
