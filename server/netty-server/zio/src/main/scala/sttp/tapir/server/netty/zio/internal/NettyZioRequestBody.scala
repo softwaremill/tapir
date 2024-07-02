@@ -10,6 +10,7 @@ import sttp.tapir.server.netty.internal.{NettyStreamingRequestBody, StreamCompat
 import sttp.tapir.ztapir.RIOMonadError
 import zio.RIO
 import zio.stream._
+import org.playframework.netty.http.StreamedHttpRequest
 
 private[zio] class NettyZioRequestBody[Env](
     val createFile: ServerRequest => RIO[Env, TapirFile],
@@ -19,6 +20,7 @@ private[zio] class NettyZioRequestBody[Env](
   override val streams: ZioStreams = ZioStreams
   override implicit val monad: MonadError[RIO[Env, *]] = new RIOMonadError[Env]
 
+  def publisherToMultipart(nettyRequest: StreamedHttpRequest): RIO[Env, Unit] = ???
   override def publisherToBytes(
       publisher: Publisher[HttpContent],
       contentLength: Option[Long],

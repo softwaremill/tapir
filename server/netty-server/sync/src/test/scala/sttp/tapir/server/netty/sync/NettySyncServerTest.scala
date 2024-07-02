@@ -11,6 +11,14 @@ import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers.*
 import org.slf4j.LoggerFactory
 import ox.*
+import sttp.tapir.tests.Multipart.{
+  in_file_list_multipart_out_multipart,
+  in_file_multipart_out_multipart,
+  in_raw_multipart_out_string,
+  in_simple_multipart_out_multipart,
+  in_simple_multipart_out_string
+}
+import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
 import ox.channels.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -77,7 +85,28 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
                   released.get(15, TimeUnit.SECONDS) shouldBe true
                 }
             }
-          })
+          },
+          testServer(in_raw_multipart_out_string)((parts: Seq[Part[Array[Byte]]]) =>
+        pureResult(
+          Right(parts.map(part => s"${part.name}:${new String(part.body)}").mkString("\n"))
+        )
+      ) { (backend, baseUri) =>
+        val file1 = writeToFile("peach mario")
+        val file2 = writeToFile("daisy luigi")
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .multipartBody(
+            multipartFile("file1", file1).fileName("file1.txt"),
+            multipartFile("file2", file2).fileName("file2.txt")
+          )
+          .send(backend)
+          .map { r =>
+            r.code shouldBe StatusCode.Ok
+            r.body should include("file1:peach mario")
+            r.body should include("file2:daisy luigi")
+          }
+      },
+          )
         }.tests()
 
     tests.foreach { t =>

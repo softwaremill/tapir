@@ -11,6 +11,8 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.netty.internal.NettyRequestBody
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
 import sttp.tapir.server.netty.sync.*
+import sttp.tapir.server.netty.internal.reactivestreams.MultiPartSubscriber
+import sttp.tapir.server.netty.NettyServerRequest
 
 private[sync] class NettySyncRequestBody(val createFile: ServerRequest => TapirFile) extends NettyRequestBody[Identity, OxStreams]:
 
@@ -19,6 +21,9 @@ private[sync] class NettySyncRequestBody(val createFile: ServerRequest => TapirF
 
   override def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): Array[Byte] =
     SimpleSubscriber.processAllBlocking(publisher, contentLength, maxBytes)
+
+  override def publisherToMultipart(nettyRequest: StreamedHttpRequest): Unit =
+    MultiPartSubscriber.processAllBlocking(nettyRequest)
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =
     serverRequest.underlying match

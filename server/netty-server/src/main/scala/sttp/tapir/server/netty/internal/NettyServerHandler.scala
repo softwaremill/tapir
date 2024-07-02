@@ -30,6 +30,8 @@ import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
@@ -68,6 +70,9 @@ class NettyServerHandler[F[_]](
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
   private final val WebSocketAutoPingHandlerName = "wsAutoPingHandler"
+
+  private lazy val multiPartDataFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE)
+  private var decoder: HttpPostRequestDecoder = _
 
   override def handlerAdded(ctx: ChannelHandlerContext): Unit =
     if (ctx.channel.isActive) {
@@ -137,6 +142,16 @@ class NettyServerHandler[F[_]](
         new IdleStateHandler(0, requestTimeout.toMillis.toInt, 0, TimeUnit.MILLISECONDS)
       }
       requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
+      
+
+      val contentType = req.headers().get(HttpHeaderNames.CONTENT_TYPE)
+      val isMultipart = contentType != null && contentType.startsWith("multipart/")
+      val multiData = if (isMultipart) {
+        decoder = new HttpPostRequestDecoder(multiPartDataFactory, req)
+        () => decoder.getBodyHttpDatas.asScala
+      }
+      
+
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
         route(NettyServerRequest(req))
           .map {
@@ -186,7 +201,7 @@ class NettyServerHandler[F[_]](
         case full: FullHttpRequest =>
           val req = full.retain()
           runRoute(req, () => req.release())
-        case req: StreamedHttpRequest =>
+        case req: StreamedHttpRequest =>        
           runRoute(req)
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
       }

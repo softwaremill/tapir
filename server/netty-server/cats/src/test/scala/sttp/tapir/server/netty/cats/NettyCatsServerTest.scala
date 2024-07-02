@@ -50,7 +50,28 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             ) {
               override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
               override def emptyPipe[A, B]: fs2.Pipe[IO, A, B] = _ => fs2.Stream.empty
-            }.tests()
+            }.tests() ++ List(
+              testServer(in_raw_multipart_out_string)((parts: Seq[Part[Array[Byte]]]) =>
+                pureResult(
+                  Right(parts.map(part => s"${part.name}:${new String(part.body)}").mkString("\n"))
+                )
+              ) { (backend, baseUri) =>
+                val file1 = writeToFile("peach mario")
+                val file2 = writeToFile("daisy luigi")
+                basicStringRequest
+                  .post(uri"$baseUri/api/echo/multipart")
+                  .multipartBody(
+                    multipartFile("file1", file1).fileName("file1.txt"),
+                    multipartFile("file2", file2).fileName("file2.txt")
+                  )
+                  .send(backend)
+                  .map { r =>
+                    r.code shouldBe StatusCode.Ok
+                    r.body should include("file1:peach mario")
+                    r.body should include("file2:daisy luigi")
+                  }
+              }
+            )
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>

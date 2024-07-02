@@ -15,6 +15,8 @@ import scala.concurrent.{ExecutionContext, Future}
 private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])(implicit ec: ExecutionContext)
     extends NettyRequestBody[Future, NoStreams] {
 
+  override def publisherToMultipart(nettyRequest: StreamedHttpRequest): Future[Unit] = Future.unit // TODO
+
   override val streams: capabilities.Streams[NoStreams] = NoStreams
   override implicit val monad: MonadError[Future] = new FutureMonad()
 

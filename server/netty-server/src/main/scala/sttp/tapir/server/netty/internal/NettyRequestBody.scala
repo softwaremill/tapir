@@ -15,11 +15,17 @@ import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 
 import java.io.InputStream
 import java.nio.ByteBuffer
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder
 
+import scala.collection.JavaConverters._
+import io.netty.handler.codec.http.HttpRequest
+import sttp.tapir.server.netty.NettyServerRequest
 /** Common logic for processing request body in all Netty backends. It requires particular backends to implement a few operations. */
 private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
 
   implicit def monad: MonadError[F]
+  private lazy val multiPartDataFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE)
 
   /** Backend-specific implementation for creating a file. */
   def createFile: ServerRequest => F[TapirFile]
@@ -36,6 +42,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     *   An effect which finishes with a single array of all collected bytes.
     */
   def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): F[Array[Byte]]
+  def publisherToMultipart(nettyRequest: StreamedHttpRequest): F[Unit]
 
   /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] and write their bytes into a file.
     *
@@ -71,7 +78,8 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
         _ <- writeToFile(serverRequest, file, maxBytes)
       } yield RawValue(FileRange(file), Seq(FileRange(file)))
     case _: RawBodyType.MultipartBody =>
-      monad.error(new UnsupportedOperationException)
+      publisherToMultipart(serverRequest.underlying.asInstanceOf[StreamedHttpRequest]).flatMap(_ => 
+      monad.error(new UnsupportedOperationException))
   }
 
   private def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
