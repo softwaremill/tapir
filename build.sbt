@@ -1852,10 +1852,6 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings
-  )
   .dependsOn(tests)
 
 lazy val clientCore: ProjectMatrix = (projectMatrix in file("client/core"))
