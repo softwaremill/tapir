@@ -4,12 +4,15 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
+import sttp.tapir.EndpointInput
+import sttp.tapir.internal.RichEndpointInput
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.ztapir._
 import zio._
+import zio.http.codec.PathCodec
 import zio.http.{Header => ZioHttpHeader, Headers => ZioHttpHeaders, _}
 
 trait ZioHttpInterpreter[R] {
@@ -50,40 +53,67 @@ trait ZioHttpInterpreter[R] {
                   case Some(Left(body))  => handleWebSocketResponse(body, zioHttpServerOptions.customWebSocketConfig(serverRequest))
                 }
 
-              case RequestResult.Failure(_) =>
-                ZIO.logError(
-                  s"The path: ${req.path} matches the shape of some endpoint, but none of the " +
-                    s"endpoints decoded the request successfully, and the decode failure handler didn't provide a " +
-                    s"response. ZIO Http requires that if the path shape matches some endpoints, the request " +
-                    s"should be handled by tapir."
-                ) *> ZIO.fail(Response.internalServerError)
+              case RequestResult.Failure(_) => ZIO.succeed(Response.notFound)
             }
           )
       }
 
-    val serverEndpointsFilter = FilterServerEndpoints[ZioStreams with WebSockets, RIO[R & R2, *]](widenedSes)
-    val singleEndpoint = widenedSes.size == 1
-
-    Routes.singleton {
-      Handler.fromFunctionHandler { case (_: Path, request: Request) =>
-        // pre-filtering the endpoints by shape to determine, if this request should be handled by tapir
-        val filteredEndpoints = serverEndpointsFilter.apply(ZioHttpServerRequest(request))
-        val filteredEndpoints2 = if (singleEndpoint) {
-          // If we are interpreting a single endpoint, we verify that the method matches as well; in case it doesn't,
-          // we refuse to handle the request, allowing other ZIO Http routes to handle it. Otherwise even if the method
-          // doesn't match, this will be handled by the RejectInterceptor
-          filteredEndpoints.filter { e =>
-            val m = e.endpoint.method
-            m.isEmpty || m.contains(sttp.model.Method(request.method.toString()))
-          }
-        } else filteredEndpoints
-
-        filteredEndpoints2 match {
-          case Nil => Handler.fail(Response.notFound)
-          case _   => handleRequest(request, filteredEndpoints2)
+    // Grouping the endpoints by path prefix template (fixed path components & single path captures). This way, if
+    // there are multiple endpoints - with/without trailing slash, with from-request extraction, or with path wildcards,
+    // they will be interpreted and disambiguated by the tapir logic, instead of ZIO HTTP's routing. Also, this covers
+    // multiple endpoints with different methods, and allows us to handle invalid methods.
+    val widenedSesGroupedByPathPrefixTemplate = widenedSes.groupBy { se =>
+      val e = se.endpoint
+      val inputs = e.securityInput.and(e.input).asVectorOfBasicInputs()
+      val x = inputs.foldLeft("") { case (p, component) =>
+        component match {
+          case _: EndpointInput.PathCapture[_] => p + "/?"
+          case i: EndpointInput.FixedPath[_]   => p + "/" + i.s
+          case _                               => p
         }
       }
+      x
     }
+
+    val handlers: List[Route[R & R2, Response]] = widenedSesGroupedByPathPrefixTemplate.toList.map { case (_, sesForPathTemplate) =>
+      // The pattern that we generate should be the same for all endpoints in a group
+      val e = sesForPathTemplate.head.endpoint
+      val inputs = e.securityInput.and(e.input).asVectorOfBasicInputs()
+
+      val hasPath = inputs.exists {
+        case _: EndpointInput.PathCapture[_]  => true
+        case _: EndpointInput.PathsCapture[_] => true
+        case _: EndpointInput.FixedPath[_]    => true
+        case _                                => false
+      }
+
+      val pattern = if (hasPath) {
+        val initialPattern = RoutePattern(Method.ANY, PathCodec.empty).asInstanceOf[RoutePattern[Any]]
+        // The second tuple parameter specifies if PathCodec.trailing has already been added to the route's pattern -
+        // it can only be added once. It's possible that an endpoint contains both ExtractFromRequest & PathsCapture,
+        // which would cause it to be added twice.
+        inputs
+          .foldLeft((initialPattern, false)) { case ((p, trailingAdded), component) =>
+            component match {
+              case i: EndpointInput.PathCapture[_] =>
+                ((p / PathCodec.string(i.name.getOrElse("?"))).asInstanceOf[RoutePattern[Any]], trailingAdded)
+              case _: EndpointInput.ExtractFromRequest[_] if !trailingAdded =>
+                ((p / PathCodec.trailing).asInstanceOf[RoutePattern[Any]], true)
+              case _: EndpointInput.PathsCapture[_] if !trailingAdded => ((p / PathCodec.trailing).asInstanceOf[RoutePattern[Any]], true)
+              case i: EndpointInput.FixedPath[_]                      => (p / PathCodec.literal(i.s), trailingAdded)
+              case _                                                  => (p, trailingAdded)
+            }
+          }
+          ._1
+      } else {
+        // if there are no path inputs, we return a catch-all
+        RoutePattern(Method.ANY, PathCodec.trailing).asInstanceOf[RoutePattern[Any]]
+      }
+
+      Route.handled(pattern)(Handler.fromFunctionHandler { request: Request => handleRequest(request, sesForPathTemplate) })
+    }
+
+    Routes(Chunk.fromIterable(handlers))
   }
 
   private def handleWebSocketResponse(
