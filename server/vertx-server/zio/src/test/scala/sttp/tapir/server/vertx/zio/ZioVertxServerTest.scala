@@ -40,7 +40,8 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
-          partOtherHeaderSupport = false
+          partOtherHeaderSupport = false,
+          maxContentLengthSupport = false
         ).tests() ++ additionalTests() ++
         new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
         new ServerWebSocketTests(

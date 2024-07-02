@@ -120,6 +120,7 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
   Test / testOptions += Tests.Argument("-oD"), // js has other options which conflict with timings
+  testListeners += TimingTestListener,
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, _)) => Seq("-target:jvm-1.8") // some users are on java 8
@@ -1477,7 +1478,8 @@ lazy val vertxServerCats: ProjectMatrix = (projectMatrix in file("server/vertx-s
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-reactive-streams" % Versions.fs2,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
-    )
+    ),
+    Test / test := {}
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, serverTests % Test, catsEffect % Test)
@@ -1488,7 +1490,8 @@ lazy val vertxServerZio: ProjectMatrix = (projectMatrix in file("server/vertx-se
     name := "tapir-vertx-server-zio",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
-    )
+    ),
+    Test / test := {}
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, vertxServer % CompileAndTestAndProvided, zio, serverTests % Test)

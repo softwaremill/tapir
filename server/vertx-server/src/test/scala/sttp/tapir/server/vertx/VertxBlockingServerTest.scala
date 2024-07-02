@@ -22,7 +22,8 @@ class VertxBlockingServerTest extends TestSuite {
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
-          partOtherHeaderSupport = false
+          partOtherHeaderSupport = false,
+          maxContentLengthSupport = false
         ).tests()
     }
   }
