@@ -56,14 +56,6 @@ val countCharactersHttp: Routes[Any, Response] =
   ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
 ```
 
-```{note}
-A single ZIO-Http application can contain both tapir-managed and ZIO-Http-managed routes. However, because of the 
-routing implementation in ZIO Http, the shape of the paths that tapir and other ZIO Http handlers serve should not 
-overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling 
-will throw an exception. We don't expect users to encounter this as a problem, however the implementation here 
-diverges a bit comparing to other interpreters.
-```
-
 ## Server logic
 
 When defining the business logic for an endpoint, the following methods are available, which replace the
