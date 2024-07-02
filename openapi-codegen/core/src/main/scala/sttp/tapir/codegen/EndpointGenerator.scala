@@ -41,7 +41,7 @@ case class GeneratedEndpoints(
 }
 case class EndpointDefs(
     endpointDecls: Map[Option[String], String],
-    queryParamRefs: Set[String],
+    queryOrPathParamRefs: Set[String],
     jsonParamRefs: Set[String],
     enumsDefinedOnEndpointParams: Boolean
 )
@@ -58,7 +58,7 @@ class EndpointGenerator {
       jsonSerdeLib: JsonSerdeLib
   ): EndpointDefs = {
     val components = Option(doc.components).flatten
-    val GeneratedEndpoints(endpointsByFile, queryParamRefs, jsonParamRefs, definesEnumQueryParam) =
+    val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam) =
       doc.paths
         .map(generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib))
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false))(_ merge _)
@@ -77,7 +77,7 @@ class EndpointGenerator {
           |$allEP
           |""".stripMargin
     }.toMap
-    EndpointDefs(endpointDecls, queryParamRefs, jsonParamRefs, definesEnumQueryParam)
+    EndpointDefs(endpointDecls, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam)
   }
 
   private[codegen] def generatedEndpoints(
@@ -119,8 +119,8 @@ class EndpointGenerator {
               |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
 
         val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
-        val queryParamRefs = m.resolvedParameters
-          .collect { case queryParam: OpenapiParameter if queryParam.in == "query" => queryParam.schema }
+        val queryOrPathParamRefs = m.resolvedParameters
+          .collect { case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" => queryParam.schema }
           .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
           .toSet
         val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
@@ -143,7 +143,7 @@ class EndpointGenerator {
           .toSet
         (
           (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums)),
-          (queryParamRefs, jsonParamRefs),
+          (queryOrPathParamRefs, jsonParamRefs),
           maybeLocalEnums.isDefined
         )
       }
@@ -215,12 +215,12 @@ class EndpointGenerator {
   )(implicit location: Location): (String, Option[String]) = {
     def getEnumParamDefn(param: OpenapiParameter, e: OpenapiSchemaEnum, isArray: Boolean) = {
       val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
-      val queryParamRefs = if (param.in == "query") Set(enumName) else Set.empty[String]
+      val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
       val enumDefn = EnumGenerator.generateEnum(
         enumName,
         e,
         targetScala3,
-        queryParamRefs,
+        enumParamRefs,
         jsonSerdeLib,
         Set.empty
       )

@@ -294,7 +294,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       .classDefs(doc, true, jsonParamRefs = Set("Test"))
       .map(concatted)
     val resWithQueryParamCodec = gen
-      .classDefs(doc, true, queryParamRefs = Set("Test"), jsonParamRefs = Set("Test"))
+      .classDefs(doc, true, queryOrPathParamRefs = Set("Test"), jsonParamRefs = Set("Test"))
       .map(concatted)
     // can't just check whether these compile, because our tests only run on scala 2.12 - so instead just eyeball it...
     res shouldBe Some("""enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
@@ -304,7 +304,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |  Map.from(
       |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
       |  )
-      |case class EnumQueryParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends QueryParamSupport[T] {
+      |case class EnumExtraParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends ExtraParamSupport[T] {
       |  // Case-insensitive mapping
       |  def decode(s: String): sttp.tapir.DecodeResult[T] =
       |    scala.util
@@ -321,11 +321,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       |      )
       |  def encode(t: T): String = t.name
       |}
-      |def queryCodecSupport[T: enumextensions.EnumMirror]: QueryParamSupport[T] =
-      |  EnumQueryParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
+      |def extraCodecSupport[T: enumextensions.EnumMirror]: ExtraParamSupport[T] =
+      |  EnumExtraParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
       |object Test {
-      |  given enumCodecSupportTest: QueryParamSupport[Test] =
-      |    queryCodecSupport[Test]
+      |  given enumCodecSupportTest: ExtraParamSupport[Test] =
+      |    extraCodecSupport[Test]
       |}
       |enum Test derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror {
       |  case enum1, enum2
