@@ -110,7 +110,7 @@ trait ZioHttpInterpreter[R] {
         RoutePattern(Method.ANY, PathCodec.trailing).asInstanceOf[RoutePattern[Any]]
       }
 
-      Route.handled(pattern)(Handler.fromFunctionHandler { request: Request => handleRequest(request, sesForPathTemplate) })
+      Route.handled(pattern)(Handler.fromFunctionHandler { (request: Request) => handleRequest(request, sesForPathTemplate) })
     }
 
     Routes(Chunk.fromIterable(handlers))
