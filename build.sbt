@@ -503,10 +503,6 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
-  .nativePlatform(
-    scalaVersions = List(scala3),
-    settings = commonNativeSettings
-  )
   .dependsOn(core, files, circeJson, cats)
 
 lazy val perfServerJavaOptions = List(
