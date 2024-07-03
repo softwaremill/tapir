@@ -167,8 +167,8 @@ and `NotFound`), which are not translated into separate classes by the compiler.
 `oneOfVariant` would fail, or more precisely, any no-parameter case would be determined to match the first 
 no-parameter-case output variant, yielding incorrect responses.
 
-To fix this, we can use the `oneOfVariantExactMatcher` method. It takes an exact value, to which the high-level output
-must be equal, which will cause a given output to be chosen:
+To fix this, we can use the `oneOfVariantSingletonMatcher` method. It takes a unit-typed output, along with an exact 
+value, to which the high-level output must be equal, for the variant to be chosen:
 
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
@@ -182,21 +182,11 @@ enum AvatarError:
   case Other(msg: String)
 
 val errorOutput: EndpointOutput[AvatarError] = oneOf(
-  oneOfVariantExactMatcher(
-    statusCode(StatusCode.Unauthorized).mapTo[AvatarError.Unauthorized.type])(
-    AvatarError.Unauthorized),
-  oneOfVariantExactMatcher(
-    statusCode(StatusCode.NotFound).mapTo[AvatarError.NotFound.type])(
-    AvatarError.NotFound),
+  oneOfVariantSingletonMatcher(statusCode(StatusCode.Unauthorized))(AvatarError.Unauthorized),
+  oneOfVariantSingletonMatcher(statusCode(StatusCode.NotFound))(AvatarError.NotFound),
   oneOfVariant(stringBody.mapTo[AvatarError.Other])
 )
 ```
-
-As before, we need to map the variant's output to the type of the specific case, using 
-`.mapTo[AvatarError.Unauthorized.type]`. We need the `.type` to create a singleton type, as `AvatarError.Unauthorized` 
-is not a type by itself (and it's not translated to a class).
-
-Additionally, the `oneOfVariantExactMatcher` takes the high-level value, for which the given variant will be used.
 
 ## Describing the entire endpoint
 
@@ -205,7 +195,7 @@ Equipped with `oneOf` outputs, we can now fully describe and test our endpoint:
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:@VERSION@
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.10
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:@VERSION@
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
@@ -231,12 +221,8 @@ val successOutput: EndpointOutput[AvatarSuccess] = oneOf(
 )
 
 val errorOutput: EndpointOutput[AvatarError] = oneOf(
-  oneOfVariantExactMatcher(
-    statusCode(StatusCode.Unauthorized).mapTo[AvatarError.Unauthorized.type])(
-    AvatarError.Unauthorized),
-  oneOfVariantExactMatcher(
-    statusCode(StatusCode.NotFound).mapTo[AvatarError.NotFound.type])(
-    AvatarError.NotFound),
+  oneOfVariantSingletonMatcher(statusCode(StatusCode.Unauthorized))(AvatarError.Unauthorized),
+  oneOfVariantSingletonMatcher(statusCode(StatusCode.NotFound))(AvatarError.NotFound),
   oneOfVariant(stringBody.mapTo[AvatarError.Other])
 )
 

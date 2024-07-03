@@ -128,4 +128,15 @@ object OneOf {
           oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[FruitErrorDetail.Unknown]))
         )
       )
+
+  val in_int_out_value_form_singleton: PublicEndpoint[Int, Unit, String, Any] =
+    endpoint
+      .in("mapping")
+      .in(query[Int]("num"))
+      .out(
+        oneOf(
+          oneOfVariantSingletonMatcher(StatusCode.Accepted)("A"),
+          oneOfVariantSingletonMatcher(statusCode(StatusCode.Ok))("B")
+        )
+      )
 }
