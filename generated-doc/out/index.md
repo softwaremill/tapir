@@ -218,6 +218,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    tutorials/03_json
    tutorials/04_errors
    tutorials/05_multiple_inputs_outputs
+   tutorials/06_error_variants
 
 .. toctree::
    :maxdepth: 2

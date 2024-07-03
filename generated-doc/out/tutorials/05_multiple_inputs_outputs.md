@@ -3,15 +3,15 @@
 In the tutorials so far we've seen how to use endpoints which have a single input and a single output, optionally with
 an additional single error output. However, most commonly you'll have multiple inputs and outputs. This can
 include multiple path, query parameters and headers, accompanied by a body as inputs, along with multiple output
-headers, accompanied by a status code and body output.
+headers, accompanied by a status code and body output. 
 
 That's why in this tutorial we'll examine how to describe endpoints with multiple inputs/outputs and map them to
 high-level types.
 
 ## Describing the endpoint
 
-Adding multiple inputs/outputs is simply a matter of calling `.in` or `.out` on an endpoint description multiple
-times.
+Adding multiple inputs/outputs is simply a matter of calling `.in` or `.out` on an endpoint description multiple 
+times. 
 
 To demonstrate how this works, let's describe an `/operation/{opName}?value1=...&value2=...` endpoint, where
 `opName` can be either `add` or `sub`, and `value1` and `value2` should be numbers. The result should be returned in the
@@ -20,7 +20,7 @@ body, but additionally the hash of the result should be included in the `X-Resul
 Below is the endpoint description; we'll be editing the `multiple.scala` file:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
 
 import sttp.tapir.*
 
@@ -36,7 +36,7 @@ import sttp.tapir.*
 
 In our endpoint, we have:
 
-* 5 inputs: 1 constant method input (`.get`), 1 constant path input (`"operation"`), 1 path-segment-capturing input
+* 5 inputs: 1 constant method input (`.get`), 1 constant path input (`"operation"`), 1 path-segment-capturing input 
   (`opName`), 2 query parameter inputs
 * 2 outputs: a body and a header
 * 1 error output: a string body, which we'll use in case an invalid operation name is provided
@@ -47,9 +47,9 @@ When we provide the server logic for our endpoint, the values of the inputs are 
 values from the output are mapped to the HTTP response. When there are multiple inputs, their values are by default
 extracted as a tuple. Conversely, the server logic must return a tuple, if there are multiple outputs.
 
-Only values of inputs which are non-constant contribute to the input tuple. That is, in our case, a 3-tuple will be
-extracted from the HTTP request: `(String, Int, Int)`, corresponding to the path segment and query parameters. The
-constant method & path inputs are used when matching an endpoint with an incoming request, but do not contribute to the
+Only values of inputs which are non-constant contribute to the input tuple. That is, in our case, a 3-tuple will be 
+extracted from the HTTP request: `(String, Int, Int)`, corresponding to the path segment and query parameters. The 
+constant method & path inputs are used when matching an endpoint with an incoming request, but do not contribute to the 
 extracted values.
 
 Here's the code with the server logic provided, transforming a `(String, Int, Int)` tuple to a `(String, String)` tuple.
@@ -57,8 +57,8 @@ The output tuple is then mapped to the response body & header:
 
 {emphasize-lines="5, 8-9, 18-29"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
@@ -88,7 +88,7 @@ import sttp.tapir.server.netty.sync.NettySyncServer
     .startAndWait()
 ```
 
-The user's input might be incorrect - that is, specify an unsupported operation name - in that case we return an error.
+The user's input might be incorrect - that is, specify an unsupported operation name - in that case we return an error. 
 That's why we need to wrap the result of the server logic either in a `Left` or `Right`, to use the error or success
 output.
 
@@ -126,14 +126,14 @@ case class Input(opName: String, value1: Int, value2: Int)
 case class Output(result: String, hash: String)
 ```
 
-Our goal now is to change the endpoint's description so that the server logic has the shape
+Our goal now is to change the endpoint's description so that the server logic has the shape 
 `Input => Either[String, Output]`.
 
-This can be done by mapping the inputs and outputs, that are defined on an endpoint, to our high-level types.
+This can be done by mapping the inputs and outputs, that are defined on an endpoint, to our high-level types. 
 
-For inputs, we can use the `.mapIn` method. We need to provide two-way conversions, between `(String, Int, Int)` and
+For inputs, we can use the `.mapIn` method. We need to provide two-way conversions, between `(String, Int, Int)` and 
 `Input`. The tuple => `Input` conversion is used for incoming requests: first the values are extracted, and then the
-mapping function is applied, yielding an `Input` instance, which is provided to the server logic.
+mapping function is applied, yielding an `Input` instance, which is provided to the server logic. 
 
 However, you also need to provide the `Input` => tuple conversion, in case the endpoint is interpreted as a client. We
 haven't covered this yet in the tutorials, but in the client-interpreter case such conversion is needed, when a request
@@ -143,8 +143,8 @@ The mapping functions are simple, but quite boring to write:
 
 {emphasize-lines="8, 17-18, 23-27"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
@@ -178,23 +178,23 @@ import sttp.tapir.server.netty.sync.NettySyncServer
     .startAndWait()
 ```
 
-The `.mapIn` method covers all inputs defined so far, hence we're calling it only after all inputs are defined. If we
-add more inputs later, the server logic will once again be parametrised by a tuple consisting of `Input` and the new
+The `.mapIn` method covers all inputs defined so far, hence we're calling it only after all inputs are defined. If we 
+add more inputs later, the server logic will once again be parametrised by a tuple consisting of `Input` and the new 
 inputs.
 
 ## Better mapping to case classes
 
 There is a better way of mapping multiple inputs and outputs to cases classes - Tapir can generate the "boring" mapping
 code for you. This can be done using `.mapInTo[]` and `.mapOutTo[]`. Both of these are macros, which take the target
-type as a parameter. The mapping code is generated at compile-time, verifying also at compile-time that the types of the
+type as a parameter. The mapping code is generated at compile-time, verifying also at compile-time that the types of the 
 inputs/outputs and the types specified as the case class parameters line up.
 
 Here's the modified code using `.mapInTo`, which additionally maps outputs to the `Output` class:
 
 {emphasize-lines="9, 11-13, 19, 22"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
@@ -204,7 +204,7 @@ import sttp.tapir.server.netty.sync.NettySyncServer
   case class Output(result: String, hash: String)
 
   def hash(result: Int): Output =
-    Output(result.toString,
+    Output(result.toString, 
       scala.util.hashing.MurmurHash3.stringHash(result.toString).toString)
 
   val opEndpoint = endpoint.get
@@ -230,7 +230,7 @@ import sttp.tapir.server.netty.sync.NettySyncServer
     .startAndWait()
 ```
 
-Now our server logic has the shape `Input => Either[String, Output]`. Much better!
+Now our server logic has the shape `Input => Either[String, Output]`. Much better! 
 
 ## Further reading
 

@@ -36,8 +36,8 @@ schemas both for the `Result` and `Error` classes, to represent them properly in
 describing the endpoint:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.10.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.10.12
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 
 import com.github.plokhotnyuk.jsoniter_scala.macros.* 
@@ -72,10 +72,10 @@ We'll also add code to expose the endpoint as a server, along with its OpenAPI d
 
 {emphasize-lines="2-3, 11-13, 24-28, 30-36"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.10.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.10.12
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 
 import com.github.plokhotnyuk.jsoniter_scala.macros.* 
@@ -148,10 +148,10 @@ you'll also get `ERROR` logs when unhandled exceptions happen:
 
 {emphasize-lines="6, 26"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.11
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.10.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.10.12
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 //> using dep ch.qos.logback:logback-classic:1.5.6
 
