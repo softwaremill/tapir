@@ -1,5 +1,9 @@
 # 4. Error handling
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=iXGJsk4_2Dg).
+```
+
 Many things can go wrong: that's why error handling is often the centerpiece of software libraries. We got a glimpse of 
 one of Tapir's components when it comes to error handling when we discussed 
 [adding OpenAPI documentation](02_openapi_docs.md). In this tutorial, we'll investigate Tapir's approach to error 

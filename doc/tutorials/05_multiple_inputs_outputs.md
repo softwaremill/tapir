@@ -1,5 +1,9 @@
 # 5. Multiple inputs & outputs
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=rJAo9yZfr9k).
+```
+
 In the tutorials so far we've seen how to use endpoints which have a single input and a single output, optionally with
 an additional single error output. However, most commonly you'll have multiple inputs and outputs. This can
 include multiple path, query parameters and headers, accompanied by a body as inputs, along with multiple output
