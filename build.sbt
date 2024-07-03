@@ -930,6 +930,10 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
+  .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = commonNativeSettings
+  )
   .dependsOn(core)
 
 lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
