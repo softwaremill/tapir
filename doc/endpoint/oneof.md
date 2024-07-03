@@ -140,6 +140,14 @@ val baseEndpoint = endpoint.errorOut(
 )
 ```
 
+### One-of-variant and singleton types
+
+One-of variants can also be created so that they are used only for specific values. This is a specialisation of the
+`oneOfVariantValueMatcher` methods, which allows for a more convenient and compact description.
+
+There are two methods which allows working with multiple or single specific values: `oneOfVariantExactMatcher` and
+`oneOfVariantSingletonMatcher`.
+
 ### Error outputs
 
 Error outputs can be extended with new variants, which is especially useful for partial server endpoints, when the

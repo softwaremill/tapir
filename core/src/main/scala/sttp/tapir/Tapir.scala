@@ -335,7 +335,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   ): OneOfVariant[T] =
     OneOfVariant(statusCode(code).and(output), matcher.lift.andThen(_.getOrElse(false)))
 
-  /** Create a one-of-variant which `output` if the provided value exactly matches one of the values provided in the second argument list.
+  /** Create a one-of-variant which uses `output` if the provided value exactly matches one of the values provided in the second argument
+    * list.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
@@ -360,6 +361,41 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
       rest: T*
   ): OneOfVariant[T] =
     oneOfVariantValueMatcher(code, output)(exactMatch(rest.toSet + firstExactValue))
+
+  /** Create a one-of-variant which uses `output` if the provided value equals the singleton value. The `output` shouldn't map to any
+    * values, that is, it should be `Unit`-typed. The entire variant is, on the other hand, typed with the singleton's type `T`.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    *
+    * @see
+    *   [[oneOfVariantExactMatcher]] which allows specifying more exact-match values, and where `output` needs to correspond to type `T`.
+    */
+  def oneOfVariantSingletonMatcher[T](output: EndpointOutput[Unit])(singletonValue: T): OneOfVariant[T] =
+    oneOfVariantValueMatcher(output.and(emptyOutputAs(singletonValue)))({ case a: Any => a == singletonValue })
+
+  /** Create a one-of-variant which uses `output` if the provided value equals the singleton value. The `output` shouldn't map to any
+    * values, that is, it should be `Unit`-typed. The entire variant is, on the other hand, typed with the singleton's type `T`.
+    *
+    * Adds a fixed status-code output with the given value.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    *
+    * @see
+    *   [[oneOfVariantExactMatcher]] which allows specifying more exact-match values, and where `output` needs to correspond to type `T`.
+    */
+  def oneOfVariantSingletonMatcher[T](code: StatusCode, output: EndpointOutput[Unit])(singletonValue: T): OneOfVariant[T] =
+    oneOfVariantValueMatcher(code, output.and(emptyOutputAs(singletonValue)))({ case a: Any => a == singletonValue })
+
+  /** Create a one-of-variant which will use a fixed status-code output with the given value, if the provided value equals the singleton
+    * value. The entire variant is typed with the singleton's type `T`.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    *
+    * @see
+    *   [[oneOfVariantExactMatcher]] which allows specifying more exact-match values, and where `output` needs to correspond to type `T`.
+    */
+  def oneOfVariantSingletonMatcher[T](code: StatusCode)(singletonValue: T): OneOfVariant[T] =
+    oneOfVariantValueMatcher(code, emptyOutputAs(singletonValue))({ case a: Any => a == singletonValue })
 
   /** Create a one-of-variant which uses `output` if the provided value matches the target type, as checked by [[MatchType]]. Instances of
     * [[MatchType]] are automatically derived and recursively check that classes of all fields match, to bypass issues caused by type
