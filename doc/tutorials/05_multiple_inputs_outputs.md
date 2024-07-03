@@ -55,7 +55,7 @@ extracted values.
 Here's the code with the server logic provided, transforming a `(String, Int, Int)` tuple to a `(String, String)` tuple.
 The output tuple is then mapped to the response body & header:
 
-{emphasize-lines="5, 8-9, 18-28"}
+{emphasize-lines="5, 8-9, 18-29"}
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:@VERSION@
@@ -141,7 +141,7 @@ is sent.
 
 The mapping functions are simple, but quite boring to write:
 
-{emphasize-lines="8, 18, 24-26"}
+{emphasize-lines="8, 17-18, 23-27"}
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:@VERSION@
@@ -159,7 +159,8 @@ import sttp.tapir.server.netty.sync.NettySyncServer
     .in("operation" / path[String]("opName"))
     .in(query[Int]("value1"))
     .in(query[Int]("value2"))
-    .mapIn((opName, value1, value2) => Input(opName, value1, value2))(input => (input.opName, input.value1, input.value2))
+    .mapIn((opName, value1, value2) => Input(opName, value1, value2))(input => 
+      (input.opName, input.value1, input.value2))
     .out(stringBody)
     .out(header[String]("X-Result-Hash"))
     .errorOut(stringBody)
@@ -190,7 +191,7 @@ inputs/outputs and the types specified as the case class parameters line up.
 
 Here's the modified code using `.mapInTo`, which additionally maps outputs to the `Output` class:
 
-{emphasize-lines="11-12, 18, 21"}
+{emphasize-lines="9, 11-13, 19, 22"}
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:@VERSION@
@@ -203,7 +204,8 @@ import sttp.tapir.server.netty.sync.NettySyncServer
   case class Output(result: String, hash: String)
 
   def hash(result: Int): Output =
-    Output(result.toString, scala.util.hashing.MurmurHash3.stringHash(result.toString).toString)
+    Output(result.toString, 
+      scala.util.hashing.MurmurHash3.stringHash(result.toString).toString)
 
   val opEndpoint = endpoint.get
     .in("operation" / path[String]("opName"))
