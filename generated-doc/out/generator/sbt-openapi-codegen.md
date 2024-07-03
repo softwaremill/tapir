@@ -9,7 +9,7 @@ This is a really early alpha implementation.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.10.10")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.10.11")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -43,6 +43,7 @@ openapiUseHeadTagForObjectName        false                                If tr
 openapiJsonSerdeLib                   circe                                The json serde library to use.
 openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
 openapiMaxSchemasPerFile              400                                  Maximum number of schemas to generate in a single file (tweak if hitting javac class size limits).
+openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
 ===================================== ==================================== ==================================================================================================
 ```
 
@@ -88,6 +89,16 @@ If `openapiUseHeadTagForObjectName = true`, then the  `GET /foo` and `GET /bar` 
 `Baz.scala` file, containing a single `object Baz` with those endpoint definitions; the `PUT /foo` endpoint, by dint of
 having no tags, would be output to the `TapirGeneratedEndpoints` file, along with any schema and parameter definitions.
 
+Files can be generated from multiple openapi schemas if `openapiAdditionalPackages` is configured; for example
+```sbt
+openapiAdditionalPackages := List(
+      "sttp.tapir.generated.v1" -> baseDirectory.value / "src" / "main" / "resources" / "openapi_v1.yml")
+```
+would generate files in the package `sttp.tapir.generated.v1` based on the `openapi_v1.yml` schema at the provided
+location. This would be in addition to files generated in `openapiPackage` from the specs configured by
+`openapiSwaggerFile`
+
+
 ### Json Support
 
 ```{eval-rst}
@@ -106,7 +117,6 @@ jsoniter              "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala
 Currently, string-like enums in Scala 2 depend upon the enumeratum library (`"com.beachape" %% "enumeratum"`).
 For Scala 3 we derive native enums, and depend on `"io.github.bishabosha" %% "enum-extensions"` for generating query
 param serdes.
-Other forms of OpenApi enum are not currently supported.
 
 Models containing binary data cannot be re-used between json and multi-part form endpoints, due to having different
 representation types for the binary data
