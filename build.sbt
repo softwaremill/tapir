@@ -18,16 +18,13 @@ val scala2_12 = "2.12.19"
 val scala2_13 = "2.13.14"
 val scala3 = "3.3.3"
 
-// The `idea.managed` property is set automatically by IntelliJ when it runs sbt for build or import
-val ideaManaged = System.getProperty("idea.managed", "false").toBoolean
-val ideScalaVersion = if (ideaManaged) scala2_13 else scala3
-
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
 val codegenScalaVersions = List(scala2_12)
-val examplesScalaVersions = List(scala3)
-val documentationScalaVersion = scala2_13
+val examplesScalaVersion = scala3
+val documentationScalaVersion = scala3
+val ideScalaVersion = scala3
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
@@ -78,8 +75,12 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   bspEnabled := !ideSkipProject.value,
   // slow down for CI
   Test / parallelExecution := false,
-  // remove false alarms about unused implicit definitions in macros
-  scalacOptions ++= Seq("-Ywarn-macros:after"),
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, _)) => Seq("-Ywarn-macros:after") // remove false alarms about unused implicit definitions in macros
+      case _            => Seq("-Xmax-inlines", "64")
+    }
+  },
   evictionErrorLevel := Level.Info
 )
 
@@ -240,7 +241,6 @@ lazy val rawAllAggregates = core.projectRefs ++
   play29Client.projectRefs ++
   tests.projectRefs ++
   perfTests.projectRefs ++
-  examples2.projectRefs ++
   examples.projectRefs ++
   documentation.projectRefs ++
   openapiCodegenCore.projectRefs ++
@@ -797,7 +797,7 @@ lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
 
 lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
@@ -2023,68 +2023,6 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
 
 // other
 
-lazy val examples2: ProjectMatrix = (projectMatrix in file("examples2"))
-  .settings(commonJvmSettings)
-  .settings(
-    name := "tapir-examples2",
-    libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
-      "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-      "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.http4s" %% "http4s-circe" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
-      "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
-      "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
-      "org.mock-server" % "mockserver-netty" % Versions.mockServer,
-      "io.circe" %% "circe-generic-extras" % Versions.circeGenericExtras,
-      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
-      "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
-      "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
-      scalaTest.value,
-      logback
-    ),
-    publishArtifact := false,
-    Compile / run / fork := true
-  )
-  .jvmPlatform(scalaVersions = List(scala2_13))
-  .dependsOn(
-    akkaHttpServer,
-    pekkoHttpServer,
-    armeriaServer,
-    jdkhttpServer,
-    http4sServer,
-    http4sServerZio,
-    http4sClient,
-    sttpClient,
-    openapiDocs,
-    asyncapiDocs,
-    circeJson,
-    swaggerUiBundle,
-    redocBundle,
-    zioHttpServer,
-    nettyServer,
-    nettyServerCats,
-    nettyServerZio,
-    sttpStubServer,
-    playJson,
-    prometheusMetrics,
-    opentelemetryMetrics,
-    datadogMetrics,
-    zioMetrics,
-    sttpMockServer,
-    zioJson,
-    vertxServer,
-    vertxServerCats,
-    vertxServerZio,
-    finatraServer,
-    protobuf
-  )
-
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonJvmSettings)
   .settings(
@@ -2100,6 +2038,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
+      "org.mock-server" % "mockserver-netty" % Versions.mockServer,
       "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
@@ -2109,32 +2048,33 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     publishArtifact := false,
     Compile / run / fork := true
   )
-  .jvmPlatform(scalaVersions = examplesScalaVersions)
+  .jvmPlatform(scalaVersions = List(examplesScalaVersion))
   .dependsOn(
-    datadogMetrics,
-    prometheusMetrics,
-    opentelemetryMetrics,
-    zioMetrics,
-    circeJson,
-    http4sServer,
-    pekkoHttpServer,
     armeriaServer,
-    nettyServer,
-    jdkhttpServer,
-    nettyServerCats,
+    asyncapiDocs,
+    circeJson,
+    datadogMetrics,
     http4sClient,
-    picklerJson,
-    sttpClient,
-    swaggerUiBundle,
+    http4sServer,
     http4sServerZio,
+    iron,
+    jdkhttpServer,
+    nettyServer,
+    nettyServerCats,
     nettyServerSync,
     nettyServerZio,
+    opentelemetryMetrics,
+    pekkoHttpServer,
+    picklerJson,
+    prometheusMetrics,
+    sttpClient,
+    sttpMockServer,
+    sttpStubServer,
+    swaggerUiBundle,
+    redocBundle,
     zioHttpServer,
     zioJson,
-    redocBundle,
-    sttpStubServer,
-    asyncapiDocs,
-    iron
+    zioMetrics
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
@@ -2171,31 +2111,35 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
   )
   .jvmPlatform(scalaVersions = List(documentationScalaVersion))
   .dependsOn(
-    core % "compile->test",
-    testing,
-    akkaHttpServer,
-    pekkoHttpServer,
     armeriaServer,
     armeriaServerCats,
     armeriaServerZio,
-    jdkhttpServer,
-    circeJson,
-    enumeratum,
-    finatraServer,
-    finatraServerCats,
-    jsoniterScala,
     asyncapiDocs,
-    openapiDocs,
-    json4s,
-    playJson,
-    playServer,
-    sprayJson,
+    circeJson,
+    core % "compile->test",
+    datadogMetrics,
+    enumeratum,
     http4sClient,
     http4sServerZio,
+    jdkhttpServer,
+    jsoniterScala,
+    json4s,
+    nettyServer,
     nettyServerCats,
-    sttpClient,
+    nettyServerSync,
+    openapiDocs,
+    opentelemetryMetrics,
+    pekkoHttpServer,
     playClient,
+    playJson,
+    playServer,
+    prometheusMetrics,
+    sprayJson,
+    sttpClient,
+    sttpMockServer,
     sttpStubServer,
+    swaggerUiBundle,
+    testing,
     tethysJson,
     uPickleJson,
     vertxServer,
@@ -2203,13 +2147,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     vertxServerZio,
     zio,
     zioHttpServer,
-    derevo,
     zioJson,
-    prometheusMetrics,
-    opentelemetryMetrics,
-    datadogMetrics,
-    zioMetrics,
-    sttpMockServer,
-    nettyServer,
-    swaggerUiBundle
+    zioMetrics
   )

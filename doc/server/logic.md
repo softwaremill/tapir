@@ -96,7 +96,7 @@ import scala.concurrent.Future
 case class MyError(msg: String) extends Exception
 val testEndpoint = endpoint
   .in(query[Boolean]("fail"))
-  .errorOut(stringBody.map(MyError)(_.msg))
+  .errorOut(stringBody.map(MyError(_))(_.msg))
   .out(stringBody)
   .serverLogicRecoverErrors { fail =>
      if (fail) {
@@ -143,9 +143,9 @@ For example, we can create a partial server endpoint given the security logic, a
 ```scala mdoc:silent
 import sttp.tapir._
 import sttp.tapir.server._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-implicit val ec = scala.concurrent.ExecutionContext.global
+implicit val ec: ExecutionContext = ExecutionContext.global
 
 case class User(name: String)
 def authLogic(token: String): Future[Either[Int, User]] = Future {

@@ -94,6 +94,7 @@ import sttp.tapir.server.armeria.cats.ArmeriaCatsServerInterpreter
 import cats.effect._
 import cats.effect.std.Dispatcher
 import com.linecorp.armeria.server.Server
+import java.util.concurrent.CompletableFuture
 
 object Main extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
@@ -117,7 +118,7 @@ object Main extends IOApp {
               }
             }
           )({ server =>
-            IO.fromCompletableFuture(IO(server.closeAsync())).void
+            IO.fromCompletableFuture(IO(server.closeAsync().asInstanceOf[CompletableFuture[Unit]]))
           })
       }
       .use(_ => IO.never)
@@ -174,6 +175,7 @@ import sttp.tapir._
 import sttp.tapir.server.armeria.zio.ArmeriaZioServerInterpreter
 import sttp.tapir.ztapir._
 import zio.{ExitCode, Runtime, UIO, URIO, ZIO, ZIOAppDefault}
+import java.util.concurrent.CompletableFuture
 
 object Main extends ZIOAppDefault {
   override def run: URIO[Any, ExitCode] = {
@@ -191,7 +193,8 @@ object Main extends ZIOAppDefault {
       server.start().thenApply[Server](_ => server)
     }
 
-    ZIO.scoped(ZIO.acquireRelease(s)(server => ZIO.fromCompletableFuture(server.closeAsync()).orDie) *> ZIO.never).exitCode
+    ZIO.scoped(ZIO.acquireRelease(s)(server => 
+      ZIO.fromCompletableFuture(server.closeAsync().asInstanceOf[CompletableFuture[Unit]]).orDie) *> ZIO.never).exitCode
   }
 }
 ```

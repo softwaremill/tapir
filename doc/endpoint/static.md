@@ -20,43 +20,33 @@ The easiest way to expose static content from the local filesystem is to use the
 is parametrised with the path, at which the content should be exposed, as well as the local system path, from which
 to read the data.
 
-Such an endpoint has to be interpreted using your server interpreter. For example, using the [akka-http](../server/akkahttp.md) interpreter:
+Such an endpoint has to be interpreted using your server interpreter. For example, using the [netty-sync](../server/netty.md) interpreter:
 
 ```scala mdoc:compile-only
-import akka.http.scaladsl.server.Route
-
 import sttp.tapir._
 import sttp.tapir.files._
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.netty.sync.NettySyncServer
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-
-val filesRoute: Route = AkkaHttpServerInterpreter().toRoute(
-  staticFilesGetServerEndpoint[Future]("site" / "static")("/home/static/data")
-)
+NettySyncServer()
+  .addEndpoint(staticFilesGetServerEndpoint("site" / "static")("/home/static/data"))
+  .startAndWait()
 ```
 
 Using the above endpoint, a request to `/site/static/css/styles.css` will try to read the
 `/home/static/data/css/styles.css` file.
 
-To expose files without a prefix, use `emptyInput`. For example, using the [netty](../server/netty.md) interpreter, the
-below exposes the content of `/var/www` at `http://localhost:8080`:
+To expose files without a prefix, use `emptyInput`. For example, below exposes the content of `/var/www` at 
+`http://localhost:8080`:
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.netty.NettyFutureServer
+import sttp.tapir.server.netty.sync.NettySyncServer
 import sttp.tapir.emptyInput
 import sttp.tapir._
 import sttp.tapir.files._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
-NettyFutureServer()
-  .port(8080)
-  .addEndpoint(staticFilesGetServerEndpoint[Future](emptyInput)("/var/www"))
-  .start()
-  .flatMap(_ => Future.never)
+NettySyncServer()
+  .addEndpoint(staticFilesGetServerEndpoint(emptyInput)("/var/www"))
+  .startAndWait()
 ```
 
 A single file can be exposed using `staticFileGetServerEndpoint`.
@@ -81,24 +71,23 @@ import sttp.model.headers.ETag
 import sttp.tapir.emptyInput
 import sttp.tapir._
 import sttp.tapir.files._
-
-import scala.concurrent.Future
+import sttp.shared.Identity
 
 import java.net.URL
 
-val customETag: Option[RangeValue] => URL => Future[Option[ETag]] = ???
+val customETag: Option[RangeValue] => URL => Option[ETag] = ???
 val customFileFilter: List[String] => Boolean = ???
 
-val options: FilesOptions[Future] =
+val options: FilesOptions[Identity] =
   FilesOptions
-    .default
+    .default[Identity]
     // serves file.txt.gz instead of file.txt if available and Accept-Encoding contains "gzip"
     .withUseGzippedIfAvailable
     .calculateETag(customETag)
     .fileFilter(customFileFilter)
     .defaultFile(List("default.md"))
 
-val endpoint = staticFilesGetServerEndpoint(emptyInput)("/var/www", options)
+val endpoint = staticFilesGetServerEndpoint[Identity](emptyInput)("/var/www", options)
 ```
 
 ## Endpoint description and server logic
@@ -121,9 +110,8 @@ following routes (here using the `/resources` context path):
 ```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.files._
+import sttp.shared.Identity
 
-import scala.concurrent.Future
-
-val webJarRoutes = staticResourcesGetServerEndpoint[Future]("resources")(
+val webJarRoutes = staticResourcesGetServerEndpoint[Identity]("resources")(
   this.getClass.getClassLoader, "META-INF/resources/webjars")
 ```

@@ -9,7 +9,7 @@ a single-import whenever you want to use tapir. For example:
 
 ```scala
 object MyTapir extends Tapir
-  with AkkaHttpServerInterpreter
+  with PekkoHttpServerInterpreter
   with SttpClientInterpreter
   with OpenAPIDocsInterpreter
   with SchemaDerivation
@@ -23,9 +23,9 @@ Then, a single `import MyTapir._` and all Tapir data types and interpreter metho
 You might also define an alias for `Endpoint`, with the capabilities that your endpoints use, e.g.:
 
 ```scala mdoc:compile-only
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.capabilities.WebSockets
 import sttp.tapir.Endpoint
 
-type MyEndpoint[A, I, E, O] = Endpoint[A, I, E, O, AkkaStreams with WebSockets]
+type MyEndpoint[A, I, E, O] = Endpoint[A, I, E, O, PekkoStreams with WebSockets]
 ```

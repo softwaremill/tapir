@@ -172,8 +172,8 @@ val config2 = NettyConfig.default.noGracefulShutdown
 There is possibility to use Domain socket instead of TCP for handling traffic.
 
 ```scala mdoc:compile-only
+import sttp.tapir.*
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureDomainSocketBinding}
-import sttp.tapir.{endpoint, query, stringBody}
 
 import java.nio.file.Paths
 import scala.concurrent.ExecutionContext.Implicits.global

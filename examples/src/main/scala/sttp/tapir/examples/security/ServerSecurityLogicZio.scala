@@ -1,4 +1,4 @@
-package sttp.tapir.examples2.security
+package sttp.tapir.examples.security
 
 import sttp.client3._
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
@@ -75,7 +75,7 @@ object ServerSecurityLogicZio extends ZIOAppDefault {
       _ <- testWith(backend, port, "hello", "Hello", "apple").map(r => assert(r == "1001"))
       _ <- testWith(backend, port, "hello", "Hello", "smurf").map(r => assert(r == "Not saying hello to Gargamel!"))
     } yield ()).exitCode
-      .provideSome(
+      .provideSome[Scope](
         ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live
       )

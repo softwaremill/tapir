@@ -15,7 +15,7 @@ object:
 
 ```scala mdoc:silent
 import sttp.apispec.asyncapi.AsyncAPI
-import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir._
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.generic.auto._
@@ -24,7 +24,7 @@ import io.circe.generic.auto._
 
 case class Response(msg: String, count: Int)
 val echoWS = endpoint.out(
-  webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
+  webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](PekkoStreams))
 
 val docs: AsyncAPI = AsyncAPIInterpreter().toAsyncAPI(echoWS, "Echo web socket", "1.0")
 ```

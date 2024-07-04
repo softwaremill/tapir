@@ -60,7 +60,7 @@ import scala.concurrent.Future
 
 import play.api.libs.ws.StandaloneWSClient
 
-def example[I, E, O, R >: PekkoStreams](implicit wsClient: StandaloneWSClient) {
+def example[I, E, O, R >: PekkoStreams](implicit wsClient: StandaloneWSClient): Unit = {
   val e: PublicEndpoint[I, E, O, R] = ???
   val inputArgs: I = ???
 

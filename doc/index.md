@@ -151,10 +151,10 @@ val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0"
 println(docs.toYaml)
 
 
-// Convert to akka-http Route
+// Convert to pekko-http Route
 
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-import akka.http.scaladsl.server.Route
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
+import org.apache.pekko.http.scaladsl.server.Route
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -163,7 +163,7 @@ def bookListingLogic(bfy: BooksQuery,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
 
-val booksListingRoute: Route = AkkaHttpServerInterpreter()
+val booksListingRoute: Route = PekkoHttpServerInterpreter()
   .toRoute(booksListing.serverLogic((bookListingLogic _).tupled))
 
 

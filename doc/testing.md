@@ -26,7 +26,7 @@ dependency:
 "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "@VERSION@"
 ```
 
-Let's assume you are using the [akka http](server/akkahttp.md) interpreter. Given the following server endpoint:
+Let's assume you are using the [pekko http](server/pekkohttp.md) interpreter. Given the following server endpoint:
 
 ```scala mdoc:silent
 import sttp.tapir._
@@ -85,12 +85,12 @@ Projects generated using [adopt-tapir](https://adopt-tapir.softwaremill.com) inc
 ### Custom interpreters
 
 Custom interpreters can be provided to the stub. For example, to test custom exception handling, we might have the
-following customised akka http options:
+following customised pekko http options:
 
 ```scala mdoc:silent
 import sttp.tapir.server.interceptor.exception.ExceptionHandler
 import sttp.tapir.server.interceptor.CustomiseInterceptors
-import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.pekkohttp.PekkoHttpServerOptions
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.model.StatusCode
 
@@ -101,9 +101,9 @@ val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
     ))
 )
 
-val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = {
+val customOptions: CustomiseInterceptors[Future, PekkoHttpServerOptions] = {
   import scala.concurrent.ExecutionContext.Implicits.global
-  AkkaHttpServerOptions.customiseInterceptors
+  PekkoHttpServerOptions.customiseInterceptors
     .exceptionHandler(exceptionHandler)
 }    
 ```

@@ -29,14 +29,12 @@ mapping to the `Person` class:
 ```scala mdoc:silent:reset
 import sttp.tapir._
 import sttp.tapir.generic.auto._
-import sttp.capabilities.akka.AkkaStreams
-import akka.stream.scaladsl._
-import akka.util.ByteString
+import sttp.capabilities.pekko.PekkoStreams
 
 case class Person(name: String)
 
 // copying the derived json schema type
-endpoint.out(streamBody(AkkaStreams)(Schema.derived[List[Person]], CodecFormat.Json()))
+endpoint.out(streamBody(PekkoStreams)(Schema.derived[List[Person]], CodecFormat.Json()))
 ```
 
 See also the [runnable streaming example](../examples.md). 

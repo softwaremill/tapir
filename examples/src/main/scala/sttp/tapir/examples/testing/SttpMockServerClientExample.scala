@@ -1,4 +1,4 @@
-package sttp.tapir.examples2.testing
+package sttp.tapir.examples.testing
 
 import io.circe.generic.auto._
 import org.mockserver.integration.ClientAndServer.startClientAndServer

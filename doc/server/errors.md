@@ -23,10 +23,10 @@ For example:
 ```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.server.netty.NettyFutureServerInterpreter
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util._
 
-implicit val ec = scala.concurrent.ExecutionContext.global
+given ExecutionContext = ExecutionContext.global
 type ErrorInfo = String
 def logic(s: String): Future[Int] = ???
 

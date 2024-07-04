@@ -44,7 +44,7 @@ you will get a codec for `sttp.apispec.Schema`:
 import io.circe.Printer
 import io.circe.syntax._
 import sttp.apispec.circe._
-import sttp.apispec.{Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.{Schema => ASchema}
 import sttp.tapir._
 import sttp.tapir.docs.apispec.schema._
 import sttp.tapir.generic.auto._

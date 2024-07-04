@@ -172,7 +172,7 @@ assumes that the low-level representation of the enumeration is a string. Encodi
 represent the enumeration's values in the documentation). For example, to use an enum as part of a `jsonBody`, using
 the circe library for JSON parsing/serialisation, and automatic schema derivation for case classes:
 
-```scala mdoc:silent:reset-object
+```scala
 import io.circe._
 import io.circe.generic.auto._
 import sttp.tapir._
@@ -189,7 +189,7 @@ object Features extends Enumeration {
 
 case class Body(someField: String, feature: Features.Feature)
 
-// these need to be provided so that circe knows how to encode/decode enumerations
+// these need to be provided so that circe knows how to encode/decode enumerations - will work only in Scala2!
 implicit val enumDecoder: Decoder[Features.Feature] = Decoder.decodeEnumeration(Features)
 implicit val enumEncoder: Encoder[Features.Feature] = Encoder.encodeEnumeration(Features)
 

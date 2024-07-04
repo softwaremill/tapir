@@ -1,11 +1,9 @@
-package sttp.tapir.examples2.custom_types
+package sttp.tapir.examples.custom_types
 
-// Note that you'll need the extras.auto._ import, not the usual one
-import io.circe.generic.extras.auto._
-import io.circe.generic.extras.{Configuration => CirceConfiguration}
+import io.circe.{Codec => CirceCodec}
+import io.circe.derivation.{Configuration => CirceConfiguration}
 import sttp.tapir._
 import sttp.tapir.generic.Configuration
-import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
@@ -24,9 +22,12 @@ object SealedTraitWithDiscriminator extends App {
   val discriminatorFieldName = "kind"
 
   // these configs must match: one configures tapir's schema, the other circe's encoding/decoding to/from json
-  implicit val tapirConfig: Configuration = Configuration.default.withDiscriminator(discriminatorFieldName)
+  given Configuration = Configuration.default.withDiscriminator(discriminatorFieldName)
   // the CirceConfiguration class is a renamed import (see above), as the name would clash with tapir's Configuration
-  implicit val circeConfig: CirceConfiguration = CirceConfiguration.default.withDiscriminator(discriminatorFieldName)
+  given CirceConfiguration = CirceConfiguration.default.withDiscriminator(discriminatorFieldName)
+
+  given CirceCodec[Node] = CirceCodec.AsObject.derivedConfigured
+  given Schema[Node] = Schema.derived
 
   // endpoint description; the configs are used when deriving the Schema, Encoder and Decoder, which are implicit
   // parameters to jsonBody[Node]

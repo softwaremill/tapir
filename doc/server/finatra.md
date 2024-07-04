@@ -9,7 +9,7 @@ dependency:
 
 and import the object:
 
-```scala mdoc:compile-only
+```scala
 import sttp.tapir.server.finatra.FinatraServerInterpreter
 ```
 
@@ -22,7 +22,7 @@ Or, if you would like to use cats-effect project, you can add the following depe
 
 and import the object:
 
-```scala mdoc:compile-only
+```scala
 import sttp.tapir.server.finatra.cats.FinatraCatsServerInterpreter
 ```
 
@@ -33,7 +33,7 @@ The `toRoute` method on the interpreter requires a `ServerEndpoint`, which can b
 
 For example:
 
-```scala mdoc:compile-only
+```scala
 import sttp.tapir._
 import sttp.tapir.server.finatra.{ FinatraServerInterpreter, FinatraRoute }
 import com.twitter.util.Future
@@ -50,7 +50,7 @@ val countCharactersRoute: FinatraRoute =
 
 or a cats-effect's example:
 
-```scala mdoc:compile-only
+```scala
 import cats.effect.IO
 import cats.effect.std.Dispatcher
 import sttp.tapir._
@@ -72,7 +72,7 @@ val countCharactersRoute: FinatraRoute =
 Now that you've created the `FinatraRoute`, add `TapirController` as a trait to your `Controller`. You can then
 add the created route with `addTapirRoute`.
 
-```scala mdoc:compile-only
+```scala
 import sttp.tapir.server.finatra._
 import com.twitter.finatra.http.Controller
 
