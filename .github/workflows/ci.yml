@@ -74,7 +74,7 @@ jobs:
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     - name: Compile documentation
-      if: matrix.target-platform == 'JVM' && matrix.java == '11'
+      if: matrix.target-platform == 'JVM' && matrix.java == '21'
       run: sbt $SBT_JAVA_OPTS -v compileDocumentation
     - name: Test
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
