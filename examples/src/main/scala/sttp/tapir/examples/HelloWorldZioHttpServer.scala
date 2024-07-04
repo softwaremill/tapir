@@ -9,7 +9,7 @@ import zio.*
 import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
-object HelloWorldZioHttpServer extends ZIOAppDefault {
+object HelloWorldZioHttpServer extends ZIOAppDefault:
   // a simple string-only endpoint
   val helloWorld: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get
@@ -44,4 +44,3 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
         Server.live
       )
       .exitCode
-}

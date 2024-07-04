@@ -23,7 +23,7 @@ import sttp.ws.WebSocket
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
-object WebSocketHttp4sServer extends IOApp {
+object WebSocketHttp4sServer extends IOApp:
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
@@ -69,7 +69,7 @@ object WebSocketHttp4sServer extends IOApp {
   val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
   println(s"Paste into https://playground.asyncapi.io/ to see the docs for this endpoint:\n$apiDocs")
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // Starting the server
     BlazeServerBuilder[IO]
       .withExecutionContext(ec)
@@ -107,5 +107,3 @@ object WebSocketHttp4sServer extends IOApp {
           .map(_ => println("Counting complete, bye!"))
       }
       .as(ExitCode.Success)
-  }
-}

@@ -15,7 +15,7 @@ import sttp.tapir.server.mockserver._
 
 import scala.util.Success
 
-class SttpMockServerClientExample extends AnyFlatSpec with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
+class SttpMockServerClientExample extends AnyFlatSpec with Matchers with BeforeAndAfterAll with BeforeAndAfterEach:
   behavior of "SttpMockServerClient"
 
   private val baseUri = uri"http://localhost:1080"
@@ -59,4 +59,3 @@ class SttpMockServerClientExample extends AnyFlatSpec with Matchers with BeforeA
 
     actual shouldEqual Success(Value(Right(sampleOut)))
   }
-}

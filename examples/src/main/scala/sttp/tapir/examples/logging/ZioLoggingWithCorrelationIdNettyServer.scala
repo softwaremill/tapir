@@ -9,7 +9,7 @@ import sttp.tapir.server.netty.zio.{NettyZioServer, NettyZioServerOptions}
 import sttp.tapir.ztapir.*
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault, durationInt}
 
-object ZioLoggingWithCorrelationIdNettyServer extends ZIOAppDefault {
+object ZioLoggingWithCorrelationIdNettyServer extends ZIOAppDefault:
   val CorrelationIdHeader = "X-Correlation-Id"
 
   // An endpoint with some logging added
@@ -30,7 +30,7 @@ object ZioLoggingWithCorrelationIdNettyServer extends ZIOAppDefault {
     }
   })
 
-  override def run: URIO[Any, ExitCode] = {
+  override def run: URIO[Any, ExitCode] = 
     val serverOptions = NettyZioServerOptions.customiseInterceptors.prependInterceptor(correlationIdInterceptor).options
     (for {
       binding <- NettyZioServer(serverOptions).port(8080).addEndpoint(loggingEndpoint).start()
@@ -39,5 +39,3 @@ object ZioLoggingWithCorrelationIdNettyServer extends ZIOAppDefault {
       _ <- httpClient.send(basicRequest.get(uri"http://localhost:8080/hello?name=Bob"))
       _ <- binding.stop()
     } yield ()).exitCode
-  }
-}

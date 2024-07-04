@@ -8,7 +8,7 @@ import sttp.tapir.ztapir._
 import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.{Console, ExitCode, IO, Scope, Task, ZIO, ZIOAppDefault, ZLayer}
 
-object ServerSecurityLogicZio extends ZIOAppDefault {
+object ServerSecurityLogicZio extends ZIOAppDefault:
   // authentication data structure & logic
   case class User(name: String)
   case class AuthenticationToken(value: String)
@@ -57,7 +57,7 @@ object ServerSecurityLogicZio extends ZIOAppDefault {
   // interpreting as an app
   val routes: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter().toHttp(secureHelloWorldWithLogic)
 
-  override def run: ZIO[Scope, Throwable, ExitCode] = {
+  override def run: ZIO[Scope, Throwable, ExitCode] =
     def testWith(backend: SttpBackend[Task, Any], port: Int, path: String, salutation: String, token: String): Task[String] =
       basicRequest
         .response(asStringAlways)
@@ -79,5 +79,3 @@ object ServerSecurityLogicZio extends ZIOAppDefault {
         ZLayer.succeed(Server.Config.default.port(8080)),
         Server.live
       )
-  }
-}

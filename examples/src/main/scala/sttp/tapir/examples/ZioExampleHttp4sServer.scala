@@ -14,7 +14,7 @@ import sttp.tapir.ztapir.*
 import zio.interop.catz.*
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault}
 
-object ZioExampleHttp4sServer extends ZIOAppDefault {
+object ZioExampleHttp4sServer extends ZIOAppDefault:
   case class Pet(species: String, url: String)
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
@@ -61,4 +61,3 @@ object ZioExampleHttp4sServer extends ZIOAppDefault {
     )
 
   override def run: URIO[Any, ExitCode] = serve.exitCode
-}

@@ -12,9 +12,9 @@ import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir.*
 import zio.interop.catz.*
-import zio.{Console, IO, Layer, RIO, ZIO, ZIOAppDefault, ZLayer}
+import zio.{Console, ExitCode, IO, Layer, RIO, URIO, ZIO, ZIOAppDefault, ZLayer}
 
-object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
+object ZioEnvExampleHttp4sServer extends ZIOAppDefault:
   // Domain classes, services, layers
   case class Pet(species: String, url: String)
 
@@ -73,6 +73,4 @@ object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
 
   }
 
-  override def run =
-    serve.provide(PetService.live).exitCode
-}
+  override def run: URIO[Any, ExitCode] = serve.provide(PetService.live).exitCode

@@ -9,7 +9,7 @@ import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.{Task, ZIO, _}
 
 /** Based on https://adopt-tapir.softwaremill.com zio version. */
-object ZioMetricsExample extends ZIOAppDefault {
+object ZioMetricsExample extends ZIOAppDefault:
 
   case class User(name: String) extends AnyVal
 
@@ -27,7 +27,7 @@ object ZioMetricsExample extends ZIOAppDefault {
   val metricsInterceptor: MetricsRequestInterceptor[Task] = metrics.metricsInterceptor()
 
   // noinspection DuplicatedCode
-  override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
+  override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] =
     val serverOptions: ZioHttpServerOptions[Any] =
       ZioHttpServerOptions.customiseInterceptors.metricsInterceptor(metricsInterceptor).options
     val app: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter(serverOptions).toHttp(all)
@@ -44,6 +44,3 @@ object ZioMetricsExample extends ZIOAppDefault {
         Server.live
       )
       .exitCode
-  }
-
-}

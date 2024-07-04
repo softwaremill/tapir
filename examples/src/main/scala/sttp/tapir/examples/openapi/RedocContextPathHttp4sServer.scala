@@ -12,23 +12,23 @@ import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import scala.concurrent.ExecutionContext
 
-object RedocContextPathHttp4sServer extends IOApp {
+object RedocContextPathHttp4sServer extends IOApp:
   val contextPath: List[String] = List("api", "v1")
   val docPathPrefix: List[String] = "redoc" :: Nil
 
   val helloWorld: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
-  val routes: HttpRoutes[IO] = {
+  val routes: HttpRoutes[IO] =
     val redocEndpoints = RedocInterpreter(redocUIOptions = RedocUIOptions.default.contextPath(contextPath).pathPrefix(docPathPrefix))
       .fromEndpoints[IO](List(helloWorld), "The tapir library", "1.0.0")
 
     Http4sServerInterpreter[IO]().toRoutes(helloWorld.serverLogic(name => IO(s"Hello, $name!".asRight[Unit])) :: redocEndpoints)
-  }
+  end routes
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // starting the server
     BlazeServerBuilder[IO]
       .withExecutionContext(ec)
@@ -37,5 +37,3 @@ object RedocContextPathHttp4sServer extends IOApp {
       .resource
       .use { _ => IO.println(s"go to: http://127.0.0.1:8080/${(contextPath ++ docPathPrefix).mkString("/")}") *> IO.never }
       .as(ExitCode.Success)
-  }
-}

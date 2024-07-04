@@ -12,7 +12,7 @@ import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import scala.concurrent.ExecutionContext
 
-object HelloWorldHttp4sServer extends IOApp {
+object HelloWorldHttp4sServer extends IOApp:
   // the endpoint: single fixed path input ("hello"), single query parameter
   // corresponds to: GET /hello?name=...
   val helloWorld: PublicEndpoint[String, Unit, String, Any] =
@@ -24,7 +24,7 @@ object HelloWorldHttp4sServer extends IOApp {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // starting the server
     BlazeServerBuilder[IO]
       .withExecutionContext(ec)
@@ -40,5 +40,3 @@ object HelloWorldHttp4sServer extends IOApp {
         }
       }
       .as(ExitCode.Success)
-  }
-}
