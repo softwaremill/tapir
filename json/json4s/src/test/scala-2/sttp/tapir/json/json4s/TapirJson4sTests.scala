@@ -14,6 +14,8 @@ case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
 case class Item(serialNumber: Long, price: Int)
 case class Order(items: Seq[Item], customer: Customer)
 
+// the tests are run only for scala 2 because https://github.com/json4s/json4s/issues/1035 is only fixed in
+// versions for scala 3.4+ (not LTS)
 class TapirJson4sTests extends AnyFlatSpecLike with Matchers {
 
   implicit val serialization: Serialization = org.json4s.jackson.Serialization
