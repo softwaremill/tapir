@@ -250,7 +250,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
 
-lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples).flatMap(_.projectRefs).flatMap(projectId)
+lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
 
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
