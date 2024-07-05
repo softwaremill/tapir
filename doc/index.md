@@ -1,7 +1,7 @@
 # tapir
 
 <div style="text-align: center">
-<p>Declarative, type-safe web endpoints library.</p>
+<p>Rapid development of self-documenting APIs</p>
 <img src="https://github.com/softwaremill/tapir/raw/master/doc/logo.png" alt="tapir" height="100" width="100" />
 </div>
 
@@ -38,6 +38,8 @@ input and output parameters. An endpoint specification can be interpreted as:
 Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
 for a more detailed description of how tapir works! ScalaDocs are available at [javadoc.io](https://www.javadoc.io/doc/com.softwaremill.sttp.tapir).
 
+Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
+
 ## Why tapir?
 
 * **type-safety**: compile-time guarantees, develop-time completions, read-time information
@@ -60,17 +62,6 @@ for a more detailed description of how tapir works! ScalaDocs are available at [
      height="603"
    ></iframe>
 ```
-
-## Availability
-
-Tapir is available:
-
-* all modules - Scala 2.12 and 2.13 on the JVM (Java 11+)
-* selected modules - Scala 3 on the JVM (Java 11+)
-* selected modules - Scala 2.12, 2.13 and 3 using Scala.JS
-* selected modules - Scala 2.12, 2.13 and 3 using Scala Native
-
-Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
 
 ## Adopters
 
@@ -208,6 +199,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    quickstart
    examples
    stability
+   scala_2_3_platforms
 
 .. toctree::
    :maxdepth: 2
