@@ -2130,6 +2130,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     openapiDocs,
     opentelemetryMetrics,
     pekkoHttpServer,
+    picklerJson,
     playClient,
     playJson,
     playServer,

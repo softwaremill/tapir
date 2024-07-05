@@ -13,7 +13,7 @@ Many of tapir functionalities come as builder methods in the main package, hence
 you import the main package entirely, i.e.:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 ```
 
 Finally, type:

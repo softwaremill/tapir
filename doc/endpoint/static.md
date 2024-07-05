@@ -23,8 +23,8 @@ to read the data.
 Such an endpoint has to be interpreted using your server interpreter. For example, using the [netty-sync](../server/netty.md) interpreter:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.files._
+import sttp.tapir.*
+import sttp.tapir.files.*
 import sttp.tapir.server.netty.sync.NettySyncServer
 
 NettySyncServer()
@@ -41,8 +41,8 @@ To expose files without a prefix, use `emptyInput`. For example, below exposes t
 ```scala mdoc:compile-only
 import sttp.tapir.server.netty.sync.NettySyncServer
 import sttp.tapir.emptyInput
-import sttp.tapir._
-import sttp.tapir.files._
+import sttp.tapir.*
+import sttp.tapir.files.*
 
 NettySyncServer()
   .addEndpoint(staticFilesGetServerEndpoint(emptyInput)("/var/www"))
@@ -69,8 +69,8 @@ Endpoint constructor methods for files and resources can receive optional `FileO
 ```scala mdoc:compile-only
 import sttp.model.headers.ETag
 import sttp.tapir.emptyInput
-import sttp.tapir._
-import sttp.tapir.files._
+import sttp.tapir.*
+import sttp.tapir.files.*
 import sttp.shared.Identity
 
 import java.net.URL
@@ -108,8 +108,8 @@ The content of [WebJars](https://www.webjars.org) that are available on the clas
 following routes (here using the `/resources` context path):
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.files._
+import sttp.tapir.*
+import sttp.tapir.files.*
 import sttp.shared.Identity
 
 val webJarRoutes = staticResourcesGetServerEndpoint[Identity]("resources")(

@@ -21,10 +21,10 @@ If the business logic signals errors as exceptions, some or all can be recovered
 For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.netty.NettyFutureServerInterpreter
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util._
+import scala.util.*
 
 given ExecutionContext = ExecutionContext.global
 type ErrorInfo = String
@@ -118,13 +118,13 @@ Moreover, when using the `DefaultDecodeFailureHandler`, decode failure handling 
 basis, by setting an attribute. For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 // bringing into scope the onDecodeFailureNextEndpoint extension method
-import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure.*
 
 case class UserId(value: String)
-object UserId {
-  implicit val codec: Codec[String, UserId, CodecFormat.TextPlain] = Codec.string.mapDecode(raw =>
+object UserId:
+  given Codec[String, UserId, CodecFormat.TextPlain] = Codec.string.mapDecode(raw =>
     UserId.make(raw) match {
       case Left(error) =>
         DecodeResult.Error(raw, new IllegalArgumentException(s"Invalid User value ($raw), failed with $error"))
@@ -134,7 +134,6 @@ object UserId {
   def make(in: String): Either[String, UserId] =
     if (in.length > 5) Right(new UserId(in))
     else Left("Too short")
-}
 
 // If your codec for UserId fails, allow checking other endpoints for possible matches, like /customer/some_special_case
 endpoint.in("customer" / path[UserId]("user_id").onDecodeFailureNextEndpoint)
@@ -151,12 +150,12 @@ default ones for you.
 We'll need to provide both the endpoint output which should be used for error messages, along with the output's value:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.server.netty.NettyFutureServerOptions
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 case class MyFailure(msg: String)
 def myFailureResponse(m: String): ValuedEndpointOutput[_] =

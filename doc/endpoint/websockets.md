@@ -14,11 +14,11 @@ For example, here's an endpoint where the requests are strings (hence only text 
 are parsed/formatted as json:
 
 ```scala mdoc:silent
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
-import io.circe.generic.auto._
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
+import io.circe.generic.auto.*
 
 case class Response(msg: String, count: Int)
 endpoint.out(
@@ -40,7 +40,7 @@ Alternatively, it's possible to obtain a raw pipe transforming `WebSocketFrame`s
 
 ```scala mdoc:silent
 import org.apache.pekko.stream.scaladsl.Flow
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.capabilities.pekko.PekkoStreams
 import sttp.capabilities.WebSockets
 import sttp.ws.WebSocketFrame

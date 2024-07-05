@@ -10,22 +10,22 @@ Schema generation can now be performed like in the following example:
 
 ```scala mdoc:compile-only
 import sttp.apispec.{Schema => ASchema}
-import sttp.tapir._
-import sttp.tapir.docs.apispec.schema._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.docs.apispec.schema.*
+import sttp.tapir.generic.auto.*
 
-  object Childhood {
-    case class Child(age: Int, height: Option[Int])
-  }
-  case class Parent(innerChildField: Child, childDetails: Childhood.Child)
-  case class Child(childName: String) // to illustrate unique name generation
-  val tSchema = implicitly[Schema[Parent]]
+object Childhood {
+  case class Child(age: Int, height: Option[Int])
+}
+case class Parent(innerChildField: Child, childDetails: Childhood.Child)
+case class Child(childName: String) // to illustrate unique name generation
+val tSchema = implicitly[Schema[Parent]]
 
-  val jsonSchema: ASchema = TapirSchemaToJsonSchema(
-    tSchema,
-    markOptionsAsNullable = true,
-    metaSchema = MetaSchemaDraft04 // default
-    // schemaName = sttp.atpir.docs.apispec.defaultSchemaName // default
+val jsonSchema: ASchema = TapirSchemaToJsonSchema(
+  tSchema,
+  markOptionsAsNullable = true,
+  metaSchema = MetaSchemaDraft04 // default
+  // schemaName = sttp.atpir.docs.apispec.defaultSchemaName // default
 )
 ```
 
@@ -42,28 +42,28 @@ you will get a codec for `sttp.apispec.Schema`:
 
 ```scala mdoc:compile-only
 import io.circe.Printer
-import io.circe.syntax._
-import sttp.apispec.circe._
+import io.circe.syntax.*
+import sttp.apispec.circe.*
 import sttp.apispec.{Schema => ASchema}
-import sttp.tapir._
-import sttp.tapir.docs.apispec.schema._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.docs.apispec.schema.*
+import sttp.tapir.generic.auto.*
 import sttp.tapir.Schema.annotations.title
 
-  object Childhood {
-    @title("my child") case class Child(age: Int, height: Option[Int])
-  }
-  case class Parent(innerChildField: Child, childDetails: Childhood.Child)
-  case class Child(childName: String)
-  val tSchema = implicitly[Schema[Parent]]
+object Childhood {
+  @title("my child") case class Child(age: Int, height: Option[Int])
+}
+case class Parent(innerChildField: Child, childDetails: Childhood.Child)
+case class Child(childName: String)
+val tSchema = implicitly[Schema[Parent]]
 
-  val jsonSchema: ASchema = TapirSchemaToJsonSchema(
-    tSchema,
-    markOptionsAsNullable = true)
-  
-  // JSON serialization
-  val schemaAsJson = jsonSchema.asJson
-  val schemaStr: String = Printer.spaces2.print(schemaAsJson.deepDropNullValues)
+val jsonSchema: ASchema = TapirSchemaToJsonSchema(
+  tSchema,
+  markOptionsAsNullable = true)
+
+// JSON serialization
+val schemaAsJson = jsonSchema.asJson
+val schemaStr: String = Printer.spaces2.print(schemaAsJson.deepDropNullValues)
 ```
 
 The title annotation of the object will be by default the name of the case class. You can customize it with `@title` annotation.

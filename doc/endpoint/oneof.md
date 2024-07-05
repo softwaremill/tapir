@@ -42,11 +42,11 @@ For example, below is a specification for an endpoint where the error output is 
 such a specification can then be refined and reused for other endpoints:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
 import sttp.model.StatusCode
-import io.circe.generic.auto._
+import io.circe.generic.auto.*
 
 sealed trait ErrorInfo
 case class NotFound(what: String) extends ErrorInfo
@@ -70,11 +70,11 @@ val baseEndpoint = endpoint.errorOut(
 Type erasure may prevent a one-of-variant from working properly. The following example will fail at compile time because `Right[NotFound]` and `Right[BadRequest]` will become `Right[Any]`:
 
 ```scala mdoc:fail
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
 import sttp.model.StatusCode
-import io.circe.generic.auto._
+import io.circe.generic.auto.*
 
 case class ServerError(what: String)
 
@@ -94,11 +94,11 @@ val baseEndpoint = endpoint.errorOut(
 The solution is therefore to handwrite a function checking that a value (of type `Any`) is of the correct type:
 
 ```scala mdoc:invisible
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
 import sttp.model.StatusCode
-import io.circe.generic.auto._
+import io.circe.generic.auto.*
 
 case class ServerError(what: String)
 
@@ -161,7 +161,7 @@ The `.errorOutVariantPrepend` function allows prepending an error out variant, l
 a default. This is useful e.g. when providing a more specific error output, than the current one. For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 
 trait DomainException {
   def help: String
@@ -194,10 +194,10 @@ Each body variant should represent the same content, and hence have the same hig
 To describe a body, which can be given as json, xml or plain text, create the following input/output description:
 
 ```scala mdoc:compile-only
-import io.circe.generic.auto._
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import io.circe.generic.auto.*
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 
 case class User(name: String)
 

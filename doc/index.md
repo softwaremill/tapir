@@ -119,10 +119,10 @@ Thank you!
 ## Code teaser
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 type Limit = Int
 type AuthToken = String
@@ -144,7 +144,7 @@ val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Bo
 
 // Generate OpenAPI documentation
 
-import sttp.apispec.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
@@ -170,7 +170,7 @@ val booksListingRoute: Route = PekkoHttpServerInterpreter()
 // Convert to sttp Request
 
 import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3._
+import sttp.client3.*
 
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] =
   SttpClientInterpreter()

@@ -27,8 +27,8 @@ For example, to specify that the output is an akka-stream, which is a (presumabl
 mapping to the `Person` class:  
 
 ```scala mdoc:silent:reset
-import sttp.tapir._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
 import sttp.capabilities.pekko.PekkoStreams
 
 case class Person(name: String)

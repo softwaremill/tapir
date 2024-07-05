@@ -16,11 +16,11 @@ object:
 ```scala mdoc:silent
 import sttp.apispec.asyncapi.AsyncAPI
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 case class Response(msg: String, count: Int)
 val echoWS = endpoint.out(
@@ -56,7 +56,7 @@ Multiple endpoints can be converted to an `AsyncAPI` instance by calling the met
 The asyncapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala mdoc:silent
-import sttp.apispec.asyncapi.circe.yaml._
+import sttp.apispec.asyncapi.circe.yaml.*
 
 println(docs.toYaml)
 ```
@@ -84,7 +84,7 @@ Specification extensions can be added by first importing an extension method, an
 method which manipulates the appropriate attribute on the schema, endpoint or endpoint input/output:
 
 ```scala mdoc:silent
-import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.*
 
 endpoint
   .post

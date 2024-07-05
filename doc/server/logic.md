@@ -38,7 +38,7 @@ converted to a function using a single argument using `.tupled`, or that you'll 
 to extract the parameters:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import scala.concurrent.Future
 
@@ -63,7 +63,7 @@ Both a single server endpoint, and multiple endpoints can be interpreted as a se
 endpoints can be converted to a Netty route:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -90,7 +90,7 @@ errors which are subtypes of `E`. Any others will be propagated without changes.
 For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import scala.concurrent.Future
 
 case class MyError(msg: String) extends Exception
@@ -141,8 +141,8 @@ provided.
 For example, we can create a partial server endpoint given the security logic, and an endpoint with security inputs:
 
 ```scala mdoc:silent
-import sttp.tapir._
-import sttp.tapir.server._
+import sttp.tapir.*
+import sttp.tapir.server.*
 import scala.concurrent.{ExecutionContext, Future}
 
 implicit val ec: ExecutionContext = ExecutionContext.global
@@ -207,8 +207,8 @@ with an error output (for security errors) and the security logic to add. This a
 before the security logic defined in the endpoint so far (if any). For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.files._
+import sttp.tapir.*
+import sttp.tapir.files.*
 import scala.concurrent.Future
 import sttp.model.StatusCode
 
