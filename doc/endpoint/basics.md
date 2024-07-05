@@ -17,7 +17,7 @@ Input/output parameters (`A`, `I`, `E` and `O`) can be:
 Hence, an empty, initial endpoint, with no inputs and no outputs, from which all other endpoints are  derived has the type:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 
 val endpoint: Endpoint[Unit, Unit, Unit, Unit, Any] = ???
 ```
@@ -25,7 +25,7 @@ val endpoint: Endpoint[Unit, Unit, Unit, Unit, Any] = ???
 For endpoints which have no security inputs, a type alias is provided which fixes `A` to `Unit`:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 
 type PublicEndpoint[I, E, O, -R] = Endpoint[Unit, I, E, O, R]
 ```
@@ -40,7 +40,7 @@ case class User()
 ```
  
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 
 val userEndpoint: PublicEndpoint[(UUID, Int), String, User, Any] = ???
 ```

@@ -3,12 +3,8 @@ package sttp.tapir.macros
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.{Codec, SchemaAnnotations, Validator}
 import sttp.tapir.internal.CodecValueClassMacro
-import sttp.tapir.Mapping
-import sttp.tapir.DecodeResult
-import sttp.tapir.DecodeResult.Value
-import sttp.tapir.Schema
 
-trait CodecMacros {
+trait CodecMacros:
 
   /** Creates a codec for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
     * that all subtypes of the sealed hierarchy `T` must be `object`s.
@@ -64,4 +60,3 @@ trait CodecMacros {
 
   /** Creates a codec for value class based on codecs defined in `Codec` companion */
   implicit inline def derivedValueClass[T <: AnyVal]: Codec[String, T, TextPlain] = CodecValueClassMacro.derivedValueClass[T]
-}

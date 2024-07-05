@@ -19,7 +19,7 @@ import java.time.Instant
 import scala.collection.immutable.ListMap
 import scala.concurrent.ExecutionContext
 
-object OAuth2GithubHttp4sServer extends IOApp {
+object OAuth2GithubHttp4sServer extends IOApp:
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
@@ -105,7 +105,7 @@ object OAuth2GithubHttp4sServer extends IOApp {
 
   val httpClient = AsyncHttpClientCatsBackend.resource[IO]()
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // starting the server
     httpClient
       .use(backend =>
@@ -123,5 +123,3 @@ object OAuth2GithubHttp4sServer extends IOApp {
           }
       )
       .as(ExitCode.Success)
-  }
-}

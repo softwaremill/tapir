@@ -22,7 +22,7 @@ with the endpoints for which the documentation is generated, will need in turn t
 interpreter. For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 
@@ -77,7 +77,7 @@ object:
 
 ```scala mdoc:silent
 import sttp.apispec.openapi.OpenAPI
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val booksListing = endpoint.in(path[String]("bookId"))
@@ -115,7 +115,7 @@ OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGen
 The openapi case classes can then be serialised to YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala mdoc:silent
-import sttp.apispec.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml.*
 
 println(docs.toYaml)
 ```
@@ -124,8 +124,8 @@ Or to JSON:
 
 ```scala mdoc:silent
 import io.circe.Printer
-import io.circe.syntax._
-import sttp.apispec.openapi.circe._
+import io.circe.syntax.*
+import sttp.apispec.openapi.circe.*
 
 println(Printer.spaces2.print(docs.asJson))
 ```
@@ -144,8 +144,8 @@ Firstly add dependencies:
 and generate the documentation by importing valid extension methods and explicitly specifying the "3.0.3" version in the OpenAPI model:
 ```scala mdoc:compile-only
 import sttp.apispec.openapi.OpenAPI
-import sttp.apispec.openapi.circe.yaml._ // for `toYaml` extension method
-import sttp.tapir._
+import sttp.apispec.openapi.circe.yaml.* // for `toYaml` extension method
+import sttp.tapir.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 case class Book(id: Option[Long], title: Option[String])
@@ -178,8 +178,8 @@ or `tapir-redoc`:
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
 
 ```scala mdoc:compile-only
-import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir._
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 import sttp.tapir.swagger.SwaggerUI
@@ -227,7 +227,7 @@ that is they will form a single security requirement, with multiple schemes, e.g
 
 ```scala mdoc:compile-only
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.tapir._
+import sttp.tapir.*
 
 val multiAuthEndpoint =
   endpoint.post
@@ -251,7 +251,7 @@ can be done in the security logic, server logic, or by mapping the inputs using 
 
 ```scala mdoc:compile-only
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.tapir._
+import sttp.tapir.*
 
 val alternativeAuthEndpoint = endpoint.securityIn(
   // auth.apiKey(...).and(auth.apiKey(..)) will map the request headers to a tuple (Option[String], Option[String])
@@ -285,16 +285,16 @@ Specification extensions can be added by first importing an extension method, an
 method which manipulates the appropriate attribute on the schema, endpoint or endpoint input/output:
 
 ```scala mdoc:compile-only
-import sttp.apispec.openapi._
-import sttp.apispec.openapi.circe._
-import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
-import io.circe.generic.auto._
+import sttp.apispec.openapi.*
+import sttp.apispec.openapi.circe.*
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
+import io.circe.generic.auto.*
 
 import sttp.tapir.docs.apispec.DocsExtension
-import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 case class FruitAmount(fruit: String, amount: Int)
@@ -333,7 +333,7 @@ If you are using `tapir-swagger-ui` you need to set `withShowExtensions` option 
 It's possible to hide an input/output from the OpenAPI description using following syntax:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 
 val acceptHeader: EndpointInput[String] = header[String]("Accept").schema(_.hidden(true))
 ```

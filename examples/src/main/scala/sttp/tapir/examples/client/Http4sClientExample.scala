@@ -1,14 +1,16 @@
 package sttp.tapir.examples.client
 
 import cats.effect.{ExitCode, IO, IOApp}
-import sttp.tapir.examples.logging.Logging
 import io.circe.generic.auto.*
 import sttp.tapir.*
 import sttp.tapir.client.http4s.Http4sClientInterpreter
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 
-object Http4sClientExample extends IOApp with Logging {
+import org.slf4j.{Logger, LoggerFactory}
+val logger: Logger = LoggerFactory.getLogger(getClass.getName)
+
+object Http4sClientExample extends IOApp:
 
   case class User(id: Int, name: String)
 
@@ -19,7 +21,7 @@ object Http4sClientExample extends IOApp with Logging {
       .out(jsonBody[User])
 
   // Define http4s routes that will be used to test the request.
-  private val http4sRoutes = {
+  private val http4sRoutes =
     import io.circe.generic.auto.*
     import io.circe.syntax.*
     import org.http4s.*
@@ -32,9 +34,8 @@ object Http4sClientExample extends IOApp with Logging {
         Ok(User(userId, "Joanna").asJson)
       }
       .orNotFound
-  }
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     val userId = 5
 
     // Interpret the endpoint as a request and a response parser.
@@ -51,5 +52,3 @@ object Http4sClientExample extends IOApp with Logging {
       result <- parseResponse(response)
       _ <- IO(logger.info(s"The result is: $result"))
     } yield ExitCode.Success
-  }
-}

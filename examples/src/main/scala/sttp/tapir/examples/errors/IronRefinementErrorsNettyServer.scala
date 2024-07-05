@@ -24,7 +24,7 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.codec.iron.given
 import sttp.tapir.generic.auto.*
 
-object IronRefinementErrorsNettyServer extends IOApp.Simple {
+object IronRefinementErrorsNettyServer extends IOApp.Simple:
 
   case class IronException(error: String) extends Exception(error)
 
@@ -81,7 +81,7 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
   private val declaredPort = 9090
   private val declaredHost = "localhost"
 
-  override def run = NettyCatsServer
+  override def run: IO[Unit] = NettyCatsServer
     .io()
     .use { server =>
       // Don't forget to add the interceptor to server options
@@ -123,4 +123,3 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
           .guarantee(binding.stop())
       } yield result
     }
-}

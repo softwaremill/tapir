@@ -1,7 +1,7 @@
 # tapir
 
 <div style="text-align: center">
-<p>Declarative, type-safe web endpoints library.</p>
+<p>Rapid development of self-documenting APIs</p>
 <img src="https://github.com/softwaremill/tapir/raw/master/doc/logo.png" alt="tapir" height="100" width="100" />
 </div>
 
@@ -38,6 +38,8 @@ input and output parameters. An endpoint specification can be interpreted as:
 Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
 for a more detailed description of how tapir works! ScalaDocs are available at [javadoc.io](https://www.javadoc.io/doc/com.softwaremill.sttp.tapir).
 
+Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
+
 ## Why tapir?
 
 * **type-safety**: compile-time guarantees, develop-time completions, read-time information
@@ -60,17 +62,6 @@ for a more detailed description of how tapir works! ScalaDocs are available at [
      height="603"
    ></iframe>
 ```
-
-## Availability
-
-Tapir is available:
-
-* all modules - Scala 2.12 and 2.13 on the JVM (Java 11+)
-* selected modules - Scala 3 on the JVM (Java 11+)
-* selected modules - Scala 2.12, 2.13 and 3 using Scala.JS
-* selected modules - Scala 2.12, 2.13 and 3 using Scala Native
-
-Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
 
 ## Adopters
 
@@ -119,10 +110,10 @@ Thank you!
 ## Code teaser
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 type Limit = Int
 type AuthToken = String
@@ -144,17 +135,17 @@ val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Bo
 
 // Generate OpenAPI documentation
 
-import sttp.apispec.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
 
 
-// Convert to akka-http Route
+// Convert to pekko-http Route
 
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-import akka.http.scaladsl.server.Route
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
+import org.apache.pekko.http.scaladsl.server.Route
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -163,14 +154,14 @@ def bookListingLogic(bfy: BooksQuery,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
 
-val booksListingRoute: Route = AkkaHttpServerInterpreter()
+val booksListingRoute: Route = PekkoHttpServerInterpreter()
   .toRoute(booksListing.serverLogic((bookListingLogic _).tupled))
 
 
 // Convert to sttp Request
 
 import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3._
+import sttp.client3.*
 
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] =
   SttpClientInterpreter()
@@ -208,6 +199,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    quickstart
    examples
    stability
+   scala_2_3_platforms
 
 .. toctree::
    :maxdepth: 2

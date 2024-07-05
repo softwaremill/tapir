@@ -7,7 +7,7 @@ import sttp.shared.Identity
 import sttp.tapir.server.netty.cats.NettyCatsServer
 import sttp.tapir.*
 
-object HelloWorldNettyCatsServer extends IOApp.Simple {
+object HelloWorldNettyCatsServer extends IOApp.Simple:
   // One endpoint on GET /hello with query parameter `name`
   val helloWorldEndpoint: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
@@ -53,4 +53,3 @@ object HelloWorldNettyCatsServer extends IOApp.Simple {
           .guarantee(binding.stop())
       } yield result
     }
-}

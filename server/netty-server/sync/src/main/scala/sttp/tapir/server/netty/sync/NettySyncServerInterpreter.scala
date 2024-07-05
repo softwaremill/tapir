@@ -15,8 +15,7 @@ import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 trait NettySyncServerInterpreter:
   def nettyServerOptions: NettySyncServerOptions
 
-  /** Requires implicit supervision scope (Ox), because it needs to know in which scope it can start background forks in the Web Sockets
-    * processor.
+  /** Requires supervision scope (Ox), because it needs to know in which scope it can start background forks in the Web Sockets processor.
     */
   def toRoute(
       ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]],

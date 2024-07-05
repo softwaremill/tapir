@@ -6,7 +6,7 @@ import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 
-object EndpointWithCustomTypes {
+object EndpointWithCustomTypes:
   // An over-complicated, example custom type
   trait MyId {
     def id: String
@@ -28,4 +28,3 @@ object EndpointWithCustomTypes {
   implicit val myIdEncoder: Encoder[MyId] = Encoder.encodeString.contramap(_.id)
   implicit val myIdDecoder: Decoder[MyId] = Decoder.decodeString.map(s => new MyIdImpl(s))
   val endpointWithPerson: PublicEndpoint[Unit, Unit, Person, Nothing] = endpoint.out(jsonBody[Person])
-}

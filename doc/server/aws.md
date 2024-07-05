@@ -5,12 +5,9 @@ an [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/htt
 This approach, known as the Fat Lambda function, utilizes a single lambda function for deploying multiple endpoints. To invoke the
 function, HTTP requests can be proxied through [AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html). 
 
+To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/), [AWS CDK](https://aws.amazon.com/cdk/) or [Terraform](https://www.terraform.io/) can be used, to automate cloud deployments.
 
-To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/)
-, [AWS CDK](https://aws.amazon.com/cdk/) or [Terraform](https://www.terraform.io/) can be used, to automate cloud deployments.
-
-For an overview of how this works in more detail, see [this blog post](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396)
-.
+For an overview of how this works in more detail, see [this blog post](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396).
 
 ## Runtime & Server interpreters
 

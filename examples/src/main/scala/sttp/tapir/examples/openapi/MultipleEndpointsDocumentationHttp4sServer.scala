@@ -15,7 +15,7 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 
-object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
+object MultipleEndpointsDocumentationHttp4sServer extends IOApp:
   // endpoint descriptions
   case class Author(name: String)
   case class Book(title: String, year: Int, author: Author)
@@ -63,7 +63,7 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
 
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes <+> swaggerUIRoutes
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] = 
     // starting the server
     BlazeServerBuilder[IO]
       .withExecutionContext(ec)
@@ -78,5 +78,4 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
         }
       }
       .as(ExitCode.Success)
-  }
-}
+

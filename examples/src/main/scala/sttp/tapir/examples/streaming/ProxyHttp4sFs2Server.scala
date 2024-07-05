@@ -1,7 +1,6 @@
 package sttp.tapir.examples.streaming
 
 import cats.effect.{ExitCode, IO, IOApp}
-import sttp.tapir.examples.logging.Logging
 import fs2.Stream
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -14,7 +13,10 @@ import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 /** Proxies requests from /proxy to https://httpbin.org/anything */
-object ProxyHttp4sFs2Server extends IOApp with Logging {
+object ProxyHttp4sFs2Server extends IOApp:
+  import org.slf4j.{Logger, LoggerFactory}
+  val logger: Logger = LoggerFactory.getLogger(getClass().getName)
+
   val proxyEndpoint: PublicEndpoint[
     (Method, List[String], QueryParams, List[Header], Stream[IO, Byte]),
     Unit,
@@ -45,7 +47,7 @@ object ProxyHttp4sFs2Server extends IOApp with Logging {
         .map { response => (response.headers.toList, response.body) }
     })
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     (for {
       backend <- HttpClientFs2Backend.resource[IO]()
       routes = proxyRoutes(backend)
@@ -56,5 +58,3 @@ object ProxyHttp4sFs2Server extends IOApp with Logging {
     } yield ())
       .use { _ => IO.never }
       .as(ExitCode.Success)
-  }
-}

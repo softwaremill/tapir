@@ -10,7 +10,7 @@ import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.Console.{printLine, readLine}
 import zio.{Task, ZIO, ZIOAppDefault, ZLayer}
 
-object RedocZioHttpServer extends ZIOAppDefault {
+object RedocZioHttpServer extends ZIOAppDefault:
   case class Pet(species: String, url: String)
 
   val petEndpoint: ZServerEndpoint[Any, Any] =
@@ -24,7 +24,7 @@ object RedocZioHttpServer extends ZIOAppDefault {
   val redocRoutes: Routes[Any, ZioHttpResponse] =
     ZioHttpInterpreter().toHttp(RedocInterpreter().fromServerEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
-  val app = (petRoutes ++ redocRoutes)
+  val app: Routes[Any, ZioHttpResponse] = (petRoutes ++ redocRoutes)
 
   override def run = {
     printLine("Go to: http://localhost:8080/docs") *>
@@ -40,4 +40,3 @@ object RedocZioHttpServer extends ZIOAppDefault {
           readLine *> fiber.interrupt
         }
   }.exitCode
-}

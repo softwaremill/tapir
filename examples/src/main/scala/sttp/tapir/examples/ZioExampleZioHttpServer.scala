@@ -10,7 +10,7 @@ import sttp.tapir.ztapir.*
 import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault, ZLayer}
 
-object ZioExampleZioHttpServer extends ZIOAppDefault {
+object ZioExampleZioHttpServer extends ZIOAppDefault:
   case class Pet(species: String, url: String)
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
@@ -48,4 +48,3 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
         Server.live
       )
       .exitCode
-}

@@ -50,9 +50,9 @@ openapiAdditionalPackages             Nil                                  Addit
 The general usage is;
 
 ```scala
-import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir.generated._
-import sttp.tapir.docs.openapi._
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.generated.*
+import sttp.tapir.docs.openapi.*
 
 val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
 ```
