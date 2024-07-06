@@ -67,3 +67,7 @@ case class UnexpectedBodyError(e: AnyEndpoint, statusCode: StatusCode) extends E
   override def toString: String =
     s"An endpoint ${e.show} may return status code ${statusCode} with body, which is not allowed by specificiation."
 }
+
+case class DuplicatedNameError(name: String) extends EndpointVerificationError {
+  override def toString: String = s"Duplicate endpoints names found: $name"
+}
