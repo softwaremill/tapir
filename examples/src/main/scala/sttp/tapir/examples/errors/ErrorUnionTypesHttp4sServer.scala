@@ -1,19 +1,26 @@
-package sttp.tapir.examples
+// {cat=Error handling; effects=cats-effect; server=http4s; JSON=circe}: Extending a base secured endpoint with error variants, using union types
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.12
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+
+package sttp.tapir.examples.errors
 
 import cats.effect.*
-import cats.syntax.all.*
 import io.circe.generic.auto.*
 import org.http4s.HttpRoutes
-import org.http4s.server.Router
 import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.server.Router
 import sttp.client3.*
 import sttp.model.StatusCode
 import sttp.shared.Identity
 import sttp.tapir.*
-import sttp.tapir.server.http4s.Http4sServerInterpreter
-import sttp.tapir.json.circe.*
 import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import scala.concurrent.ExecutionContext
 
