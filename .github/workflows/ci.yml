@@ -115,6 +115,12 @@ jobs:
          username: ${{ github.actor }}
          password: ${{ secrets.GITHUB_TOKEN }}
     steps:
+    - name: Set up JDK 
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        cache: 'sbt'
+        java-version: ${{ matrix.java }}      
     - name: Test
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
       uses: nick-fields/retry@v2
