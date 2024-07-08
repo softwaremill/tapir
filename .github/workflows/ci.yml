@@ -8,7 +8,7 @@ env:
   # .sbtopts specifies 8g, which is needed to import into IntelliJ, but on GH that exceeds the maximum available memory
   SBT_JAVA_OPTS: -J-Xms4g -J-Xmx4g
 jobs:
-  ci:
+  ci-compile:
     # run on 1) push, 2) external PRs, 3) softwaremill-ci PRs
     # do not run on internal, non-steward PRs since those will be run by push to branch
     if: |
@@ -72,10 +72,49 @@ jobs:
       if: matrix.java == '21'
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
     - name: Compile
-      run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
+      run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"i
     - name: Compile documentation
       if: matrix.target-platform == 'JVM' && matrix.java == '11'
       run: sbt $SBT_JAVA_OPTS -v compileDocumentation
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: ghcr.io/${{ github.repository }}/tapir-compiled:${{ matrix.target-platform }}-${{matrix.scala-version}}-${{ github.sha }} 
+  ci-test:
+    needs: ci-compile
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        scala-version: [ "2.12", "2.13", "3" ]
+        target-platform: [ "JVM", "JS", "Native" ]
+        java: [ "11", "21" ]
+        exclude:
+          - java: "21"
+          - scala-version: "2.12"
+            target-platform: "Native"
+          - scala-version: "2.13"
+            target-platform: "Native"
+        include: # Restricted to build only specific Loom-based modules
+          - scala-version: "2.13"
+            target-platform: "JVM"
+            java: "21"
+          - scala-version: "3"
+            target-platform: "JVM"
+            java: "21"
+    container: 
+      image: ghcr.io/${{ github.repository }}/tapir-compiled:${{ matrix.target-platform }}-${{matrix.scala-version}}-${{ github.sha }} 
+      credentials:
+         username: ${{ github.actor }}
+         password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
     - name: Test
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
       uses: nick-fields/retry@v2
