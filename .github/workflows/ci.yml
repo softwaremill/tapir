@@ -140,7 +140,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 18
-    - run: npm --version
     - name: Install AWS CDK
       if: matrix.java == '11'
       run: |
