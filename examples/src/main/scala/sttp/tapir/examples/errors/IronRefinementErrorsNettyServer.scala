@@ -1,4 +1,4 @@
-// {cat=Custom types; effects=cats-effect; server=Netty; JSON=circe}: Error reporting provided by Iron type refinements
+// {cat=Error handling; effects=cats-effect; server=Netty; JSON=circe}: Error reporting provided by Iron type refinements
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.10.12

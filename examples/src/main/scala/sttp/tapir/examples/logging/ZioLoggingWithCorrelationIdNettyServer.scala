@@ -1,3 +1,9 @@
+// {cat=Logging; effects=ZIO; server=Netty}: Logging using a correlation id
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-zio:1.10.12
+//> using dep com.softwaremill.sttp.client3::zio:3.9.7
+
 package sttp.tapir.examples.logging
 
 import sttp.client3.httpclient.zio.HttpClientZioBackend
@@ -30,7 +36,7 @@ object ZioLoggingWithCorrelationIdNettyServer extends ZIOAppDefault:
     }
   })
 
-  override def run: URIO[Any, ExitCode] = 
+  override def run: URIO[Any, ExitCode] =
     val serverOptions = NettyZioServerOptions.customiseInterceptors.prependInterceptor(correlationIdInterceptor).options
     (for {
       binding <- NettyZioServer(serverOptions).port(8080).addEndpoint(loggingEndpoint).start()
