@@ -1,3 +1,10 @@
+// {cat=Streaming; effects=cats-effect; server=http4s}: Proxy requests, handling bodies as fs2 streams
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.10.12
+//> using dep com.softwaremill.sttp.client3::fs2:3.9.7
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+
 package sttp.tapir.examples.streaming
 
 import cats.effect.{ExitCode, IO, IOApp}
@@ -15,7 +22,7 @@ import sttp.tapir.server.http4s.Http4sServerInterpreter
 /** Proxies requests from /proxy to https://httpbin.org/anything */
 object ProxyHttp4sFs2Server extends IOApp:
   import org.slf4j.{Logger, LoggerFactory}
-  val logger: Logger = LoggerFactory.getLogger(getClass().getName)
+  val logger: Logger = LoggerFactory.getLogger(this.getClass().getName)
 
   val proxyEndpoint: PublicEndpoint[
     (Method, List[String], QueryParams, List[Header], Stream[IO, Byte]),
