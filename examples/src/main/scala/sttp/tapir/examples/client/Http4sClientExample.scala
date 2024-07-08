@@ -1,3 +1,12 @@
+// {cat=Client interpreter; effects=cats-effect; JSON=circe}: Interpreting an endpoint as an http4s client
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-client:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.12
+//> using dep org.http4s::http4s-circe:0.23.27
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-dsl:0.23.27
+
 package sttp.tapir.examples.client
 
 import cats.effect.{ExitCode, IO, IOApp}
@@ -6,11 +15,10 @@ import sttp.tapir.*
 import sttp.tapir.client.http4s.Http4sClientInterpreter
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
-
 import org.slf4j.{Logger, LoggerFactory}
-val logger: Logger = LoggerFactory.getLogger(getClass.getName)
 
 object Http4sClientExample extends IOApp:
+  val logger: Logger = LoggerFactory.getLogger(this.getClass.getName)
 
   case class User(id: Int, name: String)
 

@@ -1,9 +1,17 @@
+// {cat=Error handling; effects=Future; server=Pekko HTTP; json=circe}: Error and successful outputs
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.12
+//> using dep org.apache.pekko::pekko-http:1.0.1
+//> using dep org.apache.pekko::pekko-stream:1.0.3
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+
 package sttp.tapir.examples.errors
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import ox.discard
 import sttp.client3.*
 import sttp.shared.Identity
 import sttp.tapir.generic.auto.*
@@ -50,4 +58,4 @@ import scala.concurrent.{Await, Future}
     binding
   }
 
-  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute).discard
+  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
