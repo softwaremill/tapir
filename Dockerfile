@@ -1,5 +1,5 @@
 # Use Ubuntu 22.04 as the base image
-FROM node:20
+FROM ghcr.io/actions/actions-runner
 
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
