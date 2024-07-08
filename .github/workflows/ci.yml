@@ -25,7 +25,7 @@ jobs:
         # java: [ "11", "21" ]
         scala-version: [ "3" ]
         target-platform: [ "JVM" ]
-        java: [ 21" ]
+        java: [ "21" ]
         exclude:
           - java: "21"
           - scala-version: "2.12"
@@ -33,9 +33,9 @@ jobs:
           - scala-version: "2.13"
             target-platform: "Native"
         include: # Restricted to build only specific Loom-based modules
-          - scala-version: "2.13"
-            target-platform: "JVM"
-            java: "21"
+          # - scala-version: "2.13"
+          #   target-platform: "JVM"
+          #   java: "21"
           - scala-version: "3"
             target-platform: "JVM"
             java: "21"
@@ -97,9 +97,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scala-version: [ "2.12", "2.13", "3" ]
-        target-platform: [ "JVM", "JS", "Native" ]
-        java: [ "11", "21" ]
+        # Commented out for experiments, to quickly get the full build done
+        # scala-version: [ "2.12", "2.13", "3" ]
+        # target-platform: [ "JVM", "JS", "Native" ]
+        # java: [ "11", "21" ]
+        scala-version: [ "3" ]
+        target-platform: [ "JVM" ]
+        java: [ "21" ]
         exclude:
           - java: "21"
           - scala-version: "2.12"
@@ -107,9 +111,9 @@ jobs:
           - scala-version: "2.13"
             target-platform: "Native"
         include: # Restricted to build only specific Loom-based modules
-          - scala-version: "2.13"
-            target-platform: "JVM"
-            java: "21"
+          # - scala-version: "2.13"
+          #   target-platform: "JVM"
+          #   java: "21"
           - scala-version: "3"
             target-platform: "JVM"
             java: "21"
