@@ -181,7 +181,7 @@ jobs:
 
   publish:
     name: Publish release
-    needs: [ci]
+    needs: [ci-test]
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-22.04
     strategy:
@@ -264,7 +264,7 @@ jobs:
     name: Auto merge
     # only for PRs by softwaremill-ci
     if: github.event.pull_request.user.login == 'softwaremill-ci'
-    needs: [ ci, mima, label ]
+    needs: [ ci-test, mima, label ]
     runs-on: ubuntu-22.04
     steps:
       - id: automerge
