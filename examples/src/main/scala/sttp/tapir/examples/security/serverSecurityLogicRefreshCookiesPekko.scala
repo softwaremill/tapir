@@ -1,3 +1,9 @@
+// {cat=Security; effects=Future; server=Pekko HTTP}: Separating security and server logic, with a reusable base endpoint, accepting & refreshing credentials via cookies
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.10.12
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+
 package sttp.tapir.examples.security
 
 import org.apache.pekko.actor.ActorSystem
@@ -69,4 +75,4 @@ import scala.concurrent.{Await, Future}
     binding
   }
 
-  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
+  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
