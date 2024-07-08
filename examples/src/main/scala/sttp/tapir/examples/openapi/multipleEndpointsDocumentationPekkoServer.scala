@@ -1,9 +1,15 @@
+// {cat=OpenAPI documentation; effects=Future; server=Pekko HTTP; docs=Swagger UI; json=circe}: Documenting multiple endpoints
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.10.12
+
 package sttp.tapir.examples.openapi
 
 import java.util.concurrent.atomic.AtomicReference
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
-import ox.discard
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.*
@@ -76,4 +82,4 @@ import scala.concurrent.{Await, Future}
   }
 
   // cleanup
-  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute).discard
+  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
