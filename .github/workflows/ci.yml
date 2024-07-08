@@ -127,7 +127,6 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        cache: 'sbt'
         java-version: ${{ matrix.java }}      
     - name: Install sam cli
       if: matrix.java == '11'
