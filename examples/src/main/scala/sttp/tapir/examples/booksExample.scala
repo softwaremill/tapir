@@ -1,10 +1,20 @@
+// {cat=Hello, World!; effects=Future; server=Pekko HTTP; client=sttp3; JSON=circe; docs=Swagger UI}: A demo of Tapir's capabilities
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-sttp-client:1.10.12
+//> using dep org.apache.pekko::pekko-http:1.0.1
+//> using dep org.apache.pekko::pekko-stream:1.0.3
+
 package sttp.tapir.examples
 
 import sttp.tapir.generic.auto.*
 
 @main def booksExample(): Unit =
   import org.slf4j.{Logger, LoggerFactory}
-  val logger: Logger = LoggerFactory.getLogger(getClass().getName)
+  val logger: Logger = LoggerFactory.getLogger(this.getClass().getName)
 
   type Limit = Option[Int]
   type AuthToken = String
@@ -115,7 +125,7 @@ import sttp.tapir.generic.auto.*
     // interpreting the endpoint description and converting it to an pekko-http route, providing the logic which
     // should be run when the endpoint is invoked.
     List(
-      addBook.serverLogic((bookAddLogic _).tupled),
+      addBook.serverLogic(bookAddLogic.tupled),
       booksListing.serverLogic(bookListingLogic),
       booksListingByGenre.serverLogic(bookListingByGenreLogic)
     )
