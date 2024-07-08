@@ -87,30 +87,25 @@ trait ZioHttpInterpreter[R] {
         case _                                => false
       }
 
-      val pattern = if (hasPath) {
+      val pathPrefixPattern = if (hasPath) {
         val initialPattern = RoutePattern(Method.ANY, PathCodec.empty).asInstanceOf[RoutePattern[Any]]
-        // The second tuple parameter specifies if PathCodec.trailing has already been added to the route's pattern -
-        // it can only be added once. It's possible that an endpoint contains both ExtractFromRequest & PathsCapture,
-        // which would cause it to be added twice.
-        inputs
-          .foldLeft((initialPattern, false)) { case ((p, trailingAdded), component) =>
+        val base = inputs
+          .foldLeft(initialPattern) { case (p, component) =>
             component match {
-              case i: EndpointInput.PathCapture[_] =>
-                ((p / PathCodec.string(i.name.getOrElse("?"))).asInstanceOf[RoutePattern[Any]], trailingAdded)
-              case _: EndpointInput.ExtractFromRequest[_] if !trailingAdded =>
-                ((p / PathCodec.trailing).asInstanceOf[RoutePattern[Any]], true)
-              case _: EndpointInput.PathsCapture[_] if !trailingAdded => ((p / PathCodec.trailing).asInstanceOf[RoutePattern[Any]], true)
-              case i: EndpointInput.FixedPath[_]                      => (p / PathCodec.literal(i.s), trailingAdded)
-              case _                                                  => (p, trailingAdded)
+              case i: EndpointInput.PathCapture[_] => (p / PathCodec.string(i.name.getOrElse("?"))).asInstanceOf[RoutePattern[Any]]
+              case i: EndpointInput.FixedPath[_]   => p / PathCodec.literal(i.s)
+              case _                               => p
             }
           }
-          ._1
+        // because we capture the path prefix, we add a matcher for arbitrary other path components (which might be
+        // handled by tapir's `paths` or `extractFromRequest`)
+        base / PathCodec.trailing
       } else {
         // if there are no path inputs, we return a catch-all
         RoutePattern(Method.ANY, PathCodec.trailing).asInstanceOf[RoutePattern[Any]]
       }
 
-      Route.handled(pattern)(Handler.fromFunctionHandler { (request: Request) => handleRequest(request, sesForPathTemplate) })
+      Route.handled(pathPrefixPattern)(Handler.fromFunctionHandler { (request: Request) => handleRequest(request, sesForPathTemplate) })
     }
 
     Routes(Chunk.fromIterable(handlers))

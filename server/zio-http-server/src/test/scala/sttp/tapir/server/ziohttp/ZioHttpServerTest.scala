@@ -163,6 +163,26 @@ class ZioHttpServerTest extends TestSuite {
 
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
+          // https://github.com/softwaremill/tapir/issues/3907
+          Test("extractFromRequest in the middle") { 
+            val test: UIO[Assertion] = for {
+              ref <- Ref.make("")
+              ep = endpoint.get
+                .in(path[String])
+                .in(extractFromRequest(_.method))
+                .in("test" / path[String])
+                .out(stringBody)
+                .zServerLogic(_ => ZIO.succeed("works"))
+              route = ZioHttpInterpreter().toHttp(ep)
+              result <- route
+                .runZIO(Request.get(url = URL(Path.empty / "p1" / "test" / "p2")))
+                .flatMap(response => response.body.asString)
+                .map(_ shouldBe "works")
+                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+            } yield result
+
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
           // https://github.com/softwaremill/tapir/issues/2849
           Test("Streaming works through the stub backend") {
             // given
