@@ -121,6 +121,33 @@ jobs:
         distribution: 'temurin'
         cache: 'sbt'
         java-version: ${{ matrix.java }}      
+    - name: Install sam cli
+      if: matrix.java == '11'
+      run: |
+        wget -q https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+        unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
+        sudo ./sam-installation/install --update
+        sam --version
+    - name: Install NPM
+      if: matrix.java == '11'
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+    - run: npm --version
+    - name: Install AWS CDK
+      if: matrix.java == '11'
+      run: |
+        npm install -g aws-cdk
+        cdk --version
+    - name: Install libidn2-dev libcurl3-dev
+      if: matrix.target-platform == 'Native'
+      run: |
+        sudo apt-get update
+        sudo apt-get install libidn2-dev libcurl3-dev
+        echo "STTP_NATIVE=1" >> $GITHUB_ENV
+    - name: Enable Loom-specific modules
+      if: matrix.java == '21'
+      run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
     - name: Test
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
       uses: nick-fields/retry@v2
