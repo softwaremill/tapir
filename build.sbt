@@ -64,6 +64,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   Test / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
   updateDocs := Def.taskDyn {
     val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
+    // for the root project the sourceDirectory points to src, so ../ will point to the root directory of the project
+    GenerateListOfExamples(sLog.value, sourceDirectory.value.getParentFile)
     Def.task {
       (documentation.jvm(documentationScalaVersion) / mdoc).toTask("").value
       files1 ++ Seq(file("generated-doc/out"))
