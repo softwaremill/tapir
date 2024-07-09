@@ -162,9 +162,9 @@ jobs:
     - name: Check current dir
       run: pwd
     - name: ls workdir
-      run: ls -alL /__w/tapir/tapir
+      run: ls -alL /tapir
     - name: cd workdir
-      run: cd /__w/tapir/tapir
+      run: cd /tapir
     - name: Test sbt
       run: sbt --version
     - name: Test
