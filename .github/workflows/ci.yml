@@ -95,16 +95,16 @@ jobs:
       with:
         timeout_minutes: 6
         max_attempts: 2
-        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}; openapiCodegenSbt2_12/scripted" & echo $! > pidfile
-        on_retry_command: kill -3 $(cat pidfile) 
+        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}; openapiCodegenSbt2_12/scripted"
+        on_retry_command: pkill -3 java
     - name: Test
       if: matrix.target-platform != 'JS' && !(matrix.target-platform == 'JVM' && matrix.scala-version == '2.12')
       uses: nick-fields/retry@v2
       with:
         timeout_minutes: 6
         max_attempts: 2
-        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}" & echo $! > pidfile
-        on_retry_command: kill -3 $(cat pidfile) 
+        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
+        on_retry_command: pkill -3 java
     # The finatra tests take a really long time (1/3 of the build duration); hence, they are disabled and need to be run separately
     #- name: Test finatra
     #  if: matrix.target-platform != 'JS'
