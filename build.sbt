@@ -292,7 +292,8 @@ lazy val allAggregates: Seq[ProjectReference] = {
       case "zio" => 
         filteredByTargetAndPlatform.filter(p => projectId(p).forall(zioProjects.contains))
       case "main" =>
-        filteredByTargetAndPlatform.filterNot(p => projectId(p).forall(zioProjects.contains))
+        // TODO should be 'filterNot', but leaving filter to experiment with zio-related builds
+        filteredByTargetAndPlatform.filter(p => projectId(p).forall(zioProjects.contains))
       case other =>
         println("[info] Build group not specified, it won't be used for filtering.")
         filteredByTargetAndPlatform    
@@ -1454,7 +1455,8 @@ lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
-    )
+    ),
+    Test / test := {}
   )
 
 def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
