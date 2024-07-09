@@ -13,5 +13,5 @@ WORKDIR /__w/tapir/tapir
 
 # Copy everything from the current directory to the working directory in the container
 COPY . .
-
+RUN sudo chown -R runner:runner /__w/tapir/tapir
 # The image can be used as a base for running tests or further build steps
