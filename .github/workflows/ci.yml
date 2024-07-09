@@ -33,9 +33,19 @@ jobs:
           - scala-version: "2.13"
             target-platform: "JVM"
             java: "21"
+            build-group: "main"
+          - scala-version: "2.13"
+            target-platform: "JVM"
+            java: "21"
+            build-group: "zio"
           - scala-version: "3"
             target-platform: "JVM"
             java: "21"
+            build-group: "main"
+          - scala-version: "3"
+            target-platform: "JVM"
+            java: "21"
+            build-group: "zio"
     steps:
     - name: Checkout
       uses: actions/checkout@v4
