@@ -123,6 +123,9 @@ jobs:
       credentials:
          username: ${{ github.actor }}
          password: ${{ secrets.GITHUB_TOKEN }}
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
     steps:
     - name: Set up JDK 
       uses: actions/setup-java@v4
