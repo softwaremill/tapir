@@ -95,7 +95,7 @@ jobs:
       with:
         timeout_minutes: 6
         max_attempts: 2
-        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}; openapiCodegenSbt2_12/scripted"
+        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}; openapiCodegenSbt2_12/scripted" & echo $! > pidfile
         on_retry_command: kill -3 $(cat pidfile) 
     - name: Test
       if: matrix.target-platform != 'JS' && !(matrix.target-platform == 'JVM' && matrix.scala-version == '2.12')
