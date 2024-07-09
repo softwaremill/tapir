@@ -5,7 +5,7 @@ FROM ghcr.io/actions/actions-runner
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN sudo apt update -y && sudo apt upgrade -y
-RUN sudo apt install -y --no-install-recommends curl 
+RUN sudo apt install -y --no-install-recommends curl unzip 
 RUN sudo /home/runner/bin/installdependencies.sh
 
 # Set the working directory in the container
