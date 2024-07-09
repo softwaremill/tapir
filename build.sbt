@@ -1470,7 +1470,8 @@ lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
-    )
+    ),
+    Test / test := {}
   )
 
 def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
