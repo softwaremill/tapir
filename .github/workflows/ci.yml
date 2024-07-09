@@ -159,12 +159,8 @@ jobs:
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
     # - name: Set test group
     #   run: echo "TEST_GROUP=${{ matrix.test-group }}" >> $GITHUB_ENV
-    - name: Check current dir
-      run: pwd
-    - name: ls workdir
-      run: ls -alL /tapir
-    - name: cd workdir
-      run: cd /tapir
+    - name: move sources to workdir
+      run: mv /tapir/{.,}* /__w/tapir/tapir/
     - name: Test sbt
       run: sbt --version
     - name: Test
