@@ -160,7 +160,11 @@ jobs:
     # - name: Set test group
     #   run: echo "TEST_GROUP=${{ matrix.test-group }}" >> $GITHUB_ENV
     - name: Check current dir
-      run: ls -alL
+      run: pwd
+    - name: ls workdir
+      run: ls -alL /__w/tapir/tapir
+    - name: cd workdir
+      run: cd /__w/tapir/tapir
     - name: Test sbt
       run: sbt --version
     - name: Test
