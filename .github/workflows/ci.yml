@@ -159,6 +159,10 @@ jobs:
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
     # - name: Set test group
     #   run: echo "TEST_GROUP=${{ matrix.test-group }}" >> $GITHUB_ENV
+    - name: Check current dir
+      run: ls -alL
+    - name: Test sbt
+      run: sbt --version
     - name: Test
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
       run: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}; openapiCodegenSbt2_12/scripted"
