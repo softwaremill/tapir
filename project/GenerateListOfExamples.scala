@@ -45,6 +45,7 @@ object GenerateListOfExamples {
       .sortBy { case (k, _) => if (k == "Hello, World!") "00" else k.toLowerCase() }
       .map { case (category, examples) =>
         val renderedExamplesList = examples
+          .sortBy(_.description)
           // rendering a single line with the example's description & metadata
           .map { example =>
             val relativeLink = relativePath(example.path.toFile, rootBasePath)
