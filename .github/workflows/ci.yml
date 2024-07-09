@@ -160,7 +160,7 @@ jobs:
     # - name: Set test group
     #   run: echo "TEST_GROUP=${{ matrix.test-group }}" >> $GITHUB_ENV
     - name: move sources to workdir
-      run: mv /tapir/{.,}* /__w/tapir/tapir/
+      run: shopt -s dotglob && mv /tapir/* /__w/tapir/tapir/
     - name: Test sbt
       run: sbt --version
     - name: Test
