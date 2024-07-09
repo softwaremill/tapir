@@ -89,6 +89,7 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v2
       with:
+        context: .
         push: true
         tags: ghcr.io/${{ github.repository }}/tapir-compiled:${{ matrix.target-platform }}-${{matrix.scala-version}}-${{ github.sha }} 
   ci-test:

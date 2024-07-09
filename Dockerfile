@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /tapir
 
 # Copy everything from the current directory to the working directory in the container
-COPY /home/runner/work/tapir/tapir /tapir
+COPY . .
 
 RUN sudo chown -R runner:runner /tapir
 RUN sudo apt install -y --no-install-recommends curl unzip 
