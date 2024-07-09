@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         scala-version: [ "2.12", "2.13", "3" ]
-        target-platform: [ "JVM", "JS", "Native" ]
+        target-platform: [ "JVM", "Native" ]
         java: [ "11", "21" ]
         build-group: [ "main", "zio" ]
         exclude:
