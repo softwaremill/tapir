@@ -76,6 +76,9 @@ jobs:
     - name: Compile documentation
       if: matrix.target-platform == 'JVM' && matrix.java == '21'
       run: sbt $SBT_JAVA_OPTS -v compileDocumentation
+    - name: Verify that examples compile using Scala CLI
+      if: matrix.target-platform == 'JVM' && matrix.java == '21'
+      run: sbt $SBT_JAVA_OPTS -v "project examples3" verifyExamplesCompileUsingScalaCli
     - name: Test
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
       uses: nick-fields/retry@v2
