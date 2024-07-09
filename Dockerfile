@@ -5,7 +5,7 @@ FROM ghcr.io/actions/actions-runner
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install tools like curl, npm, etc.
-RUN /home/runner/bin/installdependencies.sh
+RUN sudo /home/runner/bin/installdependencies.sh
 
 # Set the working directory in the container
 WORKDIR /__w/tapir/tapir
