@@ -69,10 +69,8 @@ jobs:
         sudo apt-get install libidn2-dev libcurl3-dev
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Install scala-cli
-      if: matrix.target-platform == 'JVM' && matrix.java == '21'
-      run: |
-        sudo apt-get update
-        sudo apt-get install scala-cli
+      if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
+      uses: VirtusLab/scala-cli-setup@main
     - name: Enable Loom-specific modules
       if: matrix.java == '21'
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
@@ -82,7 +80,7 @@ jobs:
       if: matrix.target-platform == 'JVM' && matrix.java == '21'
       run: sbt $SBT_JAVA_OPTS -v compileDocumentation
     - name: Verify that examples compile using Scala CLI
-      if: matrix.target-platform == 'JVM' && matrix.java == '21'
+      if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS -v "project examples3" verifyExamplesCompileUsingScalaCli
     - name: Test
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
