@@ -7,6 +7,9 @@ Each example is fully self-contained and can be run using [scala-cli](https://sc
 to copy the content of the file, apart from scala-cli, no additional setup is required!). Hopefully this will make
 experimenting with Tapir as frictionless as possible!
 
+Examples are tagged with the stack being used (Direct-style, cats-effect, ZIO, Future), server implementation, generated
+documentation format etc.
+
 ```{eval-rst}
 .. include:: includes/examples_list.md
    :parser: markdown
