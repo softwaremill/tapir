@@ -1456,7 +1456,7 @@ lazy val nettyServerZio: ProjectMatrix = nettyServerProject("zio", zio)
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
     ),
-    Test / test := {}
+    Test / fork := true
   )
 
 def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
@@ -1524,7 +1524,8 @@ lazy val zioHttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http-
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test,
       "dev.zio" %% "zio-http" % Versions.zioHttp
-    )
+    ),
+    Test / fork := true
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(serverCore, zio, serverTests % Test)
