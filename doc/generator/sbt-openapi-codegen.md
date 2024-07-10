@@ -89,8 +89,9 @@ If `openapiUseHeadTagForObjectName = true`, then the  `GET /foo` and `GET /bar` 
 `Baz.scala` file, containing a single `object Baz` with those endpoint definitions; the `PUT /foo` endpoint, by dint of
 having no tags, would be output to the `TapirGeneratedEndpoints` file, along with any schema and parameter definitions.
 
-Files can be generated from multiple openapi schemas if `openapiAdditionalPackages` is configured; for example
-```sbt
+Files can be generated from multiple openapi schemas if `openapiAdditionalPackages` is configured; for example:
+
+```scala
 openapiAdditionalPackages := List(
       "sttp.tapir.generated.v1" -> baseDirectory.value / "src" / "main" / "resources" / "openapi_v1.yml")
 ```

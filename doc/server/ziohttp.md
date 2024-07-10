@@ -17,7 +17,7 @@ or just add the zio-http integration which already depends on `tapir-zio`:
 "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "@VERSION@"
 ```
 
-Next, instead of the usual `import sttp.tapir.*`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
+Next, instead of the usual `import sttp.tapir.*`, you should import (or extend the `ZTapir` trait, see [MyTapir](../other/mytapir.md)):
 
 ```scala mdoc:compile-only
 import sttp.tapir.ztapir.*

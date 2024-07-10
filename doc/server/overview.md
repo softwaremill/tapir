@@ -9,7 +9,7 @@ project already, just continue doing so, and enjoy seamless Tapir integration!
 
 Currently supported:
 * [Netty](netty.md) (using direct-style, `Future`s, cats-effect or ZIO)
-* [Http4s](http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](server/zio-http4s.md))
+* [Http4s](http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](zio-http4s.md))
 * [Pekko HTTP](pekkohttp.md) `Route`s/`Directive`s
 * [ZIO Http](ziohttp.md) `Http`
 * [Play](play.md) `Route`

@@ -119,7 +119,7 @@ the union type, as it's not possible to generate a runtime check for the generic
 ### Derivation for string-based constant union types
 e.g. `type AorB = "a" | "b"`
 
-See [enumerations](enumerations.md#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
+See [enumerations](enumerations.html#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
 
 ## Configuring derivation
 

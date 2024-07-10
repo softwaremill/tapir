@@ -29,7 +29,7 @@ These are corresponding classes for each of the supported runtime:
 
 To start using any of the above add the following dependency:
 
-```sbt
+```scala
 "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "@VERSION@"
 ```
 
@@ -40,7 +40,7 @@ Tapir leverages ways of doing it provided by AWS, you can choose from: AWS SAM t
 
 You can start by adding one of the following dependencies to your project, and then follow examples:
 
-```sbt
+```scala
 "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "@VERSION@"
 "com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "@VERSION@"
 "com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "@VERSION@"

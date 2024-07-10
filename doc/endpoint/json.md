@@ -53,7 +53,7 @@ To use [Circe](https://github.com/circe/circe), add the following dependency to 
 "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.md)):
+Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../other/mytapir.md)):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.circe.*
@@ -125,7 +125,7 @@ To use [µPickle](http://www.lihaoyi.com/upickle/) add the following dependency 
 "com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.md) and add `TapirJsonuPickle` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonuPickle` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.upickle.*
@@ -165,7 +165,7 @@ For **Play 2.9** use:
 "com.softwaremill.sttp.tapir" %% "tapir-json-play29" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.md) and add `TapirJsonPlay` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonPlay` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.play.*
@@ -181,7 +181,7 @@ To use [Spray JSON](https://github.com/spray/spray-json) add the following depen
 "com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../mytapir.md) and add `TapirJsonSpray` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonSpray` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.spray.*
@@ -197,7 +197,7 @@ To use [Tethys JSON](https://github.com/tethys-json/tethys) add the following de
 "com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../mytapir.md) and add `TapirJsonTethys` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonTethys` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.tethysjson.*
@@ -213,7 +213,7 @@ To use [Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala) add the f
 "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../mytapir.md) and add `TapirJsonJsoniter` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonJsoniter` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.jsoniter.*
@@ -237,7 +237,7 @@ And one of the implementations:
 "org.json4s" %% "json4s-jackson" % "@JSON4S_VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJson4s` trait, see [MyTapir](../mytapir.md) and add `TapirJson4s` instead of `TapirCirceJson`):
+Next, import the package (or extend the `TapirJson4s` trait, see [MyTapir](../other/mytapir.md) and add `TapirJson4s` instead of `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.json4s.*
@@ -259,7 +259,7 @@ To use [zio-json](https://github.com/zio/zio-json), add the following dependency
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "@VERSION@"
 ```
-Next, import the package (or extend the `TapirJsonZio` trait, see [MyTapir](../mytapir.md) and add `TapirJsonZio` instead of `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonZio` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonZio` instead of `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.zio.*

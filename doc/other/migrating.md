@@ -14,11 +14,11 @@
 - If your code sets `badRequestOnPathErrorIfPathShapeMatches = true` to override the default `false`, you can just remove this in tapir 1.5, it is the new default.
 - Similarly, if your code sets `.badRequestOnDecodeFailure` on endpoint path input, just remove this attribute.
 - If your code doesn't change this parameter and you update tapir, you should expect shape-matched path decoding failures to always become 400s, without attempting the next endpoint unless explicitly specified.
-- If you want to override this behavior and force trying the next endpoint, add `.onDecodeFailureNextEndpoint` to the input where you expect such handling. See [error handling page](server/errors.md) for details.
+- If you want to override this behavior and force trying the next endpoint, add `.onDecodeFailureNextEndpoint` to the input where you expect such handling. See [error handling page](../server/errors.md) for details.
 
 ## From 1.2 to 1.3
 
-- Static content endpoints from `sttp.tapir.static._` are deprecated in favor of the new `tapir-files` module. New methods are in `sttp.tapir.files._`: `staticFilesGetServerEndpoint`, `staticFilesHeadServerEndpoint`, `staticFilesServerEndpoints`, `staticResourcesGetServerEndpoint`, `staticResourcesHeadServerEndpoint`, `staticResourcesServerEndpoints`, etc. See the [updated documentation](endpoint/static.md).
+- Static content endpoints from `sttp.tapir.static._` are deprecated in favor of the new `tapir-files` module. New methods are in `sttp.tapir.files._`: `staticFilesGetServerEndpoint`, `staticFilesHeadServerEndpoint`, `staticFilesServerEndpoints`, `staticResourcesGetServerEndpoint`, `staticResourcesHeadServerEndpoint`, `staticResourcesServerEndpoints`, etc. See the [updated documentation](../endpoint/static.md).
 - Respectively, use `sttp.tapir.files.FilesOptions` instead of `sttp.tapir.static.FilesOptions`
 - the `cats` integration module has been split into `cats` and `cats-effect`, with the latter containing the `CatsMonadError` class, providing a bridge between the sttp-internal `MonadError` and the cats-effect `Sync` typeclass. If you've been using this directly, you might need to update your dependencies.
 

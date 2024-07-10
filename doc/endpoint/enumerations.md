@@ -274,7 +274,7 @@ case class Foo(aOrB: "a" | "b", optA: Option["a"]) derives Schema
 
 ### Creating an enum schema by hand
 
-Creating an enumeration [schema](schema.md) by hand is exactly the same as for any other type. The only difference
+Creating an enumeration [schema](schemas.md) by hand is exactly the same as for any other type. The only difference
 is that an enumeration [validator](validation.md) has to be added to the schema.
 
 ## Next

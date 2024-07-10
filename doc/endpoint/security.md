@@ -31,7 +31,7 @@ base64-encoded username/password combination, use: `basic[UsernamePassword]`.
 as a string, use: `bearer[String]`.
 * `auth.oauth2.authorizationCode(authorizationUrl, scopes, tokenUrl, refreshUrl): EndpointInput[String]`: creates an 
 OAuth2 authorization using authorization code - sign in using an auth service (for documentation, requires defining also 
-the `oauth2-redirect.html`, see [Generating OpenAPI documentation](..docs/openapi.md))
+the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../docs/openapi.md))
 
 ## Authentication challenges
 
