@@ -44,6 +44,13 @@ jobs:
         distribution: 'temurin'
         cache: 'sbt'
         java-version: ${{ matrix.java }}
+    - name: Debug
+      if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
+      run: |
+        env
+    - name: Install scala-cli
+      if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
+      uses: VirtusLab/scala-cli-setup@main
     - name: Install sam cli
       if: matrix.java == '11'
       run: |
@@ -68,9 +75,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install libidn2-dev libcurl3-dev
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
-    - name: Install scala-cli
-      if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
-      run: curl -sSLf https://scala-cli.virtuslab.org/get | sh
     - name: Enable Loom-specific modules
       if: matrix.java == '21'
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
