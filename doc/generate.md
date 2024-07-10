@@ -5,7 +5,7 @@ Not sure how to start?
 We recommend the defaults below (Direct-style stack & Netty server); this requires Java 21+. Otherwise, 
 you might also try the Future stack + Netty, which works on Java 11+.
 
-If you'd like to include a JSON endpoint, using the [jsoninter](https://github.com/plokhotnyuk/jsoniter-scala) library
+If you'd like to include a JSON endpoint, using the [jsoniter](https://github.com/plokhotnyuk/jsoniter-scala) library
 might a good choice!
 
 ```{eval-rst}

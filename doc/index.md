@@ -13,6 +13,13 @@ using open standards.
 Tapir is fast and developer-friendly. The endpoint definition APIs are crafted with readability and discoverability in
 mind. Our Netty-based server is one of the best-performing Scala HTTP servers available.
 
+```scala
+endpoint
+  .get.in("hello").in(query[String]("name"))
+  .out(stringBody)
+  .handleSuccess(name => s"Hello, $name!")
+```
+
 Tapir integrates with all major Scala stacks, so you can use your favorite approach to Functional Programming, while
 leveraging all the benefits that Tapir brings! 
 
@@ -176,6 +183,7 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
    :maxdepth: 2
    :caption: Server interpreters
 
+   server/overview
    server/akkahttp
    server/http4s
    server/zio-http4s
