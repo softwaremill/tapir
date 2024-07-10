@@ -21,5 +21,5 @@ trait TestServerInterpreter[F[_], +R, OPTIONS, ROUTE] {
   def serverWithStop(routes: NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration] = None): Resource[IO, (Port, KillSwitch)]
 
   def server(routes: NonEmptyList[ROUTE]): Resource[IO, Port] =
-    serverWithStop(routes, gracefulShutdownTimeout = None).map(_._1)
+    serverWithStop(routes, gracefulShutdownTimeout = None).flatMap { case (port, killSwitch) => Resource.pure(port).onFinalize(killSwitch) }
 }
