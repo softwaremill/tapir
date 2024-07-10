@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.10.12"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.10.13"
 ```
 
 and import the object:
@@ -19,7 +19,7 @@ The `toRoutes` and `toHttp` methods require a single, or a list of `ServerEndpoi
 The server logic should use a cats-effect-support `F[_]` effect type. For example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
@@ -71,17 +71,17 @@ using `withHttpWebSocketApp`, for example:
 ```scala
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.websocket.WebSocketBuilder2
-import fs2._
+import fs2.*
 import scala.concurrent.ExecutionContext
 
-implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
 val wsEndpoint: PublicEndpoint[Unit, Unit, Pipe[IO, String, String], Fs2Streams[IO] with WebSockets] =
   endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](Fs2Streams[IO]))
@@ -90,7 +90,7 @@ val wsRoutes: WebSocketBuilder2[IO] => HttpRoutes[IO] =
   Http4sServerInterpreter[IO]().toWebSocketRoutes(wsEndpoint.serverLogicSuccess[IO](_ => ???))
     
 BlazeServerBuilder[IO]
-  .withExecutionContext(ec)
+  .withExecutionContext(summon[ExecutionContext])
   .bindHttp(8080, "localhost")
   .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
 ```
@@ -104,7 +104,7 @@ For example, to define an endpoint that returns event stream:
 ```scala
 import cats.effect.IO
 import sttp.model.sse.ServerSentEvent
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
 
 val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
@@ -123,8 +123,8 @@ with a dedicated context-extracting input, `.contextIn`. Endpoints using such in
 For example:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.server.http4s._
+import sttp.tapir.*
+import sttp.tapir.server.http4s.*
 import cats.effect.IO
 import org.http4s.ContextRoutes
 

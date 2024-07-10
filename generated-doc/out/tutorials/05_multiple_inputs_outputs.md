@@ -1,5 +1,9 @@
 # 5. Multiple inputs & outputs
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=rJAo9yZfr9k).
+```
+
 In the tutorials so far we've seen how to use endpoints which have a single input and a single output, optionally with
 an additional single error output. However, most commonly you'll have multiple inputs and outputs. This can
 include multiple path, query parameters and headers, accompanied by a body as inputs, along with multiple output
@@ -20,7 +24,7 @@ body, but additionally the hash of the result should be included in the `X-Resul
 Below is the endpoint description; we'll be editing the `multiple.scala` file:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.13
 
 import sttp.tapir.*
 
@@ -57,8 +61,8 @@ The output tuple is then mapped to the response body & header:
 
 {emphasize-lines="5, 8-9, 18-29"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.13
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.13
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
@@ -143,8 +147,8 @@ The mapping functions are simple, but quite boring to write:
 
 {emphasize-lines="8, 17-18, 23-27"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.13
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.13
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
@@ -193,8 +197,8 @@ Here's the modified code using `.mapInTo`, which additionally maps outputs to th
 
 {emphasize-lines="9, 11-13, 19, 22"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.13
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.13
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer

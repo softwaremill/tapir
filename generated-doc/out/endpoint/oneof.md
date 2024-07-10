@@ -42,11 +42,11 @@ For example, below is a specification for an endpoint where the error output is 
 such a specification can then be refined and reused for other endpoints:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
 import sttp.model.StatusCode
-import io.circe.generic.auto._
+import io.circe.generic.auto.*
 
 sealed trait ErrorInfo
 case class NotFound(what: String) extends ErrorInfo
@@ -70,11 +70,11 @@ val baseEndpoint = endpoint.errorOut(
 Type erasure may prevent a one-of-variant from working properly. The following example will fail at compile time because `Right[NotFound]` and `Right[BadRequest]` will become `Right[Any]`:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
 import sttp.model.StatusCode
-import io.circe.generic.auto._
+import io.circe.generic.auto.*
 
 case class ServerError(what: String)
 
@@ -89,15 +89,18 @@ val baseEndpoint = endpoint.errorOut(
     oneOfVariant(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
   )
 )
-// error: Type scala.util.Right[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.NotFound] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
-//     oneOfVariantValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
-//                             ^
-// error: Type scala.util.Right[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.BadRequest] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
-//     oneOfVariantValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
-//                             ^
-// error: Type scala.util.Left[repl.MdocSession.MdocApp.ServerError,repl.MdocSession.MdocApp.UserError] is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
-//     oneOfVariantValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
-//                             ^
+// error:
+// Type scala.util.Right[repl.MdocSession.MdocApp.ServerError, repl.MdocSession.MdocApp.NotFound], AppliedType(TypeRef(ThisType(TypeRef(NoPrefix,module class util)),class Right),List(TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),class ServerError), TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),class NotFound))) is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+//     oneOfVariant(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
+//                                                                                                       ^
+// error:
+// Type scala.util.Right[repl.MdocSession.MdocApp.ServerError, repl.MdocSession.MdocApp.BadRequest], AppliedType(TypeRef(ThisType(TypeRef(NoPrefix,module class util)),class Right),List(TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),class ServerError), TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),class BadRequest))) is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+//     oneOfVariant(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
+//                                                                                                              ^
+// error:
+// Type scala.util.Left[repl.MdocSession.MdocApp.ServerError, repl.MdocSession.MdocApp.UserError], AppliedType(TypeRef(ThisType(TypeRef(NoPrefix,module class util)),class Left),List(TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),class ServerError), TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),trait UserError))) is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
+//     oneOfVariant(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
+//                                                                                                                      ^
 ```
 
 The solution is therefore to handwrite a function checking that a value (of type `Any`) is of the correct type:
@@ -157,7 +160,7 @@ The `.errorOutVariantPrepend` function allows prepending an error out variant, l
 a default. This is useful e.g. when providing a more specific error output, than the current one. For example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 
 trait DomainException {
   def help: String
@@ -190,10 +193,10 @@ Each body variant should represent the same content, and hence have the same hig
 To describe a body, which can be given as json, xml or plain text, create the following input/output description:
 
 ```scala
-import io.circe.generic.auto._
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
+import io.circe.generic.auto.*
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
 
 case class User(name: String)
 

@@ -6,7 +6,7 @@ See the [Play framework documentation](https://www.playframework.com/documentati
 To expose an endpoint as a [play-server](https://www.playframework.com/), using **Play 2.9 with Akka**, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play29-server" % "1.10.12"
+"com.softwaremill.sttp.tapir" %% "tapir-play29-server" % "1.10.13"
 ```
 
 and (if you don't already depend on Play)
@@ -26,7 +26,7 @@ depending on whether you want to use netty or Akka based http-server under the h
 To expose an endpoint as a [play-server](https://www.playframework.com/), using **Play 3.0 with Pekko**, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.10.12"
+"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.10.13"
 ```
 
 and (if you don't already depend on Play)
@@ -58,13 +58,13 @@ The `toRoutes` method requires a single, or a list of `ServerEndpoint`s, which c
 ```scala
 import org.apache.pekko.stream.Materializer
 import play.api.routing.Router.Routes
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.play.PlayServerInterpreter
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-implicit val materializer: Materializer = ???
+given Materializer = ???
 
 def countCharacters(s: String): Future[Either[Unit, Int]] =
   Future(Right[Unit, Int](s.length))
@@ -90,22 +90,19 @@ diverges a bit comparing to other interpreters.
 An HTTP server can then be started as in the following example:
 
 ```scala
-import play.core.server._
+import play.core.server.*
 import play.api.routing.Router.Routes
 
 val aRoute: Routes = ???
 
-object Main {
-  // JVM entry point that starts the HTTP server
-  def main(args: Array[String]): Unit = {
-    val playConfig = ServerConfig(port =
-      sys.props.get("http.port").map(_.toInt).orElse(Some(9000))
-    )
-    NettyServer.fromRouterWithComponents(playConfig) { components =>
-      aRoute
-    }
+// JVM entry point that starts the HTTP server - uncomment @main to run
+/* @main */ def playServer(): Unit =
+  val playConfig = ServerConfig(port =
+    sys.props.get("http.port").map(_.toInt).orElse(Some(9000))
+  )
+  NettyServer.fromRouterWithComponents(playConfig) { components =>
+    aRoute
   }
-}
 ```
 
 ### As part of an existing Play application
@@ -118,11 +115,9 @@ First, add a line like following in the `routes` files:
 ```
 Then create a class like this:
 ```scala
-class ApiRouter @Inject() () extends SimpleRouter {
-  override def routes: Routes = {
+class ApiRouter @Inject() () extends SimpleRouter:
+  override def routes: Routes = 
     anotherRoutes.orElse(tapirGeneratedRoutes)
-  }
-}
 ```
 
 Find more details about how to bind a `Router` to your application in the [Play framework documentation](https://www.playframework.com/documentation/2.8.x/ScalaSirdRouter#Binding-sird-Router).

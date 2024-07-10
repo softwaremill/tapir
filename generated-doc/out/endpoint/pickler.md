@@ -9,7 +9,7 @@ In [other](json.md) tapir-JSON integrations, you have to keep the `Schema` (whic
 To use pickler, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-pickler" % "1.10.12"
+"com.softwaremill.sttp.tapir" %% "tapir-json-pickler" % "1.10.13"
 ```
 
 Please note that it is available only for Scala 3 and Scala.JS 3.
@@ -20,6 +20,7 @@ A pickler can be derived directly using `Pickler.derived[T]`. This will derive b
 
 ```scala 
 import sttp.tapir.json.pickler.*
+import sttp.tapir.Codec.JsonCodec
 
 case class Book(author: String, title: String, year: Int)
 
@@ -31,7 +32,7 @@ val bookJsonStr = // { "author": "Herman Melville", "title": Moby Dick", "year":
 
 A `given` pickler in scope makes it available for `jsonQuery`, `jsonBody` and `jsonBodyWithRaw`, which need to be imported from the `sttp.tapir.json.pickler` package. For example:
 
-```scala 
+```scala
 import sttp.tapir.*
 import sttp.tapir.json.pickler.*
 
@@ -48,11 +49,11 @@ val addBook: PublicEndpoint[Book, Unit, Unit, Any] =
 
 A pickler also be derived using the `derives` keyword directly on a class:
 
-```scala 
+```scala
 import sttp.tapir.json.pickler.*
 
 case class Book(author: String, title: String, year: Int) derives Pickler
-val pickler: Pickler[Book] = summon[Pickler]
+val pickler: Pickler[Book] = summon[Pickler[Book]]
 ```
 
 Picklers for primitive types are available out-of-the-box. For more complex hierarchies, like nested `case class` structures or `enum`s, you'll need to provide picklers for all children (fields, enum cases etc.). Alternatively, you can use automatic derivation described below.
@@ -61,7 +62,7 @@ Picklers for primitive types are available out-of-the-box. For more complex hier
 
 Picklers can be derived at usage side, when required, by adding the auto-derivation import:
 
-```scala 
+```scala
 import sttp.tapir.json.pickler.*
 import sttp.tapir.json.pickler.generic.auto.*
 
@@ -81,8 +82,8 @@ However, this can negatively impact compilation performance, as the same pickler
 
 It is possible to configure schema and codec derivation by providing an implicit `sttp.tapir.pickler.PicklerConfiguration`. This configuration allows switching field naming policy to `snake_case`, `kebab_case`, or an arbitrary transformation function, as well as setting the field name/value for the coproduct (sealed hierarchy) type discriminator, which is discussed in details in further sections.
 
-```scala 
-import sttp.tapir.pickler.PicklerConfiguration
+```scala
+import sttp.tapir.json.pickler.PicklerConfiguration
 
 given customConfiguration: PicklerConfiguration = 
   PicklerConfiguration
@@ -94,8 +95,8 @@ given customConfiguration: PicklerConfiguration =
 
 Pickler derivation for coproduct types (enums with parameters / sealed hierarchies) works automatically, by adding a `$type` discriminator field with the short class name. 
 
-```scala 
-import sttp.tapir.pickler.PicklerConfiguration
+```scala
+import sttp.tapir.json.pickler.PicklerConfiguration
 
 // encodes a case object as { "$type": "MyType" }
 given PicklerConfiguration = PicklerConfiguration.default
@@ -106,31 +107,31 @@ Selaed hierarchies with all cases being objects are treated differently, conside
 
 A discriminator field can be specified for coproducts by providing it in the configuration; this will be only used during automatic and semi-automatic derivation:
 
-```scala 
-import sttp.tapir.pickler.PicklerConfiguration
+```scala
+import sttp.tapir.json.pickler.PicklerConfiguration
 
 // encodes a case object as { "who_am_i": "full.pkg.path.MyType" }
 given customConfiguration: PicklerConfiguration =
   PicklerConfiguration
     .default
     .withDiscriminator("who_am_i")
-    .withFullDiscriminatorValues 
+    .withFullDiscriminatorValues
 ```
 
 The discriminator will be added as a field to all coproduct child codecs and schemas, if it’s not yet present. The schema of the added field will always be a Schema.string. Finally, the mapping between the discriminator field values and the child schemas will be generated using `Configuration.toDiscriminatorValue(childSchemaName)`.
 
 Finally, if the discriminator is a field that’s defined on the base trait (and hence in each implementation), the schemas can be specified as a custom implicit value using the `Pickler.oneOfUsingField` macro, for example (this will also generate the appropriate mappings):
 
-```scala 
-sealed trait Entity {
+```scala
+sealed trait Entity:
   def kind: String
-}
-case class Person(firstName: String, lastName: String) extends Entity {
+
+case class Person(firstName: String, lastName: String) extends Entity:
   def kind: String = "person"
-}
-case class Organization(name: String) extends Entity {
+
+case class Organization(name: String) extends Entity:
   def kind: String = "org"
-}
+
 
 import sttp.tapir.json.pickler.*
 
@@ -159,7 +160,7 @@ Tapir schemas and JSON codecs treats following cases as "enumerations":
 
 Such types are handled by `Pickler.derived[T]`: possible values are encoded as simple strings representing the case objects. For example:
 
-```scala 
+```scala
 import sttp.tapir.json.pickler.*
 
 enum ColorEnum:
@@ -205,7 +206,7 @@ pResponse.toCodec.encode(
 
 If you need to customize enumeration value encoding, use `Pickler.derivedEnumeration[T]`:
 
-```scala 
+```scala
 import sttp.tapir.json.pickler.*
 
 enum ColorEnum:

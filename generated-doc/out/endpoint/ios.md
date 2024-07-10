@@ -53,10 +53,10 @@ other values in tapir, endpoint input/output descriptions are immutable. For exa
 parameters, `start` (mandatory) and `limit` (optional) can be written down as:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 import java.util.UUID
 
 case class User(name: String)
@@ -75,10 +75,10 @@ parameters, but also to define template-endpoints, which can then be further spe
 base endpoint for our API, where all paths always start with `/api/v1.0`, and errors are always returned as a json:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 case class ErrorInfo(message: String)
 
@@ -106,7 +106,7 @@ There's a couple of ways to map over an input/output. First, there's the `map[II
 which accepts functions which provide the mapping in both directions. For example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import java.util.UUID
 
 case class Paging(from: UUID, limit: Option[Int])
@@ -138,7 +138,7 @@ The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the o
 
 Inputs and outputs can also be built for case classes using annotations. For example, for the case class `User`
 ```scala
-import sttp.tapir.EndpointIO.annotations._
+import sttp.tapir.EndpointIO.annotations.*
 
 case class User(
   @query
@@ -151,7 +151,7 @@ case class User(
 endpoint input can be generated using macro `EndpointInput.derived[User]` which is equivalent to
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 
 val userInput: EndpointInput[User] =
   query[String]("user").and(cookie[Long]("sessionId")).mapTo[User]
@@ -185,7 +185,7 @@ annotation `@header` it has optional parameter to specify alternative name for q
 by annotation `@endpointInput`. For example,
   
 ```scala
-import sttp.tapir.EndpointIO.annotations._
+import sttp.tapir.EndpointIO.annotations.*
 
 @endpointInput("books/{year}/{genre}")
 case class Book(

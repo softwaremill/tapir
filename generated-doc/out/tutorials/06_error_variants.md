@@ -1,5 +1,9 @@
 # 6. Error variants
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=w2ZL3WvhBZ8).
+```
+
 Quite often, there's more than one thing that might go wrong. On the other hand, success can also have many facets.
 
 In the previous tutorials we've seen that Tapir includes built-in support for differentiating between successful and
@@ -79,7 +83,7 @@ request serializing `AvatarSuccess.Redirect` instances, as Tapir knows nothing a
 an `EndpointOutput[String]`: 
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.13
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
@@ -102,7 +106,7 @@ this output to the `AvatarSuccess.Redirect` type using `.mapTo`, which we've lea
 
 {emphasize-lines="12-13"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.13
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
@@ -134,7 +138,7 @@ each of which translates to a separate class. Our one-of successful output takes
 
 {emphasize-lines="13-16"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.13
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
@@ -171,7 +175,7 @@ To fix this, we can use the `oneOfVariantSingletonMatcher` method. It takes a un
 value, to which the high-level output must be equal, for the variant to be chosen:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.13
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
@@ -193,9 +197,9 @@ val errorOutput: EndpointOutput[AvatarError] = oneOf(
 Equipped with `oneOf` outputs, we can now fully describe and test our endpoint:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.13
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.13
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.13
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*

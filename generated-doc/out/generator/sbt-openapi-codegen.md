@@ -9,7 +9,7 @@ This is a really early alpha implementation.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.10.12")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.10.13")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -50,9 +50,9 @@ openapiAdditionalPackages             Nil                                  Addit
 The general usage is;
 
 ```scala
-import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir.generated._
-import sttp.tapir.docs.openapi._
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.generated.*
+import sttp.tapir.docs.openapi.*
 
 val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
 ```
@@ -89,8 +89,9 @@ If `openapiUseHeadTagForObjectName = true`, then the  `GET /foo` and `GET /bar` 
 `Baz.scala` file, containing a single `object Baz` with those endpoint definitions; the `PUT /foo` endpoint, by dint of
 having no tags, would be output to the `TapirGeneratedEndpoints` file, along with any schema and parameter definitions.
 
-Files can be generated from multiple openapi schemas if `openapiAdditionalPackages` is configured; for example
-```sbt
+Files can be generated from multiple openapi schemas if `openapiAdditionalPackages` is configured; for example:
+
+```scala
 openapiAdditionalPackages := List(
       "sttp.tapir.generated.v1" -> baseDirectory.value / "src" / "main" / "resources" / "openapi_v1.yml")
 ```

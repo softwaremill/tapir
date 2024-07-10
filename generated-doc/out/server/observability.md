@@ -49,7 +49,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.10.12"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.10.13"
 ```
 
 `PrometheusMetrics` encapsulates `PrometheusReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -128,7 +128,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.de
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.10.12"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.10.13"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -155,7 +155,7 @@ val metricsInterceptor = metrics.metricsInterceptor() // add to your server opti
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.10.12"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.10.13"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -222,7 +222,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.10.12"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.10.13"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.
@@ -251,14 +251,12 @@ libraryDependencies += "dev.zio" %% "zio-metrics-connectors" % "2.0.0-RC6"
 Example zio metrics prometheus publisher style tapir metrics endpoint.
 ```scala
 import sttp.tapir.{endpoint, stringBody}
-import zio._
+import zio.*
 import zio.metrics.connectors.MetricsConfig
 import zio.metrics.connectors.prometheus.{PrometheusPublisher, prometheusLayer, publisherLayer}
 import zio.metrics.jvm.DefaultJvmMetrics
 
-
-object ZioEndpoint {
-  
+object ZioEndpoint:
   /** DefaultJvmMetrics.live.orDie >+> is optional if you want JVM metrics */
   private val layer = DefaultJvmMetrics.live.orDie >+> ZLayer.make[PrometheusPublisher](
     ZLayer.succeed(MetricsConfig(1.seconds)),
@@ -279,5 +277,4 @@ object ZioEndpoint {
 
   val metricsEndpoint =
     endpoint.get.in("metrics").out(stringBody).serverLogicSuccess(_ => getMetricsEffect)
-}
 ```

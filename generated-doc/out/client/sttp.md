@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "1.10.12"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "1.10.13"
 ```
 
 To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
@@ -66,10 +66,10 @@ convert sttp's `WebSocket` instance into a pipe. This logic is looked up via the
 The required imports are as follows:
 
 ```scala
-import sttp.tapir.client.sttp.ws.pekkohttp._ // for pekko-streams
-import sttp.tapir.client.sttp.ws.akkahttp._ // for akka-streams
-import sttp.tapir.client.sttp.ws.fs2._      // for fs2
-import sttp.tapir.client.sttp.ws.zio._      // for zio
+import sttp.tapir.client.sttp.ws.pekkohttp.* // for pekko-streams
+import sttp.tapir.client.sttp.ws.akkahttp.* // for akka-streams
+import sttp.tapir.client.sttp.ws.fs2.*      // for fs2
+import sttp.tapir.client.sttp.ws.zio.*      // for zio
 ```
 
 No additional dependencies are needed, as  both of the above implementations are included in the main interpreter, 
@@ -85,9 +85,9 @@ If you'd like to skip that step, e.g. when testing redirects, it's possible to o
 description, for example:
 
 ```scala :compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3._
+import sttp.client3.*
 
 SttpClientInterpreter()
   .toRequest(endpoint.get.in("hello").in(query[String]("name")), Some(uri"http://localhost:8080"))
@@ -101,7 +101,7 @@ In this case add the following dependencies (note the [`%%%`](https://www.scala-
 instead of the usual `%%`):
 
 ```scala
-"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client" % "1.10.12"
+"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client" % "1.10.13"
 "io.github.cquiroz" %%% "scala-java-time" % "2.2.0" // implementations of java.time classes for Scala.JS
 ```
 

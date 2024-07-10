@@ -5,12 +5,9 @@ an [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/htt
 This approach, known as the Fat Lambda function, utilizes a single lambda function for deploying multiple endpoints. To invoke the
 function, HTTP requests can be proxied through [AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html). 
 
+To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/), [AWS CDK](https://aws.amazon.com/cdk/) or [Terraform](https://www.terraform.io/) can be used, to automate cloud deployments.
 
-To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/)
-, [AWS CDK](https://aws.amazon.com/cdk/) or [Terraform](https://www.terraform.io/) can be used, to automate cloud deployments.
-
-For an overview of how this works in more detail, see [this blog post](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396)
-.
+For an overview of how this works in more detail, see [this blog post](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396).
 
 ## Runtime & Server interpreters
 
@@ -32,8 +29,8 @@ These are corresponding classes for each of the supported runtime:
 
 To start using any of the above add the following dependency:
 
-```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.10.12"
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.10.13"
 ```
 
 ## Deployment
@@ -43,10 +40,10 @@ Tapir leverages ways of doing it provided by AWS, you can choose from: AWS SAM t
 
 You can start by adding one of the following dependencies to your project, and then follow examples:
 
-```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.10.12"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.10.12"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "1.10.12"
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.10.13"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.10.13"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "1.10.13"
 ```
 
 ### Examples
