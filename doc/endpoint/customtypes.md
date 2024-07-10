@@ -1,4 +1,4 @@
-# Custom types
+# Adding support for custom types
 
 To support a custom type, you'll need to provide an implicit `Codec` for that type, or the components to create such
 a codec. 

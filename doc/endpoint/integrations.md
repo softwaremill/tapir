@@ -1,4 +1,4 @@
-# Datatypes integrations
+# Third-party datatype libraries integrations
 
 ```{note}
 Note that the codecs defined by the tapir integrations are used only when the specific types (e.g. enumerations) are 

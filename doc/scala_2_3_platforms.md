@@ -1,10 +1,10 @@
-# Scala 2, Scala 3 & platforms
+# Scala 2, Scala 3; JVM, JS & Native
 
 Tapir is available for Scala 3.3+, Scala 2.13 and Scala 2.12, on the JVM, JS and Native platforms. 
 
-Note that some modules are unavailable for specific combinations of the above, specifically for Scala.JS and Scala 
-Native. The JVM modules require Java 11+, with a couple of exceptions, which require Java 21+ - this is marked in
-the documentation.
+Note that not all  modules are available for all combinations of the above. This specifically applies to Scala.JS and 
+Scala Native, where support is limited. The JVM modules require Java 11+, with a couple of exceptions, which require 
+Java 21+ - this is marked in the documentation.
 
 ## In the documentation & examples
 
