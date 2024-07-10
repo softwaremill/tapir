@@ -1,3 +1,11 @@
+// {cat=Observability; effects=Future; server=Netty; json=circe}: Reporting DataDog metrics
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-datadog-metrics:1.10.12
+//> using dep org.slf4j:slf4j-api:2.0.13
+
 package sttp.tapir.examples.observability
 
 import com.timgroup.statsd.NonBlockingStatsDClientBuilder
@@ -15,9 +23,10 @@ import scala.concurrent.{Await, Future}
 import scala.io.StdIn
 
 import org.slf4j.{Logger, LoggerFactory}
-val logger: Logger = LoggerFactory.getLogger(getClass.getName)
 
 @main def datadogMetricsExample(): Unit =
+  val logger: Logger = LoggerFactory.getLogger(this.getClass.getName)
+
   case class Person(name: String)
 
   // Simple endpoint returning 200 or 400 response with string body

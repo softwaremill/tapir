@@ -1,3 +1,12 @@
+// {cat=Observability; effects=Future; server=Netty; json=circe}: Reporting OpenTelemetry metrics
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.10.12
+//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.40.0
+//> using dep org.slf4j:slf4j-api:2.0.13
+
 package sttp.tapir.examples.observability
 
 import io.circe.generic.auto.*
@@ -12,6 +21,7 @@ import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.metrics.opentelemetry.OpenTelemetryMetrics
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerOptions}
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.*
@@ -57,8 +67,7 @@ import scala.io.StdIn
   * }}}
   */
 @main def openTelemetryMetricsExample(): Unit =
-  import org.slf4j.{Logger, LoggerFactory}
-  val logger: Logger = LoggerFactory.getLogger(getClass().getName)
+  val logger: Logger = LoggerFactory.getLogger(this.getClass().getName)
 
   case class Person(name: String)
 

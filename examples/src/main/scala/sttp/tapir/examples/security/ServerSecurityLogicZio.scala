@@ -1,3 +1,9 @@
+// {cat=Security; effects=ZIO; server=ZIO HTTP}: Separating security and server logic, with a reusable base endpoint, accepting & refreshing credentials via cookies
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.10.12
+//> using dep com.softwaremill.sttp.client3::async-http-client-backend-zio:3.9.7
+
 package sttp.tapir.examples.security
 
 import sttp.client3._
@@ -39,7 +45,7 @@ object ServerSecurityLogicZio extends ZIOAppDefault:
     .in("hello")
     .in(query[String]("salutation"))
     .out(stringBody)
-    .mapErrorOut(AuthenticationHelloError)(_.wrapped)
+    .mapErrorOut(AuthenticationHelloError.apply)(_.wrapped)
     // returning a 400 with the "why" field from the exception
     .errorOutVariant[HelloError](oneOfVariant(stringBody.mapTo[NoHelloError]))
     // defining the remaining server logic (which uses the authenticated user)

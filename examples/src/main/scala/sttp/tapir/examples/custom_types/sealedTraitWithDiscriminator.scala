@@ -1,3 +1,10 @@
+// {cat=Custom types; effects=Direct; server=Netty; JSON=circe; docs=Swagger UI}: Mapping a sealed trait hierarchy to JSON using a discriminator
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.12
+
 package sttp.tapir.examples.custom_types
 
 import io.circe.Codec as CirceCodec

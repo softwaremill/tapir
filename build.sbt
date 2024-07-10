@@ -29,6 +29,7 @@ val ideScalaVersion = scala3
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
 lazy val generateMimeByExtensionDB = taskKey[Unit]("Generate the mime by extension DB")
+lazy val verifyExamplesCompileUsingScalaCli = taskKey[Unit]("Verify that each example compiles using Scala CLI")
 
 concurrentRestrictions in Global ++= Seq(
   Tags.limit(Tags.Test, 1),
@@ -63,6 +64,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   Test / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
   updateDocs := Def.taskDyn {
     val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
+    // for the root project the sourceDirectory points to src, so ../ will point to the root directory of the project
+    GenerateListOfExamples(sLog.value, sourceDirectory.value.getParentFile)
     Def.task {
       (documentation.jvm(documentationScalaVersion) / mdoc).toTask("").value
       files1 ++ Seq(file("generated-doc/out"))
@@ -2046,7 +2049,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       logback
     ),
     publishArtifact := false,
-    Compile / run / fork := true
+    Compile / run / fork := true,
+    verifyExamplesCompileUsingScalaCli := VerifyExamplesCompileUsingScalaCli(sLog.value, sourceDirectory.value)
   )
   .jvmPlatform(scalaVersions = List(examplesScalaVersion))
   .dependsOn(

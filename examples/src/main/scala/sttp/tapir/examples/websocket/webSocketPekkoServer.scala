@@ -1,3 +1,12 @@
+// {cat=WebSocket; effects=Future; server=Pekko HTTP}: Describe and implement a WebSocket endpoint
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.12
+//> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
+//> using dep com.softwaremill.sttp.client3::pekko-http-backend:3.9.7
+
 package sttp.tapir.examples.websocket
 
 import io.circe.generic.auto.*
@@ -27,7 +36,7 @@ import scala.concurrent.{Await, Future}
   // The web socket endpoint: GET /ping.
   // We need to provide both the type & media type for the requests, and responses. Here, the requests will be
   // strings, and responses will be returned as json.
-  val wsEndpoint: PublicEndpoint[Unit, Unit, Flow[String, Response, Any], PekkoStreams with WebSockets] =
+  val wsEndpoint: PublicEndpoint[Unit, Unit, Flow[String, Response, Any], PekkoStreams & WebSockets] =
     endpoint.get.in("ping").out(webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](PekkoStreams))
 
   implicit val actorSystem: ActorSystem = ActorSystem()
@@ -70,4 +79,4 @@ import scala.concurrent.{Await, Future}
         .map(_ => binding)
     }
 
-  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)).flatMap(_ => actorSystem.terminate()), 1.minute)
+  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)).flatMap(_ => actorSystem.terminate()), 1.minute)

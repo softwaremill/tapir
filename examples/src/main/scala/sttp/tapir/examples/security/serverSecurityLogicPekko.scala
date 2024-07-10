@@ -1,3 +1,9 @@
+// {cat=Security; effects=Future; server=Pekko HTTP}: Separating security and server logic, with a reusable base endpoint
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.10.12
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+
 package sttp.tapir.examples.security
 
 import org.apache.pekko.actor.ActorSystem
@@ -47,7 +53,7 @@ import scala.concurrent.{Await, Future}
     .in("hello")
     .in(query[String]("salutation"))
     .out(stringBody)
-    .mapErrorOut(AuthenticationHelloError)(_.wrapped)
+    .mapErrorOut(AuthenticationHelloError.apply)(_.wrapped)
     // returning a 400 with the "why" field from the exception
     .errorOutVariant[HelloError](oneOfVariant(stringBody.mapTo[NoHelloError]))
     // defining the remaining server logic (which uses the authenticated user)
@@ -88,4 +94,4 @@ import scala.concurrent.{Await, Future}
     binding
   }
 
-  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
+  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)

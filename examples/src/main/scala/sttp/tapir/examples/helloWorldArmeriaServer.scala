@@ -1,9 +1,14 @@
+// {cat=Hello, World!; effects=Future; server=Armeria}: Exposing an endpoint using the Armeria server
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.12
+//> using dep com.softwaremill.sttp.tapir::tapir-armeria-server:1.10.12
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+
 package sttp.tapir.examples
 
 import com.linecorp.armeria.server.Server
 import sttp.capabilities.armeria.ArmeriaStreams
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
-import sttp.shared.Identity
 import sttp.tapir.server.armeria.{ArmeriaFutureServerInterpreter, TapirService}
 import sttp.tapir.*
 
