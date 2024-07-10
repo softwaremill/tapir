@@ -1,5 +1,9 @@
 # 6. Error variants
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=w2ZL3WvhBZ8).
+```
+
 Quite often, there's more than one thing that might go wrong. On the other hand, success can also have many facets.
 
 In the previous tutorials we've seen that Tapir includes built-in support for differentiating between successful and
