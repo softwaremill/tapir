@@ -1,15 +1,19 @@
 package sttp.tapir.server.netty.zio.internal
 
 import io.netty.handler.codec.http.HttpContent
+import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
-import sttp.tapir.TapirFile
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.netty.internal.{NettyStreamingRequestBody, StreamCompatible}
 import sttp.tapir.ztapir.RIOMonadError
-import zio.RIO
+import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 import zio.stream._
+import zio.{RIO, ZIO}
+
+import java.io.File
 
 private[zio] class NettyZioRequestBody[Env](
     val createFile: ServerRequest => RIO[Env, TapirFile],
@@ -19,6 +23,13 @@ private[zio] class NettyZioRequestBody[Env](
   override val streams: ZioStreams = ZioStreams
   override implicit val monad: MonadError[RIO[Env, *]] = new RIOMonadError[Env]
 
+  override def publisherToMultipart(
+      nettyRequest: StreamedHttpRequest,
+      serverRequest: ServerRequest,
+      m: RawBodyType.MultipartBody
+  ): RIO[Env, RawValue[Seq[RawPart]]] = ZIO.die(new UnsupportedOperationException("Multipart requests not supported."))
+
+  override def writeBytesToFile(bytes: Array[Byte], file: File): RIO[Env, Unit] = ZIO.die(new UnsupportedOperationException)
   override def publisherToBytes(
       publisher: Publisher[HttpContent],
       contentLength: Option[Long],

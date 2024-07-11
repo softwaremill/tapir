@@ -5,15 +5,25 @@ import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.capabilities
 import sttp.monad.{FutureMonad, MonadError}
-import sttp.tapir.TapirFile
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.netty.internal.reactivestreams._
+import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 
+import java.io.File
 import scala.concurrent.{ExecutionContext, Future}
 
 private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])(implicit ec: ExecutionContext)
     extends NettyRequestBody[Future, NoStreams] {
+
+  override def publisherToMultipart(
+      nettyRequest: StreamedHttpRequest,
+      serverRequest: ServerRequest,
+      m: RawBodyType.MultipartBody
+  ): Future[RawValue[Seq[RawPart]]] = Future.failed(new UnsupportedOperationException("Multipart requests not supported."))
+  
+  override def writeBytesToFile(bytes: Array[Byte], file: File): Future[Unit] = Future.failed(new UnsupportedOperationException)
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
   override implicit val monad: MonadError[Future] = new FutureMonad()

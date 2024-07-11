@@ -16,6 +16,14 @@ import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, TapirFile}
 import java.io.InputStream
 import java.nio.ByteBuffer
 
+import scala.collection.JavaConverters._
+import sttp.tapir.RawPart
+import io.netty.handler.codec.http.multipart.InterfaceHttpData
+import sttp.model.Part
+import io.netty.handler.codec.http.multipart.HttpData
+import io.netty.handler.codec.http.multipart.FileUpload
+import java.io.ByteArrayInputStream
+import java.io.File
 /** Common logic for processing request body in all Netty backends. It requires particular backends to implement a few operations. */
 private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
 
@@ -37,6 +45,11 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     */
   def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): F[Array[Byte]]
 
+  /**
+   * Reads the reactive stream emitting HttpData into a vector of parts. Implementation-specific, as file manipulations and stream processing logic can be different for different backends.
+   */
+  def publisherToMultipart(nettyRequest: StreamedHttpRequest, serverRequest: ServerRequest, m: RawBodyType.MultipartBody): F[RawValue[Seq[RawPart]]]
+
   /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] and write their bytes into a file.
     *
     * @param serverRequest
@@ -49,6 +62,8 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     *   an effect which finishes when all data is written to the file.
     */
   def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit]
+
+  def writeBytesToFile(bytes: Array[Byte], file: File): F[Unit]
 
   override def toRaw[RAW](
       serverRequest: ServerRequest,
@@ -70,8 +85,8 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
         file <- createFile(serverRequest)
         _ <- writeToFile(serverRequest, file, maxBytes)
       } yield RawValue(FileRange(file), Seq(FileRange(file)))
-    case _: RawBodyType.MultipartBody =>
-      monad.error(new UnsupportedOperationException)
+    case m: RawBodyType.MultipartBody =>
+      publisherToMultipart(serverRequest.underlying.asInstanceOf[StreamedHttpRequest], serverRequest, m)
   }
 
   private def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
@@ -96,4 +111,72 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
         throw new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass.getName}")
     }
   }
+  
+  protected def toRawPart[R](
+      serverRequest: ServerRequest,
+      data: InterfaceHttpData,
+      partType: RawBodyType[R]
+  ): F[Part[R]] = {
+    val partName = data.getName()
+    data match {
+      case httpData: HttpData =>
+        // TODO filename* attribute is not used by netty. Non-ascii filenames like https://github.com/http4s/http4s/issues/5809 are unsupported.
+        toRawPartHttpData(partName, serverRequest, httpData, partType)
+      case unsupportedDataType =>
+        monad.error(new UnsupportedOperationException(s"Unsupported multipart data type: $unsupportedDataType in part $partName"))
+    }
+  }
+
+  private def toRawPartHttpData[R]( 
+      partName: String,
+      serverRequest: ServerRequest,
+      httpData: HttpData,
+      partType: RawBodyType[R]
+  ): F[Part[R]] = {
+    val fileName = httpData match {
+      case fileUpload: FileUpload => Option(fileUpload.getFilename())
+      case _                      => None
+    }
+    partType match {
+      case RawBodyType.StringBody(defaultCharset) =>
+        // TODO otherDispositionParams not supported. They are normally a part of the content-disposition part header, but this header is not directly accessible, they are extracted internally by the decoder.
+        val charset = if (httpData.getCharset() != null) httpData.getCharset() else defaultCharset
+        readHttpData(httpData, _.getString(charset)).map(body => Part(partName, body, fileName = fileName))
+      case RawBodyType.ByteArrayBody =>
+        readHttpData(httpData, _.get()).map(body => Part(partName, body, fileName = fileName))
+      case RawBodyType.ByteBufferBody =>
+        readHttpData(httpData, _.get()).map(body => Part(partName, ByteBuffer.wrap(body), fileName = fileName))
+      case RawBodyType.InputStreamBody =>
+        (if (httpData.isInMemory())
+           monad.unit(new ByteArrayInputStream(httpData.get()))
+         else {
+           monad.blocking(java.nio.file.Files.newInputStream(httpData.getFile().toPath()))
+         }).map(body => Part(partName, body, fileName = fileName))
+      case RawBodyType.InputStreamRangeBody =>
+        val body = () => {
+          if (httpData.isInMemory())
+            new ByteArrayInputStream(httpData.get())
+          else
+            java.nio.file.Files.newInputStream(httpData.getFile().toPath())
+        }
+        monad.unit(Part(partName, InputStreamRange(body), fileName = fileName))
+      case RawBodyType.FileBody =>
+        val fileF: F[File] =
+          if (httpData.isInMemory())
+            (for {
+              file <- createFile(serverRequest)
+              _ <- writeBytesToFile(httpData.get(), file)
+            } yield file)
+          else monad.unit(httpData.getFile())
+        fileF.map(file => Part(partName, FileRange(file), fileName = fileName))
+      case _: RawBodyType.MultipartBody =>
+        monad.error(new UnsupportedOperationException(s"Nested multipart not supported, part name = $partName"))
+    }
+  }
+
+  private def readHttpData[T](httpData: HttpData, f: HttpData => T): F[T] =
+    if (httpData.isInMemory())
+      monad.unit(f(httpData))
+    else
+      monad.blocking(f(httpData))
 }
