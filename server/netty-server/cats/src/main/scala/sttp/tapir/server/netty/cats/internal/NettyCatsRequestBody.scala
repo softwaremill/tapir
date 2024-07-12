@@ -6,7 +6,7 @@ import cats.syntax.all._
 import fs2.Chunk
 import fs2.interop.reactivestreams.StreamSubscriber
 import fs2.io.file.{Files, Path}
-import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpPostRequestDecoder }
+import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpPostRequestDecoder}
 import io.netty.handler.codec.http.{HttpContent, LastHttpContent}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
@@ -40,7 +40,6 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
       .evalMapAccumulate({
         // initialize the stream's "state" - a mutable, stateful HttpPostRequestDecoder
         new HttpPostRequestDecoder(NettyCatsRequestBody.multiPartDataFactory, nettyRequest)
-        //
       })({ case (decoder, httpContent) =>
         if (httpContent.isInstanceOf[LastHttpContent]) {
           monad.eval {
