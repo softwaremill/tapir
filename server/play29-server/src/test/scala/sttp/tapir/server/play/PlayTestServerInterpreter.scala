@@ -31,7 +31,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
     PlayServerInterpreter(serverOptions).toRoutes(es)
   }
 
-  override def serverWith(
+  override def server(
       routes: NonEmptyList[Routes],
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
