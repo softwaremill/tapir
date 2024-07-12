@@ -11,10 +11,10 @@ import scala.concurrent.duration._
 
 trait ArmeriaTestServerInterpreter[S <: Streams[S], F[_], OPTIONS] extends TestServerInterpreter[F, S, OPTIONS, TapirService[S, F]] {
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[TapirService[S, F]],
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val (quietPeriodMs, totalDeadlineMs) = gracefulShutdownTimeout
       .map(t => (t.toMillis, t.toMillis + 50))
       .getOrElse((0L, 0L))
@@ -31,19 +31,11 @@ trait ArmeriaTestServerInterpreter[S <: Streams[S], F[_], OPTIONS] extends TestS
         server.start().thenApply[Server](_ => server)
       }
     )
+    // Ignore future returned by stop() for fast test iterations.
+    // Armeria server wait for 2 seconds by default to let the boss group gracefully finish all remaining
+    // tasks in the queue. Even if graceful shutdown timeouts are set to 0.
     Resource
-      .make(
-        bind.map(b =>
-          (
-            b.activeLocalPort(),
-            // Ignore returned future for fast test iterations.
-            // Armeria server wait for 2 seconds by default to let the boss group gracefully finish all remaining
-            // tasks in the queue. Even if graceful shutdown timeouts are set to 0.
-            IO { val _ = b.stop() }
-          )
-        )
-      ) { case (_, release) =>
-        release
-      }
+      .make(bind)(s => IO.blocking { val _ = s.stop() })
+      .map(_.activeLocalPort())
   }
 }

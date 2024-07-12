@@ -23,22 +23,14 @@ class PekkoHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     PekkoHttpServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[Route],
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val bind = IO.fromFuture(IO(Http().newServerAt("localhost", 0).bind(concat(routes.toList: _*))))
 
     Resource
-      .make(
-        bind.map(b =>
-          (
-            b.localAddress.getPort(),
-            IO.fromFuture(IO(b.terminate(gracefulShutdownTimeout.getOrElse(50.millis)))).void
-          )
-        )
-      ) { case (_, release) =>
-        release
-      }
+      .make(bind)(server => IO.fromFuture(IO(server.terminate(gracefulShutdownTimeout.getOrElse(50.millis)))).void)
+      .map(_.localAddress.getPort)
   }
 }

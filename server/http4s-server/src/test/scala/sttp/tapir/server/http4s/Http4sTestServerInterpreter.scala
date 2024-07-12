@@ -28,23 +28,18 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
     Http4sServerInterpreter(serverOptions).toWebSocketRoutes(es)
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[Routes],
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val service: WebSocketBuilder2[IO] => HttpApp[IO] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
 
-    Resource.make(
-      BlazeServerBuilder[IO]
-        .withExecutionContext(ExecutionContext.global)
-        .bindHttp(0, "localhost")
-        .withHttpWebSocketApp(service)
-        .resource
-        .allocated
-        .map { case (server, release) => // Blaze has no graceful shutdown support https://github.com/http4s/blaze/issues/676
-          (server.address.getPort(), release)
-        }
-    ) { case (_, release) => release }
+    BlazeServerBuilder[IO]
+      .withExecutionContext(ExecutionContext.global)
+      .bindHttp(0, "localhost")
+      .withHttpWebSocketApp(service)
+      .resource
+      .map(_.address.getPort())
   }
 }

@@ -26,12 +26,12 @@ class ZioHttpTestServerInterpreter(
     ZioHttpInterpreter(serverOptions).toHttp(es)
   }
 
-  override def serverWithStop(
+  // Needs to manually call killSwitch, because serverWithStop uses `allocated`
+  override def server(
       routes: NonEmptyList[Routes[Any, Response]],
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
-
     val effect: ZIO[Scope, Throwable, Port] =
       (for {
         driver <- ZIO.service[Driver]
@@ -49,11 +49,7 @@ class ZioHttpTestServerInterpreter(
               .gracefulShutdownTimeout(gracefulShutdownTimeout.map(Duration.fromScala).getOrElse(50.millis))
           )
         )
-
-    Resource.make(Resource.scoped[IO, Any, Port](effect).allocated) { case (_, release) => release }
+    Resource.scoped[IO, Any, Port](effect)
   }
 
-  // Needs to manually call killSwitch, because serverWithStop uses `allocated`
-  override def server(routes: NonEmptyList[Routes[Any, Response]]): Resource[IO, Port] =    
-    serverWithStop(routes, gracefulShutdownTimeout = None).flatMap { case (port, killSwitch) => Resource.pure(port).onFinalize(killSwitch) }
 }
