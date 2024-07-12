@@ -52,4 +52,8 @@ class ZioHttpTestServerInterpreter(
 
     Resource.make(Resource.scoped[IO, Any, Port](effect).allocated) { case (_, release) => release }
   }
+
+  // Needs to manually call killSwitch, because serverWithStop uses `allocated`
+  override def server(routes: NonEmptyList[Routes[Any, Response]]): Resource[IO, Port] =    
+    serverWithStop(routes, gracefulShutdownTimeout = None).flatMap { case (port, killSwitch) => Resource.pure(port).onFinalize(killSwitch) }
 }
