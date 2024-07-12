@@ -5,13 +5,13 @@
 
 package sttp.tapir.examples.status_code
 
-import ox.supervised
+import ox.*
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
 
 /** Three examples of how to return custom status codes */
-@main def statusCodeNettyServer(): Unit =
+object StatusCodeNettyServer extends OxApp.Simple:
 
   // An endpoint which always responds with status code 308
   val fixedStatusCodeEndpoint = endpoint.get
@@ -67,7 +67,8 @@ import sttp.tapir.server.netty.sync.NettySyncServer
   // Starting netty server
   val declaredPort = 8080
   val declaredHost = "localhost"
-  supervised:
+
+  def run(using Ox): Unit =
     val binding = NettySyncServer()
       .port(declaredPort)
       .host(declaredHost)

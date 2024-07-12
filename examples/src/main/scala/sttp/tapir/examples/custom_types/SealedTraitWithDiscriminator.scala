@@ -9,7 +9,7 @@ package sttp.tapir.examples.custom_types
 
 import io.circe.Codec as CirceCodec
 import io.circe.derivation.Configuration as CirceConfiguration
-import ox.supervised
+import ox.*
 import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.generic.Configuration
@@ -17,7 +17,8 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.server.netty.sync.NettySyncServer
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
-@main def sealedTraitWithDiscriminator(): Unit =
+object SealedTraitWithDiscriminator extends OxApp.Simple:
+
   // data structures
   sealed trait Node
   case class Leaf(value: String) extends Node
@@ -44,7 +45,7 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
   val docsEndpoints = SwaggerInterpreter().fromServerEndpoints[Identity](List(nodesListingServerEndpoint), "Nodes", "1.0.0")
 
-  supervised {
+  def run(using Ox): Unit =
     val binding = NettySyncServer()
       .port(8080)
       .host("localhost")
@@ -56,4 +57,3 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
     scala.io.StdIn.readLine()
 
     binding.stop()
-  }
