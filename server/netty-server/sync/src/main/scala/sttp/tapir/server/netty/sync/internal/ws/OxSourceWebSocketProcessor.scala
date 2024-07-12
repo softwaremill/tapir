@@ -75,5 +75,5 @@ private[sync] object OxSourceWebSocketProcessor:
         case _: WebSocketFrame.Close => false
         case _                       => true
       },
-      includeFirstFailing = passAlongCloseFrame
+      includeFailed = passAlongCloseFrame
     )

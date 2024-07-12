@@ -6,7 +6,7 @@
 
 package sttp.tapir.examples.custom_types
 
-import ox.*
+import ox.supervised
 import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.CodecFormat.TextPlain
@@ -28,7 +28,7 @@ enum TapirBreeds(val name: String):
   We're going to build a simple endpoint capable of accepting requests such as
     `GET tapirs?breeds=Malayan,CentralAmerican`
  */
-object CommaSeparatedQueryParameter extends OxApp.Simple:
+@main def commaSeparatedQueryParameter(): Unit =
   /*
     It's possible to use `CommaSeparated` with any type with a `Codec[String, T, CodecFormat.TextPlain]` instance.
 
@@ -64,7 +64,7 @@ object CommaSeparatedQueryParameter extends OxApp.Simple:
 
   val docsEndpoints = SwaggerInterpreter().fromServerEndpoints[Identity](List(echoTapirsServerEndpoint), "Echo", "1.0.0")
 
-  def run(using Ox): Unit = 
+  supervised {
     val binding = NettySyncServer()
       .port(8080)
       .host("localhost")
@@ -76,3 +76,4 @@ object CommaSeparatedQueryParameter extends OxApp.Simple:
     scala.io.StdIn.readLine()
 
     binding.stop()
+  }
