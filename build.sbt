@@ -125,6 +125,7 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
   Test / testOptions += Tests.Argument("-oD"), // js has other options which conflict with timings
+  testListeners += TimingTestListener,
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, _)) => Seq("-target:jvm-1.8") // some users are on java 8
@@ -256,6 +257,9 @@ lazy val rawAllAggregates = core.projectRefs ++
 
 lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
 
+// Separated zio-related projects, to run their build/tests as a parallel "axis" to save resources
+lazy val zioProjects: Seq[String] = Seq(zio, armeriaServerZio, http4sServerZio, nettyServerZio, vertxServerZio, zioHttpServer).flatMap(_.projectRefs).flatMap(projectId)
+
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
     case ProjectRef(_, id) => Some(id)
@@ -264,6 +268,7 @@ def projectId(projectRef: ProjectReference): Option[String] =
   }
 
 lazy val allAggregates: Seq[ProjectReference] = {
+  val filteredByTargetAndPlatform = {
   val filteredByNative = if (sys.env.isDefinedAt("STTP_NATIVE")) {
     println("[info] STTP_NATIVE defined, including native in the aggregate projects")
     rawAllAggregates
@@ -281,6 +286,24 @@ lazy val allAggregates: Seq[ProjectReference] = {
     println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
     filteredByNative.filterNot(p => projectId(p).forall(loomProjects.contains))
   }
+  }
+  val filteredByBuildGroup = {
+    val buildGroup = sys.env.getOrElse("BUILD_GROUP", "none")
+    if (buildGroup != "none") {
+      println(s"[info] Running build only for projects in group: $buildGroup")
+    }
+    buildGroup match {
+      case "zio" => 
+        filteredByTargetAndPlatform.filter(p => projectId(p).forall(zioProjects.contains))
+      case "main" =>
+        // TODO should be 'filterNot', but leaving filter to experiment with zio-related builds
+        filteredByTargetAndPlatform.filter(p => projectId(p).forall(zioProjects.contains))
+      case other =>
+        println("[info] Build group not specified, it won't be used for filtering.")
+        filteredByTargetAndPlatform    
+    }
+  }
+  filteredByBuildGroup
 }
 
 // separating testing into different Scala versions so that it's not all done at once, as it causes memory problems on CI
