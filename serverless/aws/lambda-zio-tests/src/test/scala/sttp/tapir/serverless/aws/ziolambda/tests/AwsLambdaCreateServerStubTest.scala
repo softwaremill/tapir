@@ -40,6 +40,10 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[Task, Any, AwsServe
     Test(name)(runTest(stubBackend(transformMonad(route)), uri"http://localhost:3002").unsafeToFuture())
   }
 
+  def testServerWithStop(name: String, rs: => NonEmptyList[Route[Task]], gracefulShutdownTimeout: Option[FiniteDuration])(
+      runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test = throw new UnsupportedOperationException
+
   override def testServerLogic(e: ServerEndpoint[Any, Task], testNameSuffix: String, interceptors: Interceptors = identity)(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
