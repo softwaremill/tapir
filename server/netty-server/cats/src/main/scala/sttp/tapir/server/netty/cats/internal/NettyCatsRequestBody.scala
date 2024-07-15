@@ -27,7 +27,6 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
 ) extends NettyStreamingRequestBody[F, Fs2Streams[F]] {
 
   override implicit val monad: MonadError[F] = new CatsMonadError()
-  import io.netty.handler.codec.http.multipart.HttpData
 
   // TODO handle maxBytes
   def publisherToMultipart(
@@ -53,6 +52,7 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
                 // this operation is the one that does potential I/O (writing files)
                 // TODO not thread-safe? (visibility of internal state changes?)
                 decoder.offer(httpContent)
+              
                 val parts = Stream
                   .continually(if (decoder.hasNext) decoder.next() else null)
                   .takeWhile(_ != null)
@@ -61,9 +61,6 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
                   decoder,
                   parts
                 )
-              }
-              .onError { case _ =>
-                monad.eval(decoder.destroy())
               }
           })
           .map(_._2)
