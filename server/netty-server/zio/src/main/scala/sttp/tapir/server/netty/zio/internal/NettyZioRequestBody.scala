@@ -26,7 +26,8 @@ private[zio] class NettyZioRequestBody[Env](
   override def publisherToMultipart(
       nettyRequest: StreamedHttpRequest,
       serverRequest: ServerRequest,
-      m: RawBodyType.MultipartBody
+      m: RawBodyType.MultipartBody,
+      maxBytes: Option[Long]
   ): RIO[Env, RawValue[Seq[RawPart]]] = ZIO.die(new UnsupportedOperationException("Multipart requests not supported."))
 
   override def writeBytesToFile(bytes: Array[Byte], file: File): RIO[Env, Unit] = ZIO.die(new UnsupportedOperationException)

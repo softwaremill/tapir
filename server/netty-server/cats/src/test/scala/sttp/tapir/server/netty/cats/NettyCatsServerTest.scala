@@ -1,7 +1,6 @@
 package sttp.tapir.server.netty.cats
 
 import cats.effect.{IO, Resource}
-import cats.syntax.all._
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
 import sttp.capabilities.fs2.Fs2Streams

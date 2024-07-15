@@ -38,7 +38,7 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
     fs2.Stream
       .resource(
         Resource.make(Sync[F].delay(new HttpPostRequestDecoder(NettyCatsRequestBody.multiPartDataFactory, nettyRequest)))(d =>
-          Sync[F].blocking(d.destroy())
+          Sync[F].blocking(d.destroy()) // after the stream finishes or fails, decoder data has to be cleaned up
         )
       )
       .flatMap { decoder =>
@@ -76,7 +76,7 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
           })
           .map(_._2)
           .map(_.flatMap(p => m.partType(p.getName()).map((p, _)).toList))
-          .evalMap(_.traverse { case (data, partType) => toRawPart(serverRequest, data, partType) })
+          .evalMap(_.traverse { case (data, partType) => toRawPart(serverRequest, data, partType).map(_.asInstanceOf[Part[Any]]) })
       }
       .compile
       .toVector

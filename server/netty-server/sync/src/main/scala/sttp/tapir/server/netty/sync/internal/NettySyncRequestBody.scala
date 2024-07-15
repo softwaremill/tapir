@@ -27,10 +27,11 @@ private[sync] class NettySyncRequestBody(val createFile: ServerRequest => TapirF
   override def publisherToMultipart(
       nettyRequest: StreamedHttpRequest,
       serverRequest: ServerRequest,
-      m: RawBodyType.MultipartBody
+      m: RawBodyType.MultipartBody,
+      maxBytes: Option[Long]
   ): RawValue[Seq[RawPart]] = throw new UnsupportedOperationException("Multipart requests not supported.")
   override def writeBytesToFile(bytes: Array[Byte], file: File) = throw new UnsupportedOperationException()
-  
+
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =
     serverRequest.underlying match
       case r: StreamedHttpRequest => FileWriterSubscriber.processAllBlocking(r, file.toPath, maxBytes)
