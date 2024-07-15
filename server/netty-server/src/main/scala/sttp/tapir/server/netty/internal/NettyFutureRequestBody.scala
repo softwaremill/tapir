@@ -20,9 +20,10 @@ private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Fut
   override def publisherToMultipart(
       nettyRequest: StreamedHttpRequest,
       serverRequest: ServerRequest,
-      m: RawBodyType.MultipartBody
+      m: RawBodyType.MultipartBody,
+      maxBytes: Option[Long]
   ): Future[RawValue[Seq[RawPart]]] = Future.failed(new UnsupportedOperationException("Multipart requests not supported."))
-  
+
   override def writeBytesToFile(bytes: Array[Byte], file: File): Future[Unit] = Future.failed(new UnsupportedOperationException)
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams

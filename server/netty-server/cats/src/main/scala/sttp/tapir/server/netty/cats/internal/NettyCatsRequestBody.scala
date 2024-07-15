@@ -6,10 +6,11 @@ import cats.syntax.all._
 import fs2.Chunk
 import fs2.interop.reactivestreams.StreamSubscriber
 import fs2.io.file.{Files, Path}
-import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpPostRequestDecoder}
 import io.netty.handler.codec.http.HttpContent
+import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpData, HttpPostRequestDecoder}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
+import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.Part
 import sttp.monad.MonadError
@@ -28,11 +29,11 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
 
   override implicit val monad: MonadError[F] = new CatsMonadError()
 
-  // TODO handle maxBytes
   def publisherToMultipart(
       nettyRequest: StreamedHttpRequest,
       serverRequest: ServerRequest,
-      m: RawBodyType.MultipartBody
+      m: RawBodyType.MultipartBody,
+      maxBytes: Option[Long]
   ): F[RawValue[Seq[RawPart]]] = {
     fs2.Stream
       .resource(
@@ -45,20 +46,30 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
           .eval(StreamSubscriber[F, HttpContent](bufferSize = 1))
           .flatMap(s => s.sub.stream(Sync[F].delay(nettyRequest.subscribe(s))))
           .evalMapAccumulate({
-            decoder
-          })({ case (decoder, httpContent) =>
+            (decoder, 0L)
+          })({ case ((decoder, processedBytesNum), httpContent) =>
             monad
               .blocking {
                 // this operation is the one that does potential I/O (writing files)
                 // TODO not thread-safe? (visibility of internal state changes?)
                 decoder.offer(httpContent)
+                var processedBytesAndContentBytes = processedBytesNum
               
                 val parts = Stream
-                  .continually(if (decoder.hasNext) decoder.next() else null)
+                  .continually(if (decoder.hasNext) { 
+                    val next = decoder.next() 
+                    processedBytesAndContentBytes = processedBytesAndContentBytes + next.asInstanceOf[HttpData].length()
+                    maxBytes.foreach { max =>
+                      if (max < processedBytesAndContentBytes) {
+                        throw new StreamMaxLengthExceededException(max)
+                      }
+                    }
+                    next
+                  } else null)
                   .takeWhile(_ != null)
                   .toVector
                 (
-                  decoder,
+                  (decoder, processedBytesAndContentBytes),
                   parts
                 )
               }

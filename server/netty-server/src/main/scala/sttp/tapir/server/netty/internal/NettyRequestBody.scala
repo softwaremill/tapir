@@ -52,7 +52,8 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
   def publisherToMultipart(
       nettyRequest: StreamedHttpRequest,
       serverRequest: ServerRequest,
-      m: RawBodyType.MultipartBody
+      m: RawBodyType.MultipartBody,
+      maxBytes: Option[Long]
   ): F[RawValue[Seq[RawPart]]]
 
   /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] and write their bytes into a file.
@@ -91,7 +92,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
         _ <- writeToFile(serverRequest, file, maxBytes)
       } yield RawValue(FileRange(file), Seq(FileRange(file)))
     case m: RawBodyType.MultipartBody =>
-      publisherToMultipart(serverRequest.underlying.asInstanceOf[StreamedHttpRequest], serverRequest, m)
+      publisherToMultipart(serverRequest.underlying.asInstanceOf[StreamedHttpRequest], serverRequest, m, maxBytes)
   }
 
   private def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
