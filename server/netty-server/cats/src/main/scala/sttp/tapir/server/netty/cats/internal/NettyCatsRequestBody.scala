@@ -1,13 +1,13 @@
 package sttp.tapir.server.netty.cats.internal
 
 import cats.effect.Async
-import cats.effect.kernel.Sync
+import cats.effect.kernel.{Resource, Sync}
 import cats.syntax.all._
 import fs2.Chunk
 import fs2.interop.reactivestreams.StreamSubscriber
 import fs2.io.file.{Files, Path}
 import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpPostRequestDecoder}
-import io.netty.handler.codec.http.{HttpContent, LastHttpContent}
+import io.netty.handler.codec.http.HttpContent
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.capabilities.fs2.Fs2Streams
@@ -27,6 +27,7 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
 ) extends NettyStreamingRequestBody[F, Fs2Streams[F]] {
 
   override implicit val monad: MonadError[F] = new CatsMonadError()
+  import io.netty.handler.codec.http.multipart.HttpData
 
   // TODO handle maxBytes
   def publisherToMultipart(
@@ -35,39 +36,40 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
       m: RawBodyType.MultipartBody
   ): F[RawValue[Seq[RawPart]]] = {
     fs2.Stream
-      .eval(StreamSubscriber[F, HttpContent](bufferSize = 1))
-      .flatMap(s => s.sub.stream(Sync[F].delay(nettyRequest.subscribe(s))))
-      .evalMapAccumulate({
-        // initialize the stream's "state" - a mutable, stateful HttpPostRequestDecoder
-        new HttpPostRequestDecoder(NettyCatsRequestBody.multiPartDataFactory, nettyRequest)
-      })({ case (decoder, httpContent) =>
-        if (httpContent.isInstanceOf[LastHttpContent]) {
-          monad.eval {
-            decoder.destroy()
-            (decoder, Vector.empty)
-          }
-        } else
-          monad
-            .blocking {
-              // this operation is the one that does potential I/O (writing files)
-              // TODO not thread-safe? (visibility of internal state changes?)
-              decoder.offer(httpContent)
-              val parts = Stream
-                .continually(if (decoder.hasNext) decoder.next() else null)
-                .takeWhile(_ != null)
-                .toVector
-              (
-                decoder,
-                parts
-              )
-            }
-            .onError { case _ =>
-              monad.eval(decoder.destroy())
-            }
-      })
-      .map(_._2)
-      .map(_.flatMap(p => m.partType(p.getName()).map((p, _)).toList))
-      .evalMap(_.traverse { case (data, partType) => toRawPart(serverRequest, data, partType) })
+      .resource(
+        Resource.make(Sync[F].delay(new HttpPostRequestDecoder(NettyCatsRequestBody.multiPartDataFactory, nettyRequest)))(d =>
+          Sync[F].blocking(d.destroy())
+        )
+      )
+      .flatMap { decoder =>
+        fs2.Stream
+          .eval(StreamSubscriber[F, HttpContent](bufferSize = 1))
+          .flatMap(s => s.sub.stream(Sync[F].delay(nettyRequest.subscribe(s))))
+          .evalMapAccumulate({
+            decoder
+          })({ case (decoder, httpContent) =>
+            monad
+              .blocking {
+                // this operation is the one that does potential I/O (writing files)
+                // TODO not thread-safe? (visibility of internal state changes?)
+                decoder.offer(httpContent)
+                val parts = Stream
+                  .continually(if (decoder.hasNext) decoder.next() else null)
+                  .takeWhile(_ != null)
+                  .toVector
+                (
+                  decoder,
+                  parts
+                )
+              }
+              .onError { case _ =>
+                monad.eval(decoder.destroy())
+              }
+          })
+          .map(_._2)
+          .map(_.flatMap(p => m.partType(p.getName()).map((p, _)).toList))
+          .evalMap(_.traverse { case (data, partType) => toRawPart(serverRequest, data, partType) })
+      }
       .compile
       .toVector
       .map(_.flatten)

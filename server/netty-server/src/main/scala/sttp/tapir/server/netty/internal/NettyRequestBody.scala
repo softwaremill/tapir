@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.multipart.HttpData
 import io.netty.handler.codec.http.multipart.FileUpload
 import java.io.ByteArrayInputStream
 import java.io.File
+
 /** Common logic for processing request body in all Netty backends. It requires particular backends to implement a few operations. */
 private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody[F, S] {
 
@@ -45,10 +46,14 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     */
   def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): F[Array[Byte]]
 
-  /**
-   * Reads the reactive stream emitting HttpData into a vector of parts. Implementation-specific, as file manipulations and stream processing logic can be different for different backends.
-   */
-  def publisherToMultipart(nettyRequest: StreamedHttpRequest, serverRequest: ServerRequest, m: RawBodyType.MultipartBody): F[RawValue[Seq[RawPart]]]
+  /** Reads the reactive stream emitting HttpData into a vector of parts. Implementation-specific, as file manipulations and stream
+    * processing logic can be different for different backends.
+    */
+  def publisherToMultipart(
+      nettyRequest: StreamedHttpRequest,
+      serverRequest: ServerRequest,
+      m: RawBodyType.MultipartBody
+  ): F[RawValue[Seq[RawPart]]]
 
   /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] and write their bytes into a file.
     *
@@ -111,7 +116,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
         throw new UnsupportedOperationException(s"Unexpected Netty request of type ${other.getClass.getName}")
     }
   }
-  
+
   protected def toRawPart[R](
       serverRequest: ServerRequest,
       data: InterfaceHttpData,
@@ -127,7 +132,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     }
   }
 
-  private def toRawPartHttpData[R]( 
+  private def toRawPartHttpData[R](
       partName: String,
       serverRequest: ServerRequest,
       httpData: HttpData,
