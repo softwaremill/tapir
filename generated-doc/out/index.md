@@ -148,6 +148,7 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
    tutorials/04_errors
    tutorials/05_multiple_inputs_outputs
    tutorials/06_error_variants
+   tutorials/07_cats_effect
 
 .. toctree::
    :maxdepth: 2
