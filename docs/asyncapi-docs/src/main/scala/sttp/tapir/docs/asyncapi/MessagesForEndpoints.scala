@@ -39,7 +39,6 @@ private[asyncapi] class MessagesForEndpoints(tschemaToASchema: TSchemaToASchema,
   )
 
   private def message[T](ci: CodecWithInfo[T]): Message = {
-    val convertedExamples = ExampleConverter.convertExamples(ci.codec, ci.info.examples)
     SingleMessage(
       None,
       Some(Right(tschemaToASchema(ci.codec))),
@@ -53,7 +52,7 @@ private[asyncapi] class MessagesForEndpoints(tschemaToASchema: TSchemaToASchema,
       Nil,
       None,
       Nil,
-      convertedExamples.map(example => Map("payload" -> (example :: Nil))),
+      ExampleConverter.convertExamples(ci.codec, ci.info.examples),
       Nil
     )
   }

@@ -33,11 +33,10 @@ components:
       examples:
         - payload:
             f: apple
+          name: Apple
+          summary: Sample representation of apple
     integer:
       payload:
         type: integer
         format: int32
       contentType: application/json
-      examples:
-        - payload: 10
-        - payload: 42
