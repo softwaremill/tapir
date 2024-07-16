@@ -51,25 +51,28 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
           })({ case ((decoder, processedBytesNum), httpContent) =>
             monad
               .blocking {
+                val newProcessedBytes = if (httpContent.content() != null) {
+                  val processedBytesAndContentBytes = processedBytesNum + httpContent.content().readableBytes()
+                  maxBytes.foreach { max =>
+                    if (max < processedBytesAndContentBytes) {
+                      throw new StreamMaxLengthExceededException(max)
+                    }
+                  }
+                  processedBytesAndContentBytes
+                } else processedBytesNum
+
                 // this operation is the one that does potential I/O (writing files)
                 decoder.offer(httpContent)
-                var processedBytesAndContentBytes = processedBytesNum
-
                 val parts = Stream
                   .continually(if (decoder.hasNext) {
                     val next = decoder.next()
-                    processedBytesAndContentBytes = processedBytesAndContentBytes + next.asInstanceOf[HttpData].length()
-                    maxBytes.foreach { max =>
-                      if (max < processedBytesAndContentBytes) {
-                        throw new StreamMaxLengthExceededException(max)
-                      }
-                    }
                     next
                   } else null)
                   .takeWhile(_ != null)
                   .toVector
+
                 (
-                  (decoder, processedBytesAndContentBytes),
+                  (decoder, newProcessedBytes),
                   parts
                 )
               }
