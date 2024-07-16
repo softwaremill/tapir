@@ -7,6 +7,7 @@ import sttp.apispec.asyncapi.{Info, Server}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
 import sttp.apispec.asyncapi.circe.yaml._
+import sttp.tapir.EndpointIO.Example
 import sttp.tapir.Schema.SName
 import sttp.tapir._
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
@@ -16,6 +17,7 @@ import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.tests.data.{Fruit, FruitAmount}
 
 import scala.io.Source
+import scala.util.chaining.scalaUtilChainingOps
 
 class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
@@ -118,6 +120,23 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
       )
 
     val expectedYaml = loadYaml("expected_json_examples.yml")
+
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should include example name and summary") {
+    val e = endpoint
+      .in("fruit")
+      .out(
+        webSocketBody[Fruit, CodecFormat.Json, Int, CodecFormat.Json](AkkaStreams)
+          // TODO: missing `RequestInfo.example(example: EndpointIO.Example)` and friends
+          .pipe(e => e.copy(requestsInfo = e.requestsInfo.example(Example.of(Fruit("apple")).name("Apple").summary("Sample representation of apple"))))
+      )
+
+    val expectedYaml = loadYaml("expected_json_example_name_summary.yml")
 
     val actualYaml = AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
