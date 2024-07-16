@@ -27,13 +27,16 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
     partContentTypeHeaderSupport: Boolean = true,
     partOtherHeaderSupport: Boolean = true,
     maxContentLengthSupport: Boolean = true,
+    chunkingSupport: Boolean = true,
     multipartResponsesSupport: Boolean = true
 )(implicit m: MonadError[F]) {
   import createServerTest._
 
   def tests(): List[Test] =
     basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil) ++
-      (if (maxContentLengthSupport) maxContentLengthTests() else Nil) ++ (if (multipartResponsesSupport) multipartResponsesTests() else Nil)
+      (if (maxContentLengthSupport) maxContentLengthTests() else Nil) ++ (if (multipartResponsesSupport) multipartResponsesTests()
+                                                                          else
+                                                                            Nil) ++ (if (chunkingSupport) chunkedMultipartTests() else Nil)
 
   def maxContentLengthTests(): List[Test] = List(
     testServer(
@@ -121,6 +124,36 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
       }
     )
   }
+
+  def chunkedMultipartTests() = List(
+    testServer(in_raw_multipart_out_string, "chunked multipart attribute")((parts: Seq[Part[Array[Byte]]]) =>
+      pureResult(
+        parts.map(part => s"${part.name}:${new String(part.body)}").mkString("\n__\n").asRight[Unit]
+      )
+    ) { (backend, baseUri) =>
+      val testBody = "61\r\n--boundary123\r\n" +
+        "Content-Disposition: form-data; name=\"attr1\"\r\n" +
+        "Content-Type: text/plain\r\n" +
+        "\r\nValue1\r\n" +
+        "\r\n47\r\n--boundary123\r\n" + // 15
+        "Content-Disposition: form-data; name=\"attr2\"\r\n" + // 46
+        "\r\nPart1 of\r\n" + // 10
+        "1E\r\n Attr2 Value\r\n" +
+        "--boundary123--\r\n\r\n" +
+        "0\r\n\r\n"
+      basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .header("Content-Type", "multipart/form-data; boundary=boundary123")
+        .header("Transfer-Encoding", "chunked")
+        .body(testBody)
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+          println(r.body)
+          r.body should be("attr1:Value1\n__\nattr2:Part1 of Attr2 Value")
+        }
+    }
+  )
 
   def multipartResponsesTests() = List(
     testServer(in_simple_multipart_out_multipart)((fa: FruitAmount) =>

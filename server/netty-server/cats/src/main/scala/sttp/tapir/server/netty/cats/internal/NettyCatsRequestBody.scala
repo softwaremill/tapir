@@ -22,6 +22,7 @@ import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 
 import java.io.File
 
+
 private[cats] class NettyCatsRequestBody[F[_]: Async](
     val createFile: ServerRequest => F[TapirFile],
     val streamCompatible: StreamCompatible[Fs2Streams[F]]
@@ -51,13 +52,12 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
             monad
               .blocking {
                 // this operation is the one that does potential I/O (writing files)
-                // TODO not thread-safe? (visibility of internal state changes?)
                 decoder.offer(httpContent)
                 var processedBytesAndContentBytes = processedBytesNum
-              
+
                 val parts = Stream
-                  .continually(if (decoder.hasNext) { 
-                    val next = decoder.next() 
+                  .continually(if (decoder.hasNext) {
+                    val next = decoder.next()
                     processedBytesAndContentBytes = processedBytesAndContentBytes + next.asInstanceOf[HttpData].length()
                     maxBytes.foreach { max =>
                       if (max < processedBytesAndContentBytes) {
