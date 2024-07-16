@@ -7,13 +7,7 @@ import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.generic.auto._
-import sttp.tapir.tests.Multipart.{
-  in_file_list_multipart_out_multipart,
-  in_file_multipart_out_multipart,
-  in_raw_multipart_out_string,
-  in_simple_multipart_out_multipart,
-  in_simple_multipart_out_string
-}
+import sttp.tapir.tests.Multipart._
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
 import sttp.tapir.tests.data.{DoubleFruit, FruitAmount, FruitData}
 import sttp.tapir.tests.{MultipleFileUpload, Test, data}
@@ -21,6 +15,10 @@ import sttp.tapir.server.model.EndpointExtensions._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import java.io.File
+import fs2.io.file.Files
+import cats.effect.IO
+import fs2.io.file.Path
 
 class ServerMultipartTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
@@ -121,6 +119,54 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             r.code shouldBe StatusCode.Ok
             r.body should be("firstPart:BODYONE\r\n--AA\n__\nsecondPart:BODYTWO")
           }
+      },
+      testServer(in_file_multipart_out_string, "simple file multipart body")((fd: FruitData) => {
+        val content = Await.result(readFromFile(fd.data.body), 3.seconds)
+        pureResult(content.reverse.asRight[Unit])
+      }) { (backend, baseUri) =>
+        val file = writeToFile("peach2 mario2")
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .multipartBody(multipartFile("data", file).fileName("fruit-data7.txt").header("X-Auth", "12Aa"))
+          .send(backend)
+          .map { r =>
+            r.code shouldBe StatusCode.Ok
+            r.body shouldBe "2oiram 2hcaep"
+          }
+      },
+      testServer(in_file_multipart_out_string, "large file multipart body")((fd: FruitData) => {
+        val fileSize = fd.data.body.length() // FIXME is 0, because decoder.destroy() removes the file
+        pureResult(fileSize.toString.asRight[Unit])
+      }) { (backend, baseUri) =>
+        val file = File.createTempFile("test", "tapir")
+        file.deleteOnExit()
+        fs2.Stream
+          .constant[IO, Byte]('x')
+          .take(5 * 1024 * 1024)
+          .through(Files.forAsync[IO].writeAll(Path.fromNioPath(file.toPath)))
+          .compile
+          .drain >>
+          basicStringRequest
+            .post(uri"$baseUri/api/echo/multipart")
+            .multipartBody(multipartFile("data", file).fileName("fruit-data8.txt"))
+            .send(backend)
+            .map { r =>
+              r.code shouldBe StatusCode.Ok
+              r.body shouldBe "5242880"
+            }
+      },
+      testServer(in_file_multipart_out_string, "file from a multipart attribute")((fd: FruitData) => {
+        val content = Await.result(readFromFile(fd.data.body), 3.seconds)
+        pureResult(content.reverse.asRight[Unit])
+      }) { (backend, baseUri) =>
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .multipartBody(multipart("data", "peach3 mario3"))
+          .send(backend)
+          .map { r =>
+            // r.code shouldBe StatusCode.Ok
+            r.body shouldBe "3oiram 3hcaep"
+          }
       }
     )
   }
@@ -135,9 +181,9 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
         "Content-Disposition: form-data; name=\"attr1\"\r\n" +
         "Content-Type: text/plain\r\n" +
         "\r\nValue1\r\n" +
-        "\r\n47\r\n--boundary123\r\n" + // 15
-        "Content-Disposition: form-data; name=\"attr2\"\r\n" + // 46
-        "\r\nPart1 of\r\n" + // 10
+        "\r\n47\r\n--boundary123\r\n" +
+        "Content-Disposition: form-data; name=\"attr2\"\r\n" +
+        "\r\nPart1 of\r\n" +
         "1E\r\n Attr2 Value\r\n" +
         "--boundary123--\r\n\r\n" +
         "0\r\n\r\n"
@@ -149,7 +195,6 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
         .send(backend)
         .map { r =>
           r.code shouldBe StatusCode.Ok
-          println(r.body)
           r.body should be("attr1:Value1\n__\nattr2:Part1 of Attr2 Value")
         }
     }

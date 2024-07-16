@@ -111,7 +111,7 @@ class PlayServerTest extends TestSuite {
         inputStreamSupport = false,
         invulnerableToUnsanitizedHeaders = false
       ).tests() ++
-        // chunking disabled, akka-http rejects content-length with transfer-encoding
+        // chunking disabled, Play rejects content-length with transfer-encoding
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false, chunkingSupport = false).tests() ++
         new AllServerTests(
           createServerTest,
