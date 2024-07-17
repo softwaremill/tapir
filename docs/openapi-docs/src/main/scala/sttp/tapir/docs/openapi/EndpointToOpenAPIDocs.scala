@@ -38,9 +38,7 @@ private[openapi] object EndpointToOpenAPIDocs {
 
       operationIds
         .groupBy(identity)
-        .view
-        .mapValues(_.size)
-        .filter(_._2 > 1)
+        .filter(_._2.size > 1)
         .foreach { case (name, _) => throw new IllegalStateException(s"Duplicate endpoints names found: ${name}") }
     }
 
