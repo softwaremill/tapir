@@ -10,7 +10,8 @@ case class OpenAPIDocsOptions(
     operationIdGenerator: (AnyEndpoint, Vector[String], Method) => String,
     schemaName: SName => String = defaultSchemaName,
     defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]] = OpenAPIDocsOptions.defaultDecodeFailureOutput,
-    markOptionsAsNullable: Boolean = false
+    markOptionsAsNullable: Boolean = false,
+    failOnDuplicateOperationId: Boolean = false
 )
 
 object OpenAPIDocsOptions {

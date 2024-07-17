@@ -105,7 +105,7 @@ object EndpointVerifier {
     endpoints
       .filter(_.info.name.isDefined)
       .groupBy(_.info.name)
-      .filter(_._2.length > 1)
+      .filter(_._2.size > 1)
       .map { case (name, _) => DuplicatedNameError(name.getOrElse("")) }
       .toList
   }

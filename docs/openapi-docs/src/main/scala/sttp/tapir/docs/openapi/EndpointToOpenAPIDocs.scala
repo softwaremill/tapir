@@ -25,9 +25,26 @@ private[openapi] object EndpointToOpenAPIDocs {
 
     val base = apiToOpenApi(api, componentsCreator, docsExtensions)
 
-    es2.map(pathCreator.pathItem).foldLeft(base) { case (current, (path, pathItem)) =>
+    val spec = es2.map(pathCreator.pathItem).foldLeft(base) { case (current, (path, pathItem)) =>
       current.addPathItem(path, pathItem)
     }
+
+    if (options.failOnDuplicateOperationId) {
+
+      val operationIds = spec.paths.pathItems.flatMap { item =>
+        List(item._2.get, item._2.put, item._2.post, item._2.delete, item._2.options, item._2.head, item._2.patch, item._2.trace)
+          .flatMap(_.flatMap(_.operationId))
+      }
+
+      operationIds
+        .groupBy(identity)
+        .view
+        .mapValues(_.size)
+        .filter(_._2 > 1)
+        .foreach { case (name, _) => throw new IllegalStateException(s"Duplicate endpoints names found: ${name}") }
+    }
+
+    spec
   }
 
   private def apiToOpenApi(info: Info, componentsCreator: EndpointToOpenAPIComponents, docsExtensions: List[DocsExtension[_]]): OpenAPI = {
