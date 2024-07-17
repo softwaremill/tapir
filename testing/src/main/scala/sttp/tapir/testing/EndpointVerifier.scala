@@ -12,7 +12,8 @@ object EndpointVerifier {
     findShadowedEndpoints(endpoints, List()).groupBy(_.e).map(_._2.head).toSet ++
       findIncorrectPaths(endpoints).toSet ++
       findDuplicatedMethodDefinitions(endpoints).toSet ++
-      findIncorrectStatusWithBody(endpoints).toSet
+      findIncorrectStatusWithBody(endpoints).toSet ++
+      findDuplicateNames(endpoints).toSet
   }
 
   private def findIncorrectPaths(endpoints: List[AnyEndpoint]): List[IncorrectPathsError] = {
@@ -98,6 +99,15 @@ object EndpointVerifier {
 
   private def inputDefinedMethods(input: EndpointInput[_]): Vector[Method] = {
     input.traverseInputs { case EndpointInput.FixedMethod(m, _, _) => Vector(m) }
+  }
+
+  private def findDuplicateNames(endpoints: List[AnyEndpoint]): List[EndpointVerificationError] = {
+    endpoints
+      .filter(_.info.name.isDefined)
+      .groupBy(_.info.name)
+      .filter(_._2.length > 1)
+      .map { case (name, _) => DuplicatedNameError(name.getOrElse("")) }
+      .toList
   }
 }
 
