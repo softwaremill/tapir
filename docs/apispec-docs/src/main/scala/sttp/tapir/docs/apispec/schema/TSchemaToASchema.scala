@@ -33,6 +33,12 @@ private[docs] class TSchemaToASchema(
           case TSchemaType.SNumber()  => ASchema(SchemaType.Number)
           case TSchemaType.SBoolean() => ASchema(SchemaType.Boolean)
           case TSchemaType.SString()  => ASchema(SchemaType.String)
+          case TSchemaType.SProduct(fields) if schema.attribute(TSchema.ProductAsArray.Attribute).map(_.productAsArray).getOrElse(false) =>
+            // TODO: Draft04 uses alternative form of `items` instead
+            // see https://json-schema.org/understanding-json-schema/reference/array#tupleValidation
+            ASchema(SchemaType.Array).copy(
+              prefixItems = Some(fields.map(f => apply(f.schema, allowReference = true)))
+            )
           case p @ TSchemaType.SProduct(fields) =>
             ASchema(SchemaType.Object).copy(
               required = p.required.map(_.encodedName),

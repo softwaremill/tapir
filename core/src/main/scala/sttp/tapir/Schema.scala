@@ -350,6 +350,11 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[UniqueItems] = new AttributeKey[UniqueItems]("sttp.tapir.Schema.UniqueItems")
   }
 
+  case class ProductAsArray(productAsArray: Boolean)
+  object ProductAsArray {
+    val Attribute: AttributeKey[ProductAsArray] = new AttributeKey[ProductAsArray]("sttp.tapir.Schema.ProductAsArray")
+  }
+
   /** @param typeParameterShortNames
     *   full name of type parameters, name is legacy and kept only for backward compatibility
     */
