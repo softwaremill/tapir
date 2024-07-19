@@ -68,6 +68,9 @@ case class UnexpectedBodyError(e: AnyEndpoint, statusCode: StatusCode) extends E
     s"An endpoint ${e.show} may return status code ${statusCode} with body, which is not allowed by specificiation."
 }
 
+/** The given name is used by multiple endpoints. This leads to duplicate operation ids being generated, when interpreting endpoints as
+  * OpenAPI/AsyncAPI documentation. Which, in turn, causes incorrect behavior of code generators, which might silently drop endpoints.
+  */
 case class DuplicatedNameError(name: String) extends EndpointVerificationError {
   override def toString: String = s"Duplicate endpoints names found: $name"
 }
