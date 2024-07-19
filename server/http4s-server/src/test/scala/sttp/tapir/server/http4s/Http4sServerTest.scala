@@ -39,15 +39,16 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
 
-    def blazeServerAssertions[T](routes: HttpRoutes[IO], expectedContext: T): IO[Assertion] = BlazeServerBuilder[IO]
-      .withExecutionContext(ExecutionContext.global)
-      .bindHttp(0, "localhost")
-      .withHttpApp(Router("/api" -> routes).orNotFound)
-      .resource
-      .use { server =>
-        val port = server.address.getPort
-        basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContext))
-      }
+    def assert_get_apiTestRouter_respondsWithExpectedContent[T](routes: HttpRoutes[IO], expectedContext: T): IO[Assertion] =
+      BlazeServerBuilder[IO]
+        .withExecutionContext(ExecutionContext.global)
+        .bindHttp(0, "localhost")
+        .withHttpApp(Router("/api" -> routes).orNotFound)
+        .resource
+        .use { server =>
+          val port = server.address.getPort
+          basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContext))
+        }
 
     def additionalTests(): List[Test] = List(
       Test("should work with a router and routes in a context") {
@@ -55,7 +56,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure(expectedContent.asRight[Unit]))
         val routes = Http4sServerInterpreter[IO]().toRoutes(e)
 
-        blazeServerAssertions(routes, expectedContent).unsafeRunSync()
+        assert_get_apiTestRouter_respondsWithExpectedContent(routes, expectedContent).unsafeRunSync()
       },
       Test("should work with a router and context routes in a context") {
         val expectedContext: String = "Hello World!" // the context we expect http4s to provide to the endpoint
@@ -72,7 +73,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         val middleware: ContextMiddleware[IO, String] =
           ContextMiddleware.const(expectedContext)
 
-        blazeServerAssertions(middleware(routesWithContext), expectedContext).unsafeRunSync()
+        assert_get_apiTestRouter_respondsWithExpectedContent(middleware(routesWithContext), expectedContext).unsafeRunSync()
       },
       Test("should work with a router and context routes in a context using contextSecurityIn") {
         val expectedContext: Int = 3
@@ -86,7 +87,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
 
         val middleware: ContextMiddleware[IO, Int] = ContextMiddleware.const(expectedContext)
 
-        blazeServerAssertions(middleware(routesWithContext), expectedContext.toString).unsafeRunSync()
+        assert_get_apiTestRouter_respondsWithExpectedContent(middleware(routesWithContext), expectedContext.toString).unsafeRunSync()
       },
       createServerTest.testServer(
         endpoint.out(
