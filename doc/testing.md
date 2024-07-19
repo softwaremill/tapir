@@ -354,3 +354,24 @@ Results in:
 ```scala mdoc
 result2.toString
 ```
+
+### Duplicated endpoint names
+
+Duplicate endpoint names will generate duplicate operation ids, when generating OpenAPI or AsyncAPI documentation. As
+the operation ids should be unique, this is reported as an error:
+
+Example 1:
+
+```scala mdoc:silent
+import sttp.tapir.testing.EndpointVerifier
+
+val ep1 = endpoint.name("e1").get.in("a")
+val ep2 = endpoint.name("e1").get.in("b")
+val result3 = EndpointVerifier(List(ep1, ep2))
+```
+
+Results in:
+
+```scala mdoc
+result3.toString
+```

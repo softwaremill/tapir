@@ -213,6 +213,9 @@ Options can be customised by providing an instance of `OpenAPIDocsOptions` to th
 * `schemaName`: specifies how schema names are created from the full type name. By default, this takes the last
   component of a dot-separated type name. Suffixes might be added at a later stage to disambiguate between different
   schemas with same names.
+* `failOnDuplicateOperationId`: if set to `true`, the interpreter will throw an exception if it encounters two endpoints
+  with the same operation id. An OpenAPI document with duplicate operation ids is not valid. Code generators can 
+  silently drop duplicates. This is also verified by the [endpoint verifier](../testing.md).
 
 ## Inlined and referenced schemas
 
