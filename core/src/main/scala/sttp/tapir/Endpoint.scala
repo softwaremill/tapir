@@ -314,8 +314,6 @@ trait EndpointInfoOps[-R] {
   private[tapir] def withInfo(info: EndpointInfo): ThisType[R]
 
   def name(n: String): ThisType[R] = withInfo(info.name(n))
-  def prefixName(n: String): ThisType[R] = withInfo(info.copy(name = Some(n + info.name.getOrElse(""))))
-  def suffixName(n: String): ThisType[R] = withInfo(info.copy(name = info.name.map(_ + n)))
 
   def summary(s: String): ThisType[R] = withInfo(info.summary(s))
   def description(d: String): ThisType[R] = withInfo(info.description(d))
