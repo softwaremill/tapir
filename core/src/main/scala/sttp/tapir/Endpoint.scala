@@ -314,7 +314,6 @@ trait EndpointInfoOps[-R] {
   private[tapir] def withInfo(info: EndpointInfo): ThisType[R]
 
   def name(n: String): ThisType[R] = withInfo(info.name(n))
-
   def summary(s: String): ThisType[R] = withInfo(info.summary(s))
   def description(d: String): ThisType[R] = withInfo(info.description(d))
   def deprecated(): ThisType[R] = withInfo(info.deprecated(true))
