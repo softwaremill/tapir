@@ -234,6 +234,7 @@ private[iron] object ValidatorForPredicate {
     }
 }
 
+// #3938: the two-level low-priority validators are needed because of implicit resolution changes in Scala 3.6
 private[iron] trait LowPriorityValidatorForPredicate extends LowPriorityValidatorForPredicate2 {
 
   inline given validatorForDescribedAnd[N, P](using
