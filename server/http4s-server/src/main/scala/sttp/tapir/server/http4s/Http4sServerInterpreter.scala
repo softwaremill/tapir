@@ -22,7 +22,7 @@ import scala.reflect.ClassTag
 class Http4sInvalidWebSocketUse(val message: String) extends Exception
 
 /** A capability that is used by endpoints, when they need to access the http4s-provided context. Such a requirement can be added using the
-  * [[RichHttp4sEndpoint.contextIn]] method.
+  * [[RichHttp4sEndpoint.contextIn]] or [[RichHttp4sEndpoint.contextSecurityIn]] methods.
   */
 trait Context[T]
 

@@ -4,6 +4,7 @@ import sttp.apispec.openapi.Info
 import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.endpoint
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.tests.Security._
 import sttp.tapir.tests.Basic._
@@ -109,5 +110,28 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     test(s"${e.showDetail} should convert to open api") {
       OpenAPIDocsInterpreter().toOpenAPI(e, Info("title", "19.2-beta-RC1"))
     }
+  }
+
+  test("should fail when OpenAPIDocsOptions.failOnDuplicateOperationId is true and there are duplicate operationIds") {
+    val e1 = endpoint.get.name("a")
+    val e2 = endpoint.post.name("a")
+
+    val options = OpenAPIDocsOptions.default.copy(failOnDuplicateOperationId = true)
+
+    val es = List(e1, e2)
+
+    assertThrows[IllegalStateException](
+      OpenAPIDocsInterpreter(options).toOpenAPI(es, Info("title", "19.2-beta-RC1"))
+    )
+  }
+  test("should pass when OpenAPIDocsOptions.failOnDuplicateOperationId is false and there are duplicate operationIds") {
+    val e1 = endpoint.get.name("a")
+    val e2 = endpoint.post.name("a")
+
+    val options = OpenAPIDocsOptions.default.copy(failOnDuplicateOperationId = false)
+
+    val es = List(e1, e2)
+
+    OpenAPIDocsInterpreter(options).toOpenAPI(es, Info("title", "19.2-beta-RC1"))
   }
 }

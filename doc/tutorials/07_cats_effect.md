@@ -1,5 +1,9 @@
 # 7. Integration with cats-effect & http4s
 
+```{note}
+The tutorial is also available [as a video](https://www.youtube.com/watch?v=M6ZHXM8_kaU).
+```
+
 [cats-effect](https://github.com/typelevel/cats-effect) is one of the most popular functional effect systems for Scala 
 (probably also one of the top ones when it comes to pure functional programming in general). So far we've used Tapir in 
 combination with so-called "direct style", where the server logic is expressed using synchronous, blocking code.

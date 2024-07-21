@@ -322,6 +322,15 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
       UnexpectedBodyError(e5, StatusCode.NoContent)
     )
   }
+
+  it should "detect duplicate names among endpoints, all endpoints names (operationId's) must be unique" in {
+    val e1 = endpoint.in("a").name("Z")
+    val e2 = endpoint.in("b").name("Z")
+
+    val result = EndpointVerifier(List(e1, e2))
+
+    result shouldBe Set(DuplicatedNameError("Z"))
+  }
 }
 
 sealed trait ErrorInfo
