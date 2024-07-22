@@ -2,11 +2,17 @@ package sttp.tapir.server.ziohttp
 
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.HasHeaders
+import sttp.model.Part
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.CodecFormat
+import sttp.tapir.RawBodyType
+import sttp.tapir.WebSocketBodyOutput
 import zio.Chunk
+import zio.http.FormField
+import zio.http.MediaType
 import zio.stream.ZStream
 
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
@@ -75,5 +81,52 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioResponseBody, ZioStreams] 
           }
           .getOrElse(ZioStreamHttpResponseBody(ZStream.fromPath(tapirFile.file.toPath), Some(tapirFile.file.length)))
       case RawBodyType.MultipartBody(_, _) => throw new UnsupportedOperationException("Multipart is not supported")
+    }
+
+    def toFormField[CF <: CodecFormat, R](bodyType: RawBodyType[R], part: Part[R], r: R): FormField = {
+      val mediaType: Option[MediaType] = part.contentType.flatMap(MediaType.forContentType)
+      bodyType match {
+        case RawBodyType.StringBody(_) =>
+          FormField.Text(part.name, part.body, mediaType.getOrElse(MediaType.text.plain), part.fileName)
+        case RawBodyType.ByteArrayBody =>
+          FormField.Binary(
+            part.name,
+            Chunk.fromArray(part.body),
+            mediaType.getOrElse(MediaType.application.`octet-stream`),
+            filename = part.fileName
+          )
+        case RawBodyType.ByteBufferBody =>
+          val array: Array[Byte] = new Array[Byte](r.remaining)
+          r.get(array)
+          FormField.Binary(
+            part.name,
+            Chunk.fromArray(array),
+            mediaType.getOrElse(MediaType.application.`octet-stream`),
+            filename = part.fileName
+          )
+        case RawBodyType.FileBody =>
+          FormField.streamingBinaryField(
+            part.name,
+            ZStream.fromFile(r.file).orDie,
+            mediaType.getOrElse(MediaType.application.`octet-stream`),
+            filename = part.fileName
+          )
+        case RawBodyType.InputStreamBody =>
+          FormField.streamingBinaryField(
+            part.name,
+            ZStream.fromInputStream(r).orDie,
+            mediaType.getOrElse(MediaType.application.`octet-stream`),
+            filename = part.fileName
+          )
+        case RawBodyType.InputStreamRangeBody =>
+          FormField.streamingBinaryField(
+            part.name,
+            ZStream.fromInputStream(r.inputStream()).orDie,
+            mediaType.getOrElse(MediaType.application.`octet-stream`),
+            filename = part.fileName
+          )
+        case _: RawBodyType.MultipartBody =>
+          throw new UnsupportedOperationException("Nested multipart messages are not supported.")
+      }
     }
 }
