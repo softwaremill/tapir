@@ -87,25 +87,30 @@ trait ZioHttpInterpreter[R] {
         case _                                => false
       }
 
-      val pathPrefixPattern = if (hasPath) {
+      val pattern = if (hasPath) {
         val initialPattern = RoutePattern(Method.ANY, PathCodec.empty).asInstanceOf[RoutePattern[Any]]
-        val base = inputs
-          .foldLeft(initialPattern) { case (p, component) =>
+        // The second tuple parameter specifies if PathCodec.trailing should be added to the route's pattern. It can
+        // be added either because of a PathsCapture, or because of an ExtractFromRequest input, which can extract
+        // arbitrary data, including the path.
+        val (p, addTrailing) = inputs
+          .foldLeft((initialPattern, false)) { case ((p, addTrailing), component) =>
             component match {
-              case i: EndpointInput.PathCapture[_] => (p / PathCodec.string(i.name.getOrElse("?"))).asInstanceOf[RoutePattern[Any]]
-              case i: EndpointInput.FixedPath[_]   => p / PathCodec.literal(i.s)
-              case _                               => p
+              case i: EndpointInput.PathCapture[_] =>
+                ((p / PathCodec.string(i.name.getOrElse("?"))).asInstanceOf[RoutePattern[Any]], addTrailing)
+              case _: EndpointInput.ExtractFromRequest[_] => (p, true)
+              case _: EndpointInput.PathsCapture[_]       => (p, true)
+              case i: EndpointInput.FixedPath[_]          => (p / PathCodec.literal(i.s), addTrailing)
+              case _                                      => (p, addTrailing)
             }
           }
-        // because we capture the path prefix, we add a matcher for arbitrary other path components (which might be
-        // handled by tapir's `paths` or `extractFromRequest`)
-        base / PathCodec.trailing
+
+        if (addTrailing) p / PathCodec.trailing else p
       } else {
         // if there are no path inputs, we return a catch-all
         RoutePattern(Method.ANY, PathCodec.trailing).asInstanceOf[RoutePattern[Any]]
       }
 
-      Route.handled(pathPrefixPattern)(Handler.fromFunctionHandler { (request: Request) => handleRequest(request, sesForPathTemplate) })
+      Route.handled(pattern)(Handler.fromFunctionHandler { (request: Request) => handleRequest(request, sesForPathTemplate) })
     }
 
     Routes(Chunk.fromIterable(handlers))
