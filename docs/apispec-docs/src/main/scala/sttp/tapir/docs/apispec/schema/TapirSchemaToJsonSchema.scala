@@ -9,7 +9,7 @@ object TapirSchemaToJsonSchema {
   def apply(
       schema: TSchema[_],
       markOptionsAsNullable: Boolean,
-      metaSchema: MetaSchema = MetaSchemaDraft04,
+      metaSchema: MetaSchema = MetaSchemaDraft202012,
       schemaName: TSchema.SName => String = defaultSchemaName
   ): ASchema = {
 
