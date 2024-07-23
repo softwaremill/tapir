@@ -75,7 +75,30 @@ trait ZioHttpInterpreter[R] {
       x
     }
 
-    val handlers: List[Route[R & R2, Response]] = widenedSesGroupedByPathPrefixTemplate.toList.map { case (_, sesForPathTemplate) =>
+    // Sorting path prefix templates from the most specific to the least specific. Path wildcards should always be less
+    // specific than fixed parts. The sorting function splits prefixes by the '/' char and assigns 0 to wildcard elements
+    // and 1 to all other parts. An example of such sorting:
+    //  1. "/p1/p2/p3" => "1111"
+    //  2. "/p1/p2/?" => "1110"
+    //  3. "/p1/p2" => "111"
+    //  4. "/p1/?/p2" => "1101"
+    //  5. "/p1/?" => "110"
+    //  6. "/p1" => "11"
+    val widenedSesGroupedByPathPrefixSortedTemplate = widenedSesGroupedByPathPrefixTemplate.toList.sortWith { (leftGroup, rightGroup) =>
+      val leftPrefix = leftGroup._1
+      val rightPrefix = rightGroup._1
+      val leftPrefixSortable = leftPrefix.split('/').map(_ match {
+        case "?" => "0" // Consider path wildcards as less specific than fixed paths
+        case _ => "1"  // Consider fixed paths as the most specific elements
+      }).mkString
+      val rightPrefixSortable = rightPrefix.split('/').map(_ match {
+        case "?" => "0"
+        case _ => "1"
+      }).mkString
+      leftPrefixSortable.compareTo(rightPrefixSortable) > 0
+    }
+
+    val handlers: List[Route[R & R2, Response]] = widenedSesGroupedByPathPrefixSortedTemplate.map { case (_, sesForPathTemplate) =>
       // The pattern that we generate should be the same for all endpoints in a group
       val e = sesForPathTemplate.head.endpoint
       val inputs = e.securityInput.and(e.input).asVectorOfBasicInputs()

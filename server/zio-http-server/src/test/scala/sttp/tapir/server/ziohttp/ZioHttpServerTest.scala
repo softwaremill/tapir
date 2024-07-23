@@ -163,6 +163,27 @@ class ZioHttpServerTest extends TestSuite {
 
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
+          // https://github.com/softwaremill/tapir/issues/3945
+          Test("zio http sort routes by their complexity") {
+            val test: UIO[Assertion] = for {
+              ep1 <- ZIO.succeed(endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ZIO.succeed("Hello!")))
+              ep2 <- ZIO.succeed(endpoint.get.in("p1" / path[String]("name")).out(stringBody).zServerLogic[Any](name => ZIO.succeed(s"Hello $name!")))
+              routes = List(ep1, ep2)
+              app = ZioHttpInterpreter().toHttp(routes)
+              _ <- app
+                .runZIO(Request.get(url = URL(Path.empty / "p1")))
+                .flatMap(response => response.body.asString)
+                .map(_ shouldBe "Hello!")
+                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+              result <- app
+                .runZIO(Request.get(url = URL(Path.empty / "p1" / "Jane")))
+                .flatMap(response => response.body.asString)
+                .map(_ shouldBe "Hello Jane!")
+                .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+            } yield result
+
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
           // https://github.com/softwaremill/tapir/issues/3907
           Test("extractFromRequest in the middle") {
             val ep = endpoint.get
