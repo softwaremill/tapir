@@ -1,3 +1,9 @@
+// {cat=Streaming; effects=ZIO; server=ZIO HTTP}: Stream response as a ZIO stream
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.10.14
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+
 package sttp.tapir.examples.streaming
 
 import sttp.capabilities.zio.ZioStreams
@@ -12,7 +18,7 @@ import zio.stream.*
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 
-object StreamingZioHttpServer extends ZIOAppDefault {
+object StreamingZioHttpServer extends ZIOAppDefault:
   // corresponds to: GET /receive?name=...
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
   // body. Here, the schema is a `string` (set by `streamTextBody`) and the media type is `text/plain`.
@@ -46,4 +52,3 @@ object StreamingZioHttpServer extends ZIOAppDefault {
         Server.live
       )
       .exitCode
-}

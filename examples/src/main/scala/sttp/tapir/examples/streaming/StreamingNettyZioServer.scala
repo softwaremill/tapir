@@ -1,3 +1,9 @@
+// {cat=Streaming; effects=ZIO; server=Netty}: Stream response as a ZIO stream
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-zio:1.10.14
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+
 package sttp.tapir.examples.streaming
 
 import sttp.capabilities.zio.ZioStreams
@@ -13,7 +19,7 @@ import zio.stream.*
 
 import java.nio.charset.StandardCharsets
 
-object StreamingNettyZioServer extends ZIOAppDefault {
+object StreamingNettyZioServer extends ZIOAppDefault:
   // corresponds to: GET /receive?name=...
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
   // body. Here, the schema is a `string` (set by `streamTextBody`) and the media type is `text/plain`.
@@ -38,7 +44,7 @@ object StreamingNettyZioServer extends ZIOAppDefault {
   private val declaredPort = 9090
   private val declaredHost = "localhost"
 
-  override def run: URIO[Any, ExitCode] = {
+  override def run: URIO[Any, ExitCode] =
     (for {
       binding <- NettyZioServer()
         .port(declaredPort)
@@ -46,11 +52,9 @@ object StreamingNettyZioServer extends ZIOAppDefault {
         .addEndpoint(serverEndpoint)
         .start()
       _ = {
-        val port = binding.port
-        val host = binding.hostName
         println(s"Server started at port = ${binding.port}")
 
-        val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+        val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
         val result: String =
           basicRequest.response(asStringAlways).get(uri"http://$declaredHost:$declaredPort/receive").send(backend).body
         println("Got result: " + result)
@@ -59,5 +63,3 @@ object StreamingNettyZioServer extends ZIOAppDefault {
       }
       _ <- binding.stop()
     } yield ()).exitCode
-  }
-}

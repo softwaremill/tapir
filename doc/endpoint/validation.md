@@ -25,7 +25,7 @@ Validators can also be added to individual inputs/outputs. Behind the scenes, th
 to add top-level validators this way, rather than modifying the implicit schemas, for example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 
 val e = endpoint.in(
   query[Int]("amount")
@@ -36,7 +36,7 @@ val e = endpoint.in(
 For optional/iterable inputs/outputs, to validate the contained value(s), use:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 
 query[Option[Int]]("item").validateOption(Validator.min(0))
 query[List[Int]]("item").validateIterable(Validator.min(0)) // validates each repeated parameter
@@ -47,12 +47,12 @@ query[List[Int]]("item").validateIterable(Validator.min(0)) // validates each re
 Finally, if you are creating a reusable [codec](codecs.md), a validator can be added to it as well:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.CodecFormat.TextPlain
 
 case class MyId(id: String)
 
-implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string
+given Codec[String, MyId, TextPlain] = Codec.string
   .map(MyId(_))(_.id)
   .validate(Validator.pattern("^[A-Z].*").contramap(_.id))
 ```
@@ -95,14 +95,14 @@ converts the enum value to a raw type (typically a string). This can be specifie
 For example:
 
 ```scala mdoc:silent:reset-object
-import sttp.tapir._
+import sttp.tapir.*
 
 sealed trait Color
 case object Blue extends Color
 case object Red extends Color
 
 // providing the enum values by hand
-implicit def colorSchema: Schema[Color] = Schema.string.validate(
+given Schema[Color] = Schema.string.validate(
   Validator.enumeration(List(Blue, Red), (c: Color) => Some(c.toString.toLowerCase)))
 ```
 

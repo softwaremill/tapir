@@ -23,13 +23,13 @@ Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or 
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.14"
 ```
 
-Let's assume you are using the [akka http](server/akkahttp.md) interpreter. Given the following server endpoint:
+Let's assume you are using the [pekko http](server/pekkohttp.md) interpreter. Given the following server endpoint:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import scala.concurrent.Future
 
@@ -53,11 +53,11 @@ A test which verifies how this endpoint behaves when interpreter as a server mig
 ```scala
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.client3._
+import sttp.client3.*
 import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.server.stub.TapirStubInterpreter
 
-class MySpec extends AsyncFlatSpec with Matchers {
+class MySpec extends AsyncFlatSpec with Matchers:
   it should "work" in {
     // given
     val backendStub: SttpBackend[Future, Any] = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
@@ -74,7 +74,6 @@ class MySpec extends AsyncFlatSpec with Matchers {
     // then
     response.map(_.body shouldBe Right("hello user123"))  
   }
-}
 ```
 
 The `.backend` method creates the enriched `SttpBackendStub`, using the provided server endpoints and their
@@ -85,12 +84,12 @@ Projects generated using [adopt-tapir](https://adopt-tapir.softwaremill.com) inc
 ### Custom interpreters
 
 Custom interpreters can be provided to the stub. For example, to test custom exception handling, we might have the
-following customised akka http options:
+following customised pekko http options:
 
 ```scala
 import sttp.tapir.server.interceptor.exception.ExceptionHandler
 import sttp.tapir.server.interceptor.CustomiseInterceptors
-import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.pekkohttp.PekkoHttpServerOptions
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.model.StatusCode
 
@@ -101,9 +100,9 @@ val exceptionHandler = ExceptionHandler.pure[Future](ctx =>
     ))
 )
 
-val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = {
+val customOptions: CustomiseInterceptors[Future, PekkoHttpServerOptions] = {
   import scala.concurrent.ExecutionContext.Implicits.global
-  AkkaHttpServerOptions.customiseInterceptors
+  PekkoHttpServerOptions.customiseInterceptors
     .exceptionHandler(exceptionHandler)
 }    
 ```
@@ -111,8 +110,7 @@ val customOptions: CustomiseInterceptors[Future, AkkaHttpServerOptions] = {
 Testing such an interceptor requires simulating an exception being thrown in the server logic:
 
 ```scala
-class MySpec2 extends AsyncFlatSpec with Matchers {
-
+class MySpec2 extends AsyncFlatSpec with Matchers:
   it should "use my custom exception handler" in {
     // given
     val stub = TapirStubInterpreter(customOptions, SttpBackendStub.asynchronousFuture)
@@ -127,7 +125,6 @@ class MySpec2 extends AsyncFlatSpec with Matchers {
       // then
       .map(_.body shouldBe Left("failed due to error"))  
   }
-}
 ```
 
 Note that to provide alternate success/error outputs given a `ServerEndpoint`, the endpoint will have to be typed
@@ -142,23 +139,23 @@ requests matching an endpoint, you can use the tapir `SttpBackendStub` extension
 Similarly as when testing server interpreters, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.14"
 ```
 
 And the following imports:
 
 ```scala
 import sttp.client3.testing.SttpBackendStub
-import sttp.tapir.server.stub._
+import sttp.tapir.server.stub.*
 ``` 
 
 Then, given the following endpoint:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 case class ResponseWrapper(value: Double)
 
@@ -197,22 +194,22 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.10.14"
 ```
 
 Imports:
 
 ```scala
-import sttp.tapir.server.mockserver._
+import sttp.tapir.server.mockserver.*
 ``` 
 
 Then, given the following endpoint:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 case class SampleIn(name: String, age: Int)
 
@@ -268,7 +265,7 @@ result == out
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.10.14"
 ```
 
 ### Shadowed endpoints

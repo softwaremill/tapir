@@ -14,15 +14,15 @@ For example, here's an endpoint where the requests are strings (hence only text 
 are parsed/formatted as json:
 
 ```scala
-import sttp.tapir._
-import sttp.capabilities.akka.AkkaStreams
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.capabilities.pekko.PekkoStreams
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
+import io.circe.generic.auto.*
 
 case class Response(msg: String, count: Int)
 endpoint.out(
-  webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
+  webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](PekkoStreams))
 ```
 
 When creating a `webSocketBody`, we need to provide the following parameters:
@@ -39,17 +39,17 @@ decoded, but this can be customised through methods on `webSocketBody`.
 Alternatively, it's possible to obtain a raw pipe transforming `WebSocketFrame`s: 
 
 ```scala
-import akka.stream.scaladsl.Flow
-import sttp.tapir._
-import sttp.capabilities.akka.AkkaStreams
+import org.apache.pekko.stream.scaladsl.Flow
+import sttp.tapir.*
+import sttp.capabilities.pekko.PekkoStreams
 import sttp.capabilities.WebSockets
 import sttp.ws.WebSocketFrame
 
-endpoint.out(webSocketBodyRaw(AkkaStreams)): PublicEndpoint[
+endpoint.out(webSocketBodyRaw(PekkoStreams)): PublicEndpoint[
   Unit, 
   Unit, 
   Flow[WebSocketFrame, WebSocketFrame, Any], 
-  AkkaStreams with WebSockets]
+  PekkoStreams with WebSockets]
 ```
 
 Such a pipe by default doesn't handle ping-pong frames automatically, doesn't concatenate fragmented flames, and
@@ -60,7 +60,7 @@ Request/response schemas can be customised through `.requestsSchema` and `.respo
 ## Interpreting as a sever
 
 When interpreting a web socket endpoint as a server, the [server logic](../server/logic.md) needs to provide a
-streaming-specific pipe from requests to responses. E.g. in akka's case, this will be `Flow[REQ, RESP, Any]`.
+streaming-specific pipe from requests to responses. E.g. in Pekko's case, this will be `Flow[REQ, RESP, Any]`.
 
 Refer to the documentation of interpreters for more details, as not all interpreters support all settings.
 

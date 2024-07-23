@@ -38,7 +38,7 @@ converted to a function using a single argument using `.tupled`, or that you'll 
 to extract the parameters:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import scala.concurrent.Future
 
@@ -63,7 +63,7 @@ Both a single server endpoint, and multiple endpoints can be interpreted as a se
 endpoints can be converted to a Netty route:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -90,13 +90,13 @@ errors which are subtypes of `E`. Any others will be propagated without changes.
 For example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import scala.concurrent.Future
 
 case class MyError(msg: String) extends Exception
 val testEndpoint = endpoint
   .in(query[Boolean]("fail"))
-  .errorOut(stringBody.map(MyError)(_.msg))
+  .errorOut(stringBody.map(MyError(_))(_.msg))
   .out(stringBody)
   .serverLogicRecoverErrors { fail =>
      if (fail) {
@@ -141,11 +141,11 @@ provided.
 For example, we can create a partial server endpoint given the security logic, and an endpoint with security inputs:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.server._
-import scala.concurrent.Future
+import sttp.tapir.*
+import sttp.tapir.server.*
+import scala.concurrent.{ExecutionContext, Future}
 
-implicit val ec = scala.concurrent.ExecutionContext.global
+implicit val ec: ExecutionContext = ExecutionContext.global
 
 case class User(name: String)
 def authLogic(token: String): Future[Either[Int, User]] = Future {
@@ -207,8 +207,8 @@ with an error output (for security errors) and the security logic to add. This a
 before the security logic defined in the endpoint so far (if any). For example:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.files._
+import sttp.tapir.*
+import sttp.tapir.files.*
 import scala.concurrent.Future
 import sttp.model.StatusCode
 

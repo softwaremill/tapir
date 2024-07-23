@@ -13,7 +13,7 @@ these steps can be done separately, giving you complete control over the process
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.10.14"
 ```
 
 Then, you can interpret a list of endpoints using `SwaggerInterpreter`. The result will be a list of file-serving 
@@ -22,7 +22,7 @@ with the endpoints for which the documentation is generated, will need in turn t
 interpreter. For example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 
@@ -55,7 +55,7 @@ for details.
 Similarly as above, you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.10.14"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -65,7 +65,7 @@ And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.Red
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.14"
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
@@ -77,7 +77,7 @@ object:
 
 ```scala
 import sttp.apispec.openapi.OpenAPI
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val booksListing = endpoint.in(path[String]("bookId"))
@@ -111,7 +111,7 @@ OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGen
 The openapi case classes can then be serialised to YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala
-import sttp.apispec.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml.*
 
 println(docs.toYaml)
 ```
@@ -120,8 +120,8 @@ Or to JSON:
 
 ```scala
 import io.circe.Printer
-import io.circe.syntax._
-import sttp.apispec.openapi.circe._
+import io.circe.syntax.*
+import sttp.apispec.openapi.circe.*
 
 println(Printer.spaces2.print(docs.asJson))
 ```
@@ -133,15 +133,15 @@ For example, generating the OpenAPI 3.0.3 YAML string can be achieved by perform
 
 Firstly add dependencies:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.14"
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
 and generate the documentation by importing valid extension methods and explicitly specifying the "3.0.3" version in the OpenAPI model:
 ```scala
 import sttp.apispec.openapi.OpenAPI
-import sttp.apispec.openapi.circe.yaml._ // for `toYaml` extension method
-import sttp.tapir._
+import sttp.apispec.openapi.circe.yaml.* // for `toYaml` extension method
+import sttp.tapir.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 case class Book(id: Option[Long], title: Option[String])
@@ -163,19 +163,19 @@ The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definit
 yaml format, will expose it using the given context path. To use, add as a dependency either
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.10.14"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.10.14"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
 
 ```scala
-import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir._
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.server.netty.{NettyFutureServerInterpreter, FutureRoute}
 import sttp.tapir.swagger.SwaggerUI
@@ -223,7 +223,7 @@ that is they will form a single security requirement, with multiple schemes, e.g
 
 ```scala
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.tapir._
+import sttp.tapir.*
 
 val multiAuthEndpoint =
   endpoint.post
@@ -247,7 +247,7 @@ can be done in the security logic, server logic, or by mapping the inputs using 
 
 ```scala
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.tapir._
+import sttp.tapir.*
 
 val alternativeAuthEndpoint = endpoint.securityIn(
   // auth.apiKey(...).and(auth.apiKey(..)) will map the request headers to a tuple (Option[String], Option[String])
@@ -281,16 +281,16 @@ Specification extensions can be added by first importing an extension method, an
 method which manipulates the appropriate attribute on the schema, endpoint or endpoint input/output:
 
 ```scala
-import sttp.apispec.openapi._
-import sttp.apispec.openapi.circe._
-import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
-import io.circe.generic.auto._
+import sttp.apispec.openapi.*
+import sttp.apispec.openapi.circe.*
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
+import io.circe.generic.auto.*
 
 import sttp.tapir.docs.apispec.DocsExtension
-import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+import sttp.tapir.docs.apispec.DocsExtensionAttribute.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 case class FruitAmount(fruit: String, amount: Int)
@@ -329,7 +329,7 @@ If you are using `tapir-swagger-ui` you need to set `withShowExtensions` option 
 It's possible to hide an input/output from the OpenAPI description using following syntax:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 
 val acceptHeader: EndpointInput[String] = header[String]("Accept").schema(_.hidden(true))
 ```

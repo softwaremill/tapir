@@ -1,3 +1,13 @@
+// {cat=Hello, World!; effects=ZIO; server=http4s; json=circe; docs=Swagger UI}: Exposing an endpoint using the http4s server
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.10.14
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep dev.zio::zio-interop-cats:23.1.0.2
+
 package sttp.tapir.examples
 
 import cats.syntax.all.*
@@ -14,7 +24,7 @@ import sttp.tapir.ztapir.*
 import zio.interop.catz.*
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault}
 
-object ZioExampleHttp4sServer extends ZIOAppDefault {
+object ZioExampleHttp4sServer extends ZIOAppDefault:
   case class Pet(species: String, url: String)
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
@@ -61,4 +71,3 @@ object ZioExampleHttp4sServer extends ZIOAppDefault {
     )
 
   override def run: URIO[Any, ExitCode] = serve.exitCode
-}

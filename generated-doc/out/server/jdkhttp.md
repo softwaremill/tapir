@@ -5,13 +5,13 @@ To expose endpoints using the
 (`com.sun.net.httpserver`), first add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-jdkhttp-server" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-jdkhttp-server" % "1.10.14"
 ```
 
 Then, import the package:
 
 ```scala
-import sttp.tapir.server.jdkhttp._
+import sttp.tapir.server.jdkhttp.*
 ```
 
 and use `JdkHttpServer().addEndpoints` to expose server endpoints.
@@ -25,8 +25,8 @@ original `serverLogic` methods and also because names are shorter.
 For example:
 
 ```scala
-import sttp.tapir._
-import sttp.tapir.server.jdkhttp._
+import sttp.tapir.*
+import sttp.tapir.server.jdkhttp.*
 
 val helloWorld = endpoint
   .get

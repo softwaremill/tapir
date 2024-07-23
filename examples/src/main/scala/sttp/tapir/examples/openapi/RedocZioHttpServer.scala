@@ -1,3 +1,10 @@
+// {cat=OpenAPI documentation; effects=ZIO; server=ZIO HTTP; json=circe; docs=ReDoc}: Exposing documentation using ReDoc
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-redoc-bundle:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.10.14
+
 package sttp.tapir.examples.openapi
 
 import io.circe.generic.auto.*
@@ -10,7 +17,7 @@ import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.Console.{printLine, readLine}
 import zio.{Task, ZIO, ZIOAppDefault, ZLayer}
 
-object RedocZioHttpServer extends ZIOAppDefault {
+object RedocZioHttpServer extends ZIOAppDefault:
   case class Pet(species: String, url: String)
 
   val petEndpoint: ZServerEndpoint[Any, Any] =
@@ -24,7 +31,7 @@ object RedocZioHttpServer extends ZIOAppDefault {
   val redocRoutes: Routes[Any, ZioHttpResponse] =
     ZioHttpInterpreter().toHttp(RedocInterpreter().fromServerEndpoints[Task](List(petEndpoint), "Our pets", "1.0"))
 
-  val app = (petRoutes ++ redocRoutes)
+  val app: Routes[Any, ZioHttpResponse] = (petRoutes ++ redocRoutes)
 
   override def run = {
     printLine("Go to: http://localhost:8080/docs") *>
@@ -40,4 +47,3 @@ object RedocZioHttpServer extends ZIOAppDefault {
           readLine *> fiber.interrupt
         }
   }.exitCode
-}

@@ -1,3 +1,10 @@
+// {cat=Hello, World!; effects=Future; server=http4s}: Exposing an endpoint using the http4s server
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.10.14
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+
 package sttp.tapir.examples
 
 import cats.effect.*
@@ -12,7 +19,7 @@ import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import scala.concurrent.ExecutionContext
 
-object HelloWorldHttp4sServer extends IOApp {
+object HelloWorldHttp4sServer extends IOApp:
   // the endpoint: single fixed path input ("hello"), single query parameter
   // corresponds to: GET /hello?name=...
   val helloWorld: PublicEndpoint[String, Unit, String, Any] =
@@ -24,7 +31,7 @@ object HelloWorldHttp4sServer extends IOApp {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // starting the server
     BlazeServerBuilder[IO]
       .withExecutionContext(ec)
@@ -40,5 +47,3 @@ object HelloWorldHttp4sServer extends IOApp {
         }
       }
       .as(ExitCode.Success)
-  }
-}

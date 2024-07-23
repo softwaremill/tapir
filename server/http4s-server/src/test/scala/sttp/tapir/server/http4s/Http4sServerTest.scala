@@ -11,7 +11,7 @@ import org.http4s.server.Router
 import org.http4s.server.ContextMiddleware
 import org.http4s.ContextRoutes
 import org.http4s.HttpRoutes
-import org.scalatest.OptionValues
+import org.scalatest.{Assertion, OptionValues}
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -39,23 +39,26 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
 
+    def assert_get_apiTestRouter_respondsWithExpectedContent[T](routes: HttpRoutes[IO], expectedContext: T): IO[Assertion] =
+      BlazeServerBuilder[IO]
+        .withExecutionContext(ExecutionContext.global)
+        .bindHttp(0, "localhost")
+        .withHttpApp(Router("/api" -> routes).orNotFound)
+        .resource
+        .use { server =>
+          val port = server.address.getPort
+          basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContext))
+        }
+
     def additionalTests(): List[Test] = List(
       Test("should work with a router and routes in a context") {
-        val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure("ok".asRight[Unit]))
+        val expectedContent: String = "ok"
+        val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure(expectedContent.asRight[Unit]))
         val routes = Http4sServerInterpreter[IO]().toRoutes(e)
 
-        BlazeServerBuilder[IO]
-          .withExecutionContext(ExecutionContext.global)
-          .bindHttp(0, "localhost")
-          .withHttpApp(Router("/api" -> routes).orNotFound)
-          .resource
-          .use { server =>
-            val port = server.address.getPort
-            basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right("ok"))
-          }
-          .unsafeRunSync()
+        assert_get_apiTestRouter_respondsWithExpectedContent(routes, expectedContent).unsafeRunSync()
       },
-      Test("should work with a router and  context routes in a context") {
+      Test("should work with a router and context routes in a context") {
         val expectedContext: String = "Hello World!" // the context we expect http4s to provide to the endpoint
 
         val e: Endpoint[Unit, String, Unit, String, Context[String]] =
@@ -70,16 +73,21 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         val middleware: ContextMiddleware[IO, String] =
           ContextMiddleware.const(expectedContext)
 
-        BlazeServerBuilder[IO]
-          .withExecutionContext(ExecutionContext.global)
-          .bindHttp(0, "localhost")
-          .withHttpApp(Router("/api" -> middleware(routesWithContext)).orNotFound)
-          .resource
-          .use { server =>
-            val port = server.address.getPort
-            basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContext))
-          }
-          .unsafeRunSync()
+        assert_get_apiTestRouter_respondsWithExpectedContent(middleware(routesWithContext), expectedContext).unsafeRunSync()
+      },
+      Test("should work with a router and context routes in a context using contextSecurityIn") {
+        val expectedContext: Int = 3
+
+        val e: Endpoint[Int, Unit, Unit, String, Context[Int]] =
+          endpoint.get.in("test" / "router").contextSecurityIn[Int]().out(stringBody)
+
+        val routesWithContext: ContextRoutes[Int, IO] =
+          Http4sServerInterpreter[IO]()
+            .toContextRoutes(e.serverSecurityLogicSuccess(IO.pure).serverLogicSuccess(x => _ => IO.pure(x.toString)))
+
+        val middleware: ContextMiddleware[IO, Int] = ContextMiddleware.const(expectedContext)
+
+        assert_get_apiTestRouter_respondsWithExpectedContent(middleware(routesWithContext), expectedContext.toString).unsafeRunSync()
       },
       createServerTest.testServer(
         endpoint.out(

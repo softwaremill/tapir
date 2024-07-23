@@ -25,16 +25,16 @@ class VertxTestServerInterpreter(vertx: Vertx)
       es.map(interpreter.route(_)(router)).last
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[Router => Route],
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val router = Router.router(vertx)
     val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
     val listenIO = vertxFutureToIo(server.listen(0))
     routes.toList.foreach(_.apply(router))
     // Vertx doesn't offer graceful shutdown with timeout OOTB
-    Resource.make(listenIO.map(s => (s.actualPort(), vertxFutureToIo(s.close()).void))) { case (_, release) => release }
+    Resource.make(listenIO)(s => vertxFutureToIo(s.close()).void).map(s => s.actualPort())
   }
 }
 

@@ -1,3 +1,9 @@
+// {cat=Observability; effects=ZIO; server=ZIO HTTP}: Reporting Prometheus metrics
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-metrics:1.10.14
+
 package sttp.tapir.examples.observability
 
 import sttp.tapir.*
@@ -9,7 +15,7 @@ import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.{Task, ZIO, _}
 
 /** Based on https://adopt-tapir.softwaremill.com zio version. */
-object ZioMetricsExample extends ZIOAppDefault {
+object ZioMetricsExample extends ZIOAppDefault:
 
   case class User(name: String) extends AnyVal
 
@@ -27,16 +33,14 @@ object ZioMetricsExample extends ZIOAppDefault {
   val metricsInterceptor: MetricsRequestInterceptor[Task] = metrics.metricsInterceptor()
 
   // noinspection DuplicatedCode
-  override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] = {
+  override def run: ZIO[Any & ZIOAppArgs & Scope, Any, Any] =
     val serverOptions: ZioHttpServerOptions[Any] =
       ZioHttpServerOptions.customiseInterceptors.metricsInterceptor(metricsInterceptor).options
     val app: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter(serverOptions).toHttp(all)
 
-    val port = sys.env.get("http.port").map(_.toInt).getOrElse(8080)
-
     (for {
       serverPort <- Server.install(app)
-      _ <- Console.printLine(s"Server started at http://localhost:${serverPort}. Press ENTER key to exit.")
+      _ <- Console.printLine(s"Server started at http://localhost:$serverPort. Press ENTER key to exit.")
       _ <- Console.readLine
     } yield serverPort)
       .provide(
@@ -44,6 +48,3 @@ object ZioMetricsExample extends ZIOAppDefault {
         Server.live
       )
       .exitCode
-  }
-
-}

@@ -6,13 +6,13 @@ See the [Play framework documentation](https://www.playframework.com/documentati
 For **Play 3.0**, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "1.10.14"
 ```
 
 For **Play 2.9**, add
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play29-client" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-play29-client" % "1.10.14"
 ```
 
 instead. Furthermore, replace all uses of `sttp.capabilities.pekko.PekkoStreams` in the following code snippets with `sttp.capabilities.akka.AkkaStreams`.
@@ -51,7 +51,7 @@ After providing the input parameters, the two following are returned:
 Example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.client.play.PlayClientInterpreter
 import sttp.capabilities.pekko.PekkoStreams
 
@@ -60,7 +60,7 @@ import scala.concurrent.Future
 
 import play.api.libs.ws.StandaloneWSClient
 
-def example[I, E, O, R >: PekkoStreams](implicit wsClient: StandaloneWSClient) {
+def example[I, E, O, R >: PekkoStreams](implicit wsClient: StandaloneWSClient): Unit = 
   val e: PublicEndpoint[I, E, O, R] = ???
   val inputArgs: I = ???
 
@@ -71,7 +71,6 @@ def example[I, E, O, R >: PekkoStreams](implicit wsClient: StandaloneWSClient) {
   val result: Future[Either[E, O]] = req
       .execute()
       .map(responseParser)
-}
 ```
 
 ## Limitations

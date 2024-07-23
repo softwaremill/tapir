@@ -13,7 +13,6 @@ import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.tests._
-import org.scalactic.anyvals.FiniteDouble
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.FiniteDuration
@@ -53,7 +52,7 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
     */
   def testServerWithStop(name: String, rs: => NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration])(
       runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
-  ): Test = testServer(name, rs)(runTest(IO.unit))
+  ): Test
 }
 
 class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](

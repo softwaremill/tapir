@@ -21,10 +21,10 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
     NettyCatsServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[Route[IO]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val config = NettyConfig.default
       .eventLoopGroup(eventLoopGroup)
       .randomPort
@@ -36,6 +36,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
     val bind: IO[NettyCatsServerBinding[IO]] = NettyCatsServer(options, customizedConfig).addRoutes(routes.toList).start()
 
     Resource
-      .make(bind.map(b => (b.port, b.stop()))) { case (_, release) => release }
+      .make(bind)(_.stop())
+      .map(_.port)
   }
 }

@@ -1,3 +1,11 @@
+// {cat=Error handling; effects=cats-effect; server=Netty; JSON=circe}: Error reporting provided by Iron type refinements
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.10.14
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+
 package sttp.tapir.examples.errors
 
 import cats.effect.{IO, IOApp}
@@ -24,7 +32,7 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.codec.iron.given
 import sttp.tapir.generic.auto.*
 
-object IronRefinementErrorsNettyServer extends IOApp.Simple {
+object IronRefinementErrorsNettyServer extends IOApp.Simple:
 
   case class IronException(error: String) extends Exception(error)
 
@@ -81,7 +89,7 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
   private val declaredPort = 9090
   private val declaredHost = "localhost"
 
-  override def run = NettyCatsServer
+  override def run: IO[Unit] = NettyCatsServer
     .io()
     .use { server =>
       // Don't forget to add the interceptor to server options
@@ -123,4 +131,3 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple {
           .guarantee(binding.stop())
       } yield result
     }
-}

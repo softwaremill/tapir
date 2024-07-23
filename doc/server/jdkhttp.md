@@ -11,7 +11,7 @@ To expose endpoints using the
 Then, import the package:
 
 ```scala
-import sttp.tapir.server.jdkhttp._
+import sttp.tapir.server.jdkhttp.*
 ```
 
 and use `JdkHttpServer().addEndpoints` to expose server endpoints.
@@ -25,8 +25,8 @@ original `serverLogic` methods and also because names are shorter.
 For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.server.jdkhttp._
+import sttp.tapir.*
+import sttp.tapir.server.jdkhttp.*
 
 val helloWorld = endpoint
   .get

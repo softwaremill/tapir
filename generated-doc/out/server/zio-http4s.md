@@ -8,26 +8,26 @@ The `*-zio` modules depend on ZIO 2.x.
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.10.14"
 ```
 
 or just add the zio-http4s integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "1.10.10"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio" % "1.10.14"
 ```
 
-Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
+Next, instead of the usual `import sttp.tapir.*`, you should import (or extend the `ZTapir` trait, see [MyTapir](../other/mytapir.md)):
 
 ```scala
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 ```
 
 This brings into scope all of the [basic](../endpoint/basics.md) input/output descriptions, which can be used to define an endpoint.
 
 ```{note}
 You should have only one of these imports in your source file. Otherwise, you'll get naming conflicts. The
-`import sttp.tapir.ztapir._` import is meant as a complete replacement of `import sttp.tapir._`.
+`import sttp.tapir.ztapir.*` import is meant as a complete replacement of `import sttp.tapir.*`.
 ```
 
 ## Server logic
@@ -68,7 +68,7 @@ so that it is uniform across all endpoints, using the `.widen` method:
 
 ```scala
 import org.http4s.HttpRoutes
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import zio.RIO
 
@@ -118,7 +118,7 @@ method. This can then be added to a server builder using `withHttpWebSocketApp`,
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.{CodecFormat, PublicEndpoint}
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -126,12 +126,12 @@ import org.http4s.server.Router
 import org.http4s.server.websocket.WebSocketBuilder2
 import scala.concurrent.ExecutionContext
 import zio.{Task, Runtime, ZIO}
-import zio.interop.catz._
+import zio.interop.catz.*
 import zio.stream.Stream
 
 def runtime: Runtime[Any] = ??? // provided by ZIOAppDefault
 
-implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
 val wsEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, String] => Stream[Throwable, String], ZioStreams with WebSockets] =
   endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](ZioStreams))
@@ -162,7 +162,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir.server.http4s.ztapir.{ZHttp4sServerInterpreter, serverSentEventsBody}
 import sttp.tapir.PublicEndpoint
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 import org.http4s.HttpRoutes
 import zio.{Task, ZIO}
 import zio.stream.{Stream, ZStream}

@@ -97,7 +97,6 @@ Finally, let's add an output to the endpoint. We'll return the response as a str
 
 {emphasize-lines="11"}
 ```scala
-
 //> using dep com.softwaremill.sttp.tapir::tapir-core:@VERSION@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:@VERSION@
 

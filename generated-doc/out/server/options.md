@@ -10,23 +10,23 @@ Each interpreter can be configured using an options object, which includes:
 * additional user-provided [interceptors](interceptors.md)
 
 To use custom server options pass them as an argument to the interpreter's `apply` method.
-For example, for `AkkaHttpServerOptions` and `AkkaHttpServerInterpreter`:
+For example, for `PekkoHttpServerOptions` and `PekkoHttpServerInterpreter`:
 
 ```scala
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
-import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.pekkohttp.PekkoHttpServerOptions
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 val customDecodeFailureHandler: DecodeFailureHandler[Future] = ???
 
-val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+val customServerOptions: PekkoHttpServerOptions = PekkoHttpServerOptions
   .customiseInterceptors
   .decodeFailureHandler(customDecodeFailureHandler)
   .options
-  
-AkkaHttpServerInterpreter(customServerOptions)
+
+PekkoHttpServerInterpreter(customServerOptions)
 ```
 
 ## Hiding authenticated endpoints
@@ -39,17 +39,17 @@ returned instead by using a different decode failure handler. For example, using
 
 ```scala
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
-import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import sttp.tapir.server.pekkohttp.PekkoHttpServerOptions
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+val customServerOptions: PekkoHttpServerOptions = PekkoHttpServerOptions
   .customiseInterceptors
   .decodeFailureHandler(DefaultDecodeFailureHandler.hideEndpointsWithAuth[Future])
   .options
-  
-AkkaHttpServerInterpreter(customServerOptions)
+
+PekkoHttpServerInterpreter(customServerOptions)
 ```
 
 Note however, that it can still be possible to discover the existence of certain endpoints using timing attacks.

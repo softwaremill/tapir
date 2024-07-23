@@ -21,10 +21,10 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
     NettyZioServerInterpreter(serverOptions).toRoute(es)
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[Task[Route[Task]]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val config = NettyConfig.default
       .eventLoopGroup(eventLoopGroup)
       .randomPort
@@ -46,8 +46,7 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
       )
 
     Resource
-      .make(bind.map(b => (b.port, IO.fromFuture[Unit](IO(Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(b.stop()))))))) {
-        case (_, release) => release
-      }
+      .make(bind)(server => IO.fromFuture[Unit](IO(Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(server.stop())))))
+      .map(_.port)
   }
 }

@@ -1,3 +1,12 @@
+// {cat=Security; effects=cats-effect; server=http4s; json=circe}: Login using OAuth2, authorization code flow
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.14
+//> using dep com.softwaremill.sttp.client3::async-http-client-backend-cats:3.9.7
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep com.github.jwt-scala::jwt-circe:10.0.1
+
 package sttp.tapir.examples.security
 
 import cats.effect.*
@@ -19,7 +28,7 @@ import java.time.Instant
 import scala.collection.immutable.ListMap
 import scala.concurrent.ExecutionContext
 
-object OAuth2GithubHttp4sServer extends IOApp {
+object OAuth2GithubHttp4sServer extends IOApp:
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
@@ -105,7 +114,7 @@ object OAuth2GithubHttp4sServer extends IOApp {
 
   val httpClient = AsyncHttpClientCatsBackend.resource[IO]()
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // starting the server
     httpClient
       .use(backend =>
@@ -123,5 +132,3 @@ object OAuth2GithubHttp4sServer extends IOApp {
           }
       )
       .as(ExitCode.Success)
-  }
-}

@@ -1,3 +1,11 @@
+// {cat=Testing; effects=Future; server=Pekko HTTP}: Test endpoints using the TapirStubInterpreter
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-sttp-stub-server:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.10.14
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep org.scalatest::scalatest:3.2.19
+
 package sttp.tapir.examples.testing
 
 import org.scalatest.flatspec.AsyncFlatSpec
@@ -15,7 +23,7 @@ import sttp.tapir.server.stub.TapirStubInterpreter
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class PekkoServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
+class PekkoServerStubInterpreterExample extends AsyncFlatSpec with Matchers:
 
   it should "use custom exception handler" in {
     val stubBackend: SttpBackend[Future, Any] = TapirStubInterpreter(PekkoUsersApi.options, SttpBackendStub.asynchronousFuture)
@@ -43,9 +51,8 @@ class PekkoServerStubInterpreterExample extends AsyncFlatSpec with Matchers {
     // then
     response.map(_.body shouldBe Right("hello user123"))
   }
-}
 
-object PekkoUsersApi {
+object PekkoUsersApi:
 
   val greetUser: ServerEndpoint[Any, Future] = endpoint.get
     .in("api" / "users" / "greet")
@@ -64,4 +71,3 @@ object PekkoUsersApi {
   )
   def options(implicit ec: ExecutionContext): CustomiseInterceptors[Future, PekkoHttpServerOptions] =
     PekkoHttpServerOptions.customiseInterceptors.exceptionHandler(exceptionHandler)
-}

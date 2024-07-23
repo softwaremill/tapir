@@ -32,14 +32,12 @@ components:
       contentType: application/json
       examples:
         - payload:
-            - f: apple
+            f: apple
     integer:
       payload:
         type: integer
         format: int32
       contentType: application/json
       examples:
-        - payload:
-            - 10
-        - payload:
-            - 42
+        - payload: 10
+        - payload: 42

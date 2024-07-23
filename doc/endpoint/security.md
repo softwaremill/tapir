@@ -21,7 +21,7 @@ using one of the methods from `auth`, and arbitrary "regular" inputs, such as pa
 inputs can contain inputs created through `auth`, though typically this shouldn't be the case.
 ```
 
-Currently, the following authentication inputs are available (assuming `import sttp.tapir._`):
+Currently, the following authentication inputs are available (assuming `import sttp.tapir.*`):
 
 * `auth.apiKey(anotherInput)`: wraps any other input and designates it as an api key. The input is typically a header, 
 cookie or a query parameter
@@ -31,7 +31,7 @@ base64-encoded username/password combination, use: `basic[UsernamePassword]`.
 as a string, use: `bearer[String]`.
 * `auth.oauth2.authorizationCode(authorizationUrl, scopes, tokenUrl, refreshUrl): EndpointInput[String]`: creates an 
 OAuth2 authorization using authorization code - sign in using an auth service (for documentation, requires defining also 
-the `oauth2-redirect.html`, see [Generating OpenAPI documentation](..docs/openapi.md))
+the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../docs/openapi.md))
 
 ## Authentication challenges
 
@@ -55,8 +55,8 @@ This feature is available for all server backends *except*: `akka-grpc`, `Armeri
 Individual endpoints can be annotated with content length limit:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.server.model.EndpointExtensions._
+import sttp.tapir.*
+import sttp.tapir.server.model.EndpointExtensions.*
 
 val limitedEndpoint = endpoint.maxRequestBodyLength(maxBytes = 16384L)
 ```

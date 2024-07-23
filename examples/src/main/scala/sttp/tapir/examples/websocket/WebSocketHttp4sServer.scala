@@ -1,3 +1,13 @@
+// {cat=WebSocket; effects=cats-effect; server=http4s; json=circe; docs=AsyncAPI}: Describe and implement a WebSocket endpoint
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.10.14
+//> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
+//> using dep com.softwaremill.sttp.client3::async-http-client-backend-fs2:3.9.7
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+
 package sttp.tapir.examples.websocket
 
 import cats.effect.{ExitCode, IO, IOApp}
@@ -23,7 +33,7 @@ import sttp.ws.WebSocket
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 
-object WebSocketHttp4sServer extends IOApp {
+object WebSocketHttp4sServer extends IOApp:
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
@@ -32,7 +42,7 @@ object WebSocketHttp4sServer extends IOApp {
   // The web socket endpoint: GET /count.
   // We need to provide both the type & media type for the requests, and responses. Here, the requests will be
   // byte arrays, and responses will be returned as json.
-  val wsEndpoint: PublicEndpoint[Unit, Unit, Pipe[IO, String, CountResponse], Fs2Streams[IO] with WebSockets] =
+  val wsEndpoint: PublicEndpoint[Unit, Unit, Pipe[IO, String, CountResponse], Fs2Streams[IO] & WebSockets] =
     endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, CountResponse, CodecFormat.Json](Fs2Streams[IO]))
 
   // A pipe which counts the number of bytes received each second
@@ -69,7 +79,7 @@ object WebSocketHttp4sServer extends IOApp {
   val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
   println(s"Paste into https://playground.asyncapi.io/ to see the docs for this endpoint:\n$apiDocs")
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // Starting the server
     BlazeServerBuilder[IO]
       .withExecutionContext(ec)
@@ -107,5 +117,3 @@ object WebSocketHttp4sServer extends IOApp {
           .map(_ => println("Counting complete, bye!"))
       }
       .as(ExitCode.Success)
-  }
-}

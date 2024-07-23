@@ -1,0 +1,42 @@
+asyncapi: 2.6.0
+info:
+  title: The fruit basket
+  version: '0.1'
+channels:
+  /fruit:
+    subscribe:
+      operationId: onFruit
+      message:
+        $ref: '#/components/messages/integer'
+    publish:
+      operationId: sendFruit
+      message:
+        $ref: '#/components/messages/Fruit'
+    bindings:
+      ws:
+        method: GET
+components:
+  schemas:
+    Fruit:
+      title: Fruit
+      type: object
+      required:
+        - f
+      properties:
+        f:
+          type: string
+  messages:
+    Fruit:
+      payload:
+        $ref: '#/components/schemas/Fruit'
+      contentType: application/json
+      examples:
+        - payload:
+            f: apple
+          name: Apple
+          summary: Sample representation of apple
+    integer:
+      payload:
+        type: integer
+        format: int32
+      contentType: application/json

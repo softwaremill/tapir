@@ -1,42 +1,48 @@
 # tapir
 
 <div style="text-align: center">
-<p>Declarative, type-safe web endpoints library.</p>
+<p>Rapid development of self-documenting APIs</p>
 <img src="https://github.com/softwaremill/tapir/raw/master/doc/logo.png" alt="tapir" height="100" width="100" />
 </div>
 
 ## Intro
 
-With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of
-input and output parameters. An endpoint specification can be interpreted as:
+Tapir is a library to describe HTTP APIs, expose them as a server, consume as a client, and automatically document 
+using open standards. 
 
-* a server, given the "business logic": a function, which computes output parameters based on input parameters.
-  Currently supported:
-  * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s
-  * [Http4s](server/http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](server/zio-http4s.md))
-  * [Netty](server/netty.md) (using `Future`s, cats-effect or ZIO)
-  * [Helidon Níma](server/nima.md) (using JVM 21 Virtual Threads and direct style)
-  * [Finatra](server/finatra.md) `http.Controller`
-  * [Pekko HTTP](server/pekkohttp.md) `Route`s/`Directive`s
-  * [Play](server/play.md) `Route`
-  * [Vert.X](server/vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
-  * [ZIO Http](server/ziohttp.md) `Http`
-  * [Armeria](server/armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
-  * [JDK HTTP](server/jdkhttp.md) `HttpHandler` (simple, synchronous API only)
-  * [aws](server/aws.md) through Lambda/SAM/Terraform
-  * [gRPC](grpc.md)
-* a client, which is a function from input parameters to output parameters.
-  Currently supported:
-  * [sttp](client/sttp.md)
-  * [Play](client/play.md)
-  * [Http4s](client/http4s.md)
-* documentation. Currently supported:
-  * [OpenAPI](docs/openapi.md)
-  * [AsyncAPI](docs/asyncapi.md)
-  * [Json Schema](docs/json-schema.md)
+Tapir is fast and developer-friendly. The endpoint definition APIs are crafted with readability and discoverability in
+mind. Our Netty-based server is one of the best-performing Scala HTTP servers available.
 
-Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
-for a more detailed description of how tapir works! ScalaDocs are available at [javadoc.io](https://www.javadoc.io/doc/com.softwaremill.sttp.tapir).
+```scala
+endpoint
+  .get.in("hello").in(query[String]("name"))
+  .out(stringBody)
+  .handleSuccess(name => s"Hello, $name!")
+```
+
+Tapir integrates with all major Scala stacks, so you can use your favorite approach to Functional Programming, while
+leveraging all the benefits that Tapir brings! 
+
+Seamless integration with the Scala and HTTP ecosystems is one of Tapir's major strengths:
+
+* all popular Scala HTTP server implementations are supported. You can define your entire API using Tapir, or expose 
+Tapir-managed routes alongside "native" ones. This is especially useful when gradually adopting Tapir, or using it for 
+selected use-cases. 
+* the Scala ecosystem is rich with libraries leveraging its type-safety and enhancing the developer's toolbox, 
+that's why Tapir provides integrations with many of such custom type, JSON and observability libraries 
+* documentation can be generated in the [OpenAPI](docs/openapi.md), [AsyncAPI](docs/asyncapi.md) and [JSON Schema](docs/json-schema.md) formats 
+
+Depending on how you'd prefer to explore Tapir, this documentation has three main sections:
+
+1. There's a number of [tutorials](tutorials/01_hello_world.md), which provide a gentle introduction to the library
+2. Nothing compares to tinkering with working code, that's why we've prepared [runnable examples](examples.md),
+   covering solutions to many "everyday" problems 
+3. Finally, the reference documentation describes all of Tapir's aspects in depth - take a look at the menu on
+   the left, starting with the "Endpoints" section
+
+ScalaDocs are available at [javadoc.io](https://www.javadoc.io/doc/com.softwaremill.sttp.tapir). 
+
+Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
 
 ## Why tapir?
 
@@ -47,82 +53,13 @@ for a more detailed description of how tapir works! ScalaDocs are available at [
 * **abstraction**: re-use common endpoint definitions, as well as individual inputs/outputs
 * **library, not a framework**: integrates with your stack
 
-## Adopt a tapir
-
-```{eval-rst}
-.. raw:: html
-
-   <iframe
-     frameborder=0
-     sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups"
-     src="https://adopt-tapir.softwaremill.com/embedded-form"
-     width="100%"
-     height="603"
-   ></iframe>
-```
-
-## Availability
-
-Tapir is available:
-
-* all modules - Scala 2.12 and 2.13 on the JVM (Java 11+)
-* selected modules - Scala 3 on the JVM (Java 11+)
-* selected modules - Scala 2.12, 2.13 and 3 using Scala.JS
-* selected modules - Scala 2.12, 2.13 and 3 using Scala Native
-
-Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
-
-## Adopters
-
-Is your company already using tapir? We're continually expanding the "adopters" section in the documentation; the more the merrier! It would be great to feature your company's logo, but in order to do that, we'll need written permission to avoid any legal misunderstandings.
-
-Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from your company's email with a link to your logo (if we can use it, of course!) or with details who to kindly ask for permission to feature the logo in tapir's documentation. We'll handle the rest.
-
-Thank you!
-
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<a href="https://www.adobe.com" title="Adobe"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/adobe.png" alt="Adobe" width="160"/></a>
-<a href="https://swisscom.com" title="Swisscom"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/swisscom.svg" alt="Swisscom" width="160"/></a>
-<a href="https://swissborg.com" title="Swissborg"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/swissborg.png" alt="Swissborg" width="160"/></a>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<a href="https://kaizo.com" title="Kaizo"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kaizo.png" alt="Kaizo" width="160"/></a>
-<a href="https://www.process.st/" title="Process Street"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/process_street.png" alt="Process Street" width="100"/></a>
-<a href="https://tranzzo.com" title="Tranzzo"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/tranzzo.svg" alt="Tranzzo" width="160"/></a>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center; margin-top:10px;">
-<a href="https://www.kelkoogroup.com" title="Kelkoo group"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kelkoogroup.png" alt="Kelkoo group" width="160"/></a>
-<a href="https://www.softwaremill.com/" title="SoftwareMill"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/softwaremill.png" alt="SoftwareMill" width="160"/></a>
-<a href="https://www.carvana.com" title="Carvana"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/carvana.svg" alt="Carvana" width="160"/></a>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<a href="https://www.moneyfarm.com" title="Moneyfarm"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moneyfarm.png" alt="Moneyfarm" width="160"/></a>
-<a href="https://www.ocadogroup.com/about-us/ocado-technology/" title="Ocado Technology"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ocado.png" alt="Ocado" width="160"/></a>
-<a href="https://www.wegtam.com" title="Wegtam"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/wegtam.svg" alt="Wegtam" width="160"/></a>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
-<a href="http://www.broad.app/" title="Broad"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/broad.png" alt="Broad" width="160"/></a>
-<a href="https://www.kensu.io?utm_source=github&utm_campaign=tapir"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kensu.png" alt="Kensu" width="160"/></a>
-<a href="https://www.colisweb.com" title="Colisweb"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
-<a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a>
-<a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a>
-<a href="https://www.hunters.security/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hunters.png" alt="hunters" width="160"/></a>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
-<a href="https://www.moia.io/en"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moia.png" alt="moia" width="160"/></a>
-<a href="https://www.pitsdatarecovery.net"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/pits.svg" alt="pits" width="100"/></a>
-<a href="https://www.hootsuite.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hootsuite.png" alt="hootsuite" width="160"/></a>
-</div>
-
 ## Code teaser
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 type Limit = Int
 type AuthToken = String
@@ -144,17 +81,17 @@ val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Bo
 
 // Generate OpenAPI documentation
 
-import sttp.apispec.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
 
 
-// Convert to akka-http Route
+// Convert to pekko-http Route
 
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-import akka.http.scaladsl.server.Route
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
+import org.apache.pekko.http.scaladsl.server.Route
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -163,14 +100,14 @@ def bookListingLogic(bfy: BooksQuery,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
 
-val booksListingRoute: Route = AkkaHttpServerInterpreter()
+val booksListingRoute: Route = PekkoHttpServerInterpreter()
   .toRoute(booksListing.serverLogic((bookListingLogic _).tupled))
 
 
 // Convert to sttp Request
 
 import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3._
+import sttp.client3.*
 
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] =
   SttpClientInterpreter()
@@ -188,16 +125,6 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
 * [sttp shared](https://github.com/softwaremill/sttp-shared): shared web socket, FP abstractions, capabilities and streaming code.
 * [sttp apispec](https://github.com/softwaremill/sttp-apispec): OpenAPI, AsyncAPI and JSON Schema models.
 
-## Sponsors
-
-Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https://softwaremill.com), a software development and consulting company. We help clients scale their business through software. Our areas of expertise include backends, distributed systems, blockchain, machine learning and data analytics.
-
-[![](https://files.softwaremill.com/logo/logo.png "SoftwareMill")](https://softwaremill.com)
-
-## Commercial Support
-
-We offer commercial support for sttp and related technologies, as well as development services. [Contact us](https://softwaremill.com/contact/) to learn more about our offer!
-
 ## Table of contents
 
 ```{eval-rst}
@@ -206,8 +133,10 @@ We offer commercial support for sttp and related technologies, as well as develo
    :caption: Getting started
 
    quickstart
-   examples
-   stability
+   generate
+   adopters
+   support
+   scala_2_3_platforms
 
 .. toctree::
    :maxdepth: 2
@@ -217,6 +146,16 @@ We offer commercial support for sttp and related technologies, as well as develo
    tutorials/02_openapi_docs
    tutorials/03_json
    tutorials/04_errors
+   tutorials/05_multiple_inputs_outputs
+   tutorials/06_error_variants
+   tutorials/07_cats_effect
+
+.. toctree::
+   :maxdepth: 2
+   :caption: How-to's
+   
+   examples
+   external
 
 .. toctree::
    :maxdepth: 2
@@ -245,6 +184,7 @@ We offer commercial support for sttp and related technologies, as well as develo
    :maxdepth: 2
    :caption: Server interpreters
 
+   server/overview
    server/akkahttp
    server/http4s
    server/zio-http4s
@@ -298,11 +238,12 @@ We offer commercial support for sttp and related technologies, as well as develo
    :maxdepth: 2
    :caption: Other subjects
 
-   other_interpreters
-   mytapir
-   grpc
-   troubleshooting
-   migrating
-   goals
-   contributing
+   other/stability
+   other/other_interpreters
+   other/mytapir
+   other/grpc
+   other/troubleshooting
+   other/migrating
+   other/goals
+   other/contributing
 

@@ -1,4 +1,4 @@
-# Custom types
+# Adding support for custom types
 
 To support a custom type, you'll need to provide an implicit `Codec` for that type, or the components to create such
 a codec. 
@@ -46,29 +46,26 @@ need to provide two mappings:
 For example, to support a custom id type:
 
 ```scala mdoc:silent
-import scala.util._
+import scala.util.*
 
-class MyId private (id: String) {
+class MyId private (id: String):
   override def toString(): String = id
-}
-object MyId {
-  def parse(id: String): Try[MyId] = {
-    Success(new MyId(id))
-  }
-}
+
+object MyId:
+  def parse(id: String): Try[MyId] = Success(new MyId(id))
 ```
 
 ```scala mdoc:silent
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.CodecFormat.TextPlain
 
-def decode(s: String): DecodeResult[MyId] = MyId.parse(s) match {
+def decode(s: String): DecodeResult[MyId] = MyId.parse(s) match 
   case Success(v) => DecodeResult.Value(v)
   case Failure(f) => DecodeResult.Error(s, f)
-}
+
 def encode(id: MyId): String = id.toString
 
-implicit val myIdCodec: Codec[String, MyId, TextPlain] = 
+given Codec[String, MyId, TextPlain] = 
   Codec.string.mapDecode(decode)(encode)
 ```
 
@@ -77,7 +74,7 @@ Or, using the type alias for codecs in the `TextPlain` format and `String` as th
 ```scala mdoc:silent:nest
 import sttp.tapir.Codec.PlainCodec
 
-implicit val myIdCodec: PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode)
+given PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode)
 ```
 
 ```{note}

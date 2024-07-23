@@ -28,7 +28,7 @@ The `toRoute` method requires a single, or a list of `ServerEndpoint`s, which ca
 For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import scala.concurrent.Future
 import org.apache.pekko.http.scaladsl.server.Route
@@ -56,9 +56,9 @@ Edge-case endpoints, which require special logic not expressible using tapir, ca
 using pekko-http. For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
-import org.apache.pekko.http.scaladsl.server._
+import org.apache.pekko.http.scaladsl.server.*
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -103,7 +103,7 @@ For example, to define an endpoint that returns event stream:
 ```scala mdoc:compile-only
 import org.apache.pekko.stream.scaladsl.Source
 import sttp.model.sse.ServerSentEvent
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.{PekkoHttpServerInterpreter, serverSentEventsBody}
 
 import scala.concurrent.Future

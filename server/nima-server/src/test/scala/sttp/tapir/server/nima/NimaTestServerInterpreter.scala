@@ -18,10 +18,10 @@ class NimaTestServerInterpreter() extends TestServerInterpreter[Identity, Any, N
     NimaServerInterpreter(serverOptions).toHandler(es)
   }
 
-  override def serverWithStop(
+  override def server(
       nimaRoutes: NonEmptyList[Handler],
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val bind = IO.blocking {
       WebServer
         .builder()
@@ -35,8 +35,7 @@ class NimaTestServerInterpreter() extends TestServerInterpreter[Identity, Any, N
     }
 
     Resource
-      .make(bind.map(b => (b.port, IO.blocking(b.stop()).map(_ => ())))) { case (_, release) =>
-        release
-      }
+      .make(bind)(server => IO.blocking { val _ = server.stop() })
+      .map(_.port)
   }
 }

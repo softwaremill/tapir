@@ -207,6 +207,36 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
 
       }
 
+}
+
+private[iron] trait ValidatorForPredicate[Value, Predicate] {
+  def validator: Validator[Value]
+  def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]]
+  lazy val containsMinSizePositive: Boolean = validator.asPrimitiveValidators.exists {
+    case Validator.MinSize(a) => a > 0
+    case _                    => false
+  }
+}
+
+private[iron] trait PrimitiveValidatorForPredicate[Value, Predicate] extends ValidatorForPredicate[Value, Predicate] {
+  def validator: Validator.Primitive[Value]
+  def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]]
+}
+
+private[iron] object ValidatorForPredicate {
+  def fromPrimitiveValidator[Value, Predicate](
+      primitiveValidator: Validator.Primitive[Value]
+  ): PrimitiveValidatorForPredicate[Value, Predicate] =
+    new PrimitiveValidatorForPredicate[Value, Predicate] {
+      override def validator: Validator.Primitive[Value] = primitiveValidator
+      override def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]] =
+        List(ValidationError[Value](primitiveValidator, value))
+    }
+}
+
+// #3938: the two-level low-priority validators are needed because of implicit resolution changes in Scala 3.6
+private[iron] trait LowPriorityValidatorForPredicate extends LowPriorityValidatorForPredicate2 {
+
   inline given validatorForDescribedAnd[N, P](using
       id: IsDescription[P],
       mirror: IntersectionTypeMirror[id.Predicate]
@@ -244,32 +274,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
     validator.asInstanceOf[PrimitiveValidatorForPredicate[N, P]]
 }
 
-private[iron] trait ValidatorForPredicate[Value, Predicate] {
-  def validator: Validator[Value]
-  def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]]
-  lazy val containsMinSizePositive: Boolean = validator.asPrimitiveValidators.exists {
-    case Validator.MinSize(a) => a > 0
-    case _                    => false
-  }
-}
-
-private[iron] trait PrimitiveValidatorForPredicate[Value, Predicate] extends ValidatorForPredicate[Value, Predicate] {
-  def validator: Validator.Primitive[Value]
-  def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]]
-}
-
-private[iron] object ValidatorForPredicate {
-  def fromPrimitiveValidator[Value, Predicate](
-      primitiveValidator: Validator.Primitive[Value]
-  ): PrimitiveValidatorForPredicate[Value, Predicate] =
-    new PrimitiveValidatorForPredicate[Value, Predicate] {
-      override def validator: Validator.Primitive[Value] = primitiveValidator
-      override def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]] =
-        List(ValidationError[Value](primitiveValidator, value))
-    }
-}
-
-private[iron] trait LowPriorityValidatorForPredicate {
+private[iron] trait LowPriorityValidatorForPredicate2 {
 
   inline given [Value, Predicate](using
       inline constraint: Constraint[Value, Predicate],
