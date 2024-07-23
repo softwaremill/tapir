@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.10.14"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.10.15"
 ```
 
 and import the object:
@@ -117,8 +117,9 @@ val routes = Http4sServerInterpreter[IO]().toRoutes(sseEndpoint.serverLogicSucce
 ## Accessing http4s context
 
 If you'd like to access context provided by an http4s middleware, e.g. with authentication data, this can be done
-with a dedicated context-extracting input, `.contextIn`. Endpoints using such input need then to be interpreted to
-`org.http4s.ContextRoutes` (also known by its type alias `AuthedRoutes`) using the `.toContextRoutes` method.
+with a dedicated context-extracting input, `.contextIn` (or the analogous `.contextSecurityIn` for security inputs).
+Endpoints using such input need then to be interpreted to `org.http4s.ContextRoutes` (also known by its type alias
+`AuthedRoutes`) using the `.toContextRoutes` method.
 
 For example:
 

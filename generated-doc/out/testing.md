@@ -23,7 +23,7 @@ Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or 
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.14"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.15"
 ```
 
 Let's assume you are using the [pekko http](server/pekkohttp.md) interpreter. Given the following server endpoint:
@@ -139,7 +139,7 @@ requests matching an endpoint, you can use the tapir `SttpBackendStub` extension
 Similarly as when testing server interpreters, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.14"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.15"
 ```
 
 And the following imports:
@@ -194,7 +194,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.10.14"
+"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.10.15"
 ```
 
 Imports:
@@ -265,7 +265,7 @@ result == out
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.10.14"
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.10.15"
 ```
 
 ### Shadowed endpoints
@@ -357,4 +357,26 @@ Results in:
 ```scala
 result2.toString
 // res5: String = "Set(An endpoint OPTIONS GET /a /b /c -> -/- have multiple method definitions: List(OPTIONS, GET))"
+```
+
+### Duplicated endpoint names
+
+Duplicate endpoint names will generate duplicate operation ids, when generating OpenAPI or AsyncAPI documentation. As
+the operation ids should be unique, this is reported as an error:
+
+Example 1:
+
+```scala
+import sttp.tapir.testing.EndpointVerifier
+
+val ep1 = endpoint.name("e1").get.in("a")
+val ep2 = endpoint.name("e1").get.in("b")
+val result3 = EndpointVerifier(List(ep1, ep2))
+```
+
+Results in:
+
+```scala
+result3.toString
+// res6: String = "Set(Duplicate endpoints names found: e1)"
 ```
