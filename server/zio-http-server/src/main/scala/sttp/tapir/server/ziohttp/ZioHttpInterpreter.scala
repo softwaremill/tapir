@@ -58,27 +58,30 @@ trait ZioHttpInterpreter[R] {
           )
       }
 
-    // Grouping the endpoints by path prefix template (fixed path components & single path captures). This way, if
-    // there are multiple endpoints - with/without trailing slash, with from-request extraction, or with path wildcards,
-    // they will be interpreted and disambiguated by the tapir logic, instead of ZIO HTTP's routing. Also, this covers
-    // multiple endpoints with different methods, and allows us to handle invalid methods.
-    val widenedSesGroupedByPathPrefixTemplate = widenedSes.groupBy { se =>
+    // here we'll keep the endpoint together with the meta-data needed to create the zio-http routing information
+    case class ServerEndpointWithPattern(
+        index: Int,
+        pathTemplate: String,
+        routePattern: RoutePattern[_],
+        endpoint: ZServerEndpoint[R & R2, ZioStreams with WebSockets]
+    )
+
+    def toPattern(se: ZServerEndpoint[R & R2, ZioStreams with WebSockets], index: Int): ServerEndpointWithPattern = {
       val e = se.endpoint
       val inputs = e.securityInput.and(e.input).asVectorOfBasicInputs()
-      val x = inputs.foldLeft("") { case (p, component) =>
+
+      // Creating the path template - no-trailing-slash inputs are treated as wildcard inputs, as they are usually 
+      // accompanied by endpoints which handle wildcard path inputs, when the `/` is present (to serve files). They 
+      // need to end up in the same group (see below), so that they are disambiguated by tapir's logic.
+      val pathTemplate = inputs.foldLeft("") { case (p, component) =>
         component match {
-          case _: EndpointInput.PathCapture[_] => p + "/?"
-          case i: EndpointInput.FixedPath[_]   => p + "/" + i.s
-          case _                               => p
+          case _: EndpointInput.PathCapture[_]                                                                   => p + "/?"
+          case _: EndpointInput.PathsCapture[_]                                                                  => p + "/..."
+          case i: EndpointInput.ExtractFromRequest[_] if i.attribute(NoTrailingSlash.Attribute).getOrElse(false) => p + "/..."
+          case i: EndpointInput.FixedPath[_]                                                                     => p + "/" + i.s
+          case _                                                                                                 => p
         }
       }
-      x
-    }
-
-    val handlers: List[Route[R & R2, Response]] = widenedSesGroupedByPathPrefixTemplate.toList.map { case (_, sesForPathTemplate) =>
-      // The pattern that we generate should be the same for all endpoints in a group
-      val e = sesForPathTemplate.head.endpoint
-      val inputs = e.securityInput.and(e.input).asVectorOfBasicInputs()
 
       val hasPath = inputs.exists {
         case _: EndpointInput.PathCapture[_]  => true
@@ -86,21 +89,23 @@ trait ZioHttpInterpreter[R] {
         case _: EndpointInput.FixedPath[_]    => true
         case _                                => false
       }
+      val hasNoTrailingSlash = inputs.exists {
+        case i: EndpointInput.ExtractFromRequest[_] if i.attribute(NoTrailingSlash.Attribute).getOrElse(false) => true
+        case _                                                                                                 => false
+      }
 
-      val pattern = if (hasPath) {
+      val routePattern = if (hasPath) {
         val initialPattern = RoutePattern(Method.ANY, PathCodec.empty).asInstanceOf[RoutePattern[Any]]
         // The second tuple parameter specifies if PathCodec.trailing should be added to the route's pattern. It can
-        // be added either because of a PathsCapture, or because of an ExtractFromRequest input, which can extract
-        // arbitrary data, including the path.
+        // be added either because of a PathsCapture, or because of an noTrailingSlash input.
         val (p, addTrailing) = inputs
-          .foldLeft((initialPattern, false)) { case ((p, addTrailing), component) =>
+          .foldLeft((initialPattern, hasNoTrailingSlash)) { case ((p, addTrailing), component) =>
             component match {
               case i: EndpointInput.PathCapture[_] =>
                 ((p / PathCodec.string(i.name.getOrElse("?"))).asInstanceOf[RoutePattern[Any]], addTrailing)
-              case _: EndpointInput.ExtractFromRequest[_] => (p, true)
-              case _: EndpointInput.PathsCapture[_]       => (p, true)
-              case i: EndpointInput.FixedPath[_]          => (p / PathCodec.literal(i.s), addTrailing)
-              case _                                      => (p, addTrailing)
+              case _: EndpointInput.PathsCapture[_] => (p, true)
+              case i: EndpointInput.FixedPath[_]    => (p / PathCodec.literal(i.s), addTrailing)
+              case _                                => (p, addTrailing)
             }
           }
 
@@ -110,7 +115,28 @@ trait ZioHttpInterpreter[R] {
         RoutePattern(Method.ANY, PathCodec.trailing).asInstanceOf[RoutePattern[Any]]
       }
 
-      Route.handled(pattern)(Handler.fromFunctionHandler { (request: Request) => handleRequest(request, sesForPathTemplate) })
+      ServerEndpointWithPattern(index, pathTemplate, routePattern, se)
+    }
+
+    // Grouping the endpoints by path template. This way, if there are multiple endpoints with/without trailing slash or
+    // with path wildcards, they will end up in the same group, and they will be disambiguated by the tapir logic.
+    // That's because there's not way currently to create a zio-http route pattern which would match on 
+    // no-trailing-slashes. A group also includes multiple endpoints with different methods, but same path.
+    val widenedSesGroupedByPathPrefixTemplate = widenedSes.zipWithIndex
+      .map { case (se, index) => toPattern(se, index) }
+      .groupBy(_.pathTemplate)
+      .toList
+      .map(_._2)
+      // we try to maintain the order of endpoints as passed by the user; this order might be changed if there are
+      // endpoints with/without trailing slashes, or with different methods, which are not passed as subsequent
+      // values in the original `ses` list
+      .sortBy(_.map(_.index).min)
+
+    val handlers: List[Route[R & R2, Response]] = widenedSesGroupedByPathPrefixTemplate.map { sesWithPattern =>
+      val pattern = sesWithPattern.head.routePattern
+      val endpoints = sesWithPattern.sortBy(_.index).map(_.endpoint)
+      // The pattern that we generate should be the same for all endpoints in a group
+      Route.handled(pattern)(Handler.fromFunctionHandler { (request: Request) => handleRequest(request, endpoints) })
     }
 
     Routes(Chunk.fromIterable(handlers))
