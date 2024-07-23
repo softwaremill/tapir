@@ -11,7 +11,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.{AnyEndpoint, EndpointInput, noTrailingSlash}
+import sttp.tapir._
 
 trait FinatraServerInterpreter extends Logging {
 
@@ -61,8 +61,8 @@ trait FinatraServerInterpreter extends Logging {
   }
 
   private[finatra] def path(input: EndpointInput[_]): String = {
-    val p = input
-      .asVectorOfBasicInputs()
+    val basicInputs = input.asVectorOfBasicInputs()
+    val p = basicInputs
       .collect {
         case segment: EndpointInput.FixedPath[_] => segment.show
         case PathCapture(Some(name), _, _)       => s"/:$name"
@@ -73,9 +73,10 @@ trait FinatraServerInterpreter extends Logging {
     if (p.isEmpty) "/:*"
     // checking if there's an input which rejects trailing slashes; otherwise the default behavior is to accept them
     else if (
-      input.traverseInputs {
-        case i if i == noTrailingSlash => Vector(())
-      }.isEmpty
+      basicInputs.exists {
+        case i: EndpointInput.ExtractFromRequest[_] if i.attribute(NoTrailingSlash.Attribute).getOrElse(false) => true
+        case _                                                                                                 => false
+      }
     ) p + "/?"
     else p
   }
