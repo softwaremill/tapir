@@ -42,7 +42,7 @@ class ZioHttpTestServerInterpreter(
         .enableRequestStreaming
         .gracefulShutdownTimeout(gracefulShutdownTimeout.map(Duration.fromScala).getOrElse(50.millis))
     )
-    val drv = (eventLoopGroup ++ nettyConfig ++ channelFactory ++ serverConfig) >>> NettyDriver.manual
+    val drv = (eventLoopGroup ++ nettyConfig ++ channelFactory ++ serverConfig) >>> zio.test.manual
 
     val effect: ZIO[Scope, Throwable, Port] =
       for {
