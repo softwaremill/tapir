@@ -9,6 +9,7 @@ import io.netty.channel.ServerChannel
 import org.scalatest.Assertion
 import org.scalatest.Exceptional
 import org.scalatest.FutureOutcome
+import org.scalatest.concurrent.TimeLimits
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
 import sttp.client3._
@@ -38,9 +39,7 @@ import zio.http.Middleware
 import zio.http.Path
 import zio.http.Request
 import zio.http.URL
-import zio.http.netty.ChannelFactories
-import zio.http.netty.ChannelType
-import zio.http.netty.EventLoopGroups
+import zio.http.netty.{ChannelFactories, ChannelType, EventLoopGroups, NettyConfig}
 import zio.interop.catz._
 import zio.stream
 import zio.stream.ZPipeline
@@ -52,16 +51,17 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import zio.stream.ZSink
 
-class ZioHttpServerTest extends TestSuite {
+class ZioHttpServerTest extends TestSuite with TimeLimits {
 
   // zio-http tests often fail with "Cause: java.io.IOException: parsing HTTP/1.1 status line, receiving [DEFAULT], parser state [STATUS_LINE]"
-  // until this is fixed, adding retries to avoid flaky tests
+  // they also sometimes hang, esp. on CI (see #3827)
+  // until this is fixed, adding retries to avoid flaky tests & CI timeouts
   val retries = 5
 
   override def withFixture(test: NoArgAsyncTest): FutureOutcome = withFixture(test, retries)
 
   def withFixture(test: NoArgAsyncTest, count: Int): FutureOutcome = {
-    val outcome = super.withFixture(test)
+    val outcome = failAfter(5.seconds)(super.withFixture(test))
     new FutureOutcome(outcome.toFuture.flatMap {
       case Exceptional(e) =>
         println(s"Test ${test.name} failed, retrying.")
@@ -73,6 +73,34 @@ class ZioHttpServerTest extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     implicit val r: Runtime[Any] = Runtime.default
+
+    val t = new Thread() {
+      override def run(): Unit = {
+        println("START")
+        try {
+          var run = true
+          while (run) {
+            Thread.sleep(100)
+
+            val source = scala.io.Source.fromFile("/Users/adamw/projects/tapir/control")
+            val content =
+              try source.mkString
+              finally source.close()
+
+            if (content.startsWith("1")) {
+              zio.Unsafe.unsafe { implicit unsafe =>
+                println(r.unsafe.run(zio.Fiber.dumpAll))
+              }
+              run = false
+            }
+          }
+        } finally {
+          println("STOP")
+        }
+      }
+    }
+    t.start()
+
     // creating the netty dependencies once, to speed up tests
     Resource
       .scoped[IO, Any, ZEnvironment[EventLoopGroup with ChannelFactory[ServerChannel]]]({
@@ -319,5 +347,6 @@ class ZioHttpServerTest extends TestSuite {
           }.tests() ++
           additionalTests()
       }
+      .onFinalize(IO(t.interrupt()))
   }
 }
