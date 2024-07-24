@@ -137,10 +137,10 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
       "Either_SomeValueInt_Node_String"
     )
     TapirSchemaToJsonSchema(implicitly[Schema[Either[Node[Boolean], SomeValueInt]]], true).title shouldBe Some(
-     "Either_Node_Boolean_SomeValueInt" 
+      "Either_Node_Boolean_SomeValueInt"
     )
   }
-  
+
   it should "Generate correct names for Maps with parameterized types" in {
     type Tree[A] = Either[A, Node[A]]
     final case class Node[A](values: List[A])
@@ -151,13 +151,12 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
   }
 
   it should "Generate array for products marked with ProductAsArray attribute" in {
-    val tSchema: Schema[(Int, String)] = implicitly[Schema[(Int,String)]]
+    val tSchema: Schema[(Int, String)] = implicitly[Schema[(Int, String)]]
       .attribute(Schema.ProductAsArray.Attribute, Schema.ProductAsArray(true))
 
     // when
     val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = false)
 
-    // TODO: actually for Draft04 it should render as `items:[]` rather than `prefixItems:[]`
     // then
     result.asJson.deepDropNullValues shouldBe
       json"""{"$$schema" : "http://json-schema.org/draft/2020-12/schema#", "title" : "Tuple2_Int_String", "type" : "array", "prefixItems" : [{"type" : "integer", "format" : "int32"}, {"type" : "string"}]}"""

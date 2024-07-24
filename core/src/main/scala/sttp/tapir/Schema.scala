@@ -350,11 +350,12 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[UniqueItems] = new AttributeKey[UniqueItems]("sttp.tapir.Schema.UniqueItems")
   }
 
-  /** Switches `SProduct` schema to represent `array` (#3941).
-   * 
-   * Used to model tuples, which are products with no meaningful property names - attributes are identified by their position.
-   * Enabling this flag for `SProduct` renders `array` schema, with type constraints for each index.
-   */
+  /** Hints that a [[SchemaType.SProduct]] should be rendered in the schema as an `array` (#3941).
+    *
+    * Used to model tuples, which are products with no meaningful property names - attributes are identified by their position. When
+    * converting to JSON schema, adding this attribute on a schema for a `SProduct` renders `array` schema, with type constraints for each
+    * index.
+    */
   case class ProductAsArray(productAsArray: Boolean)
   object ProductAsArray {
     val Attribute: AttributeKey[ProductAsArray] = new AttributeKey[ProductAsArray]("sttp.tapir.Schema.ProductAsArray")

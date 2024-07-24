@@ -10,5 +10,4 @@ case object MetaSchemaDraft04 extends MetaSchema {
 
 case object MetaSchemaDraft202012 extends MetaSchema {
   override lazy val schemaId: String = "http://json-schema.org/draft/2020-12/schema#"
-
 }
