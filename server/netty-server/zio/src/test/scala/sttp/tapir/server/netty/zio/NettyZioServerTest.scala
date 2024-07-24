@@ -3,11 +3,6 @@ package sttp.tapir.server.netty.zio
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
-import org.scalatest.Exceptional
-import org.scalatest.FutureOutcome
-import org.scalatest.concurrent.TimeLimits
-import scala.concurrent.Future
-import scala.concurrent.duration._
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.netty.internal.FutureUtil
@@ -21,25 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import zio.stream.ZSink
 
-class NettyZioServerTest extends TestSuite with EitherValues with TimeLimits {
-
-  // ZIO tests sometimes hang, esp. on CI (see #3827); until this is fixed, adding retries to avoid flaky tests & CI timeouts
-  val retries = 5
-
-  override def withFixture(test: NoArgAsyncTest): FutureOutcome = withFixture(test, retries)
-
-  def withFixture(test: NoArgAsyncTest, count: Int): FutureOutcome = {
-    val outcome = failAfter(5.seconds)(super.withFixture(test))
-    new FutureOutcome(outcome.toFuture.flatMap {
-      case Exceptional(e) =>
-        println(s"Test ${test.name} failed, retrying.")
-        e.printStackTrace()
-        (if (count == 1) super.withFixture(test) else withFixture(test, count - 1)).toFuture
-      case other => Future.successful(other)
-    })
-  }
-  //
-
+class NettyZioServerTest extends TestSuite with EitherValues {
   def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
     zStream.run(ZSink.drain)
 
