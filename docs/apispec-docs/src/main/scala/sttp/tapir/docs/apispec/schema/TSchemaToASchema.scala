@@ -33,6 +33,10 @@ private[docs] class TSchemaToASchema(
           case TSchemaType.SNumber()  => ASchema(SchemaType.Number)
           case TSchemaType.SBoolean() => ASchema(SchemaType.Boolean)
           case TSchemaType.SString()  => ASchema(SchemaType.String)
+          case TSchemaType.SProduct(fields) if schema.attribute(TSchema.ProductAsArray.Attribute).map(_.productAsArray).getOrElse(false) =>
+            ASchema(SchemaType.Array).copy(
+              prefixItems = Some(fields.map(f => apply(f.schema, allowReference = true)))
+            )
           case p @ TSchemaType.SProduct(fields) =>
             ASchema(SchemaType.Object).copy(
               required = p.required.map(_.encodedName),
