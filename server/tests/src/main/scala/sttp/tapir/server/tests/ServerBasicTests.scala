@@ -522,6 +522,30 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         basicStringRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe "e2")
     },
     testServer(
+      "two endpoints with increasingly specific path inputs (w/ path capture): should match path exactly",
+      NonEmptyList.of(
+        route(
+          List[ServerEndpoint[Any, F]](
+            endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])),
+            endpoint.get.in("p1" / path[String]).out(stringBody).serverLogic((_: String) => pureResult("e2".asRight[Unit]))
+          )
+        )
+      )
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/p1").send(backend).map(_.body shouldBe "e1") >>
+        basicStringRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe "e2")
+    },
+    testServer(
+      "two endpoints with decreasingly specific path inputs: should match path exactly",
+      NonEmptyList.of(
+        route(endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit]))),
+        route(endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])))
+      )
+    ) { (backend, baseUri) =>
+      basicStringRequest.get(uri"$baseUri/p1").send(backend).map(_.body shouldBe "e1") >>
+        basicStringRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe "e2")
+    },
+    testServer(
       "two endpoints with a body defined as the first input: should only consume body when the path matches",
       NonEmptyList.of(
         route(

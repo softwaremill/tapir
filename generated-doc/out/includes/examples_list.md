@@ -85,6 +85,7 @@
 ## Streaming
 
 * [Proxy requests, handling bodies as fs2 streams](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/streaming/ProxyHttp4sFs2Server.scala) <span class="example-tag example-effects">cats-effect</span> <span class="example-tag example-server">http4s</span>
+* [Respond with an fs2 stream, or with an error, represented as a failed effect in the business logic](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/streaming/StreamingHttp4sFs2ServerOrError.scala) <span class="example-tag example-effects">cats-effect</span> <span class="example-tag example-server">http4s</span>
 * [Stream response as a Pekko stream](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/streaming/streamingPekkoServer.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Pekko HTTP</span>
 * [Stream response as a ZIO stream](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/streaming/StreamingNettyZioServer.scala) <span class="example-tag example-effects">ZIO</span> <span class="example-tag example-server">Netty</span>
 * [Stream response as a ZIO stream](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/streaming/StreamingZioHttpServer.scala) <span class="example-tag example-effects">ZIO</span> <span class="example-tag example-server">ZIO HTTP</span>

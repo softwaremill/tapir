@@ -535,8 +535,14 @@ trait TapirComputedInputs { this: Tapir =>
 
   /** An input which matches if the request URI ends with a trailing slash, otherwise the result is a decode failure on the path. Has no
     * effect when used by documentation or client interpreters.
+    *
+    * The input has the [[NoTrailingSlash.Attribute]] attribute set to `true`, which might be useful for server interpreters.
     */
-  val noTrailingSlash: EndpointInput[Unit] = extractFromRequest(_.uri.path).mapDecode(ps =>
-    if (ps.lastOption.contains("")) DecodeResult.Mismatch("", "/") else DecodeResult.Value(())
-  )(_ => Nil)
+  val noTrailingSlash: EndpointInput[Unit] = extractFromRequest(_.uri.path)
+    .mapDecode(ps => if (ps.lastOption.contains("")) DecodeResult.Mismatch("", "/") else DecodeResult.Value(()))(_ => Nil)
+    .attribute(NoTrailingSlash.Attribute, true)
+
+  object NoTrailingSlash {
+    val Attribute: AttributeKey[Boolean] = new AttributeKey[Boolean]("sttp.tapir.NoTrailingSlash")
+  }
 }
