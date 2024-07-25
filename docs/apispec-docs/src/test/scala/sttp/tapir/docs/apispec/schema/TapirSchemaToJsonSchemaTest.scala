@@ -13,7 +13,7 @@ import sttp.tapir.Schema.annotations.title
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 
-class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with EitherValues with Inside {
+class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionValues with EitherValues with Inside {
   behavior of "TapirSchemaToJsonSchema"
 
   it should "represent schema as JSON" in {
@@ -150,9 +150,8 @@ class JsonSchemasTest extends AnyFlatSpec with Matchers with OptionValues with E
     TapirSchemaToJsonSchema(schema2, true).title shouldBe Some("Map_Either_Int_Node_Int_String")
   }
 
-  it should "Generate array for products marked with ProductAsArray attribute" in {
+  it should "Generate array for products marked with Tuple attribute" in {
     val tSchema: Schema[(Int, String)] = implicitly[Schema[(Int, String)]]
-      .attribute(Schema.ProductAsArray.Attribute, Schema.ProductAsArray(true))
 
     // when
     val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = false)

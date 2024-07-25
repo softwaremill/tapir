@@ -18,7 +18,7 @@ trait SchemaMagnoliaDerivation {
 
       override def join[T](ctx: CaseClass[Schema, T]): Schema[T] = {
         withCache(ctx.typeInfo, ctx.annotations) {
-          val result =
+          var result =
             if (ctx.isValueClass) {
               require(ctx.params.nonEmpty, s"Cannot derive schema for generic value class: ${ctx.typeInfo.owner}")
               val valueSchema = ctx.params.head.typeclass
@@ -27,6 +27,9 @@ trait SchemaMagnoliaDerivation {
               // Not using inherited annotations when generating type name, we don't want @encodedName to be inherited for types
               Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeInfo, ctx.annotations)))
             }
+          if (ctx.typeInfo.full.startsWith("scala.Tuple")) {
+            result = result.attribute(Schema.Tuple.Attribute, Schema.Tuple(true))
+          }
           enrichSchema(result, mergeAnnotations(ctx.annotations, ctx.inheritedAnnotations))
         }
       }

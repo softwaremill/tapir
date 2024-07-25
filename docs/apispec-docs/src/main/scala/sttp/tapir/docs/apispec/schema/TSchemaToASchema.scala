@@ -33,7 +33,7 @@ private[docs] class TSchemaToASchema(
           case TSchemaType.SNumber()  => ASchema(SchemaType.Number)
           case TSchemaType.SBoolean() => ASchema(SchemaType.Boolean)
           case TSchemaType.SString()  => ASchema(SchemaType.String)
-          case TSchemaType.SProduct(fields) if schema.attribute(TSchema.ProductAsArray.Attribute).map(_.productAsArray).getOrElse(false) =>
+          case TSchemaType.SProduct(fields) if schema.attribute(TSchema.Tuple.Attribute).map(_.isTuple).getOrElse(false) =>
             ASchema(SchemaType.Array).copy(
               prefixItems = Some(fields.map(f => apply(f.schema, allowReference = true)))
             )
