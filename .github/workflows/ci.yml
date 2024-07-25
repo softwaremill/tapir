@@ -6,7 +6,7 @@ on:
     tags: [v*]
 env:
   # .sbtopts specifies 8g, which is needed to import into IntelliJ, but on GH that exceeds the maximum available memory
-  SBT_JAVA_OPTS: -J-Xms4g -J-Xmx4g -Xlog:gc*::time -verbose:gc
+  SBT_JAVA_OPTS: -J-Xms4g -J-Xmx4g -J-Xlog:gc*::time -J-verbose:gc
 jobs:
   ci:
     # run on 1) push, 2) external PRs, 3) softwaremill-ci PRs
