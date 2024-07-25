@@ -304,7 +304,14 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
 
     schemaType.subtypes.foreach { childSchema =>
       val childProduct = childSchema.schemaType.asInstanceOf[SProduct[_]]
-      childProduct.fields.find(_.name.name == "kind") shouldBe Some(SProductField(FieldName("kind"), Schema.string, (_: Any) => None))
+      val discValue = if (childSchema.name.get.fullName == "sttp.tapir.SchemaMacroTestData.User") "user" else "org"
+      childProduct.fields.find(_.name.name == "kind") shouldBe Some(
+        SProductField(
+          FieldName("kind"),
+          Schema.string.attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue(discValue)),
+          (_: Any) => None
+        )
+      )
     }
   }
 
