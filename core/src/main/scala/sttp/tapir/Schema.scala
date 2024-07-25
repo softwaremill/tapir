@@ -361,6 +361,16 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[Tuple] = new AttributeKey[Tuple]("sttp.tapir.Schema.Tuple")
   }
 
+  /** For coproduct schemas, when there's a discriminator field, used to attach the encoded value of the discriminator field. Such value is
+    * added to the discriminator field schemas in each of the coproduct's subtypes. When rendering OpenAPI/JSON schema, these values are
+    * converted to `const` constraints on fields.
+    */
+  case class EncodedDiscriminatorValue(v: String)
+  object EncodedDiscriminatorValue {
+    val Attribute: AttributeKey[EncodedDiscriminatorValue] =
+      new AttributeKey[EncodedDiscriminatorValue]("sttp.tapir.Schema.EncodedDiscriminatorValue")
+  }
+
   /** @param typeParameterShortNames
     *   full name of type parameters, name is legacy and kept only for backward compatibility
     */

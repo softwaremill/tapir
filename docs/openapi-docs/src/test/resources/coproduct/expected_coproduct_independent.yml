@@ -74,6 +74,7 @@ components:
           type: string
         kind:
           type: string
+          const: organization
     Person:
       title: Person
       type: object
@@ -101,3 +102,4 @@ components:
           format: int32
         kind:
           type: string
+          const: person

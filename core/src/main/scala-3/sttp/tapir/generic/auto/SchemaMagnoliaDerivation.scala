@@ -99,6 +99,7 @@ trait SchemaMagnoliaDerivation {
                   val schemaName = subtypeNameToSchemaName(s)
                   genericDerivationConfig.toDiscriminatorValue(schemaName) -> SRef(schemaName)
                 }.toMap
+                // TODO
               baseCoproduct.addDiscriminatorField(FieldName(d), discriminatorMapping = discriminatorMapping)
             case None => baseCoproduct
           }

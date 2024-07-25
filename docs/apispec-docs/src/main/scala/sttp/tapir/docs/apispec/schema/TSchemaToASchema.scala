@@ -112,9 +112,13 @@ private[docs] class TSchemaToASchema(
     // The primary motivation for using schema name as fallback title is to improve Swagger UX with
     // `oneOf` schemas in OpenAPI 3.1. See https://github.com/softwaremill/tapir/issues/3447 for details.
     def fallbackTitle = tschema.name.map(fallbackSchemaTitle)
+    
+    val const = tschema.attribute(TSchema.EncodedDiscriminatorValue.Attribute).map(_.v).map(v => ExampleSingleValue(v))
+    
     oschema
-      .copy(title = titleFromAttr orElse fallbackTitle)
+      .copy(title = titleFromAttr.orElse(fallbackTitle))
       .copy(uniqueItems = tschema.attribute(UniqueItems.Attribute).map(_.uniqueItems))
+      .copy(const = const)
   }
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {

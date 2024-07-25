@@ -37,3 +37,4 @@ components:
             - red
         shapeType:
           type: string
+          const: Square
