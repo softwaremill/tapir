@@ -90,6 +90,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 
 val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
 
+val _ = ThreadDumpEveryMinute // init
+
 val enableMimaSettings = Seq(
   mimaPreviousArtifacts := {
     // currently only 2.* versions are stable; skipping mima for scala3
