@@ -74,33 +74,6 @@ class ZioHttpServerTest extends TestSuite with TimeLimits {
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     implicit val r: Runtime[Any] = Runtime.default
 
-    val t = new Thread() {
-      override def run(): Unit = {
-        println("START")
-        try {
-          var run = true
-          while (run) {
-            Thread.sleep(100)
-
-            val source = scala.io.Source.fromFile("/Users/adamw/projects/tapir/control")
-            val content =
-              try source.mkString
-              finally source.close()
-
-            if (content.startsWith("1")) {
-              zio.Unsafe.unsafe { implicit unsafe =>
-                println(r.unsafe.run(zio.Fiber.dumpAll))
-              }
-              run = false
-            }
-          }
-        } finally {
-          println("STOP")
-        }
-      }
-    }
-    t.start()
-
     // creating the netty dependencies once, to speed up tests
     Resource
       .scoped[IO, Any, ZEnvironment[EventLoopGroup with ChannelFactory[ServerChannel]]]({
@@ -347,6 +320,5 @@ class ZioHttpServerTest extends TestSuite with TimeLimits {
           }.tests() ++
           additionalTests()
       }
-      .onFinalize(IO(t.interrupt()))
   }
 }
