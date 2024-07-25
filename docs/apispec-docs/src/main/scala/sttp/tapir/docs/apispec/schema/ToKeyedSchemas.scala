@@ -9,14 +9,14 @@ private[docs] object ToKeyedSchemas {
   def apply(schema: TSchema[_]): List[KeyedSchema] = {
     val thisSchema = SchemaKey(schema).map(_ -> schema).toList
     val nestedSchemas = schema match {
-      case TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _, _, _, _)            => apply(o)
-      case t @ TSchema(o: TSchemaType.SOption[_, _], _, _, _, _, _, _, _, _, _, _) =>
+      case TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _, _, _, _, _)            => apply(o)
+      case t @ TSchema(o: TSchemaType.SOption[_, _], _, _, _, _, _, _, _, _, _, _, _) =>
         // #1168: if there's an optional field which is an object, with metadata defined (such as description), this
         // needs to be propagated to the target object, so that it isn't omitted.
         apply(propagateMetadataForOption(t, o).element)
-      case TSchema(st: TSchemaType.SProduct[_], _, _, _, _, _, _, _, _, _, _)        => productSchemas(st)
-      case TSchema(st: TSchemaType.SCoproduct[_], _, _, _, _, _, _, _, _, _, _)      => coproductSchemas(st)
-      case TSchema(st: TSchemaType.SOpenProduct[_, _], _, _, _, _, _, _, _, _, _, _) => apply(st.valueSchema)
+      case TSchema(st: TSchemaType.SProduct[_], _, _, _, _, _, _, _, _, _, _, _)        => productSchemas(st)
+      case TSchema(st: TSchemaType.SCoproduct[_], _, _, _, _, _, _, _, _, _, _, _)      => coproductSchemas(st)
+      case TSchema(st: TSchemaType.SOpenProduct[_, _], _, _, _, _, _, _, _, _, _, _, _) => apply(st.valueSchema)
       case _                                                                         => List.empty
     }
 

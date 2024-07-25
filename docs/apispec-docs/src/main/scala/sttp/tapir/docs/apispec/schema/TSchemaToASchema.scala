@@ -4,7 +4,7 @@ import sttp.apispec.{Schema => ASchema, _}
 import sttp.tapir.Schema.{SName, Title, UniqueItems}
 import sttp.tapir.Validator.EncodeToRaw
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichSchema
-import sttp.tapir.docs.apispec.schema.TSchemaToASchema.{tDefaultToADefault, tExampleToAExample}
+import sttp.tapir.docs.apispec.schema.TSchemaToASchema.{tConstToAConst, tDefaultToADefault, tExampleToAExample}
 import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
 import sttp.tapir.internal._
 import sttp.tapir.{Codec, Validator, Schema => TSchema, SchemaType => TSchemaType}
@@ -43,7 +43,7 @@ private[docs] class TSchemaToASchema(
               properties = extractProperties(fields)
             )
           case TSchemaType.SArray(el) => ASchema(SchemaType.Array).copy(items = Some(apply(el, allowReference = true)))
-          case opt @ TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _)) =>
+          case opt @ TSchemaType.SOption(nested @ TSchema(_, Some(name), _, _, _, _, _, _, _, _, _, _)) =>
             // #3288: in case there are multiple different customisations of the nested schema, we need to propagate the
             // metadata to properly customise the reference. These are also propagated in ToKeyedSchemas when computing
             // the initial list of schemas.
@@ -121,6 +121,7 @@ private[docs] class TSchemaToASchema(
     oschema.copy(
       description = tschema.description.orElse(oschema.description),
       default = tDefaultToADefault(tschema).orElse(oschema.default),
+      const = tConstToAConst(tschema).orElse(oschema.const),
       examples = tExampleToAExample(tschema).map(List(_)).orElse(oschema.examples),
       format = tschema.format.orElse(oschema.format),
       deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated),
@@ -193,5 +194,10 @@ object TSchemaToASchema {
   def tDefaultToADefault(schema: TSchema[_]): Option[ExampleValue] = schema.default.flatMap { case (_, raw) =>
     raw.flatMap(r => exampleValue(schema, r))
   }
+
+  def tConstToAConst(schema: TSchema[_]): Option[ExampleValue] = schema.const.flatMap { case (_, raw) =>
+    raw.flatMap(r => exampleValue(schema, r))
+  }
+
   def tExampleToAExample(schema: TSchema[_]): Option[ExampleValue] = schema.encodedExample.flatMap(exampleValue(schema, _))
 }

@@ -51,7 +51,7 @@ private[tapir] object OneOfMacro {
             val discriminatorName = _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name))
             // cannot use .collect because of a bug in ScalaJS (Trying to access the this of another class ... during phase: jscode)
             val discriminatorMapping = mappingAsMap.toList.flatMap { 
-                case (k, _root_.sttp.tapir.Schema(_, _root_.scala.Some(fname), _, _, _, _, _, _, _, _, _)) => _root_.scala.collection.immutable.List($asString.apply(k) -> _root_.sttp.tapir.SchemaType.SRef(fname))
+                case (k, _root_.sttp.tapir.Schema(_, _root_.scala.Some(fname), _, _, _, _, _, _, _, _, _, _)) => _root_.scala.collection.immutable.List($asString.apply(k) -> _root_.sttp.tapir.SchemaType.SRef(fname))
                 case _ => _root_.scala.Nil
               }
               .toMap
