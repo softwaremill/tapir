@@ -123,8 +123,11 @@ components:
     SubtypeWithD1:
       type: object
       required:
+        - type
         - s
       properties:
+        type:
+          type: string
         s:
           type: string
         i:
@@ -135,8 +138,11 @@ components:
     SubtypeWithD2:
       type: object
       required:
+        - type
         - s
       properties:
+        type:
+          type: string
         s:
           type: string
         a:
