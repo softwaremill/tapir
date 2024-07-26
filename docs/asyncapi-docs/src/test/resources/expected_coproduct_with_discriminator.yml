@@ -1,0 +1,69 @@
+asyncapi: 2.6.0
+info:
+  title: discriminator
+  version: '1.0'
+channels:
+  /animals:
+    subscribe:
+      operationId: onAnimals
+      message:
+        $ref: '#/components/messages/Animal'
+    publish:
+      operationId: sendAnimals
+      message:
+        $ref: '#/components/messages/GetAnimal'
+    bindings:
+      ws:
+        method: GET
+components:
+  schemas:
+    GetAnimal:
+      title: GetAnimal
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+    Animal:
+      title: Animal
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+      discriminator: pet
+    Cat:
+      title: Cat
+      type: object
+      required:
+        - name
+        - pet
+      properties:
+        name:
+          type: string
+        pet:
+          type: string
+          const: Cat
+    Dog:
+      title: Dog
+      type: object
+      required:
+        - name
+        - breed
+        - pet
+      properties:
+        name:
+          type: string
+        breed:
+          type: string
+        pet:
+          type: string
+          const: Dog
+  messages:
+    GetAnimal:
+      payload:
+        $ref: '#/components/schemas/GetAnimal'
+      contentType: application/json
+    Animal:
+      payload:
+        $ref: '#/components/schemas/Animal'
+      contentType: application/json
