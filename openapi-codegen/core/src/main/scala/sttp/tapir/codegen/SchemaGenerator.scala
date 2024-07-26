@@ -148,7 +148,7 @@ object SchemaGenerator {
       // Select next candidate. Order lexicographically for stable output
       val next = initialSet.minBy(_._1)
       recurse(next)
-      res += nextRing.sortBy(_._1)
+      res += nextRing.distinct.sortBy(_._1)
     }
     res.toSeq
   }
