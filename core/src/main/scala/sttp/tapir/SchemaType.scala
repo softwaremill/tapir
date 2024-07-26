@@ -129,11 +129,39 @@ object SchemaType {
         discriminatorSchema: Schema[D] = Schema.string,
         discriminatorMapping: Map[String, SRef[_]] = Map.empty
     ): SCoproduct[T] = {
+      // used to add encoded discriminator value attributes
+      val reverseDiscriminatorByNameMapping: Map[SName, String] = discriminatorMapping.toList.map { case (v, ref) => (ref.name, v) }.toMap
+
       SCoproduct(
         subtypes.map {
-          case s @ Schema(st: SchemaType.SProduct[Any @unchecked], _, _, _, _, _, _, _, _, _, _)
-              if st.fields.forall(_.name != discriminatorName) =>
-            s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[Any, D](discriminatorName, discriminatorSchema, _ => None)))
+          case s @ Schema(st: SchemaType.SProduct[Any @unchecked], _, _, _, _, _, _, _, _, _, _) =>
+            // first, ensuring that the discriminator field is added to the schema type - it might already be present
+            var targetSt =
+              if (st.fields.forall(_.name != discriminatorName))
+                st.copy(fields = st.fields :+ SProductField[Any, D](discriminatorName, discriminatorSchema, _ => None))
+              else st
+
+            // next, modifying the discriminator field, by adding the value attribute (if a value can be found)
+            targetSt = targetSt.copy(fields = targetSt.fields.map { field =>
+              if (field.name == discriminatorName) {
+                val discriminatorValue = s.name.flatMap { subtypeName =>
+                  reverseDiscriminatorByNameMapping.get(subtypeName)
+                }
+
+                discriminatorValue match {
+                  case Some(v) =>
+                    SProductField(
+                      field.name,
+                      field.schema.attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue(v)),
+                      field.get
+                    )
+                  case None => field
+                }
+
+              } else field
+            })
+
+            s.copy(schemaType = targetSt)
           case s => s
         },
         Some(SDiscriminator(discriminatorName, discriminatorMapping))

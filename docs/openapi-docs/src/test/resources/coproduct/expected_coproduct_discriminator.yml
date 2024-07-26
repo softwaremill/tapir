@@ -33,6 +33,7 @@ components:
       properties:
         name:
           type: string
+          const: sml
     Person:
       title: Person
       type: object
@@ -42,6 +43,7 @@ components:
       properties:
         name:
           type: string
+          const: john
         age:
           type: integer
           format: int32

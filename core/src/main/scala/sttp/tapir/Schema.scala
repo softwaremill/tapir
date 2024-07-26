@@ -361,6 +361,26 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[Tuple] = new AttributeKey[Tuple]("sttp.tapir.Schema.Tuple")
   }
 
+  /** For coproduct schemas, when there's a discriminator field, used to attach the encoded value of the discriminator field. Such value is
+    * added to the discriminator field schemas in each of the coproduct's subtypes. When rendering OpenAPI/JSON schema, these values are
+    * converted to `const` constraints on fields.
+    */
+  case class EncodedDiscriminatorValue(v: String)
+  object EncodedDiscriminatorValue {
+    /*
+    Implementation note: the discriminator value constraint is in fact an enum validator with a single possible enum value. Hence an
+    alternative design would be to add such validators to discriminator fields, instead of an attribute. However, this has two drawbacks:
+    1. when adding discriminator fields using `addDiscriminatorField`, we don't have access to the decoded discriminator value - only
+       to the encoded one, via reverse mapping lookup
+    2. the validator doesn't necessarily make sense, as it can't be used to validate the deserialiszd object. Usually the discriminator
+       fields don't even exist on the high-level representations.
+    That's why instead of re-using the validators, we decided to use a specialised attribute.
+     */
+
+    val Attribute: AttributeKey[EncodedDiscriminatorValue] =
+      new AttributeKey[EncodedDiscriminatorValue]("sttp.tapir.Schema.EncodedDiscriminatorValue")
+  }
+
   /** @param typeParameterShortNames
     *   full name of type parameters, name is legacy and kept only for backward compatibility
     */
