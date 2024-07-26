@@ -39,10 +39,10 @@ object UnionTypeMirror {
           val (c1, rec1) = rec(left)
           val (c2, rec2) = rec(right)
           (c1 + c2, concatTypes(rec1, rec2))
-        case t => 
-          // Intentionally using `tpe` instead of `t`. Dealiased representation `t` "loses" information 
-          // about the original type from the union. For example, an Iron predicate `MinLength[N]` 
-          // would be dealiased to `DescribedAs[Length[GreaterEqual[N]], _]`. 
+        case t =>
+          // Intentionally using `tpe` instead of `t`. Dealiased representation `t` "loses" information
+          // about the original type from the union. For example, an Iron predicate `MinLength[N]`
+          // would be dealiased to `DescribedAs[Length[GreaterEqual[N]], _]`.
           // Then, a given `ValidatorForPredicate[T, MinLength[N]]` would not be used in implicit resolution.
           (1, prependTypes(tpe, TypeRepr.of[EmptyTuple]))
       }

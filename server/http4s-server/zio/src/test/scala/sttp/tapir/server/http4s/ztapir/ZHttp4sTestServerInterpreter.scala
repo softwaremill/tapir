@@ -47,7 +47,7 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
       .withHttpWebSocketApp(service)
       .resource
       .map(_.address.getPort)
-      .mapK(new ~>[Task, IO] { 
+      .mapK(new ~>[Task, IO] {
         // Converting a ZIO effect to an Cats Effect IO effect
         def apply[B](fa: Task[B]): IO[B] = IO.fromFuture(Unsafe.unsafe(implicit u => IO(Runtime.default.unsafe.runToFuture(fa))))
       })

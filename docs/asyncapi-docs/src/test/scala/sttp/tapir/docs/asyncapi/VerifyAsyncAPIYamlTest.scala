@@ -133,7 +133,11 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
       .out(
         webSocketBody[Fruit, CodecFormat.Json, Int, CodecFormat.Json](AkkaStreams)
           // TODO: missing `RequestInfo.example(example: EndpointIO.Example)` and friends
-          .pipe(e => e.copy(requestsInfo = e.requestsInfo.example(Example.of(Fruit("apple")).name("Apple").summary("Sample representation of apple"))))
+          .pipe(e =>
+            e.copy(requestsInfo =
+              e.requestsInfo.example(Example.of(Fruit("apple")).name("Apple").summary("Sample representation of apple"))
+            )
+          )
       )
 
     val expectedYaml = loadYaml("expected_json_example_name_summary.yml")

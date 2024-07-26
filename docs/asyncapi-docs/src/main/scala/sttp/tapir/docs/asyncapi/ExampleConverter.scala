@@ -13,7 +13,7 @@ private[asyncapi] object ExampleConverter {
           case WebSocketFrame.Text(payload, _, _) =>
             Some(MessageExample(headers = None, Some(ExampleSingleValue(payload)), example.name, example.summary))
           case WebSocketFrame.Binary(_, _, _) => None
-          case _: WebSocketFrame.Control => None
+          case _: WebSocketFrame.Control      => None
         }
       }
   }

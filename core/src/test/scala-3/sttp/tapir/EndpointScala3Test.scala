@@ -15,7 +15,7 @@ class EndpointScala3Test extends AnyFlatSpec with Matchers:
         )
       )
   }
-  
+
   it should "compile when using parameterless sealed traits" in {
     endpoint.get
       .out(
