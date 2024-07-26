@@ -76,7 +76,9 @@ object TapirGeneratedEndpoints {
     s: String,
     i: Option[Int] = None,
     d: Option[Double] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
+    def `type`: String = "SubA"
+  }
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
@@ -103,7 +105,9 @@ object TapirGeneratedEndpoints {
   case class SubtypeWithD2 (
     s: String,
     a: Option[Seq[String]] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
+    def `type`: String = "SubB"
+  }
 
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] with enumeratum.CirceEnum[AnEnum] {
