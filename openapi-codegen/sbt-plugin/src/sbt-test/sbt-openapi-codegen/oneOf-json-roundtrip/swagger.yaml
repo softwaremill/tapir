@@ -119,7 +119,7 @@ components:
         - $ref: '#/components/schemas/SubtypeWithD1'
         - $ref: '#/components/schemas/SubtypeWithD2'
       discriminator:
-        propertyName: type
+        propertyName: noMapType
     SubtypeWithD1:
       type: object
       required:
