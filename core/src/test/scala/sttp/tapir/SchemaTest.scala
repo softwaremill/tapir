@@ -209,13 +209,16 @@ class SchemaTest extends AnyFlatSpec with Matchers {
 
   it should "generate correct names for Eithers with parameterized types" in {
     import sttp.tapir.generic.auto._
-    implicitly[Schema[Either[Int, Int]]].name shouldBe None    
+    implicitly[Schema[Either[Int, Int]]].name shouldBe None
     implicitly[Schema[Either[SomeValueInt, Int]]].name shouldBe None
     implicitly[Schema[Either[SomeValueInt, SomeValueInt]]].name shouldBe Some(
       SName("Either", List("sttp.tapir.SchemaTest.SomeValueInt", "sttp.tapir.SchemaTest.SomeValueInt"))
     )
     implicitly[Schema[Either[SomeValueInt, Node[SomeValueString[Boolean]]]]].name shouldBe Some(
-      SName("Either", List("sttp.tapir.SchemaTest.SomeValueInt", "sttp.tapir.SchemaTest.Node", "sttp.tapir.SchemaTest.SomeValueString", "scala.Boolean"))
+      SName(
+        "Either",
+        List("sttp.tapir.SchemaTest.SomeValueInt", "sttp.tapir.SchemaTest.Node", "sttp.tapir.SchemaTest.SomeValueString", "scala.Boolean")
+      )
     )
     implicitly[Schema[Either[SomeValueInt, Node[String]]]].name shouldBe Some(
       SName("Either", List("sttp.tapir.SchemaTest.SomeValueInt", "sttp.tapir.SchemaTest.Node", "java.lang.String"))
@@ -224,15 +227,18 @@ class SchemaTest extends AnyFlatSpec with Matchers {
       SName("Either", List("sttp.tapir.SchemaTest.Node", "scala.Boolean", "sttp.tapir.SchemaTest.SomeValueInt"))
     )
   }
-  
+
   it should "generate correct names for Maps with parameterized types" in {
     import sttp.tapir.generic.auto._
     type Tree[A] = Either[A, Node[A]]
-    val schema1: Schema[Map[SomeValueInt, Node[SomeValueString[Boolean]]]] = Schema.schemaForMap(_.toString) 
+    val schema1: Schema[Map[SomeValueInt, Node[SomeValueString[Boolean]]]] = Schema.schemaForMap(_.toString)
     schema1.name shouldBe Some(
-      SName("Map", List("sttp.tapir.SchemaTest.SomeValueInt", "sttp.tapir.SchemaTest.Node", "sttp.tapir.SchemaTest.SomeValueString", "scala.Boolean"))
+      SName(
+        "Map",
+        List("sttp.tapir.SchemaTest.SomeValueInt", "sttp.tapir.SchemaTest.Node", "sttp.tapir.SchemaTest.SomeValueString", "scala.Boolean")
+      )
     )
-    val schema2: Schema[Map[Node[Boolean], Node[String]]] = Schema.schemaForMap(_.toString) 
+    val schema2: Schema[Map[Node[Boolean], Node[String]]] = Schema.schemaForMap(_.toString)
     schema2.name shouldBe Some(
       SName("Map", List("sttp.tapir.SchemaTest.Node", "scala.Boolean", "sttp.tapir.SchemaTest.Node", "java.lang.String"))
     )
