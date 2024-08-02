@@ -25,7 +25,6 @@ object JsonSerdeGenerator {
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
       jsonParamRefs: Set[String],
       allTransitiveJsonParamRefs: Set[String],
-      fullModelPath: String,
       validateNonDiscriminatedOneOfs: Boolean,
       adtInheritanceMap: Map[String, Seq[String]],
       targetScala3: Boolean
@@ -41,7 +40,6 @@ object JsonSerdeGenerator {
           jsonParamRefs,
           allTransitiveJsonParamRefs,
           adtInheritanceMap,
-          if (fullModelPath.isEmpty) None else Some(fullModelPath),
           validateNonDiscriminatedOneOfs
         )
       case JsonSerdeLib.Zio => genZioSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs, targetScala3)
@@ -233,7 +231,6 @@ object JsonSerdeGenerator {
       jsonParamRefs: Set[String],
       allTransitiveJsonParamRefs: Set[String],
       adtInheritanceMap: Map[String, Seq[String]],
-      fullModelPath: Option[String],
       validateNonDiscriminatedOneOfs: Boolean
   ): Option[String] = {
     // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
@@ -271,7 +268,7 @@ object JsonSerdeGenerator {
           Some(genJsoniterEnumSerde(name))
         // For ADTs, generate the serde if it's referenced in any json model
         case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(generateJsoniterAdtSerde(allSchemas, name, schema, fullModelPath, validateNonDiscriminatedOneOfs))
+          Some(generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
         case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
       })
@@ -304,10 +301,8 @@ object JsonSerdeGenerator {
       allSchemas: Map[String, OpenapiSchemaType],
       name: String,
       schema: OpenapiSchemaOneOf,
-      maybeFullModelPath: Option[String],
       validateNonDiscriminatedOneOfs: Boolean
   ): String = {
-    val fullPathPrefix = maybeFullModelPath.map(_ + ".").getOrElse("")
     val uncapitalisedName = BasicGenerator.uncapitalise(name)
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
