@@ -75,7 +75,7 @@ object TapirGeneratedEndpoints {
     a: Option[Seq[String]] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
 
-  enum AnEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+  enum AnEnum {
     case Foo, Bar, Baz
   }
 
