@@ -323,11 +323,11 @@ object JsonSerdeGenerator {
         val body = if (schemaToJsonMapping.exists { case (className, jsonValue) => className != jsonValue }) {
           val discriminatorMap = indent(2)(
             schemaToJsonMapping
-              .map { case (k, v) => s"""case "$fullPathPrefix$k" => "$v"""" }
+              .map { case (k, v) => s"""case "$k" => "$v"""" }
               .mkString("\n", "\n", "\n")
           )
           val config =
-            s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}")).withAdtLeafClassNameMapper{$discriminatorMap}"""
+            s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {$discriminatorMap})"""
           val serde =
             s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
 

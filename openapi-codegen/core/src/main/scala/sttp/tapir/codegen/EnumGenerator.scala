@@ -33,10 +33,12 @@ object EnumGenerator {
       val maybeCodecExtensions = jsonSerdeLib match {
         case _ if !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) => ""
         case _ if !jsonParamRefs.contains(name)                                   => " derives enumextensions.EnumMirror"
-        case JsonSerdeLib.Circe if !queryParamRefs.contains(name) => " derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec"
-        case JsonSerdeLib.Circe => " derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror"
-        case JsonSerdeLib.Jsoniter | JsonSerdeLib.Zio if !queryParamRefs.contains(name) => s" extends java.lang.Enum[$name]"
-        case JsonSerdeLib.Jsoniter | JsonSerdeLib.Zio => s" extends java.lang.Enum[$name] derives enumextensions.EnumMirror"
+        case JsonSerdeLib.Circe | JsonSerdeLib.Jsoniter if !queryParamRefs.contains(name) =>
+          " derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec"
+        case JsonSerdeLib.Circe | JsonSerdeLib.Jsoniter =>
+          " derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror"
+        case JsonSerdeLib.Zio if !queryParamRefs.contains(name) => s" extends java.lang.Enum[$name]"
+        case JsonSerdeLib.Zio                                   => s" extends java.lang.Enum[$name] derives enumextensions.EnumMirror"
       }
       s"""$maybeCompanion
          |enum $name$maybeCodecExtensions {
