@@ -15,10 +15,6 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class JsonRoundtrip extends AnyFreeSpec with Matchers {
-  "println!" in {
-    println(">> A: " +SubtypeWithD1("a", None, None).getClass.getName)
-    println(">> B: " +classOf[SubtypeWithD1])
-  }
   "oneOf without discriminator can be round-tripped by generated serdes" in {
     val route = TapirGeneratedEndpoints.putAdtTest.serverLogic[Future]({
       case foo: SubtypeWithoutD1 =>
