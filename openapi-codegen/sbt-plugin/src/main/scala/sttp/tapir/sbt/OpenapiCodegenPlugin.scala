@@ -66,8 +66,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
         ) =>
           def genTask(swaggerFile: File, packageName: String, directoryName: Option[String] = None) =
             OpenapiCodegenTask(
-              c.swaggerFile,
-              c.packageName,
+              swaggerFile,
+              packageName,
               c.objectName,
               c.useHeadTagForObjectName,
               c.jsonSerdeLib,
