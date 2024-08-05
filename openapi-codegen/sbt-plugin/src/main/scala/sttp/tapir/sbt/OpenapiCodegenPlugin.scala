@@ -47,8 +47,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     standardParamSetting
   )
 
-  private def codegen = Def.sequential(
-    Def.task { standardParamSetting },
+  private def codegen =
     Def.task {
       val log = sLog.value
       log.info("Zipping file...")
@@ -85,5 +84,4 @@ object OpenapiCodegenPlugin extends AutoPlugin {
             .reduceLeft((l, r) => l.flatMap(_l => r.map(_l ++ _)))
       }) map (Seq(_))).value
     }
-  )
 }
