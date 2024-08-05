@@ -48,7 +48,6 @@ class ClassDefinitionGenerator {
       jsonSerdeLib,
       jsonParamRefs,
       allTransitiveJsonParamRefs,
-      fullModelPath,
       validateNonDiscriminatedOneOfs,
       adtInheritanceMap.mapValues(_.map(_._1)),
       targetScala3

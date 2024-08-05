@@ -1,0 +1,138 @@
+openapi: 3.0.3
+servers:
+  - url: /v3
+info:
+  description: File for testing json roundtripping of oneOf defns in scala 2.x with jsoniter-scala
+  version: 1.0.20-SNAPSHOT
+  title: OneOf Json test for jsoniter-scala
+tags: []
+paths:
+  '/adt/test':
+    post:
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ADTWithDiscriminator'
+      requestBody:
+        required: true
+        description: Update an existent user in the store
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ADTWithDiscriminatorNoMapping'
+    put:
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ADTWithoutDiscriminator'
+      requestBody:
+        required: true
+        description: Update an existent user in the store
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ADTWithoutDiscriminator'
+
+components:
+  schemas:
+    ADTWithDiscriminator:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/SubtypeWithD1'
+        - $ref: '#/components/schemas/SubtypeWithD2'
+      discriminator:
+        propertyName: type
+        mapping:
+          'SubA': '#/components/schemas/SubtypeWithD1'
+          'SubB': '#/components/schemas/SubtypeWithD2'
+    # This has the same members as ADTWithDiscriminator, to test that we can extend multiple sealed traits in our ADT mappings
+    ADTWithDiscriminatorNoMapping:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/SubtypeWithD1'
+        - $ref: '#/components/schemas/SubtypeWithD2'
+      discriminator:
+        propertyName: type
+    SubtypeWithD1:
+      type: object
+      required:
+        - s
+      properties:
+        s:
+          type: string
+        i:
+          type: integer
+        d:
+          type: number
+          format: double
+    SubtypeWithD2:
+      type: object
+      required:
+        - s
+      properties:
+        s:
+          type: string
+        a:
+          type: array
+          items:
+            type: string
+    ADTWithoutDiscriminator:
+      type: object
+      oneOf:
+        ## A 'SubtypeWithoutD1' with only 'a' and 'd' fields set could be decoded as either a SubtypeWithoutD2 or SubtypeWithoutD3,
+        ## and so must be defined first here, or else we'd fail validation
+        - $ref: '#/components/schemas/SubtypeWithoutD1'
+        - $ref: '#/components/schemas/SubtypeWithoutD2'
+        - $ref: '#/components/schemas/SubtypeWithoutD3'
+    SubtypeWithoutD1:
+      type: object
+      required:
+        - s
+        - a
+      properties:
+        s:
+          type: string
+        i:
+          type: integer
+        a:
+          type: array
+          items:
+            type: string
+        absent:
+          type: string
+    SubtypeWithoutD2:
+      type: object
+      required:
+        - a
+      properties:
+        a:
+          type: array
+          items:
+            type: string
+        absent:
+          type: string
+    SubtypeWithoutD3:
+      type: object
+      required:
+        - s
+      properties:
+        s:
+          type: string
+        i:
+          type: integer
+        e:
+          $ref: '#/components/schemas/AnEnum'
+        absent:
+          type: string
+    AnEnum:
+      type: string
+      enum:
+        - Foo
+        - Bar
+        - Baz
