@@ -18,7 +18,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
   def openapiCodegenScopedSettings(conf: Configuration): Seq[Setting[_]] = inConfig(conf)(
     Seq(
       generateTapirDefinitions := codegen.value,
-      sourceGenerators += (codegen.taskValue).map(_.flatMap(_.map(_.toPath.toFile)))
+      sourceGenerators += (codegen.taskValue).map(_.map(_.toPath.toFile))
     )
   )
 
@@ -51,12 +51,12 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     Def.task {
       val log = sLog.value
       log.info("Zipping file...")
-      (((
+      (
         openapiOpenApiConfiguration,
         sourceManaged,
         streams,
         scalaVersion
-      ) flatMap {
+      ).flatMap {
         (
             c: OpenApiConfiguration,
             srcDir: File,
@@ -82,6 +82,6 @@ object OpenapiCodegenPlugin extends AutoPlugin {
             genTask(defns, pkg, Some(pkg.replace('.', '/'))).file
           })
             .reduceLeft((l, r) => l.flatMap(_l => r.map(_l ++ _)))
-      }) map (Seq(_))).value
+      }.value
     }
 }
