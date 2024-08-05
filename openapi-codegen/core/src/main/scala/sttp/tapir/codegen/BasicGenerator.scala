@@ -21,6 +21,10 @@ object JsonSerdeLib extends Enumeration {
   val Circe, Jsoniter, Zio = Value
   type JsonSerdeLib = Value
 }
+object StreamingImplementation extends Enumeration {
+  val Akka, FS2, Pekko, Zio = Value
+  type StreamingImplementation = Value
+}
 
 object BasicGenerator {
 
@@ -34,6 +38,7 @@ object BasicGenerator {
       targetScala3: Boolean,
       useHeadTagForObjectNames: Boolean,
       jsonSerdeLib: String,
+      streamingImplementation: String,
       validateNonDiscriminatedOneOfs: Boolean,
       maxSchemasPerFile: Int
   ): Map[String, String] = {
@@ -47,9 +52,20 @@ object BasicGenerator {
         )
         JsonSerdeLib.Circe
     }
+    val normalisedStreamingImplementation = streamingImplementation.toLowerCase match {
+      case "akka"  => StreamingImplementation.Akka
+      case "fs2"   => StreamingImplementation.FS2
+      case "pekko" => StreamingImplementation.Pekko
+      case "zio"   => StreamingImplementation.Zio
+      case _ =>
+        System.err.println(
+          s"!!! Unrecognised value $streamingImplementation for streaming impl -- should be one of akka, fs2, pekko or zio. Defaulting to fs2 !!!"
+        )
+        StreamingImplementation.FS2
+    }
 
     val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams) =
-      endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames, targetScala3, normalisedJsonLib)
+      endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames, targetScala3, normalisedJsonLib, normalisedStreamingImplementation)
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas) =
       classGenerator
         .classDefs(

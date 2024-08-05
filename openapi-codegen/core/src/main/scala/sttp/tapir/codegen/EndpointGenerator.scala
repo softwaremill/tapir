@@ -2,6 +2,8 @@ package sttp.tapir.codegen
 import io.circe.Json
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
+import sttp.tapir.codegen.StreamingImplementation
+import sttp.tapir.codegen.StreamingImplementation.StreamingImplementation
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
@@ -55,12 +57,13 @@ class EndpointGenerator {
       doc: OpenapiDocument,
       useHeadTagForObjectNames: Boolean,
       targetScala3: Boolean,
-      jsonSerdeLib: JsonSerdeLib
+      jsonSerdeLib: JsonSerdeLib,
+      streamingImplementation: StreamingImplementation
   ): EndpointDefs = {
     val components = Option(doc.components).flatten
     val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam) =
       doc.paths
-        .map(generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib))
+        .map(generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, streamingImplementation))
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false))(_ merge _)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
       val definitions = ge
@@ -84,7 +87,8 @@ class EndpointGenerator {
       components: Option[OpenapiComponent],
       useHeadTagForObjectNames: Boolean,
       targetScala3: Boolean,
-      jsonSerdeLib: JsonSerdeLib
+      jsonSerdeLib: JsonSerdeLib,
+      streamingImplementation: StreamingImplementation
   )(p: OpenapiPath): GeneratedEndpoints = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
@@ -106,14 +110,15 @@ class EndpointGenerator {
         }
 
         val name = strippedToCamelCase(m.operationId.getOrElse(m.methodType + p.url.capitalize))
-        val (inParams, maybeLocalEnums) = ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib)
+        val (inParams, maybeLocalEnums) =
+          ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation)
         val definition =
           s"""|endpoint
               |  .${m.methodType}
               |  ${urlMapper(p.url, m.resolvedParameters)}
               |${indent(2)(security(securitySchemes, m.security))}
               |${indent(2)(inParams)}
-              |${indent(2)(outs(m.responses))}
+              |${indent(2)(outs(m.responses, streamingImplementation))}
               |${indent(2)(tags(m.tags))}
               |$attributeString
               |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
@@ -211,7 +216,8 @@ class EndpointGenerator {
       requestBody: Option[OpenapiRequestBody],
       endpointName: String,
       targetScala3: Boolean,
-      jsonSerdeLib: JsonSerdeLib
+      jsonSerdeLib: JsonSerdeLib,
+      streamingImplementation: StreamingImplementation
   )(implicit location: Location): (String, Option[String]) = {
     def getEnumParamDefn(param: OpenapiParameter, e: OpenapiSchemaEnum, isArray: Boolean) = {
       val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
@@ -267,7 +273,7 @@ class EndpointGenerator {
     val rqBody = requestBody.flatMap { b =>
       if (b.content.isEmpty) None
       else if (b.content.size != 1) bail(s"We can handle only one requestBody content! Saw ${b.content.map(_.contentType)}")
-      else Some(s".in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, b.required)})")
+      else Some(s".in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, streamingImplementation, b.required)})")
     }
 
     (params ++ rqBody).mkString("\n") -> maybeEnumDefns.foldLeft(Option.empty[String]) {
@@ -298,7 +304,7 @@ class EndpointGenerator {
   // treats redirects as ok
   private val okStatus = """([23]\d\d)""".r
   private val errorStatus = """([45]\d\d)""".r
-  private def outs(responses: Seq[OpenapiResponse])(implicit location: Location) = {
+  private def outs(responses: Seq[OpenapiResponse], streamingImplementation: StreamingImplementation)(implicit location: Location) = {
     // .errorOut(stringBody)
     // .out(jsonBody[List[Book]])
 
@@ -315,13 +321,13 @@ class EndpointGenerator {
           case content +: Nil =>
             resp.code match {
               case "200" =>
-                s".out(${contentTypeMapper(content.contentType, content.schema)}$d)"
+                s".out(${contentTypeMapper(content.contentType, content.schema, streamingImplementation)}$d)"
               case okStatus(s) =>
-                s".out(${contentTypeMapper(content.contentType, content.schema)}$d.and(statusCode(sttp.model.StatusCode($s))))"
+                s".out(${contentTypeMapper(content.contentType, content.schema, streamingImplementation)}$d.and(statusCode(sttp.model.StatusCode($s))))"
               case "default" =>
-                s".errorOut(${contentTypeMapper(content.contentType, content.schema)}$d)"
+                s".errorOut(${contentTypeMapper(content.contentType, content.schema, streamingImplementation)}$d)"
               case errorStatus(s) =>
-                s".errorOut(${contentTypeMapper(content.contentType, content.schema)}$d.and(statusCode(sttp.model.StatusCode($s))))"
+                s".errorOut(${contentTypeMapper(content.contentType, content.schema, streamingImplementation)}$d.and(statusCode(sttp.model.StatusCode($s))))"
               case x =>
                 bail(s"Statuscode mapping is incomplete! Cannot handle $x")
             }
@@ -333,7 +339,12 @@ class EndpointGenerator {
       .mkString("\n")
   }
 
-  private def contentTypeMapper(contentType: String, schema: OpenapiSchemaType, required: Boolean = true)(implicit location: Location) = {
+  private def contentTypeMapper(
+      contentType: String,
+      schema: OpenapiSchemaType,
+      streamingImplementation: StreamingImplementation,
+      required: Boolean = true
+  )(implicit location: Location) = {
     contentType match {
       case "text/plain" =>
         "stringBody"
@@ -361,6 +372,17 @@ class EndpointGenerator {
             val (t, _) = mapSchemaSimpleTypeToType(schemaRef, multipartForm = true)
             s"multipartBody[$t]"
           case x => bail(s"$contentType only supports schema ref or binary. Found $x")
+        }
+      case "application/octet-stream" =>
+        schema match {
+          case _: OpenapiSchemaBinary =>
+            val capability = streamingImplementation match {
+              case StreamingImplementation.Akka  => "sttp.capabilities.akka.AkkaStreams"
+              case StreamingImplementation.FS2   => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
+              case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
+              case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
+            }
+            s"streamTextBody($capability)(CodecFormat.TextPlain())"
         }
 
       case x => bail(s"Not all content types supported! Found $x")

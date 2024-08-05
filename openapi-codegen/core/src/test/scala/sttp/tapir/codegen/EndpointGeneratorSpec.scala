@@ -63,7 +63,13 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     )
     val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
-        .endpointDefs(doc, useHeadTagForObjectNames = false, targetScala3 = false, jsonSerdeLib = JsonSerdeLib.Circe)
+        .endpointDefs(
+          doc,
+          useHeadTagForObjectNames = false,
+          targetScala3 = false,
+          jsonSerdeLib = JsonSerdeLib.Circe,
+          streamingImplementation = StreamingImplementation.FS2
+        )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
     generatedCode should include(""".in(query[Option[String]]("fgh-id"))""")
@@ -142,7 +148,13 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     )
     BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
-        .endpointDefs(doc, useHeadTagForObjectNames = false, targetScala3 = false, jsonSerdeLib = JsonSerdeLib.Circe)
+        .endpointDefs(
+          doc,
+          useHeadTagForObjectNames = false,
+          targetScala3 = false,
+          jsonSerdeLib = JsonSerdeLib.Circe,
+          streamingImplementation = StreamingImplementation.FS2
+        )
         .endpointDecls(None) shouldCompile ()
   }
 
@@ -188,7 +200,13 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     )
     val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
-        .endpointDefs(doc, useHeadTagForObjectNames = false, targetScala3 = false, jsonSerdeLib = JsonSerdeLib.Circe)
+        .endpointDefs(
+          doc,
+          useHeadTagForObjectNames = false,
+          targetScala3 = false,
+          jsonSerdeLib = JsonSerdeLib.Circe,
+          streamingImplementation = StreamingImplementation.FS2
+        )
         .endpointDecls(None)
     generatedCode should include(
       """.out(stringBody.description("Processing").and(statusCode(sttp.model.StatusCode(202))))"""
@@ -253,7 +271,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       useHeadTagForObjectNames = false,
       jsonSerdeLib = "circe",
       validateNonDiscriminatedOneOfs = true,
-      maxSchemasPerFile = 400
+      maxSchemasPerFile = 400,
+      streamingImplementation = "fs2"
     )("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
@@ -274,7 +293,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       useHeadTagForObjectNames = false,
       jsonSerdeLib = "circe",
       validateNonDiscriminatedOneOfs = true,
-      maxSchemasPerFile = 400
+      maxSchemasPerFile = 400,
+      streamingImplementation = "fs2"
     )("TapirGeneratedEndpoints")
     generatedCode shouldCompile ()
     val expectedAttrDecls = Seq(
