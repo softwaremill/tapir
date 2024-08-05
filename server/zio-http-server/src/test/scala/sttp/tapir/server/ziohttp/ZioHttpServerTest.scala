@@ -300,7 +300,7 @@ class ZioHttpServerTest extends TestSuite {
             backend,
             basic = false,
             staticContent = true,
-            multipart = false,
+            multipart = true,
             file = true,
             options = false
           ).tests() ++
