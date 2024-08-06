@@ -382,7 +382,7 @@ class EndpointGenerator {
               case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
               case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
             }
-            s"streamTextBody($capability)(CodecFormat.TextPlain())"
+            s"streamTextBody($capability)(CodecFormat.OctetStream())"
           case x => bail(s"$contentType only supports binary schema. Found $x")
         }
 

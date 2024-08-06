@@ -123,13 +123,13 @@ object TapirGeneratedEndpoints {
     endpoint
       .get
       .in(("binary" / "test"))
-      .out(streamTextBody(sttp.capabilities.pekko.PekkoStreams)(CodecFormat.TextPlain()).description("Response CSV body"))
+      .out(streamTextBody(sttp.capabilities.pekko.PekkoStreams)(CodecFormat.OctetStream()).description("Response CSV body"))
 
   lazy val postBinaryTest =
     endpoint
       .post
       .in(("binary" / "test"))
-      .in(streamTextBody(sttp.capabilities.pekko.PekkoStreams)(CodecFormat.TextPlain()))
+      .in(streamTextBody(sttp.capabilities.pekko.PekkoStreams)(CodecFormat.OctetStream()))
       .out(jsonBody[String].description("successful operation"))
 
   lazy val putAdtTest =
