@@ -12,7 +12,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaEnum,
   OpenapiSchemaMap,
   OpenapiSchemaRef,
-  OpenapiSchemaSimpleType
+  OpenapiSchemaSimpleType,
+  OpenapiSchemaString
 }
 import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType, SpecificationExtensionRenderer}
 import sttp.tapir.codegen.util.JavaEscape
@@ -374,16 +375,29 @@ class EndpointGenerator {
           case x => bail(s"$contentType only supports schema ref or binary. Found $x")
         }
       case "application/octet-stream" =>
+        val capability = streamingImplementation match {
+          case StreamingImplementation.Akka  => "sttp.capabilities.akka.AkkaStreams"
+          case StreamingImplementation.FS2   => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
+          case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
+          case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
+        }
         schema match {
-          case _: OpenapiSchemaBinary =>
-            val capability = streamingImplementation match {
-              case StreamingImplementation.Akka  => "sttp.capabilities.akka.AkkaStreams"
-              case StreamingImplementation.FS2   => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
-              case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
-              case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
-            }
+          case _: OpenapiSchemaString =>
             s"streamTextBody($capability)(CodecFormat.OctetStream())"
-          case x => bail(s"$contentType only supports binary schema. Found $x")
+          case schema =>
+            val outT = schema match {
+              case st: OpenapiSchemaSimpleType =>
+                val (t, _) = mapSchemaSimpleTypeToType(st)
+                t
+              case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _) =>
+                val (t, _) = mapSchemaSimpleTypeToType(st)
+                s"List[$t]"
+              case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _) =>
+                val (t, _) = mapSchemaSimpleTypeToType(st)
+                s"Map[String, $t]"
+              case x => bail(s"Can't create this param as output (found $x)")
+                }
+            s"streamBody($capability)(Schema.binary[$outT], CodecFormat.OctetStream())"
         }
 
       case x => bail(s"Not all content types supported! Found $x")
