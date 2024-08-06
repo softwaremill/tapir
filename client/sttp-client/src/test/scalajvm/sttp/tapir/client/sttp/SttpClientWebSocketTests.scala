@@ -21,6 +21,7 @@ class SttpClientWebSocketTests extends SttpClientTests[WebSockets with Fs2Stream
   webSocketTests()
 
   test("web sockets, string echo, custom header") {
+    // HttpClient doesn't expose web socket response headers
     AsyncHttpClientFs2Backend
       .resource[IO]()
       .use { asyncHttpClientBackend =>
@@ -31,7 +32,6 @@ class SttpClientWebSocketTests extends SttpClientTests[WebSockets with Fs2Stream
             args: I,
             scheme: String = "http"
         ): IO[Response[Either[E, O]]] = {
-          implicit val wst: WebSocketToPipe[WebSockets with Fs2Streams[IO]] = wsToPipe
           SttpClientInterpreter()
             .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
             .apply(securityArgs)
