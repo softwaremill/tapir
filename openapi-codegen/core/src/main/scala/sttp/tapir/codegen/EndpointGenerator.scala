@@ -396,7 +396,7 @@ class EndpointGenerator {
                 val (t, _) = mapSchemaSimpleTypeToType(st)
                 s"Map[String, $t]"
               case x => bail(s"Can't create this param as output (found $x)")
-                }
+            }
             s"streamBody($capability)(Schema.binary[$outT], CodecFormat.OctetStream())"
         }
 
