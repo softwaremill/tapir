@@ -17,7 +17,8 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       useHeadTagForObjectNames = useHeadTagForObjectNames,
       jsonSerdeLib = jsonSerdeLib,
       validateNonDiscriminatedOneOfs = true,
-      maxSchemasPerFile = 400
+      maxSchemasPerFile = 400,
+      streamingImplementation = "fs2"
     )
   }
   def gen(

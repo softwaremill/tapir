@@ -117,6 +117,21 @@ object TapirGeneratedEndpoints {
     case object Baz extends AnEnum
   }
 
+
+
+  lazy val getBinaryTest =
+    endpoint
+      .get
+      .in(("binary" / "test"))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()).description("Response CSV body"))
+
+  lazy val postBinaryTest =
+    endpoint
+      .post
+      .in(("binary" / "test"))
+      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()))
+      .out(jsonBody[String].description("successful operation"))
+
   lazy val putAdtTest =
     endpoint
       .put
@@ -183,6 +198,6 @@ object TapirGeneratedEndpoints {
   }
 
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postInlineEnumTest)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putAdtTest, postAdtTest, postInlineEnumTest)
 
 }

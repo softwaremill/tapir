@@ -44,6 +44,7 @@ openapiJsonSerdeLib                   circe                                The j
 openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
 openapiMaxSchemasPerFile              400                                  Maximum number of schemas to generate in a single file (tweak if hitting javac class size limits).
 openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
+openapiStreamingImplementation        fs2                                  Backend capability to assume for streaming content. Supports akka, fs2, pekko and zio.  
 ===================================== ==================================== ==================================================================================================
 ```
 
