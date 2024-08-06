@@ -383,6 +383,7 @@ class EndpointGenerator {
               case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
             }
             s"streamTextBody($capability)(CodecFormat.TextPlain())"
+          case x => bail(s"$contentType only supports binary schema. Found $x")
         }
 
       case x => bail(s"Not all content types supported! Found $x")
