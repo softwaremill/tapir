@@ -8,32 +8,42 @@
 
 ## Intro
 
-With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of
-input and output parameters. An endpoint specification can be interpreted as:
+Tapir is a library to describe HTTP APIs, expose them as a server, consume as a client, and automatically document
+using open standards.
 
-* a server, given the "business logic": a function, which computes output parameters based on input parameters. 
-  Currently supported: 
-  * [Akka HTTP](https://tapir.softwaremill.com/en/latest/server/akkahttp.html) `Route`s/`Directive`s
-  * [Http4s](https://tapir.softwaremill.com/en/latest/server/http4s.html) `HttpRoutes[F]`
-  * [Netty](https://tapir.softwaremill.com/en/latest/server/netty.html)
-  * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
-  * [Pekko HTTP](https://tapir.softwaremill.com/en/latest/server/pekkohttp.html) `Route`s/`Directive`s
-  * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
-  * [Vert.X](https://tapir.softwaremill.com/en/latest/server/vertx.html) `Router => Route`
-  * [ZIO Http](https://tapir.softwaremill.com/en/latest/server/ziohttp.html) `Http`
-  * [Armeria](https://tapir.softwaremill.com/en/latest/server/armeria.html) `HttpServiceWithRoutes`
-  * [aws](https://tapir.softwaremill.com/en/latest/server/aws.html) through Lambda/SAM/Terraform
-* a client, which is a function from input parameters to output parameters.
-  Currently supported:
-  * [sttp](https://tapir.softwaremill.com/en/latest/client/sttp.html)
-  * [Play](https://tapir.softwaremill.com/en/latest/client/play.html)
-  * [http4s](https://tapir.softwaremill.com/en/latest/client/http4s.html)
-* documentation. Currently supported: 
-  * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
-  * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
+Tapir is fast and developer-friendly. The endpoint definition APIs are crafted with readability and discoverability in
+mind. Our Netty-based server is one of the best-performing Scala HTTP servers available.
 
-Depending on how you prefer to explore the library, take a look at one of the [examples](https://tapir.softwaremill.com/en/latest/examples.html) 
-or [head over to the docs](https://tapir.softwaremill.com/en/latest/index.html) for a more detailed description of how tapir works! Or, use [adopt-tapir](https://adopt-tapir.softwaremill.com) to generate a tapir-based project in a couple of clicks! You can also generate a stub of a tapir-based application directly from the command line with `sbt new softwaremill/tapir.g8`. Finally, ScalaDocs are available at [javadoc.io](https://www.javadoc.io/doc/com.softwaremill.sttp.tapir).
+```scala
+endpoint
+  .get.in("hello").in(query[String]("name"))
+  .out(stringBody)
+  .handleSuccess(name => s"Hello, $name!")
+```
+
+Tapir integrates with all major Scala stacks, so you can use your favorite approach to Functional Programming, while
+leveraging all the benefits that Tapir brings!
+
+Seamless integration with the Scala and HTTP ecosystems is one of Tapir's major strengths:
+
+* all popular Scala HTTP server implementations are supported. You can define your entire API using Tapir, or expose
+  Tapir-managed routes alongside "native" ones. This is especially useful when gradually adopting Tapir, or using it for
+  selected use-cases.
+* the Scala ecosystem is rich with libraries leveraging its type-safety and enhancing the developer's toolbox,
+  that's why Tapir provides integrations with many of such custom type, JSON and observability libraries
+* documentation can be generated in the [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html), [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html) and [JSON Schema](https://tapir.softwaremill.com/en/latest/docs/json-schema.html) formats
+
+Depending on how you'd prefer to explore Tapir, this documentation has three main sections:
+
+1. There's a number of [tutorials](https://tapir.softwaremill.com/en/latest/tutorials/01_hello_world.html), which provide a gentle introduction to the library
+2. Nothing compares to tinkering with working code, that's why we've prepared [runnable examples](https://tapir.softwaremill.com/en/latest/examples.html),
+   covering solutions to many "everyday" problems
+3. Finally, the reference documentation describes all of Tapir's aspects in depth - take a look at the menu on
+   the left, starting with the "Endpoints" section
+
+## Documentation
+
+Tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwaremill.com).
 
 ## Why tapir?
 
@@ -121,10 +131,6 @@ val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] 
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
 ```
-
-## Documentation
-
-tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwaremill.com).
 
 ## Quickstart with sbt
 
