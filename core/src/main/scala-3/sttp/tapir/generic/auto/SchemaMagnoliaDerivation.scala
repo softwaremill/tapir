@@ -121,7 +121,7 @@ trait SchemaMagnoliaDerivation {
         val cacheKey = typeName.full
         val inProgressOrNull: mutable.Set[String] | Null = deriveCache.get()
         val newCache = inProgressOrNull == null
-        
+
         val inProgress = if (newCache) {
           val newInProgress = mutable.Set[String]()
           deriveCache.set(newInProgress)
