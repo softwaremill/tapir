@@ -11,4 +11,7 @@ package object test {
       ZLayer.succeed(NettyConfig.default),
       NettyDriver.manual
     )
+
+  // work-around for Scala 2.12
+  val manual =  NettyDriver.manual
 }

@@ -10,7 +10,11 @@ import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
 import zio._
 import zio.http._
+import zio.http.netty.NettyConfig
+import zio.http.netty.server.NettyDriver
 import zio.interop.catz._
+import zio.http.netty.{ChannelFactories, ChannelType, EventLoopGroups, NettyConfig}
+
 import scala.concurrent.duration.FiniteDuration
 
 class ZioHttpTestServerInterpreter(
@@ -31,24 +35,24 @@ class ZioHttpTestServerInterpreter(
       routes: NonEmptyList[Routes[Any, Response]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, Port] = {
-    implicit val r: Runtime[Any] = Runtime.default
+    val nettyConfig = ZLayer.succeed(NettyConfig.default)
+    val serverConfig = ZLayer.succeed(
+      Server.Config.default
+        .port(0)
+        .enableRequestStreaming
+        .gracefulShutdownTimeout(gracefulShutdownTimeout.map(Duration.fromScala).getOrElse(50.millis))
+    )
+    val drv = (eventLoopGroup ++ nettyConfig ++ channelFactory ++ serverConfig) >>> zio.test.manual
+
     val effect: ZIO[Scope, Throwable, Port] =
-      (for {
-        driver <- ZIO.service[Driver]
+      for {
+        deps <- drv.build
+        driver = deps.get[Driver]
         result <- driver.start
         _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _), ZEnvironment())
-      } yield result.port)
-        .provideSome[Scope](
-          zio.test.driver,
-          eventLoopGroup,
-          channelFactory,
-          ZLayer.succeed(
-            Server.Config.default
-              .port(0)
-              .enableRequestStreaming
-              .gracefulShutdownTimeout(gracefulShutdownTimeout.map(Duration.fromScala).getOrElse(50.millis))
-          )
-        )
+      } yield result.port
+
+    implicit val r: Runtime[Any] = Runtime.default
     Resource.scoped[IO, Any, Port](effect)
   }
 
