@@ -1,12 +1,13 @@
 package sttp.tapir.server.ziohttp
 
-import sttp.{capabilities, model}
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.Part
+import sttp.tapir.RawBodyType.FileBody
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
-import zio.http.FormField.StreamingBinary
+import sttp.tapir.{FileRange, InputStreamRange, RawBodyType}
+import sttp.{capabilities, model}
+import zio.http.multipart.mixed.MultipartMixed
 import zio.http.{FormField, Request}
 import zio.stream.{Stream, ZSink, ZStream}
 import zio.{RIO, Task, ZIO}
@@ -15,8 +16,6 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import scala.collection.immutable
-import sttp.tapir.RawBodyType.FileBody
-import zio.http.multipart.mixed.MultipartMixed
 
 class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends RequestBody[RIO[R, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
@@ -36,10 +35,7 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
       case RawBodyType.FileBody =>
         for {
           file <- serverOptions.createFile(serverRequest)
-          _ <- (toStream(serverRequest, maxBytes)
-            .asInstanceOf[ZStream[Any, Throwable, Byte]])
-            .run(ZSink.fromFile(file))
-            .map(_ => ())
+          _ <- (toStream(serverRequest, maxBytes).asInstanceOf[ZStream[Any, Throwable, Byte]]).run(ZSink.fromFile(file)).map(_ => ())
         } yield RawValue(FileRange(file), Seq(FileRange(file)))
       case RawBodyType.MultipartBody(partTypes, _) => toRawMultipart(serverRequest, partTypes)
     }
