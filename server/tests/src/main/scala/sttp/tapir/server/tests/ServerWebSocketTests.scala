@@ -39,8 +39,8 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
   def functionToPipe[A, B](f: A => B): streams.Pipe[A, B]
   def emptyPipe[A, B]: streams.Pipe[A, B]
 
-  private def stringWs = webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain].apply(streams)
-  private def stringEcho = functionToPipe((s: String) => s"echo: $s")
+  private def stringWs = webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain].apply(streams).autoPing(None)
+  private def stringEcho = functionToPipe((s: String) => s"echo: $s" )
 
   def tests(): List[Test] = List(
     testServer(
@@ -111,7 +111,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           }
       }
     },
-    testServer(endpoint.out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](streams)), "json client-terminated echo")(
+    testServer(endpoint.out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](streams).autoPing(None)), "json client-terminated echo")(
       (_: Unit) => pureResult(functionToPipe((f: Fruit) => Fruit(s"echo: ${f.f}")).asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
@@ -128,7 +128,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         .map(_.body shouldBe Right(List("""{"f":"echo: apple"}""", """{"f":"echo: orange"}""")))
     },
     testServer(
-      endpoint.out(webSocketBody[String, CodecFormat.TextPlain, Option[String], CodecFormat.TextPlain](streams)),
+      endpoint.out(webSocketBody[String, CodecFormat.TextPlain, Option[String], CodecFormat.TextPlain](streams).autoPing(None)),
       "string server-terminated echo"
     )((_: Unit) =>
       pureResult(functionToPipe[String, Option[String]] {
@@ -156,11 +156,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         )
     },
     testServer(
-      endpoint.out(
-        webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
-          .autoPing(None)
-          .autoPongOnPing(true)
-      ),
+      endpoint.out(stringWs.autoPongOnPing(true)),
       "pong on ping"
     )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
@@ -186,7 +182,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         )
     },
     testServer(
-      endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)),
+      endpoint.out(stringWs),
       "empty client stream"
     )((_: Unit) => pureResult(emptyPipe.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
@@ -254,8 +250,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       List(
         testServer(
           endpoint.out(
-            webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
-              .autoPing(Some((50.millis, WebSocketFrame.ping)))
+            stringWs.autoPing(Some((50.millis, WebSocketFrame.ping)))
           ),
           "auto ping"
         )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
@@ -285,7 +280,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     if (failingPipe)
       List(
         testServer(
-          endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)),
+          endpoint.out(stringWs),
           "failing pipe"
         )((_: Unit) =>
           pureResult(functionToPipe[String, String] {
@@ -322,8 +317,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       List(
         testServer(
           endpoint.out(
-            webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
-              .autoPing(None)
+            stringWs
               .autoPongOnPing(false)
               .concatenateFragmentedFrames(true)
           ),
@@ -372,8 +366,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       List(
         testServer(
           endpoint.out(
-            webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
-              .autoPing(None)
+            stringWs
               .autoPongOnPing(false)
           ),
           "not pong on ping if disabled"
