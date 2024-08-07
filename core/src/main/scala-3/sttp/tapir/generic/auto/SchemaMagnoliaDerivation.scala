@@ -119,14 +119,14 @@ trait SchemaMagnoliaDerivation {
         */
       private def withCache[T](typeName: TypeInfo, annotations: Seq[Any])(f: => Schema[T]): Schema[T] = {
         val cacheKey = typeName.full
-        val inProgressOrNull = deriveCache.get()
+        val inProgressOrNull: mutable.Set[String] | Null = deriveCache.get()
         val newCache = inProgressOrNull == null
-
-        val inProgress = if (inProgressOrNull == null) {
+        
+        val inProgress = if (newCache) {
           val newInProgress = mutable.Set[String]()
           deriveCache.set(newInProgress)
           newInProgress
-        } else inProgressOrNull
+        } else inProgressOrNull.nn
 
         if (inProgress.contains(cacheKey)) {
           Schema[T](SRef(typeNameToSchemaName(typeName, annotations)))
