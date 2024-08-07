@@ -16,7 +16,7 @@ Alternatively, you can generate a stub of a tapir-based application directly fro
 ## Project templates
 
 * [Bootzooka: direct-style, Scala3](https://github.com/softwaremill/bootzooka)
-* [Scala+ZIO+Quill+tapir, "real-world" impl](https://github.com/softwaremill/realworld-tapir-zio)
+* [Scala+ZIO+Quill+tapir, "real-world" implementation](https://github.com/softwaremill/realworld-tapir-zio)
 
 ## Blogs, articles
 
