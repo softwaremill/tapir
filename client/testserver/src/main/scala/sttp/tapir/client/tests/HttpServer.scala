@@ -149,6 +149,20 @@ class HttpServer(port: Port) {
           wsb.build(d, e)
         }
 
+    case GET -> Root / "ws" / "echo" / "header" =>
+      val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
+        _.collect { case WebSocketFrame.Text(msg, _) => WebSocketFrame.Text("echo: " + msg) }
+
+      Queue
+        .unbounded[IO, WebSocketFrame]
+        .flatMap { q =>
+          val d = Stream.repeatEval(q.take).through(echoReply)
+          val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
+          wsb
+            .withHeaders(Headers(Header.Raw(CIString("Correlation-id"), "ABC-DEF-123")))
+            .build(d, e)
+        }
+
     case GET -> Root / "entity" / entityType =>
       if (entityType == "person") Created("""{"name":"mary","age":20}""")
       else Ok("""{"name":"work"}""")
