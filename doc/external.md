@@ -10,10 +10,18 @@ Alternatively, you can generate a stub of a tapir-based application directly fro
 
 * http4s interpreter: [todo-backend](https://github.com/lolgab/snunit-tapir-example)
 * quickstart using http4s: [a gitter8 template](https://codeberg.org/wegtam/http4s-tapir.g8). A new project can be created using: `sbt new https://codeberg.org/wegtam/http4s-tapir.g8.git`
-* Scala Native application, [using Nginx Unit](https://github.com/lolgab/snunit-tapir-example).
+* Scala Native application, [using Nginx Unit](https://github.com/lolgab/snunit-tapir-example)
+* Sharing tapir endpoints between server and client, [using ZIO](https://github.com/dallinhuff/zio-tpilot)
+
+## Project templates
+
+* [Bootzooka: direct-style, Scala3](https://github.com/softwaremill/bootzooka)
+* [Scala+ZIO+Quill+tapir, "real-world" impl](https://github.com/softwaremill/realworld-tapir-zio)
 
 ## Blogs, articles
 
+* [WebSocket chat using structured concurrency, Ox & Tapir](https://softwaremill.com/websocket-chat-using-structured-concurrency-ox-and-tapir)
+* [A tapir looms in the distance](https://softwaremill.com/a-tapir-looms-in-the-distance/)
 * [Migrating from Akka HTTP to tapir](https://softwaremill.com/migrating-from-akka-http-to-tapir/)
 * [Benchmarking Tapir: Part 1](https://softwaremill.com/benchmarking-tapir-part-1/)
 * [Benchmarking Tapir: Part 2](https://softwaremill.com/benchmarking-tapir-part-2/)
@@ -28,6 +36,8 @@ Alternatively, you can generate a stub of a tapir-based application directly fro
 
 ## Videos
 
+* [Tapir tutorials: playlist](https://www.youtube.com/watch?v=WV1bZaGrdQQ&list=PL8NC5lCgGs6MnRHBdBNNWwafaHaxZTf9m&index=1&t=0s)
+* [Functional websockets](https://www.youtube.com/watch?v=rR7CK5xDn40)
 * [ScalaLove 2020: Your HTTP endpoints are data, as well!](https://www.youtube.com/watch?v=yuQNgZgSFIc&t=944s)
 * [Scalar 2020: A Functional Scala Stack For 2020](https://www.youtube.com/watch?v=DGlkap5kzGU)
 * [ScalaWorld 2019: Designing Programmer-Friendly APIs](https://www.youtube.com/watch?v=I3loMuHnYqw)
