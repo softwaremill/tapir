@@ -6,7 +6,7 @@ An URL-encoded form input/output can be specified in two ways. First, it is poss
 `Seq[(String, String)]`, or `Map[String, String]` (which is more convenient if fields can't have multiple values):
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 
 formBody[Seq[(String, String)]]: EndpointIO.Body[String, Seq[(String, String)]]
 formBody[Map[String, String]]: EndpointIO.Body[String, Map[String, String]]
@@ -16,8 +16,8 @@ Second, form data can be mapped to a case class. The codec for the case class is
 compile-time. The fields of the case class should have types, for which there is a plain text codec. For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
 
 case class RegistrationForm(name: String, age: Int, news: Boolean, city: Option[String])
 
@@ -33,7 +33,7 @@ Similarly as above, multipart form input/outputs can be specified in two ways. T
 use:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.model.Part
 
 multipartBody: EndpointIO.Body[Seq[RawPart], Seq[Part[Array[Byte]]]]
@@ -56,10 +56,10 @@ Additionally, the case class to which the multipart body is mapped can contain b
 For example:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.model.Part
 import java.io.File
-import sttp.tapir.generic.auto._
+import sttp.tapir.generic.auto.*
 
 case class RegistrationForm(userData: User, photo: Part[File], news: Boolean)
 case class User(email: String)
@@ -72,10 +72,10 @@ If there can be none or multiple parts for the same name, the fields can be wrap
 or any other container `C` for which exists a codec `List[T] => C[T]`
 
 ```scala mdoc:compile-only
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.model.Part
 import java.io.File
-import sttp.tapir.generic.auto._
+import sttp.tapir.generic.auto.*
 
 case class RegistrationForm(userData: Option[User], photos: List[Part[File]], news: Option[Part[Boolean]])
 case class User(email: String)

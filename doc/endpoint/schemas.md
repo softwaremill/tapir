@@ -27,18 +27,18 @@ perform any [validation](validation.md).
 
 ## Automatic derivation
 
-Schemas for case classes, sealed traits and their children can be recursively derived. Importing `sttp.tapir.generic.auto._` 
+Schemas for case classes, sealed traits and their children can be recursively derived. Importing `sttp.tapir.generic.auto.*` 
 (or extending the `SchemaDerivation` trait) enables fully automatic derivation for `Schema`:
 
 ```scala mdoc:silent:reset
 import sttp.tapir.Schema
-import sttp.tapir.generic.auto._
+import sttp.tapir.generic.auto.*
 
 case class Parent(child: Child)
 case class Child(value: String)
 
 // implicit schema used by codecs
-implicitly[Schema[Parent]]
+summon[Schema[Parent]]
 ```
 
 If you have a case class which contains some non-standard types (other than strings, number, other case classes,
@@ -46,7 +46,7 @@ collections), you only need to provide implicit schemas for them. Using these, t
 
 Note that when using [datatypes integrations](integrations.md), respective schemas & codecs must also be imported to 
 enable the derivation, e.g. for [newtype](integrations.html#newtype-integration) you'll have to add
-`import sttp.tapir.codec.newtype._` or extend `TapirCodecNewType`.
+`import sttp.tapir.codec.newtype.*` or extend `TapirCodecNewType`.
 
 ## Semi-automatic derivation
 
@@ -64,8 +64,8 @@ import sttp.tapir.Schema
 case class Parent(child: Child)
 case class Child(value: String)
 
-implicit lazy val sChild: Schema[Child] = Schema.derived
-implicit lazy val sParent: Schema[Parent] = Schema.derived
+given Schema[Child] = Schema.derived
+given Schema[Parent] = Schema.derived
 ```
 
 Note that while schemas for regular types can be safely defined as `val`s, in case of recursive values, the schema
@@ -90,9 +90,8 @@ For example:
 
 ```scala mdoc:silent
 case class RecursiveTest(data: List[RecursiveTest])
-object RecursiveTest {
+object RecursiveTest:
   implicit def f1Schema: Schema[RecursiveTest] = Schema.derived[RecursiveTest]
-}
 ```
 
 The implicit doesn't have to be defined in the companion object, just anywhere in scope. This applies to cases where
@@ -120,7 +119,7 @@ the union type, as it's not possible to generate a runtime check for the generic
 ### Derivation for string-based constant union types
 e.g. `type AorB = "a" | "b"`
 
-See [enumerations](enumerations.md#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
+See [enumerations](enumerations.html#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
 
 ## Configuring derivation
 
@@ -131,8 +130,7 @@ representation is described in documentation:
 ```scala mdoc:silent
 import sttp.tapir.generic.Configuration
 
-implicit val customConfiguration: Configuration =
-  Configuration.default.withSnakeCaseMemberNames
+given Configuration = Configuration.default.withSnakeCaseMemberNames
 ```
 
 ## Manually providing schemas
@@ -141,12 +139,12 @@ Alternatively, `Schema[_]` values can be defined by hand, either for whole case 
 For example, here we state that the schema for `MyCustomType` is a `String`:
 
 ```scala mdoc:silent
-import sttp.tapir._
+import sttp.tapir.*
 
 case class MyCustomType()
-implicit val schemaForMyCustomType: Schema[MyCustomType] = Schema.string
+given Schema[MyCustomType] = Schema.string
 // or, if the low-level representation is e.g. a number
-implicit val anotherSchemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaType.SInteger())
+// given Schema[MyCustomType] = Schema(SchemaType.SInteger())
 ```
 
 ## Sealed traits / coproducts
@@ -172,7 +170,7 @@ during automatic and semi-automatic derivation:
 ```scala mdoc:silent:reset
 import sttp.tapir.generic.Configuration
 
-implicit val customConfiguration: Configuration =
+given Configuration =
   Configuration.default.withDiscriminator("who_am_i")
 ```
 
@@ -186,17 +184,17 @@ semi-automatic or automatic derivation; in both cases a custom implicit has to b
 one:
 
 ```scala mdoc:silent:reset
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.generic.Derived
-import sttp.tapir.generic.auto._
+import sttp.tapir.generic.auto.*
 
 sealed trait MyCoproduct 
 case class Child1(s: String) extends MyCoproduct
 // ... implementations of MyCoproduct ...
 
-implicit val myCoproductSchema: Schema[MyCoproduct] = {
+given Schema[MyCoproduct] =
   val derived = implicitly[Derived[Schema[MyCoproduct]]].value
-  derived.schemaType match {
+  derived.schemaType match
     case s: SchemaType.SCoproduct[_] => derived.copy(schemaType = s.addDiscriminatorField(
       FieldName("myField"),
       Schema.string,
@@ -206,8 +204,6 @@ implicit val myCoproductSchema: Schema[MyCoproduct] = {
       )
     ))
     case _ => ???
-  }
-}
 ```
 
 Finally, if the discriminator is a field that's defined on the base trait (and hence in each implementation), the
@@ -215,23 +211,22 @@ schemas can be specified as a custom implicit value using the `Schema.oneOfUsing
 for example (this will also generate the appropriate mappings):
 
 ```scala mdoc:silent:reset
-sealed trait Entity {
+sealed trait Entity:
   def kind: String
-} 
-case class Person(firstName: String, lastName: String) extends Entity { 
-  def kind: String = "person"
-}
-case class Organization(name: String) extends Entity {
-  def kind: String = "org"  
-}
 
-import sttp.tapir._
+case class Person(firstName: String, lastName: String) extends Entity: 
+  def kind: String = "person"
+
+case class Organization(name: String) extends Entity:
+  def kind: String = "org"  
+
+import sttp.tapir.*
 
 val sPerson = Schema.derived[Person]
 val sOrganization = Schema.derived[Organization]
-implicit val sEntity: Schema[Entity] = 
-    Schema.oneOfUsingField[Entity, String](_.kind, _.toString)(
-      "person" -> sPerson, "org" -> sOrganization)
+given Schema[Entity] =
+  Schema.oneOfUsingField[Entity, String](_.kind, _.toString)(
+    "person" -> sPerson, "org" -> sOrganization)
 ```
 
 ### Wrapper object discriminators
@@ -245,10 +240,10 @@ sealed trait Entity
 case class Person(firstName: String, lastName: String) extends Entity
 case class Organization(name: String) extends Entity 
 
-import sttp.tapir._
-import sttp.tapir.generic.auto._ // to derive child schemas
+import sttp.tapir.*
+import sttp.tapir.generic.auto.* // to derive child schemas
 
-implicit val sEntity: Schema[Entity] = Schema.oneOfWrapped[Entity]
+given Schema[Entity] = Schema.oneOfWrapped[Entity]
 ```
 
 The names of the field in the wrapper object will be generated using the implicit `Configuration`. If for some reason
@@ -287,13 +282,13 @@ Schemas for products/coproducts (case classes and case class families) can be tr
 For example:
 
 ```scala mdoc:silent:reset
-import sttp.tapir._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
 import sttp.tapir.generic.Derived
 
 case class Basket(fruits: List[FruitAmount])
 case class FruitAmount(fruit: String, amount: Int)
-implicit val customBasketSchema: Schema[Basket] = implicitly[Derived[Schema[Basket]]].value
+given Schema[Basket] = summon[Derived[Schema[Basket]]].value
   .modify(_.fruits.each.amount)(_.description("How many fruits?"))
 ```
 
@@ -317,21 +312,21 @@ For example, to support an integer wrapped in a value type in a json body, we ne
 decoders (if that's the json library that we are using), schema information with validator:
 
 ```scala mdoc:silent:reset-object
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.{ Encoder, Decoder }
-import io.circe.generic.semiauto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.{Encoder, Decoder}
+import io.circe.generic.semiauto.*
 
 case class Amount(v: Int) extends AnyVal
 case class FruitAmount(fruit: String, amount: Amount)
 
-implicit val amountSchema: Schema[Amount] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
-implicit val amountEncoder: Encoder[Amount] = Encoder.encodeInt.contramap(_.v)
-implicit val amountDecoder: Decoder[Amount] = Decoder.decodeInt.map(Amount.apply)
+given Schema[Amount] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
+given Encoder[Amount] = Encoder.encodeInt.contramap(_.v)
+given Decoder[Amount] = Decoder.decodeInt.map(Amount.apply)
 
-implicit val decoder: Decoder[FruitAmount] = deriveDecoder[FruitAmount]
-implicit val encoder: Encoder[FruitAmount] = deriveEncoder[FruitAmount]
+given Decoder[FruitAmount] = deriveDecoder[FruitAmount]
+given Encoder[FruitAmount] = deriveEncoder[FruitAmount]
 
 val e: PublicEndpoint[FruitAmount, Unit, Unit, Nothing] =
   endpoint.in(jsonBody[FruitAmount])

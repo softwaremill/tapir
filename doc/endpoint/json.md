@@ -39,8 +39,8 @@ serialising/deserialising of the body must be part of the [server logic](../serv
 A schema can be provided in this case as well:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
 case class MyBody(field: Int)
 stringJsonBody.schema(implicitly[Schema[MyBody]].as[String])
 ```
@@ -53,10 +53,10 @@ To use [Circe](https://github.com/circe/circe), add the following dependency to 
 "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.md)):
+Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../other/mytapir.md)):
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.circe._
+import sttp.tapir.json.circe.*
 ```
 
 The above import brings into scope the `jsonBody[T]` body input/output description, which creates a codec, given an
@@ -68,10 +68,10 @@ Note that when using Circe's auto derivation, any encoders/decoders for custom t
 For example, to automatically generate a JSON codec for a case class:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
+import io.circe.generic.auto.*
 
 case class Book(author: String, title: String, year: Int)
 
@@ -84,7 +84,7 @@ Circe lets you select an instance of `io.circe.Printer` to configure the way JSO
 Tapir uses `Printer.nospaces`, which would render:
 
 ```scala mdoc:compile-only
-import io.circe._
+import io.circe.*
 
 Json.obj(
   "key1" -> Json.fromString("present"),
@@ -102,14 +102,13 @@ Suppose we would instead want to omit `null`-values from the object and pretty-p
 overriding the `jsonPrinter` in `tapir.circe.json.TapirJsonCirce`:
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.circe._
+import sttp.tapir.json.circe.*
 import io.circe.Printer
 
-object MyTapirJsonCirce extends TapirJsonCirce {
+object MyTapirJsonCirce extends TapirJsonCirce:
   override def jsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
-}
 
-import MyTapirJsonCirce._
+import MyTapirJsonCirce.*
 ```
 
 Now the above JSON object will render as
@@ -126,25 +125,24 @@ To use [µPickle](http://www.lihaoyi.com/upickle/) add the following dependency 
 "com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.md) and add `TapirJsonuPickle` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonuPickle` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.upickle._
+import sttp.tapir.json.upickle.*
 ```
 
 µPickle requires a `ReadWriter` in scope for each type you want to serialize. In order to provide one use the `macroRW` macro in the companion object as follows:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import upickle.default._
-import sttp.tapir.json.upickle._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import upickle.default.*
+import sttp.tapir.json.upickle.*
 
 case class Book(author: String, title: String, year: Int)
 
-object Book {
-  implicit val rw: ReadWriter[Book] = macroRW
-}
+object Book:
+  given ReadWriter[Book] = macroRW
 
 val bookInput: EndpointIO[Book] = jsonBody[Book]
 ```
@@ -167,10 +165,10 @@ For **Play 2.9** use:
 "com.softwaremill.sttp.tapir" %% "tapir-json-play29" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.md) and add `TapirJsonPlay` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonPlay` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.play._
+import sttp.tapir.json.play.*
 ```
 
 Play JSON requires `Reads` and `Writes` implicit values in scope for each type you want to serialize.
@@ -183,10 +181,10 @@ To use [Spray JSON](https://github.com/spray/spray-json) add the following depen
 "com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../mytapir.md) and add `TapirJsonSpray` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonSpray` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.spray._
+import sttp.tapir.json.spray.*
 ```
 
 Spray JSON requires a `JsonFormat` implicit value in scope for each type you want to serialize.
@@ -199,10 +197,10 @@ To use [Tethys JSON](https://github.com/tethys-json/tethys) add the following de
 "com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../mytapir.md) and add `TapirJsonTethys` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonTethys` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.tethysjson._
+import sttp.tapir.json.tethysjson.*
 ```
 
 Tethys JSON requires `JsonReader` and `JsonWriter` implicit values in scope for each type you want to serialize.
@@ -215,10 +213,10 @@ To use [Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala) add the f
 "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../mytapir.md) and add `TapirJsonJsoniter` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonJsoniter` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.jsoniter._
+import sttp.tapir.json.jsoniter.*
 ```
 
 Jsoniter Scala requires `JsonValueCodec` implicit value in scope for each type you want to serialize.
@@ -239,19 +237,19 @@ And one of the implementations:
 "org.json4s" %% "json4s-jackson" % "@JSON4S_VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJson4s` trait, see [MyTapir](../mytapir.md) and add `TapirJson4s` instead of `TapirCirceJson`):
+Next, import the package (or extend the `TapirJson4s` trait, see [MyTapir](../other/mytapir.md) and add `TapirJson4s` instead of `TapirCirceJson`):
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.json4s._
+import sttp.tapir.json.json4s.*
 ```
 
 Json4s requires `Serialization` and `Formats` implicit values in scope, for example:
 
 ```scala
-import org.json4s._
+import org.json4s.*
 // ...
-implicit val serialization: Serialization = org.json4s.jackson.Serialization
-implicit val formats: Formats = org.json4s.jackson.Serialization.formats(NoTypeHints)
+given Serialization = org.json4s.jackson.Serialization
+given Formats = org.json4s.jackson.Serialization.formats(NoTypeHints)
 ```
 
 ## Zio JSON
@@ -261,10 +259,10 @@ To use [zio-json](https://github.com/zio/zio-json), add the following dependency
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "@VERSION@"
 ```
-Next, import the package (or extend the `TapirJsonZio` trait, see [MyTapir](../mytapir.md) and add `TapirJsonZio` instead of `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonZio` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonZio` instead of `TapirCirceJson`):
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.zio._
+import sttp.tapir.json.zio.*
 ```
 
 Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for each type you want to serialize.
@@ -274,10 +272,10 @@ Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for e
 You can specify query parameters in JSON format by using the `jsonQuery` method. For example, using Circe:
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
+import io.circe.generic.auto.*
 
 case class Book(author: String, title: String, year: Int)
 

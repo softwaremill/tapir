@@ -2,6 +2,7 @@ package sttp.tapir.server.http4s.ztapir
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
+import cats._
 import cats.syntax.all._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.websocket.WebSocketBuilder2
@@ -15,7 +16,6 @@ import sttp.tapir.tests._
 import sttp.tapir.ztapir.ZServerEndpoint
 import zio.{Runtime, Task, Unsafe}
 import zio.interop.catz._
-import zio.interop.catz.implicits._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
@@ -34,28 +34,22 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
     ZHttp4sServerInterpreter(serverOptions).fromWebSocket(es).toRoutes
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[Routes],
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val service: WebSocketBuilder2[Task] => HttpApp[Task] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
 
-    val serverResource = BlazeServerBuilder[Task]
+    BlazeServerBuilder[Task]
       .withExecutionContext(ExecutionContext.global)
       .bindHttp(0, "localhost")
       .withHttpWebSocketApp(service)
       .resource
       .map(_.address.getPort)
-
-    // Converting a zio.RIO-resource to an cats.IO-resource
-    val runtime = implicitly[zio.Runtime[Any]]
-    Resource
-      .eval(IO.fromFuture(IO(Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(serverResource.allocated)))))
-      .flatMap { case (port, release) => // Blaze has no graceful shutdown support https://github.com/http4s/blaze/issues/676
-        Resource.make(IO.pure((port, IO.fromFuture(IO(Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(release))))))) {
-          case (_, release) => release
-        }
-      }
+      .mapK(new ~>[Task, IO] {
+        // Converting a ZIO effect to an Cats Effect IO effect
+        def apply[B](fa: Task[B]): IO[B] = IO.fromFuture(Unsafe.unsafe(implicit u => IO(Runtime.default.unsafe.runToFuture(fa))))
+      })
   }
 }

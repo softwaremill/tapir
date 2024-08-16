@@ -18,10 +18,22 @@ object OpenapiCodegenPlugin extends AutoPlugin {
   def openapiCodegenScopedSettings(conf: Configuration): Seq[Setting[_]] = inConfig(conf)(
     Seq(
       generateTapirDefinitions := codegen.value,
-      sourceGenerators += (codegen.taskValue).map(_.flatMap(_.map(_.toPath.toFile)))
+      sourceGenerators += (codegen.taskValue).map(_.map(_.toPath.toFile))
     )
   )
 
+  def standardParamSetting =
+    openapiOpenApiConfiguration := OpenApiConfiguration(
+      openapiSwaggerFile.value,
+      openapiPackage.value,
+      openapiObject.value,
+      openapiUseHeadTagForObjectName.value,
+      openapiJsonSerdeLib.value,
+      openapiStreamingImplementation.value,
+      openapiValidateNonDiscriminatedOneOfs.value,
+      openapiMaxSchemasPerFile.value,
+      openapiAdditionalPackages.value
+    )
   def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
     openapiSwaggerFile := baseDirectory.value / "swagger.yaml",
     openapiPackage := "sttp.tapir.generated",
@@ -29,48 +41,47 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiUseHeadTagForObjectName := false,
     openapiJsonSerdeLib := "circe",
     openapiValidateNonDiscriminatedOneOfs := true,
-    openapiMaxSchemasPerFile := 400
+    openapiMaxSchemasPerFile := 400,
+    openapiAdditionalPackages := Nil,
+    openapiStreamingImplementation := "fs2",
+    standardParamSetting
   )
 
-  private def codegen = Def.task {
-    val log = sLog.value
-    log.info("Zipping file...")
-    (((
-      openapiSwaggerFile,
-      openapiPackage,
-      openapiObject,
-      openapiUseHeadTagForObjectName,
-      openapiJsonSerdeLib,
-      openapiValidateNonDiscriminatedOneOfs,
-      openapiMaxSchemasPerFile,
-      sourceManaged,
-      streams,
-      scalaVersion
-    ) flatMap {
+  private def codegen =
+    Def.task {
+      val log = sLog.value
+      log.info("Zipping file...")
       (
-          swaggerFile: File,
-          packageName: String,
-          objectName: String,
-          useHeadTagForObjectName: Boolean,
-          jsonSerdeLib: String,
-          validateNonDiscriminatedOneOfs: Boolean,
-          maxSchemasPerFile: Int,
-          srcDir: File,
-          taskStreams: TaskStreams,
-          sv: String
-      ) =>
-        OpenapiCodegenTask(
-          swaggerFile,
-          packageName,
-          objectName,
-          useHeadTagForObjectName,
-          jsonSerdeLib,
-          validateNonDiscriminatedOneOfs,
-          maxSchemasPerFile,
-          srcDir,
-          taskStreams.cacheDirectory,
-          sv.startsWith("3")
-        ).file
-    }) map (Seq(_))).value
-  }
+        openapiOpenApiConfiguration,
+        sourceManaged,
+        streams,
+        scalaVersion
+      ).flatMap {
+        (
+            c: OpenApiConfiguration,
+            srcDir: File,
+            taskStreams: TaskStreams,
+            sv: String
+        ) =>
+          def genTask(swaggerFile: File, packageName: String, directoryName: Option[String] = None) =
+            OpenapiCodegenTask(
+              swaggerFile,
+              packageName,
+              c.objectName,
+              c.useHeadTagForObjectName,
+              c.jsonSerdeLib,
+              c.streamingImplementation,
+              c.validateNonDiscriminatedOneOfs,
+              c.maxSchemasPerFile,
+              srcDir,
+              taskStreams.cacheDirectory,
+              sv.startsWith("3"),
+              directoryName
+            )
+          (genTask(c.swaggerFile, c.packageName).file +: c.additionalPackages.map { case (pkg, defns) =>
+            genTask(defns, pkg, Some(pkg.replace('.', '/'))).file
+          })
+            .reduceLeft((l, r) => l.flatMap(_l => r.map(_l ++ _)))
+      }.value
+    }
 }

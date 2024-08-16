@@ -19,6 +19,12 @@ private[tapir] object ErasureSameAsTypeMacros {
 
     val t = TypeRepr.of[T]
 
+    if t.<:<(TypeRepr.of[reflect.Enum]) && t.typeSymbol.declaredFields.isEmpty then
+      report.errorAndAbort(
+        s"Type ${t.show} is a parameterless enum case. Such cases do not have a distinct run-time class, and hence cannot" +
+          s"be correctly used in a oneOfVariant. Consider using other matchers, such as oneOfVariantExactMatcher."
+      )
+
     // substitute for `t =:= t.erasure` - https://github.com/lampepfl/dotty-feature-requests/issues/209
     val isAllowed: TypeRepr => Boolean = {
       case AppliedType(t, _) if t.typeSymbol.name == "Array" => true
@@ -26,12 +32,11 @@ private[tapir] object ErasureSameAsTypeMacros {
       case _                                                 => true
     }
 
-    if (!isAllowed(t)) {
+    if !isAllowed(t) then
       report.errorAndAbort(
         s"Type ${t.show}, $t is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify " +
           s"that the input matches the desired type. Use other methods to match the input to the appropriate variant " +
           s"instead."
       )
-    }
   }
 }

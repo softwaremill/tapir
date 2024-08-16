@@ -20,17 +20,11 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
     es.map(interpreter.toRoute).last
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[FinatraRoute],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
-  ): Resource[IO, (Port, KillSwitch)] = FinatraTestServerInterpreter.serverWithStop(routes, gracefulShutdownTimeout)
-}
+  ): Resource[IO, Port] = {
 
-object FinatraTestServerInterpreter {
-  def serverWithStop(
-      routes: NonEmptyList[FinatraRoute],
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
     def waitUntilHealthy(s: EmbeddedHttpServer, count: Int): IO[EmbeddedHttpServer] =
       if (s.isHealthy) IO.pure(s)
       else if (count > 1000) IO.raiseError(new IllegalStateException("Server unhealthy"))
@@ -65,15 +59,7 @@ object FinatraTestServerInterpreter {
     }.flatMap(waitUntilHealthy(_, 0))
 
     Resource
-      .make(
-        bind.map(server =>
-          (
-            server.httpExternalPort(),
-            IO { server.close(Duration.fromMilliseconds(gracefulShutdownTimeout.map(_.toMillis).getOrElse(50))) }
-          )
-        )
-      ) { case (_, release) =>
-        release
-      }
+      .make(bind)(server => IO.blocking(server.close(Duration.fromMilliseconds(gracefulShutdownTimeout.map(_.toMillis).getOrElse(50)))))
+      .map(_.httpExternalPort())
   }
 }

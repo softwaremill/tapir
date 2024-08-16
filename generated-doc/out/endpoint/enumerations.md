@@ -30,15 +30,14 @@ assumes that the low-level representation of the enumeration is a string. Encodi
 decoding performs a case-insensitive search through the enumeration's values. For example:
 
 ```scala 
-import sttp.tapir._
+import sttp.tapir.*
 
-object Features extends Enumeration {
+object Features extends Enumeration:
   type Feature = Value
 
   val A: Feature = Value("a")
   val B: Feature = Value("b")
   val C: Feature = Value("c")
-}
 
 query[Features.Feature]("feature")
 ```
@@ -78,17 +77,16 @@ would be considered by the compiler.
 For example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.Codec.PlainCodec
 
 sealed trait Feature
-object Feature {
+object Feature:
   case object A extends Feature
   case object B extends Feature
   case object C extends Feature
-}
 
-implicit val featureCodec: PlainCodec[Feature] = 
+given PlainCodec[Feature] = 
   Codec.derivedEnumeration[String, Feature].defaultStringBased
 
 query[Feature]("feature")
@@ -99,14 +97,14 @@ default `Enumeration` codec (using `.toString`). Such a codec can be similarly c
 and `decode` functions as parameters to the value returned to `derivedEnumeration`:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.Codec.PlainCodec
 
 sealed trait Color
 case object Blue extends Color
 case object Red extends Color
 
-implicit val colorCodec: PlainCodec[Color] = {
+given PlainCodec[Color] =
   Codec.derivedEnumeration[String, Color](
     (_: String) match {
       case "red"  => Some(Red)
@@ -115,7 +113,6 @@ implicit val colorCodec: PlainCodec[Color] = {
     },
     _.toString.toLowerCase
   )
-}
 ```
 
 ### Creating an enum codec by hand
@@ -131,16 +128,15 @@ If an input/output contains multiple enumeration values, delimited e.g. using a 
 type is a simple wrapper for a list of `T`-values. For example, if the query parameter is required:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.model.CommaSeparated
 
-object Features extends Enumeration {
+object Features extends Enumeration:
   type Feature = Value
 
   val A: Feature = Value("a")
   val B: Feature = Value("b")
   val C: Feature = Value("c")
-}
 
 query[CommaSeparated[Features.Feature]]("features")
 ```
@@ -173,25 +169,24 @@ represent the enumeration's values in the documentation). For example, to use an
 the circe library for JSON parsing/serialisation, and automatic schema derivation for case classes:
 
 ```scala
-import io.circe._
-import io.circe.generic.auto._
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._ 
+import io.circe.*
+import io.circe.generic.auto.*
+import sttp.tapir.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.* 
 
-object Features extends Enumeration {
+object Features extends Enumeration:
   type Feature = Value
 
   val A: Feature = Value("a")
   val B: Feature = Value("b")
   val C: Feature = Value("c")
-}
 
 case class Body(someField: String, feature: Features.Feature)
 
-// these need to be provided so that circe knows how to encode/decode enumerations
-implicit val enumDecoder: Decoder[Features.Feature] = Decoder.decodeEnumeration(Features)
-implicit val enumEncoder: Encoder[Features.Feature] = Encoder.encodeEnumeration(Features)
+// these need to be provided so that circe knows how to encode/decode enumerations - will work only in Scala2!
+given Decoder[Features.Feature] = Decoder.decodeEnumeration(Features)
+given Encoder[Features.Feature] = Encoder.encodeEnumeration(Features)
 
 // the schema for the body is automatically-derived, using the default schema for 
 // enumerations (Schema.derivedEnumerationValue)
@@ -203,17 +198,16 @@ enumeration is an integer), using `Schema.derivedEnumerationValueCustomise.apply
 to provide the schema an implicit/given value:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 
-object Features extends Enumeration {
+object Features extends Enumeration:
   type Feature = Value
 
   val A: Feature = Value("a")
   val B: Feature = Value("b")
   val C: Feature = Value("c")
-}
 
-implicit val customFeatureSchema: Schema[Features.Feature] = 
+given Schema[Features.Feature] = 
   Schema.derivedEnumerationValueCustomise[Features.Feature](
     encode = Some {
       case Features.A => 0
@@ -239,33 +233,48 @@ need to be created using `.derivedEnumeration`, instead of the more general `.de
 For example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 
 sealed trait Feature
-object Feature {
+object Feature:
   case object A extends Feature
   case object B extends Feature
   case object C extends Feature
-}
 
-implicit val featureSchema: Schema[Feature] = 
+given Schema[Feature] = 
   Schema.derivedEnumeration[Feature].defaultStringBased
 ```
 
 Similarly, using Scala 3's enums:
 
 ```scala
-enum ColorEnum {
+enum ColorEnum:
   case Green extends ColorEnum
   case Pink extends ColorEnum
-}
 
-given Schema[ColorEnum] = Schema.derivedEnumeration.defaultStringBased
+given Schema.derivedEnumeration.defaultStringBased
+```
+
+### Scala 3 string-based constant union types to enum
+
+If a union type is a string-based constant union type, it can be auto-derived as field type or manually derived by using the `Schema.derivedStringBasedUnionEnumeration[T]` method.
+
+Constant strings can be derived by using the `Schema.constStringToEnum[T]` method.
+
+Examples:
+```scala
+val aOrB: Schema["a" | "b"] = Schema.derivedStringBasedUnionEnumeration
+```
+```scala
+val a: Schema["a"] = Schema.constStringToEnum
+```
+```scala
+case class Foo(aOrB: "a" | "b", optA: Option["a"]) derives Schema
 ```
 
 ### Creating an enum schema by hand
 
-Creating an enumeration [schema](schema.md) by hand is exactly the same as for any other type. The only difference
+Creating an enumeration [schema](schemas.md) by hand is exactly the same as for any other type. The only difference
 is that an enumeration [validator](validation.md) has to be added to the schema.
 
 ## Next

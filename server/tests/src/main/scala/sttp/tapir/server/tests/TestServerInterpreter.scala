@@ -18,8 +18,11 @@ trait TestServerInterpreter[F[_], +R, OPTIONS, ROUTE] {
 
   def route(es: List[ServerEndpoint[R, F]], interceptors: Interceptors = identity): ROUTE
 
-  def serverWithStop(routes: NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration] = None): Resource[IO, (Port, KillSwitch)]
+  def serverWithStop(
+      routes: NonEmptyList[ROUTE],
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, (Port, KillSwitch)] =
+    Resource.eval(server(routes, gracefulShutdownTimeout).allocated)
 
-  def server(routes: NonEmptyList[ROUTE]): Resource[IO, Port] =
-    serverWithStop(routes, gracefulShutdownTimeout = None).map(_._1)
+  def server(routes: NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration] = None): Resource[IO, Port]
 }

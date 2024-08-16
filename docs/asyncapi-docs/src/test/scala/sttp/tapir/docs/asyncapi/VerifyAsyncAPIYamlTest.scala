@@ -7,6 +7,7 @@ import sttp.apispec.asyncapi.{Info, Server}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
 import sttp.apispec.asyncapi.circe.yaml._
+import sttp.tapir.EndpointIO.Example
 import sttp.tapir.Schema.SName
 import sttp.tapir._
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
@@ -16,6 +17,7 @@ import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.tests.data.{Fruit, FruitAmount}
 
 import scala.io.Source
+import scala.util.chaining.scalaUtilChainingOps
 
 class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
@@ -125,6 +127,27 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should include example name and summary") {
+    val e = endpoint
+      .in("fruit")
+      .out(
+        webSocketBody[Fruit, CodecFormat.Json, Int, CodecFormat.Json](AkkaStreams)
+          // TODO: missing `RequestInfo.example(example: EndpointIO.Example)` and friends
+          .pipe(e =>
+            e.copy(requestsInfo =
+              e.requestsInfo.example(Example.of(Fruit("apple")).name("Apple").summary("Sample representation of apple"))
+            )
+          )
+      )
+
+    val expectedYaml = loadYaml("expected_json_example_name_summary.yml")
+
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should include required indicator for non optional inputs") {
     val e = endpoint
       .in("fruit" / query[Int]("limit").and(query[Option[Int]]("offset")))
@@ -211,6 +234,22 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     val yaml = AsyncAPIInterpreter().toAsyncAPI(personEndpoint, "Header flags", "1.0").toYaml
 
     noIndentation(yaml) shouldBe loadYaml("expected_flags_header.yml")
+  }
+
+  test("should work with discriminators") {
+    case class GetAnimal(name: String)
+    sealed trait Animal
+    case class Cat(name: String) extends Animal
+    case class Dog(name: String, breed: String) extends Animal
+    implicit val configuration: sttp.tapir.generic.Configuration = sttp.tapir.generic.Configuration.default.withDiscriminator("pet")
+
+    val animalEndpoint = endpoint.get
+      .in("animals")
+      .out(webSocketBody[GetAnimal, CodecFormat.Json, Animal, CodecFormat.Json](AkkaStreams))
+
+    val yaml = AsyncAPIInterpreter().toAsyncAPI(animalEndpoint, "discriminator", "1.0").toYaml
+
+    noIndentation(yaml) shouldBe loadYaml("expected_coproduct_with_discriminator.yml")
   }
 
   private def loadYaml(fileName: String): String = {

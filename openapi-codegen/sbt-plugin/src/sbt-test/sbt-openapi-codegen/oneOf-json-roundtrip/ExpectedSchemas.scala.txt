@@ -3,11 +3,13 @@ package sttp.tapir.generated
 object TapirGeneratedEndpointsSchemas {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
+  implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derived
+  implicit lazy val objectWithInlineEnumInlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnumInlineEnum] = sttp.tapir.Schema.derived
+  implicit lazy val objectWithInlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnum] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithD1TapirSchema: sttp.tapir.Schema[SubtypeWithD1] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithD2TapirSchema: sttp.tapir.Schema[SubtypeWithD2] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD1TapirSchema: sttp.tapir.Schema[SubtypeWithoutD1] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD2TapirSchema: sttp.tapir.Schema[SubtypeWithoutD2] = sttp.tapir.Schema.derived
-  implicit lazy val subtypeWithoutD3TapirSchema: sttp.tapir.Schema[SubtypeWithoutD3] = sttp.tapir.Schema.derived
   implicit lazy val aDTWithDiscriminatorTapirSchema: sttp.tapir.Schema[ADTWithDiscriminator] = {
     val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[ADTWithDiscriminator]]].value
     derived.schemaType match {
@@ -26,7 +28,7 @@ object TapirGeneratedEndpointsSchemas {
     val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[ADTWithDiscriminatorNoMapping]]].value
     derived.schemaType match {
       case s: sttp.tapir.SchemaType.SCoproduct[_] => derived.copy(schemaType = s.addDiscriminatorField(
-        sttp.tapir.FieldName("type"),
+        sttp.tapir.FieldName("noMapType"),
         sttp.tapir.Schema.string,
         Map(
           "SubtypeWithD1" -> sttp.tapir.SchemaType.SRef(sttp.tapir.Schema.SName("sttp.tapir.generated.TapirGeneratedEndpoints.SubtypeWithD1")),
@@ -36,5 +38,6 @@ object TapirGeneratedEndpointsSchemas {
       case _ => throw new IllegalStateException("Derived schema for ADTWithDiscriminatorNoMapping should be a coproduct")
     }
   }
+  implicit lazy val subtypeWithoutD3TapirSchema: sttp.tapir.Schema[SubtypeWithoutD3] = sttp.tapir.Schema.derived
   implicit lazy val aDTWithoutDiscriminatorTapirSchema: sttp.tapir.Schema[ADTWithoutDiscriminator] = sttp.tapir.Schema.derived
 }

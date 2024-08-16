@@ -18,7 +18,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD1(foo.s + "+SubtypeWithoutD1", foo.i, foo.a))
       case foo: SubtypeWithoutD2 => Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD2(foo.a :+ "+SubtypeWithoutD2"))
       case foo: SubtypeWithoutD3 =>
-        Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD3(foo.s + "+SubtypeWithoutD3", foo.i, foo.d))
+        Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD3(foo.s + "+SubtypeWithoutD3", foo.i, foo.e))
     })
 
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
@@ -67,12 +67,12 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     }
 
     locally {
-      val reqBody: ADTWithoutDiscriminator = SubtypeWithoutD3("a string", Some(123), Some(23.4))
+      val reqBody: ADTWithoutDiscriminator = SubtypeWithoutD3("a string", Some(123), Some(AnEnum.Foo))
       val reqJsonBody = reqBody.toJson(TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder)
-      val respBody: ADTWithoutDiscriminator = SubtypeWithoutD3("a string+SubtypeWithoutD3", Some(123), Some(23.4))
+      val respBody: ADTWithoutDiscriminator = SubtypeWithoutD3("a string+SubtypeWithoutD3", Some(123), Some(AnEnum.Foo))
       val respJsonBody = respBody.toJson(TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder)
-      reqJsonBody shouldEqual """{"s":"a string","i":123,"d":23.4}"""
-      respJsonBody shouldEqual """{"s":"a string+SubtypeWithoutD3","i":123,"d":23.4}"""
+      reqJsonBody shouldEqual """{"s":"a string","i":123,"e":"Foo"}"""
+      respJsonBody shouldEqual """{"s":"a string+SubtypeWithoutD3","i":123,"e":"Foo"}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")

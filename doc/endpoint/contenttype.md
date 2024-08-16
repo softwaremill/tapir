@@ -24,13 +24,13 @@ On the client side, the appropriate mapping will be chosen basing on the `Conten
 For example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.Codec.{JsonCodec, XmlCodec}
 import sttp.model.StatusCode
 
 case class Entity(name: String)
-implicit val jsonCodecForOrganization: JsonCodec[Entity] = ???
-implicit val xmlCodecForOrganization: XmlCodec[Entity] = ???
+given JsonCodec[Entity] = ???
+given XmlCodec[Entity] = ???
 
 endpoint.out(
   oneOf(

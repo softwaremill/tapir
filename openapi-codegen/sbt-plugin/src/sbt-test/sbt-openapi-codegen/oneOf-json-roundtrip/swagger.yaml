@@ -5,8 +5,36 @@ info:
   description: File for testing json roundtripping of oneOf defns in scala 2.x with circe
   version: 1.0.20-SNAPSHOT
   title: OneOf Json test for scala 2
-tags: []
+tags: [ ]
 paths:
+  '/binary/test':
+    get:
+      responses:
+        "200":
+          description: "Response CSV body"
+          content:
+            application/octet-stream:
+              schema:
+                description: "csv file"
+                type: string
+                format: binary
+    post:
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: string
+      requestBody:
+        required: true
+        description: Upload a csv
+        content:
+          application/octet-stream:
+            schema:
+              description: "csv file"
+              type: string
+              format: binary
   '/adt/test':
     post:
       responses:
@@ -38,6 +66,67 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ADTWithoutDiscriminator'
+  '/inline/enum/test':
+    post:
+      parameters:
+        - name: query-enum
+          in: query
+          description: An enum, inline, in a query string
+          required: true
+          schema:
+            type: string
+            enum:
+              - bar1
+              - bar2
+              - bar3
+        - name: query-opt-enum
+          in: query
+          description: An optional enum, inline, in a query string
+          required: false
+          schema:
+            type: string
+            enum:
+              - bar1
+              - bar2
+              - bar3
+        - name: query-seq-enum
+          in: query
+          description: A sequence of enums, inline, in a query string
+          required: true
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - baz1
+                - baz2
+                - baz3
+              default: baz2
+        - name: query-opt-seq-enum
+          in: query
+          description: An optional sequence of enums, inline, in a query string
+          required: false
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - baz1
+                - baz2
+                - baz3
+              default: baz2
+      responses:
+        '204':
+          description: No Content
+      requestBody:
+        required: true
+        description: Check inline enums
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
 
 components:
   schemas:
@@ -58,12 +147,15 @@ components:
         - $ref: '#/components/schemas/SubtypeWithD1'
         - $ref: '#/components/schemas/SubtypeWithD2'
       discriminator:
-        propertyName: type
+        propertyName: noMapType
     SubtypeWithD1:
       type: object
       required:
+        - type
         - s
       properties:
+        type:
+          type: string
         s:
           type: string
         i:
@@ -74,8 +166,11 @@ components:
     SubtypeWithD2:
       type: object
       required:
+        - type
         - s
       properties:
+        type:
+          type: string
         s:
           type: string
         a:
@@ -126,8 +221,30 @@ components:
           type: string
         i:
           type: integer
-        d:
-          type: number
-          format: double
+        e:
+          $ref: '#/components/schemas/AnEnum'
         absent:
           type: string
+    AnEnum:
+      type: string
+      enum:
+        - Foo
+        - Bar
+        - Baz
+    ObjectWithInlineEnum:
+      title: ObjectWithInlineEnum
+      required:
+        - id
+        - inlineEnum
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        inlineEnum:
+          type: string
+          enum:
+            - foo1
+            - foo2
+            - foo3
+            - foo4

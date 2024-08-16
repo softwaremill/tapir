@@ -21,6 +21,10 @@ object JsonSerdeLib extends Enumeration {
   val Circe, Jsoniter, Zio = Value
   type JsonSerdeLib = Value
 }
+object StreamingImplementation extends Enumeration {
+  val Akka, FS2, Pekko, Zio = Value
+  type StreamingImplementation = Value
+}
 
 object BasicGenerator {
 
@@ -34,6 +38,7 @@ object BasicGenerator {
       targetScala3: Boolean,
       useHeadTagForObjectNames: Boolean,
       jsonSerdeLib: String,
+      streamingImplementation: String,
       validateNonDiscriminatedOneOfs: Boolean,
       maxSchemasPerFile: Int
   ): Map[String, String] = {
@@ -47,19 +52,32 @@ object BasicGenerator {
         )
         JsonSerdeLib.Circe
     }
+    val normalisedStreamingImplementation = streamingImplementation.toLowerCase match {
+      case "akka"  => StreamingImplementation.Akka
+      case "fs2"   => StreamingImplementation.FS2
+      case "pekko" => StreamingImplementation.Pekko
+      case "zio"   => StreamingImplementation.Zio
+      case _ =>
+        System.err.println(
+          s"!!! Unrecognised value $streamingImplementation for streaming impl -- should be one of akka, fs2, pekko or zio. Defaulting to fs2 !!!"
+        )
+        StreamingImplementation.FS2
+    }
 
-    val EndpointDefs(endpointsByTag, queryParamRefs, jsonParamRefs) = endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames)
+    val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams) =
+      endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames, targetScala3, normalisedJsonLib, normalisedStreamingImplementation)
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas) =
       classGenerator
         .classDefs(
           doc = doc,
           targetScala3 = targetScala3,
-          queryParamRefs = queryParamRefs,
+          queryOrPathParamRefs = queryOrPathParamRefs,
           jsonSerdeLib = normalisedJsonLib,
           jsonParamRefs = jsonParamRefs,
           fullModelPath = s"$packagePath.$objName",
           validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs,
-          maxSchemasPerFile = maxSchemasPerFile
+          maxSchemasPerFile = maxSchemasPerFile,
+          enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams
         )
         .getOrElse(GeneratedClassDefinitions("", None, Nil))
     val hasJsonSerdes = jsonSerdes.nonEmpty
@@ -140,12 +158,48 @@ object BasicGenerator {
       .mkString("\n")
 
     val extraImports = if (endpointsInMain.nonEmpty) s"$maybeJsonImport$maybeSchemaImport" else ""
+    val queryParamSupport =
+      """
+      |case class CommaSeparatedValues[T](values: List[T])
+      |case class ExplodedValues[T](values: List[T])
+      |trait ExtraParamSupport[T] {
+      |  def decode(s: String): sttp.tapir.DecodeResult[T]
+      |  def encode(t: T): String
+      |}
+      |implicit def makePathCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[String, T, sttp.tapir.CodecFormat.TextPlain] = {
+      |  sttp.tapir.Codec.string.mapDecode(support.decode)(support.encode)
+      |}
+      |implicit def makeQueryCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
+      |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(support.decode)(support.encode)
+      |}
+      |implicit def makeQueryOptCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] = {
+      |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(maybeV => DecodeResult.sequence(maybeV.toSeq.map(support.decode)).map(_.headOption))(_.map(support.encode))
+      |}
+      |implicit def makeUnexplodedQuerySeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], CommaSeparatedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+      |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode(values => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(s => CommaSeparatedValues(s.toList)))(_.values.map(support.encode).mkString(","))
+      |}
+      |implicit def makeUnexplodedQueryOptSeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], Option[CommaSeparatedValues[T]], sttp.tapir.CodecFormat.TextPlain] = {
+      |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      |    .mapDecode{
+      |      case None => DecodeResult.Value(None)
+      |      case Some(values) => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(r => Some(CommaSeparatedValues(r.toList)))
+      |    }(_.map(_.values.map(support.encode).mkString(",")))
+      |}
+      |implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+      |  support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
+      |}
+      |""".stripMargin
     val mainObj = s"""
         |package $packagePath
         |
         |object $objName {
         |
         |${indent(2)(imports(normalisedJsonLib) + extraImports)}
+        |
+        |${indent(2)(queryParamSupport)}
         |
         |${indent(2)(classDefns)}
         |

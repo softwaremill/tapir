@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.10.9"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.11.1"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.10.9"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.1"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.10.9"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.11.1"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.10.9"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.11.1"
 ```
 
 Then, use:
@@ -29,7 +29,7 @@ to an endpoint.
 For example:
 
 ```scala
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -92,14 +92,14 @@ To create a web socket endpoint, use Tapir's `out(webSocketBody)` output type:
 ```scala
 import cats.effect.kernel.Resource
 import cats.effect.{IO, ResourceApp}
-import cats.syntax.all._
+import cats.syntax.all.*
 import fs2.Pipe
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.server.netty.cats.NettyCatsServer
 import sttp.ws.WebSocketFrame
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 object WebSocketsNettyCatsServer extends ResourceApp.Forever {
 
@@ -159,7 +159,7 @@ You can customize this behavior in `NettyConfig`:
 
 ```scala
 import sttp.tapir.server.netty.NettyConfig
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 // adjust the waiting time to your needs
 val config = NettyConfig.default.withGracefulShutdownTimeout(5.seconds)
@@ -172,8 +172,8 @@ val config2 = NettyConfig.default.noGracefulShutdown
 There is possibility to use Domain socket instead of TCP for handling traffic.
 
 ```scala
+import sttp.tapir.*
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureDomainSocketBinding}
-import sttp.tapir.{endpoint, query, stringBody}
 
 import java.nio.file.Paths
 import scala.concurrent.ExecutionContext.Implicits.global

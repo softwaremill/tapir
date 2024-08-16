@@ -17,17 +17,17 @@ or just add the zio-http integration which already depends on `tapir-zio`:
 "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "@VERSION@"
 ```
 
-Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
+Next, instead of the usual `import sttp.tapir.*`, you should import (or extend the `ZTapir` trait, see [MyTapir](../other/mytapir.md)):
 
 ```scala mdoc:compile-only
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 ```
 
 This brings into scope all the [basic](../endpoint/basics.md) input/output descriptions, which can be used to define an endpoint.
 
 ```{note}
 You should have only one of these imports in your source file. Otherwise, you'll get naming conflicts. The
-`import sttp.tapir.ztapir._` import is meant as a complete replacement of `import sttp.tapir._`.
+`import sttp.tapir.ztapir.*` import is meant as a complete replacement of `import sttp.tapir.*`.
 ```
 
 ## Exposing endpoints
@@ -41,10 +41,10 @@ example:
 
 ```scala mdoc:compile-only
 import sttp.tapir.PublicEndpoint
-import sttp.tapir.ztapir._
+import sttp.tapir.ztapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.{Request, Response, Routes}
-import zio._
+import zio.*
 
 def countCharacters(s: String): ZIO[Any, Nothing, Int] =
   ZIO.succeed(s.length)
@@ -54,14 +54,6 @@ val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] =
   
 val countCharactersHttp: Routes[Any, Response] =
   ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
-```
-
-```{note}
-A single ZIO-Http application can contain both tapir-managed and ZIO-Http-managed routes. However, because of the 
-routing implementation in ZIO Http, the shape of the paths that tapir and other ZIO Http handlers serve should not 
-overlap. The shape of the path includes exact path segments, single- and multi-wildcards. Otherwise, request handling 
-will throw an exception. We don't expect users to encounter this as a problem, however the implementation here 
-diverges a bit comparing to other interpreters.
 ```
 
 ## Server logic

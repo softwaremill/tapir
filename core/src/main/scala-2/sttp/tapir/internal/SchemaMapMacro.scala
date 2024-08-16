@@ -30,7 +30,7 @@ private[tapir] object SchemaMapMacro {
 
     val genericTypeParameters =
       (if (keyTypeParameter.split('.').lastOption.contains("String")) Nil else List(keyTypeParameter)) ++
-        extractTypeArguments(weakTypeK) ++ List(weakTypeV.typeSymbol.fullName) ++ extractTypeArguments(weakTypeV)
+        extractTypeArguments(weakTypeK.dealias) ++ List(weakTypeV.typeSymbol.fullName) ++ extractTypeArguments(weakTypeV.dealias)
     val schemaForMap =
       q"""{
           val s = $schemaForV

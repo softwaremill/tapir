@@ -31,10 +31,10 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
     PlayServerInterpreter(serverOptions).toRoutes(es)
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[Routes],
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val components = new DefaultAkkaHttpServerComponents {
       val initialServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
 
@@ -57,9 +57,9 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
           })
         )
     }
-    val bind = IO {
+    val bind = IO.blocking {
       components.server
     }
-    Resource.make(bind.map(s => (s.mainAddress.getPort, IO(s.stop())))) { case (_, release) => release }
+    Resource.make(bind)(s => IO.blocking(s.stop())).map(s => (s.mainAddress.getPort))
   }
 }

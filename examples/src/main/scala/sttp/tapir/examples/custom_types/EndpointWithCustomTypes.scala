@@ -1,3 +1,8 @@
+// {cat=Custom types; json=circe}: Supporting custom types, when used in query or path parameters, as well as part of JSON bodies
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.1
+
 package sttp.tapir.examples.custom_types
 
 import io.circe.generic.auto.*
@@ -6,7 +11,7 @@ import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 
-object EndpointWithCustomTypes {
+object EndpointWithCustomTypes:
   // An over-complicated, example custom type
   trait MyId {
     def id: String
@@ -28,4 +33,3 @@ object EndpointWithCustomTypes {
   implicit val myIdEncoder: Encoder[MyId] = Encoder.encodeString.contramap(_.id)
   implicit val myIdDecoder: Decoder[MyId] = Decoder.decodeString.map(s => new MyIdImpl(s))
   val endpointWithPerson: PublicEndpoint[Unit, Unit, Person, Nothing] = endpoint.out(jsonBody[Person])
-}

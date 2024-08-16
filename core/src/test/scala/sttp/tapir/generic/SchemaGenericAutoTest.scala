@@ -245,7 +245,13 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs List(
       Schema(
         SProduct[Organization](
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
+          List(
+            field(FieldName("name"), Schema(SString())),
+            field(
+              FieldName("who_am_i"),
+              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Organization"))
+            )
+          )
         ),
         Some(SName("sttp.tapir.generic.Organization"))
       ),
@@ -254,7 +260,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           List(
             field(FieldName("first"), Schema(SString())),
             field(FieldName("age"), Schema(SInteger(), format = Some("int32"))),
-            field(FieldName("who_am_i"), Schema(SString()))
+            field(
+              FieldName("who_am_i"),
+              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Person"))
+            )
           )
         ),
         Some(SName("sttp.tapir.generic.Person"))
@@ -262,7 +271,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       Schema(
         SProduct[UnknownEntity.type](
           List(
-            field(FieldName("who_am_i"), Schema(SString()))
+            field(
+              FieldName("who_am_i"),
+              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("UnknownEntity"))
+            )
           )
         ),
         Some(SName("sttp.tapir.generic.UnknownEntity"))

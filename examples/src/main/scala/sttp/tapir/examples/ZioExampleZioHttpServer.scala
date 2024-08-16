@@ -1,3 +1,12 @@
+// {cat=Hello, World!; effects=ZIO; server=zio-http; json=circe; docs=Swagger UI}: Exposing an endpoint using the ZIO HTTP server
+
+//> using option -Ykind-projector
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.1
+
 package sttp.tapir.examples
 
 import io.circe.generic.auto.*
@@ -10,7 +19,7 @@ import sttp.tapir.ztapir.*
 import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.{ExitCode, Task, URIO, ZIO, ZIOAppDefault, ZLayer}
 
-object ZioExampleZioHttpServer extends ZIOAppDefault {
+object ZioExampleZioHttpServer extends ZIOAppDefault:
   case class Pet(species: String, url: String)
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
@@ -48,4 +57,3 @@ object ZioExampleZioHttpServer extends ZIOAppDefault {
         Server.live
       )
       .exitCode
-}

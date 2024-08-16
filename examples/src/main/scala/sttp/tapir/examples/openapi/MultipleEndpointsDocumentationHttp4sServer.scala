@@ -1,3 +1,11 @@
+// {cat=OpenAPI documentation; effects=cats-effect; server=http4s; docs=Swagger UI; json=circe}: Documenting multiple endpoints
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.1
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+
 package sttp.tapir.examples.openapi
 
 import cats.effect.*
@@ -15,7 +23,7 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 
-object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
+object MultipleEndpointsDocumentationHttp4sServer extends IOApp:
   // endpoint descriptions
   case class Author(name: String)
   case class Book(title: String, year: Int, author: Author)
@@ -63,7 +71,7 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
 
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes <+> swaggerUIRoutes
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // starting the server
     BlazeServerBuilder[IO]
       .withExecutionContext(ec)
@@ -78,5 +86,3 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
         }
       }
       .as(ExitCode.Success)
-  }
-}

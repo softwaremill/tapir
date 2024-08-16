@@ -19,7 +19,7 @@ Such endpoints are then processed through `NimaServerInterpreter` in order to ob
 
 ```scala
 import io.helidon.webserver.WebServer
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.shared.Identity
 import sttp.tapir.server.nima.NimaServerInterpreter
 

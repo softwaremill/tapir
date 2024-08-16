@@ -169,6 +169,11 @@ class ServerOneOfTests[F[_], OPTIONS, ROUTE](
       basicRequest.response(asStringAlways).get(uri"$baseUri/test").send(backend).map { r =>
         r.code shouldBe StatusCode.BadRequest
       }
+    },
+    testServer(in_int_out_value_form_singleton)((num: Int) => pureResult(if (num % 2 == 0) Right("A") else Right("B"))) {
+      (backend, baseUri) =>
+        basicRequest.get(uri"$baseUri/mapping?num=1").send(backend).map(_.code shouldBe StatusCode.Ok) >>
+          basicRequest.get(uri"$baseUri/mapping?num=2").send(backend).map(_.code shouldBe StatusCode.Accepted)
     }
   )
 }

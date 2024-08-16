@@ -7,6 +7,7 @@ import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJso
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
 
+import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,7 +19,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD1(foo.s + "+SubtypeWithoutD1", foo.i, foo.a))
       case foo: SubtypeWithoutD2 => Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD2(foo.a :+ "+SubtypeWithoutD2"))
       case foo: SubtypeWithoutD3 =>
-        Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD3(foo.s + "+SubtypeWithoutD3", foo.i, foo.d))
+        Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD3(foo.s + "+SubtypeWithoutD3", foo.i, foo.e))
     })
 
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
@@ -68,12 +69,12 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     }
 
     locally {
-      val reqBody = SubtypeWithoutD3("a string", Some(123), Some(23.4))
+      val reqBody = SubtypeWithoutD3("a string", Some(123), Some(AnEnum.Foo))
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(reqBody).noSpacesSortKeys
-      val respBody = SubtypeWithoutD3("a string+SubtypeWithoutD3", Some(123), Some(23.4))
+      val respBody = SubtypeWithoutD3("a string+SubtypeWithoutD3", Some(123), Some(AnEnum.Foo))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithoutDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"absent":null,"d":23.4,"i":123,"s":"a string"}"""
-      respJsonBody shouldEqual """{"absent":null,"d":23.4,"i":123,"s":"a string+SubtypeWithoutD3"}"""
+      reqJsonBody shouldEqual """{"absent":null,"e":"Foo","i":123,"s":"a string"}"""
+      respJsonBody shouldEqual """{"absent":null,"e":"Foo","i":123,"s":"a string+SubtypeWithoutD3"}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")
@@ -105,7 +106,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorNoMappingJsonEncoder(reqBody).noSpacesSortKeys
       val respBody = SubtypeWithD1("a string+SubtypeWithD1", Some(123), Some(23.4))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"d":23.4,"i":123,"s":"a string","type":"SubtypeWithD1"}"""
+      reqJsonBody shouldEqual """{"d":23.4,"i":123,"noMapType":"SubtypeWithD1","s":"a string"}"""
       respJsonBody shouldEqual """{"d":23.4,"i":123,"s":"a string+SubtypeWithD1","type":"SubA"}"""
       Await.result(
         sttp.client3.basicRequest
@@ -125,7 +126,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorNoMappingJsonEncoder(reqBody).noSpacesSortKeys
       val respBody = SubtypeWithD2("a string+SubtypeWithD2", Some(Seq("string 1", "string 2")))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"a":["string 1","string 2"],"s":"a string","type":"SubtypeWithD2"}"""
+      reqJsonBody shouldEqual """{"a":["string 1","string 2"],"noMapType":"SubtypeWithD2","s":"a string"}"""
       respJsonBody shouldEqual """{"a":["string 1","string 2"],"s":"a string+SubtypeWithD2","type":"SubB"}"""
       Await.result(
         sttp.client3.basicRequest
@@ -140,5 +141,74 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       )
     }
 
+  }
+
+  "enum query param support" in {
+    var lastValues: (
+        PostInlineEnumTestQueryEnum,
+        Option[PostInlineEnumTestQueryOptEnum],
+        List[PostInlineEnumTestQuerySeqEnum],
+        Option[List[PostInlineEnumTestQueryOptSeqEnum]],
+        ObjectWithInlineEnum
+    ) = null
+    val route = TapirGeneratedEndpoints.postInlineEnumTest.serverLogic[Future]({ case (a, b, c, d, e) =>
+      lastValues = (a, b, c, d, e)
+      Future successful Right[Unit, Unit](())
+    })
+
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+
+    locally {
+      val id = UUID.randomUUID()
+      val reqBody = ObjectWithInlineEnum(id, ObjectWithInlineEnumInlineEnum.foo3)
+      val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.objectWithInlineEnumJsonEncoder(reqBody).noSpacesSortKeys
+      reqJsonBody shouldEqual s"""{"id":"$id","inlineEnum":"foo3"}"""
+      Await.result(
+        sttp.client3.basicRequest
+          .post(
+            uri"http://test.com/inline/enum/test?query-enum=bar1&query-opt-enum=bar2&query-seq-enum=baz1,baz2&query-opt-seq-enum=baz1,baz2"
+          )
+          .body(reqJsonBody)
+          .send(stub)
+          .map { resp =>
+            resp.code.code === 200
+            resp.body shouldEqual Right("")
+          },
+        1.second
+      )
+      val (a, b, c, d, e) = lastValues
+      a shouldEqual PostInlineEnumTestQueryEnum.bar1
+      b shouldEqual Some(PostInlineEnumTestQueryOptEnum.bar2)
+      c shouldEqual Seq(PostInlineEnumTestQuerySeqEnum.baz1, PostInlineEnumTestQuerySeqEnum.baz2)
+      d shouldEqual Some(Seq(PostInlineEnumTestQueryOptSeqEnum.baz1, PostInlineEnumTestQueryOptSeqEnum.baz2))
+      e shouldEqual reqBody
+    }
+
+    locally {
+      val id = UUID.randomUUID()
+      val reqBody = ObjectWithInlineEnum(id, ObjectWithInlineEnumInlineEnum.foo3)
+      val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.objectWithInlineEnumJsonEncoder(reqBody).noSpacesSortKeys
+      reqJsonBody shouldEqual s"""{"id":"$id","inlineEnum":"foo3"}"""
+      Await.result(
+        sttp.client3.basicRequest
+          .post(uri"http://test.com/inline/enum/test?query-enum=bar1&query-seq-enum=baz1,baz2")
+          .body(reqJsonBody)
+          .send(stub)
+          .map { resp =>
+            resp.code.code === 200
+            resp.body shouldEqual Right("")
+          },
+        1.second
+      )
+      val (a, b, c, d, e) = lastValues
+      a shouldEqual PostInlineEnumTestQueryEnum.bar1
+      b shouldEqual None
+      c shouldEqual Seq(PostInlineEnumTestQuerySeqEnum.baz1, PostInlineEnumTestQuerySeqEnum.baz2)
+      d shouldEqual None
+      e shouldEqual reqBody
+    }
   }
 }

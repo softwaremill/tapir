@@ -18,10 +18,10 @@ class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Identity, Any
     JdkHttpServerInterpreter(serverOptions).toHandler(es)
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[HttpHandler],
       gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = {
+  ): Resource[IO, Port] = {
     val server = IO.blocking {
       val server = HttpServer.create(new InetSocketAddress(0), 0)
 
@@ -48,8 +48,7 @@ class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Identity, Any
     }
 
     Resource
-      .make(server.map(s => (s.getAddress.getPort, IO.blocking(s.stop(gracefulShutdownTimeout.map(_.toSeconds.toInt).getOrElse(0)))))) {
-        case (_, release) => release
-      }
+      .make(server)(s => IO.blocking(s.stop(gracefulShutdownTimeout.map(_.toSeconds.toInt).getOrElse(0))))
+      .map(_.getAddress.getPort)
   }
 }

@@ -18,7 +18,7 @@ trait SchemaMagnoliaDerivation {
 
       override def join[T](ctx: CaseClass[Schema, T]): Schema[T] = {
         withCache(ctx.typeInfo, ctx.annotations) {
-          val result =
+          var result =
             if (ctx.isValueClass) {
               require(ctx.params.nonEmpty, s"Cannot derive schema for generic value class: ${ctx.typeInfo.owner}")
               val valueSchema = ctx.params.head.typeclass
@@ -27,6 +27,9 @@ trait SchemaMagnoliaDerivation {
               // Not using inherited annotations when generating type name, we don't want @encodedName to be inherited for types
               Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeInfo, ctx.annotations)))
             }
+          if (ctx.typeInfo.full.startsWith("scala.Tuple")) {
+            result = result.attribute(Schema.Tuple.Attribute, Schema.Tuple(true))
+          }
           enrichSchema(result, mergeAnnotations(ctx.annotations, ctx.inheritedAnnotations))
         }
       }
@@ -116,12 +119,14 @@ trait SchemaMagnoliaDerivation {
         */
       private def withCache[T](typeName: TypeInfo, annotations: Seq[Any])(f: => Schema[T]): Schema[T] = {
         val cacheKey = typeName.full
-        var inProgress = deriveCache.get()
-        val newCache = inProgress == null
-        if (newCache) {
-          inProgress = mutable.Set[String]()
-          deriveCache.set(inProgress)
-        }
+        val inProgressOrNull: mutable.Set[String] | Null = deriveCache.get()
+        val newCache = inProgressOrNull == null
+
+        val inProgress = if (newCache) {
+          val newInProgress = mutable.Set[String]()
+          deriveCache.set(newInProgress)
+          newInProgress
+        } else inProgressOrNull.nn
 
         if (inProgress.contains(cacheKey)) {
           Schema[T](SRef(typeNameToSchemaName(typeName, annotations)))

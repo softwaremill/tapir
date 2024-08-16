@@ -11,15 +11,18 @@ case class OpenapiCodegenTask(
     objectName: String,
     useHeadTagForObjectName: Boolean,
     jsonSerdeLib: String,
+    streamingImplementation: String,
     validateNonDiscriminatedOneOfs: Boolean,
     maxSchemasPerFile: Int,
     dir: File,
     cacheDir: File,
-    targetScala3: Boolean
+    targetScala3: Boolean,
+    overrideDirectoryName: Option[String]
 ) {
 
-  val tempDirectory = cacheDir / "sbt-openapi-codegen"
-  val outDirectory = dir / "sbt-openapi-codegen"
+  private val directoryName: String = overrideDirectoryName.getOrElse("sbt-openapi-codegen")
+  val tempDirectory = cacheDir / directoryName
+  val outDirectory = dir / directoryName
 
   // 1. make the files under cache/sbt-tapircodegen.
   // 2. compare their SHA1 against cache/sbtbuildinfo-inputs
@@ -54,6 +57,7 @@ case class OpenapiCodegenTask(
           targetScala3,
           useHeadTagForObjectName,
           jsonSerdeLib,
+          streamingImplementation,
           validateNonDiscriminatedOneOfs,
           maxSchemasPerFile
         )

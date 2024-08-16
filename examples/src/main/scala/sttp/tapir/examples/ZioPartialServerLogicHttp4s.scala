@@ -1,3 +1,12 @@
+// {cat=Hello, World!; effects=ZIO; server=http4s}: Extending a base endpoint (which has the security logic provided), with server logic
+
+//> using option -Ykind-projector
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.1
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep com.softwaremill.sttp.client3::async-http-client-backend-zio:3.9.7
+
 package sttp.tapir.examples
 
 import org.http4s.*
@@ -12,7 +21,7 @@ import zio.Console.printLine
 import zio.*
 import zio.interop.catz.*
 
-object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
+object ZioPartialServerLogicHttp4s extends ZIOAppDefault:
 
   def greet(user: User, salutation: String): ZIO[Any, Nothing, String] = {
     val greeting = s"$salutation, ${user.name}!"
@@ -79,18 +88,17 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault {
         .provide(UserService.live)
         .exitCode
     )
-}
+end ZioPartialServerLogicHttp4s
 
-object UserAuthenticationLayer {
+object UserAuthenticationLayer:
   type UserService = UserService.Service
 
   case class User(name: String)
   val AuthenticationErrorCode = 1001
 
-  object UserService {
-    trait Service {
+  object UserService:
+    trait Service:
       def auth(token: String): IO[Int, User]
-    }
 
     val live: ZLayer[Any, Nothing, Service] = ZLayer.succeed(new Service {
       def auth(token: String): IO[Int, User] = {
@@ -100,6 +108,4 @@ object UserAuthenticationLayer {
     })
 
     def auth(token: String): ZIO[UserService, Int, User] = ZIO.environmentWithZIO(_.get.auth(token))
-  }
-
-}
+  end UserService

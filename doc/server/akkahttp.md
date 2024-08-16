@@ -16,7 +16,7 @@ your own Akka version (for example 2.5), use sbt exclusion. Mind the Scala versi
 
 Now import the object:
 
-```scala mdoc:compile-only
+```scala
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 ```
 
@@ -27,7 +27,7 @@ The `toRoute` method requires a single, or a list of `ServerEndpoint`s, which ca
 
 For example:
 
-```scala mdoc:compile-only
+```scala
 import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
@@ -55,7 +55,7 @@ tapir-generated directive.
 Edge-case endpoints, which require special logic not expressible using tapir, can be implemented directly
 using akka-http. For example:
 
-```scala mdoc:compile-only
+```scala 
 import sttp.tapir._
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server._
@@ -101,7 +101,7 @@ The interpreter supports [SSE (Server Sent Events)](https://developer.mozilla.or
 
 For example, to define an endpoint that returns event stream:
 
-```scala mdoc:compile-only
+```scala
 import akka.stream.scaladsl.Source
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._

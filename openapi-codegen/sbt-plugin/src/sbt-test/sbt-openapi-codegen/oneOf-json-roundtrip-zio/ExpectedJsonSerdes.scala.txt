@@ -45,6 +45,10 @@ object TapirGeneratedEndpointsJsonSerdes {
   implicit lazy val subtypeWithoutD2JsonEncoder: zio.json.JsonEncoder[SubtypeWithoutD2] = zio.json.DeriveJsonEncoder.gen[SubtypeWithoutD2]
   implicit lazy val subtypeWithD2JsonDecoder: zio.json.JsonDecoder[SubtypeWithD2] = zio.json.DeriveJsonDecoder.gen[SubtypeWithD2]
   implicit lazy val subtypeWithD2JsonEncoder: zio.json.JsonEncoder[SubtypeWithD2] = zio.json.DeriveJsonEncoder.gen[SubtypeWithD2]
+  implicit lazy val anEnumJsonCodec: zio.json.JsonCodec[AnEnum] = zio.json.JsonCodec[AnEnum](
+    zio.json.JsonEncoder[String].contramap[AnEnum](_.entryName),
+    zio.json.JsonDecoder[String].mapOrFail(name => AnEnum.withNameEither(name).left.map(error => error.getMessage)),
+  )
   implicit lazy val aDTWithoutDiscriminatorJsonEncoder: zio.json.JsonEncoder[ADTWithoutDiscriminator] = new zio.json.JsonEncoder[ADTWithoutDiscriminator] {
     override def unsafeEncode(v: ADTWithoutDiscriminator, indent: Option[Int], out: zio.json.internal.Write): Unit = {
       v match {

@@ -5,11 +5,16 @@ import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Schema => TSchema}
 import scala.collection.immutable.ListMap
 
+/** Renders json schema from tapir schema.
+  *
+  * Note [[MetaSchemaDraft04]] is accepted for compatibility, but the [[sttp.apispec.Schema]] produced always follows
+  * [[MetaSchemaDraft202012]].
+  */
 object TapirSchemaToJsonSchema {
   def apply(
       schema: TSchema[_],
       markOptionsAsNullable: Boolean,
-      metaSchema: MetaSchema = MetaSchemaDraft04,
+      metaSchema: MetaSchema = MetaSchemaDraft202012,
       schemaName: TSchema.SName => String = defaultSchemaName
   ): ASchema = {
 

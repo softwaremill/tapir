@@ -1,3 +1,9 @@
+// {cat=Streaming; effects=cats-effect; server=Netty}: Stream response as an fs2 stream
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.1
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+
 package sttp.tapir.examples.streaming
 
 import cats.effect.{ExitCode, IO, IOApp}
@@ -14,7 +20,7 @@ import sttp.tapir.server.netty.cats.{NettyCatsServer, NettyCatsServerBinding}
 import java.nio.charset.StandardCharsets
 import scala.concurrent.duration.*
 
-object StreamingNettyFs2Server extends IOApp {
+object StreamingNettyFs2Server extends IOApp:
   // corresponds to: GET /receive?name=...
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
   // body. Here, the schema is a `string` (set by `streamTextBody`) and the media type is `text/plain`.
@@ -30,7 +36,7 @@ object StreamingNettyFs2Server extends IOApp {
       Stream
         .emit(List[Char]('a', 'b', 'c', 'd'))
         .repeat
-        .flatMap(list => Stream.chunk(Chunk.seq(list)))
+        .flatMap(list => Stream.chunk(Chunk.from(list)))
         .metered[IO](100.millis)
         .take(size)
         .covary[IO]
@@ -42,12 +48,11 @@ object StreamingNettyFs2Server extends IOApp {
   private val declaredPort = 9090
   private val declaredHost = "localhost"
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // starting the server
     NettyCatsServer
       .io()
       .use { server =>
-
         val startServer: IO[NettyCatsServerBinding[IO]] = server
           .port(declaredPort)
           .host(declaredHost)
@@ -57,11 +62,9 @@ object StreamingNettyFs2Server extends IOApp {
         startServer
           .map { binding =>
 
-            val port = binding.port
-            val host = binding.hostName
             println(s"Server started at port = ${binding.port}")
 
-            val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+            val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
             val result: String =
               basicRequest.response(asStringAlways).get(uri"http://$declaredHost:$declaredPort/receive").send(backend).body
             println("Got result: " + result)
@@ -70,5 +73,3 @@ object StreamingNettyFs2Server extends IOApp {
           }
           .as(ExitCode.Success)
       }
-  }
-}

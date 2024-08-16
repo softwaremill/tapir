@@ -29,9 +29,10 @@ object AwsLambdaStubHttpTest {
       AwsCatsEffectServerInterpreter(serverOptions).toRoute(es)
     }
 
-    override def serverWithStop(
+    override def server(
         routes: NonEmptyList[Route[IO]],
         gracefulShutdownTimeout: Option[FiniteDuration]
-    ): Resource[IO, (Port, KillSwitch)] = ???
+    ): Resource[IO, Port] = throw new UnsupportedOperationException
+
   }
 }

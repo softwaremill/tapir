@@ -1,3 +1,14 @@
+// {cat=Hello, World!; effects=ZIO; server=http4s; json=circe; docs=Swagger UI}: Exposing an endpoint, defined with ZIO and depending on services in the environment, using the http4s server
+
+//> using option -Ykind-projector
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.1
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep dev.zio::zio-interop-cats:23.1.0.3
+
 package sttp.tapir.examples
 
 import cats.syntax.all.*
@@ -12,9 +23,9 @@ import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir.*
 import zio.interop.catz.*
-import zio.{Console, IO, Layer, RIO, ZIO, ZIOAppDefault, ZLayer}
+import zio.{Console, ExitCode, IO, Layer, RIO, URIO, ZIO, ZIOAppDefault, ZLayer}
 
-object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
+object ZioEnvExampleHttp4sServer extends ZIOAppDefault:
   // Domain classes, services, layers
   case class Pet(species: String, url: String)
 
@@ -73,6 +84,4 @@ object ZioEnvExampleHttp4sServer extends ZIOAppDefault {
 
   }
 
-  override def run =
-    serve.provide(PetService.live).exitCode
-}
+  override def run: URIO[Any, ExitCode] = serve.provide(PetService.live).exitCode

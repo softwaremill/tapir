@@ -32,7 +32,7 @@ class TapirJsonJsoniterTests extends AnyFlatSpecLike with Matchers {
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual List(JsonError("missing required field \"name\", offset: 0x00000001", Nil))
     tapirCodecWithHexDump.decode("{}") should matchPattern {
-      case DecodeResult.Error(_, JsonDecodeException(errs, _: JsonReaderException)) if  errs.head.msg.contains("buf:") =>
+      case DecodeResult.Error(_, JsonDecodeException(errs, _: JsonReaderException)) if errs.head.msg.contains("buf:") =>
     }
     error.underlying shouldBe a[JsonReaderException]
   }

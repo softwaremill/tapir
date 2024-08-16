@@ -1,3 +1,9 @@
+// {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=ZIO JSON}: Exposing an endpoint using the ZIO HTTP server
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-json-zio:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.1
+
 package sttp.tapir.examples
 
 import sttp.tapir.PublicEndpoint
@@ -9,7 +15,7 @@ import zio.*
 import zio.http.{Response => ZioHttpResponse, Routes, Server}
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
-object HelloWorldZioHttpServer extends ZIOAppDefault {
+object HelloWorldZioHttpServer extends ZIOAppDefault:
   // a simple string-only endpoint
   val helloWorld: PublicEndpoint[String, Unit, String, Any] =
     endpoint.get
@@ -44,4 +50,3 @@ object HelloWorldZioHttpServer extends ZIOAppDefault {
         Server.live
       )
       .exitCode
-}

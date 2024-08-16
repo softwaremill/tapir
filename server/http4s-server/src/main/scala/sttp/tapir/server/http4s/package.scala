@@ -36,16 +36,34 @@ package object http4s {
       */
     def contextIn[T]: AddContextInput[T] = new AddContextInput[T]
 
+    /** Access the context provided by an http4s middleware, such as authentication data.
+      *
+      * Interpreting endpoints which access the http4s context requires the usage of the [[Http4sServerInterpreter.toContextRoutes]] method.
+      * This then yields a [[org.http4s.ContextRoutes]] instance, which needs to be correctly mounted in the http4s router.
+      *
+      * Note that the correct syntax for adding the context input includes `()` after the method invocation, to properly infer types and
+      * capture implicit parameters, e.g. `myEndpoint.contextSecurityIn[Auth]()`.
+      */
+    def contextSecurityIn[T]: AddContextSecurityInput[T] = new AddContextSecurityInput[T]
+
     class AddContextInput[T] {
       def apply[IT]()(implicit concat: ParamConcat.Aux[I, T, IT], ct: ClassTag[T]): Endpoint[A, IT, E, O, R with Context[T]] = {
         val attribute = contextAttributeKey[T]
-        e.in(extractFromRequest[T] { (req: ServerRequest) =>
-          req
-            .attribute(attribute)
-            // should never happen since http4s had to build a ContextRequest with Ctx for ContextRoutes
-            .getOrElse(throw new RuntimeException(s"context ${attribute.typeName} not found in the request"))
-        })
+        e.in(extractFromRequest[T](extractContext[T](attribute)))
       }
     }
+
+    class AddContextSecurityInput[T] {
+      def apply[AT]()(implicit concat: ParamConcat.Aux[A, T, AT], ct: ClassTag[T]): Endpoint[AT, I, E, O, R with Context[T]] = {
+        val attribute = contextAttributeKey[T]
+        e.securityIn(extractFromRequest[T](extractContext[T](attribute)))
+      }
+    }
+
+    private def extractContext[T](attribute: AttributeKey[T]): ServerRequest => T = (req: ServerRequest) =>
+      req
+        .attribute(attribute)
+        // should never happen since http4s had to build a ContextRequest with Ctx for ContextRoutes
+        .getOrElse(throw new RuntimeException(s"context ${attribute.typeName} not found in the request"))
   }
 }

@@ -35,9 +35,10 @@ object AwsLambdaStubHttpTest {
       AwsZioServerInterpreter(serverOptions).toRoute(es)
     }
 
-    override def serverWithStop(
+    override def server(
         routes: NonEmptyList[Route[Task]],
         gracefulShutdownTimeout: Option[FiniteDuration]
-    ): Resource[IO, (Port, KillSwitch)] = ???
+    ): Resource[IO, Port] = throw new UnsupportedOperationException
+
   }
 }

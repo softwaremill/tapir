@@ -30,18 +30,17 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     }
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[IdRoute],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
-  ): Resource[IO, (Port, IO[Unit])] = {
+  ): Resource[IO, Port] = {
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettySyncServerOptions.default
     val bind = IO.blocking(NettySyncServer(options, customizedConfig).start(routes.toList))
 
-    Resource
-      .make(bind.map(b => (b.port, IO.blocking(b.stop())))) { case (_, stop) => stop }
+    Resource.make(bind)(server => IO.blocking(server.stop())).map(_.port)
   }
 
   def scopedServerWithRoutesStop(

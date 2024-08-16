@@ -12,8 +12,8 @@ import sttp.tapir.{AttributeKey, FieldName, Schema, SchemaType, Validator}
 
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 
-class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
-  import SchemaGenericAutoTest._
+class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
+  import SchemaDerivationTest._
 
   import generic.auto._
   def implicitlySchema[T: Pickler]: Schema[T] = summon[Pickler[T]].schema
@@ -210,7 +210,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
     val schema = implicitlySchema[Test1]
 
     // when
-    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.SchemaGenericAutoTest.<local SchemaGenericAutoTest>.Test1"))
+    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.SchemaDerivationTest.<local SchemaDerivationTest>.Test1"))
     schema.schemaType shouldBe SProduct[Test1](
       List(
         field(FieldName("f1"), implicitlySchema[String]),
@@ -276,7 +276,13 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
     schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs List(
       Schema(
         SProduct[Organization](
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
+          List(
+            field(FieldName("name"), Schema(SString())),
+            field(
+              FieldName("who_am_i"),
+              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Organization"))
+            )
+          )
         ),
         Some(SName("sttp.tapir.json.pickler.Organization"))
       ),
@@ -285,7 +291,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
           List(
             field(FieldName("first"), Schema(SString())),
             field(FieldName("age"), Schema(SInteger(), format = Some("int32"))),
-            field(FieldName("who_am_i"), Schema(SString()))
+            field(
+              FieldName("who_am_i"),
+              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Person"))
+            )
           )
         ),
         Some(SName("sttp.tapir.json.pickler.Person"))
@@ -293,7 +302,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
       Schema(
         SProduct[UnknownEntity.type](
           List(
-            field(FieldName("who_am_i"), Schema(SString()))
+            field(
+              FieldName("who_am_i"),
+              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("UnknownEntity"))
+            )
           )
         ),
         Some(SName("sttp.tapir.json.pickler.UnknownEntity"))
@@ -423,7 +435,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
         List(
           field(FieldName("name"), stringSchema.copy(description = Some("cat name"))),
           field(FieldName("catFood"), stringSchema.copy(description = Some("cat food"))),
-          field(FieldName("$type"), Schema(SString()))
+          field(
+            FieldName("$type"),
+            Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Cat"))
+          )
         )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Cat"))
@@ -434,7 +449,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
         List(
           field(FieldName("name"), stringSchema.copy(description = Some("name"))),
           field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food"))),
-          field(FieldName("$type"), Schema(SString()))
+          field(
+            FieldName("$type"),
+            Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Dog"))
+          )
         )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Dog"))
@@ -445,7 +463,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
         List(
           field(FieldName("name"), stringSchema.copy(description = Some("name"))),
           field(FieldName("likesNuts"), booleanSchema.copy(description = Some("likes nuts?"))),
-          field(FieldName("$type"), Schema(SString()))
+          field(
+            FieldName("$type"),
+            Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Hamster"))
+          )
         )
       ),
       Some(SName("sttp.tapir.SchemaMacroTestData.Hamster"))
@@ -470,7 +491,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers with Inside {
   }
 }
 
-object SchemaGenericAutoTest {
+object SchemaDerivationTest {
   import generic.auto._
   def implicitlySchema[A: Pickler]: Schema[A] = summon[Pickler[A]].schema
 

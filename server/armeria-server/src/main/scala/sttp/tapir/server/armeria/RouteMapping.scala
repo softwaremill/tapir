@@ -6,7 +6,7 @@ import sttp.tapir.EndpointIO.{Body, StreamBodyWrapper}
 import sttp.tapir.EndpointInput.{FixedPath, PathCapture, PathsCapture}
 import sttp.tapir.RawBodyType.FileBody
 import sttp.tapir.internal.{RichEndpoint, RichEndpointInput, RichEndpointOutput}
-import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput, RawBodyType, noTrailingSlash}
+import sttp.tapir._
 
 private[armeria] object RouteMapping {
 
@@ -25,10 +25,11 @@ private[armeria] object RouteMapping {
 
     val hasNoTrailingSlash = e.securityInput
       .and(e.input)
-      .traverseInputs {
-        case i if i == noTrailingSlash => Vector(())
+      .asVectorOfBasicInputs()
+      .exists {
+        case i: EndpointInput.ExtractFromRequest[_] if i.attribute(NoTrailingSlash.Attribute).getOrElse(false) => true
+        case _                                                                                                 => false
       }
-      .nonEmpty
 
     toPathPatterns(inputs, hasNoTrailingSlash).map { path =>
       // Allows all HTTP method to handle invalid requests by RejectInterceptor

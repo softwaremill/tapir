@@ -251,14 +251,12 @@ libraryDependencies += "dev.zio" %% "zio-metrics-connectors" % "2.0.0-RC6"
 Example zio metrics prometheus publisher style tapir metrics endpoint.
 ```scala
 import sttp.tapir.{endpoint, stringBody}
-import zio._
+import zio.*
 import zio.metrics.connectors.MetricsConfig
 import zio.metrics.connectors.prometheus.{PrometheusPublisher, prometheusLayer, publisherLayer}
 import zio.metrics.jvm.DefaultJvmMetrics
 
-
-object ZioEndpoint {
-  
+object ZioEndpoint:
   /** DefaultJvmMetrics.live.orDie >+> is optional if you want JVM metrics */
   private val layer = DefaultJvmMetrics.live.orDie >+> ZLayer.make[PrometheusPublisher](
     ZLayer.succeed(MetricsConfig(1.seconds)),
@@ -279,5 +277,4 @@ object ZioEndpoint {
 
   val metricsEndpoint =
     endpoint.get.in("metrics").out(stringBody).serverLogicSuccess(_ => getMetricsEffect)
-}
 ```

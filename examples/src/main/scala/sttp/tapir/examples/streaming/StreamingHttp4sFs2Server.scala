@@ -1,3 +1,10 @@
+// {cat=Streaming; effects=cats-effect; server=http4s}: Stream response as an fs2 stream
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.1
+//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep org.http4s::http4s-blaze-server:0.23.16
+
 package sttp.tapir.examples.streaming
 
 import cats.effect.{ExitCode, IO, IOApp}
@@ -17,7 +24,7 @@ import java.nio.charset.StandardCharsets
 import scala.concurrent.duration.*
 
 // https://github.com/softwaremill/tapir/issues/367
-object StreamingHttp4sFs2Server extends IOApp {
+object StreamingHttp4sFs2Server extends IOApp:
   // corresponds to: GET /receive?name=...
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
   // body. Here, the schema is a `string` (set by `streamTextBody`) and the media type is `text/plain`.
@@ -34,7 +41,7 @@ object StreamingHttp4sFs2Server extends IOApp {
       Stream
         .emit(List[Char]('a', 'b', 'c', 'd'))
         .repeat
-        .flatMap(list => Stream.chunk(Chunk.seq(list)))
+        .flatMap(list => Stream.chunk(Chunk.from(list)))
         .metered[IO](100.millis)
         .take(size)
         .covary[IO]
@@ -43,7 +50,7 @@ object StreamingHttp4sFs2Server extends IOApp {
         .map(s => (size, s))
     })
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     // starting the server
     BlazeServerBuilder[IO]
       .bindHttp(8080, "localhost")
@@ -51,7 +58,7 @@ object StreamingHttp4sFs2Server extends IOApp {
       .resource
       .use { _ =>
         IO {
-          val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+          val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
           val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/receive").send(backend).body
           println("Got result: " + result)
 
@@ -59,5 +66,3 @@ object StreamingHttp4sFs2Server extends IOApp {
         }
       }
       .as(ExitCode.Success)
-  }
-}
