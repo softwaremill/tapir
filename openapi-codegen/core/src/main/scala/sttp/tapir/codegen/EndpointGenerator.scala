@@ -309,35 +309,55 @@ class EndpointGenerator {
     // .errorOut(stringBody)
     // .out(jsonBody[List[Book]])
 
-    responses
-      .map { resp =>
-        val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
+    val (outs, errorOuts) = responses.partition { resp =>
+      resp.content match {
+        case Nil | _ +: Nil =>
+          resp.code match {
+            case okStatus(_)                => true
+            case "default" | errorStatus(_) => false
+            case x                          => bail(s"Statuscode mapping is incomplete! Cannot handle $x")
+          }
+        case _ => bail("We can handle only one return content!")
+      }
+    }
+    def bodyFmt(resp: OpenapiResponse): String = {
+      val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
+      resp.content match {
+        case Nil => ""
+        case content +: Nil =>
+          s"${contentTypeMapper(content.contentType, content.schema, streamingImplementation)}$d"
+      }
+    }
+    def mappedGroup(group: Seq[OpenapiResponse]) = group match {
+      case Nil => None
+      case resp +: Nil =>
         resp.content match {
           case Nil =>
+            val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
             resp.code match {
-              case "200" | "default" => ""
-              case okStatus(s)       => s".out(statusCode(sttp.model.StatusCode($s))$d)"
-              case errorStatus(s)    => s".errorOut(statusCode(sttp.model.StatusCode($s))$d)"
+              case "200" | "default" => None
+              case okStatus(s)       => Some(s"statusCode(sttp.model.StatusCode($s))$d")
+              case errorStatus(s)    => Some(s"statusCode(sttp.model.StatusCode($s))$d")
             }
-          case content +: Nil =>
-            resp.code match {
-              case "200" =>
-                s".out(${contentTypeMapper(content.contentType, content.schema, streamingImplementation)}$d)"
-              case okStatus(s) =>
-                s".out(${contentTypeMapper(content.contentType, content.schema, streamingImplementation)}$d.and(statusCode(sttp.model.StatusCode($s))))"
-              case "default" =>
-                s".errorOut(${contentTypeMapper(content.contentType, content.schema, streamingImplementation)}$d)"
-              case errorStatus(s) =>
-                s".errorOut(${contentTypeMapper(content.contentType, content.schema, streamingImplementation)}$d.and(statusCode(sttp.model.StatusCode($s))))"
-              case x =>
-                bail(s"Statuscode mapping is incomplete! Cannot handle $x")
-            }
-          case _ => bail("We can handle only one return content!")
+          case _ =>
+            Some(resp.code match {
+              case "200" | "default" => s"${bodyFmt(resp)}"
+              case okStatus(s)       => s"${bodyFmt(resp)}.and(statusCode(sttp.model.StatusCode($s)))"
+              case errorStatus(s)    => s"${bodyFmt(resp)}.and(statusCode(sttp.model.StatusCode($s)))"
+            })
         }
-      }
-      .sorted
-      .filter(_.nonEmpty)
-      .mkString("\n")
+      case many =>
+        if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
+        val oneOfs = many.map { m =>
+          val code = if (m.code == "default") "400" else m.code
+          s"oneOfVariant(sttp.model.StatusCode(${code}), ${bodyFmt(m)})"
+        }
+        Some(s"oneOf(${oneOfs.mkString(", ")})")
+    }
+    val mappedOuts = mappedGroup(outs).map(s => s".out($s)")
+    val mappedErrorOuts = mappedGroup(errorOuts).map(s => s".errorOut($s)")
+
+    Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n")
   }
 
   private def contentTypeMapper(
