@@ -945,7 +945,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   .settings(
     name := "tapir-json-zio",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-json" % Versions.zioJson,
+      "dev.zio" %%% "zio-json" % Versions.zioJson,
       scalaTest.value % Test
     )
   )
@@ -953,6 +953,10 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = commonNativeSettings
   )
   .dependsOn(core)
 
