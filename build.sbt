@@ -1419,7 +1419,7 @@ lazy val play29Server: ProjectMatrix = (projectMatrix in file("server/play29-ser
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
-  .jvmPlatform(scalaVersions = List(scala2_13))
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-server"))
