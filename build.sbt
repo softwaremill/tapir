@@ -1407,19 +1407,37 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
+// Play 2.9 Server
+lazy val play29Scala2Deps = Map(
+  "com.typesafe.akka"            -> ("2.6.21", Seq("akka-actor", "akka-actor-typed", "akka-slf4j", "akka-serialization-jackson", "akka-stream")),
+  "com.typesafe"                 -> ("0.6.1", Seq("ssl-config-core")),
+  "com.fasterxml.jackson.module" -> ("2.14.3", Seq("jackson-module-scala"))
+)
+
 lazy val play29Server: ProjectMatrix = (projectMatrix in file("server/play29-server"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-play29-server",
+    excludeDependencies ++=
+      (if (scalaBinaryVersion.value == "3") {
+        play29Scala2Deps.flatMap(e => e._2._2.map(_ + "_3").map(ExclusionRule(e._1, _))).toSeq
+      } else {
+        Seq.empty
+      }),
     libraryDependencies ++= Seq(
       "com.typesafe.play" %% "play-server" % Versions.play29Server,
       "com.typesafe.play" %% "play" % Versions.play29Server,
       "com.typesafe.play" %% "play-akka-http-server" % Versions.play29Server,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
-    )
+    ) ++
+      (if (scalaBinaryVersion.value == "3") {
+        play29Scala2Deps.flatMap(e => e._2._2.map(e._1 %% _ % e._2._1).map(_.cross(CrossVersion.for3Use2_13))).toSeq
+      } else {
+        Seq.empty
+      }),
   )
-  .jvmPlatform(scalaVersions = List(scala2_13))
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-server"))
