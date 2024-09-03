@@ -98,7 +98,8 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
       mat: Materializer,
       ec: ExecutionContext
   ): Future[RawValue[Seq[RawPart]]] = {
-    val bodyParser = maxBytes.map(parsers.multipartFormData(filePartHandler, _)).getOrElse(parsers.multipartFormData(filePartHandler))
+    val bodyParser =
+      maxBytes.map(parsers.multipartFormData(filePartHandler, _, false)).getOrElse(parsers.multipartFormData(filePartHandler))
     bodyParser.apply(request).run(body()).flatMap {
       case Left(r) =>
         Future.failed(new PlayBodyParserException(r))
