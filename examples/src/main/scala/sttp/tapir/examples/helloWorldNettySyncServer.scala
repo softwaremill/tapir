@@ -2,7 +2,6 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.1
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
 
 package sttp.tapir.examples
 
