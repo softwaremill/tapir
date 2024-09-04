@@ -1013,7 +1013,7 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
   .settings(
     name := "tapir-pekko-grpc-examples",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-discovery" % "1.0.3",
+      "org.apache.pekko" %% "pekko-discovery" % "1.1.0",
       slf4j
     ),
     fork := true
@@ -1409,8 +1409,8 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
 
 // Play 2.9 Server
 lazy val play29Scala2Deps = Map(
-  "com.typesafe.akka"            -> ("2.6.21", Seq("akka-actor", "akka-actor-typed", "akka-slf4j", "akka-serialization-jackson", "akka-stream")),
-  "com.typesafe"                 -> ("0.6.1", Seq("ssl-config-core")),
+  "com.typesafe.akka" -> ("2.6.21", Seq("akka-actor", "akka-actor-typed", "akka-slf4j", "akka-serialization-jackson", "akka-stream")),
+  "com.typesafe" -> ("0.6.1", Seq("ssl-config-core")),
   "com.fasterxml.jackson.module" -> ("2.14.3", Seq("jackson-module-scala"))
 )
 
@@ -1420,10 +1420,10 @@ lazy val play29Server: ProjectMatrix = (projectMatrix in file("server/play29-ser
     name := "tapir-play29-server",
     excludeDependencies ++=
       (if (scalaBinaryVersion.value == "3") {
-        play29Scala2Deps.flatMap(e => e._2._2.map(_ + "_3").map(ExclusionRule(e._1, _))).toSeq
-      } else {
-        Seq.empty
-      }),
+         play29Scala2Deps.flatMap(e => e._2._2.map(_ + "_3").map(ExclusionRule(e._1, _))).toSeq
+       } else {
+         Seq.empty
+       }),
     libraryDependencies ++= Seq(
       "com.typesafe.play" %% "play-server" % Versions.play29Server,
       "com.typesafe.play" %% "play" % Versions.play29Server,
@@ -1432,10 +1432,10 @@ lazy val play29Server: ProjectMatrix = (projectMatrix in file("server/play29-ser
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     ) ++
       (if (scalaBinaryVersion.value == "3") {
-        play29Scala2Deps.flatMap(e => e._2._2.map(e._1 %% _ % e._2._1).map(_.cross(CrossVersion.for3Use2_13))).toSeq
-      } else {
-        Seq.empty
-      }),
+         play29Scala2Deps.flatMap(e => e._2._2.map(e._1 %% _ % e._2._1).map(_.cross(CrossVersion.for3Use2_13))).toSeq
+       } else {
+         Seq.empty
+       })
   )
   .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
