@@ -451,7 +451,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     )
   )
   .nativePlatform(
-    scalaVersions = List(scala3),
+    scalaVersions = scala2And3Versions,
     settings = {
       commonNativeSettings ++ Seq(
         libraryDependencies ++= Seq(
@@ -700,6 +700,10 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
+  )
   .dependsOn(core, serverCore % Test)
 
 lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
@@ -764,6 +768,10 @@ lazy val zioPrelude: ProjectMatrix = (projectMatrix in file("integrations/zio-pr
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
   )
   .dependsOn(core)
 
@@ -955,7 +963,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
     settings = commonJsSettings
   )
   .nativePlatform(
-    scalaVersions = List(scala3),
+    scalaVersions = scala2And3Versions,
     settings = commonNativeSettings
   )
   .dependsOn(core)
@@ -1202,7 +1210,7 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
   .dependsOn(core % CompileAndTest)
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
-  .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
+  .nativePlatform(scalaVersions = scala2And3Versions, settings = commonNativeSettings)
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonJvmSettings)
