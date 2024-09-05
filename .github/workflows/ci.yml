@@ -24,10 +24,6 @@ jobs:
         java: [ "11", "21" ]
         exclude:
           - java: "21"
-          - scala-version: "2.12"
-            target-platform: "Native"
-          - scala-version: "2.13"
-            target-platform: "Native"
         include: # Restricted to build only specific Loom-based modules
           - scala-version: "2.13"
             target-platform: "JVM"
