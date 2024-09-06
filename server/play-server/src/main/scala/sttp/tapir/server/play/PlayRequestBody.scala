@@ -65,9 +65,9 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
         bodyAsByteString().map(b => RawValue(b.decodeString(charset.getOrElse(defaultCharset))))
       case RawBodyType.ByteArrayBody   => bodyAsByteString().map(b => RawValue(b.toArrayUnsafe()))
       case RawBodyType.ByteBufferBody  => bodyAsByteString().map(b => RawValue(b.toByteBuffer))
-      case RawBodyType.InputStreamBody => bodyAsByteString().map(b => RawValue(b.asInputStream()))
+      case RawBodyType.InputStreamBody => bodyAsByteString().map(b => RawValue(b.asInputStream))
       case RawBodyType.InputStreamRangeBody =>
-        bodyAsByteString().map(b => RawValue(new InputStreamRange(() => b.asInputStream())))
+        bodyAsByteString().map(b => RawValue(new InputStreamRange(() => b.asInputStream)))
       case RawBodyType.FileBody =>
         bodyAsFile match {
           case Some(file) =>
