@@ -25,31 +25,28 @@ private[sync] object OxSourceWebSocketProcessor:
 
   def apply[REQ, RESP](
       oxDispatcher: OxDispatcher,
-      pipe: OxStreams.Pipe[REQ, RESP],
+      processingPipe: OxStreams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
       ctx: ChannelHandlerContext
   ): Processor[NettyWebSocketFrame, NettyWebSocketFrame] =
+    def decodeFrame(f: WebSocketFrame): REQ = o.requests.decode(f) match {
+      case failure: DecodeResult.Failure         => throw new WebSocketFrameDecodeFailure(f, failure)
+      case x: DecodeResult.Value[REQ] @unchecked => x.v
+    }
+
     val frame2FramePipe: OxStreams.Pipe[NettyWebSocketFrame, NettyWebSocketFrame] = ox ?=>
       val closeSignal = new Semaphore(0)
       (incoming: Source[NettyWebSocketFrame]) =>
-        val outgoing = pipe(
-          optionallyConcatenateFrames(o.concatenateFragmentedFrames)(
-            takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests, closeSignal)(
-              incoming
-                .mapAsView { f =>
-                  val sttpFrame = nettyFrameToFrame(f)
-                  f.release()
-                  sttpFrame
-                }
-            )
-          )
-            .mapAsView(f =>
-              o.requests.decode(f) match {
-                case failure: DecodeResult.Failure         => throw new WebSocketFrameDecodeFailure(f, failure)
-                case x: DecodeResult.Value[REQ] @unchecked => x.v
-              }
-            )
-        )
+        val outgoing = incoming
+          .mapAsView { f =>
+            val sttpFrame = nettyFrameToFrame(f)
+            f.release()
+            sttpFrame
+          }
+          .pipe(takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests, closeSignal))
+          .pipe(optionallyConcatenateFrames(o.concatenateFragmentedFrames))
+          .mapAsView(decodeFrame)
+          .pipe(processingPipe)
           .mapAsView(r => frameToNettyFrame(o.responses.encode(r)))
 
         // when the client closes the connection, we need to close the outgoing channel as well - this needs to be
@@ -57,6 +54,7 @@ private[sync] object OxSourceWebSocketProcessor:
         monitorOutgoingClosedAfterClientClose(closeSignal, outgoing)
 
         outgoing
+    end frame2FramePipe
 
     // We need this kind of interceptor to make Netty reply correctly to closed channel or error
     def wrapSubscriberWithNettyCallback[B](sub: Subscriber[? >: B]): Subscriber[? >: B] = new Subscriber[B] {
@@ -76,6 +74,7 @@ private[sync] object OxSourceWebSocketProcessor:
         sub.onComplete()
     }
     new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
+  end apply
 
   private def optionallyConcatenateFrames(doConcatenate: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
     if doConcatenate then s.mapStateful(() => None: Accumulator)(accumulateFrameState).collectAsView { case Some(f: WebSocketFrame) => f }
