@@ -40,13 +40,13 @@ private[pekkohttp] object PekkoWebSockets {
       case msg: TextMessage =>
         msg.textStream.runFold("")(_ + _).map(t => WebSocketFrame.text(t))
       case msg: BinaryMessage =>
-        msg.dataStream.runFold(ByteString.empty)(_ ++ _).map(b => WebSocketFrame.binary(b.toArray))
+        msg.dataStream.runFold(ByteString.empty)(_ ++ _).map(b => WebSocketFrame.binary(b.toArrayUnsafe()))
     }
 
   private def frameToMessage(w: WebSocketFrame): Option[Message] = {
     w match {
       case WebSocketFrame.Text(p, _, _)   => Some(TextMessage(p))
-      case WebSocketFrame.Binary(p, _, _) => Some(BinaryMessage(ByteString(p)))
+      case WebSocketFrame.Binary(p, _, _) => Some(BinaryMessage(ByteString.fromArrayUnsafe(p)))
       case WebSocketFrame.Ping(_)         => None
       case WebSocketFrame.Pong(_)         => None
       case WebSocketFrame.Close(_, _)     => throw WebSocketClosed(None)
