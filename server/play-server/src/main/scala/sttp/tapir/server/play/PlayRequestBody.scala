@@ -12,7 +12,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 
-import java.io.{ByteArrayInputStream, File}
+import java.io.File
 import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.compat._

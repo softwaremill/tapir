@@ -39,10 +39,10 @@ private[akkagrpc] class AkkaGrpcRequestBody(serverOptions: AkkaHttpServerOptions
 
   private def toExpectedBodyType[R](byteString: ByteString, bodyType: RawBodyType[R]): RawValue[R] = {
     bodyType match {
-      case RawBodyType.ByteArrayBody        => RawValue(byteString.toArray)
+      case RawBodyType.ByteArrayBody        => RawValue(byteString.toArrayUnsafe())
       case RawBodyType.ByteBufferBody       => RawValue(byteString.asByteBuffer)
-      case RawBodyType.InputStreamBody      => RawValue(new ByteArrayInputStream(byteString.toArray))
-      case RawBodyType.InputStreamRangeBody => RawValue(InputStreamRange(() => new ByteArrayInputStream(byteString.toArray)))
+      case RawBodyType.InputStreamBody      => RawValue(new ByteArrayInputStream(byteString.toArrayUnsafe()))
+      case RawBodyType.InputStreamRangeBody => RawValue(InputStreamRange(() => new ByteArrayInputStream(byteString.toArrayUnsafe())))
       case RawBodyType.FileBody             => ???
       case m: RawBodyType.MultipartBody     => ???
       case _                                => ???
