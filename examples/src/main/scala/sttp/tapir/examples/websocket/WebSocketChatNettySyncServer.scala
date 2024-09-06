@@ -2,6 +2,7 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.2
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.2
+//> using dep com.softwaremill.ox::core:0.3.7
 
 package sttp.tapir.examples.websocket
 
@@ -62,10 +63,12 @@ def chatProcessor(a: ActorRef[ChatRoom]): OxStreams.Pipe[Message, Message] =
       incoming.foreach { msg =>
         a.tell(_.incoming(msg))
       }
+      // all incoming messages are processed (= client closed), completing the outgoing channel as well
+      member.channel.done()
     }
 
+    // however the scope ends (client close or error), we need to notify the chat room
     releaseAfterScope {
-      member.channel.done()
       a.tell(_.disconnected(member))
     }
 
