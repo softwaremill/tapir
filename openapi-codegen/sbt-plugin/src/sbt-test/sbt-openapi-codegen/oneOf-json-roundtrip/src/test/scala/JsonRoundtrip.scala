@@ -106,7 +106,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorNoMappingJsonEncoder(reqBody).noSpacesSortKeys
       val respBody = SubtypeWithD1("a string+SubtypeWithD1", Some(123), Some(23.4))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"d":23.4,"i":123,"s":"a string","type":"SubtypeWithD1"}"""
+      reqJsonBody shouldEqual """{"d":23.4,"i":123,"noMapType":"SubtypeWithD1","s":"a string"}"""
       respJsonBody shouldEqual """{"d":23.4,"i":123,"s":"a string+SubtypeWithD1","type":"SubA"}"""
       Await.result(
         sttp.client3.basicRequest
@@ -126,7 +126,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorNoMappingJsonEncoder(reqBody).noSpacesSortKeys
       val respBody = SubtypeWithD2("a string+SubtypeWithD2", Some(Seq("string 1", "string 2")))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"a":["string 1","string 2"],"s":"a string","type":"SubtypeWithD2"}"""
+      reqJsonBody shouldEqual """{"a":["string 1","string 2"],"noMapType":"SubtypeWithD2","s":"a string"}"""
       respJsonBody shouldEqual """{"a":["string 1","string 2"],"s":"a string+SubtypeWithD2","type":"SubB"}"""
       Await.result(
         sttp.client3.basicRequest

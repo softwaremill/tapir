@@ -24,7 +24,7 @@ class ClassDefinitionGenerator {
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
-    val adtInheritanceMap: Map[String, Seq[String]] = mkMapParentsByChild(allOneOfSchemas)
+    val adtInheritanceMap: Map[String, Seq[(String, OpenapiSchemaOneOf)]] = mkMapParentsByChild(allOneOfSchemas)
     val generatesQueryOrPathParamEnums = enumsDefinedOnEndpointParams ||
       allSchemas
         .collect { case (name, _: OpenapiSchemaEnum) => name }
@@ -40,7 +40,7 @@ class ClassDefinitionGenerator {
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
 
-    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
+    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemas = SchemaGenerator.generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile)
     val jsonSerdes = JsonSerdeGenerator.serdeDefs(
@@ -48,9 +48,8 @@ class ClassDefinitionGenerator {
       jsonSerdeLib,
       jsonParamRefs,
       allTransitiveJsonParamRefs,
-      fullModelPath,
       validateNonDiscriminatedOneOfs,
-      adtInheritanceMap,
+      adtInheritanceMap.mapValues(_.map(_._1)),
       targetScala3
     )
     val defns = doc.components
@@ -71,7 +70,7 @@ class ClassDefinitionGenerator {
     defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas))
   }
 
-  private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[String]] =
+  private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[(String, OpenapiSchemaOneOf)]] =
     allOneOfSchemas
       .flatMap { case (name, schema) =>
         val validatedChildren = schema.types.map {
@@ -92,7 +91,7 @@ class ClassDefinitionGenerator {
                 s"Discriminator values $targetClassNames did not match schema variants $validatedChildren for oneOf defn $name"
               )
         }
-        validatedChildren.map(_ -> name)
+        validatedChildren.map(_ -> ((name, schema)))
       }
       .groupBy(_._1)
       .mapValues(_.map(_._2))
@@ -203,7 +202,7 @@ class ClassDefinitionGenerator {
       name: String,
       obj: OpenapiSchemaObject,
       jsonParamRefs: Set[String],
-      adtInheritanceMap: Map[String, Seq[String]],
+      adtInheritanceMap: Map[String, Seq[(String, OpenapiSchemaOneOf)]],
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
       targetScala3: Boolean
   ): Seq[String] = {
@@ -226,25 +225,44 @@ class ClassDefinitionGenerator {
         .flatten
         .toList
 
-      val (properties, maybeEnums) = obj.properties.map { case (key, OpenapiSchemaField(schemaType, maybeDefault)) =>
-        val (tpe, maybeEnum) = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType, isJson, jsonSerdeLib, targetScala3)
-        val fixedKey = fixKey(key)
-        val optional = schemaType.nullable || !obj.required.contains(key)
-        val maybeExplicitDefault =
-          maybeDefault.map(" = " + DefaultValueRenderer.render(allModels = allSchemas, thisType = schemaType, optional)(_))
-        val default = maybeExplicitDefault getOrElse (if (optional) " = None" else "")
-        s"$fixedKey: $tpe$default" -> maybeEnum
-      }.unzip
-
       val parents = adtInheritanceMap.getOrElse(name, Nil) match {
         case Nil => ""
-        case ps  => ps.mkString(" extends ", " with ", "")
+        case ps  => ps.map(_._1).mkString(" extends ", " with ", "")
       }
+      val discriminatorDefFields = adtInheritanceMap
+        .getOrElse(name, Nil)
+        .flatMap { case (_, parent) =>
+          parent.discriminator.map { d =>
+            d.propertyName -> d.mapping.flatMap(_.find(_._2.stripPrefix("#/components/schemas/") == name).map(_._1)).getOrElse(name)
+          }
+        }
+        .distinct
+      val discriminatorDefBody = discriminatorDefFields.filter { case (n, _) => obj.properties.map(_._1).toSet.contains(n) } match {
+        case Nil => ""
+        case fields =>
+          val fs = fields.map { case (k, v) => s"""def `$k`: String = "$v"""" }.mkString("\n")
+          s""" {
+             |${indent(2)(fs)}
+             |}""".stripMargin
+      }
+
+      val (properties, maybeEnums) = obj.properties
+        .filterNot(discriminatorDefFields.map(_._1) contains _._1)
+        .map { case (key, OpenapiSchemaField(schemaType, maybeDefault)) =>
+          val (tpe, maybeEnum) = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType, isJson, jsonSerdeLib, targetScala3)
+          val fixedKey = fixKey(key)
+          val optional = schemaType.nullable || !obj.required.contains(key)
+          val maybeExplicitDefault =
+            maybeDefault.map(" = " + DefaultValueRenderer.render(allModels = allSchemas, thisType = schemaType, optional)(_))
+          val default = maybeExplicitDefault getOrElse (if (optional) " = None" else "")
+          s"$fixedKey: $tpe$default" -> maybeEnum
+        }
+        .unzip
 
       val enumDefn = maybeEnums.flatten.toList
       s"""|case class $name (
           |${indent(2)(properties.mkString(",\n"))}
-          |)$parents""".stripMargin :: innerClasses ::: enumDefn ::: acc
+          |)$parents$discriminatorDefBody""".stripMargin :: innerClasses ::: enumDefn ::: acc
     }
 
     rec(addName("", name), obj, Nil)

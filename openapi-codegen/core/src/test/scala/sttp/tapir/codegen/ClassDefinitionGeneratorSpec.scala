@@ -391,7 +391,13 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       case Left(value) => throw new Exception(value)
       case Right(doc) =>
         new EndpointGenerator()
-          .endpointDefs(doc, useHeadTagForObjectNames = false, targetScala3 = false, jsonSerdeLib = JsonSerdeLib.Circe)
+          .endpointDefs(
+            doc,
+            useHeadTagForObjectNames = false,
+            targetScala3 = false,
+            jsonSerdeLib = JsonSerdeLib.Circe,
+            streamingImplementation = StreamingImplementation.FS2
+          )
           .endpointDecls(None)
     }
 

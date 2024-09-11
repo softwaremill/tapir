@@ -14,7 +14,7 @@ import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
-val scala2_12 = "2.12.19"
+val scala2_12 = "2.12.20"
 val scala2_13 = "2.13.14"
 val scala3 = "3.3.3"
 
@@ -451,7 +451,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     )
   )
   .nativePlatform(
-    scalaVersions = List(scala3),
+    scalaVersions = scala2And3Versions,
     settings = {
       commonNativeSettings ++ Seq(
         libraryDependencies ++= Seq(
@@ -530,7 +530,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.2",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
-      "io.github.classgraph" % "classgraph" % "4.8.174",
+      "io.github.classgraph" % "classgraph" % "4.8.175",
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -700,6 +700,10 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
+  )
   .dependsOn(core, serverCore % Test)
 
 lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
@@ -764,6 +768,10 @@ lazy val zioPrelude: ProjectMatrix = (projectMatrix in file("integrations/zio-pr
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
   )
   .dependsOn(core)
 
@@ -924,8 +932,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.30.7",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.30.7" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.30.9",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.30.9" % Test,
       scalaTest.value % Test
     )
   )
@@ -945,7 +953,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   .settings(
     name := "tapir-json-zio",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-json" % Versions.zioJson,
+      "dev.zio" %%% "zio-json" % Versions.zioJson,
       scalaTest.value % Test
     )
   )
@@ -953,6 +961,10 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonNativeSettings
   )
   .dependsOn(core)
 
@@ -1009,7 +1021,7 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
   .settings(
     name := "tapir-pekko-grpc-examples",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-discovery" % "1.0.3",
+      "org.apache.pekko" %% "pekko-discovery" % "1.1.0",
       slf4j
     ),
     fork := true
@@ -1198,7 +1210,7 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
   .dependsOn(core % CompileAndTest)
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
-  .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
+  .nativePlatform(scalaVersions = scala2And3Versions, settings = commonNativeSettings)
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonJvmSettings)
@@ -1403,19 +1415,37 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
+// Play 2.9 Server
+lazy val play29Scala2Deps = Map(
+  "com.typesafe.akka" -> ("2.6.21", Seq("akka-actor", "akka-actor-typed", "akka-slf4j", "akka-serialization-jackson", "akka-stream")),
+  "com.typesafe" -> ("0.6.1", Seq("ssl-config-core")),
+  "com.fasterxml.jackson.module" -> ("2.14.3", Seq("jackson-module-scala"))
+)
+
 lazy val play29Server: ProjectMatrix = (projectMatrix in file("server/play29-server"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-play29-server",
+    excludeDependencies ++=
+      (if (scalaBinaryVersion.value == "3") {
+         play29Scala2Deps.flatMap(e => e._2._2.map(_ + "_3").map(ExclusionRule(e._1, _))).toSeq
+       } else {
+         Seq.empty
+       }),
     libraryDependencies ++= Seq(
       "com.typesafe.play" %% "play-server" % Versions.play29Server,
       "com.typesafe.play" %% "play" % Versions.play29Server,
       "com.typesafe.play" %% "play-akka-http-server" % Versions.play29Server,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
-    )
+    ) ++
+      (if (scalaBinaryVersion.value == "3") {
+         play29Scala2Deps.flatMap(e => e._2._2.map(e._1 %% _ % e._2._1).map(_.cross(CrossVersion.for3Use2_13))).toSeq
+       } else {
+         Seq.empty
+       })
   )
-  .jvmPlatform(scalaVersions = List(scala2_13))
+  .jvmPlatform(scalaVersions = scala2_13And3Versions)
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val jdkhttpServer: ProjectMatrix = (projectMatrix in file("server/jdkhttp-server"))

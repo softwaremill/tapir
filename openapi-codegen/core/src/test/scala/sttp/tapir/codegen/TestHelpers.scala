@@ -100,6 +100,12 @@ object TestHelpers {
       |                type: array
       |                items:
       |                  $ref: '#/components/schemas/Book'
+      |        '401':
+      |          description: 'unauthorized'
+      |          content:
+      |            text/plain:
+      |              schema:
+      |                type: string
       |        default:
       |          description: ''
       |          content:
@@ -165,6 +171,7 @@ object TestHelpers {
                 "",
                 Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
               ),
+              OpenapiResponse("401", "unauthorized", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))),
               OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
             ),
             requestBody = None,

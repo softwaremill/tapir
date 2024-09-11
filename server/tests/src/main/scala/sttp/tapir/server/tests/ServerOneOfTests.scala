@@ -174,6 +174,6 @@ class ServerOneOfTests[F[_], OPTIONS, ROUTE](
       (backend, baseUri) =>
         basicRequest.get(uri"$baseUri/mapping?num=1").send(backend).map(_.code shouldBe StatusCode.Ok) >>
           basicRequest.get(uri"$baseUri/mapping?num=2").send(backend).map(_.code shouldBe StatusCode.Accepted)
-    },
+    }
   )
 }

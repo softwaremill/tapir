@@ -54,7 +54,10 @@ object SchemaGenerator {
             false
           ) -> "implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]"
         )
-      else throw new NotImplementedError("any not implemented for json libs other than circe")
+      else
+        throw new NotImplementedError(
+          s"any not implemented for json libs other than circe (problematic models: ${schemasWithAny.map(_._1)})"
+        )
     val openApiSchemasWithTapirSchemas = doc.components
       .map(_.schemas.map {
         case (name, _: OpenapiSchemaEnum) =>
@@ -148,7 +151,7 @@ object SchemaGenerator {
       // Select next candidate. Order lexicographically for stable output
       val next = initialSet.minBy(_._1)
       recurse(next)
-      res += nextRing.sortBy(_._1)
+      res += nextRing.distinct.sortBy(_._1)
     }
     res.toSeq
   }

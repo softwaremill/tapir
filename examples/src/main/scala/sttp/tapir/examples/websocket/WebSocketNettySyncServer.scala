@@ -1,7 +1,7 @@
 // {cat=WebSocket; effects=Direct; server=Netty}: Describe and implement a WebSocket endpoint
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.10.14
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.10.14
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.2
 
 package sttp.tapir.examples.websocket
 
@@ -10,10 +10,11 @@ import ox.channels.*
 import sttp.capabilities.WebSockets
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.OxStreams
-import sttp.tapir.server.netty.sync.OxStreams.Pipe // alias for Ox ?=> Source[A] => Source[B]
+import sttp.tapir.server.netty.sync.OxStreams.Pipe
 import sttp.tapir.server.netty.sync.NettySyncServer
 import sttp.ws.WebSocketFrame
 
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.duration.*
 
 object WebSocketNettySyncServer:
@@ -33,17 +34,21 @@ object WebSocketNettySyncServer:
 
   // Your processor transforming a stream of requests into a stream of responses
   val wsPipe: Pipe[String, String] = requestStream => requestStream.map(_.toUpperCase)
-  // Alternatively, requests and responses can be treated separately, for example to emit frames to the client from another source:
+
+  // Alternative logic (not used here): requests and responses can be treated separately, for example to emit frames
+  // to the client from another source.
   val wsPipe2: Pipe[String, String] = { in =>
+    val running = new AtomicBoolean(true) // TODO use https://github.com/softwaremill/ox/issues/209 once available
     fork {
       in.drain() // read and ignore requests
+      running.set(false) // stopping the responses
     }
     // emit periodic responses
-    Source.tick(1.second).map(_ => System.currentTimeMillis()).map(_.toString)
+    Source.tick(1.second).takeWhile(_ => running.get()).map(_ => System.currentTimeMillis()).map(_.toString)
   }
 
   // The WebSocket endpoint, builds the pipeline in serverLogicSuccess
-  val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe)
+  val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe2)
 
   // A regular /GET endpoint
   val helloWorldEndpoint =

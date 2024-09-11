@@ -33,6 +33,10 @@ private[docs] class TSchemaToASchema(
           case TSchemaType.SNumber()  => ASchema(SchemaType.Number)
           case TSchemaType.SBoolean() => ASchema(SchemaType.Boolean)
           case TSchemaType.SString()  => ASchema(SchemaType.String)
+          case TSchemaType.SProduct(fields) if schema.attribute(TSchema.Tuple.Attribute).map(_.isTuple).getOrElse(false) =>
+            ASchema(SchemaType.Array).copy(
+              prefixItems = Some(fields.map(f => apply(f.schema, allowReference = true)))
+            )
           case p @ TSchemaType.SProduct(fields) =>
             ASchema(SchemaType.Object).copy(
               required = p.required.map(_.encodedName),
@@ -108,9 +112,13 @@ private[docs] class TSchemaToASchema(
     // The primary motivation for using schema name as fallback title is to improve Swagger UX with
     // `oneOf` schemas in OpenAPI 3.1. See https://github.com/softwaremill/tapir/issues/3447 for details.
     def fallbackTitle = tschema.name.map(fallbackSchemaTitle)
+    
+    val const = tschema.attribute(TSchema.EncodedDiscriminatorValue.Attribute).map(_.v).map(v => ExampleSingleValue(v))
+    
     oschema
-      .copy(title = titleFromAttr orElse fallbackTitle)
+      .copy(title = titleFromAttr.orElse(fallbackTitle))
       .copy(uniqueItems = tschema.attribute(UniqueItems.Attribute).map(_.uniqueItems))
+      .copy(const = const)
   }
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {

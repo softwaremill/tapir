@@ -62,6 +62,9 @@ object GenScala {
   private val jsonLibOpt: Opts[Option[String]] =
     Opts.option[String]("jsonLib", "Json library to use for serdes", "j").orNone
 
+  private val streamingImplementationOpt: Opts[Option[String]] =
+    Opts.option[String]("streamingImplementation", "Capability to use for binary streams", "s").orNone
+
   private val destDirOpt: Opts[File] =
     Opts
       .option[String]("destdir", "Destination directory", "d")
@@ -84,7 +87,8 @@ object GenScala {
       headTagForNamesOpt,
       jsonLibOpt,
       validateNonDiscriminatedOneOfsOpt,
-      maxSchemasPerFileOpt
+      maxSchemasPerFileOpt,
+      streamingImplementationOpt
     )
       .mapN {
         case (
@@ -96,7 +100,8 @@ object GenScala {
               headTagForNames,
               jsonLib,
               validateNonDiscriminatedOneOfs,
-              maxSchemasPerFile
+              maxSchemasPerFile,
+              streamingImplementation
             ) =>
           val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
@@ -109,6 +114,7 @@ object GenScala {
                 targetScala3,
                 headTagForNames,
                 jsonLib.getOrElse("circe"),
+                streamingImplementation.getOrElse("fs2"),
                 validateNonDiscriminatedOneOfs,
                 maxSchemasPerFile.getOrElse(400)
               )

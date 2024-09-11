@@ -76,7 +76,9 @@ object TapirGeneratedEndpoints {
     s: String,
     i: Option[Int] = None,
     d: Option[Double] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
+    def `type`: String = "SubA"
+  }
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
@@ -103,7 +105,9 @@ object TapirGeneratedEndpoints {
   case class SubtypeWithD2 (
     s: String,
     a: Option[Seq[String]] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
+    def `type`: String = "SubB"
+  }
 
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] with enumeratum.CirceEnum[AnEnum] {
@@ -112,6 +116,21 @@ object TapirGeneratedEndpoints {
     case object Bar extends AnEnum
     case object Baz extends AnEnum
   }
+
+
+
+  lazy val getBinaryTest =
+    endpoint
+      .get
+      .in(("binary" / "test"))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()).description("Response CSV body"))
+
+  lazy val postBinaryTest =
+    endpoint
+      .post
+      .in(("binary" / "test"))
+      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()))
+      .out(jsonBody[String].description("successful operation"))
 
   lazy val putAdtTest =
     endpoint
@@ -179,6 +198,6 @@ object TapirGeneratedEndpoints {
   }
 
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postInlineEnumTest)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putAdtTest, postAdtTest, postInlineEnumTest)
 
 }

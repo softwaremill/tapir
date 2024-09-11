@@ -62,14 +62,12 @@ trait FinatraServerInterpreter extends Logging {
 
   private[finatra] def path(input: EndpointInput[_]): String = {
     val basicInputs = input.asVectorOfBasicInputs()
-    val p = basicInputs
-      .collect {
-        case segment: EndpointInput.FixedPath[_] => segment.show
-        case PathCapture(Some(name), _, _)       => s"/:$name"
-        case PathCapture(_, _, _)                => "/:param"
-        case EndpointInput.PathsCapture(_, _)    => "/:*"
-      }
-      .mkString
+    val p = basicInputs.collect {
+      case segment: EndpointInput.FixedPath[_] => segment.show
+      case PathCapture(Some(name), _, _)       => s"/:$name"
+      case PathCapture(_, _, _)                => "/:param"
+      case EndpointInput.PathsCapture(_, _)    => "/:*"
+    }.mkString
     if (p.isEmpty) "/:*"
     // checking if there's an input which rejects trailing slashes; otherwise the default behavior is to accept them
     else if (
