@@ -1,4 +1,4 @@
-// {cat=Hello, World!; effects=Future; server=http4s}: Exposing an endpoint using the http4s server
+// {cat=Hello, World!; effects=cats-effect; server=http4s}: Exposing an endpoint using the http4s server
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.2
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.2
