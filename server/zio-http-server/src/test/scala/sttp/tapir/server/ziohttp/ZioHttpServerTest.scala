@@ -4,7 +4,6 @@ import cats.effect.IO
 import cats.effect.Resource
 import cats.implicits.toTraverseOps
 import io.netty.channel.ChannelFactory
-import io.netty.channel.EventLoopGroup
 import io.netty.channel.ServerChannel
 import org.scalatest.Assertion
 import org.scalatest.Exceptional
@@ -38,9 +37,6 @@ import zio.http.Middleware
 import zio.http.Path
 import zio.http.Request
 import zio.http.URL
-import zio.http.netty.ChannelFactories
-import zio.http.netty.ChannelType
-import zio.http.netty.EventLoopGroups
 import zio.interop.catz._
 import zio.stream
 import zio.stream.ZPipeline
@@ -51,6 +47,10 @@ import java.time
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import zio.stream.ZSink
+import zio.http.netty.NettyConfig
+import zio.http.netty.ChannelType
+import zio.http.netty.server.ServerEventLoopGroups
+import _root_.zio.http.netty.TestChannelFactories
 
 class ZioHttpServerTest extends TestSuite {
 
@@ -75,22 +75,27 @@ class ZioHttpServerTest extends TestSuite {
     implicit val r: Runtime[Any] = Runtime.default
     // creating the netty dependencies once, to speed up tests
     Resource
-      .scoped[IO, Any, ZEnvironment[EventLoopGroup with ChannelFactory[ServerChannel]]]({
-        val eventConfig = ZLayer.succeed(new EventLoopGroups.Config {
-          def channelType = ChannelType.AUTO
-          val nThreads = 0
-          val shutdownQuietPeriod = 0
-          val shutdownTimeOut = 0
-          val shutdownTimeUnit = scala.concurrent.duration.SECONDS
-        })
+      .scoped[IO, Any, ZEnvironment[ServerEventLoopGroups with ChannelFactory[ServerChannel]]]({
+        val eventConfig = ZLayer.succeed(
+          NettyConfig.default.bossGroup(
+            NettyConfig.BossGroup(
+              channelType = ChannelType.AUTO,
+              nThreads = 0,
+              shutdownQuietPeriodDuration = zio.Duration.fromSeconds(0),
+              shutdownTimeOutDuration = zio.Duration.fromSeconds(0)
+            )
+          )
+        )
 
         val channelConfig: ZLayer[Any, Nothing, ChannelType.Config] = eventConfig
-        (channelConfig >>> ChannelFactories.Server.fromConfig) ++ (eventConfig >>> EventLoopGroups.live)
+        val channelFactory = (channelConfig >>> TestChannelFactories.config)
+        val groups = (eventConfig >>> ServerEventLoopGroups.live)
+        (groups ++ channelFactory)
       }.build)
-      .map { nettyDeps =>
-        val eventLoopGroup = ZLayer.succeed(nettyDeps.get[EventLoopGroup])
-        val channelFactory = ZLayer.succeed(nettyDeps.get[ChannelFactory[ServerChannel]])
-        val interpreter = new ZioHttpTestServerInterpreter(eventLoopGroup, channelFactory)
+      .map { environment =>
+        val groups = environment.get[ServerEventLoopGroups]
+        val factory = environment.get[ChannelFactory[ServerChannel]]
+        val interpreter = new ZioHttpTestServerInterpreter(groups, factory)
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
         def additionalTests(): List[Test] = List(
