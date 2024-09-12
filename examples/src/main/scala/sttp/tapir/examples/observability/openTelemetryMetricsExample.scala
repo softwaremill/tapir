@@ -4,7 +4,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.2
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.2
 //> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.2
-//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.42.0
+//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.42.1
 //> using dep org.slf4j:slf4j-api:2.0.13
 
 package sttp.tapir.examples.observability
