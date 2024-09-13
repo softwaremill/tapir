@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.11.2"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.11.3"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.2"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.3"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.11.2"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.11.3"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.11.2"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.11.3"
 ```
 
 Then, use:
@@ -151,6 +151,10 @@ object WebSocketsNettyCatsServer extends ResourceApp.Forever {
 
 In the Loom-based backend, Tapir uses [Ox](https://ox.softwaremill.com) to manage concurrency, and your transformation pipeline should be represented as `Ox ?=> Source[A] => Source[B]`. Any forks started within this function will be run under a safely isolated internal scope.
 See [examples/websocket/WebSocketNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/websocket/WebSocketNettySyncServer.scala) for a full example.
+
+```{note}
+The pipeline transform a source of incoming web socket messages (received from the client), into a source of outgoing web socket messages (which will be sent to the client), within some concurrency scope. Once the incoming source is done, the client has closed the connection. In that case, remember to close the outgoing source as well: otherwise the scope will leak and won't be closed. An error will be logged if the outgoing channel is not closed within a timeout after a close frame is received.
+```
 
 ## Graceful shutdown
 
