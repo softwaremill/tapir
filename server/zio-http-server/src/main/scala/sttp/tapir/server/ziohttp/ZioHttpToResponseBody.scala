@@ -83,50 +83,50 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioResponseBody, ZioStreams] 
       case RawBodyType.MultipartBody(_, _) => throw new UnsupportedOperationException("Multipart is not supported")
     }
 
-    def toFormField[CF <: CodecFormat, R](bodyType: RawBodyType[R], part: Part[R], r: R): FormField = {
-      val mediaType: Option[MediaType] = part.contentType.flatMap(MediaType.forContentType)
-      bodyType match {
-        case RawBodyType.StringBody(_) =>
-          FormField.Text(part.name, part.body, mediaType.getOrElse(MediaType.text.plain), part.fileName)
-        case RawBodyType.ByteArrayBody =>
-          FormField.Binary(
-            part.name,
-            Chunk.fromArray(part.body),
-            mediaType.getOrElse(MediaType.application.`octet-stream`),
-            filename = part.fileName
-          )
-        case RawBodyType.ByteBufferBody =>
-          val array: Array[Byte] = new Array[Byte](r.remaining)
-          r.get(array)
-          FormField.Binary(
-            part.name,
-            Chunk.fromArray(array),
-            mediaType.getOrElse(MediaType.application.`octet-stream`),
-            filename = part.fileName
-          )
-        case RawBodyType.FileBody =>
-          FormField.streamingBinaryField(
-            part.name,
-            ZStream.fromFile(r.file).orDie,
-            mediaType.getOrElse(MediaType.application.`octet-stream`),
-            filename = part.fileName
-          )
-        case RawBodyType.InputStreamBody =>
-          FormField.streamingBinaryField(
-            part.name,
-            ZStream.fromInputStream(r).orDie,
-            mediaType.getOrElse(MediaType.application.`octet-stream`),
-            filename = part.fileName
-          )
-        case RawBodyType.InputStreamRangeBody =>
-          FormField.streamingBinaryField(
-            part.name,
-            ZStream.fromInputStream(r.inputStream()).orDie,
-            mediaType.getOrElse(MediaType.application.`octet-stream`),
-            filename = part.fileName
-          )
-        case _: RawBodyType.MultipartBody =>
-          throw new UnsupportedOperationException("Nested multipart messages are not supported.")
-      }
+  def toFormField[CF <: CodecFormat, R](bodyType: RawBodyType[R], part: Part[R], r: R): FormField = {
+    val mediaType: Option[MediaType] = part.contentType.flatMap(MediaType.forContentType)
+    bodyType match {
+      case RawBodyType.StringBody(_) =>
+        FormField.Text(part.name, part.body, mediaType.getOrElse(MediaType.text.plain), part.fileName)
+      case RawBodyType.ByteArrayBody =>
+        FormField.Binary(
+          part.name,
+          Chunk.fromArray(part.body),
+          mediaType.getOrElse(MediaType.application.`octet-stream`),
+          filename = part.fileName
+        )
+      case RawBodyType.ByteBufferBody =>
+        val array: Array[Byte] = new Array[Byte](r.remaining)
+        r.get(array)
+        FormField.Binary(
+          part.name,
+          Chunk.fromArray(array),
+          mediaType.getOrElse(MediaType.application.`octet-stream`),
+          filename = part.fileName
+        )
+      case RawBodyType.FileBody =>
+        FormField.streamingBinaryField(
+          part.name,
+          ZStream.fromFile(r.file).orDie,
+          mediaType.getOrElse(MediaType.application.`octet-stream`),
+          filename = part.fileName
+        )
+      case RawBodyType.InputStreamBody =>
+        FormField.streamingBinaryField(
+          part.name,
+          ZStream.fromInputStream(r).orDie,
+          mediaType.getOrElse(MediaType.application.`octet-stream`),
+          filename = part.fileName
+        )
+      case RawBodyType.InputStreamRangeBody =>
+        FormField.streamingBinaryField(
+          part.name,
+          ZStream.fromInputStream(r.inputStream()).orDie,
+          mediaType.getOrElse(MediaType.application.`octet-stream`),
+          filename = part.fileName
+        )
+      case _: RawBodyType.MultipartBody =>
+        throw new UnsupportedOperationException("Nested multipart messages are not supported.")
     }
+  }
 }
