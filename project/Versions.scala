@@ -1,5 +1,5 @@
 object Versions {
-  val http4s = "0.23.27"
+  val http4s = "0.23.28"
   val http4sBlazeServer = "0.23.16"
   val http4sBlazeClient = "0.23.16"
   val catsCore = "2.12.0"
