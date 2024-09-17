@@ -1,7 +1,7 @@
 // {cat=Streaming; effects=ZIO; server=ZIO HTTP}: Stream response as a ZIO stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.2
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.2
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.3
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.3
 //> using dep com.softwaremill.sttp.client3::core:3.9.7
 
 package sttp.tapir.examples.streaming

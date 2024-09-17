@@ -304,11 +304,10 @@ class ZioHttpServerTest extends TestSuite {
             interpreter,
             backend,
             basic = false,
-            staticContent = true,
             multipart = false,
-            file = true,
             options = false
           ).tests() ++
+          new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
           new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
           new ZioHttpCompositionTest(createServerTest).tests() ++
           new ServerWebSocketTests(

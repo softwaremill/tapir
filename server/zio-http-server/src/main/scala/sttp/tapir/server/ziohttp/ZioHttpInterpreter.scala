@@ -168,19 +168,15 @@ trait ZioHttpInterpreter[R] {
     }
     val statusCode = resp.code.code
 
-    ZIO.succeed(
-      Response(
-        status = Status.fromInt(statusCode),
-        headers = ZioHttpHeaders(allHeaders),
-        body = body
-          .map {
-            case ZioStreamHttpResponseBody(stream, Some(contentLength)) => Body.fromStream(stream, contentLength)
-            case ZioStreamHttpResponseBody(stream, None)                => Body.fromStreamChunked(stream)
-            case ZioRawHttpResponseBody(chunk, _)                       => Body.fromChunk(chunk)
-          }
-          .getOrElse(Body.empty)
-      )
-    )
+    body
+      .map {
+        case ZioStreamHttpResponseBody(stream, Some(contentLength)) => ZIO.succeed(Body.fromStream(stream, contentLength))
+        case ZioStreamHttpResponseBody(stream, None)                => ZIO.succeed(Body.fromStreamChunked(stream))
+        case ZioMultipartHttpResponseBody(formFields)               => Body.fromMultipartFormUUID(Form(Chunk.fromIterable(formFields)))
+        case ZioRawHttpResponseBody(chunk, _)                       => ZIO.succeed(Body.fromChunk(chunk))
+      }
+      .getOrElse(ZIO.succeed(Body.empty))
+      .map(zioBody => Response(status = Status.fromInt(statusCode), headers = ZioHttpHeaders(allHeaders), body = zioBody))
   }
 
   private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): Seq[ZioHttpHeader] = {
