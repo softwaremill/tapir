@@ -10,11 +10,9 @@ import sttp.tapir.RawBodyType
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.interpreter.RequestBody
-import zio.RIO
-import zio.Task
-import zio.http.FormField
+import zio.{RIO, Task, ZIO}
+import zio.http.{FormField, Request, StreamingForm}
 import zio.http.FormField.StreamingBinary
-import zio.http.Request
 import zio.stream.ZSink
 import zio.stream.ZStream
 
@@ -48,19 +46,28 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
           file <- serverOptions.createFile(serverRequest)
           _ <- limitedStream.run(ZSink.fromFile(file)).unit
         } yield RawValue(FileRange(file), Seq(FileRange(file)))
-      case m: RawBodyType.MultipartBody => handleMultipartBody(serverRequest, m)
+      case m: RawBodyType.MultipartBody => handleMultipartBody(serverRequest, m, limitedStream)
     }
   }
 
-  private def handleMultipartBody[RAW](serverRequest: ServerRequest, bodyType: RawBodyType.MultipartBody): Task[RawValue[RAW]] =
-    zRequest(serverRequest).body.asMultipartFormStream
-      .flatMap(streamingForm =>
-        streamingForm.fields
+  private def handleMultipartBody[RAW](
+      serverRequest: ServerRequest,
+      bodyType: RawBodyType.MultipartBody,
+      limitedStream: ZStream[Any, Throwable, Byte]
+  ): Task[RawValue[RAW]] = {
+    zRequest(serverRequest).body.contentType.flatMap(_.boundary) match {
+      case Some(boundary) =>
+        StreamingForm(limitedStream, boundary).fields
           .flatMap(field => ZStream.fromIterable(bodyType.partType(field.name).map((field, _))))
           .mapZIO { case (field, bodyType) => toRawPart(serverRequest, field, bodyType) }
           .runCollect
           .map(RawValue.fromParts(_).asInstanceOf[RawValue[RAW]])
-      )
+      case None =>
+        ZIO.fail(
+          new IllegalStateException("Cannot decode body as streaming multipart/form-data without a known boundary")
+        )
+    }
+  }
 
   private def toRawPart[A](serverRequest: ServerRequest, field: FormField, bodyType: RawBodyType[A]): Task[Part[A]] = {
     val fieldsStream = field match {
@@ -73,7 +80,7 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
           field.name,
           raw.value,
           otherDispositionParams = field.filename.map(name => Map(FileNameDispositionParam -> name)).getOrElse(Map.empty)
-        ).contentType(field.contentType.toString)
+        ).contentType(field.contentType.fullType)
       )
   }
 

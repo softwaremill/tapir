@@ -4,9 +4,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.model.HasHeaders
 import sttp.model.Part
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.CodecFormat
-import sttp.tapir.RawBodyType
-import sttp.tapir.WebSocketBodyOutput
+import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 import zio.Chunk
 import zio.http.FormField
 import zio.http.MediaType
@@ -80,10 +78,16 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioResponseBody, ZioStreams] 
             }
           }
           .getOrElse(ZioStreamHttpResponseBody(ZStream.fromPath(tapirFile.file.toPath), Some(tapirFile.file.length)))
-      case RawBodyType.MultipartBody(_, _) => throw new UnsupportedOperationException("Multipart is not supported")
+      case m @ RawBodyType.MultipartBody(_, _) =>
+        val formFields = (r: Seq[RawPart]).flatMap { part =>
+          m.partType(part.name).map { partType =>
+            toFormField(partType.asInstanceOf[RawBodyType[Any]], part)
+          }
+        }.toList
+        ZioMultipartHttpResponseBody(formFields)
     }
 
-  def toFormField[CF <: CodecFormat, R](bodyType: RawBodyType[R], part: Part[R], r: R): FormField = {
+  private def toFormField[R](bodyType: RawBodyType[R], part: Part[R]): FormField = {
     val mediaType: Option[MediaType] = part.contentType.flatMap(MediaType.forContentType)
     bodyType match {
       case RawBodyType.StringBody(_) =>
@@ -96,8 +100,8 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioResponseBody, ZioStreams] 
           filename = part.fileName
         )
       case RawBodyType.ByteBufferBody =>
-        val array: Array[Byte] = new Array[Byte](r.remaining)
-        r.get(array)
+        val array: Array[Byte] = new Array[Byte](part.body.remaining)
+        part.body.get(array)
         FormField.Binary(
           part.name,
           Chunk.fromArray(array),
@@ -107,21 +111,21 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioResponseBody, ZioStreams] 
       case RawBodyType.FileBody =>
         FormField.streamingBinaryField(
           part.name,
-          ZStream.fromFile(r.file).orDie,
+          ZStream.fromFile(part.body.file).orDie,
           mediaType.getOrElse(MediaType.application.`octet-stream`),
           filename = part.fileName
         )
       case RawBodyType.InputStreamBody =>
         FormField.streamingBinaryField(
           part.name,
-          ZStream.fromInputStream(r).orDie,
+          ZStream.fromInputStream(part.body).orDie,
           mediaType.getOrElse(MediaType.application.`octet-stream`),
           filename = part.fileName
         )
       case RawBodyType.InputStreamRangeBody =>
         FormField.streamingBinaryField(
           part.name,
-          ZStream.fromInputStream(r.inputStream()).orDie,
+          ZStream.fromInputStream(part.body.inputStream()).orDie,
           mediaType.getOrElse(MediaType.application.`octet-stream`),
           filename = part.fileName
         )
