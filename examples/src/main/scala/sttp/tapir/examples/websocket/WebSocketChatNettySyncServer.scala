@@ -1,7 +1,7 @@
 // {cat=WebSocket; effects=Direct; server=Netty}: A WebSocket chat across multiple clients connected to the same server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.3
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.3
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.4
 //> using dep com.softwaremill.ox::core:0.3.7
 
 package sttp.tapir.examples.websocket
