@@ -706,6 +706,25 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         basicRequest.get(uri"$baseUri/p1/x/p3").send(backend).map(_.body shouldBe Right("2: x")) >>
         basicRequest.get(uri"$baseUri/p1/y/p3").send(backend).map(_.body shouldBe Right("2: y")) >>
         basicRequest.get(uri"$baseUri/p1/p2/p4").send(backend).map(_.code shouldBe StatusCode.NotFound)
+    },
+    // #4050
+    testServer(
+      "two endpoints with fixed path & path capture as the middle component, different methods",
+      NonEmptyList.of(
+        route(
+          List[ServerEndpoint[Any, F]](
+            endpoint.get.in("p1" / "p2").out(stringBody).serverLogic(_ => pureResult("1".asRight[Unit])),
+            endpoint.delete.in("p1" / path[String]("p")).out(stringBody).serverLogic((v: String) => pureResult(s"2: $v".asRight[Unit]))
+          )
+        )
+      )
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe Right("1")) >>
+        basicRequest.get(uri"$baseUri/p1/x").send(backend).map(_.code shouldBe StatusCode.MethodNotAllowed) >>
+        basicRequest.delete(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe Right("2: p2")) >>
+        basicRequest.delete(uri"$baseUri/p1/p3").send(backend).map(_.body shouldBe Right("2: p3")) >>
+        basicRequest.get(uri"$baseUri/p1/p2/p3").send(backend).map(_.code shouldBe StatusCode.NotFound) >>
+        basicRequest.delete(uri"$baseUri/p1/p2/p3").send(backend).map(_.code shouldBe StatusCode.NotFound)
     }
   )
 
