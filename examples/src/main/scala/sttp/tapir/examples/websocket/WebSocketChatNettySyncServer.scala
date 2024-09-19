@@ -2,7 +2,7 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.4
-//> using dep com.softwaremill.ox::core:0.3.7
+//> using dep com.softwaremill.ox::core:0.3.9
 
 package sttp.tapir.examples.websocket
 
