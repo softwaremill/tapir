@@ -7,6 +7,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-sttp-client:1.11.4
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
+//> using dep ch.qos.logback:logback-classic:1.5.6
 
 package sttp.tapir.examples
 
