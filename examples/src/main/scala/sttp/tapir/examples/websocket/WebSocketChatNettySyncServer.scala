@@ -2,12 +2,12 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.4
-//> using dep com.softwaremill.ox::core:0.3.9
+//> using dep com.softwaremill.ox::core:0.4.0
 
 package sttp.tapir.examples.websocket
 
 import ox.channels.{Actor, ActorRef, Channel, ChannelClosed, Default, DefaultResult, selectOrClosed}
-import ox.{ExitCode, IO, Ox, OxApp, fork, never, releaseAfterScope}
+import ox.{ExitCode, Ox, OxApp, fork, never, releaseAfterScope}
 import sttp.tapir.*
 import sttp.tapir.CodecFormat.*
 import sttp.tapir.server.netty.sync.{NettySyncServer, OxStreams}
@@ -76,7 +76,7 @@ def chatProcessor(a: ActorRef[ChatRoom]): OxStreams.Pipe[Message, Message] =
   }
 
 object WebSocketChatNettySyncServer extends OxApp:
-  override def run(args: Vector[String])(using Ox, IO): ExitCode =
+  override def run(args: Vector[String])(using Ox): ExitCode =
     val chatActor = Actor.create(new ChatRoom)
     val chatServerEndpoint = chatEndpoint.handleSuccess(_ => chatProcessor(chatActor))
     val binding = NettySyncServer().addEndpoint(chatServerEndpoint).start()
