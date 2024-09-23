@@ -3,6 +3,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.4
 //> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep ch.qos.logback:logback-classic:1.5.8
 
 package sttp.tapir.examples
 
