@@ -33,6 +33,12 @@
 * [Error reporting provided by Iron type refinements](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/errors/IronRefinementErrorsNettyServer.scala) <span class="example-tag example-json">circe</span> <span class="example-tag example-effects">cats-effect</span> <span class="example-tag example-server">Netty</span>
 * [Extending a base secured endpoint with error variants, using union types](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/errors/ErrorUnionTypesHttp4sServer.scala) <span class="example-tag example-json">circe</span> <span class="example-tag example-effects">cats-effect</span> <span class="example-tag example-server">http4s</span>
 
+## JSON
+
+* [Return a JSON body which optionally serializes as `null`](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/json/circeNullBody.scala) <span class="example-tag example-json">circe</span> <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
+* [Return a JSON response with Circe and auto-dervied codecs](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/json/circeAutoDerivationNettySyncServer.scala) <span class="example-tag example-json">circe</span> <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
+* [Return a JSON response with Jsoniter](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/json/jsoniterNettySyncServer.scala) <span class="example-tag example-json">jsoniter</span> <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
+
 ## Logging
 
 * [Logging using a correlation id](https://github.com/softwaremill/tapir/tree/master//examples/src/main/scala/sttp/tapir/examples/logging/ZioLoggingWithCorrelationIdNettyServer.scala) <span class="example-tag example-effects">ZIO</span> <span class="example-tag example-server">Netty</span>
