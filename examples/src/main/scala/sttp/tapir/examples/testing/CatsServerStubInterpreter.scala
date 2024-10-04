@@ -3,7 +3,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-cats-effect:1.11.5
 //> using dep com.softwaremill.sttp.tapir::tapir-sttp-stub-server:1.11.5
 //> using dep com.softwaremill.sttp.tapir::tapir-cats:1.11.5
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep com.softwaremill.sttp.client3::core:3.9.8
 //> using dep org.scalatest::scalatest:3.2.19
 
 package sttp.tapir.examples.testing
