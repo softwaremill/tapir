@@ -2,6 +2,7 @@ package sttp.tapir.server.netty.sync.perf
 
 import ox.*
 import ox.channels.*
+import ox.flow.Flow
 import sttp.shared.Identity
 import sttp.tapir.server.netty.sync.NettySyncServerOptions
 import sttp.tapir.server.netty.sync.NettySyncServerBinding
@@ -61,7 +62,7 @@ object NettySyncServerRunner {
     fork {
       in.drain()
     }
-    Source.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis())
+    Flow.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis()).runToChannel()
   }
 
   val wsEndpoint: Endpoint[Unit, Unit, Unit, OxStreams.Pipe[Long, Long], OxStreams with WebSockets] = wsBaseEndpoint

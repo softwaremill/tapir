@@ -18,6 +18,7 @@ import java.io.IOException
 import java.util.concurrent.Semaphore
 
 import scala.concurrent.duration.*
+import ox.flow.Flow
 
 private[sync] object OxSourceWebSocketProcessor:
   private val logger = LoggerFactory.getLogger(getClass.getName)
@@ -37,15 +38,17 @@ private[sync] object OxSourceWebSocketProcessor:
     val frame2FramePipe: OxStreams.Pipe[NettyWebSocketFrame, NettyWebSocketFrame] = ox ?=>
       val closeSignal = new Semaphore(0)
       (incoming: Source[NettyWebSocketFrame]) =>
-        val outgoing = incoming
-          .mapAsView { f =>
+        val outgoing = Flow
+          .fromSource(incoming)
+          .map { f =>
             val sttpFrame = nettyFrameToFrame(f)
             f.release()
             sttpFrame
           }
           .pipe(takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests, closeSignal))
           .pipe(optionallyConcatenateFrames(o.concatenateFragmentedFrames))
-          .mapAsView(decodeFrame)
+          .map(decodeFrame)
+          .runToChannel()
           .pipe(processingPipe)
           .mapAsView(r => frameToNettyFrame(o.responses.encode(r)))
 
@@ -76,14 +79,12 @@ private[sync] object OxSourceWebSocketProcessor:
     new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
   end apply
 
-  private def optionallyConcatenateFrames(doConcatenate: Boolean)(s: Source[WebSocketFrame])(using Ox): Source[WebSocketFrame] =
-    if doConcatenate then s.mapStateful(() => None: Accumulator)(accumulateFrameState).collectAsView { case Some(f: WebSocketFrame) => f }
-    else s
+  private def optionallyConcatenateFrames(doConcatenate: Boolean)(f: Flow[WebSocketFrame]): Flow[WebSocketFrame] =
+    if doConcatenate then f.mapStateful(() => None: Accumulator)(accumulateFrameState).collect { case Some(f: WebSocketFrame) => f }
+    else f
 
-  private def takeUntilCloseFrame(passAlongCloseFrame: Boolean, closeSignal: Semaphore)(
-      s: Source[WebSocketFrame]
-  )(using Ox): Source[WebSocketFrame] =
-    s.takeWhile(
+  private def takeUntilCloseFrame(passAlongCloseFrame: Boolean, closeSignal: Semaphore)(f: Flow[WebSocketFrame]): Flow[WebSocketFrame] =
+    f.takeWhile(
       {
         case _: WebSocketFrame.Close => closeSignal.release(); false
         case _                       => true

@@ -81,7 +81,7 @@ private[sync] class OxProcessor[A, B](
     if (pipelineForkFuture != null) try {
       val pipelineFork = Await.result(pipelineForkFuture, pipelineCancelationTimeout)
       oxDispatcher.runAsync {
-        race(
+        raceSuccess(
           {
             ox.sleep(pipelineCancelationTimeout)
             logger.error(s"Pipeline fork cancelation did not complete in time ($pipelineCancelationTimeout).")
