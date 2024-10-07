@@ -92,17 +92,16 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
   def toRequestThrowErrors[I, E, O, R](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
   ): I => Request[O, R] =
-    i =>
-      new EndpointToSttpClient(sttpClientOptions, wsToPipe)
-        .toSttpRequest(e, baseUri)
-        .apply(())
-        .apply(i)
+    i => {
+      val request = new EndpointToSttpClient(sttpClientOptions, wsToPipe).toSttpRequest(e, baseUri).apply(()).apply(i)
+      request
         .mapResponse(throwDecodeFailures)
         .mapResponse {
-          case Left(t: Throwable) => throw new RuntimeException(throwErrorExceptionMsg(e, i, t.asInstanceOf[E]), t)
-          case Left(t)            => throw new RuntimeException(throwErrorExceptionMsg(e, i, t))
+          case Left(t: Throwable) => throw new RuntimeException(throwErrorExceptionMsg(e, i, t.asInstanceOf[E], request), t)
+          case Left(t)            => throw new RuntimeException(throwErrorExceptionMsg(e, i, t, request))
           case Right(o)           => o
         }
+    }
 
   // secure
 
@@ -192,17 +191,16 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
       wsToPipe: WebSocketToPipe[R]
   ): A => I => Request[O, R] =
     a =>
-      i =>
-        new EndpointToSttpClient(sttpClientOptions, wsToPipe)
-          .toSttpRequest(e, baseUri)
-          .apply(a)
-          .apply(i)
+      i => {
+        val request = new EndpointToSttpClient(sttpClientOptions, wsToPipe).toSttpRequest(e, baseUri).apply(a).apply(i)
+        request
           .mapResponse(throwDecodeFailures)
           .mapResponse {
-            case Left(t: Throwable) => throw new RuntimeException(throwErrorExceptionMsg(e, a, i, t.asInstanceOf[E]), t)
-            case Left(t)            => throw new RuntimeException(throwErrorExceptionMsg(e, a, i, t))
+            case Left(t: Throwable) => throw new RuntimeException(throwErrorExceptionMsg(e, a, i, t.asInstanceOf[E], request), t)
+            case Left(t)            => throw new RuntimeException(throwErrorExceptionMsg(e, a, i, t, request))
             case Right(o)           => o
           }
+      }
 
   //
 
@@ -213,11 +211,11 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
       case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
     }
 
-  private def throwErrorExceptionMsg[I, E, O, R](endpoint: PublicEndpoint[I, E, O, R], i: I, e: E): String =
-    s"Endpoint ${endpoint.show} returned error: $e, inputs: $i."
+  private def throwErrorExceptionMsg[I, E, O, R](endpoint: PublicEndpoint[I, E, O, R], i: I, e: E, r: Request[_, _]): String =
+    s"Endpoint ${endpoint.show} returned error: $e, inputs: $i. Request: ${r.showBasic}."
 
-  private def throwErrorExceptionMsg[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R], a: A, i: I, e: E): String =
-    s"Endpoint ${endpoint.show} returned error: $e, for security inputs: $a, inputs: $i."
+  private def throwErrorExceptionMsg[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R], a: A, i: I, e: E, r: Request[_, _]): String =
+    s"Endpoint ${endpoint.show} returned error: $e, for security inputs: $a, inputs: $i. Request: ${r.showBasic}."
 }
 
 object SttpClientInterpreter {
