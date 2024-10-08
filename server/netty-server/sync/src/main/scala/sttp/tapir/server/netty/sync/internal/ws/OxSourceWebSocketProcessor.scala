@@ -5,7 +5,7 @@ import io.netty.handler.codec.http.websocketx.{CloseWebSocketFrame, WebSocketClo
 import org.reactivestreams.{Processor, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import ox.*
-import ox.channels.{ChannelClosedException, Source}
+import ox.channels.ChannelClosedException
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters.*
 import sttp.tapir.server.netty.sync.OxStreams
@@ -35,29 +35,20 @@ private[sync] object OxSourceWebSocketProcessor:
       case x: DecodeResult.Value[REQ] @unchecked => x.v
     }
 
-    val frame2FramePipe: OxStreams.Pipe[NettyWebSocketFrame, NettyWebSocketFrame] = ox ?=>
+    val frame2FramePipe: OxStreams.Pipe[NettyWebSocketFrame, NettyWebSocketFrame] = incoming =>
       val closeSignal = new Semaphore(0)
-      (incoming: Source[NettyWebSocketFrame]) =>
-        val outgoing = Flow
-          .fromSource(incoming)
-          .map { f =>
-            val sttpFrame = nettyFrameToFrame(f)
-            f.release()
-            sttpFrame
-          }
-          .pipe(takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests, closeSignal))
-          .pipe(optionallyConcatenateFrames(o.concatenateFragmentedFrames))
-          .map(decodeFrame)
-          .runToChannel()
-          .pipe(processingPipe)
-          .mapAsView(r => frameToNettyFrame(o.responses.encode(r)))
-
-        // when the client closes the connection, we need to close the outgoing channel as well - this needs to be
-        // done in the client's pipeline code; monitoring that this happens within a timeout after the close happens
-        monitorOutgoingClosedAfterClientClose(closeSignal, outgoing)
-
-        outgoing
-    end frame2FramePipe
+      incoming
+        .map { f =>
+          val sttpFrame = nettyFrameToFrame(f)
+          f.release()
+          sttpFrame
+        }
+        .pipe(takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests, closeSignal))
+        .pipe(optionallyConcatenateFrames(o.concatenateFragmentedFrames))
+        .map(decodeFrame)
+        .pipe(processingPipe)
+        .pipe(monitorOutgoingClosedAfterClientClose(closeSignal))
+        .map(r => frameToNettyFrame(o.responses.encode(r)))
 
     // We need this kind of interceptor to make Netty reply correctly to closed channel or error
     def wrapSubscriberWithNettyCallback[B](sub: Subscriber[? >: B]): Subscriber[? >: B] = new Subscriber[B] {
@@ -87,21 +78,29 @@ private[sync] object OxSourceWebSocketProcessor:
     f.takeWhile(
       {
         case _: WebSocketFrame.Close => closeSignal.release(); false
-        case _                       => true
+        case f                       => true
       },
       includeFirstFailing = passAlongCloseFrame
     )
 
-  private def monitorOutgoingClosedAfterClientClose(closeSignal: Semaphore, outgoing: Source[_])(using Ox): Unit =
-    // will be interrupted when outgoing is completed
-    fork {
-      closeSignal.acquire()
-      sleep(outgoingCloseAfterCloseTimeout)
-      if !outgoing.isClosedForReceive then
-        logger.error(
-          s"WebSocket outgoing messages channel either not drained, or not closed, " +
-            s"$outgoingCloseAfterCloseTimeout after receiving a close frame from the client! " +
-            s"Make sure to complete the outgoing channel in your pipeline, once the incoming " +
-            s"channel is done!"
-        )
-    }.discard
+  private def monitorOutgoingClosedAfterClientClose[T](closeSignal: Semaphore)(outgoing: Flow[T]): Flow[T] =
+    // when the client closes the connection, the outgoing flow has to be completed as well, in the client's pipeline
+    // code; monitoring that this happens within a timeout after the close happens
+    Flow.usingEmit { emit =>
+      unsupervised {
+        forkUnsupervised {
+          // after the close frame is received from the client, waiting for the given grace period for the flow to
+          // complete. This will end this scope, and interrupt the `sleep`. If this doesn't happen, logging an error.
+          closeSignal.acquire()
+          sleep(outgoingCloseAfterCloseTimeout)
+          logger.error(
+            s"WebSocket outgoing messages flow either not drained, or not closed, " +
+              s"$outgoingCloseAfterCloseTimeout after receiving a close frame from the client! " +
+              s"Make sure to complete the outgoing flow in your pipeline, once the incoming " +
+              s"flow is done!"
+          )
+        }
+
+        outgoing.runToEmit(emit)
+      }
+    }

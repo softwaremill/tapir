@@ -10,6 +10,7 @@ import sttp.tapir.server.netty.sync.internal.ox.OxDispatcher
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
+import ox.flow.Flow
 
 /** A reactive Processor, which is both a Publisher and a Subscriber
   *
@@ -65,10 +66,7 @@ private[sync] class OxProcessor[A, B](
     if subscriber == null then throw new NullPointerException("Subscriber cannot be null")
     val wrappedSubscriber = wrapSubscriber(subscriber)
     pipelineForkFuture = oxDispatcher.runAsync {
-      val outgoingResponses: Source[B] = pipeline((channel: Source[A]).mapAsView { e =>
-        requestsSubscription.request(1)
-        e
-      })
+      val outgoingResponses: Source[B] = pipeline(Flow.fromSource(channel).tap(_ => requestsSubscription.request(1))).runToChannel()
       val channelSubscription = new ChannelSubscription(wrappedSubscriber, outgoingResponses)
       subscriber.onSubscribe(channelSubscription)
       channelSubscription.runBlocking() // run the main loop which reads from the channel if there's demand
