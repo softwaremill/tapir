@@ -2,8 +2,6 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.5
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.5
-//> using dep com.softwaremill.ox::core:0.5.0
-// the explicit ox dependency is only needed until tapir is updated
 
 package sttp.tapir.examples.websocket
 

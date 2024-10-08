@@ -58,14 +58,12 @@ object NettySyncServerRunner {
 
   val wsBaseEndpoint = endpoint.get.in("ws" / "ts")
 
-  val wsPipe: OxStreams.Pipe[Long, Long] = { in =>
-    in.map(_ => -1L)
+  val wsPipe: OxStreams.Pipe[Long, Long] = in =>
+    in.drain()
       .merge(
         Flow.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis()),
         propagateDoneLeft = true
       )
-      .collect { case n if n > 0 => n }
-  }
 
   val wsEndpoint: Endpoint[Unit, Unit, Unit, OxStreams.Pipe[Long, Long], OxStreams with WebSockets] = wsBaseEndpoint
     .out(

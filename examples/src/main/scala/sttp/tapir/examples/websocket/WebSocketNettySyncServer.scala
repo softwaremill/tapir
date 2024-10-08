@@ -28,14 +28,12 @@ object WebSocketNettySyncServer:
 
   // Alternative logic (not used here): requests and responses can be treated separately, for example to emit frames
   // to the client from another source.
-  val wsPipe2: Pipe[String, String] = { in =>
-    val flowLeft: Flow[Either[String, String]] = in.map(Left(_))
+  val wsPipe2: Pipe[String, String] = in =>
     // emit periodic responses
-    val flowRight: Flow[Either[String, String]] = Flow.tick(1.second).map(_ => System.currentTimeMillis()).map(_.toString).map(Right(_))
+    val responseFlow: Flow[String] = Flow.tick(1.second).map(_ => System.currentTimeMillis()).map(_.toString)
 
-    // ignore whatever is sent by the client (represented as `Left`)
-    flowLeft.merge(flowRight, propagateDoneLeft = true).collect { case Right(s) => s }
-  }
+    // ignore whatever is sent by the client, but complete the stream once the client closes
+    in.drain().merge(responseFlow, propagateDoneLeft = true)
 
   // The WebSocket endpoint, builds the pipeline in serverLogicSuccess
   val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe)
