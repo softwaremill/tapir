@@ -1,8 +1,8 @@
 // {cat=Static content; effects=Direct; server=Netty}: Serving static files from a directory
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.5
-//> using dep com.softwaremill.sttp.tapir::tapir-files:1.11.5
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.5
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.6
+//> using dep com.softwaremill.sttp.tapir::tapir-files:1.11.6
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.6
 
 package sttp.tapir.examples.static_content
 
