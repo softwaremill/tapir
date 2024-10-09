@@ -90,3 +90,7 @@ object Fixtures:
   sealed trait NotAllSealedVariant
   case object NotAllSealedVariantA extends NotAllSealedVariant
   case class NotAllSealedVariantB(innerField: Int) extends NotAllSealedVariant
+
+  enum NotAlphabetical:
+    case Xyz
+    case Fgh
