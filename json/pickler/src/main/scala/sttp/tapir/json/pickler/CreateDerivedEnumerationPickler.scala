@@ -39,14 +39,14 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
     val tapirPickle = new TapirPickle[T] {
       override lazy val reader: Reader[T] = {
         val readersForPossibleValues: Seq[TaggedReader[T]] =
-          validator.possibleValues.zip(childReadWriters.map(_._1)).map { case (enumValue, reader) =>
-            TaggedReader.Leaf[T](encode(enumValue).toString, reader.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
+          childReadWriters.map { case (enumValue, reader, _) =>
+            TaggedReader.Leaf[T](encode(enumValue.asInstanceOf[T]).toString, reader.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
           }
         new TaggedReader.Node[T](readersForPossibleValues: _*)
       }
 
       override lazy val writer: Writer[T] =
-        new TaggedWriter.Node[T](childReadWriters.map(_._2.asInstanceOf[TaggedWriter[T]]): _*) {
+        new TaggedWriter.Node[T](childReadWriters.map(_._3.asInstanceOf[TaggedWriter[T]]): _*) {
           override def findWriterWithKey(v: Any): (String, String, ObjectWriter[T]) =
             val (tagKey, tagValue, writer) = super.findWriterWithKey(v)
             // Here our custom encoding transforms the value of a singleton object
@@ -57,14 +57,16 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
     new Pickler[T](tapirPickle, schema)
   }
 
-  private inline def buildEnumerationReadWriters[T: ClassTag, Cases <: Tuple]: List[(Types#Reader[_], Types#Writer[_])] =
+  private inline def buildEnumerationReadWriters[T: ClassTag, Cases <: Tuple]: List[(Any, Types#Reader[_], Types#Writer[_])] =
     inline erasedValue[Cases] match {
       case _: (enumerationCase *: enumerationCasesTail) =>
-        val processedHead = readWriterForEnumerationCase[enumerationCase]
+        val (reader, writer) = readWriterForEnumerationCase[enumerationCase]
         val processedTail = buildEnumerationReadWriters[T, enumerationCasesTail]
-        (processedHead +: processedTail)
+        ((productValue[enumerationCase], reader, writer) +: processedTail)
       case _: EmptyTuple.type => Nil
     }
+
+  private inline def productValue[E] = summonFrom { case m: Mirror.ProductOf[E] => m.fromProduct(EmptyTuple) }
 
   /** Enumeration cases and case objects in an enumeration need special writers and readers, which are generated here, instead of being
     * taken from child picklers. For example, for enum Color and case values Red and Blue, a Writer should just use the object Red or Blue
