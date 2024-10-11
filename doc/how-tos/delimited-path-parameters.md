@@ -1,19 +1,20 @@
-## Handling Delimited Path Parameters
+# Handling Delimited Path Parameters
 
 Tapir allows you to handle complex path parameters, such as lists of custom types separated by delimiters (e.g., commas).
 This can be achieved using `Codec.delimited`, which facilitates the serialization and deserialization of delimited lists
 within path segments.
 
-### Use Case
+## Use Case
+
 Suppose you want to define an endpoint that accepts a list of names as a comma-separated path parameter. Each name should
 adhere to a specific pattern (e.g., only uppercase letters).
 
-### Implementation Steps:
+## Implementation Steps:
 
 ### 1. Define the Custom Type and Validator
 Start by defining your custom type and the associated validator to enforce the desired pattern.
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.Codec
@@ -88,7 +89,7 @@ paths:
               pattern: ^[A-Z]+$
 ```
 
-### Explanation
+## Explanation
 - `Codec.parsedString`: Transforms a `String` into a custom type (`Name`) and vice versa. It also applies validation to
   ensure each `Name` adheres to the specified pattern.
 - `Codec.delimited`: Handles the serialization and deserialization of a delimited list (e.g., comma-separated) of the
@@ -96,7 +97,7 @@ paths:
 - Endpoint Definition: The `path[List[Name]]("id")` indicates that the id path parameter should be treated as a list of
   `Name` objects, utilizing the previously defined codecs.
 
-### Validation
+## Validation
 Validators play a crucial role in ensuring that each element within the delimited list meets the required criteria. In
 this example, `nameValidator` ensures that each `Name` consists solely of uppercase letters. Tapir applies this validation
 to each element in the list, providing robust input validation.
