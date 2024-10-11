@@ -1,8 +1,8 @@
 // {cat=Hello, World!; effects=Future; server=Netty}: Exposing an endpoint using the Netty server (Future variant)
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.5
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.5
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.6
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.6
+//> using dep com.softwaremill.sttp.client3::core:3.9.8
 //> using dep ch.qos.logback:logback-classic:1.5.8
 
 package sttp.tapir.examples
