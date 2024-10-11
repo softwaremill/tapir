@@ -13,11 +13,13 @@ adhere to a specific pattern (e.g., only uppercase letters).
 ### 1. Define the Custom Type and Validator
 Start by defining your custom type and the associated validator to enforce the desired pattern.
 
-```scala mdoc:compile-only
+```scala
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.Codec
 import sttp.tapir.Validator
+import sttp.tapir.CodecFormat.TextPlain
+import sttp.tapir.model.Delimited
 
 case class Name(value: String)
 
@@ -28,7 +30,7 @@ val nameValidator: Validator[String] = Validator.pattern("^[A-Z]+$")
 ### 2. Create Codecs for the Custom Type and Delimited List
 Utilize `Codec.parsedString` for individual `Name` instances and `Codec.delimited` for handling the list.
 
-```scala mdoc:compile-only
+```scala
 // Codec for single Name
 given Codec[String, Name, TextPlain] = Codec.parsedString(Name.apply)
   .validate(nameValidator.contramap(_.value))
@@ -41,9 +43,28 @@ given Codec[String, Delimited[",", Name], TextPlain] = Codec.delimited
 Incorporate the delimited codec into your endpoint definition to handle the list of names in the path.
 
 ```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.generic.auto._
+import sttp.tapir.Codec
+import sttp.tapir.Validator
+import sttp.tapir.CodecFormat.TextPlain
+import sttp.tapir.model.Delimited
+
+case class Name(value: String)
+
+// Validator to ensure names consist of uppercase letters only
+val nameValidator: Validator[String] = Validator.pattern("^[A-Z]+$")
+
+// Codec for single Name
+given Codec[String, Name, TextPlain] = Codec.parsedString(Name.apply)
+        .validate(nameValidator.contramap(_.value))
+
+// Codec for a list of Names, delimited by commas
+given Codec[String, Delimited[",", Name], TextPlain] = Codec.delimited
+
 val getUserEndpoint =
   endpoint.get
-    .in("user" / path[List[Name]]("id"))
+    .in("user" / path[Delimited[",", Name]]("id"))
     .out(stringBody)
 ```
 
