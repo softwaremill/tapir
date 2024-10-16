@@ -64,7 +64,7 @@ object Versions {
   val mockServer = "5.15.0"
   val dogstatsdClient = "4.4.3"
   val nettyAll = "4.1.114.Final"
-  val logback = "1.5.10"
+  val logback = "1.5.11"
   val slf4j = "2.0.16"
   val jsoniter = "2.30.15"
 }
