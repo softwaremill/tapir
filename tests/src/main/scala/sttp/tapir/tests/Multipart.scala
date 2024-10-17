@@ -23,6 +23,9 @@ object Multipart {
   val in_file_multipart_out_multipart: PublicEndpoint[FruitData, Unit, FruitData, Any] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
 
+  val in_file_multipart_out_string: PublicEndpoint[FruitData, Unit, String, Any] =
+    endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitData]).out(stringBody)
+
   val in_file_list_multipart_out_multipart: PublicEndpoint[MultipleFileUpload, Unit, MultipleFileUpload, Any] =
     endpoint.post
       .in("api" / "echo" / "multipart")
