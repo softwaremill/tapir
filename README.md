@@ -205,6 +205,8 @@ Fetch the tags from the upstream:
 git fetch --tags upstream
 ```
 
+When you have a PR ready, take a look at our ["How to prepare a good PR" guide](https://softwaremill.community/t/how-to-prepare-a-good-pr-to-a-library/448). Thanks! :)
+
 ## Scoping which projects are included by `sbt`
 
 * when `STTP_NATIVE` is set, Scala native projects are included in the build (when running `sbt`)
