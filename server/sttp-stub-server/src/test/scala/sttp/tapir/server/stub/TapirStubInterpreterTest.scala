@@ -14,6 +14,7 @@ import sttp.tapir.server.interceptor.exception.ExceptionHandler
 import sttp.tapir.server.interceptor.reject.RejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.model.ValuedEndpointOutput
+import sttp.tapir.generic.auto._
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
@@ -203,6 +204,29 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // then
     response.body shouldBe Left("Internal server error")
     response.code shouldBe StatusCode.InternalServerError
+  }
+
+  it should "handle multipart body" in {
+    // given
+    val e =
+      endpoint.post
+        .in("api" / "multipart")
+        .in(multipartBody)
+        .out(stringBody)
+
+    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
+      .whenEndpoint(e)
+      .thenRespond("success")
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest
+      .post(uri"http://test.com/api/multipart")
+      .multipartBody(multipart("name", "abc"))
+      .send(server)
+
+    // then
+    response.body shouldBe Right("success")
   }
 }
 
