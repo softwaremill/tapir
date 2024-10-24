@@ -26,7 +26,11 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
           case RawBodyType.InputStreamRangeBody => ME.unit(RawValue(InputStreamRange(() => new ByteArrayInputStream(bytes))))
           case _: RawBodyType.MultipartBody     => ME.error(new UnsupportedOperationException)
         }
-      case _ => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
+      case Right(value) => 
+        bodyType match {
+          case RawBodyType.MultipartBody(partTypes, defaultType) => ME.unit(RawValue(value.asInstanceOf[R]))
+          case _ => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
+        }
     }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = body(serverRequest) match {
@@ -45,8 +49,7 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     case InputStreamBody(b, _)      => Left(toByteArray(b))
     case FileBody(f, _)             => Left(f.readAsByteArray)
     case StreamBody(s)              => Right(s)
-    case MultipartBody(_) =>
-      throw new IllegalArgumentException("Stub cannot handle multipart bodies")
+    case MultipartBody(parts)       => Right(parts)
   }
 
   private def toByteArray(is: InputStream): Array[Byte] = {
