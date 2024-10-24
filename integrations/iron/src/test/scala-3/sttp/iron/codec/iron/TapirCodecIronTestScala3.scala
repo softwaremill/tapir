@@ -18,6 +18,9 @@ import io.github.iltotore.iron.constraint.all.*
 import sttp.tapir.Validator
 import sttp.tapir.ValidationError
 
+import com.example.RefinedString
+import com.example.RefinedStringConstraint
+
 class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
 
   val schema: Schema[Double :| Positive] = summon[Schema[Double :| Positive]]
@@ -320,5 +323,12 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
     type NewtypeInt = Int :| Pure
     summon[Schema[NewtypeInt]]
     summon[Codec[String, NewtypeInt, TextPlain]]
+
+  "Instances for opaque refined type defined outside of source" should "be correctly derived" in:
+    summon[Schema[RefinedString]]
+    summon[Codec[String, RefinedString, TextPlain]]
+
+  "Instance of validator for constraint defined outside of source" should "be correctly derived" in:
+    summon[PrimitiveValidatorForPredicate[String, RefinedStringConstraint]]
 
 }
