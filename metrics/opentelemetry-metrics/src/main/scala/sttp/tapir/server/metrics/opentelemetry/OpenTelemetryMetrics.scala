@@ -80,15 +80,28 @@ object OpenTelemetryMetrics {
   def requestActive[F[_]](meter: Meter, labels: MetricLabels): Metric[F, LongUpDownCounter] =
     Metric[F, LongUpDownCounter](
       meter
-        .upDownCounterBuilder("request_active")
+        .upDownCounterBuilder("http.server.active_requests")
         .setDescription("Active HTTP requests")
         .setUnit("1")
         .build(),
       onRequest = (req, counter, m) => {
         m.unit {
           EndpointMetric()
-            .onEndpointRequest { ep => m.eval(counter.add(1, asOpenTelemetryAttributes(labels, ep, req))) }
-            .onResponseBody { (ep, _) => m.eval(counter.add(-1, asOpenTelemetryAttributes(labels, ep, req))) }
+            .onEndpointRequest { ep =>
+              m.eval {
+                val attrs = asOpenTelemetryAttributes(labels, ep, req)
+                println(s"[DEBUG] Incrementing active requests with attributes: $attrs")
+
+                counter.add(1, attrs)
+              }
+            }
+            .onResponseBody { (ep, _) =>
+              m.eval {
+                val attrs = asOpenTelemetryAttributes(labels, ep, req)
+                println(s"[DEBUG] Decrementing active requests with attributes: $attrs")
+                counter.add(-1, attrs)
+              }
+            }
             .onException { (ep, _) => m.eval(counter.add(-1, asOpenTelemetryAttributes(labels, ep, req))) }
         }
       }
@@ -97,7 +110,7 @@ object OpenTelemetryMetrics {
   def requestTotal[F[_]](meter: Meter, labels: MetricLabels): Metric[F, LongCounter] =
     Metric[F, LongCounter](
       meter
-        .counterBuilder("request_total")
+        .counterBuilder("http.server.request.total")
         .setDescription("Total HTTP requests")
         .setUnit("1")
         .build(),
@@ -106,8 +119,11 @@ object OpenTelemetryMetrics {
           EndpointMetric()
             .onResponseBody { (ep, res) =>
               m.eval {
-                val otLabels =
+                val otLabels: Attributes =
                   merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Right(res), None))
+
+                println(s"[DEBUG] Incrementing total requests with labels: $otLabels")
+
                 counter.add(1, otLabels)
               }
             }
@@ -125,14 +141,14 @@ object OpenTelemetryMetrics {
   def requestDuration[F[_]](meter: Meter, labels: MetricLabels): Metric[F, DoubleHistogram] =
     Metric[F, DoubleHistogram](
       meter
-        .histogramBuilder("request_duration")
+        .histogramBuilder("http.server.request.duration")
         .setDescription("Duration of HTTP requests")
-        .setUnit("ms")
+        .setUnit("s")
         .build(),
       onRequest = (req, recorder, m) =>
         m.eval {
           val requestStart = Instant.now()
-          def duration = Duration.between(requestStart, Instant.now()).toMillis.toDouble
+          def duration = Duration.between(requestStart, Instant.now()).toMillis.toDouble / 1000.0
           EndpointMetric()
             .onResponseHeaders { (ep, res) =>
               m.eval {
