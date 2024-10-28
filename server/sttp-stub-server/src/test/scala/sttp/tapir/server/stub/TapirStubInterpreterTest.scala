@@ -228,7 +228,66 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // then
     response.body shouldBe Right("success")
   }
+
+  it should "correctly process a multipart body" in {
+    // given
+    val e =
+      endpoint.post
+        .in("api" / "multipart")
+        .in(multipartBody)
+        .out(stringBody)
+
+    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
+      .whenServerEndpointRunLogic(e.serverLogic(multipartData => {
+        val partOpt = multipartData.find(_.name == "name")
+        partOpt match {
+          case Some(part) =>
+            val data = new String(part.body)
+            IdMonad.unit(Right("Hello " + data))
+          case None =>
+            IdMonad.unit(Right("Part not found"))
+        }
+      }))
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest
+      .post(uri"http://test.com/api/multipart")
+      .multipartBody(multipart("name", "abc"))
+      .send(server)
+
+    // then
+    response.body shouldBe Right("Hello abc")
+  }
+
+  it should "correctly handle derived multipart body" in {
+    // given
+    val e =
+      endpoint.post
+        .in("api" / "multipart")
+        .in(multipartBody[MultipartData])
+        .out(stringBody)
+
+    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
+      .whenServerEndpointRunLogic(e.serverLogic(multipartData => {
+        IdMonad.unit(Right("Hello " + multipartData.name))
+      }))
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest
+      .post(uri"http://test.com/api/multipart")
+      .multipartBody(
+        multipart("name", "abc")
+      )
+      .send(server)
+
+    // then
+    response.body shouldBe Right("Hello abc")
+  }
 }
+
+case class MultipartData(name: String)
 
 object ProductsApi {
 
