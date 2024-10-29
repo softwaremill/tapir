@@ -15,6 +15,11 @@ import sttp.tapir.server.interceptor.reject.RejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.generic.auto._
+import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
+import sttp.model.Part
+import sttp.tapir.TapirFile
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
@@ -222,7 +227,10 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // when
     val response = sttp.client3.basicRequest
       .post(uri"http://test.com/api/multipart")
-      .multipartBody(multipart("name", "abc"))
+      .multipartBody(
+        multipart("name", "abc"),
+        multipartFile("file", writeToFile("file_content"))
+      )
       .send(server)
 
     // then
@@ -237,15 +245,25 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
         .in(multipartBody)
         .out(stringBody)
 
-    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
-      .whenServerEndpointRunLogic(e.serverLogic(multipartData => {
+    val server = TapirStubInterpreter(SttpBackendStub.synchronous)
+      .whenServerEndpointRunLogic(e.serverLogic((multipartData) => {
         val partOpt = multipartData.find(_.name == "name")
-        partOpt match {
-          case Some(part) =>
-            val data = new String(part.body)
-            IdMonad.unit(Right("Hello " + data))
-          case None =>
+        val fileOpt = multipartData.find(_.name == "file")
+
+        (partOpt, fileOpt) match {
+          case (Some(part), Some(filePart)) =>
+            val partData = new String(part.body)
+            val fileData = new String(filePart.body)
+            IdMonad.unit(Right("name: " + partData + " file: " + fileData))
+
+          case (Some(_), None) =>
+            IdMonad.unit(Right("File part not found"))
+
+          case (None, Some(_)) =>
             IdMonad.unit(Right("Part not found"))
+
+          case (None, None) =>
+            IdMonad.unit(Right("Both parts not found"))
         }
       }))
       .backend()
@@ -253,11 +271,14 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // when
     val response = sttp.client3.basicRequest
       .post(uri"http://test.com/api/multipart")
-      .multipartBody(multipart("name", "abc"))
+      .multipartBody(
+        multipart("name", "abc"),
+        multipartFile("file", writeToFile("file_content"))
+      )
       .send(server)
 
     // then
-    response.body shouldBe Right("Hello abc")
+    response.body shouldBe Right("name: abc file: file_content")
   }
 
   it should "correctly handle derived multipart body" in {
@@ -270,7 +291,8 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
     val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
       .whenServerEndpointRunLogic(e.serverLogic(multipartData => {
-        IdMonad.unit(Right("Hello " + multipartData.name))
+        val fileContent = Await.result(readFromFile(multipartData.file.body), 3.seconds)
+        IdMonad.unit(Right("name: " + multipartData.name + " year: " + multipartData.year + " file: " + fileContent))
       }))
       .backend()
 
@@ -278,16 +300,18 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     val response = sttp.client3.basicRequest
       .post(uri"http://test.com/api/multipart")
       .multipartBody(
-        multipart("name", "abc")
+        multipart("name", "abc"),
+        multipart("year", "2024"),
+        multipartFile("file", writeToFile("file_content"))
       )
       .send(server)
 
     // then
-    response.body shouldBe Right("Hello abc")
+    response.body shouldBe Right("name: abc year: 2024 file: file_content")
   }
 }
 
-case class MultipartData(name: String)
+case class MultipartData(name: String, year: Int, file: Part[TapirFile])
 
 object ProductsApi {
 

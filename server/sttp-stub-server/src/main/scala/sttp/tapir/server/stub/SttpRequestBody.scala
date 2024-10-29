@@ -14,6 +14,9 @@ import sttp.client3
 import sttp.model.Part
 import sttp.model.MediaType
 import sttp.tapir.FileRange
+import java.nio.file.Files
+import java.io.FileInputStream
+
 
 class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, AnyStreams] {
   override val streams: AnyStreams = AnyStreams
@@ -103,8 +106,11 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
         }
       case FileBody(f, _) =>
         bodyType match {
-          case RawBodyType.FileBody => Some(FileRange(new File(f.toString)))
-          case _                    => None
+          case RawBodyType.FileBody        => Some(FileRange(f.toFile))
+          case RawBodyType.ByteArrayBody   => Some(Files.readAllBytes(f.toPath))
+          case RawBodyType.ByteBufferBody  => Some(ByteBuffer.wrap(Files.readAllBytes(f.toPath)))
+          case RawBodyType.InputStreamBody => Some(new FileInputStream(f.toFile))
+          case _                           => None
         }
       case StringBody(s, charset, _) =>
         bodyType match {
