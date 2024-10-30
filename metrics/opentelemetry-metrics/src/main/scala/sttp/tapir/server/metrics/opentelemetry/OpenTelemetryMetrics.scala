@@ -138,6 +138,7 @@ object OpenTelemetryMetrics {
       }
     )
 
+  
   def requestDuration[F[_]](meter: Meter, labels: MetricLabels): Metric[F, DoubleHistogram] =
     Metric[F, DoubleHistogram](
       meter
