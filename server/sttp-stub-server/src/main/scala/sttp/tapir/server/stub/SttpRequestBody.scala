@@ -101,7 +101,7 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
           case RawBodyType.ByteBufferBody       => Some(ByteBuffer.wrap(b))
           case RawBodyType.InputStreamBody      => Some(new ByteArrayInputStream(b))
           case RawBodyType.InputStreamRangeBody => Some(InputStreamRange(() => new ByteArrayInputStream(b)))
-          case RawBodyType.FileBody             => None
+          case RawBodyType.FileBody             => throw new IllegalArgumentException("ByteArray body provided while endpoint accepts FileBody")
           case _: RawBodyType.MultipartBody     => None
         }
       case FileBody(f, _) =>

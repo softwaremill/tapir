@@ -309,6 +309,33 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // then
     response.body shouldBe Right("name: abc year: 2024 file: file_content")
   }
+
+  it should "throw exception when bytearray body provided while endpoint accepts fileBody" in {
+    // given
+    val e =
+      endpoint.post
+        .in("api" / "multipart")
+        .in(multipartBody[MultipartData])
+        .out(stringBody)
+
+    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
+      .whenEndpoint(e)
+      .thenRespond("success")
+      .backend()
+
+    // when
+    val response = the[IllegalArgumentException] thrownBy sttp.client3.basicRequest
+      .post(uri"http://test.com/api/multipart")
+      .multipartBody(
+        multipart("name", "abc"),
+        multipart("year", "2024"),
+        multipart("file", "file_content".getBytes())
+      )
+      .send(server)
+
+    // then
+    response.getMessage shouldBe "ByteArray body provided while endpoint accepts FileBody"
+  }
 }
 
 case class MultipartData(name: String, year: Int, file: Part[TapirFile])
