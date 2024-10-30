@@ -7,7 +7,7 @@ import OpenTelemetryMetrics._
 import io.opentelemetry.api.OpenTelemetry
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabels}
+import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabels, OTELMetricLabels}
 import sttp.tapir.server.model.ServerResponse
 
 import java.time.{Duration, Instant}
@@ -15,15 +15,15 @@ import java.time.{Duration, Instant}
 case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]]) {
 
   /** Registers a `request_active{path, method}` up-down-counter (assuming default labels). */
-  def addRequestsActive(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def addRequestsActive(labels: MetricLabels = OTELMetricLabels.Default): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestActive(meter, labels))
 
   /** Registers a `request_total{path, method, status}` counter (assuming default labels). */
-  def addRequestsTotal(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def addRequestsTotal(labels: MetricLabels = OTELMetricLabels.Default): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestTotal(meter, labels))
 
   /** Registers a `request_duration_seconds{path, method, status, phase}` histogram (assuming default labels). */
-  def addRequestsDuration(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def addRequestsDuration(labels: MetricLabels = OTELMetricLabels.Default): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestDuration(meter, labels))
 
   /** Registers a custom metric. */
@@ -50,7 +50,7 @@ object OpenTelemetryMetrics {
     * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
   def default[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] =
-    default(defaultMeter(otel), MetricLabels.Default)
+    default(defaultMeter(otel), OTELMetricLabels.Default)
 
   /** Registers default metrics (see other variants) using custom labels. */
   def default[F[_]](otel: OpenTelemetry, labels: MetricLabels): OpenTelemetryMetrics[F] = default(defaultMeter(otel), labels)
@@ -64,10 +64,10 @@ object OpenTelemetryMetrics {
     * Status is by default the status code class (1xx, 2xx, etc.), and phase can be either `headers` or `body` - request duration is
     * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
-  def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, MetricLabels.Default)
+  def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, OTELMetricLabels.Default)
 
   /** Registers default metrics (see other variants) using custom labels. */
-  def default[F[_]](meter: Meter, labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def default[F[_]](meter: Meter, labels: MetricLabels = OTELMetricLabels.Default): OpenTelemetryMetrics[F] =
     OpenTelemetryMetrics(
       meter,
       List[Metric[F, _]](
@@ -87,21 +87,8 @@ object OpenTelemetryMetrics {
       onRequest = (req, counter, m) => {
         m.unit {
           EndpointMetric()
-            .onEndpointRequest { ep =>
-              m.eval {
-                val attrs = asOpenTelemetryAttributes(labels, ep, req)
-                println(s"[DEBUG] Incrementing active requests with attributes: $attrs")
-
-                counter.add(1, attrs)
-              }
-            }
-            .onResponseBody { (ep, _) =>
-              m.eval {
-                val attrs = asOpenTelemetryAttributes(labels, ep, req)
-                println(s"[DEBUG] Decrementing active requests with attributes: $attrs")
-                counter.add(-1, attrs)
-              }
-            }
+            .onEndpointRequest { ep => m.eval(counter.add(1, asOpenTelemetryAttributes(labels, ep, req))) }
+            .onResponseBody { (ep, _) => m.eval(counter.add(-1, asOpenTelemetryAttributes(labels, ep, req))) }
             .onException { (ep, _) => m.eval(counter.add(-1, asOpenTelemetryAttributes(labels, ep, req))) }
         }
       }
@@ -119,10 +106,8 @@ object OpenTelemetryMetrics {
           EndpointMetric()
             .onResponseBody { (ep, res) =>
               m.eval {
-                val otLabels: Attributes =
+                val otLabels =
                   merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Right(res), None))
-
-                println(s"[DEBUG] Incrementing total requests with labels: $otLabels")
 
                 counter.add(1, otLabels)
               }
@@ -138,7 +123,6 @@ object OpenTelemetryMetrics {
       }
     )
 
-  
   def requestDuration[F[_]](meter: Meter, labels: MetricLabels): Metric[F, DoubleHistogram] =
     Metric[F, DoubleHistogram](
       meter
@@ -149,7 +133,7 @@ object OpenTelemetryMetrics {
       onRequest = (req, recorder, m) =>
         m.eval {
           val requestStart = Instant.now()
-          def duration = Duration.between(requestStart, Instant.now()).toMillis.toDouble / 1000.0
+          def duration = Duration.between(requestStart, Instant.now()).toMillis.toDouble
           EndpointMetric()
             .onResponseHeaders { (ep, res) =>
               m.eval {
