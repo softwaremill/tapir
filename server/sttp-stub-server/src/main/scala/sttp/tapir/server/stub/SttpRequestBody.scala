@@ -42,6 +42,7 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = body(serverRequest) match {
+    case Right(_: Seq[Part[client3.RequestBody[_]]]) => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
     case Right(stream) => stream
     case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
   }
@@ -80,51 +81,50 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
   private def extractMultipartParts(parts: Seq[Part[client3.RequestBody[_]]], bodyType: RawBodyType.MultipartBody): List[Part[Any]] = {
     parts.flatMap { part =>
       bodyType.partType(part.name).flatMap { partType =>
-        extractPartBody(part, partType).map { body =>
-          Part(
-            name = part.name,
-            body = body,
-            contentType = part.contentType.flatMap(ct => MediaType.parse(ct).toOption),
-            fileName = part.fileName
-          )
-        }
+        val body = extractPartBody(part, partType)
+        Some(Part(
+          name = part.name,
+          body = body,
+          contentType = part.contentType.flatMap(ct => MediaType.parse(ct).toOption),
+          fileName = part.fileName
+        ))
       }
     }.toList
   }
 
-  private def extractPartBody[B](part: Part[client3.RequestBody[_]], bodyType: RawBodyType[B]): Option[Any] = {
+  private def extractPartBody[B](part: Part[client3.RequestBody[_]], bodyType: RawBodyType[B]): Any = {
     part.body match {
       case ByteArrayBody(b, _) =>
         bodyType match {
-          case RawBodyType.StringBody(charset)  => Some(b)
-          case RawBodyType.ByteArrayBody        => Some(b)
-          case RawBodyType.ByteBufferBody       => Some(ByteBuffer.wrap(b))
-          case RawBodyType.InputStreamBody      => Some(new ByteArrayInputStream(b))
-          case RawBodyType.InputStreamRangeBody => Some(InputStreamRange(() => new ByteArrayInputStream(b)))
+          case RawBodyType.StringBody(charset)  => b
+          case RawBodyType.ByteArrayBody        => b
+          case RawBodyType.ByteBufferBody       => ByteBuffer.wrap(b)
+          case RawBodyType.InputStreamBody      => new ByteArrayInputStream(b)
+          case RawBodyType.InputStreamRangeBody => InputStreamRange(() => new ByteArrayInputStream(b))
           case RawBodyType.FileBody             => throw new IllegalArgumentException("ByteArray body provided while endpoint accepts FileBody")
-          case _: RawBodyType.MultipartBody     => None
+          case _: RawBodyType.MultipartBody     => ME.error(new IllegalArgumentException)
         }
       case FileBody(f, _) =>
         bodyType match {
-          case RawBodyType.FileBody        => Some(FileRange(f.toFile))
-          case RawBodyType.ByteArrayBody   => Some(Files.readAllBytes(f.toPath))
-          case RawBodyType.ByteBufferBody  => Some(ByteBuffer.wrap(Files.readAllBytes(f.toPath)))
-          case RawBodyType.InputStreamBody => Some(new FileInputStream(f.toFile))
-          case _                           => None
+          case RawBodyType.FileBody        => FileRange(f.toFile)
+          case RawBodyType.ByteArrayBody   => Files.readAllBytes(f.toPath)
+          case RawBodyType.ByteBufferBody  => ByteBuffer.wrap(Files.readAllBytes(f.toPath))
+          case RawBodyType.InputStreamBody => new FileInputStream(f.toFile)
+          case _                           => ME.error(new IllegalArgumentException)
         }
       case StringBody(s, charset, _) =>
         bodyType match {
-          case RawBodyType.StringBody(_)  => Some(s)
-          case RawBodyType.ByteArrayBody  => Some(s.getBytes(charset))
-          case RawBodyType.ByteBufferBody => Some(ByteBuffer.wrap(s.getBytes(charset)))
-          case _                          => None
+          case RawBodyType.StringBody(_)  => s
+          case RawBodyType.ByteArrayBody  => s.getBytes(charset)
+          case RawBodyType.ByteBufferBody => ByteBuffer.wrap(s.getBytes(charset))
+          case _                          => ME.error(new IllegalArgumentException)
         }
       case InputStreamBody(is, _) =>
         bodyType match {
-          case RawBodyType.InputStreamBody => Some(is)
-          case _                           => None
+          case RawBodyType.InputStreamBody => is
+          case _                           => ME.error(new IllegalArgumentException)
         }
-      case _ => None
+      case _ => ME.error(new IllegalArgumentException)
     }
   }
 }
