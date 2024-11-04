@@ -14,6 +14,12 @@ import sttp.tapir.server.interceptor.exception.ExceptionHandler
 import sttp.tapir.server.interceptor.reject.RejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.model.ValuedEndpointOutput
+import sttp.tapir.generic.auto._
+import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
+import sttp.model.Part
+import sttp.tapir.TapirFile
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
@@ -204,7 +210,135 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     response.body shouldBe Left("Internal server error")
     response.code shouldBe StatusCode.InternalServerError
   }
+
+  it should "handle multipart body" in {
+    // given
+    val e =
+      endpoint.post
+        .in("api" / "multipart")
+        .in(multipartBody)
+        .out(stringBody)
+
+    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
+      .whenEndpoint(e)
+      .thenRespond("success")
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest
+      .post(uri"http://test.com/api/multipart")
+      .multipartBody(
+        multipart("name", "abc"),
+        multipartFile("file", writeToFile("file_content"))
+      )
+      .send(server)
+
+    // then
+    response.body shouldBe Right("success")
+  }
+
+  it should "correctly process a multipart body" in {
+    // given
+    val e =
+      endpoint.post
+        .in("api" / "multipart")
+        .in(multipartBody)
+        .out(stringBody)
+
+    val server = TapirStubInterpreter(SttpBackendStub.synchronous)
+      .whenServerEndpointRunLogic(e.serverLogic((multipartData) => {
+        val partOpt = multipartData.find(_.name == "name")
+        val fileOpt = multipartData.find(_.name == "file")
+
+        (partOpt, fileOpt) match {
+          case (Some(part), Some(filePart)) =>
+            val partData = new String(part.body)
+            val fileData = new String(filePart.body)
+            IdMonad.unit(Right("name: " + partData + " file: " + fileData))
+
+          case (Some(_), None) =>
+            IdMonad.unit(Right("File part not found"))
+
+          case (None, Some(_)) =>
+            IdMonad.unit(Right("Part not found"))
+
+          case (None, None) =>
+            IdMonad.unit(Right("Both parts not found"))
+        }
+      }))
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest
+      .post(uri"http://test.com/api/multipart")
+      .multipartBody(
+        multipart("name", "abc"),
+        multipartFile("file", writeToFile("file_content"))
+      )
+      .send(server)
+
+    // then
+    response.body shouldBe Right("name: abc file: file_content")
+  }
+
+  it should "correctly handle derived multipart body" in {
+    // given
+    val e =
+      endpoint.post
+        .in("api" / "multipart")
+        .in(multipartBody[MultipartData])
+        .out(stringBody)
+
+    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
+      .whenServerEndpointRunLogic(e.serverLogic(multipartData => {
+        val fileContent = Await.result(readFromFile(multipartData.file.body), 3.seconds)
+        IdMonad.unit(Right("name: " + multipartData.name + " year: " + multipartData.year + " file: " + fileContent))
+      }))
+      .backend()
+
+    // when
+    val response = sttp.client3.basicRequest
+      .post(uri"http://test.com/api/multipart")
+      .multipartBody(
+        multipart("name", "abc"),
+        multipart("year", "2024"),
+        multipartFile("file", writeToFile("file_content"))
+      )
+      .send(server)
+
+    // then
+    response.body shouldBe Right("name: abc year: 2024 file: file_content")
+  }
+
+  it should "throw exception when bytearray body provided while endpoint accepts fileBody" in {
+    // given
+    val e =
+      endpoint.post
+        .in("api" / "multipart")
+        .in(multipartBody[MultipartData])
+        .out(stringBody)
+
+    val server = TapirStubInterpreter(SttpBackendStub(IdMonad))
+      .whenEndpoint(e)
+      .thenRespond("success")
+      .backend()
+
+    // when
+    val response = the[IllegalArgumentException] thrownBy sttp.client3.basicRequest
+      .post(uri"http://test.com/api/multipart")
+      .multipartBody(
+        multipart("name", "abc"),
+        multipart("year", "2024"),
+        multipart("file", "file_content".getBytes())
+      )
+      .send(server)
+
+    // then
+    response.getMessage shouldBe "ByteArray part provided while expecting a File part"
+  }
 }
+
+case class MultipartData(name: String, year: Int, file: Part[TapirFile])
 
 object ProductsApi {
 

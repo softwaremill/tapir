@@ -10,6 +10,12 @@ import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import java.nio.ByteBuffer
 import scala.annotation.tailrec
+import sttp.client3
+import sttp.model.Part
+import sttp.model.MediaType
+import sttp.tapir.FileRange
+import java.nio.file.Files
+import java.io.FileInputStream
 
 class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, AnyStreams] {
   override val streams: AnyStreams = AnyStreams
@@ -26,27 +32,32 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
           case RawBodyType.InputStreamRangeBody => ME.unit(RawValue(InputStreamRange(() => new ByteArrayInputStream(bytes))))
           case _: RawBodyType.MultipartBody     => ME.error(new UnsupportedOperationException)
         }
-      case _ => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
+      case Right(parts) =>
+        bodyType match {
+          case mp: RawBodyType.MultipartBody => ME.unit(RawValue(extractMultipartParts(parts, mp)))
+          case _ => throw new IllegalArgumentException(s"Multipart body provided while endpoint accepts raw body type: ${bodyType}")
+        }
     }
 
-  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = body(serverRequest) match {
-    case Right(stream) => stream
-    case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
-  }
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+    sttpRequest(serverRequest).body match {
+      case StreamBody(s) => s
+      case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
+    }
 
   private def sttpRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request[_, _]]
 
-  /** Either bytes or any stream */
-  private def body(serverRequest: ServerRequest): Either[Array[Byte], Any] = sttpRequest(serverRequest).body match {
+  private def body(serverRequest: ServerRequest): Either[Array[Byte], Seq[Part[client3.RequestBody[_]]]] = sttpRequest(
+    serverRequest
+  ).body match {
     case NoBody                     => Left(Array.emptyByteArray)
     case StringBody(s, encoding, _) => Left(s.getBytes(encoding))
     case ByteArrayBody(b, _)        => Left(b)
     case ByteBufferBody(b, _)       => Left(b.array())
     case InputStreamBody(b, _)      => Left(toByteArray(b))
     case FileBody(f, _)             => Left(f.readAsByteArray)
-    case StreamBody(s)              => Right(s)
-    case MultipartBody(_) =>
-      throw new IllegalArgumentException("Stub cannot handle multipart bodies")
+    case StreamBody(_)              => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
+    case MultipartBody(parts)       => Right(parts)
   }
 
   private def toByteArray(is: InputStream): Array[Byte] = {
@@ -65,5 +76,57 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
 
     transfer()
     os.toByteArray
+  }
+
+  private def extractMultipartParts(parts: Seq[Part[client3.RequestBody[_]]], bodyType: RawBodyType.MultipartBody): List[Part[Any]] = {
+    parts.flatMap { part =>
+      bodyType.partType(part.name).flatMap { partType =>
+        val body = extractPartBody(part, partType)
+        Some(
+          Part(
+            name = part.name,
+            body = body,
+            contentType = part.contentType.flatMap(ct => MediaType.parse(ct).toOption),
+            fileName = part.fileName
+          )
+        )
+      }
+    }.toList
+  }
+
+  private def extractPartBody[B](part: Part[client3.RequestBody[_]], bodyType: RawBodyType[B]): Any = {
+    part.body match {
+      case ByteArrayBody(b, _) =>
+        bodyType match {
+          case RawBodyType.StringBody(_)        => b
+          case RawBodyType.ByteArrayBody        => b
+          case RawBodyType.ByteBufferBody       => ByteBuffer.wrap(b)
+          case RawBodyType.InputStreamBody      => new ByteArrayInputStream(b)
+          case RawBodyType.InputStreamRangeBody => InputStreamRange(() => new ByteArrayInputStream(b))
+          case RawBodyType.FileBody             => throw new IllegalArgumentException("ByteArray part provided while expecting a File part")
+          case _: RawBodyType.MultipartBody     => throw new IllegalArgumentException("Nested multipart bodies are not allowed")
+        }
+      case FileBody(f, _) =>
+        bodyType match {
+          case RawBodyType.FileBody        => FileRange(f.toFile)
+          case RawBodyType.ByteArrayBody   => Files.readAllBytes(f.toPath)
+          case RawBodyType.ByteBufferBody  => ByteBuffer.wrap(Files.readAllBytes(f.toPath))
+          case RawBodyType.InputStreamBody => new FileInputStream(f.toFile)
+          case _                           => throw new IllegalArgumentException(s"File part provided, while expecting $bodyType")
+        }
+      case StringBody(s, charset, _) =>
+        bodyType match {
+          case RawBodyType.StringBody(_)  => s
+          case RawBodyType.ByteArrayBody  => s.getBytes(charset)
+          case RawBodyType.ByteBufferBody => ByteBuffer.wrap(s.getBytes(charset))
+          case _                          => throw new IllegalArgumentException(s"String part provided, while expecting $bodyType")
+        }
+      case InputStreamBody(is, _) =>
+        bodyType match {
+          case RawBodyType.InputStreamBody => is
+          case _                           => throw new IllegalArgumentException(s"InputStream part provided, while expecting $bodyType")
+        }
+      case _ => throw new IllegalArgumentException(s"Unsupported part body type provided: ${part.body}")
+    }
   }
 }
