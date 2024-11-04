@@ -17,7 +17,6 @@ import sttp.tapir.FileRange
 import java.nio.file.Files
 import java.io.FileInputStream
 
-
 class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, AnyStreams] {
   override val streams: AnyStreams = AnyStreams
 
@@ -42,11 +41,13 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = body(serverRequest) match {
-    case Right(stream) => stream match {
-      case _: Seq[Part[client3.RequestBody[_]]] => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
-      case _ => stream
-    }
-    case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
+    case Right(stream) =>
+      stream match {
+        case _: Seq[Part[client3.RequestBody[_]]] =>
+          throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
+        case _ => stream
+      }
+    case _ => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
   }
 
   private def sttpRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request[_, _]]
@@ -84,12 +85,14 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     parts.flatMap { part =>
       bodyType.partType(part.name).flatMap { partType =>
         val body = extractPartBody(part, partType)
-        Some(Part(
-          name = part.name,
-          body = body,
-          contentType = part.contentType.flatMap(ct => MediaType.parse(ct).toOption),
-          fileName = part.fileName
-        ))
+        Some(
+          Part(
+            name = part.name,
+            body = body,
+            contentType = part.contentType.flatMap(ct => MediaType.parse(ct).toOption),
+            fileName = part.fileName
+          )
+        )
       }
     }.toList
   }
@@ -103,8 +106,8 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
           case RawBodyType.ByteBufferBody       => ByteBuffer.wrap(b)
           case RawBodyType.InputStreamBody      => new ByteArrayInputStream(b)
           case RawBodyType.InputStreamRangeBody => InputStreamRange(() => new ByteArrayInputStream(b))
-          case RawBodyType.FileBody             => throw new IllegalArgumentException("ByteArray body provided while endpoint accepts FileBody")
-          case _: RawBodyType.MultipartBody     => throw new IllegalArgumentException()
+          case RawBodyType.FileBody         => throw new IllegalArgumentException("ByteArray body provided while endpoint accepts FileBody")
+          case _: RawBodyType.MultipartBody => throw new IllegalArgumentException()
         }
       case FileBody(f, _) =>
         bodyType match {
