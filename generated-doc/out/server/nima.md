@@ -8,7 +8,7 @@ To expose an endpoint as a [Helidon Níma](https://helidon.io/nima) server, firs
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-nima-server" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-nima-server" % "1.11.8"
 ```
 
 Loom-managed concurrency uses direct style instead of effect wrappers like `Future[T]` or `IO[T]`. Because of this,

@@ -83,7 +83,7 @@ In our case, deriving the schemas will amount to adding a `... derives Schema` c
 
 {emphasize-lines="1, 7, 10, 12, 16"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*   // needed for `writeToString`
@@ -127,10 +127,10 @@ how the `jsonBody[T]` method is used in the endpoint definition. We'll also expo
 
 {emphasize-lines="2-4, 10-15, 23-39"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.11.8
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.1
 
 import com.github.plokhotnyuk.jsoniter_scala.macros.* // needed for ... derives

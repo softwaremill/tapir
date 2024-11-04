@@ -21,7 +21,7 @@ use.
 Hence, we'll start with the same basic endpoint description. We'll be editing the `cats-effect.scala` file:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
 
 import sttp.tapir.*
 
@@ -56,8 +56,8 @@ parameter explicitly, using `.serverLogic[IO]` in our case:
 
 {emphasize-lines="2, 4, 12-14"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-cats:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-cats:1.11.8
 
 import cats.effect.IO
 import sttp.tapir.*
@@ -102,8 +102,8 @@ The conversion process is an almost-one-liner (if it wasn't for line length limi
 
 {emphasize-lines="2, 5, 7, 18-19"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.8
 
 import cats.effect.IO
 import org.http4s.HttpRoutes
@@ -130,8 +130,8 @@ standard code to start a server and handle requests until the application is int
 
 {emphasize-lines="3, 5, 7, 8, 12, 24-30"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.8
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 
 import cats.effect.{ExitCode, IO, IOApp}
@@ -192,9 +192,9 @@ the second step that we need to perform:
 
 {emphasize-lines="3, 7, 13, 27-32, 37"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.8
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 
 import cats.effect.{ExitCode, IO, IOApp}

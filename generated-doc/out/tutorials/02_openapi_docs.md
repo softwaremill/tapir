@@ -17,16 +17,16 @@ use a bundle, which first interprets the provided tapir endpoints into OpenAPI a
 endpoints, which expose the UI together with the generated specification. We'll need to add a dependency:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.8
 ```
 
 We'll also define and expose two endpoints as an HTTP server, as described in the previous tutorial. Hence, our
 starting setup of `docs.scala` is as follows:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.8
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
@@ -108,9 +108,9 @@ And that's almost all the code changes that we need to introduce! We only need t
 
 {emphasize-lines="3, 5, 8, 24-25, 29"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.8
 
 import sttp.shared.Identity
 import sttp.tapir.*

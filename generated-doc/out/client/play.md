@@ -6,13 +6,13 @@ See the [Play framework documentation](https://www.playframework.com/documentati
 For **Play 3.0**, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "1.11.8"
 ```
 
 For **Play 2.9**, add
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play29-client" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-play29-client" % "1.11.8"
 ```
 
 instead. Furthermore, replace all uses of `sttp.capabilities.pekko.PekkoStreams` in the following code snippets with `sttp.capabilities.akka.AkkaStreams`.

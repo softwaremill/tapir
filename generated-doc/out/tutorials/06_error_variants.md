@@ -83,7 +83,7 @@ request serializing `AvatarSuccess.Redirect` instances, as Tapir knows nothing a
 an `EndpointOutput[String]`: 
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
@@ -106,7 +106,7 @@ this output to the `AvatarSuccess.Redirect` type using `.mapTo`, which we've lea
 
 {emphasize-lines="12-13"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
@@ -138,7 +138,7 @@ each of which translates to a separate class. Our one-of successful output takes
 
 {emphasize-lines="13-16"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
@@ -175,7 +175,7 @@ To fix this, we can use the `oneOfVariantSingletonMatcher` method. It takes a un
 value, to which the high-level output must be equal, for the variant to be chosen:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*
@@ -197,9 +197,9 @@ val errorOutput: EndpointOutput[AvatarError] = oneOf(
 Equipped with `oneOf` outputs, we can now fully describe and test our endpoint:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.8
 
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.*

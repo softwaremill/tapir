@@ -24,7 +24,7 @@ body, but additionally the hash of the result should be included in the `X-Resul
 Below is the endpoint description; we'll be editing the `multiple.scala` file:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
 
 import sttp.tapir.*
 
@@ -61,8 +61,8 @@ The output tuple is then mapped to the response body & header:
 
 {emphasize-lines="5, 8-9, 18-29"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
@@ -147,8 +147,8 @@ The mapping functions are simple, but quite boring to write:
 
 {emphasize-lines="8, 17-18, 23-27"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer
@@ -197,8 +197,8 @@ Here's the modified code using `.mapInTo`, which additionally maps outputs to th
 
 {emphasize-lines="9, 11-13, 19, 22"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer

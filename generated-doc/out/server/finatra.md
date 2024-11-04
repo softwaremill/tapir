@@ -4,7 +4,7 @@ To expose an endpoint as an [finatra](https://twitter.github.io/finatra/) server
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "1.11.8"
 ```
 
 and import the object:
@@ -17,7 +17,7 @@ This interpreter supports the twitter `Future`.
 Or, if you would like to use cats-effect project, you can add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "1.11.8"
 ```
 
 and import the object:

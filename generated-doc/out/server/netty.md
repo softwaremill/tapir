@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.11.8"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.8"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.11.8"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.11.8"
 ```
 
 Then, use:

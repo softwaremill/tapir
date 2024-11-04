@@ -22,8 +22,8 @@ multiple servers, but we'll choose the simplest (and also one of the fastest!), 
 available through the `tapir-netty-server-sync` module:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
 ```
 
 ## Endpoint description
@@ -43,8 +43,8 @@ Let's start by defining the method and path of our endpoint:
 
 {emphasize-lines="4-11"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
 
 import sttp.tapir.*
 
@@ -72,8 +72,8 @@ of requiring it to be a fixed value (a constant):
 
 {emphasize-lines="10"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
 
 import sttp.tapir.*
 
@@ -97,8 +97,8 @@ Finally, let's add an output to the endpoint. We'll return the response as a str
 
 {emphasize-lines="11"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
 
 import sttp.tapir.*
 
@@ -123,8 +123,8 @@ will be sent as a response:
 
 {emphasize-lines="12"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
 
 import sttp.tapir.*
 
@@ -152,8 +152,8 @@ example, we'll bind to `localhost` (which is the default), and to the port 8080:
 
 {emphasize-lines="5, 15-18"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.8
 
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.NettySyncServer

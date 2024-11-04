@@ -4,14 +4,14 @@ To expose an endpoint as a [pekko-http](https://pekko.apache.org/docs/pekko-http
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % "1.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % "1.11.8"
 ```
 
 This will transitively pull some Pekko modules. If you want to force
 your own Pekko version, use sbt exclusion. Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % "1.11.7" exclude("org.apache.pekko", "pekko-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % "1.11.8" exclude("org.apache.pekko", "pekko-stream_2.12")
 ```
 
 Now import the object:
