@@ -334,7 +334,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
       .send(server)
 
     // then
-    response.getMessage shouldBe "ByteArray body provided while endpoint accepts FileBody"
+    response.getMessage shouldBe "ByteArray part provided while expecting a File part"
   }
 }
 

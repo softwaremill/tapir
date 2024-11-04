@@ -101,13 +101,13 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     part.body match {
       case ByteArrayBody(b, _) =>
         bodyType match {
-          case RawBodyType.StringBody(charset)  => b
+          case RawBodyType.StringBody(_)        => b
           case RawBodyType.ByteArrayBody        => b
           case RawBodyType.ByteBufferBody       => ByteBuffer.wrap(b)
           case RawBodyType.InputStreamBody      => new ByteArrayInputStream(b)
           case RawBodyType.InputStreamRangeBody => InputStreamRange(() => new ByteArrayInputStream(b))
-          case RawBodyType.FileBody         => throw new IllegalArgumentException("ByteArray body provided while endpoint accepts FileBody")
-          case _: RawBodyType.MultipartBody => throw new IllegalArgumentException()
+          case RawBodyType.FileBody             => throw new IllegalArgumentException("ByteArray part provided while expecting a File part")
+          case _: RawBodyType.MultipartBody     => throw new IllegalArgumentException("Nested multipart bodies are not allowed")
         }
       case FileBody(f, _) =>
         bodyType match {
@@ -115,21 +115,21 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
           case RawBodyType.ByteArrayBody   => Files.readAllBytes(f.toPath)
           case RawBodyType.ByteBufferBody  => ByteBuffer.wrap(Files.readAllBytes(f.toPath))
           case RawBodyType.InputStreamBody => new FileInputStream(f.toFile)
-          case _                           => throw new IllegalArgumentException()
+          case _                           => throw new IllegalArgumentException(s"File part provided, while expecting $bodyType")
         }
       case StringBody(s, charset, _) =>
         bodyType match {
           case RawBodyType.StringBody(_)  => s
           case RawBodyType.ByteArrayBody  => s.getBytes(charset)
           case RawBodyType.ByteBufferBody => ByteBuffer.wrap(s.getBytes(charset))
-          case _                          => throw new IllegalArgumentException()
+          case _                          => throw new IllegalArgumentException(s"String part provided, while expecting $bodyType")
         }
       case InputStreamBody(is, _) =>
         bodyType match {
           case RawBodyType.InputStreamBody => is
-          case _                           => throw new IllegalArgumentException()
+          case _                           => throw new IllegalArgumentException(s"InputStream part provided, while expecting $bodyType")
         }
-      case _ => throw new IllegalArgumentException()
+      case _ => throw new IllegalArgumentException(s"Unsupported part body type provided: ${part.body}")
     }
   }
 }
