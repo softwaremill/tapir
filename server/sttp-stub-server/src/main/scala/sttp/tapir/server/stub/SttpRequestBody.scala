@@ -7,7 +7,7 @@ import sttp.tapir.RawBodyType
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, InputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import java.nio.ByteBuffer
 import scala.annotation.tailrec
 import sttp.client3
@@ -32,34 +32,31 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
           case RawBodyType.InputStreamRangeBody => ME.unit(RawValue(InputStreamRange(() => new ByteArrayInputStream(bytes))))
           case _: RawBodyType.MultipartBody     => ME.error(new UnsupportedOperationException)
         }
-      case Right(value) =>
+      case Right(parts) =>
         bodyType match {
-          case mp: RawBodyType.MultipartBody =>
-            ME.unit(RawValue(extractMultipartParts(value.asInstanceOf[Seq[Part[client3.RequestBody[_]]]], mp)))
-          case _ => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
+          case mp: RawBodyType.MultipartBody => ME.unit(RawValue(extractMultipartParts(parts, mp)))
+          case _ => throw new IllegalArgumentException(s"Multipart body provided while endpoint accepts raw body type: ${bodyType}")
         }
     }
 
-  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = body(serverRequest) match {
-    case Right(stream) =>
-      stream match {
-        case _: Seq[Part[client3.RequestBody[_]]] =>
-          throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
-        case _ => stream
-      }
-    case _ => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
-  }
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+    sttpRequest(serverRequest).body match {
+      case StreamBody(s) => s
+      case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
+    }
 
   private def sttpRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request[_, _]]
 
-  private def body(serverRequest: ServerRequest): Either[Array[Byte], Any] = sttpRequest(serverRequest).body match {
+  private def body(serverRequest: ServerRequest): Either[Array[Byte], Seq[Part[client3.RequestBody[_]]]] = sttpRequest(
+    serverRequest
+  ).body match {
     case NoBody                     => Left(Array.emptyByteArray)
     case StringBody(s, encoding, _) => Left(s.getBytes(encoding))
     case ByteArrayBody(b, _)        => Left(b)
     case ByteBufferBody(b, _)       => Left(b.array())
     case InputStreamBody(b, _)      => Left(toByteArray(b))
     case FileBody(f, _)             => Left(f.readAsByteArray)
-    case StreamBody(s)              => Right(s)
+    case StreamBody(_)              => throw new IllegalArgumentException("Stream body provided while endpoint accepts raw body type")
     case MultipartBody(parts)       => Right(parts)
   }
 
