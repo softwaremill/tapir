@@ -1,11 +1,11 @@
 // {cat=Hello, World!; effects=ZIO; server=http4s; json=circe; docs=Swagger UI}: Exposing an endpoint, defined with ZIO and depending on services in the environment, using the http4s server
 
 //> using option -Ykind-projector
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.8
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 //> using dep dev.zio::zio-interop-cats:23.1.0.3
 

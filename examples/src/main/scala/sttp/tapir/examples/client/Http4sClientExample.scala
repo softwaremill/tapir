@@ -1,8 +1,8 @@
 // {cat=Client interpreter; effects=cats-effect; JSON=circe}: Interpreting an endpoint as an http4s client
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-client:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-client:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.8
 //> using dep org.http4s::http4s-circe:0.23.27
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 //> using dep org.http4s::http4s-dsl:0.23.27

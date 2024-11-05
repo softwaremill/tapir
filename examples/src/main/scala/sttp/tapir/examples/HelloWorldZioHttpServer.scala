@@ -1,8 +1,8 @@
 // {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=ZIO JSON}: Exposing an endpoint using the ZIO HTTP server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-json-zio:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-json-zio:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.8
 
 package sttp.tapir.examples
 
