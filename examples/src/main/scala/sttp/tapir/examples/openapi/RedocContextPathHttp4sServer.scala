@@ -1,8 +1,8 @@
 // {cat=OpenAPI documentation; effects=cats-effect; server=http4s; docs=ReDoc}: Exposing documentation using ReDoc
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-redoc-bundle:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-redoc-bundle:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.8
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 
 package sttp.tapir.examples.openapi

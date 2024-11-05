@@ -1,8 +1,8 @@
 // {cat=OpenAPI documentation; json=circe}: Adding OpenAPI documentation extensions
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-openapi-docs:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-openapi-docs:1.11.8
 //> using dep com.softwaremill.sttp.apispec::openapi-circe-yaml:0.10.0
 
 package sttp.tapir.examples.openapi

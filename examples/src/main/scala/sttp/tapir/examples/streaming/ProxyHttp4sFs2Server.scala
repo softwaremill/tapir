@@ -1,7 +1,7 @@
 // {cat=Streaming; effects=cats-effect; server=http4s}: Proxy requests, handling bodies as fs2 streams
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.8
 //> using dep com.softwaremill.sttp.client3::fs2:3.9.8
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 

@@ -1,7 +1,7 @@
 // {cat=Hello, World!; effects=cats-effect; server=http4s}: Exposing an endpoint using the http4s server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.8
 //> using dep com.softwaremill.sttp.client3::core:3.9.8
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 

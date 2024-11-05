@@ -1,7 +1,7 @@
 // {cat=Logging; effects=ZIO; server=Netty}: Logging using a correlation id
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-zio:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-zio:1.11.8
 //> using dep com.softwaremill.sttp.client3::zio:3.9.8
 
 package sttp.tapir.examples.logging

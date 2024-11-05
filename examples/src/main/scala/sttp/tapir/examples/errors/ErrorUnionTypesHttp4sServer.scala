@@ -1,8 +1,8 @@
 // {cat=Error handling; effects=cats-effect; server=http4s; JSON=circe}: Extending a base secured endpoint with error variants, using union types
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.8
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 //> using dep com.softwaremill.sttp.client3::core:3.9.8
 

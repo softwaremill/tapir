@@ -1,7 +1,7 @@
 // {cat=Custom types; json=circe}: Supporting custom types, when used in query or path parameters, as well as part of JSON bodies
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.7
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.8
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.8
 
 package sttp.tapir.examples.custom_types
 
