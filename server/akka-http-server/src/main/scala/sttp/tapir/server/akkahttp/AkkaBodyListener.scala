@@ -14,7 +14,7 @@ class AkkaBodyListener(implicit ec: ExecutionContext) extends BodyListener[Futur
   override def onComplete(body: AkkaResponseBody)(cb: Try[Unit] => Future[Unit]): Future[AkkaResponseBody] = {
     body match {
       case ws @ Left(_) => cb(Success(())).map(_ => ws)
-      case Right(e @ HttpEntity.Empty) =>
+      case Right(e) if e.isKnownEmpty =>
         Future.successful(Right(e)).andThen { case _ => cb(Success(())) }
       case Right(e: UniversalEntity) =>
         Future.successful(
