@@ -74,6 +74,7 @@ object MetricLabels {
   lazy val OpenTelemetryAttributes: MetricLabels = MetricLabels(
     forRequest = List(
       "http.request.method" -> { case (_, req) => req.method.method },
+      "url.scheme" -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
       "path" -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) }
     ),
     forResponse = List(
@@ -81,6 +82,11 @@ object MetricLabels {
         case Right(r) => r.code.code.toString
         // Default to 500 for exceptions
         case Left(_) => "500"
+      },
+      "error.type" -> {
+        case Left(ex) => ex.getClass.getSimpleName
+        case Right(_) => ""
+
       }
     )
   )
