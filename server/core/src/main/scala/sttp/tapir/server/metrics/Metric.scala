@@ -63,31 +63,4 @@ object MetricLabels {
       }
     )
   )
-
-  /** Default labels for OpenTelemetry-compliant metrics, as recommended here:
-    * https://opentelemetry.io/docs/specs/semconv/http/http-metrics/#http-server
-    *
-    *   - `http.request.method` - HTTP request method (e.g., GET, POST).
-    *   - `path` - The request path or route template.
-    *   - `http.response.status_code` - HTTP response status code (200, 404, etc.).
-    */
-  lazy val OpenTelemetryAttributes: MetricLabels = MetricLabels(
-    forRequest = List(
-      "http.request.method" -> { case (_, req) => req.method.method },
-      "url.scheme" -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
-      "path" -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) }
-    ),
-    forResponse = List(
-      "http.response.status_code" -> {
-        case Right(r) => r.code.code.toString
-        // Default to 500 for exceptions
-        case Left(_) => "500"
-      },
-      "error.type" -> {
-        case Left(ex) => ex.getClass.getSimpleName
-        case Right(_) => ""
-
-      }
-    )
-  )
 }
