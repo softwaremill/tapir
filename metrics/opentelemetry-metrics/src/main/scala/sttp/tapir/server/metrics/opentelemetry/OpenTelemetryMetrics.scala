@@ -15,15 +15,15 @@ import java.time.{Duration, Instant}
 case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]]) {
 
   /** Registers a `request_active{path, method}` up-down-counter (assuming default labels). */
-  def addRequestsActive(labels: MetricLabels = MetricLabels.OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
+  def addRequestsActive(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestActive(meter, labels))
 
   /** Registers a `request_total{path, method, status}` counter (assuming default labels). */
-  def addRequestsTotal(labels: MetricLabels = MetricLabels.OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
+  def addRequestsTotal(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestTotal(meter, labels))
 
   /** Registers a `request_duration_seconds{path, method, status, phase}` histogram (assuming default labels). */
-  def addRequestsDuration(labels: MetricLabels = MetricLabels.OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
+  def addRequestsDuration(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestDuration(meter, labels))
 
   /** Registers a custom metric. */
@@ -35,6 +35,33 @@ case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]])
 }
 
 object OpenTelemetryMetrics {
+
+  /** Default labels for OpenTelemetry-compliant metrics, as recommended here:
+    * https://opentelemetry.io/docs/specs/semconv/http/http-metrics/#http-server
+    *
+    *   - `http.request.method` - HTTP request method (e.g., GET, POST).
+    *   - `path` - The request path or route template.
+    *   - `http.response.status_code` - HTTP response status code (200, 404, etc.).
+    */
+  lazy val OpenTelemetryAttributes: MetricLabels = MetricLabels(
+    forRequest = List(
+      "http.request.method" -> { case (_, req) => req.method.method },
+      "url.scheme" -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
+      "path" -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) }
+    ),
+    forResponse = List(
+      "http.response.status_code" -> {
+        case Right(r) => r.code.code.toString
+        // Default to 500 for exceptions
+        case Left(_) => "500"
+      },
+      "error.type" -> {
+        case Left(ex) => ex.getClass.getSimpleName
+        case Right(_) => ""
+
+      }
+    )
+  )
 
   def apply[F[_]](meter: Meter): OpenTelemetryMetrics[F] = apply(meter, Nil)
   def apply[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] = apply(defaultMeter(otel), Nil)
@@ -50,7 +77,7 @@ object OpenTelemetryMetrics {
     * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
   def default[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] =
-    default(defaultMeter(otel), MetricLabels.OpenTelemetryAttributes)
+    default(defaultMeter(otel), OpenTelemetryAttributes)
 
   /** Registers default metrics (see other variants) using custom labels. */
   def default[F[_]](otel: OpenTelemetry, labels: MetricLabels): OpenTelemetryMetrics[F] = default(defaultMeter(otel), labels)
@@ -64,10 +91,10 @@ object OpenTelemetryMetrics {
     * Status is by default the status code class (1xx, 2xx, etc.), and phase can be either `headers` or `body` - request duration is
     * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
-  def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, MetricLabels.OpenTelemetryAttributes)
+  def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, OpenTelemetryAttributes)
 
   /** Registers default metrics (see other variants) using custom labels. */
-  def default[F[_]](meter: Meter, labels: MetricLabels = MetricLabels.OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
+  def default[F[_]](meter: Meter, labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     OpenTelemetryMetrics(
       meter,
       List[Metric[F, _]](
