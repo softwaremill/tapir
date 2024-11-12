@@ -19,7 +19,7 @@ import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
 
-class NettyRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets])(implicit
+class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets])(implicit
     ec: ExecutionContext
 ) {
   def tests(): List[Test] = List(
@@ -39,14 +39,14 @@ class NettyRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: SttpBack
           onRequest = (_, metric, me) =>
             me.eval {
               EndpointMetric()
-                .onEndpointRequest { _ => me.eval(metric.incrementAndGet()) }
-                .onResponseBody { (_, _) => me.eval(metric.decrementAndGet()) }
-                .onException { (_, _) => me.eval(metric.decrementAndGet()) }
+                .onEndpointRequest { _ => me.eval { val _ = metric.incrementAndGet(); } }
+                .onResponseBody { (_, _) => me.eval { val _ = metric.decrementAndGet(); } }
+                .onException { (_, _) => me.eval { val _ = metric.decrementAndGet(); } }
             }
         ),
         Metric(
           metric = totalRequests,
-          onRequest = (_, metric, me) => me.eval(EndpointMetric().onEndpointRequest { _ => me.eval(metric.incrementAndGet()) })
+          onRequest = (_, metric, me) => me.eval(EndpointMetric().onEndpointRequest { _ => me.eval { val _ = metric.incrementAndGet(); } })
         )
       )
 
