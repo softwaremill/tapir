@@ -25,6 +25,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import ox.flow.Flow
 import scala.annotation.nowarn
+import sttp.tapir.server.netty.NettySyncRequestTimeoutTests
 
 class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
@@ -44,7 +45,8 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, failingPipe = true, handlePong = true) {
           override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
           override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
-        }.tests()
+        }.tests() ++
+        NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests()
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {

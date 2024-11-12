@@ -47,7 +47,12 @@ object NettySyncServerOptions:
       doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,
       doLogAllDecodeFailures = debugLog,
-      doLogExceptions = (msg: String, ex: Throwable) => log.error(msg, ex),
+      doLogExceptions = (msg: String, e: Throwable) =>
+        e match
+          // if server logic is interrupted (e.g. due to timeout), this isn't an error, but might still be useful for debugging,
+          // to know how far processing got
+          case _: InterruptedException => log.debug(msg, e)
+          case _                       => log.error(msg, e),
       noLog = ()
     )
 
