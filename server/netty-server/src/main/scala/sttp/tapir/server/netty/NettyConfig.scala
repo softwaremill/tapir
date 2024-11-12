@@ -104,8 +104,8 @@ case class NettyConfig(
 
   def initPipeline(f: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit): NettyConfig = copy(initPipeline = f)
 
-  def withGracefulShutdownTimeout(t: FiniteDuration) = copy(gracefulShutdownTimeout = Some(t))
-  def noGracefulShutdown = copy(gracefulShutdownTimeout = None)
+  def withGracefulShutdownTimeout(t: FiniteDuration): NettyConfig = copy(gracefulShutdownTimeout = Some(t))
+  def noGracefulShutdown: NettyConfig = copy(gracefulShutdownTimeout = None)
 
   def serverHeader(h: String): NettyConfig = copy(serverHeader = Some(h))
 
