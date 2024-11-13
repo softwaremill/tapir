@@ -38,12 +38,8 @@ private[armeria] final case class ArmeriaServerRequest(ctx: ServiceRequestContex
   override def underlying: Any = ctx
 
   override val pathSegments: List[String] = {
-    // ctx.path() always starts with '/'.
-    if (ctx.path() == "/") {
-      Nil
-    } else {
-      ctx.path().substring(1).split("/").toList
-    }
+    val segments = uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList
+    if (segments == List("")) Nil else segments // representing the root path as an empty list
   }
 
   override val queryParameters: QueryParams = {
