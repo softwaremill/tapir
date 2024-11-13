@@ -461,6 +461,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       (backend, baseUri) =>
         basicRequest.get(uri"$baseUri/api").send(backend).map(_.code shouldBe StatusCode.Ok)
     },
+    testServer(in_path_paths_out_header_body, "Encoded path should be decoded") { case (i, paths) =>
+      pureResult(Right((i, paths.last)))
+    }{
+      (backend, baseUri) =>
+        basicRequest.get(uri"$baseUri/api/15/and/MIN%2FMAX").send(backend).map(_.body shouldBe Right("MIN/MAX"))
+    },
     testServer(in_single_path, "single path should match single/ path")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) {
       (backend, baseUri) =>
         basicRequest.get(uri"$baseUri/api/").send(backend).map(_.code shouldBe StatusCode.Ok)
