@@ -60,8 +60,6 @@ object OpenTelemetryMetrics {
     }
   ).collect { case (k, Some(v)) => k -> v }
 
-      }
-    )
   )
 
   def apply[F[_]](meter: Meter): OpenTelemetryMetrics[F] = apply(meter, Nil)
