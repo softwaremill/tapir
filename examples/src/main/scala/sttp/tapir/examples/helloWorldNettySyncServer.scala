@@ -30,6 +30,6 @@ import sttp.tapir.server.netty.sync.NettySyncServer
 
   supervised {
     val serverBinding = useInScope(NettySyncServer().addEndpoint(helloWorld).start())(_.stop())
-    println(s"Tapir is running on port ${serverBinding.port}")
+    println(s"You can now make requests to http://${serverBinding.hostName}:${serverBinding.port}/hello?name=...!")
     never
   }
