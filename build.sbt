@@ -169,6 +169,7 @@ lazy val logback = "ch.qos.logback" % "logback-classic" % Versions.logback
 lazy val slf4j = "org.slf4j" % "slf4j-api" % Versions.slf4j
 
 lazy val rawAllAggregates = core.projectRefs ++
+  opentelemetryTracingSync.projectRefs ++
   testing.projectRefs ++
   cats.projectRefs ++
   catsEffect.projectRefs ++
@@ -256,7 +257,13 @@ lazy val rawAllAggregates = core.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
 
-lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
+lazy val loomProjects: Seq[String] = Seq(
+  nettyServerSync,
+  nimaServer,
+  examples,
+  documentation,
+  opentelemetryTracingSync
+).flatMap(_.projectRefs).flatMap(projectId)
 
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
@@ -264,6 +271,23 @@ def projectId(projectRef: ProjectReference): Option[String] =
     case LocalProject(id)  => Some(id)
     case _                 => None
   }
+lazy val opentelemetryTracingSync: ProjectMatrix = (projectMatrix in file("tracing/opentelemetry-tracing-sync"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-opentelemetry-tracing-sync",
+    libraryDependencies ++= Seq(
+      "io.opentelemetry" % "opentelemetry-api" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-context" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % Versions.openTelemetry,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.23.1-alpha",
+      // Test dependencies
+      "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test,
+      slf4j % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
+  .dependsOn(core, serverCore)
 
 lazy val allAggregates: Seq[ProjectReference] = {
   val filteredByNative = if (sys.env.isDefinedAt("STTP_NATIVE")) {
@@ -2031,7 +2055,7 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
-  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, opentelemetryTracingSync)
 
 // other
 
@@ -2040,6 +2064,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= Seq(
+      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp,
