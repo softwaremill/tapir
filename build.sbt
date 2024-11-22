@@ -272,22 +272,22 @@ def projectId(projectRef: ProjectReference): Option[String] =
     case _                 => None
   }
 lazy val opentelemetryTracingSync: ProjectMatrix = (projectMatrix in file("tracing/opentelemetry-tracing-sync"))
-  .settings(commonSettings)
-  .settings(
-    name := "tapir-opentelemetry-tracing-sync",
-    libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % Versions.openTelemetry,
-      "io.opentelemetry" % "opentelemetry-context" % Versions.openTelemetry,
-      "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % Versions.openTelemetry,
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.23.1-alpha",
-      // Test dependencies
-      "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test,
-      slf4j % Test,
-      scalaTest.value % Test
-    )
-  )
-  .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
-  .dependsOn(core, serverCore)
+ .settings(commonSettings)
+ .settings(
+   name := "tapir-opentelemetry-tracing-sync",
+   libraryDependencies ++= Seq(
+     "io.opentelemetry" % "opentelemetry-api" % Versions.openTelemetry,
+     "io.opentelemetry" % "opentelemetry-context" % Versions.openTelemetryContext,
+     "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % Versions.openTelemetryPropagators,
+     "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconv,
+     // Test dependencies
+     "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetrySdk % Test,
+     "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetrySdk % Test,
+     scalaTest.value % Test
+   )
+ )
+ .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
+ .dependsOn(core, serverCore)
 
 lazy val allAggregates: Seq[ProjectReference] = {
   val filteredByNative = if (sys.env.isDefinedAt("STTP_NATIVE")) {
