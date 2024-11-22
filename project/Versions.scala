@@ -67,4 +67,9 @@ object Versions {
   val logback = "1.5.12"
   val slf4j = "2.0.16"
   val jsoniter = "2.31.3"
+  val openTelemetry = "1.36.0"                  
+  val openTelemetrySdk = "1.36.0"            
+  val openTelemetryContext = "1.36.0"          
+  val openTelemetryPropagators = "1.36.0"       
+  val openTelemetrySemconv = "1.23.1-alpha"     
 }
