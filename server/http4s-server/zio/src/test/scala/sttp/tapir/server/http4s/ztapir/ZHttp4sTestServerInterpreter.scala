@@ -4,7 +4,8 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats._
 import cats.syntax.all._
-import org.http4s.blaze.server.BlazeServerBuilder
+import com.comcast.ip4s
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.{HttpApp, HttpRoutes}
 import sttp.capabilities.WebSockets
@@ -41,11 +42,11 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
     val service: WebSocketBuilder2[Task] => HttpApp[Task] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
 
-    BlazeServerBuilder[Task]
-      .withExecutionContext(ExecutionContext.global)
-      .bindHttp(0, "localhost")
+    EmberServerBuilder
+      .default[Task]
+      .withPort(ip4s.Port.fromInt(0).get)
       .withHttpWebSocketApp(service)
-      .resource
+      .build
       .map(_.address.getPort)
       .mapK(new ~>[Task, IO] {
         // Converting a ZIO effect to an Cats Effect IO effect
