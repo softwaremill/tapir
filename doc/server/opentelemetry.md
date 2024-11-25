@@ -1,58 +1,73 @@
-# OpenTelemetry Tracing for Synchronous Applications in Tapir
+# OpenTelemetry Tracing for Tapir with Netty Sync Server
 
-This module provides server-side integration between Tapir and OpenTelemetry for tracing synchronous HTTP requests, optimized for applications using Java's Project Loom virtual threads.
+This documentation describes the integration between Tapir and OpenTelemetry for tracing synchronous HTTP requests, optimized for applications using Java's virtual threads (Project Loom).
 
 ## Dependencies
 
-To use this module, add the following dependency to your `build.sbt` file:
+Add the following dependencies to your `build.sbt` file:
 
+```scala
+libraryDependencies ++= Seq(
+  "com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.9",
+  "com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing-sync" % "1.11.9",
+  "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.36.0",
+  "io.opentelemetry" % "opentelemetry-sdk" % "1.36.0"
+)
 ```
-libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing-sync" % "@VERSION@"
-```
-
-Replace `@VERSION@` with the latest version of Tapir.
 
 ## Overview
 
-This module integrates OpenTelemetry tracing with Tapir, providing:
-
-- Synchronous request processing
+This integration provides:
+- Synchronous request processing with Netty
 - Virtual threads compatibility (Project Loom)
-- Context propagation
-- Baggage handling
+- OpenTelemetry context propagation
+- OpenTelemetry baggage handling
 - Custom span naming
-- Header attributes mapping
+- HTTP header attributes mapping
+- High-performance request handling
 
-## Usage
+## Additional Netty Server Features
+- Graceful shutdown support
+- Domain socket support
+- WebSocket support through Ox
+- Logging through SLF4J (enabled by default)
+- Virtual threads optimization
+- High-performance request handling
 
-### Basic Configuration
+## Basic Usage
 
-```
+### OpenTelemetry Configuration
+
+```scala
+import sttp.tapir.*
+import sttp.tapir.server.netty.NettySyncServer
 import sttp.tapir.server.opentelemetry.*
 import io.opentelemetry.api.trace.Tracer
 
 // Obtain your OpenTelemetry tracer instance
-val tracer: Tracer = // ... your OpenTelemetry tracer configuration
+val tracer: Tracer = // ... your OpenTelemetry configuration
 
 // Create the OpenTelemetry tracing instance
 val tracing = new OpenTelemetryTracingSync(tracer)
 
-// Integrate with your server options
-val serverOptions = NettyFutureServerOptions.customiseInterceptors
+// Integrate with server options
+val serverOptions = NettySyncServerOptions.customiseInterceptors
   .tracingInterceptor(tracing.interceptor())
   .options
 
-// Create the server interpreter
-val server = NettyFutureServerInterpreter(serverOptions)
+// Create the server with additional Netty configuration
+val server = NettySyncServer(serverOptions)
+  .port(8080)
+  .host("localhost")
 ```
 
-### Custom Configuration
+### Custom OpenTelemetry Configuration
 
-```
+```scala
 val config = OpenTelemetryConfig(
-  includeHeaders = Set("x-request-id", "user-agent"), // Headers to include as span attributes
+  includeHeaders = Set("x-request-id", "user-agent"), // Headers to include as attributes
   includeBaggage = true,                              // Enable baggage propagation
-  errorPredicate = statusCode => statusCode >= 500,   // Define which HTTP status codes are considered errors
+  errorPredicate = statusCode => statusCode >= 500,   // Define which HTTP status codes are errors
   spanNaming = SpanNaming.Path                        // Choose a span naming strategy
 )
 
@@ -61,26 +76,111 @@ val customTracing = new OpenTelemetryTracingSync(tracer, config)
 
 ### Span Naming Strategies
 
-You can choose different strategies for naming your spans:
+Several strategies are available:
 
-**Default**: Combines the HTTP method and path (e.g., `"GET /users"`).
-
-```
-val spanNaming = SpanNaming.Default
-```
-
-**Path Only**: Uses only the request path (e.g., `"/users"`).
-
-```
-val spanNaming = SpanNaming.Path
+**Default**: Combines HTTP method and path
+```scala
+val spanNaming = SpanNaming.Default // Example: "GET /users"
 ```
 
-**Custom Naming**: Define your own naming strategy using a function.
-
+**Path Only**: Uses only the path
+```scala
+val spanNaming = SpanNaming.Path // Example: "/users"
 ```
+
+**Custom**: Define your own strategy
+```scala
 val spanNaming = SpanNaming.Custom { endpoint =>
-  s"${endpoint.method.method} - ${endpoint.showShort}"
+  s"${endpoint.method.method} - ${endpoint.showPathTemplate()}"
 }
+```
+
+## Complete Examples
+
+### Basic Server with Tracing
+
+```scala
+import sttp.tapir.*
+import sttp.tapir.server.netty.NettySyncServer
+import sttp.tapir.server.opentelemetry.*
+import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.api.OpenTelemetry
+import io.opentelemetry.sdk.OpenTelemetrySdk
+import io.opentelemetry.sdk.trace.SdkTracerProvider
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
+import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter
+import scala.util.Using
+
+object TracedNettySyncServer:
+  val healthEndpoint = endpoint.get
+    .in("health")
+    .out(stringBody)
+    .handle { _ => 
+      Right("OK") 
+    }
+
+  def setupTracing(): Tracer =
+    val spanExporter = OtlpGrpcSpanExporter.builder()
+      .setEndpoint("http://localhost:4317")
+      .build()
+
+    val tracerProvider = SdkTracerProvider.builder()
+      .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
+      .build()
+
+    val openTelemetry = OpenTelemetrySdk.builder()
+      .setTracerProvider(tracerProvider)
+      .build()
+
+    openTelemetry.getTracer("com.example.tapir-server")
+
+  def main(args: Array[String]): Unit =
+    val tracer = setupTracing()
+    val tracing = new OpenTelemetryTracingSync(tracer)
+
+    val serverOptions = NettySyncServerOptions
+      .customiseInterceptors
+      .tracingInterceptor(tracing.interceptor())
+      .options
+
+    val server = NettySyncServer(serverOptions)
+      .port(8080)
+      .addEndpoint(healthEndpoint)
+
+    Using.resource(server.start()) { binding =>
+      println("Server running on http://localhost:8080")
+      Thread.sleep(Long.MaxValue)
+    }
+```
+
+### WebSocket Server
+
+```scala
+import ox.*
+
+val wsEndpoint = endpoint.get
+  .in("ws")
+  .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain])
+
+def wsLogic(using Ox): Source[String] => Source[String] = input => 
+  input.map(_.toUpperCase)
+
+val wsServerEndpoint = wsEndpoint.handle(wsLogic)
+
+// Add to server
+val server = NettySyncServer(serverOptions)
+  .addEndpoint(wsServerEndpoint)
+```
+
+### Domain Socket Server
+
+```scala
+import java.nio.file.Paths
+import io.netty.channel.unix.DomainSocketAddress
+
+val binding = NettySyncServer()
+  .addEndpoint(endpoint)
+  .startUsingDomainSocket(Paths.get("/tmp/server.sock"))
 ```
 
 ## Configuration Options
@@ -89,141 +189,144 @@ val spanNaming = SpanNaming.Custom { endpoint =>
 
 | Option           | Type                  | Default                 | Description                                   |
 | ---------------- | --------------------- | ----------------------- | --------------------------------------------- |
-| `includeHeaders` | `Set[String]`         | `Set.empty`             | HTTP headers to include as span attributes    |
-| `includeBaggage` | `Boolean`             | `true`                  | Enable or disable baggage propagation         |
+| `includeHeaders` | `Set[String]`         | `Set.empty`             | HTTP headers to include as attributes         |
+| `includeBaggage` | `Boolean`             | `true`                  | Enable/disable baggage propagation            |
 | `errorPredicate` | `Int => Boolean`      | `_ >= 500`              | Determines which HTTP status codes are errors |
 | `spanNaming`     | `SpanNaming`          | `Default`               | Strategy for naming spans                     |
 | `virtualThreads` | `VirtualThreadConfig` | `VirtualThreadConfig()` | Configuration for virtual threads             |
 
 ### VirtualThreadConfig
 
-| Option                    | Type      | Default       | Description                             |
-| ------------------------- | --------- | ------------- | --------------------------------------- |
-| `useVirtualThreads`       | `Boolean` | `true`        | Enable or disable virtual threads usage |
-| `virtualThreadNamePrefix` | `String`  | `"tapir-ot-"` | Prefix for virtual thread names         |
+| Option                    | Type      | Default       | Description                          |
+| ------------------------- | --------- | ------------- | ------------------------------------ |
+| `useVirtualThreads`       | `Boolean` | `true`        | Enable/disable virtual threads usage |
+| `virtualThreadNamePrefix` | `String`  | `"tapir-ot-"` | Prefix for virtual thread names      |
 
-## Virtual Threads Compatibility
+### Netty Server Configuration
 
-This module is optimized for use with Project Loom's virtual threads:
+```scala
+import scala.concurrent.duration.*
 
-- **Scoped Values**: Utilizes `ScopedValue` instead of `ThreadLocal` for context storage.
-- **Proper Context Propagation**: Ensures tracing context is maintained across thread boundaries.
-- **High Concurrency**: Efficiently handles a large number of concurrent requests.
+// Basic configuration
+val server = NettySyncServer()
+  .port(8080)
+  .host("localhost")
+  .withGracefulShutdownTimeout(5.seconds)
 
-## Examples
+// Advanced Netty configuration
+val nettyConfig = NettyConfig.default
+  .socketBacklog(256)
+  .withGracefulShutdownTimeout(5.seconds)
+  // Or disable graceful shutdown
+  //.noGracefulShutdown
 
-### Basic Server Setup
-
+val serverWithConfig = NettySyncServer(nettyConfig)
 ```
-import sttp.tapir.*
-import sttp.tapir.server.opentelemetry.*
-import sttp.tapir.server.netty.*
-import io.opentelemetry.api.trace.Tracer
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-
-def setupServer(tracer: Tracer) = {
-  val tracing = new OpenTelemetryTracingSync(tracer)
-  
-  val serverOptions = NettyFutureServerOptions.customiseInterceptors
-    .tracingInterceptor(tracing.interceptor())
-    .options
-  
-  val server = NettyFutureServerInterpreter(serverOptions)
-  
-  val helloEndpoint = endpoint.get
-    .in("hello")
-    .out(stringBody)
-    .serverLogicSuccess(_ => Future.successful("Hello, World!"))
-  
-  server.toRoute(helloEndpoint)
-}
-```
-
-### Custom Span Attributes
-
-```
-val config = OpenTelemetryConfig(
-  includeHeaders = Set("x-request-id"),
-  spanNaming = SpanNaming.Custom { endpoint =>
-    s"${endpoint.method.method} - ${endpoint.showShort}"
-  }
-)
-
-val tracing = new OpenTelemetryTracingSync(tracer, config)
-```
-
-## Integration with Other Tapir Components
-
-The OpenTelemetry Sync Tracing module can be used alongside other Tapir components:
-
-- **Server Interpreters**: Compatible with various server backends like Netty, Http4s, and Akka HTTP.
-- **Monitoring Solutions**: Can be integrated with additional monitoring tools.
-- **Security Interceptors**: Works with Tapir's security features.
-- **Documentation Generators**: Complements OpenAPI and AsyncAPI documentation.
-
-## Error Handling
-
-By default, the module handles errors in the following way:
-
-- **Error Span Marking**: Marks spans as errors for HTTP status codes matching the `errorPredicate` (default is `>= 500`).
-- **Exception Recording**: Records exceptions as events within the span.
-- **Error Attributes**: Adds error-related attributes following OpenTelemetry's semantic conventions.
 
 ## Testing
 
-When testing your application, you might want to verify that tracing is working as expected. Here are some tips:
+For testing your application with tracing:
 
-- **Use In-Memory Exporters**: Configure OpenTelemetry to use an in-memory exporter to collect spans during tests.
-- **Assert on Spans**: After executing test requests, assert that the correct spans were created with the expected attributes.
-- **Mocking**: If necessary, mock the `Tracer` or other OpenTelemetry components to control the behavior in tests.
-
-Example of setting up an in-memory exporter:
-
-```
+```scala
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
-import io.opentelemetry.api.trace.Tracer
 
 val spanExporter = InMemorySpanExporter.create()
 val tracerProvider = SdkTracerProvider.builder()
   .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
   .build()
-val tracer: Tracer = tracerProvider.get("test-tracer")
-
-// Use the tracer in your application setup
+val tracer = tracerProvider.get("test-tracer")
 
 // After running your test
 val spans = spanExporter.getFinishedSpanItems()
 // Perform assertions on spans
 ```
 
-## Limitations
+## Virtual Threads Compatibility
 
-- **Virtual Threads Requirement**: To take full advantage of virtual threads, your application needs to run on Java 19 or later with Project Loom enabled.
-- **Compatibility**: Ensure that other libraries used in your application are compatible with virtual threads to avoid unexpected behavior.
-- **Context Propagation**: While the module handles context propagation across virtual threads, manual intervention might be required in complex threading scenarios.
+This module is optimized for use with Project Loom's virtual threads:
+- Uses `ScopedValue` instead of `ThreadLocal` for context storage
+- Ensures tracing context is maintained across thread boundaries
+- Efficiently handles a large number of concurrent requests
+- Proper context propagation across virtual threads
 
-## Performance Considerations
+## Performance and Optimization
 
-- **Low Overhead**: Designed to have minimal impact on synchronous operations.
-- **Efficient Context Propagation**: Optimized for passing context without performance penalties.
-- **Non-Blocking**: Avoids blocking operations in the request processing path.
-- **Thread-Safety**: Safe to use in highly concurrent environments.
+- Minimal overhead for synchronous operations
+- Efficient context propagation
+- Non-blocking operations in the request processing path
+- Thread-safe for highly concurrent environments
+- Optimized for virtual threads via Netty Sync
+- Configurable socket backlog and other Netty parameters
+- Graceful shutdown support for clean request handling
 
 ## Debugging
 
-Spans include standard HTTP attributes for easier debugging:
-
+Spans include standard HTTP attributes:
 - `http.method`
 - `http.url`
 - `http.status_code`
-- **Custom Headers**: If configured, additional headers are included.
-- **Error Information**: Details about errors and exceptions.
+- Custom headers (if configured)
+- Error information
 
-To view and analyze spans:
+To view spans:
+1. Use an OpenTelemetry-compatible tracing backend (Jaeger, Zipkin)
+2. Configure the OpenTelemetry SDK to export spans
+3. Use the backend's UI to visualize and inspect spans
 
-1. Use an OpenTelemetry-compatible tracing backend (e.g., Jaeger, Zipkin).
-2. Configure the OpenTelemetry SDK to export spans to your tracing backend.
-3. Use the backend's UI to visualize and inspect the spans and their attributes.
+### Logging
+By default, logging of handled requests and exceptions is enabled using SLF4J. You can customize it:
+
+```scala
+val serverOptions = NettySyncServerOptions.customiseInterceptors
+  .serverLog(None) // Disable logging
+  .options
+```
+
+## Best Practices
+
+1. **Span Naming**
+   - Use descriptive and consistent names
+   - Include HTTP method and path
+   - Avoid overly generic names
+   - Consider using custom naming for specific use cases
+
+2. **Attributes**
+   - Limit traced headers to relevant ones
+   - Add meaningful business attributes
+   - Follow OpenTelemetry semantic conventions
+   - Consider performance impact of attribute collection
+
+3. **Error Handling**
+   - Configure error predicate appropriately
+   - Add relevant details to error spans
+   - Use span events for exceptions
+   - Consider error handling in WebSocket scenarios
+
+4. **Performance**
+   - Monitor tracing impact
+   - Use sampling if needed
+   - Optimize configuration for your use case
+   - Consider using domain sockets for local communication
+   - Configure appropriate shutdown timeouts
+   - Tune Netty parameters for your load
+
+## Integration with Other Tapir Components
+
+The OpenTelemetry Sync module works seamlessly with:
+- Security interceptors
+- Documentation generators
+- Other monitoring solutions
+- Server endpoints and routing
+- WebSocket endpoints
+- Domain socket endpoints
+
+## Limitations
+
+- Requires Java 19+ for virtual threads
+- Ensure other libraries are virtual thread compatible
+- Context propagation may need manual handling in complex threading scenarios
+- Sampling might be required for high-throughput applications
+- WebSocket support requires understanding of Ox concurrency model
+- Domain socket support limited to Unix-like systems
