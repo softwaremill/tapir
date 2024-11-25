@@ -3,12 +3,13 @@ package sttp.tapir.client.tests
 import cats.effect._
 import cats.effect.std.Queue
 import cats.effect.unsafe.implicits.global
+import com.comcast.ip4s
 import cats.implicits._
 import fs2.{Pipe, Stream}
 import org.http4s.dsl.io._
 import org.http4s.headers.{Accept, `Content-Type`}
 import org.http4s.server.Router
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware._
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.websocket.WebSocketFrame
@@ -33,7 +34,7 @@ class HttpServer(port: Port) {
 
   private val logger = LoggerFactory.getLogger(getClass)
 
-  private var stopServer: IO[Unit] = _
+  private val stopServer: Deferred[IO, Unit] = Deferred.unsafe[IO, Unit]
 
   //
 
@@ -213,22 +214,19 @@ class HttpServer(port: Port) {
   //
 
   def start(): Unit = {
-    val (_, _stopServer) = BlazeServerBuilder[IO]
-      .withExecutionContext(ExecutionContext.global)
-      .bindHttp(port)
+    EmberServerBuilder
+      .default[IO]
+      .withPort(ip4s.Port.fromInt(port).get)
       .withHttpWebSocketApp(app)
-      .resource
-      .map(_.address.getPort)
-      .allocated
+      .build
+      .use(_ => stopServer.get)
       .unsafeRunSync()
-
-    stopServer = _stopServer
 
     logger.info(s"Server on port $port started")
   }
 
   def close(): Unit = {
-    stopServer.unsafeRunSync()
+    stopServer.complete(()).unsafeRunSync()
     logger.info(s"Server on port $port stopped")
   }
 }
