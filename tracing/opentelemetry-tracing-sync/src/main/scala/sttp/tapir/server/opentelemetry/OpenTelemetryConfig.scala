@@ -1,24 +1,22 @@
 package sttp.tapir.server.opentelemetry
-
 case class OpenTelemetryConfig(
-    // Headers à inclure comme attributs de span
+    // Headers to include as span attributes
     includeHeaders: Set[String] = Set.empty,
     
-    // Activer/désactiver la propagation du baggage
+    // Enable/disable baggage propagation
     includeBaggage: Boolean = true,
     
-    // Prédicat pour déterminer si un code HTTP doit être considéré comme une erreur
+    // Predicate to determine if an HTTP code should be considered as an error
     errorPredicate: Int => Boolean = _ >= 500,
     
-    // Stratégie de nommage des spans
+    // Span naming strategy
     spanNaming: SpanNaming = SpanNaming.Default,
     
-    // Options supplémentaires spécifiques à Loom
+    // Additional Loom-specific options
     virtualThreads: VirtualThreadConfig = VirtualThreadConfig()
 )
-
 case class VirtualThreadConfig(
-    // Configuration spécifique pour l'utilisation des threads virtuels
+    // Specific configuration for using virtual threads
     useVirtualThreads: Boolean = true,
     virtualThreadNamePrefix: String = "tapir-ot-"
 )
