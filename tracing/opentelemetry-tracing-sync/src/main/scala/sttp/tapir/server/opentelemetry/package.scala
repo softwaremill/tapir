@@ -1,5 +1,7 @@
 package sttp.tapir.server
 
+import sttp.shared.Identity
+
 package object opentelemetry {
-  type Identity[A] = A  // Type alias pour le style synchrone
+  // Identity type alias removed as it's already available in sttp.shared
 }
