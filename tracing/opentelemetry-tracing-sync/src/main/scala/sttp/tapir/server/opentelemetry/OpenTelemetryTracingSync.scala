@@ -7,7 +7,16 @@ import io.opentelemetry.context.propagation.{TextMapGetter, TextMapPropagator}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestResult, SecureEndpointInterceptor}
 import scala.util.control.NonFatal
+import scala.jdk.CollectionConverters._
 
+/**
+ * OpenTelemetry tracing implementation for synchronous/direct-style endpoints.
+ * Designed to be compatible with virtual threads (Project Loom).
+ *
+ * @param tracer OpenTelemetry tracer instance
+ * @param propagator Context propagator (defaults to W3C)
+ * @param config Tracing configuration
+ */
 class OpenTelemetryTracingSync(
     tracer: Tracer,
     propagator: TextMapPropagator,
@@ -24,6 +33,13 @@ class OpenTelemetryTracingSync(
       carrier.header(key).orNull
   }
 
+  private def executeInVirtualThread[A](f: => A): A = {
+    Thread.ofVirtual()
+      .name(s"tapir-ot-${Thread.currentThread().getName}")
+      .start(() => f)
+      .join()
+  }
+
   def apply[A](
       endpoint: Endpoint[_, _, _, _, _],
       securityLogic: EndpointInterceptor[Identity],
@@ -31,37 +47,39 @@ class OpenTelemetryTracingSync(
   ): EndpointInterceptor[Identity] =
     new EndpointInterceptor[Identity] {
       def apply(request: ServerRequest): RequestResult[Identity] = {
-        val parentContext = propagator.extract(Context.current(), request, textMapGetter)
+        executeInVirtualThread {
+          val parentContext = propagator.extract(Context.current(), request, textMapGetter)
         
-        val spanBuilder = tracer
-          .spanBuilder(getSpanName(endpoint))
-          .setParent(parentContext)
-          .setSpanKind(SpanKind.SERVER)
+          val spanBuilder = tracer
+            .spanBuilder(getSpanName(endpoint))
+            .setParent(parentContext)
+            .setSpanKind(SpanKind.SERVER)
 
-        addRequestAttributes(spanBuilder, request)
+          addRequestAttributes(spanBuilder, request)
         
-        val span = spanBuilder.startSpan()
-        try {
-          val scopedContext = parentContext.`with`(SERVER_SPAN_KEY, span)
-          Context.makeContext(scopedContext)
+          val span = spanBuilder.startSpan()
+          try {
+            val scopedContext = parentContext.`with`(SERVER_SPAN_KEY, span)
+            Context.makeContext(scopedContext)
           
-          if (config.includeBaggage) {
-            addBaggageToSpan(span, Baggage.current())
-          }
+            if (config.includeBaggage) {
+              addBaggageToSpan(span, Baggage.current())
+            }
 
-          val result = try {
-            delegate(request)
-          } catch {
-            case NonFatal(e) =>
-              span.recordException(e)
-              span.setStatus(StatusCode.ERROR)
-              throw e
-          }
+            val result = try {
+              delegate(request)
+            } catch {
+              case NonFatal(e) =>
+                span.recordException(e)
+                span.setStatus(StatusCode.ERROR)
+                throw e
+            }
 
-          handleResult(result, span)
-          result
-        } finally {
-          span.end()
+            handleResult(result, span)
+            result
+          } finally {
+            span.end()
+          }
         }
       }
     }
