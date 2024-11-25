@@ -1,40 +1,34 @@
-# Server-Side OpenTelemetry Tracing for Synchronous Applications
+# OpenTelemetry Tracing for Synchronous Applications in Tapir
 
-This module provides integration between Tapir and OpenTelemetry for tracing synchronous HTTP requests, optimized for applications using Java's Project Loom virtual threads.
+This module provides server-side integration between Tapir and OpenTelemetry for tracing synchronous HTTP requests, optimized for applications using Java's Project Loom virtual threads.
 
-## Installation
+## Dependencies
 
-Add the following dependency to your `build.sbt` file:
+To use this module, add the following dependency to your `build.sbt` file:
 
 ```
-scala
-
-
-Copier le code
 libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing-sync" % "@VERSION@"
 ```
 
-Replace `@VERSION@` with the latest version of the library.
+Replace `@VERSION@` with the latest version of Tapir.
 
 ## Overview
 
-The OpenTelemetry Sync Tracing module offers:
+This module integrates OpenTelemetry tracing with Tapir, providing:
 
-- **Synchronous Request Processing**: Optimized for services that process requests synchronously.
-- **Virtual Threads Compatibility**: Designed to work seamlessly with Project Loom's virtual threads.
-- **Context Propagation**: Ensures that the tracing context is properly propagated throughout the application.
-- **Baggage Handling**: Supports OpenTelemetry baggage for passing data across service boundaries.
-- **Custom Span Naming**: Allows customization of span names for better observability.
-- **Header Attributes Mapping**: Enables inclusion of specific HTTP headers as span attributes.
+- Synchronous request processing
+- Virtual threads compatibility (Project Loom)
+- Context propagation
+- Baggage handling
+- Custom span naming
+- Header attributes mapping
 
 ## Usage
 
 ### Basic Configuration
 
-To start using the module, obtain an instance of `io.opentelemetry.api.trace.Tracer` and create an `OpenTelemetryTracingSync` instance.
-
 ```
-scalaCopier le codeimport sttp.tapir.server.opentelemetry._
+import sttp.tapir.server.opentelemetry.*
 import io.opentelemetry.api.trace.Tracer
 
 // Obtain your OpenTelemetry tracer instance
@@ -43,20 +37,19 @@ val tracer: Tracer = // ... your OpenTelemetry tracer configuration
 // Create the OpenTelemetry tracing instance
 val tracing = new OpenTelemetryTracingSync(tracer)
 
-// Integrate with your server interpreter
+// Integrate with your server options
 val serverOptions = NettyFutureServerOptions.customiseInterceptors
   .tracingInterceptor(tracing.interceptor())
   .options
 
+// Create the server interpreter
 val server = NettyFutureServerInterpreter(serverOptions)
 ```
 
 ### Custom Configuration
 
-You can customize the tracing behavior by creating an `OpenTelemetryConfig` instance with your desired settings.
-
 ```
-scalaCopier le codeval config = OpenTelemetryConfig(
+val config = OpenTelemetryConfig(
   includeHeaders = Set("x-request-id", "user-agent"), // Headers to include as span attributes
   includeBaggage = true,                              // Enable baggage propagation
   errorPredicate = statusCode => statusCode >= 500,   // Define which HTTP status codes are considered errors
@@ -70,33 +63,25 @@ val customTracing = new OpenTelemetryTracingSync(tracer, config)
 
 You can choose different strategies for naming your spans:
 
-- **Default**: Combines the HTTP method and path (e.g., `"GET /users"`).
+**Default**: Combines the HTTP method and path (e.g., `"GET /users"`).
 
-  ```
-  scala
-  
-  
-  Copier le code
-  spanNaming = SpanNaming.Default
-  ```
+```
+val spanNaming = SpanNaming.Default
+```
 
-- **Path Only**: Uses only the request path (e.g., `"/users"`).
+**Path Only**: Uses only the request path (e.g., `"/users"`).
 
-  ```
-  scala
-  
-  
-  Copier le code
-  spanNaming = SpanNaming.Path
-  ```
+```
+val spanNaming = SpanNaming.Path
+```
 
-- **Custom Naming**: Define your own naming strategy using a function.
+**Custom Naming**: Define your own naming strategy using a function.
 
-  ```
-  scalaCopier le codespanNaming = SpanNaming.Custom { endpoint =>
-    s"${endpoint.method.method} - ${endpoint.showShort}"
-  }
-  ```
+```
+val spanNaming = SpanNaming.Custom { endpoint =>
+  s"${endpoint.method.method} - ${endpoint.showShort}"
+}
+```
 
 ## Configuration Options
 
@@ -129,12 +114,10 @@ This module is optimized for use with Project Loom's virtual threads:
 
 ### Basic Server Setup
 
-Here's how you can set up a simple server with OpenTelemetry tracing:
-
 ```
-scalaCopier le codeimport sttp.tapir._
-import sttp.tapir.server.opentelemetry._
-import sttp.tapir.server.netty._
+import sttp.tapir.*
+import sttp.tapir.server.opentelemetry.*
+import sttp.tapir.server.netty.*
 import io.opentelemetry.api.trace.Tracer
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -159,11 +142,9 @@ def setupServer(tracer: Tracer) = {
 
 ### Custom Span Attributes
 
-You can include specific HTTP headers as span attributes and define custom span names:
-
 ```
-scalaCopier le codeval config = OpenTelemetryConfig(
-  includeHeaders = Set("x-request-id"), // Include the "x-request-id" header
+val config = OpenTelemetryConfig(
+  includeHeaders = Set("x-request-id"),
   spanNaming = SpanNaming.Custom { endpoint =>
     s"${endpoint.method.method} - ${endpoint.showShort}"
   }
@@ -200,9 +181,10 @@ When testing your application, you might want to verify that tracing is working 
 Example of setting up an in-memory exporter:
 
 ```
-scalaCopier le codeimport io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
-import io.opentelemetry.sdk.trace.{SdkTracerProvider, TracerSdkManagement}
+import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
+import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
+import io.opentelemetry.api.trace.Tracer
 
 val spanExporter = InMemorySpanExporter.create()
 val tracerProvider = SdkTracerProvider.builder()
@@ -211,12 +193,9 @@ val tracerProvider = SdkTracerProvider.builder()
 val tracer: Tracer = tracerProvider.get("test-tracer")
 
 // Use the tracer in your application setup
-```
 
-After running your test, you can retrieve the collected spans:
-
-```
-scalaCopier le codeval spans = spanExporter.getFinishedSpanItems()
+// After running your test
+val spans = spanExporter.getFinishedSpanItems()
 // Perform assertions on spans
 ```
 
@@ -245,6 +224,6 @@ Spans include standard HTTP attributes for easier debugging:
 
 To view and analyze spans:
 
-- Use an OpenTelemetry-compatible tracing backend (e.g., Jaeger, Zipkin).
-- Configure the OpenTelemetry SDK to export spans to your tracing backend.
-- Use the backend's UI to visualize and inspect the spans and their attributes.
+1. Use an OpenTelemetry-compatible tracing backend (e.g., Jaeger, Zipkin).
+2. Configure the OpenTelemetry SDK to export spans to your tracing backend.
+3. Use the backend's UI to visualize and inspect the spans and their attributes.
