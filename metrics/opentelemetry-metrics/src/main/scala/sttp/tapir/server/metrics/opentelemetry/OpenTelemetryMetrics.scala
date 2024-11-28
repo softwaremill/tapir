@@ -49,17 +49,17 @@ object OpenTelemetryMetrics {
       "url.scheme" -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
       "path" -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) }
     ),
-  forResponse = List(
-    "http.response.status_code" -> {
-      case Right(r) => Some(r.code.code.toString) 
-      case Left(_) => Some("500") 
-    },
-    "error.type" -> {
-      case Left(ex) => Some(ex.getClass.getName) 
-      case Right(_) => None 
-    }
-  ).collect { case (k, Some(v)) => k -> v }
-
+    forResponse = List(
+      "http.response.status_code" -> {
+        case Right(r) => r.code.code.toString
+        // Default to 500 for exceptions
+        case Left(_) => "500"
+      },
+      "error.type" -> {
+        case Left(ex) => ex.getClass.getName // Exception class name for pre-response errors
+        case Right(_) => None // No error.type for successful responses
+      }
+    )
   )
 
   def apply[F[_]](meter: Meter): OpenTelemetryMetrics[F] = apply(meter, Nil)
