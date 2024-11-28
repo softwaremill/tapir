@@ -56,8 +56,8 @@ object OpenTelemetryMetrics {
         case Left(_) => "500"
       },
       "error.type" -> {
-        case Left(ex) => ex.getClass.getName // Exception class name for pre-response errors
-        case Right(_) => None // No error.type for successful responses
+        case Left(ex) => ex.getClass.getName // Exception class name for errors
+        case Right(_) => ""
       }
     )
   )
@@ -197,7 +197,11 @@ object OpenTelemetryMetrics {
     l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(ep, req)) }).build()
 
   private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Attributes = {
-    val builder = l.forResponse.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(res)) })
+    val builder = Attributes.builder()
+    l.forResponse.foreach { case (key, valueFn) =>
+      val value = valueFn(res)
+      if (value.nonEmpty) builder.put(key, value)
+    }
     phase.foreach(v => builder.put(l.forResponsePhase.name, v))
     builder.build()
   }
