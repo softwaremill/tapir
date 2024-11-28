@@ -109,8 +109,6 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
               "http",
               AttributeKey.stringKey("http.response.status_code"),
               "200",
-              AttributeKey.stringKey("error.type"),
-              ""
             ) && dp.getValue == 2 =>
           true
         case dp
@@ -123,8 +121,6 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
               "http",
               AttributeKey.stringKey("http.response.status_code"),
               "400",
-              AttributeKey.stringKey("error.type"),
-              ""
             ) && dp.getValue == 2 =>
           true
         case _ => false
@@ -172,8 +168,6 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
         "body",
         AttributeKey.stringKey("url.scheme"),
         "http",
-        AttributeKey.stringKey("error.type"),
-        ""
       )
     )
   }
@@ -230,9 +224,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       AttributeKey.stringKey("url.scheme"),
       "http",
       AttributeKey.stringKey("http.response.status_code"),
-      "500",
-      AttributeKey.stringKey("error.type"),
-      ""
+      "500"
     )
     point.getValue shouldBe 1
   }
