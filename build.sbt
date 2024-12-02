@@ -549,6 +549,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .jvmPlatform(scalaVersions = List(scala2_13), settings = commonJvmSettings)
   .dependsOn(
     core,
+    circeJson,
     pekkoHttpServer,
     http4sServer,
     nettyServer,
