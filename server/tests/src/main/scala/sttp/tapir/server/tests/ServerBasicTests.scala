@@ -416,6 +416,38 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       pureResult(s"fruit: $fruit".asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.contentLength shouldBe Some(13))
+    },
+    // #4194: large payloads where released too soon in the netty server interpreters, corrupting the json and resulting in parse errors
+    {
+      val largePayloadSize = 1024 * 1024 * 5
+      testServer(
+        endpoint.post.in("api" / "echo").in(stringBody).out(stringBody).maxRequestBodyLength(largePayloadSize + 100),
+        "multiple large requests parsing & serialising JSON"
+      )((s: String) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
+        val largePayload = Iterator.continually('A' to 'Z').flatten.take(largePayloadSize).mkString
+        (1 to 100).toList
+          .traverse { i =>
+            basicRequest
+              .post(uri"$baseUri/api/echo")
+              .body(largePayload)
+              .send(backend)
+              .map { response =>
+                if (response.code != StatusCode.Ok || response.body != Right(largePayload)) {
+                  val detail = response.body match {
+                    case Left(e)                                     => fail(s"error response: $e")
+                    case Right(b) if b.length != largePayload.length => s"body length: ${b.length}, expected: ${largePayload.length}"
+                    case Right(b) =>
+                      val original = largePayload.getBytes()
+                      val received = b.getBytes()
+                      val firstDifference = original.zip(received).indexWhere { case (a, b) => a != b }
+                      s"first difference on byte $firstDifference, expected: ${original(firstDifference)}, received: ${received(firstDifference)}"
+                  }
+                  fail(s"Failed on iteration $i, got response code: ${response.code}; $detail")
+                }
+              }
+          }
+          .map(_ => succeed)
+      }
     }
   )
 
@@ -463,9 +495,8 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(in_path_paths_out_header_body, "Encoded path should be decoded") { case (i, paths) =>
       pureResult(Right((i, paths.last)))
-    }{
-      (backend, baseUri) =>
-        basicRequest.get(uri"$baseUri/api/15/and/MIN%2FMAX").send(backend).map(_.body shouldBe Right("MIN/MAX"))
+    } { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/api/15/and/MIN%2FMAX").send(backend).map(_.body shouldBe Right("MIN/MAX"))
     },
     testServer(in_single_path, "single path should match single/ path")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) {
       (backend, baseUri) =>
