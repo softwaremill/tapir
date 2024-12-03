@@ -52,12 +52,14 @@ object Fs2StreamCompatible {
           .flatMap(s => s.sub.stream(Sync[F].delay(publisher.subscribe(s))))
           .flatMap(httpContent =>
             fs2.Stream.chunk {
+              // #4194: we need to copy the data here as we don't know when the data will be ultimately read, and hence
+              // when we'll be able to release the Netty buffer
               val buf = httpContent.content.nioBuffer()
-              val content = new Array[Byte](buf.remaining())
-              buf.get(content)
-              val chunk = Chunk.array(content)
-              httpContent.release() // https://netty.io/wiki/reference-counted-objects.html
-              chunk
+              try {
+                val content = new Array[Byte](buf.remaining())
+                buf.get(content)
+                Chunk.array(content)
+              } finally { val _ = httpContent.release() } // https://netty.io/wiki/reference-counted-objects.html
             }
           )
         maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
