@@ -9,6 +9,7 @@ case class OpenApiConfiguration(
     useHeadTagForObjectName: Boolean,
     jsonSerdeLib: String,
     streamingImplementation: String,
+    endpointCapabilites: String,
     validateNonDiscriminatedOneOfs: Boolean,
     maxSchemasPerFile: Int,
     additionalPackages: List[(String, File)]
@@ -27,6 +28,7 @@ trait OpenapiCodegenKeys {
   lazy val openapiMaxSchemasPerFile = settingKey[Int]("Maximum number of schemas to generate for a single file")
   lazy val openapiAdditionalPackages = settingKey[List[(String, File)]]("Addition package -> spec mappings to generate.")
   lazy val openapiStreamingImplementation = settingKey[String]("Implementation for streamTextBody. Supports: akka, fs2, pekko, zio.")
+  lazy val openapiEndpointCapabilites = settingKey[String]("Implementation for streamTextBody. Supports: akka, fs2, nothing, pekko, zio.")
   lazy val openapiOpenApiConfiguration =
     settingKey[OpenApiConfiguration]("Aggregation of other settings. Manually set value will be disregarded.")
 

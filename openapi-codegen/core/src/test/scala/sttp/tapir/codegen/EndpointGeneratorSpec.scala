@@ -68,7 +68,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           useHeadTagForObjectNames = false,
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
-          streamingImplementation = StreamingImplementation.FS2
+          streamingImplementation = StreamingImplementation.FS2,
+          endpointCapabilites = EndpointCapabilites.Nothing
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -153,7 +154,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           useHeadTagForObjectNames = false,
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
-          streamingImplementation = StreamingImplementation.FS2
+          streamingImplementation = StreamingImplementation.FS2,
+          endpointCapabilites = EndpointCapabilites.Nothing
         )
         .endpointDecls(None) shouldCompile ()
   }
@@ -205,7 +207,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           useHeadTagForObjectNames = false,
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
-          streamingImplementation = StreamingImplementation.FS2
+          streamingImplementation = StreamingImplementation.FS2,
+          endpointCapabilites = EndpointCapabilites.Nothing
         )
         .endpointDecls(None)
     generatedCode should include(
@@ -272,7 +275,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       jsonSerdeLib = "circe",
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
-      streamingImplementation = "fs2"
+      streamingImplementation = "fs2",
+      endpointCapabilites = "nothing"
     )("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
@@ -294,7 +298,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       jsonSerdeLib = "circe",
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
-      streamingImplementation = "fs2"
+      streamingImplementation = "fs2",
+      endpointCapabilites = "nothing"
     )("TapirGeneratedEndpoints")
     generatedCode shouldCompile ()
     val expectedAttrDecls = Seq(

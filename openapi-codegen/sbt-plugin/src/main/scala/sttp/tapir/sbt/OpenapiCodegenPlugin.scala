@@ -30,6 +30,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiUseHeadTagForObjectName.value,
       openapiJsonSerdeLib.value,
       openapiStreamingImplementation.value,
+      openapiEndpointCapabilites.value,
       openapiValidateNonDiscriminatedOneOfs.value,
       openapiMaxSchemasPerFile.value,
       openapiAdditionalPackages.value
@@ -44,6 +45,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiMaxSchemasPerFile := 400,
     openapiAdditionalPackages := Nil,
     openapiStreamingImplementation := "fs2",
+    openapiEndpointCapabilites := "nothing",
     standardParamSetting
   )
 
@@ -71,6 +73,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
               c.useHeadTagForObjectName,
               c.jsonSerdeLib,
               c.streamingImplementation,
+              c.endpointCapabilites,
               c.validateNonDiscriminatedOneOfs,
               c.maxSchemasPerFile,
               srcDir,

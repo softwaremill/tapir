@@ -25,6 +25,10 @@ object StreamingImplementation extends Enumeration {
   val Akka, FS2, Pekko, Zio = Value
   type StreamingImplementation = Value
 }
+object EndpointCapabilites extends Enumeration {
+  val Akka, FS2, Nothing, Pekko, Zio = Value
+  type EndpointCapabilites = Value
+}
 
 object BasicGenerator {
 
@@ -39,6 +43,7 @@ object BasicGenerator {
       useHeadTagForObjectNames: Boolean,
       jsonSerdeLib: String,
       streamingImplementation: String,
+      endpointCapabilites: String,
       validateNonDiscriminatedOneOfs: Boolean,
       maxSchemasPerFile: Int
   ): Map[String, String] = {
@@ -63,9 +68,21 @@ object BasicGenerator {
         )
         StreamingImplementation.FS2
     }
+    val normalisedEndpointCapabilites = endpointCapabilites.toLowerCase match {
+      case "akka"    => EndpointCapabilites.Akka
+      case "fs2"     => EndpointCapabilites.FS2
+      case "nothing" => EndpointCapabilites.Nothing
+      case "pekko"   => EndpointCapabilites.Pekko
+      case "zio"     => EndpointCapabilites.Zio
+      case _ =>
+        System.err.println(
+          s"!!! Unrecognised value $endpointCapabilites for endpoint capabilities -- should be one of akka, fs2, nothing, pekko or zio. Defaulting to nothing !!!"
+        )
+        EndpointCapabilites.Nothing
+    }
 
     val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams) =
-      endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames, targetScala3, normalisedJsonLib, normalisedStreamingImplementation)
+      endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames, targetScala3, normalisedJsonLib, normalisedStreamingImplementation, normalisedEndpointCapabilites)
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas) =
       classGenerator
         .classDefs(
