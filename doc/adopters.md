@@ -46,3 +46,8 @@ Thank you!
 <a href="https://www.fugo.ai/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/fugo.png" alt="fugo" width="100"/></a>
 <a href="https://budgetbakers.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/budgetbakers.svg" alt="budgetbakers" width="100"/></a>
 </div>
+<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+&nbsp;
+<a href="https://flo.health"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/flo.svg" alt="flo" width="100"/></a>
+&nbsp;
+</div>

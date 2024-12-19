@@ -56,7 +56,7 @@ object GenerateListOfExamples {
               }
               .mkString(" ")
 
-            s"""* [${example.description}]($LinkBase/$relativeLink) $tags"""
+            s"""* [${example.description}]($LinkBase$relativeLink) $tags"""
           }
           // combining all examples in category
           .mkString("\n")

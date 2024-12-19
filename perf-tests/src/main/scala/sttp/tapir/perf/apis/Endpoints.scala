@@ -5,7 +5,8 @@ import sttp.tapir._
 import sttp.tapir.perf.Common._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.EndpointExtensions._
-
+import io.circe.Json
+import sttp.tapir.json.circe._
 import java.io.File
 import scala.concurrent.Future
 
@@ -54,6 +55,17 @@ trait Endpoints {
           .serverLogicSuccess {
             body: File =>
               reply(s"Ok [$n], file saved to ${body.toPath}")
+          }
+      },
+      { (n: Int) =>
+        endpoint.post
+          .in("pathJson" + n.toString)
+          .in(jsonBody[Json])
+          .maxRequestBodyLength(LargeInputSize + 1024L)
+          .out(stringBody)
+          .serverLogicSuccess {
+            body: Json =>
+              reply(s"Ok [$n], file saved to ${body}")
           }
       }
     )

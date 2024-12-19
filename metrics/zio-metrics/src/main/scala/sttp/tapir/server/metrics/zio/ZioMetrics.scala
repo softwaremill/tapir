@@ -87,9 +87,12 @@ object ZioMetrics {
 
   /** Convert into zio metric labels */
   private def asZioLabel(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Set[MetricLabel] = {
-    l.forResponse.map(label => zio.metrics.MetricLabel(label._1, label._2(res))) ++
-      phase.map(v => MetricLabel(l.forResponsePhase.name, v))
-  }.toSet
+    val responseLabels = l.forResponse.map { case (key, valueFn) =>
+      MetricLabel(key, valueFn(res).getOrElse("unknown"))
+    }
+    val phaseLabel = phase.map(v => MetricLabel(l.forResponsePhase.name, v))
+    (responseLabels ++ phaseLabel).toSet
+  }
 
   /** Requests active metric collector. */
   def requestActive[F[_]](namespace: String, labels: MetricLabels): Metric[F, Gauge[Long]] = {

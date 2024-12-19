@@ -2,6 +2,8 @@ package sttp.tapir
 
 import sttp.tapir.macros.AttributeKeyMacros
 
+// TODO: use AttributeKey & AttributeMap from sttp-shared in Tapir2
+
 /** @param typeName
   *   The fully qualified name of `T`.
   * @tparam T
