@@ -3,7 +3,8 @@ lazy val root = (project in file("."))
   .settings(
     scalaVersion := "2.13.15",
     version := "0.1",
-    openapiStreamingImplementation := "pekko"
+    openapiStreamingImplementation := "pekko",
+    openapiGenerateEndpointTypes := true
   )
 
 libraryDependencies ++= Seq(
