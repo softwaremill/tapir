@@ -2,10 +2,11 @@ package sttp.tapir.perf.http4s
 
 import cats.effect._
 import cats.syntax.all._
+import com.comcast.ip4s
 import fs2._
 import fs2.io.file.{Files, Path => Fs2Path}
 import org.http4s._
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.dsl._
 import org.http4s.implicits._
 import org.http4s.server.Router
@@ -105,21 +106,17 @@ object Tapir extends Endpoints {
 
 object server {
   val maxConnections = 65536
-  val connectorPoolSize: Int = Math.max(2, Runtime.getRuntime.availableProcessors() / 4)
   def runServer(
       router: WebSocketBuilder2[IO] => HttpRoutes[IO]
-  ): IO[ServerRunner.KillSwitch] =
-    BlazeServerBuilder[IO]
-      .bindHttp(Port, "localhost")
-      .withHttpWebSocketApp(wsb => router(wsb).orNotFound)
-      .withMaxConnections(maxConnections)
-      .withConnectorPoolSize(connectorPoolSize)
-      .resource
-      .allocated
-      .map(_._2)
-      .map(_.flatTap { _ =>
-        IO.println("Http4s server closed.")
-      })
+  ): IO[ServerRunner.KillSwitch] = EmberServerBuilder
+    .default[IO]
+    .withPort(ip4s.Port.fromInt(Port).get)
+    .withHttpWebSocketApp(wsb => router(wsb).orNotFound)
+    .withMaxConnections(maxConnections)
+    .build
+    .useForever
+    .start
+    .map(_.cancel *> IO.println("Http4s server closed."))
 }
 
 object TapirServer extends ServerRunner { override def start = server.runServer(Tapir.router(1)) }
