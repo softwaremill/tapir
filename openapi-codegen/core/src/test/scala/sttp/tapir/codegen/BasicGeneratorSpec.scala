@@ -18,7 +18,8 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       jsonSerdeLib = jsonSerdeLib,
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
-      streamingImplementation = "fs2"
+      streamingImplementation = "fs2",
+      generateEndpointTypes = false
     )
   }
   def gen(

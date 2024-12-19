@@ -25,6 +25,10 @@ object StreamingImplementation extends Enumeration {
   val Akka, FS2, Pekko, Zio = Value
   type StreamingImplementation = Value
 }
+object EndpointCapabilites extends Enumeration {
+  val Akka, FS2, Nothing, Pekko, Zio = Value
+  type EndpointCapabilites = Value
+}
 
 object BasicGenerator {
 
@@ -40,7 +44,8 @@ object BasicGenerator {
       jsonSerdeLib: String,
       streamingImplementation: String,
       validateNonDiscriminatedOneOfs: Boolean,
-      maxSchemasPerFile: Int
+      maxSchemasPerFile: Int,
+      generateEndpointTypes: Boolean
   ): Map[String, String] = {
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
@@ -65,7 +70,14 @@ object BasicGenerator {
     }
 
     val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams) =
-      endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames, targetScala3, normalisedJsonLib, normalisedStreamingImplementation)
+      endpointGenerator.endpointDefs(
+        doc,
+        useHeadTagForObjectNames,
+        targetScala3,
+        normalisedJsonLib,
+        normalisedStreamingImplementation,
+        generateEndpointTypes
+      )
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas) =
       classGenerator
         .classDefs(

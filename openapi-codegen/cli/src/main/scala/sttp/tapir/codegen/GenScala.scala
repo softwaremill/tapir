@@ -65,6 +65,9 @@ object GenScala {
   private val streamingImplementationOpt: Opts[Option[String]] =
     Opts.option[String]("streamingImplementation", "Capability to use for binary streams", "s").orNone
 
+  private val generateEndpointTypesOpt: Opts[Boolean] =
+    Opts.flag("generateEndpointTypes", "Whether to emit explicit type aliases for endpoint declarations", "e").orFalse
+
   private val destDirOpt: Opts[File] =
     Opts
       .option[String]("destdir", "Destination directory", "d")
@@ -88,7 +91,8 @@ object GenScala {
       jsonLibOpt,
       validateNonDiscriminatedOneOfsOpt,
       maxSchemasPerFileOpt,
-      streamingImplementationOpt
+      streamingImplementationOpt,
+      generateEndpointTypesOpt
     )
       .mapN {
         case (
@@ -101,7 +105,8 @@ object GenScala {
               jsonLib,
               validateNonDiscriminatedOneOfs,
               maxSchemasPerFile,
-              streamingImplementation
+              streamingImplementation,
+              generateEndpointTypes
             ) =>
           val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
@@ -116,7 +121,8 @@ object GenScala {
                 jsonLib.getOrElse("circe"),
                 streamingImplementation.getOrElse("fs2"),
                 validateNonDiscriminatedOneOfs,
-                maxSchemasPerFile.getOrElse(400)
+                maxSchemasPerFile.getOrElse(400),
+                generateEndpointTypes
               )
             )
             destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }

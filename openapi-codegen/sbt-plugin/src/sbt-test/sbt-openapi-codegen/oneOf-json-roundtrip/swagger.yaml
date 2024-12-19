@@ -127,6 +127,24 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ObjectWithInlineEnum'
+  '/oneof/error/test':
+    get:
+      responses:
+        "204":
+          description: "No response"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        default:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+
 
 components:
   schemas:
@@ -248,3 +266,25 @@ components:
             - foo2
             - foo3
             - foo4
+    Error:
+      title: Error
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/NotFoundError'
+        - $ref: '#/components/schemas/SimpleError'
+    NotFoundError:
+      title: NotFoundError
+      required:
+        - reason
+      type: object
+      properties:
+        reason:
+          type: string
+    SimpleError:
+      title: SimpleError
+      required:
+        - message
+      type: object
+      properties:
+        message:
+          type: string
