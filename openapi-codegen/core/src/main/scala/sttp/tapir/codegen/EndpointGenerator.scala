@@ -146,7 +146,7 @@ class EndpointGenerator {
         val (securityDecl, securityTypes) = security(securitySchemes, m.security)
         val (inParams, maybeLocalEnums, inTypes) =
           ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation)
-        val (outDecl, outTypes, errTypes) = outs(m.responses, streamingImplementation, doc)
+        val (outDecl, outTypes, errTypes) = outs(m.responses, streamingImplementation, doc, targetScala3)
         val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
         val definition =
           s"""|endpoint
@@ -357,7 +357,12 @@ class EndpointGenerator {
   // treats redirects as ok
   private val okStatus = """([23]\d\d)""".r
   private val errorStatus = """([45]\d\d)""".r
-  private def outs(responses: Seq[OpenapiResponse], streamingImplementation: StreamingImplementation, doc: OpenapiDocument)(implicit
+  private def outs(
+      responses: Seq[OpenapiResponse],
+      streamingImplementation: StreamingImplementation,
+      doc: OpenapiDocument,
+      targetScala3: Boolean
+  )(implicit
       location: Location
   ) = {
     // .errorOut(stringBody)
@@ -437,8 +442,9 @@ class EndpointGenerator {
           if (allElemTypes.size == 1) allElemTypes.head
           else
             allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
-              case s if s.isEmpty => "Any"
-              case s              => s.mkString(" with ")
+              case s if s.isEmpty & targetScala3 => types.mkString(" | ")
+              case s if s.isEmpty                => "Any"
+              case s                             => s.mkString(" with ")
             }
         Some(s"oneOf[$commmonType](${oneOfs.mkString(", ")})") -> Some(commmonType)
     }
