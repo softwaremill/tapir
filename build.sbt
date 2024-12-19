@@ -527,7 +527,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.18.1",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.18.2",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.179",
@@ -549,6 +549,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .jvmPlatform(scalaVersions = List(scala2_13), settings = commonJvmSettings)
   .dependsOn(
     core,
+    circeJson,
     pekkoHttpServer,
     http4sServer,
     nettyServer,
@@ -1018,8 +1019,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.3.4",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.4",
+      "io.prometheus" % "prometheus-metrics-core" % "1.3.5",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.5",
       scalaTest.value % Test
     )
   )

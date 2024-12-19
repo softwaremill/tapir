@@ -9,6 +9,7 @@ import sttp.tapir.perf.Common._
 
 import scala.concurrent.duration._
 import scala.util.Random
+import scala.io.Source
 
 object CommonSimulations {
   private val baseUrl = "127.0.0.1:8080"
@@ -25,6 +26,8 @@ object CommonSimulations {
 
   def randomAlphanumByteArray(size: Int): Array[Byte] =
     Random.alphanumeric.take(size).map(_.toByte).toArray
+
+  def randomJson: Array[Byte] = Source.fromResource("64KB.json").getLines().mkString("\n").getBytes()
 
   lazy val constRandomLongBytes = randomByteArray(LargeInputSize)
   lazy val constRandomLongAlphanumBytes = randomAlphanumByteArray(LargeInputSize)
@@ -130,6 +133,23 @@ object CommonSimulations {
       .protocols(httpProtocol)
   }
 
+  def scenario_post_long_json(routeNumber: Int, histogram: Histogram, warmup: Boolean = false): PopulationBuilder = {
+    val execHttpPost =
+      exec(
+        http(s"${namePrefix(warmup)}HTTP POST /pathJson$routeNumber")
+          .post(s"/pathJson$routeNumber")
+          .body(ByteArrayBody(randomJson))
+          .header("Content-Type", "application/json")
+          .check(sessionSaveResponseTime)
+      )
+        .exec(handleLatencyHistogram(histogram, warmup))
+
+    scenario(s"${namePrefix(warmup)} Repeatedly invoke POST with json body")
+      .during(duration(warmup))(execHttpPost)
+      .inject(atOnceUsers(userCount))
+      .protocols(httpProtocol)
+  }
+
 }
 
 import CommonSimulations._
@@ -181,6 +201,12 @@ class PostLongStringSimulation extends PerfTestSuiteRunnerSimulation {
   val warmup = scenario_post_long_string(0, histogram, warmup = true)
   val measurements = scenario_post_long_string(0, histogram)
   setUp(warmup.andThen(measurements)): Unit
+}
+
+class PostLongJsonSimulation extends PerfTestSuiteRunnerSimulation {
+  val warmup = scenario_post_long_json(0, histogram, warmup = true)
+  val small = scenario_post_long_json(0, histogram)
+  setUp(warmup.andThen(small)): Unit
 }
 
 /** Based on https://github.com/kamilkloch/websocket-benchmark/ Can't be executed using PerfTestSuiteRunner, see perfTests/README.md
