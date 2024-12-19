@@ -30,7 +30,7 @@ class CreateDerivedEnumerationCodec[L, T](validator: Validator.Enumeration[T], s
       .mapDecode(s =>
         decode(s) match {
           case Some(value) => DecodeResult.Value(value)
-          case None        => DecodeResult.InvalidValue(List(ValidationError(validator, s)))
+          case None        => DecodeResult.InvalidValue(List(ValidationError(v, s)))
         }
       )(encode)
       .schema(schemaAnnotations.enrich(s))

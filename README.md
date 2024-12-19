@@ -70,6 +70,7 @@ Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from 
 | <a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a> | <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a> | <a href="https://www.hunters.security/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hunters.png" alt="hunters" width="160"/></a> | 
 | <a href="https://www.moia.io/en"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moia.png" alt="moia" width="160"/></a> | <a href="https://www.pitsdatarecovery.net"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/pits.svg" alt="pits" width="100"/></a> | <a href="https://www.hootsuite.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hootsuite.png" alt="hootsuite" width="160"/></a> |
 | <a href="https://www.ematiq.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ematiq.png" alt="ematiq" width="100"/></a> | <a href="https://www.fugo.ai/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/fugo.png" alt="fugo" width="100"/></a> | <a href="https://budgetbakers.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/budgetbakers.svg" alt="budgetbakers" width="100"/></a> |
+| | <a href="https://flo.health"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/flo.svg" alt="flo" width="100"/></a> | |
 
 ## Teaser
 
@@ -138,7 +139,7 @@ val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] 
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.11.9"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.11.10"
 ```
 
 Then, import:
