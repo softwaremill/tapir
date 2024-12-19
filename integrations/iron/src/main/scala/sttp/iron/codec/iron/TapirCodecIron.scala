@@ -209,7 +209,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
 
 }
 
-private[iron] trait ValidatorForPredicate[Value, Predicate] {
+trait ValidatorForPredicate[Value, Predicate] {
   def validator: Validator[Value]
   def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]]
   lazy val containsMinSizePositive: Boolean = validator.asPrimitiveValidators.exists {
@@ -218,12 +218,12 @@ private[iron] trait ValidatorForPredicate[Value, Predicate] {
   }
 }
 
-private[iron] trait PrimitiveValidatorForPredicate[Value, Predicate] extends ValidatorForPredicate[Value, Predicate] {
+trait PrimitiveValidatorForPredicate[Value, Predicate] extends ValidatorForPredicate[Value, Predicate] {
   def validator: Validator.Primitive[Value]
   def makeErrors(value: Value, errorMessage: String): List[ValidationError[_]]
 }
 
-private[iron] object ValidatorForPredicate {
+object ValidatorForPredicate {
   def fromPrimitiveValidator[Value, Predicate](
       primitiveValidator: Validator.Primitive[Value]
   ): PrimitiveValidatorForPredicate[Value, Predicate] =
@@ -235,7 +235,7 @@ private[iron] object ValidatorForPredicate {
 }
 
 // #3938: the two-level low-priority validators are needed because of implicit resolution changes in Scala 3.6
-private[iron] trait LowPriorityValidatorForPredicate extends LowPriorityValidatorForPredicate2 {
+trait LowPriorityValidatorForPredicate extends LowPriorityValidatorForPredicate2 {
 
   inline given validatorForDescribedAnd[N, P](using
       id: IsDescription[P],

@@ -47,7 +47,7 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onDecodeSuccess(ctx)
         else {
-          val responseWithMetrics: F[ServerResponse[B]] = for {
+          def responseWithMetrics: F[ServerResponse[B]] = for {
             _ <- collectRequestMetrics(ctx.endpoint)
             response <- endpointHandler.onDecodeSuccess(ctx)
             _ <- collectResponseHeadersMetrics(ctx.endpoint, response)
@@ -64,7 +64,7 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onSecurityFailure(ctx)
         else {
-          val responseWithMetrics: F[ServerResponse[B]] = for {
+          def responseWithMetrics: F[ServerResponse[B]] = for {
             _ <- collectRequestMetrics(ctx.endpoint)
             response <- endpointHandler.onSecurityFailure(ctx)
             _ <- collectResponseHeadersMetrics(ctx.endpoint, response)
@@ -83,7 +83,7 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] = {
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onDecodeFailure(ctx)
         else {
-          val responseWithMetrics: F[Option[ServerResponse[B]]] = for {
+          def responseWithMetrics: F[Option[ServerResponse[B]]] = for {
             response <- endpointHandler.onDecodeFailure(ctx)
             withMetrics <- response match {
               case Some(response) =>
@@ -129,7 +129,7 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
     }
   }
 
-  private def handleResponseExceptions[T](r: F[T], e: AnyEndpoint)(implicit monad: MonadError[F]): F[T] =
+  private def handleResponseExceptions[T](r: => F[T], e: AnyEndpoint)(implicit monad: MonadError[F]): F[T] =
     r.handleError { case ex: Exception => collectExceptionMetrics(e, ex) }
 
   private def collectExceptionMetrics[T](e: AnyEndpoint, ex: Throwable)(implicit monad: MonadError[F]): F[T] =

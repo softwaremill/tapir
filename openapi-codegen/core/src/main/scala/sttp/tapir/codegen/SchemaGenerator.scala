@@ -123,7 +123,9 @@ object SchemaGenerator {
       res ++= nextLayers.toSeq.sortBy(_.head._1)
       acquired ++= nextLayers.flatMap(_.map(_._1)).toSet
       if (initialSet.nonEmpty && nextLayers.isEmpty)
-        throw new IllegalStateException("Cannot order layers until mutually-recursive references have been resolved.")
+        throw new IllegalStateException(
+          s"Cannot order layers until mutually-recursive references have been resolved. Unable to find all dependencies for ${initialSet.flatMap(_.map(_._1))}"
+        )
     }
 
     res.map(_.map { case (k, v, _) => k -> v })

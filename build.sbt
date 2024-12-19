@@ -85,6 +85,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       case _            => Seq("-Xmax-inlines", "64")
     }
   },
+  Test / scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s",
+  Test / scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s",
   evictionErrorLevel := Level.Info
 )
 
@@ -422,7 +424,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.7")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.8")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.10",
@@ -525,10 +527,10 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.17.2",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.18.2",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
-      "io.github.classgraph" % "classgraph" % "4.8.176",
+      "io.github.classgraph" % "classgraph" % "4.8.179",
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -547,6 +549,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
   .jvmPlatform(scalaVersions = List(scala2_13), settings = commonJvmSettings)
   .dependsOn(
     core,
+    circeJson,
     pekkoHttpServer,
     http4sServer,
     nettyServer,
@@ -996,7 +999,7 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
   .settings(
     name := "tapir-pekko-grpc-examples",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-discovery" % "1.1.1",
+      "org.apache.pekko" %% "pekko-discovery" % "1.1.2",
       slf4j
     ),
     fork := true
@@ -1016,8 +1019,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.3.1",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.1",
+      "io.prometheus" % "prometheus-metrics-core" % "1.3.5",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.5",
       scalaTest.value % Test
     )
   )
@@ -1244,7 +1247,7 @@ lazy val pekkoGrpcServer: ProjectMatrix = (projectMatrix in file("server/pekko-g
   .settings(
     name := "tapir-pekko-grpc-server",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-grpc-runtime" % "1.0.2"
+      "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1"
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
@@ -1986,8 +1989,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
-      "com.beachape" %% "enumeratum" % "1.7.4" % Test,
-      "com.beachape" %% "enumeratum-circe" % "1.7.4" % Test,
+      "com.beachape" %% "enumeratum" % "1.7.5" % Test,
+      "com.beachape" %% "enumeratum-circe" % "1.7.5" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.28.2" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.28.2" % Provided
     )

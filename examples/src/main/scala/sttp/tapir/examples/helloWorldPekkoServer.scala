@@ -1,8 +1,8 @@
 // {cat=Hello, World!; effects=Future; server=Pekko HTTP}: Exposing an endpoint using the Pekko HTTP server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.5
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.5
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.10
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.10
+//> using dep com.softwaremill.sttp.client3::core:3.9.8
 
 package sttp.tapir.examples
 

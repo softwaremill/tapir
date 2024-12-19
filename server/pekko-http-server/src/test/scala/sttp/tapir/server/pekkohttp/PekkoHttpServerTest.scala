@@ -14,14 +14,19 @@ import sttp.capabilities.pekko.PekkoStreams
 import sttp.client3._
 import sttp.client3.pekkohttp.PekkoHttpBackend
 import sttp.model.sse.ServerSentEvent
+import sttp.model.Header
+import sttp.model.MediaType
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
 import sttp.tapir.server.interceptor._
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.Future
 import scala.util.Random
 
@@ -96,6 +101,58 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
             .server(NonEmptyList.of(route))
             .use { port =>
               basicRequest.post(uri"http://localhost:$port").body("test123").send(backend).map(_.body shouldBe Right("replaced"))
+            }
+            .unsafeToFuture()
+        },
+        Test("execute metrics interceptors for empty body and json content type") {
+          val e = endpoint.post.in(stringBody)
+            .out(stringBody)
+            .out(header(Header.contentType(MediaType.ApplicationJson)))
+            .serverLogicSuccess[Future](body => Future.successful(body))
+
+          class DummyMetric {
+            val onRequestCnt = new AtomicInteger(0)
+            val onEndpointRequestCnt = new AtomicInteger(0)
+            val onResponseHeadersCnt = new AtomicInteger(0)
+            val onResponseBodyCnt = new AtomicInteger(0)
+          }
+          val metric = new DummyMetric()
+          val customMetrics: Metric[Future, DummyMetric] =
+            Metric(
+              metric = metric,
+              onRequest = (_, metric, me) =>
+                me.eval {
+                  metric.onRequestCnt.incrementAndGet()
+                  EndpointMetric(
+                    onEndpointRequest = Some((_) =>
+                      me.eval(metric.onEndpointRequestCnt.incrementAndGet()),
+                    ),
+                    onResponseHeaders = Some((_, _) =>
+                      me.eval(metric.onResponseHeadersCnt.incrementAndGet()),
+                    ),
+                    onResponseBody = Some((_, _) =>
+                      me.eval(metric.onResponseBodyCnt.incrementAndGet()),
+                    ),
+                    onException = None,
+                  )
+                },
+            )
+          val route = PekkoHttpServerInterpreter(
+            PekkoHttpServerOptions.customiseInterceptors
+              .metricsInterceptor(new MetricsRequestInterceptor[Future](List(customMetrics), Seq.empty))
+              .options
+          ).toRoute(e)
+
+          interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.post(uri"http://localhost:$port").body("").send(backend).map { response =>
+                response.body shouldBe Right("")
+                metric.onRequestCnt.get() shouldBe 1
+                metric.onEndpointRequestCnt.get() shouldBe 1
+                metric.onResponseHeadersCnt.get() shouldBe 1
+                metric.onResponseBodyCnt.get() shouldBe 1
+              }
             }
             .unsafeToFuture()
         }

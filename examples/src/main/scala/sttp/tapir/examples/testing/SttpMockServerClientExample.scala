@@ -1,9 +1,9 @@
 // {cat=Testing; json=circe}: Test endpoints using the MockServer client
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.5
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.5
-//> using dep com.softwaremill.sttp.tapir::sttp-mock-server:1.11.5
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.10
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.10
+//> using dep com.softwaremill.sttp.tapir::sttp-mock-server:1.11.10
+//> using dep com.softwaremill.sttp.client3::core:3.9.8
 //> using dep org.mock-server:mockserver-netty:5.15.0
 //> using dep org.scalatest::scalatest:3.2.19
 

@@ -55,7 +55,7 @@ A => I => Request[DecodeResult[Either[E, O]], R]
 A => I => F[DecodeResult[Either[E, O]]]
 ```
 
-See  the [runnable example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExample.scala)
+See  the [runnable example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/booksExample.scala)
 for example usage.
 
 ## Web sockets

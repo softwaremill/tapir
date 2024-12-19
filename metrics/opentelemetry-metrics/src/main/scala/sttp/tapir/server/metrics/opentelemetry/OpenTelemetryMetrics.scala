@@ -15,15 +15,15 @@ import java.time.{Duration, Instant}
 case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]]) {
 
   /** Registers a `request_active{path, method}` up-down-counter (assuming default labels). */
-  def addRequestsActive(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def addRequestsActive(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestActive(meter, labels))
 
   /** Registers a `request_total{path, method, status}` counter (assuming default labels). */
-  def addRequestsTotal(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def addRequestsTotal(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestTotal(meter, labels))
 
   /** Registers a `request_duration_seconds{path, method, status, phase}` histogram (assuming default labels). */
-  def addRequestsDuration(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def addRequestsDuration(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestDuration(meter, labels))
 
   /** Registers a custom metric. */
@@ -35,6 +35,32 @@ case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]])
 }
 
 object OpenTelemetryMetrics {
+
+  /** Default labels for OpenTelemetry-compliant metrics, as recommended here:
+    * https://opentelemetry.io/docs/specs/semconv/http/http-metrics/#http-server
+    *
+    *   - `http.request.method` - HTTP request method (e.g., GET, POST).
+    *   - `path` - The request path or route template.
+    *   - `http.response.status_code` - HTTP response status code (200, 404, etc.).
+    */
+  lazy val OpenTelemetryAttributes: MetricLabels = MetricLabels(
+    forRequest = List(
+      "http.request.method" -> { case (_, req) => req.method.method },
+      "url.scheme" -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
+      "path" -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) }
+    ),
+    forResponse = List(
+      "http.response.status_code" -> {
+        case Right(r) => Some(r.code.code.toString)
+        // Default to 500 for exceptions
+        case Left(_) => Some("500")
+      },
+      "error.type" -> {
+        case Left(ex) => Some(ex.getClass.getName) // Exception class name for errors
+        case Right(_) => None
+      }
+    )
+  )
 
   def apply[F[_]](meter: Meter): OpenTelemetryMetrics[F] = apply(meter, Nil)
   def apply[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] = apply(defaultMeter(otel), Nil)
@@ -50,7 +76,7 @@ object OpenTelemetryMetrics {
     * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
   def default[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] =
-    default(defaultMeter(otel), MetricLabels.Default)
+    default(defaultMeter(otel), OpenTelemetryAttributes)
 
   /** Registers default metrics (see other variants) using custom labels. */
   def default[F[_]](otel: OpenTelemetry, labels: MetricLabels): OpenTelemetryMetrics[F] = default(defaultMeter(otel), labels)
@@ -64,10 +90,10 @@ object OpenTelemetryMetrics {
     * Status is by default the status code class (1xx, 2xx, etc.), and phase can be either `headers` or `body` - request duration is
     * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
-  def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, MetricLabels.Default)
+  def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, OpenTelemetryAttributes)
 
   /** Registers default metrics (see other variants) using custom labels. */
-  def default[F[_]](meter: Meter, labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def default[F[_]](meter: Meter, labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     OpenTelemetryMetrics(
       meter,
       List[Metric[F, _]](
@@ -80,7 +106,7 @@ object OpenTelemetryMetrics {
   def requestActive[F[_]](meter: Meter, labels: MetricLabels): Metric[F, LongUpDownCounter] =
     Metric[F, LongUpDownCounter](
       meter
-        .upDownCounterBuilder("request_active")
+        .upDownCounterBuilder("http.server.active_requests")
         .setDescription("Active HTTP requests")
         .setUnit("1")
         .build(),
@@ -97,7 +123,7 @@ object OpenTelemetryMetrics {
   def requestTotal[F[_]](meter: Meter, labels: MetricLabels): Metric[F, LongCounter] =
     Metric[F, LongCounter](
       meter
-        .counterBuilder("request_total")
+        .counterBuilder("http.server.request.total")
         .setDescription("Total HTTP requests")
         .setUnit("1")
         .build(),
@@ -108,6 +134,7 @@ object OpenTelemetryMetrics {
               m.eval {
                 val otLabels =
                   merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Right(res), None))
+
                 counter.add(1, otLabels)
               }
             }
@@ -125,9 +152,9 @@ object OpenTelemetryMetrics {
   def requestDuration[F[_]](meter: Meter, labels: MetricLabels): Metric[F, DoubleHistogram] =
     Metric[F, DoubleHistogram](
       meter
-        .histogramBuilder("request_duration")
+        .histogramBuilder("http.server.request.duration")
         .setDescription("Duration of HTTP requests")
-        .setUnit("ms")
+        .setUnit("s")
         .build(),
       onRequest = (req, recorder, m) =>
         m.eval {
@@ -170,7 +197,10 @@ object OpenTelemetryMetrics {
     l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(ep, req)) }).build()
 
   private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Attributes = {
-    val builder = l.forResponse.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(res)) })
+    val builder = Attributes.builder()
+    l.forResponse.foreach { case (key, valueFn) =>
+      valueFn(res).foreach(value => builder.put(key, value))
+    }
     phase.foreach(v => builder.put(l.forResponsePhase.name, v))
     builder.build()
   }
