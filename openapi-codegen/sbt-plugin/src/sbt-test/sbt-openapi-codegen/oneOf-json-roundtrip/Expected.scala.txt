@@ -44,7 +44,6 @@ object TapirGeneratedEndpoints {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
   }
 
-
   case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
     // Case-insensitive mapping
     def decode(s: String): sttp.tapir.DecodeResult[T] =
@@ -63,9 +62,16 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
+  sealed trait Error
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
+  case class SimpleError (
+    message: String
+  ) extends Error
+  case class NotFoundError (
+    reason: String
+  ) extends Error
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
@@ -119,34 +125,39 @@ object TapirGeneratedEndpoints {
 
 
 
-  lazy val getBinaryTest =
+  type GetBinaryTestEndpoint = Endpoint[Unit, Unit, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
+  lazy val getBinaryTest: GetBinaryTestEndpoint =
     endpoint
       .get
       .in(("binary" / "test"))
       .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()).description("Response CSV body"))
 
-  lazy val postBinaryTest =
+  type PostBinaryTestEndpoint = Endpoint[Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, String, sttp.capabilities.pekko.PekkoStreams]
+  lazy val postBinaryTest: PostBinaryTestEndpoint =
     endpoint
       .post
       .in(("binary" / "test"))
       .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()))
       .out(jsonBody[String].description("successful operation"))
 
-  lazy val putAdtTest =
+  type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
+  lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
       .put
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithoutDiscriminator])
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
-  lazy val postAdtTest =
+  type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
+  lazy val postAdtTest: PostAdtTestEndpoint =
     endpoint
       .post
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithDiscriminatorNoMapping])
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
-  lazy val postInlineEnumTest =
+  type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
+  lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =
     endpoint
       .post
       .in(("inline" / "enum" / "test"))
@@ -197,7 +208,14 @@ object TapirGeneratedEndpoints {
       extraCodecSupport[PostInlineEnumTestQueryOptSeqEnum]("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
   }
 
+  type GetOneofErrorTestEndpoint = Endpoint[Unit, Unit, Error, Unit, Any]
+  lazy val getOneofErrorTest: GetOneofErrorTestEndpoint =
+    endpoint
+      .get
+      .in(("oneof" / "error" / "test"))
+      .errorOut(oneOf[Error](oneOfVariant(sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")), oneOfVariant(sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
+      .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putAdtTest, postAdtTest, postInlineEnumTest)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putAdtTest, postAdtTest, postInlineEnumTest, getOneofErrorTest)
 
 }

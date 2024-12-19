@@ -397,7 +397,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             targetScala3 = false,
             jsonSerdeLib = JsonSerdeLib.Circe,
             streamingImplementation = StreamingImplementation.FS2,
-            endpointCapabilites = EndpointCapabilites.Nothing
+            endpointCapabilites = EndpointCapabilites.Nothing,
+            generateEndpointTypes = false
           )
           .endpointDecls(None)
     }

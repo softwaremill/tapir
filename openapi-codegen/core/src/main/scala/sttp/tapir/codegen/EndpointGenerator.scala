@@ -13,6 +13,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaBinary,
   OpenapiSchemaEnum,
   OpenapiSchemaMap,
+  OpenapiSchemaOneOf,
   OpenapiSchemaRef,
   OpenapiSchemaSimpleType,
   OpenapiSchemaString
@@ -73,27 +74,32 @@ class EndpointGenerator {
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
       streamingImplementation: StreamingImplementation,
-      endpointCapabilites: EndpointCapabilites
+      endpointCapabilites: EndpointCapabilites,
+      generateEndpointTypes: Boolean
   ): EndpointDefs = {
     val capabilities = endpointCapabilites match {
-      case EndpointCapabilites.Akka    => "sttp.capabilities.akka.AkkaStreams with sttp.capabilities.WebSockets"
-      case EndpointCapabilites.FS2     => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO] with sttp.capabilities.WebSockets"
+      case EndpointCapabilites.Akka    => "sttp.capabilities.akka.AkkaStreams"
+      case EndpointCapabilites.FS2     => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
       case EndpointCapabilites.Nothing => "Any"
-      case EndpointCapabilites.Pekko   => "sttp.capabilities.pekko.PekkoStreams with sttp.capabilities.WebSockets"
-      case EndpointCapabilites.Zio     => "sttp.capabilities.zio.ZioStreams with sttp.capabilities.WebSockets"
+      case EndpointCapabilites.Pekko   => "sttp.capabilities.pekko.PekkoStreams"
+      case EndpointCapabilites.Zio     => "sttp.capabilities.zio.ZioStreams"
     }
     val components = Option(doc.components).flatten
     val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam) =
       doc.paths
-        .map(generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, streamingImplementation))
+        .map(generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, streamingImplementation, doc))
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false))(_ merge _)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
       val definitions = ge
         .map { case GeneratedEndpoint(name, definition, maybeEnums, types) =>
-          val endpointType =
-            s"type ${name.capitalize}Endpoint = Endpoint[${types.securityTypes}, ${types.inTypes}, ${types.errTypes}, ${types.outTypes}, $capabilities]"
-          s"""$endpointType
-             |lazy val $name: ${name.capitalize}Endpoint =
+          val theCapabilities = if (definition.contains(".capabilities.")) capabilities else "Any"
+          val endpointTypeDecl =
+            if (generateEndpointTypes)
+              s"type ${name.capitalize}Endpoint = Endpoint[${types.securityTypes}, ${types.inTypes}, ${types.errTypes}, ${types.outTypes}, $theCapabilities]\n"
+            else ""
+
+          val maybeType = if (generateEndpointTypes) s": ${name.capitalize}Endpoint" else ""
+          s"""${endpointTypeDecl}lazy val $name$maybeType =
              |${indent(2)(definition)}${maybeEnums.fold("")("\n" + _)}
              |""".stripMargin
         }
@@ -113,7 +119,8 @@ class EndpointGenerator {
       useHeadTagForObjectNames: Boolean,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
-      streamingImplementation: StreamingImplementation
+      streamingImplementation: StreamingImplementation,
+      doc: OpenapiDocument
   )(p: OpenapiPath): GeneratedEndpoints = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
@@ -139,7 +146,7 @@ class EndpointGenerator {
         val (securityDecl, securityTypes) = security(securitySchemes, m.security)
         val (inParams, maybeLocalEnums, inTypes) =
           ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation)
-        val (outDecl, outTypes, errTypes) = outs(m.responses, streamingImplementation)
+        val (outDecl, outTypes, errTypes) = outs(m.responses, streamingImplementation, doc)
         val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
         val definition =
           s"""|endpoint
@@ -269,10 +276,16 @@ class EndpointGenerator {
       // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
       val noOptionWrapper = required || (isArray && param.isExploded)
       val req = if (noOptionWrapper) tpe else s"Option[$tpe]"
+      val outType = (isArray, noOptionWrapper) match {
+        case (true, true)   => s"List[$enumName]"
+        case (true, false)  => s"Option[List[$enumName]]"
+        case (false, true)  => enumName
+        case (false, false) => s"Option[$enumName]"
+      }
       def mapToList =
         if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
       val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-      (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", Some(enumDefn), req)
+      (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", Some(enumDefn), outType)
     }
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     // .in(header[AuthToken]("X-Auth-Token"))
@@ -344,7 +357,9 @@ class EndpointGenerator {
   // treats redirects as ok
   private val okStatus = """([23]\d\d)""".r
   private val errorStatus = """([45]\d\d)""".r
-  private def outs(responses: Seq[OpenapiResponse], streamingImplementation: StreamingImplementation)(implicit location: Location) = {
+  private def outs(responses: Seq[OpenapiResponse], streamingImplementation: StreamingImplementation, doc: OpenapiDocument)(implicit
+      location: Location
+  ) = {
     // .errorOut(stringBody)
     // .out(jsonBody[List[Book]])
 
@@ -397,9 +412,32 @@ class EndpointGenerator {
           val code = if (m.code == "default") "400" else m.code
           s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
         }.unzip
-        // TODO: Handle this
-//        if (types.distinct.size > 1) bail("Cannot construct oneOfs with differing types yet")
-        Some(s"oneOf(${oneOfs.mkString(", ")})") -> Some(types.flatten.head)
+        val parentMap = doc.components.toSeq
+          .flatMap(_.schemas)
+          .collect { case (k, v: OpenapiSchemaOneOf) =>
+            v.types.map {
+              case r: OpenapiSchemaRef        => r.stripped -> k
+              case x: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(x)._1 -> k
+              case x                          => bail(s"Unexpected oneOf child type $x")
+            }
+          }
+          .flatten
+          .groupBy(_._1)
+          .map { case (k, vs) => k -> vs.map(_._2) }
+          .toMap
+        val allElemTypes = many
+          .flatMap(_.content.map(_.schema))
+          .map {
+            case r: OpenapiSchemaRef        => r.stripped
+            case x: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(x)._1
+            case x                          => bail(s"Unexpected oneOf elem type $x")
+          }
+          .distinct
+        val commmonType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
+          case s if s.isEmpty => "Any"
+          case s              => s.mkString(" with ")
+        }
+        Some(s"oneOf[$commmonType](${oneOfs.mkString(", ")})") -> Some(commmonType)
     }
 
     val (outDecls, outTypes) = mappedGroup(outs)
@@ -453,7 +491,7 @@ class EndpointGenerator {
         }
         schema match {
           case _: OpenapiSchemaString =>
-            s"streamTextBody($capability)(CodecFormat.OctetStream())" -> "Array[Byte]"
+            s"streamTextBody($capability)(CodecFormat.OctetStream())" -> s"$capability.BinaryStream"
           case schema =>
             val outT = schema match {
               case st: OpenapiSchemaSimpleType =>
@@ -467,7 +505,7 @@ class EndpointGenerator {
                 s"Map[String, $t]"
               case x => bail(s"Can't create this param as output (found $x)")
             }
-            s"streamBody($capability)(Schema.binary[$outT], CodecFormat.OctetStream())" -> "Array[Byte]"
+            s"streamBody($capability)(Schema.binary[$outT], CodecFormat.OctetStream())" -> s"$capability.BinaryStream"
         }
 
       case x => bail(s"Not all content types supported! Found $x")

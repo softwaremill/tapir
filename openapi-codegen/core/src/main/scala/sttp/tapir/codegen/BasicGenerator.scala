@@ -45,7 +45,8 @@ object BasicGenerator {
       streamingImplementation: String,
       endpointCapabilites: String,
       validateNonDiscriminatedOneOfs: Boolean,
-      maxSchemasPerFile: Int
+      maxSchemasPerFile: Int,
+      generateEndpointTypes: Boolean
   ): Map[String, String] = {
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
@@ -82,7 +83,15 @@ object BasicGenerator {
     }
 
     val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams) =
-      endpointGenerator.endpointDefs(doc, useHeadTagForObjectNames, targetScala3, normalisedJsonLib, normalisedStreamingImplementation, normalisedEndpointCapabilites)
+      endpointGenerator.endpointDefs(
+        doc,
+        useHeadTagForObjectNames,
+        targetScala3,
+        normalisedJsonLib,
+        normalisedStreamingImplementation,
+        normalisedEndpointCapabilites,
+        generateEndpointTypes
+      )
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas) =
       classGenerator
         .classDefs(

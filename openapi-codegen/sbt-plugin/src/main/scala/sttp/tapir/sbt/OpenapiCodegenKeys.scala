@@ -12,6 +12,7 @@ case class OpenApiConfiguration(
     endpointCapabilites: String,
     validateNonDiscriminatedOneOfs: Boolean,
     maxSchemasPerFile: Int,
+    generateEndpointTypes: Boolean,
     additionalPackages: List[(String, File)]
 )
 
@@ -29,6 +30,7 @@ trait OpenapiCodegenKeys {
   lazy val openapiAdditionalPackages = settingKey[List[(String, File)]]("Addition package -> spec mappings to generate.")
   lazy val openapiStreamingImplementation = settingKey[String]("Implementation for streamTextBody. Supports: akka, fs2, pekko, zio.")
   lazy val openapiEndpointCapabilites = settingKey[String]("Implementation for streamTextBody. Supports: akka, fs2, nothing, pekko, zio.")
+  lazy val openapiGenerateEndpointTypes = settingKey[Boolean]("Whether to emit explicit types for endpoint denfs")
   lazy val openapiOpenApiConfiguration =
     settingKey[OpenApiConfiguration]("Aggregation of other settings. Manually set value will be disregarded.")
 
