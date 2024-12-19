@@ -65,9 +65,6 @@ object GenScala {
   private val streamingImplementationOpt: Opts[Option[String]] =
     Opts.option[String]("streamingImplementation", "Capability to use for binary streams", "s").orNone
 
-  private val endpointCapabilitesOpt: Opts[Option[String]] =
-    Opts.option[String]("endpointCapabilites", "Capability to use for endpoints", "c").orNone
-
   private val generateEndpointTypesOpt: Opts[Boolean] =
     Opts.flag("generateEndpointTypes", "Whether to emit explicit type aliases for endpoint declarations", "e").orFalse
 
@@ -95,7 +92,6 @@ object GenScala {
       validateNonDiscriminatedOneOfsOpt,
       maxSchemasPerFileOpt,
       streamingImplementationOpt,
-      endpointCapabilitesOpt,
       generateEndpointTypesOpt
     )
       .mapN {
@@ -110,7 +106,6 @@ object GenScala {
               validateNonDiscriminatedOneOfs,
               maxSchemasPerFile,
               streamingImplementation,
-              endpointCapabilites,
               generateEndpointTypes
             ) =>
           val objectName = maybeObjectName.getOrElse(DefaultObjectName)
@@ -125,7 +120,6 @@ object GenScala {
                 headTagForNames,
                 jsonLib.getOrElse("circe"),
                 streamingImplementation.getOrElse("fs2"),
-                endpointCapabilites.getOrElse("nothing"),
                 validateNonDiscriminatedOneOfs,
                 maxSchemasPerFile.getOrElse(400),
                 generateEndpointTypes

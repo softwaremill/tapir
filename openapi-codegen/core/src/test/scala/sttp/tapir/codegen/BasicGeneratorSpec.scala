@@ -19,7 +19,6 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      endpointCapabilites = "nothing",
       generateEndpointTypes = false
     )
   }

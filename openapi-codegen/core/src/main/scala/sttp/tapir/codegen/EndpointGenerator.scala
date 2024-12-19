@@ -68,22 +68,22 @@ class EndpointGenerator {
 
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
+  private def capabilityImpl(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
+    case StreamingImplementation.Akka  => "sttp.capabilities.akka.AkkaStreams"
+    case StreamingImplementation.FS2   => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
+    case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
+    case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
+  }
+
   def endpointDefs(
       doc: OpenapiDocument,
       useHeadTagForObjectNames: Boolean,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
       streamingImplementation: StreamingImplementation,
-      endpointCapabilites: EndpointCapabilites,
       generateEndpointTypes: Boolean
   ): EndpointDefs = {
-    val capabilities = endpointCapabilites match {
-      case EndpointCapabilites.Akka    => "sttp.capabilities.akka.AkkaStreams"
-      case EndpointCapabilites.FS2     => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
-      case EndpointCapabilites.Nothing => "Any"
-      case EndpointCapabilites.Pekko   => "sttp.capabilities.pekko.PekkoStreams"
-      case EndpointCapabilites.Zio     => "sttp.capabilities.zio.ZioStreams"
-    }
+    val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
     val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam) =
       doc.paths
@@ -433,10 +433,13 @@ class EndpointGenerator {
             case x                          => bail(s"Unexpected oneOf elem type $x")
           }
           .distinct
-        val commmonType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
-          case s if s.isEmpty => "Any"
-          case s              => s.mkString(" with ")
-        }
+        val commmonType =
+          if (allElemTypes.size == 1) allElemTypes.head
+          else
+            allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
+              case s if s.isEmpty => "Any"
+              case s              => s.mkString(" with ")
+            }
         Some(s"oneOf[$commmonType](${oneOfs.mkString(", ")})") -> Some(commmonType)
     }
 
@@ -483,12 +486,7 @@ class EndpointGenerator {
           case x => bail(s"$contentType only supports schema ref or binary. Found $x")
         }
       case "application/octet-stream" =>
-        val capability = streamingImplementation match {
-          case StreamingImplementation.Akka  => "sttp.capabilities.akka.AkkaStreams"
-          case StreamingImplementation.FS2   => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
-          case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
-          case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
-        }
+        val capability = capabilityImpl(streamingImplementation)
         schema match {
           case _: OpenapiSchemaString =>
             s"streamTextBody($capability)(CodecFormat.OctetStream())" -> s"$capability.BinaryStream"

@@ -12,7 +12,6 @@ case class OpenapiCodegenTask(
     useHeadTagForObjectName: Boolean,
     jsonSerdeLib: String,
     streamingImplementation: String,
-    endpointCapabilites: String,
     validateNonDiscriminatedOneOfs: Boolean,
     maxSchemasPerFile: Int,
     generateEndpointTypes: Boolean,
@@ -60,7 +59,6 @@ case class OpenapiCodegenTask(
           useHeadTagForObjectName,
           jsonSerdeLib,
           streamingImplementation,
-          endpointCapabilites,
           validateNonDiscriminatedOneOfs,
           maxSchemasPerFile,
           generateEndpointTypes

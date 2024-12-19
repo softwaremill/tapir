@@ -69,7 +69,6 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
           streamingImplementation = StreamingImplementation.FS2,
-          endpointCapabilites = EndpointCapabilites.Nothing,
           generateEndpointTypes = false
         )
         .endpointDecls(None)
@@ -156,7 +155,6 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
           streamingImplementation = StreamingImplementation.FS2,
-          endpointCapabilites = EndpointCapabilites.Nothing,
           generateEndpointTypes = false
         )
         .endpointDecls(None) shouldCompile ()
@@ -210,7 +208,6 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
           streamingImplementation = StreamingImplementation.FS2,
-          endpointCapabilites = EndpointCapabilites.Nothing,
           generateEndpointTypes = false
         )
         .endpointDecls(None)
@@ -279,7 +276,6 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      endpointCapabilites = "nothing",
       generateEndpointTypes = false
     )("TapirGeneratedEndpoints")
     generatedCode should include(
@@ -303,7 +299,6 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      endpointCapabilites = "nothing",
       generateEndpointTypes = false
     )("TapirGeneratedEndpoints")
     generatedCode shouldCompile ()

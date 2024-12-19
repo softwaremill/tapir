@@ -4,7 +4,6 @@ lazy val root = (project in file("."))
     scalaVersion := "2.13.15",
     version := "0.1",
     openapiStreamingImplementation := "pekko",
-    openapiEndpointCapabilites := "pekko",
     openapiGenerateEndpointTypes := true
   )
 
