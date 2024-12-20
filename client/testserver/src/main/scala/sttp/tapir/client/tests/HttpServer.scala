@@ -219,9 +219,9 @@ class HttpServer(port: Port) {
       .withPort(ip4s.Port.fromInt(port).get)
       .withHttpWebSocketApp(app)
       .build
-      .use(_ => stopServer.get)
-      .background
       .useForever
+      .background
+      .use(_ => stopServer.get)
       .unsafeRunSync()
 
     logger.info(s"Server on port $port started")
