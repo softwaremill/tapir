@@ -220,6 +220,8 @@ class HttpServer(port: Port) {
       .withHttpWebSocketApp(app)
       .build
       .use(_ => stopServer.get)
+      .background
+      .useForever
       .unsafeRunSync()
 
     logger.info(s"Server on port $port started")
