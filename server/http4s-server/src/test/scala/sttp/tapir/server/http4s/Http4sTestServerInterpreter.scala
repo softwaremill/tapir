@@ -41,7 +41,7 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
           .default[IO]
           .withPort(ip4s.Port.fromInt(0).get)
           .withHttpWebSocketApp(service)
-      )(_.withShutdownTimeout)
+      ) { case (b, t) => b.withShutdownTimeout(t) }
       .build
       .map(_.address.getPort)
   }

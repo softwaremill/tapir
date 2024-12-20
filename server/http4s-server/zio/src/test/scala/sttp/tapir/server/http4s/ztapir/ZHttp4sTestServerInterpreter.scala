@@ -47,7 +47,7 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
           .default[Task]
           .withPort(ip4s.Port.fromInt(0).get)
           .withHttpWebSocketApp(service)
-      )(_.withShutdownTimeout)
+      ) { case (b, t) => b.withShutdownTimeout(t) }
       .build
       .map(_.address.getPort)
       .mapK(new ~>[Task, IO] {
