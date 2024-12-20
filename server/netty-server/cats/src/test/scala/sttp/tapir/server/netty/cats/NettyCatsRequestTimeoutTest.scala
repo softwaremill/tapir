@@ -60,7 +60,7 @@ class NettyCatsRequestTimeoutTest(
           chunksToGo -= 1
           List.fill('A')(chunkSize).map(_.toByte).iterator
         }
-      }.flatten
+      }.flatMap(identity)
 
       val inputStream = fs2.Stream.fromIterator[IO](iterator(howManyChunks, chunkSize), chunkSize = chunkSize)
 
