@@ -2,9 +2,8 @@ package sttp.tapir.client.tests
 
 import cats.effect._
 import cats.effect.std.Queue
-import cats.effect.unsafe.implicits.global
-import com.comcast.ip4s
 import cats.implicits._
+import com.comcast.ip4s.Port
 import fs2.{Pipe, Stream}
 import org.http4s.dsl.io._
 import org.http4s.headers.{Accept, `Content-Type`}
@@ -17,24 +16,20 @@ import org.http4s._
 import org.slf4j.LoggerFactory
 import org.typelevel.ci.CIString
 import scodec.bits.ByteVector
-import sttp.tapir.client.tests.HttpServer._
 
-import scala.concurrent.ExecutionContext
+object HttpServer extends ResourceApp.Forever {
 
-object HttpServer {
-  type Port = Int
+  private val defaultPort = Port.fromInt(51823).get
 
-  def main(args: Array[String]): Unit = {
-    val port = args.headOption.map(_.toInt).getOrElse(51823)
-    new HttpServer(port).start()
+  def run(args: List[String]): Resource[IO, Unit] = {
+    val port = args.headOption.flatMap(Port.fromString).getOrElse(defaultPort)
+    new HttpServer(port).build.void
   }
 }
 
 class HttpServer(port: Port) {
 
   private val logger = LoggerFactory.getLogger(getClass)
-
-  private val stopServer: Deferred[IO, Unit] = Deferred.unsafe[IO, Unit]
 
   //
 
@@ -211,24 +206,12 @@ class HttpServer(port: Port) {
     Router("/" -> corsService).orNotFound
   }
 
-  //
+  def build: Resource[IO, server.Server] = EmberServerBuilder
+    .default[IO]
+    .withPort(port)
+    .withHttpWebSocketApp(app)
+    .build
+    .evalTap(_ => IO(logger.info(s"Server on port $port started")))
+    .onFinalize(IO(logger.info(s"Server on port $port stopped")))
 
-  def start(): Unit = {
-    EmberServerBuilder
-      .default[IO]
-      .withPort(ip4s.Port.fromInt(port).get)
-      .withHttpWebSocketApp(app)
-      .build
-      .useForever
-      .background
-      .use(_ => stopServer.get)
-      .unsafeRunSync()
-
-    logger.info(s"Server on port $port started")
-  }
-
-  def close(): Unit = {
-    stopServer.complete(()).unsafeRunSync()
-    logger.info(s"Server on port $port stopped")
-  }
 }
