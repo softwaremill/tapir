@@ -41,11 +41,13 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
   ): Resource[IO, Port] = {
     val service: WebSocketBuilder2[Task] => HttpApp[Task] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
-
-    EmberServerBuilder
-      .default[Task]
-      .withPort(ip4s.Port.fromInt(0).get)
-      .withHttpWebSocketApp(service)
+    gracefulShutdownTimeout
+      .foldLeft(
+        EmberServerBuilder
+          .default[Task]
+          .withPort(ip4s.Port.fromInt(0).get)
+          .withHttpWebSocketApp(service)
+      )(_.withShutdownTimeout)
       .build
       .map(_.address.getPort)
       .mapK(new ~>[Task, IO] {

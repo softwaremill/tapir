@@ -35,11 +35,13 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   ): Resource[IO, Port] = {
     val service: WebSocketBuilder2[IO] => HttpApp[IO] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
-
-    EmberServerBuilder
-      .default[IO]
-      .withPort(ip4s.Port.fromInt(0).get)
-      .withHttpWebSocketApp(service)
+    gracefulShutdownTimeout
+      .foldLeft(
+        EmberServerBuilder
+          .default[IO]
+          .withPort(ip4s.Port.fromInt(0).get)
+          .withHttpWebSocketApp(service)
+      )(_.withShutdownTimeout)
       .build
       .map(_.address.getPort)
   }
