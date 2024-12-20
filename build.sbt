@@ -200,6 +200,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   pekkoGrpcExamples.projectRefs ++
   apispecDocs.projectRefs ++
   openapiDocs.projectRefs ++
+  openapiVerifier.projectRefs ++
   asyncapiDocs.projectRefs ++
   swaggerUi.projectRefs ++
   swaggerUiBundle.projectRefs ++
@@ -1097,6 +1098,26 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     libraryDependencies ++= Seq(
       "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
       "com.softwaremill.sttp.apispec" %% "openapi-model" % Versions.sttpApispec,
+      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test
+    )
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core, apispecDocs, tests % Test)
+
+lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-verifier"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-openapi-verifier",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
+      "com.softwaremill.sttp.apispec" %% "openapi-model" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test,
       "com.softwaremill.sttp.apispec" %% "openapi-circe" % Versions.sttpApispec,
       "io.circe" %% "circe-parser" % Versions.circe,
@@ -1111,7 +1132,7 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
-  .dependsOn(core, apispecDocs, tests % Test)
+  .dependsOn(core, openapiDocs, tests % Test)
 
 lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn()
 lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
