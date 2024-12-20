@@ -4,9 +4,10 @@ import cats.data._
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
+import com.comcast.ip4s.Port
 import fs2.Pipe
 import fs2.Stream
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.ContextMiddleware
 import org.http4s.ContextRoutes
@@ -40,11 +41,11 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
 
     def assert_get_apiTestRouter_respondsWithExpectedContent[T](routes: HttpRoutes[IO], expectedContext: T): IO[Assertion] =
-      BlazeServerBuilder[IO]
-        .withExecutionContext(ExecutionContext.global)
-        .bindHttp(0, "localhost")
+      EmberServerBuilder
+        .default[IO]
+        .withPort(Port.fromInt(0).get)
         .withHttpApp(Router("/api" -> routes).orNotFound)
-        .resource
+        .build
         .use { server =>
           val port = server.address.getPort
           basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContext))

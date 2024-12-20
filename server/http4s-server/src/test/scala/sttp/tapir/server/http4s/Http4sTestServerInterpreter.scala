@@ -3,7 +3,8 @@ package sttp.tapir.server.http4s
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
-import org.http4s.blaze.server.BlazeServerBuilder
+import com.comcast.ip4s
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.{HttpApp, HttpRoutes}
 import sttp.capabilities.WebSockets
@@ -34,12 +35,14 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   ): Resource[IO, Port] = {
     val service: WebSocketBuilder2[IO] => HttpApp[IO] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
-
-    BlazeServerBuilder[IO]
-      .withExecutionContext(ExecutionContext.global)
-      .bindHttp(0, "localhost")
-      .withHttpWebSocketApp(service)
-      .resource
-      .map(_.address.getPort())
+    gracefulShutdownTimeout
+      .foldLeft(
+        EmberServerBuilder
+          .default[IO]
+          .withPort(ip4s.Port.fromInt(0).get)
+          .withHttpWebSocketApp(service)
+      ) { case (b, t) => b.withShutdownTimeout(t) }
+      .build
+      .map(_.address.getPort)
   }
 }
