@@ -1116,8 +1116,6 @@ lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-v
   .settings(
     name := "tapir-openapi-verifier",
     libraryDependencies ++= Seq(
-      "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
-      "com.softwaremill.sttp.apispec" %% "openapi-model" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test,
       "com.softwaremill.sttp.apispec" %% "openapi-circe" % Versions.sttpApispec,
       "io.circe" %% "circe-parser" % Versions.circe,
@@ -2168,6 +2166,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     nettyServerCats,
     nettyServerSync,
     openapiDocs,
+    openapiVerifier,
     opentelemetryMetrics,
     pekkoHttpServer,
     picklerJson,
