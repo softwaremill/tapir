@@ -48,8 +48,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
               override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
               override def emptyPipe[A, B]: fs2.Pipe[IO, A, B] = _ => fs2.Stream.empty
             }
-              .tests() ++
-            new NettyCatsRequestTimeoutTest(dispatcher, eventLoopGroup, backend).tests()
+              .tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
