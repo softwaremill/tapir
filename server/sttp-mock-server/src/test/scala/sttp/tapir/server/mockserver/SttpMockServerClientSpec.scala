@@ -46,6 +46,13 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
     .errorOut(circe.jsonBody[ApiError])
     .out(circe.jsonBody[PersonView])
 
+  private val queryParameterEndpoint = endpoint
+    .in("api" / "v1" / "person")
+    .in(query[String]("name").and(query[Int]("age")).mapTo[CreatePersonCommand])
+    .put
+    .errorOut(circe.jsonBody[ApiError])
+    .out(circe.jsonBody[PersonView])
+
   it should "create plain text expectation correctly" in {
     val sampleIn = "Hello, world!"
     val sampleOut = "Hello to you!"
@@ -62,6 +69,27 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
 
       _ <- mockServerClient
         .verifyRequest(plainEndpoint, VerificationTimes.exactlyOnce)((), sampleIn)
+    } yield resp.body
+
+    actual shouldEqual Success(Value(Right(sampleOut)))
+  }
+
+  it should "create query parameters in expectation correctly" in {
+    val sampleIn = CreatePersonCommand("John", 23)
+    val sampleOut = PersonView(uuid(), "John", 23)
+
+    val actual = for {
+      _ <- mockServerClient
+        .whenInputMatches(queryParameterEndpoint)((), sampleIn)
+        .thenSuccess(sampleOut)
+
+      resp <- SttpClientInterpreter()
+        .toRequest(queryParameterEndpoint, baseUri = Some(baseUri))
+        .apply(sampleIn)
+        .send(backend)
+
+      _ <- mockServerClient
+        .verifyRequest(queryParameterEndpoint, VerificationTimes.exactlyOnce)((), sampleIn)
     } yield resp.body
 
     actual shouldEqual Success(Value(Right(sampleOut)))
