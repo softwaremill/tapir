@@ -375,3 +375,90 @@ Results in:
 ```scala mdoc
 result3.toString
 ```
+
+## OpenAPI schema compatibility
+
+The `OpenAPIVerifier` provides utilities for verifying that client and server endpoints are consistent with an OpenAPI specification. This ensures that endpoints defined in your code correspond to those documented in the OpenAPI schema, and vice versa.
+
+To use the `OpenAPIVerifier`, add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-verifier" % "@VERSION@"
+```
+
+The `OpenAPIVerifier` supports two key verification scenarios:
+
+1. **Server Verification**: Ensures that all endpoints defined in the OpenAPI specification are implemented by the server.
+2. **Client Verification**: Ensures that the client implementation matches the OpenAPI specification.
+
+As a result, you get a list of issues that describe the incomapatibilities, or an empty list, if the endpoints and schema are compatible.
+
+### Example Usage
+
+#### Server Endpoint Verification
+
+```scala mdoc:silent
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.OpenAPIVerifier
+import sttp.tapir.json.circe.*
+
+val clientOpenAPISpecification: String = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      summary: Get users
+      responses:
+        "200":
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+"""
+
+val serverEndpoints = List(
+  endpoint.get.in("users").out(jsonBody[List[String]])
+)
+
+val serverIssues = OpenAPIVerifier.verifyServer(serverEndpoints, clientOpenAPISpecification)
+```
+
+#### Client Endpoint Verification
+
+```scala mdoc:silent
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.OpenAPIVerifier
+import sttp.tapir.json.circe.*
+
+val serverOpenAPISpecification: String = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      summary: Get users
+      responses:
+        "200":
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+""".stripMargin
+
+val clientEndpoints = List(
+  endpoint.get.in("users").out(jsonBody[List[String]])
+)
+
+val clientIssues = OpenAPIVerifier.verifyClient(clientEndpoints, serverOpenAPISpecification)
+```

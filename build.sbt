@@ -16,7 +16,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.20"
 val scala2_13 = "2.13.15"
-val scala3 = "3.3.3"
+val scala3 = "3.3.4"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -201,6 +201,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   pekkoGrpcExamples.projectRefs ++
   apispecDocs.projectRefs ++
   openapiDocs.projectRefs ++
+  openapiVerifier.projectRefs ++
   asyncapiDocs.projectRefs ++
   swaggerUi.projectRefs ++
   swaggerUiBundle.projectRefs ++
@@ -1112,6 +1113,27 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     settings = commonJsSettings
   )
   .dependsOn(core, apispecDocs, tests % Test)
+
+lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-verifier"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-openapi-verifier",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test,
+      "com.softwaremill.sttp.apispec" %% "openapi-circe" % Versions.sttpApispec,
+      "io.circe" %% "circe-parser" % Versions.circe,
+      "io.circe" %% "circe-yaml" % Versions.circeYaml
+    )
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core, openapiDocs, tests % Test)
 
 lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn()
 lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
@@ -2147,6 +2169,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     nettyServerCats,
     nettyServerSync,
     openapiDocs,
+    openapiVerifier,
     opentelemetryMetrics,
     pekkoHttpServer,
     picklerJson,
