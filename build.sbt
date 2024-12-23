@@ -28,7 +28,6 @@ val ideScalaVersion = scala3
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
-lazy val stopClientTestServer = taskKey[Unit]("Stop http server used by client interpreter tests")
 lazy val generateMimeByExtensionDB = taskKey[Unit]("Generate the mime by extension DB")
 lazy val verifyExamplesCompileUsingScalaCli = taskKey[Unit]("Verify that each example compiles using Scala CLI")
 
@@ -383,7 +382,7 @@ val clientTestServerSettings = Seq(
     val port = (clientTestServer2_13 / clientTestServerPort).value
     PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
   }),
-  Test / testOptions += Tests.Cleanup(() => (clientTestServer2_13 / stopClientTestServer).value)
+  Test / testOptions += Tests.Cleanup(() => (clientTestServer2_13 / reStop).value)
 )
 
 lazy val clientTestServer = (projectMatrix in file("client/testserver"))
@@ -402,8 +401,7 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
     reStart / reStartArgs := Seq(s"${(Test / clientTestServerPort).value}"),
     reStart / fullClasspath := (Test / fullClasspath).value,
     clientTestServerPort := 51823,
-    startClientTestServer := reStart.toTask("").value,
-    stopClientTestServer := reStop.toTask("").value
+    startClientTestServer := reStart.toTask("").value
   )
   .settings(disableScaladocSettingsWhenScala3)
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
