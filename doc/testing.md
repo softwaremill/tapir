@@ -393,9 +393,9 @@ The `OpenAPIVerifier` supports two key verification scenarios:
 
 As a result, you get a list of issues that describe the incomapatibilities, or an empty list, if the endpoints and schema are compatible.
 
-#### Example Usage
+### Example Usage
 
-##### Server Endpoint Verification
+#### Server Endpoint Verification
 
 ```scala mdoc:silent
 import sttp.tapir.*
@@ -429,7 +429,7 @@ val serverEndpoints = List(
 val serverIssues = OpenAPIVerifier.verifyServer(serverEndpoints, clientOpenAPISpecification)
 ```
 
-##### Client Endpoint Verification
+#### Client Endpoint Verification
 
 ```scala mdoc:silent
 import sttp.tapir.*
