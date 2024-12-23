@@ -1,24 +1,23 @@
 package sttp.tapir.server.mockserver
 
 import io.circe.{JsonObject, Printer}
-import io.circe.syntax.*
-import sttp.client3.*
-import sttp.client3.testing.*
+import io.circe.syntax._
+import sttp.client3._
+import sttp.client3.testing._
 import sttp.model.Uri.{QuerySegment, UriContext}
 import sttp.model.{ContentTypeRange, HasHeaders, Header, HeaderNames, Headers, MediaType, StatusCode, Uri}
 import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, RawBodyType, WebSocketBodyOutput}
-import sttp.tapir.server.mockserver.impl.JsonCodecs.*
-import cats.syntax.either.*
+import sttp.tapir.server.mockserver.impl.JsonCodecs._
+import cats.syntax.either._
 
 import java.nio.charset.Charset
-import io.circe.parser.*
+import io.circe.parser._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.server.interpreter.{EncodeOutputs, OutputValues, ToResponseBody}
 
 import scala.collection.immutable.Seq
-import scala.collection.mutable
 
 class SttpMockServerClient[F[_]] private[mockserver] (baseUri: Uri, backend: SttpBackend[F, Any]) {
 
