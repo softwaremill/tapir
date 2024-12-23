@@ -23,7 +23,7 @@ Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or 
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.10"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.11"
 ```
 
 Let's assume you are using the [pekko http](server/pekkohttp.md) interpreter. Given the following server endpoint:
@@ -139,7 +139,7 @@ requests matching an endpoint, you can use the tapir `SttpBackendStub` extension
 Similarly as when testing server interpreters, add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.10"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.11"
 ```
 
 And the following imports:
@@ -194,7 +194,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.11.10"
+"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.11.11"
 ```
 
 Imports:
@@ -265,7 +265,7 @@ result == out
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.11.10"
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.11.11"
 ```
 
 ### Shadowed endpoints
@@ -379,4 +379,91 @@ Results in:
 ```scala
 result3.toString
 // res6: String = "Set(Duplicate endpoints names found: e1)"
+```
+
+## OpenAPI schema compatibility
+
+The `OpenAPIVerifier` provides utilities for verifying that client and server endpoints are consistent with an OpenAPI specification. This ensures that endpoints defined in your code correspond to those documented in the OpenAPI schema, and vice versa.
+
+To use the `OpenAPIVerifier`, add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-verifier" % "1.11.11"
+```
+
+The `OpenAPIVerifier` supports two key verification scenarios:
+
+1. **Server Verification**: Ensures that all endpoints defined in the OpenAPI specification are implemented by the server.
+2. **Client Verification**: Ensures that the client implementation matches the OpenAPI specification.
+
+As a result, you get a list of issues that describe the incomapatibilities, or an empty list, if the endpoints and schema are compatible.
+
+### Example Usage
+
+#### Server Endpoint Verification
+
+```scala
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.OpenAPIVerifier
+import sttp.tapir.json.circe.*
+
+val clientOpenAPISpecification: String = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      summary: Get users
+      responses:
+        "200":
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+"""
+
+val serverEndpoints = List(
+  endpoint.get.in("users").out(jsonBody[List[String]])
+)
+
+val serverIssues = OpenAPIVerifier.verifyServer(serverEndpoints, clientOpenAPISpecification)
+```
+
+#### Client Endpoint Verification
+
+```scala
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.OpenAPIVerifier
+import sttp.tapir.json.circe.*
+
+val serverOpenAPISpecification: String = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      summary: Get users
+      responses:
+        "200":
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+""".stripMargin
+
+val clientEndpoints = List(
+  endpoint.get.in("users").out(jsonBody[List[String]])
+)
+
+val clientIssues = OpenAPIVerifier.verifyClient(clientEndpoints, serverOpenAPISpecification)
 ```
