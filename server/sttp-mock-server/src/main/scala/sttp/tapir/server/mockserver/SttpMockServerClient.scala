@@ -214,7 +214,7 @@ object SttpMockServerClient {
         querySegments
           .collect { case kv: QuerySegment.KeyValue => kv }
           .groupBy(x => x.k)
-          .map((key, values) => key -> values.map(_.v).toList)
+          .map { case (key, values) => key -> values.map(_.v).toList }
       )
 
   private val printer = Printer.noSpaces
