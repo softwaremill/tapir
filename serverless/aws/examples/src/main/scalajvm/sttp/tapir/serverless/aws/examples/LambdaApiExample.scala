@@ -11,7 +11,7 @@ import sttp.tapir.serverless.aws.lambda._
 
 import java.io.{InputStream, OutputStream}
 
-object LambdaApiExample extends LambdaHandler[IO, AwsRequest] {
+object LambdaApiExample(options: AwsServerOptions[IO]) extends LambdaHandler[IO, AwsRequest](options) {
 
   val helloEndpoint: ServerEndpoint[Any, IO] = endpoint.get
     .in("api" / "hello")

@@ -8,7 +8,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.serverless.aws.lambda.{AwsRequest, LambdaHandler}
 import java.io.{InputStream, OutputStream}
 
-class IOLambdaHandlerV2 extends LambdaHandler[IO, AwsRequest] {
+class IOLambdaHandlerV2(options: AwsServerOptions[IO]) extends LambdaHandler[IO, AwsRequest](options) {
 
   override protected def getAllEndpoints: List[ServerEndpoint[Any, IO]] = allEndpoints.toList
 
