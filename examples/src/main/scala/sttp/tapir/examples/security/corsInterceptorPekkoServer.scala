@@ -1,7 +1,7 @@
 // {cat=Security; effects=Future; server=Pekko HTTP}: CORS interceptor
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.10
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.10
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.11
 //> using dep com.softwaremill.sttp.client3::core:3.9.8
 
 package sttp.tapir.examples.security
