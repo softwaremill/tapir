@@ -11,7 +11,7 @@ import java.io.{InputStream, OutputStream}
 
 /** Used by [[AwsCdkAppTemplate]] for integration tests
   */
-object CdkTestLambdaHandler extends LambdaHandler[IO, AwsRequestV1] {
+object CdkTestLambdaHandler extends LambdaHandler[IO, AwsRequestV1](AwsCatsEffectServerOptions.default[IO]) {
   override protected def getAllEndpoints: List[ServerEndpoint[Any, IO]] = allEndpoints.toList
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
