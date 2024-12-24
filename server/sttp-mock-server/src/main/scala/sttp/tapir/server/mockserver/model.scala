@@ -27,6 +27,7 @@ case class Expectation(
 case class ExpectationRequestDefinition(
     method: Method,
     path: Uri,
+    queryStringParameters: Option[Map[String, List[String]]],
     body: Option[ExpectationBodyDefinition],
     headers: Option[Map[String, List[String]]]
 )
