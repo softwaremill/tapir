@@ -1,7 +1,7 @@
 // {cat=Status code; effects=Direct; server=Netty}: Serving static files from a directory
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.10
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.10
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.11
 
 package sttp.tapir.examples.status_code
 
