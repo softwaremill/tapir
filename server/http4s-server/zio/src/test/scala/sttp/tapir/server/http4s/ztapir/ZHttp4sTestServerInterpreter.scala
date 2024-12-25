@@ -17,6 +17,7 @@ import sttp.tapir.tests._
 import sttp.tapir.ztapir.ZServerEndpoint
 import zio.{Runtime, Task, Unsafe}
 import zio.interop.catz._
+import zio.interop.catz.implicits._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
@@ -29,6 +30,15 @@ object ZHttp4sTestServerInterpreter {
 
 class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams with WebSockets, ServerOptions, Routes] {
 
+  private val anyAvailablePort = ip4s.Port.fromInt(0).get
+  // for some reason server doesn't exit gracefully in tests, that's why a short interval by default
+  private val builder = EmberServerBuilder.default[IO].withPort(anyAvailablePort).withShutdownTimeout(10.millis)
+
+  private val taskToIO = new ~>[Task, IO] {
+    // Converting a ZIO effect to an Cats Effect IO effect
+    def apply[B](fa: Task[B]): IO[B] = fa.toEffect[IO]
+  }
+
   override def route(es: List[ZServerEndpoint[Any, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
     val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors[Task]).options
     ZHttp4sServerInterpreter(serverOptions).fromWebSocket(es).toRoutes
@@ -38,16 +48,14 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
       routes: NonEmptyList[Routes],
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
-    val service: WebSocketBuilder2[Task] => HttpApp[IO] =
-      wsb => routes.map(_.apply(wsb).mapF(_.toIO)).reduceK.orNotFound
+    val service: WebSocketBuilder2[Task] => HttpApp[Task] =
+      wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
     gracefulShutdownTimeout
       .foldLeft(
-        EmberServerBuilder
-          .default[IO]
-          .withPort(ip4s.Port.fromInt(0).get)
-          .withHttpWebSocketApp(service)
+        builder.withHttpWebSocketApp(service)
       ) { case (b, t) => b.withShutdownTimeout(t) }
       .build
       .map(_.address.getPort)
+      .mapK(taskToIO)
   }
 }
