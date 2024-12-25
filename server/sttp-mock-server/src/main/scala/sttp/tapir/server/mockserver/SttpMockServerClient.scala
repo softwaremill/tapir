@@ -179,7 +179,8 @@ object SttpMockServerClient {
           matchType = ExpectationBodyDefinition.JsonMatchType.Strict
         )
       case MediaType.ApplicationOctetStream => ExpectationBodyDefinition.BinaryBodyDefinition(body, MediaType.ApplicationOctetStream)
-      case other                            => ExpectationBodyDefinition.PlainBodyDefinition(body, other)
+      // Should Image Media Types also be binary?
+      case other => ExpectationBodyDefinition.PlainBodyDefinition(body, other)
     }
   }
 
