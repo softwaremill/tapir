@@ -20,7 +20,7 @@ import zio.interop.catz._
 import zio.interop.catz.implicits._
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object ZHttp4sTestServerInterpreter {
   type F[A] = Task[A]
