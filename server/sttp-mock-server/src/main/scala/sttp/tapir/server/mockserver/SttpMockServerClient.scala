@@ -11,6 +11,7 @@ import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, RawBodyType, WebSocketBo
 import sttp.tapir.server.mockserver.impl.JsonCodecs._
 import cats.syntax.either._
 
+import java.util.Base64
 import java.nio.charset.Charset
 import io.circe.parser._
 import sttp.tapir.capabilities.NoStreams
@@ -160,7 +161,10 @@ object SttpMockServerClient {
 
   private def toExpectationBody(outputValues: OutputValues[Any]): Option[ExpectationBodyDefinition] = {
     for {
-      body <- outputValues.body.map(_.apply(Headers(outputValues.headers)).toString)
+      body <- outputValues.body.map(_.apply(Headers(outputValues.headers))).map {
+        case a: Array[Byte] => Base64.getEncoder.encodeToString(a)
+        case b              => b.toString
+      }
       if body.nonEmpty
       contentTypeRaw <- outputValues.headers.find(_.name == HeaderNames.ContentType)
       contentType <- MediaType.parse(contentTypeRaw.value).toOption
@@ -174,7 +178,8 @@ object SttpMockServerClient {
           json = decode[JsonObject](body).valueOr(throw _), // todo: probably it should not throw if tapir interprets correctly
           matchType = ExpectationBodyDefinition.JsonMatchType.Strict
         )
-      case other => ExpectationBodyDefinition.PlainBodyDefinition(body, other)
+      case MediaType.ApplicationOctetStream => ExpectationBodyDefinition.BinaryBodyDefinition(body, MediaType.ApplicationOctetStream)
+      case other                            => ExpectationBodyDefinition.PlainBodyDefinition(body, other)
     }
   }
 

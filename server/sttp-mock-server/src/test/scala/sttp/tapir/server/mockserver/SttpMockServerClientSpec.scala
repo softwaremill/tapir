@@ -46,6 +46,12 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
     .errorOut(circe.jsonBody[ApiError])
     .out(circe.jsonBody[PersonView])
 
+  private val binaryEndpoint = endpoint
+    .in("api" / "v1" / "image")
+    .get
+    .errorOut(circe.jsonBody[ApiError])
+    .out(rawBinaryBody(RawBodyType.ByteArrayBody))
+
   private val queryParameterEndpoint = endpoint
     .in("api" / "v1" / "person")
     .in(query[String]("name").and(query[Int]("age")).mapTo[CreatePersonCommand])
@@ -135,6 +141,30 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
     } yield resp.body
 
     actual shouldEqual Success(Value(Right(sampleOut)))
+  }
+
+  it should "create binary payload expectation correctly" in {
+    val sampleOut = "This is some test text that should have some length".toCharArray.map(_.toByte)
+
+    val actual = for {
+      _ <- mockServerClient
+        .whenInputMatches(binaryEndpoint)((), ())
+        .thenSuccess(sampleOut)
+
+      resp <- SttpClientInterpreter()
+        .toRequest(binaryEndpoint, baseUri = Some(baseUri))
+        .apply(())
+        .send(backend)
+
+      _ <- mockServerClient
+        .verifyRequest(binaryEndpoint, VerificationTimes.exactlyOnce)((), ())
+    } yield resp.body
+
+    val s = actual match
+      case Success(Value(Right(v))) => v
+      // Tests failed when unwrapping in shouldEqual - ScalaTest fails to compare wrapped byteArrays
+
+    s shouldEqual sampleOut
   }
 
   it should "create error json expectation correctly" in {
