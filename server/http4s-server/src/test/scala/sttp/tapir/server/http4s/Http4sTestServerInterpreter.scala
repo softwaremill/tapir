@@ -14,7 +14,6 @@ import sttp.tapir.server.http4s.Http4sTestServerInterpreter._
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 object Http4sTestServerInterpreter {
@@ -22,12 +21,15 @@ object Http4sTestServerInterpreter {
 }
 
 class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, Http4sServerOptions[IO], Routes] {
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]], interceptors: Interceptors): Routes = {
     val serverOptions: Http4sServerOptions[IO] = interceptors(Http4sServerOptions.customiseInterceptors[IO]).options
     Http4sServerInterpreter(serverOptions).toWebSocketRoutes(es)
   }
+
+  private val anyAvailablePort = ip4s.Port.fromInt(0).get
+  // for some reason server doesn't exit gracefully in tests, that's why a short interval by default
+  private val builder = EmberServerBuilder.default[IO].withPort(anyAvailablePort).withShutdownTimeout(10.millis)
 
   override def server(
       routes: NonEmptyList[Routes],
@@ -36,12 +38,9 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
     val service: WebSocketBuilder2[IO] => HttpApp[IO] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
     gracefulShutdownTimeout
-      .foldLeft(
-        EmberServerBuilder
-          .default[IO]
-          .withPort(ip4s.Port.fromInt(0).get)
-          .withHttpWebSocketApp(service)
-      ) { case (b, t) => b.withShutdownTimeout(t) }
+      .foldLeft(builder.withHttpWebSocketApp(service)) { case (b, t) =>
+        b.withShutdownTimeout(t)
+      }
       .build
       .map(_.address.getPort)
   }

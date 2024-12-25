@@ -381,8 +381,7 @@ val clientTestServerSettings = Seq(
   Test / testOptions += Tests.Setup(() => {
     val port = (clientTestServer2_13 / clientTestServerPort).value
     PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
-  }),
-  Test / testOptions += Tests.Cleanup(() => (clientTestServer2_13 / reStop).value)
+  })
 )
 
 lazy val clientTestServer = (projectMatrix in file("client/testserver"))

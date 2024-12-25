@@ -25,11 +25,14 @@ import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with OptionValues {
+
+  private val serverBuilder = EmberServerBuilder
+    .default[IO]
+    .withPort(Port.fromInt(0).get)
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
@@ -41,9 +44,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
 
     def assert_get_apiTestRouter_respondsWithExpectedContent[T](routes: HttpRoutes[IO], expectedContext: T): IO[Assertion] =
-      EmberServerBuilder
-        .default[IO]
-        .withPort(Port.fromInt(0).get)
+      serverBuilder
         .withHttpApp(Router("/api" -> routes).orNotFound)
         .build
         .use { server =>
@@ -110,12 +111,12 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         endpoint.out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream())),
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
-        IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8Encode).interruptAfter(10.seconds)))
+        IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8.encode).interruptAfter(10.seconds)))
       ) { (backend, baseUri) =>
         basicRequest
           .response(
             asStream(Fs2Streams[IO])(bs => {
-              bs.through(fs2.text.utf8Decode).mapAccumulate(0)((pings, currentTime) => (pings + 1, currentTime)).compile.last
+              bs.through(fs2.text.utf8.decode).mapAccumulate(0)((pings, currentTime) => (pings + 1, currentTime)).compile.last
             })
           )
           .get(baseUri)

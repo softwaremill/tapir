@@ -28,7 +28,6 @@ object ZHttp4sTestServerInterpreter {
 }
 
 class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams with WebSockets, ServerOptions, Routes] {
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(es: List[ZServerEndpoint[Any, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
     val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors[Task]).options
@@ -39,20 +38,16 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
       routes: NonEmptyList[Routes],
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
-    val service: WebSocketBuilder2[Task] => HttpApp[Task] =
-      wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
+    val service: WebSocketBuilder2[Task] => HttpApp[IO] =
+      wsb => routes.map(_.apply(wsb).mapF(_.toIO)).reduceK.orNotFound
     gracefulShutdownTimeout
       .foldLeft(
         EmberServerBuilder
-          .default[Task]
+          .default[IO]
           .withPort(ip4s.Port.fromInt(0).get)
           .withHttpWebSocketApp(service)
       ) { case (b, t) => b.withShutdownTimeout(t) }
       .build
       .map(_.address.getPort)
-      .mapK(new ~>[Task, IO] {
-        // Converting a ZIO effect to an Cats Effect IO effect
-        def apply[B](fa: Task[B]): IO[B] = IO.fromFuture(Unsafe.unsafe(implicit u => IO(Runtime.default.unsafe.runToFuture(fa))))
-      })
   }
 }
