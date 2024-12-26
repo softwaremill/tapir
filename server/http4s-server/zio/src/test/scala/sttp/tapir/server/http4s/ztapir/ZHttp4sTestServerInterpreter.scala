@@ -16,6 +16,7 @@ import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
 import sttp.tapir.ztapir.ZServerEndpoint
 import zio.{Runtime, Task, Unsafe}
+import zio.interop._
 import zio.interop.catz._
 import zio.interop.catz.implicits._
 
@@ -32,7 +33,7 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
 
   private val anyAvailablePort = ip4s.Port.fromInt(0).get
   // for some reason server doesn't exit gracefully in tests, that's why a short interval by default
-  private val builder = EmberServerBuilder.default[IO].withPort(anyAvailablePort).withShutdownTimeout(10.millis)
+  private val builder = EmberServerBuilder.default[Task].withPort(anyAvailablePort).withShutdownTimeout(10.millis)
 
   private val taskToIO = new ~>[Task, IO] {
     // Converting a ZIO effect to an Cats Effect IO effect
