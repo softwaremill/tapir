@@ -160,8 +160,9 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
         .verifyRequest(binaryEndpoint, VerificationTimes.exactlyOnce)((), ())
     } yield resp.body
 
-    val s = actual match
+    val s = actual match {
       case Success(Value(Right(v))) => v
+    }
       // Tests failed when unwrapping in shouldEqual - ScalaTest fails to compare wrapped byteArrays
 
     s shouldEqual sampleOut
