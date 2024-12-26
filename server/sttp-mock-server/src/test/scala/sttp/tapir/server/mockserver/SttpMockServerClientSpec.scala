@@ -162,8 +162,9 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
 
     val s = actual match {
       case Success(Value(Right(v))) => v
+      case _                        => fail(s"Response doesnt have correct structure: ${actual}")
     }
-      // Tests failed when unwrapping in shouldEqual - ScalaTest fails to compare wrapped byteArrays
+    // Tests failed when unwrapping in shouldEqual - ScalaTest fails to compare wrapped byteArrays
 
     s shouldEqual sampleOut
   }
