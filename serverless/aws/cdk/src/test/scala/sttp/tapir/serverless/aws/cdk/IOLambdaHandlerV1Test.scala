@@ -85,7 +85,7 @@ class IOLambdaHandlerV1Test extends AnyFunSuite with Matchers {
   test("lambda handler without encoding") {
     val output = new ByteArrayOutputStream()
 
-    val handler = new IOLambdaHandlerV1(AwsCatsEffectServerOptions.noEncoding[IO])
+    val handler = new IOLambdaHandlerV1()
     handler.handleRequest(new ByteArrayInputStream(input.getBytes), output, context)
 
     val expected = AwsResponse(
