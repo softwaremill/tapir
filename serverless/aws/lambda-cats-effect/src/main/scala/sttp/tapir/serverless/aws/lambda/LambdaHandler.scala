@@ -18,14 +18,15 @@ import java.nio.charset.StandardCharsets
   * @tparam R
   *   AWS API Gateway request type [[AwsRequestV1]] or [[AwsRequest]]. At the moment mapping is required as there is no support for
   *   generating API Gateway V2 definitions with AWS CDK v2.
+  * @param options
+  *   Server options of type AwsServerOptions.
   */
-abstract class LambdaHandler[F[_]: Sync, R: Decoder] extends RequestStreamHandler {
+abstract class LambdaHandler[F[_]: Sync, R: Decoder](options: AwsServerOptions[F]) extends RequestStreamHandler {
 
   protected def getAllEndpoints: List[ServerEndpoint[Any, F]]
 
   protected def process(input: InputStream, output: OutputStream): F[Unit] = {
-    val server: AwsCatsEffectServerInterpreter[F] =
-      AwsCatsEffectServerInterpreter(AwsCatsEffectServerOptions.noEncoding[F])
+    val server: AwsCatsEffectServerInterpreter[F] = AwsCatsEffectServerInterpreter(options)
 
     for {
       allBytes <- Sync[F].blocking(input.readAllBytes())

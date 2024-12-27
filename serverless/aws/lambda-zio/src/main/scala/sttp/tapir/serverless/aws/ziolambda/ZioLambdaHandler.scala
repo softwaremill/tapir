@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets
   *
   * @tparam Env
   *   The Environment type of the handler .
-  * @tparam options
+  * @param options
   *   Server options of type AwsServerOptions.
   */
 abstract class ZioLambdaHandler[Env: RIOMonadError](options: AwsServerOptions[RIO[Env, *]]) {
