@@ -11,7 +11,7 @@ import sttp.tapir.serverless.aws.lambda._
 
 import java.io.{InputStream, OutputStream}
 
-object LambdaApiV1Example extends LambdaHandler[IO, AwsRequestV1](AwsCatsEffectServerOptions.default[IO]) {
+object LambdaApiV1Example extends LambdaHandler[IO, AwsRequestV1](AwsCatsEffectServerOptions.noEncoding[IO]) {
 
   val helloEndpoint: ServerEndpoint[Any, IO] = endpoint.get
     .in("api" / "hello")
