@@ -2112,6 +2112,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     sttpStubServer,
     swaggerUiBundle,
     redocBundle,
+    vertxServer,
     zioHttpServer,
     zioJson,
     zioMetrics

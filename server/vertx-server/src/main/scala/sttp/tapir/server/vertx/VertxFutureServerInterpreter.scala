@@ -2,8 +2,8 @@ package sttp.tapir.server.vertx
 
 import io.vertx.core.{Handler, Future => VFuture}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
-import sttp.monad.FutureMonad
 import sttp.capabilities.WebSockets
+import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
@@ -26,7 +26,9 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
     *   A function, that given a router, will attach this endpoint to it
     */
   def route[A, U, I, E, O](e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint), vertxFutureServerOptions)
+    val routeDef = extractRouteDefinition(e.endpoint)
+    optionsRoute(e)(router, routeDef).foreach(_.handler(endpointHandler(e)))
+    mountWithDefaultHandlers(e)(router, routeDef, vertxFutureServerOptions)
       .handler(endpointHandler(e))
   }
 
@@ -37,7 +39,9 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
     *   A function, that given a router, will attach this endpoint to it
     */
   def blockingRoute(e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint), vertxFutureServerOptions)
+    val routeDef = extractRouteDefinition(e.endpoint)
+    optionsRoute(e)(router, routeDef).foreach(_.handler(endpointHandler(e)))
+    mountWithDefaultHandlers(e)(router, routeDef, vertxFutureServerOptions)
       .blockingHandler(endpointHandler(e))
   }
 
