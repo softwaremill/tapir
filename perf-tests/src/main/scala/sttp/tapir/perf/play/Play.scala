@@ -78,7 +78,7 @@ object Tapir extends Endpoints {
     (actorSystem: ActorSystem) => {
       implicit val actorSystemForMaterializer: ActorSystem = actorSystem
       implicit val ec: ExecutionContext = actorSystem.dispatcher
-      val serverOptions = buildOptions(PlayServerOptions.customiseInterceptors(), withServerLog)
+      val serverOptions = buildOptions(PlayServerInterpreter, withServerLog)
       PlayServerInterpreter(serverOptions).toRoutes(
         genEndpointsFuture(nRoutes)
       )

@@ -103,6 +103,9 @@ class PlayServerTest extends TestSuite {
       def drainAkka(stream: AkkaStreams.BinaryStream): Future[Unit] =
         stream.runWith(Sink.ignore).map(_ => ())
 
+      PlayServerOptions.customiseInterceptors().serverLog(PlayServerOptions.defaultServerLog.logWhenReceived(true)
+        .logAllDecodeFailures(true)).options
+      
       new ServerBasicTests(
         createServerTest,
         interpreter,

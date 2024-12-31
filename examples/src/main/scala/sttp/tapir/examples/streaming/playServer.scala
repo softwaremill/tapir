@@ -1,7 +1,8 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
 //> using dep com.softwaremill.sttp.tapir::tapir-play-server:1.11.11
 //> using dep org.playframework::play-netty-server:3.0.6
-//> using dep com.softwaremill.sttp.client3::core:3.10.1
+//> using dep com.softwaremill.sttp.client3::core:3.10.2
+//> using dep org.slf4j:slf4j-simple:2.0.16
 
 package sttp.tapir.examples.streaming
 
@@ -18,11 +19,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import sttp.model.{HeaderNames, MediaType, Part, StatusCode}
 import sttp.tapir.*
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.*
 import org.apache.pekko
 import pekko.stream.scaladsl.{Flow, Source}
 import pekko.util.ByteString
+import sttp.tapir.server.play.PlayServerOptions
 
 given ExecutionContext = ExecutionContext.global
 
@@ -51,14 +54,17 @@ val e = endpoint.post
     .out(header[Long](HeaderNames.ContentLength))
     .out(streamTextBody(PekkoStreams)(CodecFormat.TextPlain()))
     .errorOut(plainBody[ErrorInfo])
-    .serverLogic((logic _).andThen(handleErrors))
+    .serverLogic(logic.andThen(handleErrors))
 
-val routes = PlayServerInterpreter().toRoutes(e)
+
+val routes = PlayServerInterpreter(PlayServerOptions.customiseInterceptors().serverLog(PlayServerOptions.defaultServerLog.logWhenReceived(true)
+  .logAllDecodeFailures(true)).options).toRoutes(e)
 
 @main def playServer(): Unit =
   import play.api.Configuration
   import play.api.Mode
   import play.core.server.ServerConfig
+
 
   import java.io.File
   import java.util.Properties
@@ -82,13 +88,13 @@ val routes = PlayServerInterpreter().toRoutes(e)
     "play.server.websocket.periodic-keep-alive-max-idle" -> "infinite",
     "play.server.max-content-length" -> "infinite",
     "play.server.netty.log.wire" -> true,
-    "play.server.netty.option.child.tcpNoDelay" -> true,
+    "play.server.netty.option.child.SO_KEEPALIVE" -> false,
     "play.server.pekko.requestTimeout" -> "5 seconds",
   )
   val serverConfig = ServerConfig(
     rootDir = new File("."),
     port = Some(9000),
-    sslPort = Some(9443),
+    sslPort = None,
     address = "0.0.0.0",
     mode = Mode.Dev,
     properties = System.getProperties,

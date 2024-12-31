@@ -1,7 +1,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
 //> using dep org.apache.pekko::pekko-stream:1.1.2
 //> using dep org.typelevel::cats-effect:3.5.7
-//> using dep com.softwaremill.sttp.client3::core:3.10.1
+//> using dep com.softwaremill.sttp.client3::core:3.10.2
 //> using dep com.softwaremill.sttp.client3::pekko-http-backend:3.10.1
 
 package sttp.tapir.examples.streaming
