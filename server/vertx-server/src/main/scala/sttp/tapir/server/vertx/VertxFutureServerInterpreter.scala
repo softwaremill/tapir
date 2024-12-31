@@ -15,6 +15,8 @@ import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.{ReadStreamCompatible, VertxStreams}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
+import io.vertx.ext.web.handler.CorsHandler
+
 
 trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErrorHandler {
 
@@ -28,6 +30,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
   def route[A, U, I, E, O](e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint), vertxFutureServerOptions)
       .handler(endpointHandler(e))
+//      .handler(CorsHandler.create())
   }
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling The logic will be executed in a
