@@ -4,8 +4,8 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.11
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.11
 //> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.11
-//> using dep "org.typelevel::otel4s-oteljava:0.11.2" // <1>
-//> using dep "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.45.0" // <3>
+//> using dep "org.typelevel::otel4s-oteljava:0.11.2"
+//> using dep "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.45.0"
 //> using dep org.slf4j:slf4j-api:2.0.16
 
 package sttp.tapir.examples.observability
@@ -44,9 +44,7 @@ import scala.io.StdIn
   */
 
 class Service[F[_]: Async: Tracer: Console]:
-  def doWork(steps: Int): F[Unit] = doWorkInternal(steps)
-
-  private def doWorkInternal(steps: Int): F[Unit] = {
+  def doWork(steps: Int): F[Unit] = {
     val step = Tracer[F]
       .span("internal-work", Attribute("step", steps.toLong))
       .surround {
@@ -58,30 +56,25 @@ class Service[F[_]: Async: Tracer: Console]:
         } yield ()
       }
 
-    if (steps > 0) step *> doWorkInternal(steps - 1) else step
+    if (steps > 0) step *> doWork(steps - 1) else step
   }
 
 class HttpApi[F[_]: Async: Tracer](service: Service[F]):
-  import HttpApi.*
-  private val doWork: PublicEndpoint[Work, Unit, Unit, Any] = endpoint.post.in("work").in(jsonBody[Work])
-
-  private val doWorkServerEndpoint: ServerEndpoint[Any, F] = doWork.serverLogicSuccess(work => {
-    Tracer[F].span("DoWorkRequest").use { span =>
-      span.addEvent("Do the work request received") *>
-        service.doWork(work.steps) *>
-        span.addEvent("Finished working.")
-    }
-  })
-
-  val all: List[ServerEndpoint[Any, F]] = List(doWorkServerEndpoint)
-
-  object HttpApi:
-    case class Work(steps: Int)
+  private case class Work(steps: Int)
+  
+  val doWorkServerEndpoint: ServerEndpoint[Any, F] = endpoint.post
+    .in("work")
+    .in(jsonBody[Work])
+    .serverLogicSuccess(work => {
+      Tracer[F].span("DoWorkRequest").use { span =>
+        span.addEvent("Do the work request received") *>
+          service.doWork(work.steps) *>
+          span.addEvent("Finished working.")
+      }
+    })
 
 object Otel4sTracingExample extends IOApp.Simple:
   private val logger: Logger = LoggerFactory.getLogger(this.getClass.getName)
-  private val port = 9090
-  private val host = "localhost"
 
   override def run: IO[Unit] = otel
     .use { otel4s =>
@@ -96,9 +89,9 @@ object Otel4sTracingExample extends IOApp.Simple:
       .use { server =>
         for {
           bind <- server
-            .port(port)
-            .host(host)
-            .addEndpoints(httpApi.all)
+            .port(9090)
+            .host("localhost")
+            .addEndpoint(httpApi.doWorkServerEndpoint)
             .start()
           _ <- IO
             .blocking {
