@@ -2,7 +2,7 @@
 //> using dep org.apache.pekko::pekko-stream:1.1.2
 //> using dep org.typelevel::cats-effect:3.5.7
 //> using dep com.softwaremill.sttp.client3::core:3.10.2
-//> using dep com.softwaremill.sttp.client3::pekko-http-backend:3.10.1
+//> using dep com.softwaremill.sttp.client3::pekko-http-backend:3.10.2
 
 package sttp.tapir.examples.streaming
 
@@ -28,14 +28,22 @@ import scala.concurrent.duration.FiniteDuration
 object longLastingClient extends IOApp:
   implicit val actorSystem: ActorSystem = ActorSystem("longLastingClient")
 
+  private val givenLength: Long = 10000
+  private val chunkSize = 100
+  private val noChunks = givenLength / chunkSize
+
   private def makeRequest(backend: SttpBackend[Future, PekkoStreams & WebSockets]): Future[Response[Either[String, String]]] =
-    val stream: Source[ByteString, Any] = Source.tick(1.seconds, 1.seconds, ByteString(Array.fill(10)('A').map(_.toByte))).map { elem =>
-      println(s"$elem ${java.time.LocalTime.now()}"); elem
-    }
+    val stream: Source[ByteString, Any] =
+      Source.tick(1.seconds, 1.seconds, ByteString(Array.fill(chunkSize)('A').map(_.toByte)))
+        .zipWithIndex
+        .take(noChunks)
+        .map { case (chunk, idx) =>
+           println(s"Chunk ${idx + 1} sent ${java.time.LocalTime.now()}"); chunk
+        }
 
     basicRequest
       .post(uri"http://localhost:9000/chunks")
-      .header(Header(HeaderNames.ContentLength, "10000"))
+      .header(Header(HeaderNames.ContentLength, givenLength.toString))
       .streamBody(PekkoStreams)(stream)
       .send(backend)
 
