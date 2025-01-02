@@ -1,3 +1,13 @@
+// {cat=Observability; effects=cats-effect; server=Netty; json=circe}: Otel4s collecting traces
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.11
+//> using dep "org.typelevel::otel4s-oteljava:0.11.2" // <1>
+//> using dep "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.45.0" // <3>
+//> using dep org.slf4j:slf4j-api:2.0.16
+
 package sttp.tapir.examples.observability
 
 import cats.effect.std.{Console, Random}
@@ -117,16 +127,12 @@ object Otel4sTracingExample extends IOApp.Simple:
     // Please notice in your, production cases could be better to use env variable instead.
     // Under following link you may find more details about configuration https://typelevel.org/otel4s/sdk/configuration.html
     def customize(a: AutoConfigOtelSdkBuilder): AutoConfigOtelSdkBuilder = {
-      val customResource = Resource.getDefault
-        .merge(
-          Resource.create(
-            Attributes.of(io.opentelemetry.api.common.AttributeKey.stringKey("service.name"), "Otel4sTracingExample")
-          )
-        )
+      val customResource = Resource.getDefault.merge(
+        Resource.create(Attributes.of(io.opentelemetry.api.common.AttributeKey.stringKey("service.name"), "Otel4sTracingExample"))
+      )
       a.addResourceCustomizer((resource, config) => customResource)
       a
     }
 
-    OtelJava
-      .autoConfigured[IO](customize)
+    OtelJava.autoConfigured[IO](customize)
   }
