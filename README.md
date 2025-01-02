@@ -251,4 +251,4 @@ We offer commercial support for tapir and related technologies, as well as devel
 
 ## Copyright
 
-Copyright (C) 2018-2024 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2018-2025 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
