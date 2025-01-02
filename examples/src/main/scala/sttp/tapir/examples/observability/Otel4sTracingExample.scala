@@ -10,6 +10,7 @@
 
 package sttp.tapir.examples.observability
 
+import cats.effect
 import cats.effect.std.{Console, Random}
 import cats.effect.{Async, IO, IOApp}
 import io.circe.generic.auto.*
@@ -40,18 +41,6 @@ import scala.io.StdIn
   *   docker run --name jaeger -e COLLECTOR_OTLP_ENABLED=true -p 16686:16686 -p 4317:4317 -p 4318:4318 jaegertracing/all-in-one:1.35
   * }}}
   * Jaeger UI is available at http://localhost:16686. You can find the collected traces there.
-  *
-  * The example code requires the following dependencies:
-  * {{{
-  *   val openTelemetryVersion = <OpenTelemetry version>
-  *   val otel4sVersion = <Otel4s version>
-  *
-  *   libraryDependencies ++= Seq(
-  *     "org.typelevel" %% "otel4s-oteljava" % otel4sVersion,
-  *      "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % openTelemetryVersion,
-  *     "io.opentelemetry" % "opentelemetry-exporter-otlp" % openTelemetryVersion
-  *    )
-  * }}}
   */
 
 class Service[F[_]: Async: Tracer: Console]:
@@ -122,17 +111,16 @@ object Otel4sTracingExample extends IOApp.Simple:
         } yield ()
       }
 
-  private def otel = {
+  private def otel: effect.Resource[IO, OtelJava[IO]] = {
     // We implemented customization here to set service name.
     // Please notice in your, production cases could be better to use env variable instead.
     // Under following link you may find more details about configuration https://typelevel.org/otel4s/sdk/configuration.html
     def customize(a: AutoConfigOtelSdkBuilder): AutoConfigOtelSdkBuilder = {
       val customResource = Resource.getDefault.merge(
-        Resource.create(Attributes.of(io.opentelemetry.api.common.AttributeKey.stringKey("service.name"), "Otel4sTracingExample"))
+        Resource.create(Attributes.of(io.opentelemetry.api.common.AttributeKey.stringKey("service.name"), "Otel4s-Tracing-Example"))
       )
       a.addResourceCustomizer((resource, config) => customResource)
       a
     }
-
     OtelJava.autoConfigured[IO](customize)
   }
