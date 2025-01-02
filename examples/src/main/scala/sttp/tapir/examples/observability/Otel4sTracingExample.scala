@@ -29,6 +29,7 @@ import scala.io.StdIn
   * {{{
   *   docker run --name jaeger -e COLLECTOR_OTLP_ENABLED=true -p 16686:16686 -p 4317:4317 -p 4318:4318 jaegertracing/all-in-one:1.35
   * }}}
+  * Jaeger UI is available at http://localhost:16686. You can find the collected traces there.
   *
   * The example code requires the following dependencies:
   * {{{
