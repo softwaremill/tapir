@@ -2078,6 +2078,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
       "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % Versions.jsoniter,
+      "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
+      "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % Versions.openTelemetry ,
       scalaTest.value,
       logback
     ),
