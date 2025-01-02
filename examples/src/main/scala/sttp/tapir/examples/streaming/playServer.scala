@@ -23,7 +23,7 @@ import sttp.tapir.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.*
 import org.apache.pekko
-import pekko.stream.scaladsl.{Flow, Source}
+import pekko.stream.scaladsl.{Flow, Source, Sink}
 import pekko.util.ByteString
 import sttp.tapir.server.play.PlayServerOptions
 
@@ -41,18 +41,26 @@ def handleErrors[T](f: Future[T]): Future[Either[ErrorInfo, T]] =
       Success(Left(e.getMessage))
   }
 
-def logic(s: (Long, Source[ByteString, Any])): Future[(Long, Source[ByteString, Any])] = {
+def logic(s: (Long, Source[ByteString, Any])): Future[String] = {
   val (length, stream) = s
-  println(s"Received $length bytes, ${stream.map(_.length)} bytes in total")
-  Future.successful((length, stream))
+  println(s"Transmitting $length bytes...")
+  val result = stream
+    .runFold(List.empty[ByteString])((acc, byteS) => acc :+ byteS)
+    .map(_.reduce(_ ++ _).decodeString("UTF-8"))
+  result.onComplete {
+    case Failure(ex) =>
+      println(s"Stream failed with exception: $ex" )
+    case Success(s) =>
+      println(s"Stream finished: ${s.length}/$length transmitted")
+  }
+  result
 }
 
 val e = endpoint.post
     .in("chunks")
     .in(header[Long](HeaderNames.ContentLength))
     .in(streamTextBody(PekkoStreams)(CodecFormat.TextPlain()))
-    .out(header[Long](HeaderNames.ContentLength))
-    .out(streamTextBody(PekkoStreams)(CodecFormat.TextPlain()))
+    .out(stringBody)
     .errorOut(plainBody[ErrorInfo])
     .serverLogic(logic.andThen(handleErrors))
 
