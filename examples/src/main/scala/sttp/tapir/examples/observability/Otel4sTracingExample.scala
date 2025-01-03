@@ -49,7 +49,10 @@ object Otel4sTracingExample extends IOApp.Simple:
     .use { otel4s =>
       otel4s.tracerProvider
         .get("sttp.tapir.examples.observability")
-        .flatMap(implicit tracer => server(HttpApi[IO](Service[IO])))
+        .flatMap(t => {
+          given Tracer[IO] = t
+          server(HttpApi[IO](Service[IO]))
+        })
     }
 
   private def server(httpApi: HttpApi[IO]): IO[Unit] =
@@ -105,7 +108,7 @@ class Service[F[_]: Async: Tracer: Console]:
 
 class HttpApi[F[_]: Async: Tracer](service: Service[F]):
   private case class Work(steps: Int)
-  
+
   val doWorkServerEndpoint: ServerEndpoint[Any, F] = endpoint.post
     .in("work")
     .in(jsonBody[Work])
