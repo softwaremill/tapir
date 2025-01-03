@@ -42,37 +42,6 @@ import scala.io.StdIn
   * }}}
   * Jaeger UI is available at http://localhost:16686. You can find the collected traces there.
   */
-
-class Service[F[_]: Async: Tracer: Console]:
-  def doWork(steps: Int): F[Unit] = {
-    val step = Tracer[F]
-      .span("internal-work", Attribute("step", steps.toLong))
-      .surround {
-        for {
-          random <- Random.scalaUtilRandom
-          delay <- random.nextIntBounded(1000)
-          _ <- Async[F].sleep(delay.millis)
-          _ <- Console[F].println("Do work ...")
-        } yield ()
-      }
-
-    if (steps > 0) step *> doWork(steps - 1) else step
-  }
-
-class HttpApi[F[_]: Async: Tracer](service: Service[F]):
-  private case class Work(steps: Int)
-  
-  val doWorkServerEndpoint: ServerEndpoint[Any, F] = endpoint.post
-    .in("work")
-    .in(jsonBody[Work])
-    .serverLogicSuccess(work => {
-      Tracer[F].span("DoWorkRequest").use { span =>
-        span.addEvent("Do the work request received") *>
-          service.doWork(work.steps) *>
-          span.addEvent("Finished working.")
-      }
-    })
-
 object Otel4sTracingExample extends IOApp.Simple:
   private val logger: Logger = LoggerFactory.getLogger(this.getClass.getName)
 
@@ -117,3 +86,33 @@ object Otel4sTracingExample extends IOApp.Simple:
     }
     OtelJava.autoConfigured[IO](customize)
   }
+
+class Service[F[_]: Async: Tracer: Console]:
+  def doWork(steps: Int): F[Unit] = {
+    val step = Tracer[F]
+      .span("internal-work", Attribute("step", steps.toLong))
+      .surround {
+        for {
+          random <- Random.scalaUtilRandom
+          delay <- random.nextIntBounded(1000)
+          _ <- Async[F].sleep(delay.millis)
+          _ <- Console[F].println("Do work ...")
+        } yield ()
+      }
+
+    if (steps > 0) step *> doWork(steps - 1) else step
+  }
+
+class HttpApi[F[_]: Async: Tracer](service: Service[F]):
+  private case class Work(steps: Int)
+  
+  val doWorkServerEndpoint: ServerEndpoint[Any, F] = endpoint.post
+    .in("work")
+    .in(jsonBody[Work])
+    .serverLogicSuccess(work => {
+      Tracer[F].span("DoWorkRequest").use { span =>
+        span.addEvent("Do the work request received") *>
+          service.doWork(work.steps) *>
+          span.addEvent("Finished working.")
+      }
+    })
