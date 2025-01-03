@@ -49,10 +49,7 @@ object Otel4sTracingExample extends IOApp.Simple:
     .use { otel4s =>
       otel4s.tracerProvider
         .get("sttp.tapir.examples.observability")
-        .flatMap(t => {
-          given Tracer[IO] = t
-          server(HttpApi[IO](Service[IO]))
-        })
+        .flatMap { case given Tracer[IO] => server(HttpApi[IO](Service[IO])) }
     }
 
   private def server(httpApi: HttpApi[IO]): IO[Unit] =
