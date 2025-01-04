@@ -5,7 +5,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.11.11
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.11
 //> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
-//> using dep com.softwaremill.sttp.client3::async-http-client-backend-fs2:3.10.1
+//> using dep com.softwaremill.sttp.client3::async-http-client-backend-fs2:3.10.2
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 
 package sttp.tapir.examples.websocket
