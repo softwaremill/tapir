@@ -2,7 +2,6 @@ package sttp.tapir.server.vertx.interpreters
 
 import io.vertx.core.http.HttpMethod._
 import io.vertx.ext.web.{Route, Router}
-import sttp.model.Method.HEAD
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.cors.CORSInterceptor
@@ -23,7 +22,7 @@ trait CommonServerInterpreter {
   protected def optionsRouteIfCORSDefined[C, F[_]](
       e: ServerEndpoint[C, F]
   )(router: Router, routeDef: RouteDefinition, serverOptions: VertxServerOptions[F]): Option[Route] = {
-    def isCORSInterceptorDefined[F[_]](interceptors: List[Interceptor[F]]): Boolean = {
+    def isCORSInterceptorDefined(interceptors: List[Interceptor[F]]): Boolean = {
       interceptors.collectFirst { case ci: CORSInterceptor[F] => ci }.nonEmpty
     }
 
