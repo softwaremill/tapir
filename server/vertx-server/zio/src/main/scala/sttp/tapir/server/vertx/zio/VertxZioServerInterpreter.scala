@@ -26,7 +26,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
       runtime: Runtime[R & R2]
   ): Router => Route = { router =>
     val routeDef = extractRouteDefinition(e.endpoint)
-    optionsRouteIfCORSDefined(e)(router, routeDef, vertxFutureServerOptions)
+    optionsRouteIfCORSDefined(e)(router, routeDef, vertxZioServerOptions)
       .foreach(_.handler(endpointHandler(e)))
     mountWithDefaultHandlers(e.widen)(router, routeDef, vertxZioServerOptions)
       .handler(endpointHandler(e))
