@@ -1,4 +1,4 @@
-// {cat=Status code; effects=Direct; server=Netty}: Serving static files from a directory
+// {cat=Status code; effects=Direct; server=Netty}: Responding with fixed or dynamic status code
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.11
