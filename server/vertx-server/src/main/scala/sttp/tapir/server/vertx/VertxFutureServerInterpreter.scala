@@ -27,7 +27,8 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
     */
   def route[A, U, I, E, O](e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
     val routeDef = extractRouteDefinition(e.endpoint)
-    optionsRoute(e)(router, routeDef).foreach(_.handler(endpointHandler(e)))
+    optionsRouteIfCORSDefined(e)(router, routeDef, vertxFutureServerOptions)
+      .foreach(_.handler(endpointHandler(e)))
     mountWithDefaultHandlers(e)(router, routeDef, vertxFutureServerOptions)
       .handler(endpointHandler(e))
   }
@@ -40,7 +41,8 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
     */
   def blockingRoute(e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
     val routeDef = extractRouteDefinition(e.endpoint)
-    optionsRoute(e)(router, routeDef).foreach(_.handler(endpointHandler(e)))
+    optionsRouteIfCORSDefined(e)(router, routeDef, vertxFutureServerOptions)
+      .foreach(_.handler(endpointHandler(e)))
     mountWithDefaultHandlers(e)(router, routeDef, vertxFutureServerOptions)
       .blockingHandler(endpointHandler(e))
   }

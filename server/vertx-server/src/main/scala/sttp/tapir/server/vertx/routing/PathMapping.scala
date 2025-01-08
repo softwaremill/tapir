@@ -26,14 +26,6 @@ object PathMapping {
       case (None, path)         => router.route(path)
     }
 
-  private[vertx] def createOptionsRoute(router: Router, route: RouteDefinition): Option[Route] =
-    route match {
-      case (Some(method), path) if Set(GET, HEAD, POST, PUT, DELETE).contains(method) =>
-        Some(router.options(path))
-      case (None, path) => Some(router.options(path))
-      case _            => None
-    }
-
   /** Extracts the route definition from the endpoint inputs
     * @param endpoint
     *   a Tapir endpoint
@@ -58,5 +50,4 @@ object PathMapping {
       .mkString
     if (path.isEmpty) "/*" else path
   }
-
 }
