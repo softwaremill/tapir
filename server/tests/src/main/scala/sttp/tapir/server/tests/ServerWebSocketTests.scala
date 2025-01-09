@@ -260,10 +260,19 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         }.asRight[Unit])
       ) { (backend, baseUri) =>
         basicRequest
-          .response(asWebSocket { (ws: WebSocket[IO]) => ws.sendText("test1").map(_ => ws.close()) })
+          .response(asWebSocket { (ws: WebSocket[IO]) =>
+            for {
+              _ <- ws.sendText("test1")
+              m1 <- ws.eitherClose(ws.receiveText())
+              _ <- ws.close()
+              m2 <- ws.eitherClose(ws.receiveText())
+            } yield List(m1, m2)
+          })
           .get(baseUri.scheme("ws"))
           .send(backend)
-          .map(_ =>
+          .map(response =>
+            response.body.map(_.map(_.toOption)) shouldBe Right(List(Some("test1"), None))
+
             // verifying what happened on the server; clearing the trail if there are retries
             serverTrail.getAndSet(Vector.empty) shouldBe Vector(Some("test1"), None)
           )
