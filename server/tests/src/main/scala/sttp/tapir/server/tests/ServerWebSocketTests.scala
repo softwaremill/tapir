@@ -270,12 +270,12 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           })
           .get(baseUri.scheme("ws"))
           .send(backend)
-          .map(response =>
+          .map { response =>
             response.body.map(_.map(_.toOption)) shouldBe Right(List(Some("test1"), None))
 
             // verifying what happened on the server; clearing the trail if there are retries
             serverTrail.getAndSet(Vector.empty) shouldBe Vector(Some("test1"), None)
-          )
+          }
       }
     }
   ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests ++ frameConcatenationTests
