@@ -8,7 +8,7 @@ jobs:
   slashCommandDispatch:
     # to fast-skip for typical, non-rebase comments
     if: contains(github.event.comment.body, '/rebase')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Slash Command Dispatch
         uses: peter-evans/slash-command-dispatch@v4
