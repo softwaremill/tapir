@@ -42,7 +42,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false)
         .tests() ++
         new ServerGracefulShutdownTests(createServerTest, sleeper).tests() ++
-        new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, failingPipe = true, handlePong = true) {
+        new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, handlePong = true) {
           override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
           override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
         }.tests() ++

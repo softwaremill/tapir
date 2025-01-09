@@ -105,7 +105,8 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
             .unsafeToFuture()
         },
         Test("execute metrics interceptors for empty body and json content type") {
-          val e = endpoint.post.in(stringBody)
+          val e = endpoint.post
+            .in(stringBody)
             .out(stringBody)
             .out(header(Header.contentType(MediaType.ApplicationJson)))
             .serverLogicSuccess[Future](body => Future.successful(body))
@@ -124,18 +125,12 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
                 me.eval {
                   metric.onRequestCnt.incrementAndGet()
                   EndpointMetric(
-                    onEndpointRequest = Some((_) =>
-                      me.eval(metric.onEndpointRequestCnt.incrementAndGet()),
-                    ),
-                    onResponseHeaders = Some((_, _) =>
-                      me.eval(metric.onResponseHeadersCnt.incrementAndGet()),
-                    ),
-                    onResponseBody = Some((_, _) =>
-                      me.eval(metric.onResponseBodyCnt.incrementAndGet()),
-                    ),
-                    onException = None,
+                    onEndpointRequest = Some((_) => me.eval(metric.onEndpointRequestCnt.incrementAndGet())),
+                    onResponseHeaders = Some((_, _) => me.eval(metric.onResponseHeadersCnt.incrementAndGet())),
+                    onResponseBody = Some((_, _) => me.eval(metric.onResponseBodyCnt.incrementAndGet())),
+                    onException = None
                   )
-                },
+                }
             )
           val route = PekkoHttpServerInterpreter(
             PekkoHttpServerOptions.customiseInterceptors
@@ -166,7 +161,6 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           createServerTest,
           PekkoStreams,
           autoPing = false,
-          failingPipe = true,
           handlePong = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)

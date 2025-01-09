@@ -57,7 +57,6 @@ class VertxServerTest extends TestSuite {
           createServerTest,
           VertxStreams,
           autoPing = false,
-          failingPipe = false,
           handlePong = false,
           expectCloseResponse = false,
           frameConcatenation = false

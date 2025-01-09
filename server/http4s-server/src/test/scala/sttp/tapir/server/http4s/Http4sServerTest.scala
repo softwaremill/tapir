@@ -151,7 +151,6 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         createServerTest,
         Fs2Streams[IO],
         autoPing = true,
-        failingPipe = true,
         handlePong = false
       ) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
