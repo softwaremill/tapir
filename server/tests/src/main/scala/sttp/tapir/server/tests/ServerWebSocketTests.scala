@@ -31,7 +31,8 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     handlePong: Boolean,
     // Disabled for example for vert.x, which sometimes drops connection without returning Close
     expectCloseResponse: Boolean = true,
-    frameConcatenation: Boolean = true
+    frameConcatenation: Boolean = true,
+    decodeCloseRequests: Boolean = true
 )(implicit
     m: MonadError[F]
 ) extends EitherValues {
@@ -247,38 +248,8 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           response1.code shouldBe StatusCode.BadRequest
           response2.body shouldBe Right("echo: testOk")
         }
-    }, {
-      val serverTrail = new AtomicReference[Vector[Option[String]]](Vector.empty)
-      testServer(
-        // using an optional request type causes `decodeCloseRequests` to become `true` (because the schema is optional)
-        endpoint.out(webSocketBody[Option[String], CodecFormat.TextPlain, Option[String], CodecFormat.TextPlain](streams)),
-        "receive a client-sent close frame as a None"
-      )((_: Unit) =>
-        pureResult(functionToPipe[Option[String], Option[String]] { msg =>
-          serverTrail.updateAndGet(v => v :+ msg)
-          msg
-        }.asRight[Unit])
-      ) { (backend, baseUri) =>
-        basicRequest
-          .response(asWebSocket { (ws: WebSocket[IO]) =>
-            for {
-              _ <- ws.sendText("test1")
-              m1 <- ws.eitherClose(ws.receiveText())
-              _ <- ws.close()
-              m2 <- ws.eitherClose(ws.receiveText())
-            } yield List(m1, m2)
-          })
-          .get(baseUri.scheme("ws"))
-          .send(backend)
-          .map { response =>
-            response.body.map(_.map(_.toOption)) shouldBe Right(List(Some("test1"), None))
-
-            // verifying what happened on the server; clearing the trail if there are retries
-            serverTrail.getAndSet(Vector.empty) shouldBe Vector(Some("test1"), None)
-          }
-      }
     }
-  ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests ++ frameConcatenationTests
+  ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests ++ frameConcatenationTests ++ decodeCloseRequestsTests
 
   val autoPingTests =
     if (autoPing)
@@ -461,6 +432,43 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             .get(baseUri.scheme("ws"))
             .send(backend)
             .map(_.body shouldBe Right(List("echo: test1", "echo: test-pong-text")))
+        }
+      )
+    else List.empty
+
+  val decodeCloseRequestsTests =
+    if (decodeCloseRequests)
+      List(
+        {
+          val serverTrail = new AtomicReference[Vector[Option[String]]](Vector.empty)
+          testServer(
+            // using an optional request type causes `decodeCloseRequests` to become `true` (because the schema is optional)
+            endpoint.out(webSocketBody[Option[String], CodecFormat.TextPlain, Option[String], CodecFormat.TextPlain](streams)),
+            "receive a client-sent close frame as a None"
+          )((_: Unit) =>
+            pureResult(functionToPipe[Option[String], Option[String]] { msg =>
+              serverTrail.updateAndGet(v => v :+ msg)
+              msg
+            }.asRight[Unit])
+          ) { (backend, baseUri) =>
+            basicRequest
+              .response(asWebSocket { (ws: WebSocket[IO]) =>
+                for {
+                  _ <- ws.sendText("test1")
+                  m1 <- ws.eitherClose(ws.receiveText())
+                  _ <- ws.close()
+                  m2 <- ws.eitherClose(ws.receiveText())
+                } yield List(m1, m2)
+              })
+              .get(baseUri.scheme("ws"))
+              .send(backend)
+              .map { response =>
+                response.body.map(_.map(_.toOption)) shouldBe Right(List(Some("test1"), None))
+
+                // verifying what happened on the server; clearing the trail if there are retries
+                serverTrail.getAndSet(Vector.empty) shouldBe Vector(Some("test1"), None)
+              }
+          }
         }
       )
     else List.empty

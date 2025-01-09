@@ -156,7 +156,8 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           }
         },
         Test("execute metrics interceptors for empty body and json content type") {
-          val e = endpoint.post.in(stringBody)
+          val e = endpoint.post
+            .in(stringBody)
             .out(stringBody)
             .out(header(Header.contentType(MediaType.ApplicationJson)))
             .serverLogicSuccess[Future](body => Future.successful(body))
@@ -175,18 +176,12 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
                 me.eval {
                   metric.onRequestCnt.incrementAndGet()
                   EndpointMetric(
-                    onEndpointRequest = Some((_) =>
-                      me.eval(metric.onEndpointRequestCnt.incrementAndGet()),
-                    ),
-                    onResponseHeaders = Some((_, _) =>
-                      me.eval(metric.onResponseHeadersCnt.incrementAndGet()),
-                    ),
-                    onResponseBody = Some((_, _) =>
-                      me.eval(metric.onResponseBodyCnt.incrementAndGet()),
-                    ),
-                    onException = None,
+                    onEndpointRequest = Some((_) => me.eval(metric.onEndpointRequestCnt.incrementAndGet())),
+                    onResponseHeaders = Some((_, _) => me.eval(metric.onResponseHeadersCnt.incrementAndGet())),
+                    onResponseBody = Some((_, _) => me.eval(metric.onResponseBodyCnt.incrementAndGet())),
+                    onException = None
                   )
-                },
+                }
             )
           val route = AkkaHttpServerInterpreter(
             AkkaHttpServerOptions.customiseInterceptors
@@ -218,7 +213,8 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           AkkaStreams,
           autoPing = false,
           failingPipe = true,
-          handlePong = false
+          handlePong = false,
+          decodeCloseRequests = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)

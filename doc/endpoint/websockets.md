@@ -61,6 +61,11 @@ webSocketBody[...](...).decodeCloseRequests(true)
 If you'd like to decode close frames when the endpoint is interpreted as a client, you should use the 
 `decodeCloseResponses` method.
 
+```{note}
+Not all server interpreters expose control frames (such as close frames) to user (and Tapir) code. Refer to the 
+documentation of individual interpreters for more details.
+```
+
 ## Raw web sockets
 
 The second web socket handling variant is to obtain a raw pipe transforming `WebSocketFrame`s: 
