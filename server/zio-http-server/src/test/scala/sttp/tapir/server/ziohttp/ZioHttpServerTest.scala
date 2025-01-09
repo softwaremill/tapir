@@ -314,7 +314,7 @@ class ZioHttpServerTest extends TestSuite {
             createServerTest,
             ZioStreams,
             autoPing = true,
-            failingPipe = false,
+            failingPipe = true,
             handlePong = false,
             frameConcatenation = false
           ) {
