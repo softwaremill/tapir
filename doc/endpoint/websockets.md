@@ -34,6 +34,22 @@ When creating a `webSocketBody`, we need to provide the following parameters:
 By default, ping-pong frames are handled automatically, fragmented frames are combined, and close frames aren't
 decoded, but this can be customised through methods on `webSocketBody`.
 
+## Close frames
+
+If you are using the default codecs between `WebSocketFrame` and your high-level types, and you'd like to either be
+notified that a websocket has been closed by the client, or close it from the server side, then you should wrap your
+high-level type into an `Option`.
+
+The default codecs map close frames to `None`, and regular (decoded text/binary) frames to `Some`. Hence, using the 
+following definition:
+
+```scala
+webSocketBody[Option[String], CodecFormat.TextPlain, Option[Response], CodecFormat.Json](PekkoStreams)
+```
+
+the websocket-processing pipe will receive a `None: Option[String]` when the client closes the web socket. Moreover, 
+if the pipe emits a `None: Option[Response]`, the web socket will be closed by the server.
+
 ## Raw web sockets
 
 Alternatively, it's possible to obtain a raw pipe transforming `WebSocketFrame`s: 

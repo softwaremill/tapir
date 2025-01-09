@@ -35,8 +35,11 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter with Vert
   def route(
       e: ServerEndpoint[Fs2Streams[F] with WebSockets, F]
   ): Router => Route = { router =>
+    val routeDef = extractRouteDefinition(e.endpoint)
     val readStreamCompatible = fs2ReadStreamCompatible(vertxCatsServerOptions)
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint), vertxCatsServerOptions)
+    optionsRouteIfCORSDefined(e)(router, routeDef, vertxCatsServerOptions)
+      .foreach(_.handler(endpointHandler(e, readStreamCompatible)))
+    mountWithDefaultHandlers(e)(router, routeDef, vertxCatsServerOptions)
       .handler(endpointHandler(e, readStreamCompatible))
   }
 

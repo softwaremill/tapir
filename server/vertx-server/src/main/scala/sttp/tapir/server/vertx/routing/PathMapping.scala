@@ -2,9 +2,9 @@ package sttp.tapir.server.vertx.routing
 
 import io.vertx.core.http.HttpMethod
 import io.vertx.ext.web.{Route, Router}
-import sttp.tapir.{AnyEndpoint, EndpointInput}
 import sttp.tapir.EndpointInput.PathCapture
 import sttp.tapir.internal._
+import sttp.tapir.{AnyEndpoint, EndpointInput}
 
 object PathMapping {
 
@@ -49,5 +49,4 @@ object PathMapping {
       .mkString
     if (path.isEmpty) "/*" else path
   }
-
 }
