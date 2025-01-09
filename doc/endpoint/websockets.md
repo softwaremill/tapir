@@ -32,7 +32,7 @@ When creating a `webSocketBody`, we need to provide the following parameters:
 * the `Streams` implementation, which determines the pipe type
 
 By default, ping-pong frames are handled automatically, fragmented frames are combined, and close frames aren't
-decoded, but this can be customised through methods on `webSocketBody`.
+decoded, but this can be customized through methods on `webSocketBody`.
 
 ## Close frames
 
@@ -50,9 +50,20 @@ webSocketBody[Option[String], CodecFormat.TextPlain, Option[Response], CodecForm
 the websocket-processing pipe will receive a `None: Option[String]` when the client closes the web socket. Moreover, 
 if the pipe emits a `None: Option[Response]`, the web socket will be closed by the server.
 
+Alternatively, if the codec for your high-level type already handles close frames (but its schema is not derived as
+optional), you can request that the close frames are decoded by the codec as well. Here's an example which does this
+on the server side:
+
+```scala
+webSocketBody[...](...).decodeCloseRequests(true)
+```
+
+If you'd like to decode close frames when the endpoint is interpreted as a client, you should use the 
+`decodeCloseResponses` method.
+
 ## Raw web sockets
 
-Alternatively, it's possible to obtain a raw pipe transforming `WebSocketFrame`s: 
+The second web socket handling variant is to obtain a raw pipe transforming `WebSocketFrame`s: 
 
 ```scala mdoc:silent
 import org.apache.pekko.stream.scaladsl.Flow
@@ -69,11 +80,11 @@ endpoint.out(webSocketBodyRaw(PekkoStreams)): PublicEndpoint[
 ```
 
 Such a pipe by default doesn't handle ping-pong frames automatically, doesn't concatenate fragmented flames, and
-passes close frames to the pipe as well. As before, this can be customised by methods on the returned output.
+passes close frames to the pipe as well. As before, this can be customized by methods on the returned output.
 
-Request/response schemas can be customised through `.requestsSchema` and `.responsesSchema`.
+Request/response schemas can be customized through `.requestsSchema` and `.responsesSchema`.
 
-## Interpreting as a sever
+## Interpreting as a server
 
 When interpreting a web socket endpoint as a server, the [server logic](../server/logic.md) needs to provide a
 streaming-specific pipe from requests to responses. E.g. in Pekko's case, this will be `Flow[REQ, RESP, Any]`.
