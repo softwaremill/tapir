@@ -21,6 +21,7 @@ import sttp.tapir.tests.data.Fruit
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.concurrent.duration._
+import java.util.concurrent.atomic.AtomicReference
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, S with WebSockets, OPTIONS, ROUTE],
@@ -28,7 +29,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     autoPing: Boolean,
     failingPipe: Boolean,
     handlePong: Boolean,
-    // Disabled for eaxmple for vert.x, which sometimes drops connection without returning Close
+    // Disabled for example for vert.x, which sometimes drops connection without returning Close
     expectCloseResponse: Boolean = true,
     frameConcatenation: Boolean = true
 )(implicit
@@ -246,6 +247,27 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           response1.code shouldBe StatusCode.BadRequest
           response2.body shouldBe Right("echo: testOk")
         }
+    }, {
+      val serverTrail = new AtomicReference[Vector[Option[String]]](Vector.empty)
+      testServer(
+        // using an optional request type causes `decodeCloseRequests` to become `true` (because the schema is optional)
+        endpoint.out(webSocketBody[Option[String], CodecFormat.TextPlain, Option[String], CodecFormat.TextPlain](streams)),
+        "receive a client-sent close frame as a None"
+      )((_: Unit) =>
+        pureResult(functionToPipe[Option[String], Option[String]] { msg =>
+          serverTrail.updateAndGet(v => v :+ msg)
+          msg
+        }.asRight[Unit])
+      ) { (backend, baseUri) =>
+        basicRequest
+          .response(asWebSocket { (ws: WebSocket[IO]) => ws.sendText("test1").map(_ => ws.close()) })
+          .get(baseUri.scheme("ws"))
+          .send(backend)
+          .map(_ =>
+            // verifying what happened on the server; clearing the trail if there are retries
+            serverTrail.getAndSet(Vector.empty) shouldBe Vector(Some("test1"), None)
+          )
+      }
     }
   ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests ++ frameConcatenationTests
 
