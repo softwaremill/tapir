@@ -59,7 +59,6 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
         createServerTest,
         ZioStreams,
         autoPing = true,
-        failingPipe = false,
         handlePong = false,
         decodeCloseRequests = false // for some reason fails on CI
       ) {

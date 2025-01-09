@@ -212,7 +212,6 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           createServerTest,
           AkkaStreams,
           autoPing = false,
-          failingPipe = true,
           handlePong = false,
           decodeCloseRequests = false
         ) {

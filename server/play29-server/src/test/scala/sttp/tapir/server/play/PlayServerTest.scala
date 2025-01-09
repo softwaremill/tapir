@@ -118,7 +118,6 @@ class PlayServerTest extends TestSuite {
           createServerTest,
           AkkaStreams,
           autoPing = false,
-          failingPipe = true,
           handlePong = false,
           decodeCloseRequests = false
         ) {

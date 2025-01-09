@@ -126,7 +126,6 @@ class PlayServerTest extends TestSuite {
           createServerTest,
           PekkoStreams,
           autoPing = false,
-          failingPipe = true,
           handlePong = false,
           decodeCloseRequests = false
         ) {

@@ -27,7 +27,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, S with WebSockets, OPTIONS, ROUTE],
     val streams: S,
     autoPing: Boolean,
-    failingPipe: Boolean,
     handlePong: Boolean,
     // Disabled for example for vert.x, which sometimes drops connection without returning Close
     expectCloseResponse: Boolean = true,
@@ -283,41 +282,40 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     else List.empty
 
   // Optional, because some backends don't handle exceptions in the pipe gracefully, they just swallow it silently and hang forever
-  val failingPipeTests =
-    if (failingPipe)
-      List(
-        testServer(
-          endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)),
-          "failing pipe"
-        )((_: Unit) =>
-          pureResult(functionToPipe[String, String] {
-            case "error-trigger" => throw new Exception("Boom!")
-            case msg             => s"echo: $msg"
-          }.asRight[Unit])
-        ) { (backend, baseUri) =>
-          basicRequest
-            .response(asWebSocket { (ws: WebSocket[IO]) =>
-              for {
-                _ <- ws.sendText("test1")
-                _ <- ws.sendText("test2")
-                _ <- ws.sendText("error-trigger")
-                m1 <- ws.eitherClose(ws.receiveText())
-                m2 <- ws.eitherClose(ws.receiveText())
-                m3 <- ws.eitherClose(ws.receiveText())
-              } yield List(m1, m2, m3)
-            })
-            .get(baseUri.scheme("ws"))
-            .send(backend)
-            .map { r =>
-              val results = r.body.map(_.map(_.left.map(_.statusCode))).value
-              results.take(2) shouldBe
-                List(Right("echo: test1"), Right("echo: test2"))
-              val closeCode = results.last.left.value
-              assert(closeCode == 1000 || closeCode == 1011) // some servers respond with Close(normal), some with Close(error)
-            }
+  val failingPipeTests = List(
+    testServer(
+      endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)),
+      "failing pipe"
+    )((_: Unit) =>
+      pureResult(functionToPipe[String, String] {
+        case "error-trigger" => throw new Exception("Boom!")
+        case msg             => s"echo: $msg"
+      }.asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
+          for {
+            _ <- ws.sendText("test1")
+            _ <- ws.sendText("test2")
+            _ <- ws.sendText("error-trigger")
+            m1 <- ws.eitherClose(ws.receiveText())
+            m2 <- ws.eitherClose(ws.receiveText())
+            m3 <- ws.eitherClose(ws.receiveText())
+          } yield List(m1, m2, m3)
+        })
+        .get(baseUri.scheme("ws"))
+        .send(backend)
+        .map { r =>
+          val results = r.body.map(_.map(_.left.map(_.statusCode))).value
+          results.take(2) shouldBe
+            List(Right("echo: test1"), Right("echo: test2"))
+          val closeCode = results.last.left.value
+          assert(
+            closeCode == 1000 || closeCode == 1006 || closeCode == 1011
+          ) // some servers respond with Close(normal), some with Close(error), and zio+http4s with Close(abnormal)
         }
-      )
-    else List.empty
+    }
+  )
 
   val frameConcatenationTests =
     if (frameConcatenation)

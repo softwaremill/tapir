@@ -161,7 +161,6 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           createServerTest,
           PekkoStreams,
           autoPing = false,
-          failingPipe = true,
           handlePong = false,
           decodeCloseRequests = false
         ) {
