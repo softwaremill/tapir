@@ -59,7 +59,6 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
         createServerTest,
         ZioStreams,
         autoPing = true,
-        failingPipe = true,
         handlePong = false
       ) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)

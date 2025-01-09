@@ -118,7 +118,6 @@ class PlayServerTest extends TestSuite {
           createServerTest,
           AkkaStreams,
           autoPing = false,
-          failingPipe = true,
           handlePong = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
