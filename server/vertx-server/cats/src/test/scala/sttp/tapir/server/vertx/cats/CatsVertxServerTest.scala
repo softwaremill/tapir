@@ -41,7 +41,7 @@ class CatsVertxServerTest extends TestSuite {
           createServerTest,
           Fs2Streams.apply[IO],
           autoPing = false,
-          failingPipe = false,
+          failingPipe = true,
           handlePong = true,
           expectCloseResponse = false,
           frameConcatenation = false
