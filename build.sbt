@@ -1000,7 +1000,7 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
   .settings(
     name := "tapir-pekko-grpc-examples",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-discovery" % "1.1.2",
+      "org.apache.pekko" %% "pekko-discovery" % "1.1.3",
       slf4j
     ),
     fork := true
@@ -2077,7 +2077,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
-      "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % Versions.openTelemetry ,
+      "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % Versions.openTelemetry,
       "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % Versions.jsoniter,
       "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
       scalaTest.value,
@@ -2112,6 +2112,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     sttpStubServer,
     swaggerUiBundle,
     redocBundle,
+    vertxServer,
     zioHttpServer,
     zioJson,
     zioMetrics
