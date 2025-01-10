@@ -2,7 +2,7 @@ package sttp.tapir.internal
 
 import scala.quoted.*
 
-private[tapir] object ComplietimeErrors {
+private[tapir] object CompileTimeErrors {
   inline def reportIncorrectMapping[SOURCE, TARGET] = ${ reportIncorrectMappingImpl[SOURCE, TARGET] }
 
   private def reportIncorrectMappingImpl[SOURCE: Type, TARGET: Type](using Quotes): Expr[Unit] = {
