@@ -47,7 +47,7 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
           createServerTest,
           ZioStreams,
           autoPing = true,
-          handlePong = false,
+          handlePong = true,
           expectCloseResponse = false,
           frameConcatenation = false
         ) {

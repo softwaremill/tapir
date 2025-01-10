@@ -372,26 +372,33 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       List(
         testServer(
           endpoint.out(
-            webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
+            webSocketBodyRaw(streams)
               .autoPing(None)
               .autoPongOnPing(false)
           ),
           "not pong on ping if disabled"
-        )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
+        )((_: Unit) =>
+          pureResult(functionToPipe[WebSocketFrame, WebSocketFrame] {
+            case WebSocketFrame.Ping(payload)       => WebSocketFrame.text(s"ping: ${new String(payload)}")
+            case WebSocketFrame.Text(payload, _, _) => WebSocketFrame.text(s"text: ${payload}")
+            case f                                  => WebSocketFrame.text(s"other: $f")
+          }.asRight[Unit])
+        ) { (backend, baseUri) =>
           basicRequest
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               for {
                 _ <- ws.sendText("test1")
-                _ <- ws.send(WebSocketFrame.Ping("test-ping-text".getBytes()))
                 m1 <- ws.receiveText()
-                _ <- ws.sendText("test2")
+                _ <- ws.send(WebSocketFrame.Ping("test-ping-text".getBytes()))
                 m2 <- ws.receiveText()
-              } yield List(m1, m2)
+                _ <- ws.sendText("test2")
+                m3 <- ws.receiveText()
+              } yield List(m1, m2, m3)
             })
             .get(baseUri.scheme("ws"))
             .send(backend)
             .map(
-              _.body shouldBe Right(List("echo: test1", "echo: test2"))
+              _.body shouldBe Right(List("text: test1", "ping: test-ping-text", "text: test2"))
             )
         },
         testServer(
