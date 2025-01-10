@@ -4,7 +4,7 @@ on:
     types: [rebase-command]
 jobs:
   rebase:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: peter-evans/rebase@v3
         id: rebase
