@@ -8,3 +8,7 @@ updates:
     schedule:
       # Check for updates to GitHub Actions every week
       interval: "weekly"
+    # Raise all pull requests with labels
+    labels:
+      - "dependency"
+      - "automerge"
