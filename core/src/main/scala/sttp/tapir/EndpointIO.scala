@@ -384,6 +384,15 @@ object EndpointOutput extends EndpointOutputMacros {
     override def show: String = s"status code ($statusCode)"
   }
 
+  case class OptionalNotFound[T](delegate: EndpointOutput[Option[T]]) extends EndpointOutput.Single[Option[T]] {
+
+    override private[tapir] type ThisType[X] = delegate.ThisType[X]
+
+    override def map[U](mapping: Mapping[Option[T], U]): delegate.ThisType[U] = delegate.map(mapping)
+
+    override def show: String = s"body of type ${delegate.show} or empty body and status code 404 for None"
+  }
+
   case class WebSocketBodyWrapper[PIPE_REQ_RESP, T](wrapped: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, T, _]) extends Atom[T] {
     override private[tapir] type ThisType[X] = WebSocketBodyWrapper[PIPE_REQ_RESP, X]
     override private[tapir] type L = PIPE_REQ_RESP

@@ -548,6 +548,24 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
       .schema(c.schema.asOption)
 
   //
+    
+  def optionFromDelegate[L, H, CF <: CodecFormat](delegate: Codec[L, H, CF], rawValueForNone: L, decodeAsNone: L => Boolean): Codec[L, Option[H], CF] =
+    new Codec[L, Option[H], CF] {
+      override def rawDecode(l: L): DecodeResult[Option[H]] =
+        if (decodeAsNone(l))
+          DecodeResult.Value(None)
+        else
+          delegate.rawDecode(l).map(Some(_))
+
+      override def encode(h: Option[H]): L = h match {
+        case None => rawValueForNone
+        case Some(v) => delegate.encode(v)
+      }
+
+      override def schema: Schema[Option[H]] = delegate.schema.asOption
+
+      override def format: CF = delegate.format
+    }
 
   def fromDecodeAndMeta[L, H: Schema, CF <: CodecFormat](cf: CF)(f: L => DecodeResult[H])(g: H => L): Codec[L, H, CF] =
     new Codec[L, H, CF] {

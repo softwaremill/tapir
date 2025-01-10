@@ -146,6 +146,7 @@ package object internal {
         case EndpointIO.OneOfBody(variants, _)      => variants.flatMap(_.body.fold(_.asBasicOutputsList, _.asBasicOutputsList))
         case e: EndpointIO.Empty[_]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
         case b: EndpointOutput.Basic[_]             => List(Vector(b))
+        case EndpointOutput.OptionalNotFound(delegate) => delegate.asBasicOutputsList
       }
     }
 

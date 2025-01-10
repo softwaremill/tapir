@@ -4,7 +4,7 @@ import sttp.capabilities.Streams
 import sttp.model._
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta, WWWAuthenticateChallenge}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
-import sttp.tapir.EndpointOutput.OneOfVariant
+import sttp.tapir.EndpointOutput.{OneOfVariant, OptionalNotFound}
 import sttp.tapir.internal._
 import sttp.tapir.macros.ModifyMacroSupport
 import sttp.tapir.model.ServerRequest
@@ -62,6 +62,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def stringBody(charset: String): EndpointIO.Body[String, String] = stringBody(Charset.forName(charset))
   def stringBody(charset: Charset): EndpointIO.Body[String, String] =
     EndpointIO.Body(RawBodyType.StringBody(charset), Codec.string, EndpointIO.Info.empty)
+
+  def optionBody[R, T](delegate: EndpointIO.Body[R, T], rawValueForNone: R, decodeAsNone: R => Boolean): EndpointIO.Body[R, Option[T]] =
+    EndpointIO.Body(delegate.bodyType, Codec.optionFromDelegate(delegate.codec, rawValueForNone, decodeAsNone), EndpointIO.Info.empty)
+  
+  def notFoundIfNone[T](delegate: EndpointOutput[Option[T]]) = OptionalNotFound(delegate)
 
   /** A body in any format, read using the given `codec`, from a raw string read using UTF-8. */
   def stringBodyUtf8AnyFormat[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =

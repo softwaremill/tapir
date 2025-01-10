@@ -14,6 +14,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
     output match {
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
       case s: EndpointOutput.Single[_]                => applySingle(s, value, ov)
+      case s: EndpointOutput.OptionalNotFound[_]               => applySingle(s, value, ov)
       case EndpointIO.Pair(left, right, _, split)     => applyPair(left, right, split, value, ov)
       case EndpointOutput.Pair(left, right, _, split) => applyPair(left, right, split, value, ov)
       case EndpointOutput.Void()                      => throw new IllegalArgumentException("Cannot encode a void output!")
@@ -38,6 +39,12 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
       case EndpointIO.Empty(_, _)                   => ov
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name, header.value)
+      case EndpointOutput.OptionalNotFound(delegate) =>
+        val delegateOv = apply(delegate, value, ov)
+        value.asAny match
+          case Some(_) => delegateOv
+          case None => delegateOv.withStatusCode(StatusCode.NotFound)
+          case _ => throw new IllegalArgumentException("OptionalNotFound used with non-optional type")
       case EndpointIO.Body(rawBodyType, codec, _) =>
         val maybeCharset = if (codec.format.mediaType.isText) charset(rawBodyType) else None
         ov.withBody(headers => rawToResponseBody.fromRawValue(encodedC(codec), headers, codec.format, rawBodyType))

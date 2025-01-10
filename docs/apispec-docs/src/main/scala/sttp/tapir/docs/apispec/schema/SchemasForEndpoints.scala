@@ -64,6 +64,7 @@ class SchemasForEndpoints(
       case EndpointOutput.WebSocketBodyWrapper(wrapped) =>
         ToKeyedSchemas(wrapped.codec) ++ ToKeyedSchemas(wrapped.requests) ++ ToKeyedSchemas(wrapped.responses)
       case op: EndpointIO[_] => forIO(op)
+      case EndpointOutput.OptionalNotFound(delegate) => forOutput(delegate)
     }
   }
 
