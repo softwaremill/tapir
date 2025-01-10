@@ -82,7 +82,7 @@ jobs:
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS -v "project examples3" verifyExamplesCompileUsingScalaCli
     - name: Test
-      if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
+      if: matrix.target-platform != 'JS'
       uses: nick-fields/retry@v3
       with:
         timeout_minutes: 8
@@ -90,14 +90,7 @@ jobs:
         command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     - name: Test OpenAPI codegen
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
-      run: sbt $SBT_JAVA_OPTS -v "openapiCodegenSbt2_12/scripted"        
-    - name: Test
-      if: matrix.target-platform != 'JS' && !(matrix.target-platform == 'JVM' && matrix.scala-version == '2.12')
-      uses: nick-fields/retry@v3
-      with:
-        timeout_minutes: 8
-        max_attempts: 4
-        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
+      run: sbt $SBT_JAVA_OPTS -v "openapiCodegenSbt2_12/scripted"                
     # The finatra tests take a really long time (1/3 of the build duration); hence, they are disabled and need to be run separately
     #- name: Test finatra
     #  if: matrix.target-platform != 'JS'
