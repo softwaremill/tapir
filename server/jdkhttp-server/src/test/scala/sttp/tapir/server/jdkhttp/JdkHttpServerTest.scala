@@ -3,7 +3,7 @@ package sttp.tapir.server.jdkhttp
 import cats.effect.{IO, Resource}
 import org.scalatest.{EitherValues, Exceptional, FutureOutcome}
 import sttp.tapir.server.jdkhttp.internal.idMonad
-import sttp.tapir.server.tests.*
+import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
