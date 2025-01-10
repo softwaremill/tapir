@@ -21,15 +21,17 @@ import sttp.tapir.tests.data.Fruit
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.concurrent.duration._
+import java.util.concurrent.atomic.AtomicReference
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, S with WebSockets, OPTIONS, ROUTE],
     val streams: S,
     autoPing: Boolean,
     handlePong: Boolean,
-    // Disabled for eaxmple for vert.x, which sometimes drops connection without returning Close
+    // Disabled for example for vert.x, which sometimes drops connection without returning Close
     expectCloseResponse: Boolean = true,
-    frameConcatenation: Boolean = true
+    frameConcatenation: Boolean = true,
+    decodeCloseRequests: Boolean = true
 )(implicit
     m: MonadError[F]
 ) extends EitherValues {
@@ -246,7 +248,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           response2.body shouldBe Right("echo: testOk")
         }
     }
-  ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests ++ frameConcatenationTests
+  ) ++ autoPingTests ++ failingPipeTests ++ handlePongTests ++ frameConcatenationTests ++ decodeCloseRequestsTests
 
   val autoPingTests =
     if (autoPing)
@@ -294,10 +296,10 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
-            _ <- ws.sendText("test2")
-            _ <- ws.sendText("error-trigger")
             m1 <- ws.eitherClose(ws.receiveText())
+            _ <- ws.sendText("test2")
             m2 <- ws.eitherClose(ws.receiveText())
+            _ <- ws.sendText("error-trigger")
             m3 <- ws.eitherClose(ws.receiveText())
           } yield List(m1, m2, m3)
         })
@@ -370,26 +372,33 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       List(
         testServer(
           endpoint.out(
-            webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
+            webSocketBodyRaw(streams)
               .autoPing(None)
               .autoPongOnPing(false)
           ),
           "not pong on ping if disabled"
-        )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
+        )((_: Unit) =>
+          pureResult(functionToPipe[WebSocketFrame, WebSocketFrame] {
+            case WebSocketFrame.Ping(payload)       => WebSocketFrame.text(s"ping: ${new String(payload)}")
+            case WebSocketFrame.Text(payload, _, _) => WebSocketFrame.text(s"text: ${payload}")
+            case f                                  => WebSocketFrame.text(s"other: $f")
+          }.asRight[Unit])
+        ) { (backend, baseUri) =>
           basicRequest
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               for {
                 _ <- ws.sendText("test1")
-                _ <- ws.send(WebSocketFrame.Ping("test-ping-text".getBytes()))
                 m1 <- ws.receiveText()
-                _ <- ws.sendText("test2")
+                _ <- ws.send(WebSocketFrame.Ping("test-ping-text".getBytes()))
                 m2 <- ws.receiveText()
-              } yield List(m1, m2)
+                _ <- ws.sendText("test2")
+                m3 <- ws.receiveText()
+              } yield List(m1, m2, m3)
             })
             .get(baseUri.scheme("ws"))
             .send(backend)
             .map(
-              _.body shouldBe Right(List("echo: test1", "echo: test2"))
+              _.body shouldBe Right(List("text: test1", "ping: test-ping-text", "text: test2"))
             )
         },
         testServer(
@@ -428,6 +437,43 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             .get(baseUri.scheme("ws"))
             .send(backend)
             .map(_.body shouldBe Right(List("echo: test1", "echo: test-pong-text")))
+        }
+      )
+    else List.empty
+
+  val decodeCloseRequestsTests =
+    if (decodeCloseRequests)
+      List(
+        {
+          val serverTrail = new AtomicReference[Vector[Option[String]]](Vector.empty)
+          testServer(
+            // using an optional request type causes `decodeCloseRequests` to become `true` (because the schema is optional)
+            endpoint.out(webSocketBody[Option[String], CodecFormat.TextPlain, Option[String], CodecFormat.TextPlain](streams)),
+            "receive a client-sent close frame as a None"
+          )((_: Unit) =>
+            pureResult(functionToPipe[Option[String], Option[String]] { msg =>
+              serverTrail.updateAndGet(v => v :+ msg)
+              msg
+            }.asRight[Unit])
+          ) { (backend, baseUri) =>
+            basicRequest
+              .response(asWebSocket { (ws: WebSocket[IO]) =>
+                for {
+                  _ <- ws.sendText("test1")
+                  m1 <- ws.eitherClose(ws.receiveText())
+                  _ <- ws.close()
+                  m2 <- ws.eitherClose(ws.receiveText())
+                } yield List(m1, m2)
+              })
+              .get(baseUri.scheme("ws"))
+              .send(backend)
+              .map { response =>
+                response.body.map(_.map(_.toOption)) shouldBe Right(List(Some("test1"), None))
+
+                // verifying what happened on the server; clearing the trail if there are retries
+                serverTrail.getAndSet(Vector.empty) shouldBe Vector(Some("test1"), None)
+              }
+          }
         }
       )
     else List.empty
