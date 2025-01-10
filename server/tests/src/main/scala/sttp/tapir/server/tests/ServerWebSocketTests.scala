@@ -296,10 +296,10 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
-            _ <- ws.sendText("test2")
-            _ <- ws.sendText("error-trigger")
             m1 <- ws.eitherClose(ws.receiveText())
+            _ <- ws.sendText("test2")
             m2 <- ws.eitherClose(ws.receiveText())
+            _ <- ws.sendText("error-trigger")
             m3 <- ws.eitherClose(ws.receiveText())
           } yield List(m1, m2, m3)
         })
