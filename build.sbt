@@ -648,7 +648,7 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
     libraryDependencies ++= Seq(
       "eu.timepit" %%% "refined" % Versions.refined,
       scalaTest.value % Test,
-      "io.circe" %%% "circe-refined" % Versions.circe % Test
+      "io.circe" %%% "circe-refined" % Versions.circeRefined % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
