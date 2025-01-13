@@ -11,7 +11,6 @@
 
 package sttp.tapir.examples
 
-import sttp.model.StatusCode
 import sttp.tapir.generic.auto.*
 
 @main def booksExample(): Unit =
@@ -57,16 +56,6 @@ import sttp.tapir.generic.auto.*
     val booksListingByGenre: PublicEndpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
       .in(("list" / path[String]("genre").map(Option(_))(_.get)).and(limitParameter).mapTo[BooksQuery])
       .out(jsonBody[Vector[Book]])
-
-    // Optional value from serverLogic, responding with 404 when None
-    val singleBook = baseEndpoint.get
-      .in("book" / query[String]("title"))
-      .out(oneOf(
-        oneOfVariantExactMatcher(StatusCode.NotFound, jsonBody[Option[Book]])(None),
-        oneOfVariantValueMatcher(StatusCode.Ok, jsonBody[Option[Book]]) {
-          case Some(book) => true
-        }
-      ))
   end Endpoints
 
   //
@@ -134,18 +123,12 @@ import sttp.tapir.generic.auto.*
         Right[String, Vector[Book]](Library.getBooks(query))
       }
 
-    def singleBookLogic(title: String): Future[Either[String, Option[Book]]] =
-      Future {
-        Right(Library.Books.get().find(_.title == title))
-      }
-
     // interpreting the endpoint description and converting it to an pekko-http route, providing the logic which
     // should be run when the endpoint is invoked.
     List(
       addBook.serverLogic(bookAddLogic.tupled),
       booksListing.serverLogic(bookListingLogic),
-      booksListingByGenre.serverLogic(bookListingByGenreLogic),
-      singleBook.serverLogic(singleBookLogic)
+      booksListingByGenre.serverLogic(bookListingByGenreLogic)
     )
   end booksServerEndpoints
 
@@ -154,7 +137,7 @@ import sttp.tapir.generic.auto.*
 
     // interpreting the endpoint descriptions as yaml openapi documentation
     // exposing the docs using SwaggerUI endpoints, interpreted as an pekko-http route
-    SwaggerInterpreter().fromEndpoints(List(addBook, booksListing, booksListingByGenre, singleBook), "The Tapir Library", "1.0")
+    SwaggerInterpreter().fromEndpoints(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
   end swaggerUIServerEndpoints
 
   def startServer(serverEndpoints: List[ServerEndpoint[Any, Future]]): Unit =
