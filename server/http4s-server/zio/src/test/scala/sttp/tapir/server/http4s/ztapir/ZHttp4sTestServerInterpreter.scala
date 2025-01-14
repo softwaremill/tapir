@@ -15,7 +15,9 @@ import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
 import sttp.tapir.ztapir.ZServerEndpoint
 import zio.{Runtime, Task, Unsafe}
+import zio.interop._
 import zio.interop.catz._
+import zio.interop.catz.implicits._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
@@ -27,7 +29,6 @@ object ZHttp4sTestServerInterpreter {
 }
 
 class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams with WebSockets, ServerOptions, Routes] {
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(es: List[ZServerEndpoint[Any, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
     val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors[Task]).options
@@ -49,7 +50,7 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
       .map(_.address.getPort)
       .mapK(new ~>[Task, IO] {
         // Converting a ZIO effect to an Cats Effect IO effect
-        def apply[B](fa: Task[B]): IO[B] = IO.fromFuture(Unsafe.unsafe(implicit u => IO(Runtime.default.unsafe.runToFuture(fa))))
+        def apply[B](fa: Task[B]): IO[B] = fa.toEffect[IO]
       })
   }
 }

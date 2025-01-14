@@ -62,6 +62,4 @@ object ProxyHttp4sFs2Server extends IOApp:
         .bindHttp(8080, "localhost")
         .withHttpApp(Router("/" -> routes).orNotFound)
         .resource
-    } yield ())
-      .use { _ => IO.never }
-      .as(ExitCode.Success)
+    } yield ()).useForever

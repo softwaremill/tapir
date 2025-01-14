@@ -16,24 +16,21 @@ import org.http4s._
 import org.slf4j.LoggerFactory
 import org.typelevel.ci.CIString
 import scodec.bits.ByteVector
-import sttp.tapir.client.tests.HttpServer._
 
 import scala.concurrent.ExecutionContext
 
-object HttpServer {
+object HttpServer extends ResourceApp.Forever {
   type Port = Int
 
-  def main(args: Array[String]): Unit = {
+  def run(args: List[String]): Resource[IO, Unit] = {
     val port = args.headOption.map(_.toInt).getOrElse(51823)
-    new HttpServer(port).start()
+    new HttpServer(port).build.void
   }
 }
 
-class HttpServer(port: Port) {
+class HttpServer(port: HttpServer.Port) {
 
   private val logger = LoggerFactory.getLogger(getClass)
-
-  private var stopServer: IO[Unit] = _
 
   //
 
@@ -75,7 +72,7 @@ class HttpServer(port: Port) {
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
       r.decode[multipart.Multipart[IO]] { mp =>
         val parts: Vector[multipart.Part[IO]] = mp.parts
-        def toString(s: fs2.Stream[IO, Byte]): IO[String] = s.through(fs2.text.utf8Decode).compile.foldMonoid
+        def toString(s: fs2.Stream[IO, Byte]): IO[String] = s.through(fs2.text.utf8.decode).compile.foldMonoid
         def partToString(name: String): IO[String] = parts.find(_.name.contains(name)).map(p => toString(p.body)).getOrElse(IO.pure(""))
         partToString("fruit").product(partToString("amount")).flatMap { case (fruit, amount) =>
           Ok(s"$fruit=$amount")
@@ -212,23 +209,11 @@ class HttpServer(port: Port) {
 
   //
 
-  def start(): Unit = {
-    val (_, _stopServer) = BlazeServerBuilder[IO]
+  def build: Resource[IO, server.Server] = BlazeServerBuilder[IO]
       .withExecutionContext(ExecutionContext.global)
       .bindHttp(port)
       .withHttpWebSocketApp(app)
       .resource
-      .map(_.address.getPort)
-      .allocated
-      .unsafeRunSync()
-
-    stopServer = _stopServer
-
-    logger.info(s"Server on port $port started")
-  }
-
-  def close(): Unit = {
-    stopServer.unsafeRunSync()
-    logger.info(s"Server on port $port stopped")
-  }
+      .evalTap(_ => IO(logger.info(s"Server on port $port started")))
+      .onFinalize(IO(logger.info(s"Server on port $port stopped")))
 }

@@ -230,8 +230,7 @@ object HelloWorldTapir extends IOApp:
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> allRoutes).orNotFound)
       .resource
-      .use(_ => IO.never)
-      .as(ExitCode.Success)
+      .useForever
 ```
 
 Hence, we first generate endpoint descriptions, which correspond to exposing the Swagger UI (containing the generated

@@ -56,5 +56,4 @@ object StreamingHttp4sFs2ServerOrError extends IOApp:
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> userDataRoutes).orNotFound)
       .resource
-      .use { _ => IO.never }
-      .as(ExitCode.Success)
+      .useForever
