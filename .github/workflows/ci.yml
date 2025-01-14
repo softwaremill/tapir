@@ -106,7 +106,7 @@ jobs:
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test
-    - uses: actions/upload-artifact@v3  # upload test results
+    - uses: actions/upload-artifact@v4  # upload test results
       if: success() || failure()        # run this step even if previous step failed
       with:
         name: 'tests-results-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'
@@ -220,7 +220,7 @@ jobs:
     name: Auto merge
     # only for PRs by softwaremill-ci and dependabot
     if: github.event.pull_request.user.login == 'softwaremill-ci' ||
-        github.event.pull_request.user.login == 'dependabot'
+        github.event.pull_request.user.login == 'dependabot[bot]'
     needs: [ ci, mima, label ]
     runs-on: ubuntu-24.04
     steps:
