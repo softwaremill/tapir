@@ -115,11 +115,9 @@ object server {
       .withMaxConnections(maxConnections)
       .withConnectorPoolSize(connectorPoolSize)
       .resource
-      .allocated
-      .map(_._2)
-      .map(_.flatTap { _ =>
-        IO.println("Http4s server closed.")
-      })
+      .useForever
+      .start
+      .map(_.cancel *> IO.println("Http4s server closed."))
 }
 
 object TapirServer extends ServerRunner { override def start = server.runServer(Tapir.router(1)) }
