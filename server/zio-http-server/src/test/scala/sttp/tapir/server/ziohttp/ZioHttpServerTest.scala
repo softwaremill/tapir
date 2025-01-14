@@ -14,7 +14,6 @@ import sttp.client3._
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.MediaType
 import sttp.monad.MonadError
-import sttp.tapir.PublicEndpoint
 import sttp.tapir._
 import sttp.tapir.server.stub.TapirStubInterpreter
 import sttp.tapir.server.tests._
@@ -314,7 +313,6 @@ class ZioHttpServerTest extends TestSuite {
             createServerTest,
             ZioStreams,
             autoPing = true,
-            failingPipe = false,
             handlePong = false,
             frameConcatenation = false
           ) {

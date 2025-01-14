@@ -442,7 +442,7 @@ class EndpointGenerator {
           if (allElemTypes.size == 1) allElemTypes.head
           else
             allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
-              case s if s.isEmpty && targetScala3 => types.mkString(" | ")
+              case s if s.isEmpty && targetScala3 => types.flatten.mkString(" | ")
               case s if s.isEmpty                 => "Any"
               case s if targetScala3              => s.mkString(" & ")
               case s                              => s.mkString(" with ")

@@ -59,6 +59,14 @@ package object encoders {
             handler.handle(WebSocketFrame.Text(frame.textData(), frame.isFinal(), None))
           } else if (t == WebSocketFrameType.BINARY) {
             handler.handle(WebSocketFrame.Binary(frame.binaryData().getBytes(), frame.isFinal(), None))
+          } else if (t == WebSocketFrameType.CLOSE) {
+            handler.handle(WebSocketFrame.Close(frame.closeStatusCode(), frame.closeReason()))
+          } else if (t == WebSocketFrameType.PING) {
+            handler.handle(WebSocketFrame.Ping(frame.binaryData().getBytes()))
+          } else if (t == WebSocketFrameType.PONG) {
+            handler.handle(WebSocketFrame.Pong(frame.binaryData().getBytes()))
+          } else if (t == WebSocketFrameType.CONTINUATION) {
+            handler.handle(WebSocketFrame.Binary(frame.binaryData().getBytes(), frame.isFinal(), None))
           }
         }
         websocket.pongHandler { buffer =>

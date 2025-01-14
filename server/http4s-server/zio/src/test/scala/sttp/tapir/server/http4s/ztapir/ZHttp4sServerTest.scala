@@ -59,8 +59,9 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
         createServerTest,
         ZioStreams,
         autoPing = true,
-        failingPipe = false,
-        handlePong = false
+        handlePong = false,
+        decodeCloseRequests =
+          false // when a close frame is received, http4s cancels the stream, so sometimes the close frames are never processed
       ) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
         override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty

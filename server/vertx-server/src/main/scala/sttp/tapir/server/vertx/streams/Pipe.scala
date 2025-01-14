@@ -164,7 +164,7 @@ object Pipe {
     })
     request.endHandler { _ =>
       val state = progress.updateAndGet(_.copy(completed = true))
-      if (state.inProgress == 0) socket.end()
+      if (state.inProgress == 0) { val _ = socket.close(1011.toShort) }
       ()
     }
     request.exceptionHandler { _ =>

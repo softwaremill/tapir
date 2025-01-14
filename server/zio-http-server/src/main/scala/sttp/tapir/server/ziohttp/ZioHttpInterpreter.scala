@@ -190,7 +190,16 @@ trait ZioHttpInterpreter[R] {
         channelEventsQueue <- zio.Queue.unbounded[WebSocketChannelEvent]
         messageReceptionFiber <- channel.receiveAll { message => channelEventsQueue.offer(message) }.fork
         webSocketStream <- webSocketHandler(stream.ZStream.fromQueue(channelEventsQueue))
-        _ <- webSocketStream.mapZIO(channel.send).runDrain
+        _ <- webSocketStream
+          .mapZIO(channel.send)
+          .runDrain
+          .resurrect
+          .catchAll { e =>
+            channel.send(ChannelEvent.Read(WebSocketFrame.Close(1011, Some("Internal server error")))) *> ZIO.logErrorCause(
+              "Exception when handling a WebSocket",
+              Cause.fail(e)
+            )
+          }
       } yield messageReceptionFiber.join
     }
     webSocketConfig.fold(app)(app.withConfig).toResponse

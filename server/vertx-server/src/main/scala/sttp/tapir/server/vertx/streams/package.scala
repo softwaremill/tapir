@@ -26,7 +26,7 @@ package object streams {
         pipe: streams.Pipe[REQ, RESP],
         o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, VertxStreams]
     ): ReadStream[WebSocketFrame] = {
-      val stream0 = optionallyContatenateFrames(readStream, o.concatenateFragmentedFrames)
+      val stream0 = optionallyConcatenateFrames(readStream, o.concatenateFragmentedFrames)
       val stream1 = optionallyIgnorePong(stream0, o.ignorePong)
       val stream2 = optionallyAutoPing(stream1, o.autoPing)
 
@@ -45,7 +45,7 @@ package object streams {
     }
   }
 
-  private def optionallyContatenateFrames(rs: ReadStream[WebSocketFrame], doConcatenate: Boolean): ReadStream[WebSocketFrame] = {
+  private def optionallyConcatenateFrames(rs: ReadStream[WebSocketFrame], doConcatenate: Boolean): ReadStream[WebSocketFrame] = {
     // TODO implement this
     rs
   }
@@ -68,15 +68,22 @@ package object streams {
  * ReadStream doesn't offer a `map` function
  */
 class ReadStreamMapping[A, B](source: ReadStream[A], mapping: A => B) extends ReadStream[B] {
+  private var exceptionHandler: Handler[Throwable] = null
   override def handler(handler: Handler[B]): ReadStream[B] = {
     if (handler == null) {
       source.handler(null)
     } else {
-      source.handler(event => handler.handle(mapping.apply(event)))
+      source.handler { event =>
+        try handler.handle(mapping.apply(event))
+        catch {
+          case e: Throwable => exceptionHandler.handle(e)
+        }
+      }
     }
     this
   }
   override def exceptionHandler(handler: Handler[Throwable]): ReadStream[B] = {
+    this.exceptionHandler = handler
     source.exceptionHandler(handler)
     this
   }

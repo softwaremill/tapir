@@ -33,7 +33,10 @@ object ZioHttpServerOptions {
           defaultCreateFile,
           defaultDeleteFile,
           ci.interceptors,
-          _ => None
+          // Tapir's webSocketBody contains configuration if close frames should be decoded and passed to user code or
+          // not; but Tapir's WS-handling code must first receive those close frames at all, hence we request them to
+          // be forwarded by zio-http (which is not the default)
+          _ => Some(WebSocketConfig.default.forwardCloseFrames(true))
         )
     ).serverLog(defaultServerLog[R])
 

@@ -50,6 +50,7 @@
 
 ## Observability
 
+* [Otel4s collecting traces](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/Otel4sTracingExample.scala) <span class="example-tag example-effects">cats-effect</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">Netty</span>
 * [Reporting DataDog metrics](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/datadogMetricsExample.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">Netty</span>
 * [Reporting OpenTelemetry metrics](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/openTelemetryMetricsExample.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">Netty</span>
 * [Reporting Prometheus metrics](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/ZioMetricsExample.scala) <span class="example-tag example-effects">ZIO</span> <span class="example-tag example-server">ZIO HTTP</span>
@@ -71,6 +72,7 @@
 ## Security
 
 * [CORS interceptor](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/corsInterceptorPekkoServer.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Pekko HTTP</span>
+* [CORS interceptor](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/corsInterceptorVertxServer.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Vert.x</span>
 * [HTTP basic authentication](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/basicAuthenticationPekkoServer.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Pekko HTTP</span>
 * [Interceptor verifying externally added security credentials](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/externalSecurityInterceptor.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Netty</span>
 * [Login using OAuth2, authorization code flow](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/OAuth2GithubHttp4sServer.scala) <span class="example-tag example-effects">cats-effect</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">http4s</span>
@@ -87,7 +89,7 @@
 
 ## Status code
 
-* [Serving static files from a directory](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/status_code/statusCodeNettyServer.scala) <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
+* [Responding with fixed or dynamic status code](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/status_code/statusCodeNettyServer.scala) <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
 
 ## Streaming
 
@@ -111,3 +113,4 @@
 * [Describe and implement a WebSocket endpoint](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/websocket/WebSocketNettySyncServer.scala) <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
 * [Describe and implement a WebSocket endpoint](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/websocket/webSocketPekkoServer.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Pekko HTTP</span>
 * [Describe and implement a WebSocket endpoint](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/websocket/WebSocketHttp4sServer.scala) <span class="example-tag example-docs">AsyncAPI</span> <span class="example-tag example-effects">cats-effect</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">http4s</span>
+* [Describe and implement a WebSocket endpoint, being notified on the server-side that a client closed the socket](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/websocket/WebSocketZioHttpServer.scala) <span class="example-tag example-effects">ZIO</span> <span class="example-tag example-server">zio-http</span>
