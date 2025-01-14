@@ -220,7 +220,7 @@ jobs:
     name: Auto merge
     # only for PRs by softwaremill-ci and dependabot
     if: github.event.pull_request.user.login == 'softwaremill-ci' ||
-        github.event.pull_request.user.login == 'dependabot'
+        github.event.pull_request.user.login == 'dependabot[bot]'
     needs: [ ci, mima, label ]
     runs-on: ubuntu-24.04
     steps:
