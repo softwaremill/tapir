@@ -2065,6 +2065,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "circe" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
