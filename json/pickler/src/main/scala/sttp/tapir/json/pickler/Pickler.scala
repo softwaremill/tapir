@@ -85,7 +85,7 @@ object Pickler:
     }
 
   /** Creates a pickler for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
-    * that this is an `enum`, where all cases are parameterless, or that all subtypes of the sealed hierarchy `T` are `object`s.
+    * that this is an `enum`, where all cases are parameterless, or that all subtypes of the sealed hierarchy `T` are `object` s.
     *
     * This method cannot be a `given`, as there's no way to constraint the type `T` to be an enum / sealed trait or class enumeration, so
     * that this would be invoked only when necessary.

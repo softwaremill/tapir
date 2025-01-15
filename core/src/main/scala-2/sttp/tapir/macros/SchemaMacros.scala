@@ -11,7 +11,7 @@ trait SchemaMacros[T] {
   /** Modifies nested schemas for case classes and case class families (sealed traits / enums), accessible with `path`, using the given
     * `modification` function. To traverse collections, use `.each`.
     *
-    * Should only be used if the schema hasn't been created by `.map`ping another one. In such a case, the shape of the schema doesn't
+    * Should only be used if the schema hasn't been created by `.map` ping another one. In such a case, the shape of the schema doesn't
     * correspond to the type `T`, but to some lower-level representation of the type.
     *
     * If the shape of the schema doesn't correspond to the path, the schema remains unchanged.
@@ -60,7 +60,7 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   def derived[T]: Schema[T] = macro Magnolia.gen[T]
 
   /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
-    * that all subtypes of the sealed hierarchy `T` must be `object`s.
+    * that all subtypes of the sealed hierarchy `T` must be `object` s.
     *
     * This method cannot be implicit, as there's no way to constraint the type `T` to be a sealed trait / class enumeration, so that this
     * would be invoked only when necessary.

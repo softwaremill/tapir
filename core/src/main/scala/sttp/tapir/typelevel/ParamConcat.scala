@@ -2,7 +2,7 @@ package sttp.tapir.typelevel
 
 /** Concatenates two parameter lists into one. Each parameter list can be either a single type, or a tuple.
   *
-  * The arity of a type if `0` if it's `Unit`/`Nothing`, as these types act as a neutral element in the tuple-concatenation operation that
+  * The arity of a type if `0` if it's `Unit` /`Nothing`, as these types act as a neutral element in the tuple-concatenation operation that
   * takes place when combining inputs/outputs.
   *
   * The arity of a type is `1` if it's a "singular" type (as viewed at compile-time; at run-time, the value might in fact be a tuple).

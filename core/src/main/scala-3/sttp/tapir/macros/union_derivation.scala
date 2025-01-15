@@ -56,5 +56,4 @@ private[tapir] object UnionDerivation:
           report.errorAndAbort(s"${o.show} is not a subtype of ${bound.show}")
 
     transformTypes(tpe).distinct.map(_.asType match
-      case '[t] => '{ constValue[t] }
-    )
+      case '[t] => '{ constValue[t] })
