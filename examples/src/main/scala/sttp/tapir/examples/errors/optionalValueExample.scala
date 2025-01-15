@@ -1,4 +1,4 @@
-// {cat=Error handling; effects=Future; server=Pekko HTTP; JSON=circe; docs=Swagger UI}: Optional returned from the server logic, resulting in 404 if None
+// {cat=Error handling; effects=Future; server=Pekko HTTP; JSON=circe}: Optional returned from the server logic, resulting in 404 if None
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.12
 //> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.12
@@ -32,7 +32,7 @@ import scala.concurrent.duration.*
     .out(oneOf(
       oneOfVariantExactMatcher(StatusCode.NotFound, jsonBody[Option[Beer]])(None),
       oneOfVariantValueMatcher(StatusCode.Ok, jsonBody[Option[Beer]]) {
-        case Some(book) => true
+        case Some(_) => true
       }
     ))
 
@@ -44,7 +44,7 @@ import scala.concurrent.duration.*
     }
 
 
-  implicit val actorSystem: ActorSystem = ActorSystem()
+  given actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
   val routes = PekkoHttpServerInterpreter().toRoute(bartenderServerEndpoint)
 
