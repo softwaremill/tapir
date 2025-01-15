@@ -1,4 +1,4 @@
-// {cat=Error handling; effects=Future; server=Pekko HTTP; json=circe}: Error and successful outputs
+// {cat=Error handling; effects=Future; server=Pekko HTTP; json=circe}: Default error handler returning errors as JSON
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.12
 //> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.12
@@ -6,7 +6,7 @@
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
 //> using dep com.softwaremill.sttp.client3::core:3.10.2
-//> using dep com.softwaremill.sttp.client3::circe:3.10.2"
+//> using dep com.softwaremill.sttp.client3::circe:3.10.2
 
 package sttp.tapir.examples.errors
 
@@ -32,14 +32,14 @@ import scala.concurrent.{Await, Future}
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
-  // the endpoint description
   enum Severity:
     case Trace, Debug, Info, Warning, Error, Fatal
-
+  
   case class Error(severity: Severity, message: String)
 
   case class Person(name: String, surname: String, age: Int)
 
+  // the endpoint description
   val errorJson: PublicEndpoint[Person, Unit, String, Any] =
     endpoint.post
       .in("person" / jsonBody[Person])
