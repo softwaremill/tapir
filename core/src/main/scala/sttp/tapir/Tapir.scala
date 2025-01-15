@@ -363,7 +363,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     oneOfVariantValueMatcher(code, output)(exactMatch(rest.toSet + firstExactValue))
 
   /** Create a one-of-variant which uses `output` if the provided value equals the singleton value. The `output` shouldn't map to any
-    * values, that is, it should be `Unit`-typed. The entire variant is, on the other hand, typed with the singleton's type `T`.
+    * values, that is, it should be `Unit` -typed. The entire variant is, on the other hand, typed with the singleton's type `T`.
     *
     * Should be used in [[oneOf]] output descriptions.
     *
@@ -374,7 +374,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     oneOfVariantValueMatcher(output.and(emptyOutputAs(singletonValue)))({ case a: Any => a == singletonValue })
 
   /** Create a one-of-variant which uses `output` if the provided value equals the singleton value. The `output` shouldn't map to any
-    * values, that is, it should be `Unit`-typed. The entire variant is, on the other hand, typed with the singleton's type `T`.
+    * values, that is, it should be `Unit` -typed. The entire variant is, on the other hand, typed with the singleton's type `T`.
     *
     * Adds a fixed status-code output with the given value.
     *

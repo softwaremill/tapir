@@ -71,8 +71,7 @@ private[sync] object OxSourceWebSocketProcessor:
   end apply
 
   private def optionallyConcatenateFrames(doConcatenate: Boolean)(f: Flow[WebSocketFrame]): Flow[WebSocketFrame] =
-    if doConcatenate then f.mapStateful(() => None: Accumulator)(accumulateFrameState).collect { case Some(f: WebSocketFrame) => f }
-    else f
+    if doConcatenate then f.mapStateful(() => None: Accumulator)(accumulateFrameState).collect { case Some(f: WebSocketFrame) => f } else f
 
   private def takeUntilCloseFrame(passAlongCloseFrame: Boolean, closeSignal: Semaphore)(f: Flow[WebSocketFrame]): Flow[WebSocketFrame] =
     f.takeWhile(

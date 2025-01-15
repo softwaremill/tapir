@@ -145,7 +145,7 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
   /** Adds a validator to the codec's schema.
     *
     * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
-    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    * validations. Hence any functions provided in subsequent `.map` s or `.mapDecode` s will be invoked before validation.
     *
     * @see
     *   [[mapValidate]]
@@ -155,11 +155,11 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
   /** Adds a validator which validates the option's element, if it is present.
     *
     * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
-    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    * validations. Hence any functions provided in subsequent `.map` s or `.mapDecode` s will be invoked before validation.
     *
-    * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
-    * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at
-    * run-time.
+    * Should only be used if the schema hasn't been created by `.map` ping another one, but directly from `Schema[U]`. Otherwise the shape
+    * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results
+    * at run-time.
     */
   def validateOption[U](v: Validator[U])(implicit hIsOptionU: H =:= Option[U]): Codec[L, H, CF] =
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
@@ -167,11 +167,11 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
   /** Adds a validator which validates each element in the collection.
     *
     * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
-    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    * validations. Hence any functions provided in subsequent `.map` s or `.mapDecode` s will be invoked before validation.
     *
-    * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape of
-    * the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results at
-    * run-time.
+    * Should only be used if the schema hasn't been created by `.map` ping another one, but directly from `Schema[U]`. Otherwise the shape
+    * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid results
+    * at run-time.
     */
   def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit hIsCU: H =:= C[U]): Codec[L, H, CF] =
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))

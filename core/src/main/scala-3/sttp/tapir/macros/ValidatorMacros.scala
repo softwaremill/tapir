@@ -9,7 +9,7 @@ import scala.quoted.*
 trait ValidatorMacros {
 
   /** Creates an enum validator for an `enum` where all cases are parameterless, or where all subtypes of the sealed hierarchy `T` are
-    * `object`s. This enumeration will only be used for documentation, as a value outside of the allowed values will not be decoded in the
+    * `object` s. This enumeration will only be used for documentation, as a value outside of the allowed values will not be decoded in the
     * first place (the decoder has no other option than to fail).
     */
   inline def derivedEnumeration[T]: Validator.Enumeration[T] = ${ ValidatorMacros.derivedEnumerationImpl[T] }

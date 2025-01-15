@@ -52,8 +52,7 @@ class NettySyncRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: Sttp
           metric = totalRequests,
           onRequest = (_, metric, me) =>
             me.eval(EndpointMetric().onEndpointRequest: _ =>
-              val _ = metric.incrementAndGet();
-            )
+              val _ = metric.incrementAndGet();)
         )
       )
 

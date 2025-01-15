@@ -74,7 +74,7 @@ sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   /** Adds a validator.
     *
     * Note that validation is run on a fully decoded value. That is, during decoding, first the decoding functions are run, followed by
-    * validations. Hence any functions provided in subsequent `.map`s or `.mapDecode`s will be invoked before validation.
+    * validations. Hence any functions provided in subsequent `.map` s or `.mapDecode` s will be invoked before validation.
     *
     * @see
     *   [[mapValidate]]
@@ -103,7 +103,7 @@ object EndpointTransput {
 
     /** Adds a validator which validates the option's element, if it is present.
       *
-      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * Should only be used if the schema hasn't been created by `.map` ping another one, but directly from `Schema[U]`. Otherwise the shape
       * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
       * results at run-time.
       */
@@ -112,7 +112,7 @@ object EndpointTransput {
 
     /** Adds a validator which validates each element in the collection.
       *
-      * Should only be used if the schema hasn't been created by `.map`ping another one, but directly from `Schema[U]`. Otherwise the shape
+      * Should only be used if the schema hasn't been created by `.map` ping another one, but directly from `Schema[U]`. Otherwise the shape
       * of the schema doesn't correspond to the type `T`, but to some lower-level representation of the type. This might cause invalid
       * results at run-time.
       */
