@@ -200,7 +200,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-  # `automerge` label is attached iff there is exactly one file changed by steward and this file belongs to a
+  # `automerge` label is attached if there is exactly one file changed by steward and this file belongs to a
   # whitelist specified by `labeler.yml`
   label:
     name: Attach automerge label
@@ -216,16 +216,31 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-  auto-merge:
-    name: Auto merge
-    # only for PRs by softwaremill-ci and dependabot
-    if: github.event.pull_request.user.login == 'softwaremill-ci' ||
-        github.event.pull_request.user.login == 'dependabot[bot]'
+  auto-merge-softwaremill-ci:
+    name: Auto merge softwaremill-ci
+    # only for PRs by softwaremill-ci
+    if: github.event.pull_request.user.login == 'softwaremill-ci'
     needs: [ ci, mima, label ]
     runs-on: ubuntu-24.04
     steps:
-      - id: automerge
-        name: automerge
+      - id: automerge-softwaremill-ci
+        name: automerge-softwaremill-ci
+        uses: "pascalgn/automerge-action@v0.16.4"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          MERGE_METHOD: "squash"
+
+  # separate `automerge` job for dependabot as it doesn't need label job
+  # labeling is done by dependabot itself
+  auto-merge-dependabot:
+    name: Auto merge dependabot
+    # only for PRs by dependabot
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    needs: [ ci, mima ]
+    runs-on: ubuntu-24.04
+    steps:
+      - id: automerge-dependabot
+        name: automerge-dependabot
         uses: "pascalgn/automerge-action@v0.16.4"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
