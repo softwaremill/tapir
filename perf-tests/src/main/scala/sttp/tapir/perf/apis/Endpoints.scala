@@ -31,9 +31,8 @@ trait Endpoints {
           .in(stringBody)
           .maxRequestBodyLength(LargeInputSize + 1024L)
           .out(stringBody)
-          .serverLogicSuccess {
-            body: String =>
-              reply(s"Ok [$n], string length = ${body.length}")
+          .serverLogicSuccess { body: String =>
+            reply(s"Ok [$n], string length = ${body.length}")
           }
       },
       { (n: Int) =>
@@ -52,9 +51,8 @@ trait Endpoints {
           .in(fileBody)
           .maxRequestBodyLength(LargeInputSize + 1024L)
           .out(stringBody)
-          .serverLogicSuccess {
-            body: File =>
-              reply(s"Ok [$n], file saved to ${body.toPath}")
+          .serverLogicSuccess { body: File =>
+            reply(s"Ok [$n], file saved to ${body.toPath}")
           }
       },
       { (n: Int) =>
@@ -63,9 +61,8 @@ trait Endpoints {
           .in(jsonBody[Json])
           .maxRequestBodyLength(LargeInputSize + 1024L)
           .out(stringBody)
-          .serverLogicSuccess {
-            body: Json =>
-              reply(s"Ok [$n], file saved to ${body}")
+          .serverLogicSuccess { body: Json =>
+            reply(s"Ok [$n], file saved to ${body}")
           }
       }
     )

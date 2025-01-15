@@ -25,24 +25,24 @@ import scala.concurrent.duration.*
 
   case class Beer(name: String, volumeInLiters: Double)
 
-  val bartenderEndpoint = endpoint
-    .get
+  val bartenderEndpoint = endpoint.get
     .in("beer" / query[Int]("age"))
     // Optional value from serverLogic, responding with 404 "Not Found" when logic returns None
-    .out(oneOf(
-      oneOfVariantExactMatcher(StatusCode.NotFound, jsonBody[Option[Beer]])(None),
-      oneOfVariantValueMatcher(StatusCode.Ok, jsonBody[Option[Beer]]) {
-        case Some(_) => true
-      }
-    ))
+    .out(
+      oneOf(
+        oneOfVariantExactMatcher(StatusCode.NotFound, jsonBody[Option[Beer]])(None),
+        oneOfVariantValueMatcher(StatusCode.Ok, jsonBody[Option[Beer]]) { case Some(_) =>
+          true
+        }
+      )
+    )
 
   //
 
   val bartenderServerEndpoint = bartenderEndpoint.serverLogic {
-      case a if a < 18 => Future.successful(Right(None))
-      case _ => Future.successful(Right(Some(Beer("IPA", 0.5))))
-    }
-
+    case a if a < 18 => Future.successful(Right(None))
+    case _           => Future.successful(Right(Some(Beer("IPA", 0.5))))
+  }
 
   given actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher

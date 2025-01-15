@@ -622,7 +622,6 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("if an etag is present, should only return the file if it doesn't match the etag") {
         withTestFilesDirectory { testDir =>
-
           val headAndGetEndpoint = staticFilesServerEndpoints[F](emptyInput)(testDir.getAbsolutePath)
           serverInterpreter
             .server(NonEmptyList.of(serverInterpreter.route(headAndGetEndpoint)))
