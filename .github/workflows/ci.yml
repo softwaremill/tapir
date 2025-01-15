@@ -230,6 +230,8 @@ jobs:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           MERGE_METHOD: "squash"
 
+  # separate `automerge` job for dependabot as it doesn't need label job
+  # labeling is done by dependabot itself
   auto-merge-dependabot:
     name: Auto merge dependabot
     # only for PRs by dependabot
