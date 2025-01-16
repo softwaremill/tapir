@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      parameters:
+      - name: X-test
+        in: header
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ''
