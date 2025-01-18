@@ -29,12 +29,12 @@ import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 
 @main def errorAsJson(): Unit =
-  implicit val actorSystem: ActorSystem = ActorSystem()
+  given actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
   enum Severity:
     case Trace, Debug, Info, Warning, Error, Fatal
-  
+
   case class Error(severity: Severity, message: String)
 
   case class Person(name: String, surname: String, age: Int)
@@ -46,12 +46,14 @@ import scala.concurrent.{Await, Future}
       .out(stringBody)
 
   // By default, convert all String errors to Error case class with severity "Error"
-  val options = PekkoHttpServerOptions.customiseInterceptors.defaultHandlers(err => ValuedEndpointOutput(jsonBody[Error], Error(Severity.Error, err))).options
+  val options = PekkoHttpServerOptions.customiseInterceptors
+    .defaultHandlers(err => ValuedEndpointOutput(jsonBody[Error], Error(Severity.Error, err)))
+    .options
 
   // converting an endpoint to a route
   val errorOrJsonRoute: Route = PekkoHttpServerInterpreter(options).toRoute(errorJson.serverLogic {
     case person if person.age < 18 => throw new RuntimeException("Oops, something went wrong in the server internals!")
-    case x          => Future.successful(Right("Operation successful"))
+    case x                         => Future.successful(Right("Operation successful"))
   })
 
   // starting the server
@@ -60,28 +62,30 @@ import scala.concurrent.{Await, Future}
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
     // This causes internal exception, resulting in response status code 500
-    val response1 = basicRequest.post(uri"http://localhost:8080/person").body(Person("Pawel", "Stawicki", 4)).send(backend)
+    val response1 =
+      basicRequest.post(uri"http://localhost:8080/person").body(Person("Pawel", "Stawicki", 4)).response(asStringAlways).send(backend)
     assert(response1.code == StatusCode.InternalServerError)
-    val result1: Either[String, String] = response1.body
-    println("Got result (1): " + result1)
+    println("Got result (1): " + response1.body)
     // Response body contains Error case class serialized to JSON
-    // Mind the "swap" - this Either was originally Left, but we need to swap it in order to parse it later
-    val error1 = result1.swap.flatMap(parser.parse).flatMap(_.as[Error])
+    val error1 = parser.parse(response1.body).flatMap(_.as[Error])
     assert(error1 == Right(Error(Severity.Error, "Internal server error")))
 
     // Bad request sent, resulting in response status code 400
-    val response2 = basicRequest.post(uri"http://localhost:8080/person").body("invalid json").send(backend)
+    val response2 = basicRequest.post(uri"http://localhost:8080/person").body("invalid json").response(asStringAlways).send(backend)
     assert(response2.code == StatusCode.BadRequest)
-    val result2: Either[String, String] = response2.body
-    println("Got result (2): " + result2)
-    val error2 = result2.swap.flatMap(parser.parse).flatMap(_.as[Error])
+    println("Got result (2): " + response2.body)
+    val error2 = parser.parse(response2.body).flatMap(_.as[Error])
     assert(error2 == Right(Error(Severity.Error, "Invalid value for: body (expected json value got 'invali...' (line 1, column 1))")))
 
-    val result3: Either[String, String] = basicRequest.post(uri"http://localhost:8080/person").body(Person("Pawel", "Stawicki", 46)).send(backend).body
-    println("Got result (3): " + result3)
-    assert(result3 == Right("Operation successful"))
+    val response3 =
+      basicRequest.post(uri"http://localhost:8080/person").body(Person("Pawel", "Stawicki", 46)).response(asStringAlways).send(backend)
+    println("Got result (3): " + response3.body)
+    assert(response3.body == "Operation successful")
 
     binding
   }
 
-  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
+  try
+    val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
+  finally
+    val _ = actorSystem.terminate()

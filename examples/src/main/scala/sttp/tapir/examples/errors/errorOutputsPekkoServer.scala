@@ -58,4 +58,7 @@ import scala.concurrent.{Await, Future}
     binding
   }
 
-  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
+  try
+    val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
+  finally
+    val _ = actorSystem.terminate()
