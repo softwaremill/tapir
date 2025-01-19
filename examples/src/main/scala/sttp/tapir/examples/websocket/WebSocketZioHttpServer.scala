@@ -1,8 +1,8 @@
 // {cat=WebSocket; effects=ZIO; server=zio-http}: Describe and implement a WebSocket endpoint, being notified on the server-side that a client closed the socket
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.12
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.12
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.13
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.13
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.13
 
 package sttp.tapir.examples.websocket
 
