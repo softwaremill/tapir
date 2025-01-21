@@ -19,12 +19,12 @@ class LimitedInputStream(in: InputStream, limit: Long) extends FilterInputStream
 
   override def available(): Int = Math.min(in.available(), left.toInt)
 
-  override def mark(readLimit: Int): Unit = this.synchronized {
+  override def mark(readLimit: Int): Unit = {
     in.mark(readLimit)
     mark = left
   }
 
-  override def read(): Int = this.synchronized {
+  override def read(): Int = {
     if (left == 0) {
       onLimit
     } else {
@@ -36,7 +36,7 @@ class LimitedInputStream(in: InputStream, limit: Long) extends FilterInputStream
     }
   }
 
-  override def read(b: Array[Byte], off: Int, len: Int): Int = this.synchronized {
+  override def read(b: Array[Byte], off: Int, len: Int): Int = {
     if (left == 0) {
       // Temporarily perform a read to check if more bytes are available
       val checkRead = in.read()
@@ -55,7 +55,7 @@ class LimitedInputStream(in: InputStream, limit: Long) extends FilterInputStream
     }
   }
 
-  override def reset(): Unit = this.synchronized {
+  override def reset(): Unit = {
     if (!in.markSupported) {
       throw new IOException("Mark not supported")
     }
@@ -67,7 +67,7 @@ class LimitedInputStream(in: InputStream, limit: Long) extends FilterInputStream
     left = mark
   }
 
-  override def skip(n: Long): Long = this.synchronized {
+  override def skip(n: Long): Long = {
     val toSkip = Math.min(n, left)
     val skipped = in.skip(toSkip)
     left -= skipped
