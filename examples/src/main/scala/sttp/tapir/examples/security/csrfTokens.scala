@@ -9,19 +9,16 @@ package sttp.tapir.examples.security
 import ox.{supervised, useInScope}
 import sttp.client3.*
 import sttp.model.{HeaderNames, StatusCode}
-import sttp.model.headers.{Cookie, CookieValueWithMeta, WWWAuthenticateChallenge}
+import sttp.model.headers.{CookieValueWithMeta, WWWAuthenticateChallenge}
 import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.model.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.server.PartialServerEndpoint
 import sttp.tapir.server.ServerEndpoint.Full
-import sttp.tapir.server.netty.NettyFutureServer
 import sttp.tapir.server.netty.sync.NettySyncServer
 
 import java.util.UUID
-import scala.concurrent.duration.*
-import scala.concurrent.{Await, Future}
 import scala.util.matching.Regex
 
 case class User(name: String)
@@ -49,7 +46,6 @@ object SessionManager {
     sessions = sessions + (sessionId -> ProtectedUser(user, crsfToken))
     sessionId
 
-
   def getLoggedInUser(sessionId: UUID): Option[ProtectedUser] = sessions.get(sessionId)
 }
 
@@ -57,8 +53,7 @@ object SessionManager {
   val SessionCookie = "SESSIONID"
 
   val loginEndpoint: Full[UsernamePassword, User, Unit, Unit, (String, Option[CookieValueWithMeta]), Any, Identity] =
-    endpoint
-      .get
+    endpoint.get
       .securityIn("login")
       .securityIn(auth.basic[UsernamePassword]())
       .errorOut(statusCode(StatusCode.Unauthorized))
@@ -66,11 +61,12 @@ object SessionManager {
       .out(setCookieOpt(SessionCookie))
       .serverSecurityLogic[User, Identity] {
         case UsernamePassword(username, Some(pass)) if Users.checkPassword(User(username), pass) => Right(User(username))
-        case _ => Left(())
+        case _                                                                                   => Left(())
       }
-      .serverLogic(user => _ =>
-        val sessionId = SessionManager.createSession(user)
-        Right((s"Hello, ${user.name}!", CookieValueWithMeta.safeApply(sessionId.toString).toOption))
+      .serverLogic(user =>
+        _ =>
+          val sessionId = SessionManager.createSession(user)
+          Right((s"Hello, ${user.name}!", CookieValueWithMeta.safeApply(sessionId.toString).toOption))
       )
 
   val secureEndpoint: PartialServerEndpoint[String, ProtectedUser, Unit, Unit, Unit, Any, Identity] =
@@ -85,8 +81,7 @@ object SessionManager {
       }
 
   val changePasswordFormEndpoint: Full[String, ProtectedUser, Unit, Unit, String, Any, Identity] =
-    secureEndpoint
-      .get
+    secureEndpoint.get
       .in("changePasswordForm")
       .out(stringBody)
       .serverLogic(protectedUser => _ => Right(changePasswordFormHtml(protectedUser.csrfToken)))
@@ -94,32 +89,33 @@ object SessionManager {
   case class ChangePasswordForm(csrfToken: String, newPassword: String)
 
   val changePasswordEndpoint: Full[String, ProtectedUser, ChangePasswordForm, Unit, String, Any, Identity] =
-    secureEndpoint
-      .post
+    secureEndpoint.post
       .in(formBody[ChangePasswordForm])
       .out(stringBody)
-      .serverLogic { protectedUser =>
-        changePasswordForm =>
-          if changePasswordForm.csrfToken == protectedUser.csrfToken.toString then
-            Right("Password changed!")
-          else
-            Left(())
+      .serverLogic { protectedUser => changePasswordForm =>
+        if changePasswordForm.csrfToken == protectedUser.csrfToken.toString then Right("Password changed!")
+        else Left(())
       }
 
   supervised {
     // starting the server
-    val binding = useInScope(NettySyncServer()
-      .addEndpoint(loginEndpoint)
-      .addEndpoint(changePasswordFormEndpoint)
-      .addEndpoint(changePasswordEndpoint)
-      .start())(_.stop())
+    val binding = useInScope(
+      NettySyncServer()
+        .addEndpoint(loginEndpoint)
+        .addEndpoint(changePasswordFormEndpoint)
+        .addEndpoint(changePasswordEndpoint)
+        .start()
+    )(_.stop())
     println(s"Server started on http://${binding.hostName}:${binding.port}/hello?name=...!")
 
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
     // login to create session
-    val loginResponse = basicRequest.get(uri"http://localhost:8080/login").header(HeaderNames.Authorization, "Basic cGF3ZWw6TG9uZyBsaXZlIHRBUElyIQ==").send(backend)
+    val loginResponse = basicRequest
+      .get(uri"http://localhost:8080/login")
+      .header(HeaderNames.Authorization, "Basic cGF3ZWw6TG9uZyBsaXZlIHRBUElyIQ==")
+      .send(backend)
     assert(loginResponse.code == StatusCode.Ok)
 
     val sessionId = loginResponse.cookies.collectFirst { case Right(cookie) if cookie.name == SessionCookie => cookie.value }.get
@@ -137,7 +133,8 @@ object SessionManager {
 
     // do the action with wrong session ID
     println("Trying to perform action with wrong session ID")
-    val changePasswordWrongSessionId = basicRequest.post(uri"http://localhost:8080/changePassword")
+    val changePasswordWrongSessionId = basicRequest
+      .post(uri"http://localhost:8080/changePassword")
       .cookie(SessionCookie, UUID.randomUUID().toString)
       .body(s"""newPassword="MySecretPassword"&csrfToken="$crsfTokenValue"""")
       .send(backend)
