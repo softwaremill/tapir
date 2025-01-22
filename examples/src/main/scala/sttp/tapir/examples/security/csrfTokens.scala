@@ -42,8 +42,8 @@ object SessionManager {
 
   def createSession(user: User): UUID =
     val sessionId = UUID.randomUUID()
-    val crsfToken = UUID.randomUUID()
-    sessions = sessions + (sessionId -> ProtectedUser(user, crsfToken))
+    val csrfToken = UUID.randomUUID()
+    sessions = sessions + (sessionId -> ProtectedUser(user, csrfToken))
     sessionId
 
   def getLoggedInUser(sessionId: UUID): Option[ProtectedUser] = sessions.get(sessionId)
@@ -127,8 +127,8 @@ object SessionManager {
     println("Got change password form. Notice the CSRF token: " + changePasswordFormBody)
     val regex: Regex = """<input type="hidden" name="csrfToken" value="(.*)">""".r
     val maybeMatch = regex.findFirstMatchIn(changePasswordFormBody)
-    val crsfTokenValue = maybeMatch match
-      case Some(crsfTokenValue) => crsfTokenValue.group(1)
+    val csrfTokenValue = maybeMatch match
+      case Some(csrfTokenValue) => csrfTokenValue.group(1)
       case None => assert(false, "No CSRF token found in form body")
 
     // do the action with wrong session ID
@@ -136,7 +136,7 @@ object SessionManager {
     val changePasswordWrongSessionId = basicRequest
       .post(uri"http://localhost:8080/changePassword")
       .cookie(SessionCookie, UUID.randomUUID().toString)
-      .body(s"""newPassword="MySecretPassword"&csrfToken="$crsfTokenValue"""")
+      .body(s"""newPassword="MySecretPassword"&csrfToken="$csrfTokenValue"""")
       .send(backend)
     assert(changePasswordWrongSessionId.code == StatusCode.Unauthorized)
     println("Failed as expected")
@@ -157,7 +157,7 @@ object SessionManager {
     val changePassword = basicRequest
       .post(uri"http://localhost:8080/changePassword")
       .cookie(SessionCookie, sessionId)
-      .body(s"newPassword=MySecretPassword&csrfToken=$crsfTokenValue")
+      .body(s"newPassword=MySecretPassword&csrfToken=$csrfTokenValue")
       .send(backend)
     assert(changePassword.code == StatusCode.Ok)
     println("Success!")
