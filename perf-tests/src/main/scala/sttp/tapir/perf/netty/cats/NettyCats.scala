@@ -10,7 +10,6 @@ import sttp.tapir.perf.apis._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.cats.NettyCatsServer
 import sttp.tapir.server.netty.cats.NettyCatsServerOptions
-import sttp.ws.WebSocketFrame
 import sttp.capabilities.fs2.Fs2Streams
 
 import scala.concurrent.duration._
@@ -33,27 +32,26 @@ object NettyCats {
       Tapir.wsResponseStream.evalMap(_ => IO.realTime.map(_.toMillis)).concurrently(in.as(()))
     }
   )
-  def runServer(endpoints: List[ServerEndpoint[Any, IO]], withServerLog: Boolean = false): IO[ServerRunner.KillSwitch] = {
+  def runServer(endpoints: List[ServerEndpoint[Any, IO]], withServerLog: Boolean = false): Resource[IO, Unit] = {
     val declaredPort = Port
     val declaredHost = "0.0.0.0"
-    (for {
+    for {
       dispatcher <- Dispatcher.parallel[IO]
       serverOptions = buildOptions(NettyCatsServerOptions.customiseInterceptors(dispatcher), withServerLog)
-      server <- NettyCatsServer.io()
-      _ <-
-        Resource.make(
-          server
-            .port(declaredPort)
-            .host(declaredHost)
-            .addEndpoints(wsServerEndpoint :: endpoints)
-            .start()
-        )(binding => binding.stop())
-    } yield ()).allocated.map(_._2)
+      server <- NettyCatsServer.io().map(_.options(serverOptions))
+      _ <- Resource.make(
+        server
+          .port(declaredPort)
+          .host(declaredHost)
+          .addEndpoints(wsServerEndpoint :: endpoints)
+          .start()
+      )(_.stop())
+    } yield ()
   }
 }
 
-object TapirServer extends ServerRunner { override def start = NettyCats.runServer(Tapir.genEndpointsIO(1)) }
-object TapirMultiServer extends ServerRunner { override def start = NettyCats.runServer(Tapir.genEndpointsIO(128)) }
+object TapirServer extends ServerRunner { override def runServer = NettyCats.runServer(Tapir.genEndpointsIO(1)) }
+object TapirMultiServer extends ServerRunner { override def runServer = NettyCats.runServer(Tapir.genEndpointsIO(128)) }
 object TapirInterceptorMultiServer extends ServerRunner {
-  override def start = NettyCats.runServer(Tapir.genEndpointsIO(128), withServerLog = true)
+  override def runServer = NettyCats.runServer(Tapir.genEndpointsIO(128), withServerLog = true)
 }

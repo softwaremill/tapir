@@ -152,7 +152,7 @@ object Vanilla extends Endpoints {
 }
 
 object VertxRunner {
-  def runServer(route: Vertx => Router => Route, wsRoute: Option[Vertx => Router => Route] = None): IO[ServerRunner.KillSwitch] = {
+  def runServer(route: Vertx => Router => Route, wsRoute: Option[Vertx => Router => Route] = None): Resource[IO, Unit] =
     Resource
       .make(IO.delay(Vertx.vertx()))(vertx => IO.delay(vertx.close()).void)
       .flatMap { vertx =>
@@ -162,10 +162,7 @@ object VertxRunner {
         wsRoute.foreach(r => r(vertx).apply(router))
         route(vertx).apply(router): Unit
         Resource.make(listenIO)(s => vertxFutureToIo(s.close()).void)
-      }
-      .allocated
-      .map(_._2)
-  }
+      }.map(_ => ())
 
   private def vertxFutureToIo[A](future: => VFuture[A]): IO[A] =
     IO.async[A] { cb =>
@@ -178,10 +175,10 @@ object VertxRunner {
     }
 }
 
-object TapirServer extends ServerRunner { override def start = VertxRunner.runServer(Tapir.route(1)) }
-object TapirMultiServer extends ServerRunner { override def start = VertxRunner.runServer(Tapir.route(128)) }
+object TapirServer extends ServerRunner { override def runServer = VertxRunner.runServer(Tapir.route(1)) }
+object TapirMultiServer extends ServerRunner { override def runServer = VertxRunner.runServer(Tapir.route(128)) }
 object TapirInterceptorMultiServer extends ServerRunner {
-  override def start = VertxRunner.runServer(Tapir.route(128, withServerLog = true))
+  override def runServer = VertxRunner.runServer(Tapir.route(128, withServerLog = true))
 }
-object VanillaServer extends ServerRunner { override def start = VertxRunner.runServer(Vanilla.route(1), Some(Vanilla.webSocketHandler)) }
-object VanillaMultiServer extends ServerRunner { override def start = VertxRunner.runServer(Vanilla.route(128)) }
+object VanillaServer extends ServerRunner { override def runServer = VertxRunner.runServer(Vanilla.route(1), Some(Vanilla.webSocketHandler)) }
+object VanillaMultiServer extends ServerRunner { override def runServer = VertxRunner.runServer(Vanilla.route(128)) }
