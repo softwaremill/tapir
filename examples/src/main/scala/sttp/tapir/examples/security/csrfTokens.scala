@@ -122,8 +122,8 @@ object SessionManager {
     println("Successfully logged in. Got session ID: " + sessionId)
 
     // open page with action that attacker wants to perform. Notice the CSRF token.
-    val changePasswordPage = basicRequest.get(uri"http://localhost:8080/changePasswordForm").cookie(SessionCookie, sessionId).send(backend)
-    val changePasswordFormBody = changePasswordPage.body.getOrElse(throw new RuntimeException("Body is Left"))
+    val changePasswordPage = basicRequest.get(uri"http://localhost:8080/changePasswordForm").cookie(SessionCookie, sessionId).response(asStringAlways).send(backend)
+    val changePasswordFormBody = changePasswordPage.body
     println("Got change password form. Notice the CSRF token: " + changePasswordFormBody)
     val regex: Regex = """<input type="hidden" name="csrfToken" value="(.*)">""".r
     val maybeMatch = regex.findFirstMatchIn(changePasswordFormBody)
