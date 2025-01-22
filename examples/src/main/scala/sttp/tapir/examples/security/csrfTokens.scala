@@ -1,4 +1,4 @@
-// {cat=Security; effects=Future; server=Pekko HTTP}: Securing endpoint with CSRF tokens example
+// {cat=Security; effects=Future; server=Netty}: Securing endpoint with CSRF tokens example
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.13
