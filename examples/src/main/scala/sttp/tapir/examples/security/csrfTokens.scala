@@ -23,7 +23,7 @@ import scala.util.matching.Regex
 
 case class User(name: String)
 
-case class ProtectedUser(user: User, csrfToken: UUID)
+case class LoggedInUser(user: User, csrfToken: UUID)
 
 // Simple in-memory users database. Do not keep passwords in clear text in real projects!
 object Users {
@@ -38,15 +38,15 @@ object Users {
 }
 
 object SessionManager {
-  private var sessions = Map.empty[UUID, ProtectedUser]
+  private var sessions = Map.empty[UUID, LoggedInUser]
 
   def createSession(user: User): UUID =
     val sessionId = UUID.randomUUID()
     val csrfToken = UUID.randomUUID()
-    sessions = sessions + (sessionId -> ProtectedUser(user, csrfToken))
+    sessions = sessions + (sessionId -> LoggedInUser(user, csrfToken))
     sessionId
 
-  def getLoggedInUser(sessionId: UUID): Option[ProtectedUser] = sessions.get(sessionId)
+  def getLoggedInUser(sessionId: UUID): Option[LoggedInUser] = sessions.get(sessionId)
 }
 
 @main def csrfTokens(): Unit =
@@ -69,7 +69,7 @@ object SessionManager {
           Right((s"Hello, ${user.name}!", CookieValueWithMeta.safeApply(sessionId.toString).toOption))
       )
 
-  val secureEndpoint: PartialServerEndpoint[String, ProtectedUser, Unit, Unit, Unit, Any, Identity] =
+  val secureEndpoint: PartialServerEndpoint[String, LoggedInUser, Unit, Unit, Unit, Any, Identity] =
     endpoint
       .securityIn(auth.apiKey(cookie[String](SessionCookie), WWWAuthenticateChallenge("cookie")))
       .errorOut(statusCode(StatusCode.Unauthorized))
@@ -80,7 +80,7 @@ object SessionManager {
         }
       }
 
-  val changePasswordFormEndpoint: Full[String, ProtectedUser, Unit, Unit, String, Any, Identity] =
+  val changePasswordFormEndpoint: Full[String, LoggedInUser, Unit, Unit, String, Any, Identity] =
     secureEndpoint.get
       .in("changePasswordForm")
       .out(stringBody)
@@ -88,7 +88,7 @@ object SessionManager {
 
   case class ChangePasswordForm(csrfToken: String, newPassword: String)
 
-  val changePasswordEndpoint: Full[String, ProtectedUser, ChangePasswordForm, Unit, String, Any, Identity] =
+  val changePasswordEndpoint: Full[String, LoggedInUser, ChangePasswordForm, Unit, String, Any, Identity] =
     secureEndpoint.post
       .in(formBody[ChangePasswordForm])
       .out(stringBody)
