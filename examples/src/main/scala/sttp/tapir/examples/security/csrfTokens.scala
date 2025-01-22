@@ -26,7 +26,7 @@ case class User(name: String)
 case class LoggedInUser(user: User, csrfToken: UUID)
 
 // Simple in-memory users database. Do not keep passwords in clear text in real projects!
-object Users {
+object Users:
   private val usersToPassword = Map(
     User("adam") -> "Scala Rulez!",
     User("pawel") -> "Long live tAPIr!",
@@ -35,9 +35,8 @@ object Users {
 
   def checkPassword(user: User, password: String): Boolean =
     usersToPassword.get(user).contains(password)
-}
 
-object SessionManager {
+object SessionManager:
   private var sessions = Map.empty[UUID, LoggedInUser]
 
   def createSession(user: User): UUID =
@@ -47,7 +46,6 @@ object SessionManager {
     sessionId
 
   def getLoggedInUser(sessionId: UUID): Option[LoggedInUser] = sessions.get(sessionId)
-}
 
 @main def csrfTokens(): Unit =
   val SessionCookie = "SESSIONID"
