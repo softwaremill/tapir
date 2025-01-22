@@ -8,8 +8,8 @@ import sttp.tapir.client.tests.ClientStreamingTests
 
 class Http4ClientStreamingTests extends Http4sClientTests[Fs2Streams[IO]] with ClientStreamingTests[Fs2Streams[IO]] {
   override val streams: Fs2Streams[IO] = Fs2Streams[IO]
-  override def mkStream(s: String): streams.BinaryStream = fs2.Stream(s).through(text.utf8Encode)
-  override def rmStream(s: streams.BinaryStream): String = s.through(text.utf8Decode).compile.string.unsafeRunSync()
+  override def mkStream(s: String): streams.BinaryStream = fs2.Stream(s).through(text.utf8.encode)
+  override def rmStream(s: streams.BinaryStream): String = s.through(text.utf8.decode).compile.string.unsafeRunSync()
 
   streamingTests()
 }

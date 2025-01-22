@@ -10,7 +10,7 @@ import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 
 abstract class SttpClientTests[R >: WebSockets with Fs2Streams[IO]] extends ClientTests[R] {
-  val (dispatcher, closeDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
+  val (dispatcher, closeDispatcher) = Dispatcher.parallel[IO].allocated.unsafeRunSync()
   val backend: SttpBackend[IO, R] = HttpClientFs2Backend[IO](dispatcher).unsafeRunSync()
   def wsToPipe: WebSocketToPipe[R]
 
