@@ -1,14 +1,12 @@
 // {cat=Security; effects=Future; server=Pekko HTTP}: Securing endpoint with CSRF tokens example
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.12
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.12
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.13
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.13
 //> using dep com.softwaremill.sttp.client3::core:3.10.2
 
 package sttp.tapir.examples.security
 
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.http.scaladsl.Http
-import org.apache.pekko.http.scaladsl.server.Route
+import ox.{supervised, useInScope}
 import sttp.client3.*
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.model.headers.{Cookie, CookieValueWithMeta, WWWAuthenticateChallenge}
@@ -16,9 +14,10 @@ import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.model.*
 import sttp.tapir.generic.auto.*
-import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.PartialServerEndpoint
 import sttp.tapir.server.ServerEndpoint.Full
-import sttp.tapir.server.pekkohttp.*
+import sttp.tapir.server.netty.NettyFutureServer
+import sttp.tapir.server.netty.sync.NettySyncServer
 
 import java.util.UUID
 import scala.concurrent.duration.*
@@ -37,31 +36,27 @@ object Users {
     User("tomek") -> "Developers, developers, developers!"
   )
 
-  def checkPassword(user: User, password: String): Boolean = {
+  def checkPassword(user: User, password: String): Boolean =
     usersToPassword.get(user).contains(password)
-  }
 }
 
 object SessionManager {
   private var sessions = Map.empty[UUID, ProtectedUser]
 
-  def createSession(user: User): UUID = {
+  def createSession(user: User): UUID =
     val sessionId = UUID.randomUUID()
     val crsfToken = UUID.randomUUID()
     sessions = sessions + (sessionId -> ProtectedUser(user, crsfToken))
     sessionId
-  }
+
 
   def getLoggedInUser(sessionId: UUID): Option[ProtectedUser] = sessions.get(sessionId)
 }
 
 @main def csrfTokens(): Unit =
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  import actorSystem.dispatcher
-
   val SessionCookie = "SESSIONID"
 
-  val loginEndpoint: Full[UsernamePassword, User, Unit, Unit, (String, Option[CookieValueWithMeta]), Any, Future] =
+  val loginEndpoint: Full[UsernamePassword, User, Unit, Unit, (String, Option[CookieValueWithMeta]), Any, Identity] =
     endpoint
       .get
       .securityIn("login")
@@ -69,37 +64,36 @@ object SessionManager {
       .errorOut(statusCode(StatusCode.Unauthorized))
       .out(stringBody)
       .out(setCookieOpt(SessionCookie))
-      .serverSecurityLogic {
-        case UsernamePassword(username, Some(pass)) if Users.checkPassword(User(username), pass) =>
-          Future.successful(Right(User(username)))
-        case _ => Future.successful(Left(()))
+      .serverSecurityLogic[User, Identity] {
+        case UsernamePassword(username, Some(pass)) if Users.checkPassword(User(username), pass) => Right(User(username))
+        case _ => Left(())
       }
       .serverLogic(user => _ =>
         val sessionId = SessionManager.createSession(user)
-        Future.successful(Right((s"Hello, ${user.name}!", CookieValueWithMeta.safeApply(sessionId.toString).toOption)))
+        Right((s"Hello, ${user.name}!", CookieValueWithMeta.safeApply(sessionId.toString).toOption))
       )
 
-  val secureEndpoint =
+  val secureEndpoint: PartialServerEndpoint[String, ProtectedUser, Unit, Unit, Unit, Any, Identity] =
     endpoint
       .securityIn(auth.apiKey(cookie[String](SessionCookie), WWWAuthenticateChallenge("cookie")))
       .errorOut(statusCode(StatusCode.Unauthorized))
       .serverSecurityLogic { cookie =>
         SessionManager.getLoggedInUser(UUID.fromString(cookie)) match {
-          case Some(user) => Future.successful(Right(user))
-          case None       => Future.successful(Left(()))
+          case Some(user) => Right(user)
+          case None       => Left(())
         }
       }
 
-  val changePasswordFormEndpoint =
+  val changePasswordFormEndpoint: Full[String, ProtectedUser, Unit, Unit, String, Any, Identity] =
     secureEndpoint
       .get
       .in("changePasswordForm")
       .out(stringBody)
-      .serverLogic(protectedUser => _ => Future.successful(Right(changePasswordFormHtml(protectedUser.csrfToken))))
+      .serverLogic(protectedUser => _ => Right(changePasswordFormHtml(protectedUser.csrfToken)))
 
   case class ChangePasswordForm(csrfToken: String, newPassword: String)
 
-  val changePasswordEndpoint =
+  val changePasswordEndpoint: Full[String, ProtectedUser, ChangePasswordForm, Unit, String, Any, Identity] =
     secureEndpoint
       .post
       .in(formBody[ChangePasswordForm])
@@ -107,20 +101,20 @@ object SessionManager {
       .serverLogic { protectedUser =>
         changePasswordForm =>
           if changePasswordForm.csrfToken == protectedUser.csrfToken.toString then
-            Future.successful(Right("Password changed!"))
+            Right("Password changed!")
           else
-            Future.successful(Left(()))
+            Left(())
       }
 
-  val routes: Route =
-    PekkoHttpServerInterpreter().toRoute(List(
-      loginEndpoint,
-      changePasswordFormEndpoint,
-      changePasswordEndpoint
-    ))
+  supervised {
+    // starting the server
+    val binding = useInScope(NettySyncServer()
+      .addEndpoint(loginEndpoint)
+      .addEndpoint(changePasswordFormEndpoint)
+      .addEndpoint(changePasswordEndpoint)
+      .start())(_.stop())
+    println(s"Server started on http://${binding.hostName}:${binding.port}/hello?name=...!")
 
-  // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(routes).map { binding =>
     // testing
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
@@ -171,10 +165,8 @@ object SessionManager {
     assert(changePassword.code == StatusCode.Ok)
     println("Success!")
 
-    binding
+    ()
   }
-
-  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
 
 def changePasswordFormHtml(csrfToken: UUID) =
   s"""
