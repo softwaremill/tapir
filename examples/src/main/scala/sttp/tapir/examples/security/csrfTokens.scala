@@ -120,14 +120,18 @@ object SessionManager:
     println("Successfully logged in. Got session ID: " + sessionId)
 
     // open page with action that attacker wants to perform. Notice the CSRF token.
-    val changePasswordPage = basicRequest.get(uri"http://localhost:8080/changePasswordForm").cookie(SessionCookie, sessionId).response(asStringAlways).send(backend)
+    val changePasswordPage = basicRequest
+      .get(uri"http://localhost:8080/changePasswordForm")
+      .cookie(SessionCookie, sessionId)
+      .response(asStringAlways)
+      .send(backend)
     val changePasswordFormBody = changePasswordPage.body
     println("Got change password form. Notice the CSRF token: " + changePasswordFormBody)
     val regex: Regex = """<input type="hidden" name="csrfToken" value="(.*)">""".r
     val maybeMatch = regex.findFirstMatchIn(changePasswordFormBody)
     val csrfTokenValue = maybeMatch match
       case Some(csrfTokenValue) => csrfTokenValue.group(1)
-      case None => assert(false, "No CSRF token found in form body")
+      case None                 => assert(false, "No CSRF token found in form body")
 
     // do the action with wrong session ID
     println("Trying to perform action with wrong session ID")
