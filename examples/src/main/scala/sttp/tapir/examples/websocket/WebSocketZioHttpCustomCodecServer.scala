@@ -1,8 +1,7 @@
-// {cat=WebSocket; effects=ZIO; server=zio-http}: Describe and implement a WebSocket endpoint, being notified on the server-side that a client closed the socket
+// {cat=WebSocket; effects=ZIO; server=ZIO HTTP}: Describe and implement a WebSocket endpoint, being notified on the server-side that a client closed the socket, using a custom codec
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.13
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.13
 
 package sttp.tapir.examples.websocket
 
@@ -20,7 +19,7 @@ import zio.{Console, ExitCode, URIO, ZIO, ZIOAppDefault, ZLayer}
 // After running, try opening a ws connection to ws://localhost:8080/ws, sending some text messages, and then closing
 // from the client-side.
 
-object WebSocketZioHttpServer extends ZIOAppDefault:
+object WebSocketZioHttpCustomCodecServer extends ZIOAppDefault:
   enum ClientMessage:
     case Leave
     case Message(text: String)
