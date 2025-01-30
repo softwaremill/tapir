@@ -25,10 +25,10 @@ object HelloWorldZioHttpServer extends ZIOAppDefault:
 
   // an endpoint which responds which json, using zio-json
   case class AddResult(x: Int, y: Int, result: Int)
-  object AddResult {
-    implicit val decoder: JsonDecoder[AddResult] = DeriveJsonDecoder.gen[AddResult]
-    implicit val encoder: JsonEncoder[AddResult] = DeriveJsonEncoder.gen[AddResult]
-  }
+  object AddResult:
+    given JsonDecoder[AddResult] = DeriveJsonDecoder.gen[AddResult]
+    given JsonEncoder[AddResult] = DeriveJsonEncoder.gen[AddResult]
+
   val add: PublicEndpoint[(Int, Int), Unit, AddResult, Any] =
     endpoint.get
       .in("add")

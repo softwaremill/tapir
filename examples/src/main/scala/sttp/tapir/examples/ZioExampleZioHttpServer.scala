@@ -1,4 +1,4 @@
-// {cat=Hello, World!; effects=ZIO; server=zio-http; json=circe; docs=Swagger UI}: Exposing an endpoint using the ZIO HTTP server
+// {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=circe; docs=Swagger UI}: Exposing an endpoint using the ZIO HTTP server
 
 //> using option -Ykind-projector
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.13
