@@ -106,26 +106,21 @@ object Tapir extends Endpoints {
 object server {
   val maxConnections = 65536
   val connectorPoolSize: Int = Math.max(2, Runtime.getRuntime.availableProcessors() / 4)
-  def runServer(
-      router: WebSocketBuilder2[IO] => HttpRoutes[IO]
-  ): IO[ServerRunner.KillSwitch] =
+  def runServer(router: WebSocketBuilder2[IO] => HttpRoutes[IO]): Resource[IO, Unit] =
     BlazeServerBuilder[IO]
       .bindHttp(Port, "localhost")
       .withHttpWebSocketApp(wsb => router(wsb).orNotFound)
       .withMaxConnections(maxConnections)
       .withConnectorPoolSize(connectorPoolSize)
       .resource
-      .allocated
-      .map(_._2)
-      .map(_.flatTap { _ =>
-        IO.println("Http4s server closed.")
-      })
+      .map(_ => ())
+      .onFinalize(IO.println("Http4s server closed."))
 }
 
-object TapirServer extends ServerRunner { override def start = server.runServer(Tapir.router(1)) }
-object TapirMultiServer extends ServerRunner { override def start = server.runServer(Tapir.router(128)) }
+object TapirServer extends ServerRunner { override def runServer = server.runServer(Tapir.router(1)) }
+object TapirMultiServer extends ServerRunner { override def runServer = server.runServer(Tapir.router(128)) }
 object TapirInterceptorMultiServer extends ServerRunner {
-  override def start = server.runServer(Tapir.router(128, withServerLog = true))
+  override def runServer = server.runServer(Tapir.router(128, withServerLog = true))
 }
-object VanillaServer extends ServerRunner { override def start = server.runServer(Vanilla.router(1)) }
-object VanillaMultiServer extends ServerRunner { override def start = server.runServer(Vanilla.router(128)) }
+object VanillaServer extends ServerRunner { override def runServer = server.runServer(Vanilla.router(1)) }
+object VanillaMultiServer extends ServerRunner { override def runServer = server.runServer(Vanilla.router(128)) }

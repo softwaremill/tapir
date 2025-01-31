@@ -1,6 +1,6 @@
 package sttp.tapir.perf.vertx.cats
 
-import cats.effect.IO
+import cats.effect.{IO, Resource}
 import cats.effect.std.Dispatcher
 import fs2.Stream
 import io.vertx.core.Vertx
@@ -37,10 +37,9 @@ object Tapir extends Endpoints {
 
 class VertxCatsRunner(numRoutes: Int, withServerLog: Boolean = false) {
 
-  def start: IO[ServerRunner.KillSwitch] =
-    Dispatcher.parallel[IO].allocated.flatMap { case (dispatcher, releaseDispatcher) =>
-      VertxRunner.runServer(Tapir.route(dispatcher, withServerLog)(numRoutes)).map(releaseVertx => releaseVertx >> releaseDispatcher)
-    }
+  def runServer: Resource[IO, Unit] = Dispatcher.parallel[IO].flatMap { dispatcher =>
+    VertxRunner.runServer(Tapir.route(dispatcher, withServerLog)(numRoutes))
+  }
 }
 
 object TapirServer extends VertxCatsRunner(numRoutes = 1) with ServerRunner
