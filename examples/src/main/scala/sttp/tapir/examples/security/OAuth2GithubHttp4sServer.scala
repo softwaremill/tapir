@@ -4,7 +4,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.13
 //> using dep com.softwaremill.sttp.client3::async-http-client-backend-cats:3.10.2
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.30
 //> using dep com.github.jwt-scala::jwt-circe:10.0.1
 
 package sttp.tapir.examples.security
@@ -13,8 +13,8 @@ import cats.effect.*
 import cats.syntax.all.*
 import io.circe.generic.auto.*
 import org.http4s.HttpRoutes
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
-import org.http4s.blaze.server.BlazeServerBuilder
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim}
 import sttp.client3.*
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
@@ -118,11 +118,10 @@ object OAuth2GithubHttp4sServer extends IOApp:
     // starting the server
     httpClient
       .use(backend =>
-        BlazeServerBuilder[IO]
-          .withExecutionContext(ec)
-          .bindHttp(8080, "localhost")
+        EmberServerBuilder
+          .default[IO]
           .withHttpApp(Router("/" -> (secretPlaceRoute <+> loginRoute <+> loginGithubRoute(backend))).orNotFound)
-          .resource
+          .build
           .use { _ =>
             IO {
               println("Go to: http://localhost:8080")

@@ -4,9 +4,10 @@ import cats.data._
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
+import com.comcast.ip4s.Port
 import fs2.Pipe
 import fs2.Stream
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.ContextMiddleware
 import org.http4s.ContextRoutes
@@ -24,11 +25,12 @@ import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with OptionValues {
+  private val anyAvailablePort = Port.fromInt(0).get
+  private val serverBuilder = EmberServerBuilder.default[IO].withPort(anyAvailablePort)
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
@@ -40,11 +42,9 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
 
     def assert_get_apiTestRouter_respondsWithExpectedContent[T](routes: HttpRoutes[IO], expectedContext: T): IO[Assertion] =
-      BlazeServerBuilder[IO]
-        .withExecutionContext(ExecutionContext.global)
-        .bindHttp(0, "localhost")
+      serverBuilder
         .withHttpApp(Router("/api" -> routes).orNotFound)
-        .resource
+        .build
         .use { server =>
           val port = server.address.getPort
           basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContext))

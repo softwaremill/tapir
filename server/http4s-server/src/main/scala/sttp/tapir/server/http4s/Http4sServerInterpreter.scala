@@ -124,7 +124,7 @@ trait Http4sServerInterpreter[F[_]] {
                 new Http4sInvalidWebSocketUse(
                   "Invalid usage of web socket endpoint without WebSocketBuilder2. " +
                     "Use the toWebSocketRoutes/toWebSocketHttp interpreter methods, " +
-                    "and add the result using BlazeServerBuilder.withHttpWebSocketApp(..)."
+                    "and add the result using (Blaze/Ember)ServerBuilder.withHttpWebSocketApp(..)."
                 )
               )
           }

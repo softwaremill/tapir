@@ -4,7 +4,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.13
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.30
 
 package sttp.tapir.examples.openapi
 
@@ -12,7 +12,7 @@ import cats.effect.*
 import cats.syntax.all.*
 import io.circe.generic.auto.*
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
@@ -73,11 +73,10 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp:
 
   override def run(args: List[String]): IO[ExitCode] =
     // starting the server
-    BlazeServerBuilder[IO]
-      .withExecutionContext(ec)
-      .bindHttp(8080, "localhost")
+    EmberServerBuilder
+      .default[IO]
       .withHttpApp(Router("/" -> (routes)).orNotFound)
-      .resource
+      .build
       .use { _ =>
         IO {
           println("Go to: http://localhost:8080/docs")

@@ -3,7 +3,8 @@ package sttp.tapir.server.http4s
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
-import org.http4s.blaze.server.BlazeServerBuilder
+import com.comcast.ip4s
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.{HttpApp, HttpRoutes}
 import sttp.capabilities.WebSockets
@@ -13,7 +14,6 @@ import sttp.tapir.server.http4s.Http4sTestServerInterpreter._
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 object Http4sTestServerInterpreter {
@@ -21,12 +21,14 @@ object Http4sTestServerInterpreter {
 }
 
 class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, Http4sServerOptions[IO], Routes] {
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]], interceptors: Interceptors): Routes = {
     val serverOptions: Http4sServerOptions[IO] = interceptors(Http4sServerOptions.customiseInterceptors[IO]).options
     Http4sServerInterpreter(serverOptions).toWebSocketRoutes(es)
   }
+
+  private val anyAvailablePort = ip4s.Port.fromInt(0).get
+  private val serverBuilder = EmberServerBuilder.default[IO].withPort(anyAvailablePort)
 
   override def server(
       routes: NonEmptyList[Routes],
@@ -34,12 +36,11 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   ): Resource[IO, Port] = {
     val service: WebSocketBuilder2[IO] => HttpApp[IO] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
-
-    BlazeServerBuilder[IO]
-      .withExecutionContext(ExecutionContext.global)
-      .bindHttp(0, "localhost")
-      .withHttpWebSocketApp(service)
-      .resource
-      .map(_.address.getPort())
+    gracefulShutdownTimeout
+      .foldLeft(serverBuilder.withHttpWebSocketApp(service)) { case (b, t) =>
+        b.withShutdownTimeout(t)
+      }
+      .build
+      .map(_.address.getPort)
   }
 }

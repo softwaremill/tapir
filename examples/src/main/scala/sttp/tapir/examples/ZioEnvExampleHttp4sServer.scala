@@ -6,7 +6,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.13
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.30
 //> using dep dev.zio::zio-interop-cats:23.1.0.3
 
 package sttp.tapir.examples
@@ -14,7 +14,7 @@ package sttp.tapir.examples
 import cats.syntax.all.*
 import io.circe.generic.auto.*
 import org.http4s.*
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.generic.auto.*
@@ -71,17 +71,11 @@ object ZioEnvExampleHttp4sServer extends ZIOAppDefault:
       .toRoutes
 
   // Starting the server
-  val serve: ZIO[PetService, Throwable, Unit] = {
-    ZIO.executor.flatMap(executor =>
-      BlazeServerBuilder[RIO[PetService, *]]
-        .withExecutionContext(executor.asExecutionContext)
-        .bindHttp(8080, "localhost")
-        .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
-        .serve
-        .compile
-        .drain
-    )
-
-  }
+  val serve: ZIO[PetService, Throwable, Unit] =
+    EmberServerBuilder
+      .default[RIO[PetService, *]]
+      .withHttpApp(Router("/" -> (petRoutes <+> swaggerRoutes)).orNotFound)
+      .build
+      .useForever
 
   override def run: URIO[Any, ExitCode] = serve.provide(PetService.live).exitCode

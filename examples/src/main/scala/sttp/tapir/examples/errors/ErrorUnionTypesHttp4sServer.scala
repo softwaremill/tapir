@@ -3,7 +3,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.13
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.30
 //> using dep com.softwaremill.sttp.client3::core:3.9.8
 
 package sttp.tapir.examples.errors
@@ -11,7 +11,7 @@ package sttp.tapir.examples.errors
 import cats.effect.*
 import io.circe.generic.auto.*
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.client3.*
 import sttp.model.StatusCode
@@ -67,15 +67,12 @@ object ErrorUnionTypesHttp4sServer extends IOApp:
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
   val helloWorldRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(helloServerEndpoint)
 
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-
   override def run(args: List[String]): IO[ExitCode] =
     // starting the server
-    BlazeServerBuilder[IO]
-      .withExecutionContext(ec)
-      .bindHttp(8080, "localhost")
+    EmberServerBuilder
+      .default[IO]
       .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
-      .resource
+      .build
       .use { _ =>
         IO {
           val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()

@@ -3,7 +3,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.13
 //> using dep com.softwaremill.sttp.client3::core:3.9.8
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.30
 
 package sttp.tapir.examples.streaming
 
@@ -11,7 +11,7 @@ import cats.effect.{ExitCode, IO, IOApp}
 import cats.implicits.*
 import fs2.{Chunk, Stream}
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3.*
@@ -52,10 +52,10 @@ object StreamingHttp4sFs2Server extends IOApp:
 
   override def run(args: List[String]): IO[ExitCode] =
     // starting the server
-    BlazeServerBuilder[IO]
-      .bindHttp(8080, "localhost")
+    EmberServerBuilder
+      .default[IO]
       .withHttpApp(Router("/" -> streamingRoutes).orNotFound)
-      .resource
+      .build
       .use { _ =>
         IO {
           val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
