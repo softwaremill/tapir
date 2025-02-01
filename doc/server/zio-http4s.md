@@ -138,13 +138,11 @@ val wsRoutes: WebSocketBuilder2[Task] => HttpRoutes[Task] =
   ZHttp4sServerInterpreter().fromWebSocket(wsEndpoint.zServerLogic(_ => ???)).toRoutes
 
 val serve: Task[Unit] =
-  ZIO.executor.flatMap(executor =>
-    EmberServerBuilder
-      .default[Task]
-      .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
-      .build
-      .useForever
-  )
+  EmberServerBuilder
+    .default[Task]
+    .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
+    .build
+    .useForever
 ```
 
 ## Server Sent Events

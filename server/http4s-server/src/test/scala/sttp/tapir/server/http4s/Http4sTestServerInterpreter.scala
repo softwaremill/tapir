@@ -28,7 +28,8 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   }
 
   private val anyAvailablePort = ip4s.Port.fromInt(0).get
-  private val serverBuilder = EmberServerBuilder.default[IO].withPort(anyAvailablePort)
+  // FIXME: if connection idle timeout is default, tests are very slow... Closing connection bug?
+  private val serverBuilder = EmberServerBuilder.default[IO].withPort(anyAvailablePort).withIdleTimeout(50.millis)
 
   override def server(
       routes: NonEmptyList[Routes],

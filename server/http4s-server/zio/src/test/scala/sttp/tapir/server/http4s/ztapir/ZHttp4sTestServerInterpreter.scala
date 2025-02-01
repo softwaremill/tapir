@@ -21,7 +21,7 @@ import zio.interop.catz._
 import zio.interop.catz.implicits._
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object ZHttp4sTestServerInterpreter {
   type F[A] = Task[A]
@@ -32,7 +32,9 @@ object ZHttp4sTestServerInterpreter {
 class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams with WebSockets, ServerOptions, Routes] {
 
   private val anyAvailablePort = ip4s.Port.fromInt(0).get
-  private val serverBuilder = EmberServerBuilder.default[Task].withPort(anyAvailablePort)
+
+  // FIXME: if connection idle timeout is default, tests are very slow... Closing connection bug?
+  private val serverBuilder = EmberServerBuilder.default[Task].withPort(anyAvailablePort).withIdleTimeout(50.millis)
 
   override def route(es: List[ZServerEndpoint[Any, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
     val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors[Task]).options

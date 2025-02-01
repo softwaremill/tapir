@@ -56,7 +56,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure(expectedContent.asRight[Unit]))
         val routes = Http4sServerInterpreter[IO]().toRoutes(e)
 
-        assert_get_apiTestRouter_respondsWithExpectedContent(routes, expectedContent).unsafeRunSync()
+        assert_get_apiTestRouter_respondsWithExpectedContent(routes, expectedContent).unsafeToFuture()
       },
       Test("should work with a router and context routes in a context") {
         val expectedContext: String = "Hello World!" // the context we expect http4s to provide to the endpoint
@@ -73,7 +73,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         val middleware: ContextMiddleware[IO, String] =
           ContextMiddleware.const(expectedContext)
 
-        assert_get_apiTestRouter_respondsWithExpectedContent(middleware(routesWithContext), expectedContext).unsafeRunSync()
+        assert_get_apiTestRouter_respondsWithExpectedContent(middleware(routesWithContext), expectedContext).unsafeToFuture()
       },
       Test("should work with a router and context routes in a context using contextSecurityIn") {
         val expectedContext: Int = 3
@@ -87,7 +87,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
 
         val middleware: ContextMiddleware[IO, Int] = ContextMiddleware.const(expectedContext)
 
-        assert_get_apiTestRouter_respondsWithExpectedContent(middleware(routesWithContext), expectedContext.toString).unsafeRunSync()
+        assert_get_apiTestRouter_respondsWithExpectedContent(middleware(routesWithContext), expectedContext.toString).unsafeToFuture()
       },
       createServerTest.testServer(
         endpoint.out(

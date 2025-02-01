@@ -43,7 +43,6 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp:
     )
 
   // server-side logic
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   val books = new AtomicReference(
     Vector(
@@ -75,13 +74,8 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp:
     // starting the server
     EmberServerBuilder
       .default[IO]
-      .withHttpApp(Router("/" -> (routes)).orNotFound)
+      .withHttpApp(Router("/" -> routes).orNotFound)
       .build
-      .use { _ =>
-        IO {
-          println("Go to: http://localhost:8080/docs")
-          println("Press any key to exit ...")
-          scala.io.StdIn.readLine()
-        }
-      }
+      .evalTap(_ => IO.println("Go to: http://localhost:8080/docs"))
+      .surround(IO.println("Press any key to exit ...") *> IO.readLine)
       .as(ExitCode.Success)
