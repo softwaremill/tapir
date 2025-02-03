@@ -68,7 +68,11 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
               .map(_.last)
               .value
               .asInstanceOf[Option[Either[WebSocketFrame, String]]]
-              .forall(_ == Left(WebSocketFrame.Close(1000, "normal closure")))
+              .forall {
+                case Left(WebSocketFrame.Close(1000, "normal closure")) if decodeCloseRequests       => true
+                case Left(WebSocketFrame.Close(1000, "" | "normal closure")) if !decodeCloseRequests => true
+                case _                                                                               => false
+              }
           )
         }
     },
