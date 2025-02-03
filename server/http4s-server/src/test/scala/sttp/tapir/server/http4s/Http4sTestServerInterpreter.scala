@@ -28,8 +28,7 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   }
 
   private val anyAvailablePort = ip4s.Port.fromInt(0).get
-  // FIXME: if connection idle timeout is default, tests are very slow... Closing connection bug?
-  private val serverBuilder = EmberServerBuilder.default[IO].withPort(anyAvailablePort).withIdleTimeout(50.millis)
+  private val serverBuilder = EmberServerBuilder.default[IO].withPort(anyAvailablePort)
 
   override def server(
       routes: NonEmptyList[Routes],
@@ -37,10 +36,12 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   ): Resource[IO, Port] = {
     val service: WebSocketBuilder2[IO] => HttpApp[IO] =
       wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
-    gracefulShutdownTimeout
-      .foldLeft(serverBuilder.withHttpWebSocketApp(service)) { case (b, t) =>
-        b.withShutdownTimeout(t)
-      }
+
+    serverBuilder
+      .withHttpWebSocketApp(service)
+      .withShutdownTimeout(
+        gracefulShutdownTimeout.getOrElse(0.seconds) // no need to wait unless it's explicitly required by test
+      )
       .build
       .map(_.address.getPort)
   }
