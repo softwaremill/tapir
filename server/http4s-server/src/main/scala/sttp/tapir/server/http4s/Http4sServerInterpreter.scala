@@ -134,7 +134,7 @@ trait Http4sServerInterpreter[F[_]] {
           case Some(value) if response.contentLength.isEmpty => headers.put(`Content-Length`(value))
           case _                                             => headers
         }
-        Response(status = statusCode, headers = headers2, body = entity).pure[F]
+        Response(status = statusCode, headers = headers2).withEntity(entity).pure[F]
 
       case None => Response[F](status = statusCode, headers = headers).pure[F]
     }
