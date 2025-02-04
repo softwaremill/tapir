@@ -8,6 +8,7 @@ import sttp.tapir.client.tests.ClientTests
 import sttp.client4._
 import sttp.tapir.client.sttp4.{SttpClientInterpreter, WebSocketToPipe}
 import sttp.client4.fetch.FetchBackend
+import sttp.tapir.client.sttp4.GenericRequestExtensions
 
 abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
   val backend = FetchBackend()
@@ -21,13 +22,11 @@ abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
       scheme: String = "http"
   ): IO[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    val response: Future[Either[E, O]] =
-      SttpClientInterpreter()
+    val genReq = SttpClientInterpreter()
         .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
-        .send(backend)
-        .map(_.body)
+    val response: Future[Either[E, O]] = GenericRequestExtensions.sendRequest(backend, genReq).map(_.body)
     IO.fromFuture(IO(response))
   }
 
@@ -38,13 +37,12 @@ abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    def response: Future[DecodeResult[Either[E, O]]] =
-      SttpClientInterpreter()
+    val genReq = SttpClientInterpreter()
         .toSecureRequest(e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
-        .send(backend)
-        .map(_.body)
+
+    val response: Future[DecodeResult[Either[E, O]]] = GenericRequestExtensions.sendRequest(backend, genReq).map(_.body)
     IO.fromFuture(IO(response))
   }
 

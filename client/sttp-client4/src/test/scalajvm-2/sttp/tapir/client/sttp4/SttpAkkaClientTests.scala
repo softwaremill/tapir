@@ -25,14 +25,14 @@ abstract class SttpAkkaClientTests[R >: WebSockets with AkkaStreams] extends Cli
   ): IO[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
     IO.fromFuture(
-      IO(
-        SttpClientInterpreter()
+      IO {
+        val genReq = SttpClientInterpreter()
           .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
           .apply(securityArgs)
           .apply(args)
-          .send(backend)
-          .map(_.body)
-      )
+
+        GenericRequestExtensions.sendRequest(backend, genReq).map(_.body)
+      }
     )
   }
 
@@ -44,14 +44,14 @@ abstract class SttpAkkaClientTests[R >: WebSockets with AkkaStreams] extends Cli
   ): IO[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
     IO.fromFuture(
-      IO(
-        SttpClientInterpreter()
+      IO {
+        val genReq = SttpClientInterpreter()
           .toSecureRequest(e, Some(uri"http://localhost:$port"))
           .apply(securityArgs)
           .apply(args)
-          .send(backend)
-          .map(_.body)
-      )
+
+        GenericRequestExtensions.sendRequest(backend, genReq).map(_.body)
+      }
     )
   }
 }

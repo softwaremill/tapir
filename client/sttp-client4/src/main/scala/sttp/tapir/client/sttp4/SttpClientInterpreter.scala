@@ -1,6 +1,6 @@
 package sttp.tapir.client.sttp4
 
-import sttp.client4.{Backend, Request}
+import sttp.client4.{Backend, GenericRequest}
 import sttp.model.Uri
 import sttp.tapir.{DecodeResult, Endpoint, PublicEndpoint}
 
@@ -19,10 +19,9 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     */
   def toClient[F[_], I, E, O, R](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri], backend: Backend[F])(implicit
       wsToPipe: WebSocketToPipe[R]
-  ): I => F[DecodeResult[Either[E, O]]] = {
-    (i: I) =>
-      val req = toRequest(e, baseUri)
-      backend.monad.map(req(i).send(backend))(_.body)
+  ): I => F[DecodeResult[Either[E, O]]] = { (i: I) =>
+    val req = toRequest(e, baseUri)
+    backend.monad.map(GenericRequestExtensions.sendRequest(backend, req(i)))(_.body)
   }
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -36,7 +35,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
       implicit wsToPipe: WebSocketToPipe[R]
   ): I => F[Either[E, O]] = {
     val req = toRequestThrowDecodeFailures(e, baseUri)
-    (i: I) => backend.monad.map(req(i).send(backend))(_.body)
+    (i: I) => backend.monad.map(GenericRequestExtensions.sendRequest(backend, req(i)))(_.body)
   }
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -50,7 +49,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
       wsToPipe: WebSocketToPipe[R]
   ): I => F[O] = {
     val req = toRequestThrowErrors(e, baseUri)
-    (i: I) => backend.monad.map(req(i).send(backend))(_.body)
+    (i: I) => backend.monad.map(GenericRequestExtensions.sendRequest(backend, req(i)))(_.body)
   }
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -63,7 +62,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     */
   def toRequest[I, E, O, R](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
-  ): I => Request[DecodeResult[Either[E, O]]] = {
+  ): I => GenericRequest[DecodeResult[Either[E, O]], Any] = {
     new EndpointToSttpClient(sttpClientOptions, wsToPipe).toSttpRequest(e, baseUri).apply(())
   }
 
@@ -77,7 +76,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     */
   def toRequestThrowDecodeFailures[I, E, O, R](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
-  ): I => Request[Either[E, O]] =
+  ): I => GenericRequest[Either[E, O], Any] =
     i => new EndpointToSttpClient(sttpClientOptions, wsToPipe).toSttpRequest(e, baseUri).apply(()).apply(i).mapResponse(throwDecodeFailures)
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -93,7 +92,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     */
   def toRequestThrowErrors[I, E, O, R](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
-  ): I => Request[O] =
+  ): I => GenericRequest[O, Any] =
     i =>
       new EndpointToSttpClient(sttpClientOptions, wsToPipe)
         .toSttpRequest(e, baseUri)
@@ -119,7 +118,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
       wsToPipe: WebSocketToPipe[R]
   ): A => I => F[DecodeResult[Either[E, O]]] = {
     val req = toSecureRequest(e, baseUri)
-    (a: A) => (i: I) => backend.monad.map(backend.send(req(a)(i)))(_.body)
+    (a: A) => (i: I) => backend.monad.map(GenericRequestExtensions.sendRequest(backend, req(a)(i)))(_.body)
   }
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -133,7 +132,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
       implicit wsToPipe: WebSocketToPipe[R]
   ): A => I => F[Either[E, O]] = {
     val req = toSecureRequestThrowDecodeFailures(e, baseUri)
-    (a: A) => (i: I) => backend.monad.map(backend.send(req(a)(i)))(_.body)
+    (a: A) => (i: I) => backend.monad.map(GenericRequestExtensions.sendRequest(backend, req(a)(i)))(_.body)
   }
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -148,7 +147,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
       wsToPipe: WebSocketToPipe[R]
   ): A => I => F[O] = {
     val req = toSecureRequestThrowErrors(e, baseUri)
-    (a: A) => (i: I) => backend.monad.map(backend.send(req(a)(i)))(_.body)
+    (a: A) => (i: I) => backend.monad.map(GenericRequestExtensions.sendRequest(backend, req(a)(i)))(_.body)
   }
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -161,7 +160,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     */
   def toSecureRequest[A, I, E, O, R](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
-  ): A => I => Request[DecodeResult[Either[E, O]]] =
+  ): A => I => GenericRequest[DecodeResult[Either[E, O]], Any] =
     new EndpointToSttpClient(sttpClientOptions, wsToPipe).toSttpRequest(e, baseUri)
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -174,7 +173,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     */
   def toSecureRequestThrowDecodeFailures[A, I, E, O, R](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
-  ): A => I => Request[Either[E, O]] =
+  ): A => I => GenericRequest[Either[E, O], Any] =
     a =>
       i =>
         new EndpointToSttpClient(sttpClientOptions, wsToPipe).toSttpRequest(e, baseUri).apply(a).apply(i).mapResponse(throwDecodeFailures)
@@ -192,7 +191,7 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     */
   def toSecureRequestThrowErrors[A, I, E, O, R](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
-  ): A => I => Request[O] =
+  ): A => I => GenericRequest[O, Any] =
     a =>
       i =>
         new EndpointToSttpClient(sttpClientOptions, wsToPipe)
@@ -205,8 +204,6 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
             case Left(t)            => throw new RuntimeException(throwErrorExceptionMsg(e, a, i, t))
             case Right(o)           => o
           }
-
-  //
 
   private def throwDecodeFailures[T](dr: DecodeResult[T]): T =
     dr match {
