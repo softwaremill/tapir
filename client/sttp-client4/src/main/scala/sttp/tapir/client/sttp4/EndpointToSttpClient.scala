@@ -16,7 +16,10 @@ import scala.annotation.tailrec
 
 private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R])
     extends EndpointToSttpClientExtensions {
-  def toSttpRequest[A, E, O, I](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri]): A => I => Request[DecodeResult[Either[E, O]]] = { aParams => iParams =>
+  def toSttpRequest[F[_], A, E, O, I](
+      e: Endpoint[A, I, E, O, R],
+      baseUri: Option[Uri]
+  ): A => I => GenericRequest[DecodeResult[Either[E, O]], Any] = { aParams => iParams =>
     val (uri1, req1) =
       setInputParams(
         e.securityInput,
@@ -39,20 +42,43 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
 
     def isSuccess(meta: ResponseMetadata) = if (isWebSocket) meta.code == webSocketSuccessStatusCode else meta.isSuccess
 
-    val responseAs = fromMetadata(
-      responseAsFromOutputs(e.errorOutput, isWebSocket = false),
-      ConditionalResponseAs(isSuccess, responseAsFromOutputs(e.output, isWebSocket))
-    ).mapWithMetadata { (body, meta) =>
+    def mapWithMetadataF[T](body: T, meta: ResponseMetadata): DecodeResult[scala.util.Either[Any, Any]] = {
       val output = if (isSuccess(meta)) e.output else e.errorOutput
       val params = clientOutputParams(output, body, meta)
       params.map(_.asAny).map(p => if (isSuccess(meta)) Right(p) else Left(p))
-    }.map {
+    }
+
+    val mapF: Any => Any = {
       case DecodeResult.Error(o, e) =>
         DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from: $o, request: ${req3.method} ${req3.uri}", e))
       case other => other
     }
 
-    req3.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]]]]
+    (bodyIsStream(e.output), isWebSocket) match {
+      case (Some(streams), _) =>
+        req3
+          .response(
+            asStreamAlwaysUnsafe(streams).mapWithMetadata(mapWithMetadataF).map(mapF)
+          )
+          .asInstanceOf[GenericRequest[DecodeResult[Either[E, O]], Any]]
+      case (_, true) =>
+        req3
+          .response(
+            async
+              .asWebSocketAlwaysUnsafe[F]
+              .mapWithMetadata(mapWithMetadataF)
+              .map(mapF)
+          )
+          .asInstanceOf[GenericRequest[DecodeResult[Either[E, O]], Any]]
+      case (None, false) =>
+        val response = fromMetadata(
+          outToResponseAs(e.errorOutput),
+          ConditionalResponseAs(isSuccess, outToResponseAs(e.output))
+        ).mapWithMetadata(mapWithMetadataF)
+          .map(mapF)
+
+        req3.response(response).asInstanceOf[GenericRequest[DecodeResult[Either[E, O]], Any]]
+    }
   }
 
   private type PartialAnyRequest = PartialRequest[_]
@@ -202,24 +228,18 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case RawBodyType.MultipartBody(_, _)  => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
     }
 
-  private def responseAsFromOutputs(out: EndpointOutput[_], isWebSocket: Boolean): ResponseAs[Any] = {
-    ((bodyIsStream(out), isWebSocket) match {
-      case (Some(streams), _) => asStreamAlwaysUnsafe(streams)
-      case (_, true)          => async.asWebSocketAlwaysUnsafe
-      case (None, false) =>
-        out.bodyType
-          .map {
-            case RawBodyType.StringBody(charset)  => asStringAlways(charset.name())
-            case RawBodyType.ByteArrayBody        => asByteArrayAlways
-            case RawBodyType.ByteBufferBody       => asByteArrayAlways.map(ByteBuffer.wrap)
-            case RawBodyType.InputStreamBody      => asByteArrayAlways.map(new ByteArrayInputStream(_))
-            case RawBodyType.FileBody             => asFileAlways(clientOptions.createFile()).map(d => FileRange(d))
-            case RawBodyType.InputStreamRangeBody => asByteArrayAlways.map(b => InputStreamRange(() => new ByteArrayInputStream(b)))
-            case RawBodyType.MultipartBody(_, _)  => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
-          }
-          .getOrElse(ignore)
-    }).asInstanceOf[ResponseAs[Any]]
-  }
+  private def outToResponseAs(out: EndpointOutput[_]) =
+    out.bodyType
+      .map {
+        case RawBodyType.StringBody(charset)  => asStringAlways(charset.name())
+        case RawBodyType.ByteArrayBody        => asByteArrayAlways
+        case RawBodyType.ByteBufferBody       => asByteArrayAlways.map(ByteBuffer.wrap)
+        case RawBodyType.InputStreamBody      => asByteArrayAlways.map(new ByteArrayInputStream(_))
+        case RawBodyType.FileBody             => asFileAlways(clientOptions.createFile()).map(d => FileRange(d))
+        case RawBodyType.InputStreamRangeBody => asByteArrayAlways.map(b => InputStreamRange(() => new ByteArrayInputStream(b)))
+        case RawBodyType.MultipartBody(_, _)  => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
+      }
+      .getOrElse(ignore)
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
     out.traverseOutputs {

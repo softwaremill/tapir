@@ -10,6 +10,7 @@ import sttp.tapir.{DecodeResult, Endpoint}
 import zio.Runtime.default
 import zio.{CancelableFuture, Task, Unsafe}
 import sttp.tapir.client.sttp4.{SttpClientInterpreter, WebSocketToPipe}
+import sttp.tapir.client.sttp4.GenericRequestExtensions
 
 abstract class SttpClientZioTests[R >: WebSockets with ZioStreams] extends ClientTests[R] {
   private val runtime: default.UnsafeAPI = zio.Runtime.default.unsafe
@@ -25,12 +26,12 @@ abstract class SttpClientZioTests[R >: WebSockets with ZioStreams] extends Clien
   ): IO[Either[E, O]] =
     IO.fromFuture(IO.delay {
       implicit val wst: WebSocketToPipe[R] = wsToPipe
-      val send = SttpClientInterpreter()
+      val genReq = SttpClientInterpreter()
         .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
-        .send(backend)
-        .map(_.body)
+
+      val send = GenericRequestExtensions.sendRequest(backend, genReq).map(_.body)
       unsafeToFuture(send).future
     })
 
@@ -42,12 +43,12 @@ abstract class SttpClientZioTests[R >: WebSockets with ZioStreams] extends Clien
   ): IO[DecodeResult[Either[E, O]]] =
     IO.fromFuture(IO.delay {
       implicit val wst: WebSocketToPipe[R] = wsToPipe
-      val send = SttpClientInterpreter()
+      val genReq = SttpClientInterpreter()
         .toSecureRequest(e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
-        .send(backend)
-        .map(_.body)
+
+      val send = GenericRequestExtensions.sendRequest(backend, genReq).map(_.body)
       unsafeToFuture(send).future
     })
 

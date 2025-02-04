@@ -25,7 +25,7 @@ class SttpClientWebSocketTests extends SttpClientTests[WebSockets with Fs2Stream
     // HttpClient doesn't expose web socket response headers
     HttpClientFs2Backend
       .resource[IO]()
-      .use { asyncHttpClientBackend =>
+      .use { httpClientBackend =>
         def sendAsResponse[A, I, E, O](
             e: Endpoint[A, I, E, O, WebSockets with Fs2Streams[IO]],
             port: Port,
@@ -33,11 +33,12 @@ class SttpClientWebSocketTests extends SttpClientTests[WebSockets with Fs2Stream
             args: I,
             scheme: String
         ): IO[Response[Either[E, O]]] = {
-          SttpClientInterpreter()
+          val genReq = SttpClientInterpreter()
             .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
             .apply(securityArgs)
             .apply(args)
-            .send(asyncHttpClientBackend)
+
+          GenericRequestExtensions.sendRequest(httpClientBackend, genReq)
         }
 
         sendAsResponse(

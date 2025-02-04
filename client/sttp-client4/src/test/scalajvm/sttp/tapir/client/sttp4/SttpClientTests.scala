@@ -23,11 +23,13 @@ abstract class SttpClientTests[R >: WebSockets with Fs2Streams[IO]] extends Clie
       scheme: String = "http"
   ): IO[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    SttpClientInterpreter()
+    val genReq = SttpClientInterpreter()
       .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
-      .send(backend)
+
+    GenericRequestExtensions
+      .sendRequest(backend, genReq)
       .map(_.body)
   }
 
@@ -38,7 +40,12 @@ abstract class SttpClientTests[R >: WebSockets with Fs2Streams[IO]] extends Clie
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    SttpClientInterpreter().toSecureRequest(e, Some(uri"http://localhost:$port")).apply(securityArgs).apply(args).send(backend).map(_.body)
+    val genReq = SttpClientInterpreter()
+      .toSecureRequest(e, Some(uri"http://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+
+    GenericRequestExtensions.sendRequest(backend, genReq).map(_.body)
   }
 
   override protected def afterAll(): Unit = {
