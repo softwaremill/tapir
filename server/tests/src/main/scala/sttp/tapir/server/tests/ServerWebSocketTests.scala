@@ -28,6 +28,8 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     val streams: S,
     autoPing: Boolean,
     handlePong: Boolean,
+    // some servers (e.g. http4s Ember) can pong on pings automatically without proxying them to endpoint logic
+    autoPongAtEndpoint: Boolean = true,
     // Disabled for example for vert.x, which sometimes drops connection without returning Close
     expectCloseResponse: Boolean = true,
     frameConcatenation: Boolean = true,
@@ -164,7 +166,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       endpoint.out(
         webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
           .autoPing(None)
-          .autoPongOnPing(true)
+          .autoPongOnPing(autoPongAtEndpoint)
       ),
       "pong on ping"
     )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>

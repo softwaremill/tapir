@@ -145,6 +145,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         createServerTest,
         Fs2Streams[IO],
         autoPing = true,
+        autoPongAtEndpoint = false,
         handlePong = false,
         decodeCloseRequests =
           false // when a close frame is received, http4s cancels the stream, so sometimes the close frames are never processed
