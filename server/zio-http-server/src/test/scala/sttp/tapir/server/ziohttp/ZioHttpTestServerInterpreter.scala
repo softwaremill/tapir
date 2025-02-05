@@ -28,7 +28,6 @@ class ZioHttpTestServerInterpreter(
     ZioHttpInterpreter(serverOptions).toHttp(es)
   }
 
-  // Needs to manually call killSwitch, because serverWithStop uses `allocated`
   override def server(
       routes: NonEmptyList[Routes[Any, Response]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
