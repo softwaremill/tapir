@@ -54,14 +54,27 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case other => other
     }
 
-    (bodyIsStream(e.output), isWebSocket) match {
-      case (Some(streams), _) =>
+    (bodyIsStream(e.input), bodyIsStream(e.output), isWebSocket) match {
+      case (Some(streamsIn), None, _) => // request body is a stream
+        req3
+          .streamBody(streamsIn)(iParams.asInstanceOf[streamsIn.BinaryStream])
+          .asInstanceOf[GenericRequest[DecodeResult[Either[E, O]], Any]]
+      case (None, Some(streamsOut), _) => // response is a stream
         req3
           .response(
-            asStreamAlwaysUnsafe(streams).mapWithMetadata(mapWithMetadataF).map(mapF)
+            asStreamAlwaysUnsafe(streamsOut).mapWithMetadata(mapWithMetadataF).map(mapF)
           )
           .asInstanceOf[GenericRequest[DecodeResult[Either[E, O]], Any]]
-      case (_, true) =>
+      case (Some(streamsIn), Some(streamsOut), _) => { // both request body and response are streams
+        req3
+          .streamBody(streamsIn)(iParams.asInstanceOf[streamsIn.BinaryStream])
+          .asInstanceOf[StreamRequest[Any, Any]]
+          .response(
+            asStreamAlwaysUnsafe(streamsOut).mapWithMetadata(mapWithMetadataF).map(mapF)
+          )
+          .asInstanceOf[GenericRequest[DecodeResult[Either[E, O]], Any]]
+      }
+      case (None, None, true) =>
         req3
           .response(
             async
@@ -70,7 +83,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
               .map(mapF)
           )
           .asInstanceOf[GenericRequest[DecodeResult[Either[E, O]], Any]]
-      case (None, false) =>
+      case (None, None, false) =>
         val response = fromMetadata(
           outToResponseAs(e.errorOutput),
           ConditionalResponseAs(isSuccess, outToResponseAs(e.output))
@@ -123,10 +136,8 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
           ) =>
         val req2 = req.body(value.asInstanceOf[InputStream])
         (uri, req2)
-      case EndpointIO.OneOfBody(Nil, _) => throw new RuntimeException("One of body without variants")
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
-        val req2 = req.body(value.asInstanceOf[InputStream])
-        (uri, req2)
+      case EndpointIO.OneOfBody(Nil, _)                                    => throw new RuntimeException("One of body without variants")
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) => (uri, req)
       case EndpointIO.Header(name, codec, _) =>
         val req2 = codec
           .encode(value)
@@ -243,6 +254,13 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
     out.traverseOutputs {
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) => Vector(streams)
+      case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.body.toOption).map(_.wrapped.streams).toVector
+    }.headOption
+  }
+
+  private def bodyIsStream[I](in: EndpointInput[I]): Option[Streams[_]] = {
+    in.traverseInputs {
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) => Vector(streams)
       case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.body.toOption).map(_.wrapped.streams).toVector
     }.headOption
