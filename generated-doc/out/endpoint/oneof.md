@@ -100,7 +100,7 @@ val baseEndpoint = endpoint.errorOut(
 // error:
 // Type scala.util.Left[repl.MdocSession.MdocApp.ServerError, repl.MdocSession.MdocApp.UserError], AppliedType(TypeRef(ThisType(TypeRef(NoPrefix,module class util)),class Left),List(TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),class ServerError), TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),trait UserError))) is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariant(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
-//                                                                                                                      ^
+//                                                                                                                     ^
 ```
 
 The solution is therefore to handwrite a function checking that a value (of type `Any`) is of the correct type:
