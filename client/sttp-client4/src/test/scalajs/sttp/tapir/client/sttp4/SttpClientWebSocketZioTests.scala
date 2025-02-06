@@ -5,6 +5,7 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.client.sttp4.ws.zio._
 import sttp.tapir.client.tests.ClientWebSocketTests
+import sttp.tapir.client.sttp4.WebSocketToPipe
 import zio.stream.{Stream, ZStream}
 
 class SttpClientWebSocketZioTests extends SttpClientZioTests[WebSockets with ZioStreams] with ClientWebSocketTests[ZioStreams] {

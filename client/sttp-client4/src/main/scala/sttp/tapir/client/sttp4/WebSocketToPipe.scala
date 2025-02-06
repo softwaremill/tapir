@@ -23,7 +23,7 @@ trait WebSocketToPipe[-R] {
   but this causes:
   java.lang.AbstractMethodError: Receiver class sttp.tapir.client.sttp.ws.fs2.WebSocketToFs2Pipe does not define or
   inherit an implementation of the resolved method 'abstract java.lang.Object apply(sttp.capabilities.package$Streams,
-  sttp.ws.WebSocket, sttp.tapir.WebSocketBodyOutput)' of interface sttp.tapir.client.sttp.WebSocketToPipe.
+  sttp.ws.WebSocket, sttp.tapir.WebSocketBodyOutput)' of interface sttp.tapir.client.sttp4.WebSocketToPipe.
 
   I have no idea why.
    */

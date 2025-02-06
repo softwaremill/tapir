@@ -6,7 +6,7 @@ import cats.effect.Concurrent
 import cats.syntax.all._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.tapir.client.sttp.WebSocketToPipe
+import sttp.tapir.client.sttp4.WebSocketToPipe
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.{WebSocket, WebSocketFrame}

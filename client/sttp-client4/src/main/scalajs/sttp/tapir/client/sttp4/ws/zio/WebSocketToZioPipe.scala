@@ -2,7 +2,7 @@ package sttp.tapir.client.sttp4.ws.zio
 
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.client.sttp.WebSocketToPipe
+import sttp.tapir.client.sttp4.WebSocketToPipe
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.{WebSocket, WebSocketFrame}
