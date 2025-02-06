@@ -6,9 +6,11 @@ import scala.concurrent.Future
 import sttp.tapir.{DecodeResult, Endpoint}
 import sttp.tapir.client.tests.ClientTests
 import sttp.client4._
+import sttp.tapir.client.sttp4.{SttpClientInterpreter, WebSocketToPipe}
+import sttp.client4.fetch.FetchBackend
 
 abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
-  val backend: SttpBackend[Future, R] = FetchBackend()
+  val backend = FetchBackend()
   def wsToPipe: WebSocketToPipe[R]
 
   override def send[A, I, E, O](
