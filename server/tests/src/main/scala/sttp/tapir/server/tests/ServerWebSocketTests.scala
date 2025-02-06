@@ -182,13 +182,15 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map((r: Response[Either[String, List[WebSocketFrame]]]) =>
-          assert(
-            r.body.value exists {
-              case WebSocketFrame.Pong(array) => array sameElements "test-ping-text".getBytes
-              case _                          => false
-            },
-            s"Missing Pong(test-ping-text) in ${r.body}"
+        .flatMap((r: Response[Either[String, List[WebSocketFrame]]]) =>
+          IO(
+            assert(
+              r.body.value exists {
+                case WebSocketFrame.Pong(array) => array sameElements "test-ping-text".getBytes
+                case _                          => false
+              },
+              s"Missing Pong(test-ping-text) in ${r.body}"
+            )
           )
         )
     },
@@ -202,7 +204,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map(r => assert(r.body.forall(_.left.map(_.statusCode) == Left(1000))))
+        .flatMap(r => IO(assert(r.body.forall(_.left.map(_.statusCode) == Left(1000)))))
     },
     testServer(
       endpoint
