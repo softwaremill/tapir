@@ -4,15 +4,16 @@ import cats.effect.IO
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.client4._
-import sttp.client3.impl.zio.FetchZioBackend
+import sttp.client4.impl.zio.FetchZioBackend
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 import zio.Runtime.default
 import zio.{CancelableFuture, Task, Unsafe}
+import sttp.tapir.client.sttp4.{SttpClientInterpreter, WebSocketToPipe}
 
 abstract class SttpClientZioTests[R >: WebSockets with ZioStreams] extends ClientTests[R] {
   private val runtime: default.UnsafeAPI = zio.Runtime.default.unsafe
-  val backend: SttpBackend[Task, R] = FetchZioBackend()
+  val backend = FetchZioBackend()
   def wsToPipe: WebSocketToPipe[R]
 
   override def send[A, I, E, O](

@@ -1,6 +1,7 @@
 package sttp.tapir.client.sttp4
 
-import sttp.client3.{FetchBackend, SttpBackend}
+import sttp.client4.{Backend, Request}
+import sttp.client4.fetch.FetchBackend
 import sttp.model.Uri
 import sttp.tapir.{Endpoint, PublicEndpoint}
 
@@ -19,7 +20,7 @@ trait SttpClientInterpreterExtensions { this: SttpClientInterpreter =>
     */
   def toQuickClient[I, E, O](e: PublicEndpoint[I, E, O, Any], baseUri: Option[Uri]): I => Future[Either[E, O]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val backend: SttpBackend[Future, Any] = FetchBackend()
+    val backend = FetchBackend()
     SttpClientInterpreter().toClientThrowDecodeFailures(e, baseUri, backend)
   }
 
@@ -32,7 +33,7 @@ trait SttpClientInterpreterExtensions { this: SttpClientInterpreter =>
     */
   def toQuickClientThrowErrors[I, E, O](e: PublicEndpoint[I, E, O, Any], baseUri: Option[Uri]): I => Future[O] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val backend: SttpBackend[Future, Any] = FetchBackend()
+    val backend = FetchBackend()
     SttpClientInterpreter().toClientThrowErrors(e, baseUri, backend)
   }
 
@@ -47,7 +48,7 @@ trait SttpClientInterpreterExtensions { this: SttpClientInterpreter =>
     */
   def toQuickSecureClient[A, I, E, O](e: Endpoint[A, I, E, O, Any], baseUri: Option[Uri]): A => I => Future[Either[E, O]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val backend: SttpBackend[Future, Any] = FetchBackend()
+    val backend = FetchBackend()
     SttpClientInterpreter().toSecureClientThrowDecodeFailures(e, baseUri, backend)
   }
 
@@ -61,7 +62,7 @@ trait SttpClientInterpreterExtensions { this: SttpClientInterpreter =>
     */
   def toQuickSecureClientThrowErrors[A, I, E, O](e: Endpoint[A, I, E, O, Any], baseUri: Option[Uri]): A => I => Future[O] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val backend: SttpBackend[Future, Any] = FetchBackend()
+    val backend = FetchBackend()
     SttpClientInterpreter().toSecureClientThrowErrors(e, baseUri, backend)
   }
 }
