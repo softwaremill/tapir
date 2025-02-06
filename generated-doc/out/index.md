@@ -245,6 +245,7 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
    other/grpc
    other/troubleshooting
    other/migrating
+   other/adr
    other/goals
    other/contributing
 
