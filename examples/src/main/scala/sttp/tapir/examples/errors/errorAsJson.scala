@@ -6,7 +6,7 @@
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
 //> using dep com.softwaremill.sttp.client3::core:3.10.2
-//> using dep com.softwaremill.sttp.client3::circe:3.10.2
+//> using dep com.softwaremill.sttp.client3::circe:3.10.3
 
 package sttp.tapir.examples.errors
 

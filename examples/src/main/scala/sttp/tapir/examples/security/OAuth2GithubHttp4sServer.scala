@@ -3,7 +3,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.13
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.13
-//> using dep com.softwaremill.sttp.client3::async-http-client-backend-cats:3.10.2
+//> using dep com.softwaremill.sttp.client3::async-http-client-backend-cats:3.10.3
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 //> using dep com.github.jwt-scala::jwt-circe:10.0.1
 
