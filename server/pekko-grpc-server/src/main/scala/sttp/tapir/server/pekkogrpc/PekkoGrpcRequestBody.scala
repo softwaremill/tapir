@@ -11,7 +11,6 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.pekkohttp.PekkoHttpServerOptions
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 
-import java.io.ByteArrayInputStream
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
@@ -39,10 +38,10 @@ private[pekkogrpc] class PekkoGrpcRequestBody(serverOptions: PekkoHttpServerOpti
 
   private def toExpectedBodyType[R](byteString: ByteString, bodyType: RawBodyType[R]): RawValue[R] = {
     bodyType match {
-      case RawBodyType.ByteArrayBody        => RawValue(byteString.toArray)
+      case RawBodyType.ByteArrayBody        => RawValue(byteString.toArrayUnsafe())
       case RawBodyType.ByteBufferBody       => RawValue(byteString.asByteBuffer)
-      case RawBodyType.InputStreamBody      => RawValue(new ByteArrayInputStream(byteString.toArray))
-      case RawBodyType.InputStreamRangeBody => RawValue(InputStreamRange(() => new ByteArrayInputStream(byteString.toArray)))
+      case RawBodyType.InputStreamBody      => RawValue(byteString.asInputStream)
+      case RawBodyType.InputStreamRangeBody => RawValue(InputStreamRange(() => byteString.asInputStream))
       case RawBodyType.FileBody             => ???
       case m: RawBodyType.MultipartBody     => ???
       case _                                => ???

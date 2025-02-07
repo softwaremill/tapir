@@ -1,10 +1,10 @@
 // {cat=Observability; effects=Future; server=Netty; json=circe}: Reporting OpenTelemetry metrics
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.1
-//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.40.0
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.14
+//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.46.0
 //> using dep org.slf4j:slf4j-api:2.0.13
 
 package sttp.tapir.examples.observability

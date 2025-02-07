@@ -35,9 +35,7 @@ class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServ
       val resp: IO[_] = basicRequest.get(uri"$baseUri").readTimeout(300.millis).send(backend)
 
       resp
-        .map { case result =>
-          fail(s"Expected cancellation, but received a result: $result")
-        }
+        .map(result => fail(s"Expected cancellation, but received a result: $result"))
         .handleErrorWith {
           case _: SttpClientException.TimeoutException => // expected, this is how we trigged client-side cancellation
             IO(

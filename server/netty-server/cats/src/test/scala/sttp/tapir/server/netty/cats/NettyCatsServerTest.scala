@@ -52,7 +52,6 @@ class NettyCatsServerTest extends TestSuite with EitherValues with Matchers {
               createServerTest,
               Fs2Streams[IO],
               autoPing = true,
-              failingPipe = true,
               handlePong = true
             ) {
               override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)

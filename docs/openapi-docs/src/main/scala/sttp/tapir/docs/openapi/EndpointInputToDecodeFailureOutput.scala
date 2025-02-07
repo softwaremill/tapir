@@ -29,7 +29,15 @@ private[openapi] object EndpointInputToDecodeFailureOutput {
     codec.format.mediaType != MediaType.TextPlain ||
       codec.schema.hasValidation ||
       codec.schema.format.nonEmpty ||
-      codec.schema.schemaType != SchemaType.SString()
+      decodingMayFail(codec.schema.schemaType)
+
+  private def decodingMayFail(st: SchemaType[_]): Boolean = st match {
+    case SchemaType.SString()        => false
+    case SchemaType.SBinary()        => false
+    case SchemaType.SOption(element) => decodingMayFail(element.schemaType)
+    case SchemaType.SArray(element)  => decodingMayFail(element.schemaType)
+    case _                           => true
+  }
 
   private def badRequestDescription(fallibleBasicInputs: Vector[EndpointInput.Basic[_]]) =
     fallibleBasicInputs.map(failureSourceMessage).distinct.mkString(", ")

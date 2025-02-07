@@ -12,7 +12,7 @@ trait SchemaMacros[T] { this: Schema[T] =>
   /** Modifies nested schemas for case classes and case class families (sealed traits / enums), accessible with `path`, using the given
     * `modification` function. To traverse collections, use `.each`.
     *
-    * Should only be used if the schema hasn't been created by `.map`ping another one. In such a case, the shape of the schema doesn't
+    * Should only be used if the schema hasn't been created by `.map` ping another one. In such a case, the shape of the schema doesn't
     * correspond to the type `T`, but to some lower-level representation of the type.
     *
     * If the shape of the schema doesn't correspond to the path, the schema remains unchanged.
@@ -41,12 +41,15 @@ private[tapir] object SchemaMacros {
           .exists(modifyType.endsWith)
 
       tree match {
+
         /** Field access */
         case Select(deep, ident) =>
           toPath(deep, PathElement.TermPathElement(ident) :: acc)
+
         /** Method call with no arguments and using clause */
         case Apply(Apply(TypeApply(Ident(f), _), idents), _) if typeSupported(f) => {
           val newAcc = acc match {
+
             /** replace the term controlled by quicklens */
             case PathElement.TermPathElement(term, xargs @ _*) :: rest => PathElement.FunctorPathElement(f, term, xargs: _*) :: rest
             case elements => report.errorAndAbort(s"Invalid use of path elements [${elements.mkString(", ")}]. $ShapeInfo, got: ${tree}")
@@ -64,6 +67,7 @@ private[tapir] object SchemaMacros {
     }
 
     val pathElements = path.asTerm match {
+
       /** Single inlined path */
       case Inlined(_, _, Block(List(DefDef(_, _, _, Some(p))), _)) =>
         toPath(p, List.empty)
@@ -157,7 +161,7 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   }
 
   /** Creates a schema for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
-    * that this is an `enum`, where all cases are parameterless, or that all subtypes of the sealed hierarchy `T` are `object`s.
+    * that this is an `enum`, where all cases are parameterless, or that all subtypes of the sealed hierarchy `T` are `object` s.
     *
     * This method cannot be implicit, as there's no way to constraint the type `T` to be an enum / sealed trait or class enumeration, so
     * that this would be invoked only when necessary.

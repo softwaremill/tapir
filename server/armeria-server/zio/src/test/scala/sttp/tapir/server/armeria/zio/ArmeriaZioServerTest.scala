@@ -12,7 +12,6 @@ import zio.stream.ZSink
 class ArmeriaZioServerTest extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
-
     implicit val monadError: MonadError[Task] = new RIOMonadError
 
     val interpreter = new ArmeriaZioTestServerInterpreter()

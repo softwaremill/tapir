@@ -1,18 +1,18 @@
 // {cat=WebSocket; effects=Direct; server=Netty}: Describe and implement a WebSocket endpoint
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.14
 
 package sttp.tapir.examples.websocket
 
 import ox.*
 import ox.channels.*
+import ox.flow.Flow
 import sttp.capabilities.WebSockets
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.OxStreams
-import sttp.tapir.server.netty.sync.OxStreams.Pipe // alias for Ox ?=> Source[A] => Source[B]
+import sttp.tapir.server.netty.sync.OxStreams.Pipe
 import sttp.tapir.server.netty.sync.NettySyncServer
-import sttp.ws.WebSocketFrame
 
 import scala.concurrent.duration.*
 
@@ -21,26 +21,19 @@ object WebSocketNettySyncServer:
   val wsEndpoint =
     endpoint.get
       .in("ws")
-      .out(
-        webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams)
-          .concatenateFragmentedFrames(false) // All these options are supported by tapir-netty
-          .ignorePong(true)
-          .autoPongOnPing(true)
-          .decodeCloseRequests(false)
-          .decodeCloseResponses(false)
-          .autoPing(Some((10.seconds, WebSocketFrame.Ping("ping-content".getBytes))))
-      )
+      .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
 
   // Your processor transforming a stream of requests into a stream of responses
   val wsPipe: Pipe[String, String] = requestStream => requestStream.map(_.toUpperCase)
-  // Alternatively, requests and responses can be treated separately, for example to emit frames to the client from another source:
-  val wsPipe2: Pipe[String, String] = { in =>
-    fork {
-      in.drain() // read and ignore requests
-    }
+
+  // Alternative logic (not used here): requests and responses can be treated separately, for example to emit frames
+  // to the client from another source.
+  val wsPipe2: Pipe[String, String] = in =>
     // emit periodic responses
-    Source.tick(1.second).map(_ => System.currentTimeMillis()).map(_.toString)
-  }
+    val responseFlow: Flow[String] = Flow.tick(1.second).map(_ => System.currentTimeMillis()).map(_.toString)
+
+    // ignore whatever is sent by the client, but complete the stream once the client closes
+    in.drain().merge(responseFlow, propagateDoneLeft = true)
 
   // The WebSocket endpoint, builds the pipeline in serverLogicSuccess
   val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe)

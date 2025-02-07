@@ -30,6 +30,9 @@ import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
+import java.util.concurrent.TimeoutException
+import org.reactivestreams.Subscriber
+import org.reactivestreams.Subscription
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
@@ -109,11 +112,13 @@ class NettyServerHandler[F[_]](
     evt match {
       case e: IdleStateEvent =>
         if (e.state() == IdleState.WRITER_IDLE) {
-          logger.error(s"Closing connection due to exceeded response timeout of ${config.requestTimeout}")
+          logger.error(
+            s"Closing connection due to exceeded response timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
+          )
           writeError503ThenClose(ctx)
         }
         if (e.state() == IdleState.ALL_IDLE) {
-          logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout}")
+          logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
           val _ = ctx.close()
         }
       case other =>
@@ -147,30 +152,42 @@ class NettyServerHandler[F[_]](
       pendingResponses.enqueue(cancellationSwitch)
       lastResponseSent = lastResponseSent.flatMap { _ =>
         runningFuture
-          .andThen { case _ =>
-            requestTimeoutHandler.foreach(ctx.pipeline().remove)
-          }(eventLoopContext)
-          .transform {
-            case Success(serverResponse) =>
-              pendingResponses.dequeue()
-              try {
-                handleResponse(ctx, req, serverResponse)
-                Success(())
-              } catch {
-                case NonFatal(ex) =>
-                  writeError500(req, ex)
-                  Failure(ex)
-              } finally {
-                val _ = releaseReq()
+          .transform { result =>
+            try {
+              // #4131: the channel might be closed if the request timed out
+              // both timeout & response-ready events (i.e., comleting this future) are handled on the event loop's executor,
+              // so they won't be handled concurrently
+              if (ctx.channel().isOpen()) {
+                requestTimeoutHandler.foreach(ctx.pipeline().remove)
+                result match {
+                  case Success(serverResponse) =>
+                    pendingResponses.dequeue()
+                    try {
+                      handleResponse(ctx, req, serverResponse)
+                      Success(())
+                    } catch {
+                      case NonFatal(ex) =>
+                        writeError500(req, ex)
+                        Failure(ex)
+                    }
+                  case Failure(NonFatal(ex)) =>
+                    writeError500(req, ex)
+                    Failure(ex)
+                  case Failure(fatalException) => Failure(fatalException)
+                }
+              } else {
+                // pendingResponses is already dequeued because the channel is closed
+                result match {
+                  case Success(serverResponse) =>
+                    val e = new TimeoutException("Request timed out")
+                    handleResponseAfterTimeout(ctx, serverResponse, e)
+                    Failure(e)
+                  case Failure(e) => Failure(e)
+                }
               }
-            case Failure(NonFatal(ex)) =>
-              try {
-                writeError500(req, ex)
-                Failure(ex)
-              } finally {
-                val _ = releaseReq()
-              }
-            case Failure(fatalException) => Failure(fatalException)
+            } finally {
+              val _ = releaseReq()
+            }
           }(eventLoopContext)
       }(eventLoopContext)
     }
@@ -268,6 +285,39 @@ class NettyServerHandler[F[_]](
 
         ctx.writeAndFlush(res).closeIfNeeded(req)
       }
+    )
+
+  private def handleResponseAfterTimeout(
+      ctx: ChannelHandlerContext,
+      serverResponse: ServerResponse[NettyResponse],
+      timeoutException: Exception
+  ): Unit =
+    serverResponse.handle(
+      ctx = ctx,
+      byteBufHandler = (channelPromise, byteBuf) => { val _ = channelPromise.setFailure(timeoutException) },
+      chunkedStreamHandler = (channelPromise, chunkedStream) => {
+        chunkedStream.close()
+        val _ = channelPromise.setFailure(timeoutException)
+      },
+      chunkedFileHandler = (channelPromise, chunkedFile) => {
+        chunkedFile.close()
+        val _ = channelPromise.setFailure(timeoutException)
+      },
+      reactiveStreamHandler = (channelPromise, publisher) => {
+        publisher.subscribe(new Subscriber[HttpContent] {
+          override def onSubscribe(s: Subscription): Unit = {
+            s.cancel()
+            val _ = channelPromise.setFailure(timeoutException)
+          }
+          override def onNext(t: HttpContent): Unit = ()
+          override def onError(t: Throwable): Unit = ()
+          override def onComplete(): Unit = ()
+        })
+      },
+      wsHandler = (responseContent) => {
+        val _ = responseContent.channelPromise.setFailure(timeoutException)
+      },
+      noBodyHandler = () => ()
     )
 
   private def initWsPipeline(

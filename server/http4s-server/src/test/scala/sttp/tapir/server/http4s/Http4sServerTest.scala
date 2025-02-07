@@ -151,8 +151,9 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         createServerTest,
         Fs2Streams[IO],
         autoPing = true,
-        failingPipe = true,
-        handlePong = false
+        handlePong = false,
+        decodeCloseRequests =
+          false // when a close frame is received, http4s cancels the stream, so sometimes the close frames are never processed
       ) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
         override def emptyPipe[A, B]: Pipe[IO, A, B] = _ => fs2.Stream.empty

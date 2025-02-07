@@ -1,7 +1,7 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.14",
+    scalaVersion := "2.13.16",
     version := "0.1",
     openapiJsonSerdeLib := "jsoniter"
   )
@@ -10,9 +10,9 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "1.10.0",
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.0",
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.8.0",
-  "com.beachape" %% "enumeratum" % "1.7.4",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.30.7",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.30.7" % "compile-internal",
+  "com.beachape" %% "enumeratum" % "1.7.5",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.33.1",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.33.1" % "compile-internal",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test
 )

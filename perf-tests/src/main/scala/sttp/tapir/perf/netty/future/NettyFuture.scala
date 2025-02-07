@@ -1,6 +1,6 @@
 package sttp.tapir.perf.netty.future
 
-import cats.effect.IO
+import cats.effect.{IO, Resource}
 import sttp.tapir.perf.apis._
 import sttp.tapir.perf.Common._
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions}
@@ -14,7 +14,7 @@ object Tapir extends Endpoints
 
 object NettyFuture {
 
-  def runServer(endpoints: List[ServerEndpoint[Any, Future]], withServerLog: Boolean = false): IO[ServerRunner.KillSwitch] = {
+  def runServer(endpoints: List[ServerEndpoint[Any, Future]], withServerLog: Boolean = false): Resource[IO, Unit] = {
     val declaredPort = Port
     val declaredHost = "0.0.0.0"
     val serverOptions = buildOptions(NettyFutureServerOptions.customiseInterceptors, withServerLog)
@@ -29,13 +29,12 @@ object NettyFuture {
             .start()
         )
       )
-
-    serverBinding.map(b => IO.fromFuture(IO(b.stop())))
+    Resource.make(serverBinding)(b => IO.fromFuture(IO(b.stop()))).map(_ => ())
   }
 }
 
-object TapirServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(1)) }
-object TapirMultiServer extends ServerRunner { override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(128)) }
+object TapirServer extends ServerRunner { override def runServer = NettyFuture.runServer(Tapir.genEndpointsFuture(1)) }
+object TapirMultiServer extends ServerRunner { override def runServer = NettyFuture.runServer(Tapir.genEndpointsFuture(128)) }
 object TapirInterceptorMultiServer extends ServerRunner {
-  override def start = NettyFuture.runServer(Tapir.genEndpointsFuture(128), withServerLog = true)
+  override def runServer = NettyFuture.runServer(Tapir.genEndpointsFuture(128), withServerLog = true)
 }

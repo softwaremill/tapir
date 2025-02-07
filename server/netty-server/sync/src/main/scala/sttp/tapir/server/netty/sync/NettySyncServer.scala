@@ -20,6 +20,7 @@ import java.util.concurrent.{Executors, Future => JFuture}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
+import org.slf4j.LoggerFactory
 
 /** Unlike with most typical Tapir backends, adding endpoints doesn't immediatly convert them to a Route, because creating a Route requires
   * providing an Ox concurrency scope. Instead, it stores Endpoints and defers route creation until server.start() is called. This internal
@@ -38,6 +39,7 @@ case class NettySyncServer(
     config: NettyConfig
 ):
   private val executor = Executors.newVirtualThreadPerTaskExecutor()
+  private val logger = LoggerFactory.getLogger(getClass.getName)
 
   def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Identity]): NettySyncServer = addEndpoints(List(se))
   def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Identity], overrideOptions: NettySyncServerOptions): NettySyncServer =
@@ -71,7 +73,8 @@ case class NettySyncServer(
   def start()(using Ox): NettySyncServerBinding =
     startUsingSocketOverride[InetSocketAddress](None, OxDispatcher.create) match
       case (socket, stop) =>
-        NettySyncServerBinding(socket, stop)
+        NettySyncServerBinding(socket, stop).tap: binding =>
+          logger.info(s"Tapir Netty server started on ${binding.hostName}:${binding.port}")
 
   /** Starts the server and blocks current virtual thread. Ensures graceful shutdown if the running server gets interrupted. Use [[start]]
     * if you need to manually control concurrency scope or server lifecycle.

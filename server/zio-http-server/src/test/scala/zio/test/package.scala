@@ -1,13 +1,15 @@
 package zio
 
-import io.netty.channel.{ChannelFactory, EventLoopGroup, ServerChannel}
 import zio.http._
 import zio.http.netty.NettyConfig
 import zio.http.netty.server.NettyDriver
+import zio.http.netty.server.ServerEventLoopGroups
+import io.netty.channel.ChannelFactory
+import io.netty.channel.ServerChannel
 
 package object test {
-  val driver: ZLayer[EventLoopGroup & ChannelFactory[ServerChannel] & Server.Config, Nothing, Driver] =
-    ZLayer.makeSome[EventLoopGroup & ChannelFactory[ServerChannel] & Server.Config, Driver](
+  val driver: ZLayer[ServerEventLoopGroups & ChannelFactory[ServerChannel] & Server.Config, Nothing, Driver] =
+    ZLayer.makeSome[ServerEventLoopGroups & ChannelFactory[ServerChannel] & Server.Config, Driver](
       ZLayer.succeed(NettyConfig.default),
       NettyDriver.manual
     )

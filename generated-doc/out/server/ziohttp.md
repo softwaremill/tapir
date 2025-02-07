@@ -8,13 +8,13 @@ The `*-zio` modules depend on ZIO 2.x.
 You'll need the following dependency for the `ZServerEndpoint` type alias and helper classes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.11.1"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "1.11.14"
 ```
 
 or just add the zio-http integration which already depends on `tapir-zio`:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.11.1"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "1.11.14"
 ```
 
 Next, instead of the usual `import sttp.tapir.*`, you should import (or extend the `ZTapir` trait, see [MyTapir](../other/mytapir.md)):
@@ -54,6 +54,14 @@ val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] =
   
 val countCharactersHttp: Routes[Any, Response] =
   ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
+```
+
+```{note}
+A single ZIO Http application can contain both Tapir-generated and ZIO-Http-native routes. However, because of the
+routing implementation in ZIO Http, the shape of the paths that Tapir and other ZIO Http routes serve should not
+overlap. The shape of the path includes exact path segments, single- and multi-wildcards. 
+
+Such overlapping routes may cause incorrect 404 (Not Found) or 405 (Method Not Allowed) responses.
 ```
 
 ## Server logic

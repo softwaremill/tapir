@@ -1,11 +1,10 @@
 package sttp.tapir.server.netty.sync
 
-import ox.Ox
-import ox.channels.Source
+import ox.flow.Flow
 import sttp.capabilities.Streams
 
 trait OxStreams extends Streams[OxStreams]:
   override type BinaryStream = Nothing
-  override type Pipe[A, B] = Ox ?=> Source[A] => Source[B]
+  override type Pipe[A, B] = Flow[A] => Flow[B]
 
 object OxStreams extends OxStreams

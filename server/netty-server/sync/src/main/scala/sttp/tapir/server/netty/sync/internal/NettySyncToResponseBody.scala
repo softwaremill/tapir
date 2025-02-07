@@ -1,6 +1,5 @@
 package sttp.tapir.server.netty.sync.internal
 
-import _root_.ox.*
 import io.netty.channel.ChannelHandlerContext
 import sttp.capabilities
 import sttp.model.HasHeaders

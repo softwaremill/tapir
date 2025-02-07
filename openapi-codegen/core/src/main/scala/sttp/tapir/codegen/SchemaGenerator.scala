@@ -54,7 +54,10 @@ object SchemaGenerator {
             false
           ) -> "implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]"
         )
-      else throw new NotImplementedError("any not implemented for json libs other than circe")
+      else
+        throw new NotImplementedError(
+          s"any not implemented for json libs other than circe (problematic models: ${schemasWithAny.map(_._1)})"
+        )
     val openApiSchemasWithTapirSchemas = doc.components
       .map(_.schemas.map {
         case (name, _: OpenapiSchemaEnum) =>
@@ -120,7 +123,9 @@ object SchemaGenerator {
       res ++= nextLayers.toSeq.sortBy(_.head._1)
       acquired ++= nextLayers.flatMap(_.map(_._1)).toSet
       if (initialSet.nonEmpty && nextLayers.isEmpty)
-        throw new IllegalStateException("Cannot order layers until mutually-recursive references have been resolved.")
+        throw new IllegalStateException(
+          s"Cannot order layers until mutually-recursive references have been resolved. Unable to find all dependencies for ${initialSet.flatMap(_.map(_._1))}"
+        )
     }
 
     res.map(_.map { case (k, v, _) => k -> v })

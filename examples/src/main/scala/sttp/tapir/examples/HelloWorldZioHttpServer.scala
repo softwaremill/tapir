@@ -1,8 +1,8 @@
 // {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=ZIO JSON}: Exposing an endpoint using the ZIO HTTP server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-json-zio:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-json-zio:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.14
 
 package sttp.tapir.examples
 
@@ -25,10 +25,10 @@ object HelloWorldZioHttpServer extends ZIOAppDefault:
 
   // an endpoint which responds which json, using zio-json
   case class AddResult(x: Int, y: Int, result: Int)
-  object AddResult {
-    implicit val decoder: JsonDecoder[AddResult] = DeriveJsonDecoder.gen[AddResult]
-    implicit val encoder: JsonEncoder[AddResult] = DeriveJsonEncoder.gen[AddResult]
-  }
+  object AddResult:
+    given JsonDecoder[AddResult] = DeriveJsonDecoder.gen[AddResult]
+    given JsonEncoder[AddResult] = DeriveJsonEncoder.gen[AddResult]
+
   val add: PublicEndpoint[(Int, Int), Unit, AddResult, Any] =
     endpoint.get
       .in("add")

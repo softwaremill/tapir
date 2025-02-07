@@ -2,7 +2,6 @@ package sttp.tapir.server.ziohttp
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import io.netty.channel.{ChannelFactory, EventLoopGroup, ServerChannel}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
@@ -12,10 +11,13 @@ import zio._
 import zio.http._
 import zio.interop.catz._
 import scala.concurrent.duration.FiniteDuration
+import zio.http.netty.server.ServerEventLoopGroups
+import io.netty.channel.ChannelFactory
+import io.netty.channel.ServerChannel
 
 class ZioHttpTestServerInterpreter(
-    eventLoopGroup: ZLayer[Any, Nothing, EventLoopGroup],
-    channelFactory: ZLayer[Any, Nothing, ChannelFactory[ServerChannel]]
+    groups: ServerEventLoopGroups,
+    factory: ChannelFactory[ServerChannel]
 ) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], Routes[Any, Response]] {
 
   override def route(
@@ -26,7 +28,6 @@ class ZioHttpTestServerInterpreter(
     ZioHttpInterpreter(serverOptions).toHttp(es)
   }
 
-  // Needs to manually call killSwitch, because serverWithStop uses `allocated`
   override def server(
       routes: NonEmptyList[Routes[Any, Response]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
@@ -40,8 +41,8 @@ class ZioHttpTestServerInterpreter(
       } yield result.port)
         .provideSome[Scope](
           zio.test.driver,
-          eventLoopGroup,
-          channelFactory,
+          ZLayer.succeed(groups),
+          ZLayer.succeed(factory),
           ZLayer.succeed(
             Server.Config.default
               .port(0)
@@ -51,5 +52,4 @@ class ZioHttpTestServerInterpreter(
         )
     Resource.scoped[IO, Any, Port](effect)
   }
-
 }

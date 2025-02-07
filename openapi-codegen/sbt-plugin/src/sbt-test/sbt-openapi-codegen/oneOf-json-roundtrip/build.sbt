@@ -1,9 +1,10 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.14",
+    scalaVersion := "2.13.16",
     version := "0.1",
-    openapiStreamingImplementation := "pekko"
+    openapiStreamingImplementation := "pekko",
+    openapiGenerateEndpointTypes := true
   )
 
 libraryDependencies ++= Seq(
@@ -11,9 +12,9 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.0",
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % "1.10.0",
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.8.0",
-  "io.circe" %% "circe-generic" % "0.14.9",
-  "com.beachape" %% "enumeratum" % "1.7.4",
-  "com.beachape" %% "enumeratum-circe" % "1.7.4",
+  "io.circe" %% "circe-generic" % "0.14.10",
+  "com.beachape" %% "enumeratum" % "1.7.5",
+  "com.beachape" %% "enumeratum-circe" % "1.7.5",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test
 )

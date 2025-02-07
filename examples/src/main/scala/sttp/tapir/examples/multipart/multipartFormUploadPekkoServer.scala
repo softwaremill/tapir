@@ -1,10 +1,10 @@
 // {cat=Multipart; effects=Future; server=Pekko HTTP}: Uploading a multipart form, with text and file parts
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.14
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep com.softwaremill.sttp.client3::core:3.9.8
 
 package sttp.tapir.examples.multipart
 

@@ -14,7 +14,7 @@ class PekkoBodyListener(implicit ec: ExecutionContext) extends BodyListener[Futu
   override def onComplete(body: PekkoResponseBody)(cb: Try[Unit] => Future[Unit]): Future[PekkoResponseBody] = {
     body match {
       case ws @ Left(_) => cb(Success(())).map(_ => ws)
-      case Right(e @ HttpEntity.Empty) =>
+      case Right(e) if e.isKnownEmpty =>
         Future.successful(Right(e)).andThen { case _ => cb(Success(())) }
       case Right(e: UniversalEntity) =>
         Future.successful(

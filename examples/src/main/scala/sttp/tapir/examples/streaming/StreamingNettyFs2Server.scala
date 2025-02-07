@@ -1,8 +1,8 @@
 // {cat=Streaming; effects=cats-effect; server=Netty}: Stream response as an fs2 stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.1
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.14
+//> using dep com.softwaremill.sttp.client3::core:3.9.8
 
 package sttp.tapir.examples.streaming
 

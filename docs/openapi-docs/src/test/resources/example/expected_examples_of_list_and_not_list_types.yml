@@ -36,8 +36,8 @@ paths:
         '200':
           description: ''
         '400':
-          description: 'Invalid value for: query parameter friends, Invalid value
-                        for: query parameter current-person, Invalid value for: body'
+          description: 'Invalid value for: query parameter current-person, Invalid
+                        value for: body'
           content:
             text/plain:
               schema:

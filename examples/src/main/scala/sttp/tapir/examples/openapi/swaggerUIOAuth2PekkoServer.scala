@@ -1,8 +1,8 @@
 // {cat=OpenAPI documentation; effects=Future; server=Pekko HTTP; docs=Swagger UI}: Securing Swagger UI using OAuth 2
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.1
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.1
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.14
 
 package sttp.tapir.examples.openapi
 
@@ -21,8 +21,7 @@ import scala.concurrent.{Await, Future, Promise}
 /** Preliminary steps (!!! DO NOT USE ON PRODUCTION :) !!!):
   *   1. Start keycloak
   *      {{{docker run -p 8080:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:17.0.1 start-dev}}}
-  *
-  * 2. Based on page: [[https://www.keycloak.org/getting-started/getting-started-docker]]
+  *   2. Based on page: [[https://www.keycloak.org/getting-started/getting-started-docker]]
   *
   *   - create realm `myrealm`
   *   - create client `myclient` with:
@@ -31,7 +30,7 @@ import scala.concurrent.{Await, Future, Promise}
   *     - `Web Origins` == *
   *   - create user 'myuser' and add password which is permanent not temporary
   *
-  * 3. Check if you can connect by using [[https://www.keycloak.org/app/]] ---
+  *   3. Check if you can connect by using [[https://www.keycloak.org/app/]] ---
   *
   * Go to: [[http://localhost:3333/docs]] And try authorize by using `Authorize` by providing details of clients and user
   */

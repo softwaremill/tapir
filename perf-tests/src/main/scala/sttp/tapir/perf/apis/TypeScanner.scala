@@ -4,7 +4,6 @@ import io.github.classgraph.ClassGraph
 
 import scala.jdk.CollectionConverters._
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
 
 import sttp.tapir.perf.Common._
 

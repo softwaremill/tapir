@@ -27,6 +27,6 @@ private[tapir] object MappingMacros {
       case _: (EmptyTuple, Unit)   => ()
       case _: (B *: EmptyTuple, B) => ()
       case _: (B, B)               => ()
-      case e                       => ComplietimeErrors.reportIncorrectMapping[B, A]
+      case e                       => CompileTimeErrors.reportIncorrectMapping[B, A]
     }
 }

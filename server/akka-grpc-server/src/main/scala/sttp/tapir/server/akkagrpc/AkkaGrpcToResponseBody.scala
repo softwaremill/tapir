@@ -46,7 +46,7 @@ private[akkagrpc] class AkkaGrpcToResponseBody(implicit m: Materializer, ec: Exe
   ): ResponseEntity = {
     bodyType match {
       case RawBodyType.StringBody(charset)  => ???
-      case RawBodyType.ByteArrayBody        => HttpEntity(ct, encodeDataToFrameBytes(ByteString(r)))
+      case RawBodyType.ByteArrayBody        => HttpEntity(ct, encodeDataToFrameBytes(ByteString.fromArrayUnsafe(r)))
       case RawBodyType.ByteBufferBody       => HttpEntity(ct, encodeDataToFrameBytes(ByteString(r)))
       case RawBodyType.InputStreamBody      => ???
       case RawBodyType.InputStreamRangeBody => ???

@@ -874,7 +874,16 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val e = endpoint.post.in("double").in(stringBody)
 
     val expectedYaml = load("expected_string_body_response.yml")
-    val codec = Codec.listHead(Codec.json[String](DecodeResult.Value(_))(identity))
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0")).toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should not include '400 invalid value for: header' response if an optional string header is used") {
+    val e = endpoint.post.in(header[Option[String]]("X-test"))
+
+    val expectedYaml = load("expected_optional_header.yml")
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
