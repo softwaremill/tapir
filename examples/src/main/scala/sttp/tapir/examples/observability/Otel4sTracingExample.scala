@@ -1,9 +1,9 @@
 // {cat=Observability; effects=cats-effect; server=Netty; json=circe}: Otel4s collecting traces
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.13
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.13
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.13
-//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.13
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.14
 //> using dep "org.typelevel::otel4s-oteljava:0.11.2"
 //> using dep "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.46.0"
 //> using dep org.slf4j:slf4j-api:2.0.16
