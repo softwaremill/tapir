@@ -1,4 +1,4 @@
-package sttp.tapir.client.sttp
+package sttp.tapir.client.sttp4
 
 import cats.effect.IO
 import sttp.capabilities.WebSockets
