@@ -5,7 +5,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.14
 //> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.14
 //> using dep "org.typelevel::otel4s-oteljava:0.11.2"
-//> using dep "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.46.0"
+//> using dep "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.47.0"
 //> using dep org.slf4j:slf4j-api:2.0.16
 
 package sttp.tapir.examples.observability
