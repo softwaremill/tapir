@@ -15,12 +15,11 @@ import sttp.tapir.server.http4s.ztapir.ZHttp4sTestServerInterpreter._
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
 import sttp.tapir.ztapir.ZServerEndpoint
-import zio.{Runtime, Task, Unsafe}
+import zio.Task
 import zio.interop._
 import zio.interop.catz._
 import zio.interop.catz.implicits._
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object ZHttp4sTestServerInterpreter {
