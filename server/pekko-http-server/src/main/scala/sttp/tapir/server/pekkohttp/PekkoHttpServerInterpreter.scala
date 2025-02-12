@@ -74,7 +74,9 @@ trait PekkoHttpServerInterpreter {
   }
 
   private def serverResponseToPekko(response: ServerResponse[PekkoResponseBody], requestMethod: Method): Route = {
-    val statusCode = StatusCodes.getForKey(response.code.code).getOrElse(StatusCodes.custom(response.code.code, ""))
+    val statusCode = StatusCodes
+      .getForKey(response.code.code)
+      .getOrElse(StatusCodes.custom(response.code.code, "", "", 200 to 299 contains response.code.code, true))
     val pekkoHeaders = parseHeadersOrThrowWithoutContentHeaders(response)
 
     response.body match {

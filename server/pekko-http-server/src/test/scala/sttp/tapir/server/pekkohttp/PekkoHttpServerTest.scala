@@ -16,6 +16,7 @@ import sttp.client3.pekkohttp.PekkoHttpBackend
 import sttp.model.sse.ServerSentEvent
 import sttp.model.Header
 import sttp.model.MediaType
+import sttp.model.StatusCode
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
@@ -148,6 +149,16 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
                 metric.onResponseHeadersCnt.get() shouldBe 1
                 metric.onResponseBodyCnt.get() shouldBe 1
               }
+            }
+            .unsafeToFuture()
+        },
+        Test("handle status codes >=600") {
+          val e = endpoint.get.in("custom_code").errorOut(statusCode).serverLogic(_ => (StatusCode(800).asLeft[Unit]).unit)
+          val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
+          interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.get(uri"http://localhost:$port/api/custom_code").send(backend).map(_.code shouldBe StatusCode(800))
             }
             .unsafeToFuture()
         }
