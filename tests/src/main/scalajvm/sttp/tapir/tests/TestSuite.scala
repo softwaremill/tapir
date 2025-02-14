@@ -11,7 +11,7 @@ trait TestSuite extends AsyncFunSuite with BeforeAndAfterAll {
   def tests: Resource[IO, List[Test]]
   def testNameFilter: Option[String] = None // define to run a single test (temporarily for debugging)
 
-  protected val (dispatcher, shutdownDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
+  protected val (dispatcher, shutdownDispatcher) = Dispatcher.parallel[IO].allocated.unsafeRunSync()
 
   // we need to register the tests when the class is constructed, as otherwise scalatest skips it
   val (allTests, doRelease) = tests.allocated.unsafeRunSync()

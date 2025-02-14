@@ -12,7 +12,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 class NettyCatsCreateServerStubTest extends CreateServerStubTest[IO, NettyCatsServerOptions[IO]] {
-  val (dispatcher, shutdownDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
+  val (dispatcher, shutdownDispatcher) = Dispatcher.parallel[IO].allocated.unsafeRunSync()
 
   override def customiseInterceptors: CustomiseInterceptors[IO, NettyCatsServerOptions[IO]] =
     NettyCatsServerOptions.customiseInterceptors[IO](dispatcher)
