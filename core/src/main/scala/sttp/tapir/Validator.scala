@@ -168,8 +168,9 @@ object Validator extends ValidatorMacros {
       ValidationResult.validWhen(implicitly[Numeric[T]].lt(t, value) || (!exclusive && implicitly[Numeric[T]].equiv(t, value)))
   }
   case class Pattern[T <: String](value: String) extends Primitive[T] {
-    private lazy val regex: Regex = value.r
-    override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(regex.matches(value))
+    // java.util.regex.Pattern is compatible with scalajs and scala native
+    private lazy val pattern: java.util.regex.Pattern = java.util.regex.Pattern.compile(value)
+    override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(pattern.matcher(t).matches())
   }
 
   case class MinLength[T <: String](value: Int, countCodePoints: Boolean) extends Primitive[T] {
