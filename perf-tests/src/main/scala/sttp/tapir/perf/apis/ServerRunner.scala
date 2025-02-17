@@ -21,7 +21,8 @@ object ServerRunner extends ResourceApp.Forever {
   )
   private def notInstantiated(name: ServerName)(e: Throwable): IO[ServerRunner] = IO.raiseError(
     new IllegalArgumentException(
-      s"ERROR! Could not find object ${name.fullName} or it doesn't extend ServerRunner", e
+      s"ERROR! Could not find object ${name.fullName} or it doesn't extend ServerRunner",
+      e
     )
   )
 
@@ -31,12 +32,15 @@ object ServerRunner extends ResourceApp.Forever {
   def startServerByTypeName(serverName: ServerName): Resource[IO, Unit] =
     serverName match {
       case ExternalServerName => Resource.unit
-      case _ => Resource.eval(
-        IO({
-          val moduleSymbol = runtimeMirror.staticModule(serverName.fullName)
-          val moduleMirror = runtimeMirror.reflectModule(moduleSymbol)
-          moduleMirror.instance.asInstanceOf[ServerRunner]
-        }).handleErrorWith(notInstantiated(serverName))
-      ).flatMap(_.runServer)
+      case _ =>
+        Resource
+          .eval(
+            IO({
+              val moduleSymbol = runtimeMirror.staticModule(serverName.fullName)
+              val moduleMirror = runtimeMirror.reflectModule(moduleSymbol)
+              moduleMirror.instance.asInstanceOf[ServerRunner]
+            }).handleErrorWith(notInstantiated(serverName))
+          )
+          .flatMap(_.runServer)
     }
 }

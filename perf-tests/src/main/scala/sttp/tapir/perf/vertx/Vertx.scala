@@ -162,7 +162,8 @@ object VertxRunner {
         wsRoute.foreach(r => r(vertx).apply(router))
         route(vertx).apply(router): Unit
         Resource.make(listenIO)(s => vertxFutureToIo(s.close()).void)
-      }.map(_ => ())
+      }
+      .map(_ => ())
 
   private def vertxFutureToIo[A](future: => VFuture[A]): IO[A] =
     IO.async[A] { cb =>
@@ -180,5 +181,7 @@ object TapirMultiServer extends ServerRunner { override def runServer = VertxRun
 object TapirInterceptorMultiServer extends ServerRunner {
   override def runServer = VertxRunner.runServer(Tapir.route(128, withServerLog = true))
 }
-object VanillaServer extends ServerRunner { override def runServer = VertxRunner.runServer(Vanilla.route(1), Some(Vanilla.webSocketHandler)) }
+object VanillaServer extends ServerRunner {
+  override def runServer = VertxRunner.runServer(Vanilla.route(1), Some(Vanilla.webSocketHandler))
+}
 object VanillaMultiServer extends ServerRunner { override def runServer = VertxRunner.runServer(Vanilla.route(128)) }
