@@ -103,15 +103,11 @@ object Tapir extends Endpoints {
 }
 
 object PekkoHttp {
-  private val actorSystem = Resource.make(IO(ActorSystem("tapir-pekko-http")))(
-    aSystem => IO.fromFuture(IO(aSystem.terminate())).void
-  )
+  private val actorSystem = Resource.make(IO(ActorSystem("tapir-pekko-http")))(aSystem => IO.fromFuture(IO(aSystem.terminate())).void)
 
   private def http(route: Route)(implicit aSystem: ActorSystem) = Resource.make(
     IO.fromFuture(IO(Http().newServerAt("127.0.0.1", Port).bind(route)))
-  )(
-    binding => IO.fromFuture(IO(binding.unbind())).void
-  )
+  )(binding => IO.fromFuture(IO(binding.unbind())).void)
 
   // We need to create a new actor system each time server is run
   def runServer(router: ActorSystem => Route): Resource[IO, Unit] =
