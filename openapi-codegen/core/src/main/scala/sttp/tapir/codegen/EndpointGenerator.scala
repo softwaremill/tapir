@@ -145,7 +145,7 @@ class EndpointGenerator {
         val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
         val (securityDecl, securityTypes) = security(securitySchemes, m.security)
         val (inParams, maybeLocalEnums, inTypes) =
-          ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation)
+          ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation, doc)
         val (outDecl, outTypes, errTypes) = outs(m.responses, streamingImplementation, doc, targetScala3)
         val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
         val definition =
@@ -257,7 +257,8 @@ class EndpointGenerator {
       endpointName: String,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
-      streamingImplementation: StreamingImplementation
+      streamingImplementation: StreamingImplementation,
+      doc: OpenapiDocument
   )(implicit location: Location): (String, Option[String], Seq[String]) = {
     def getEnumParamDefn(param: OpenapiParameter, e: OpenapiSchemaEnum, isArray: Boolean) = {
       val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
@@ -320,7 +321,13 @@ class EndpointGenerator {
       if (b.content.isEmpty) None
       else if (b.content.size != 1) bail(s"We can handle only one requestBody content! Saw ${b.content.map(_.contentType)}")
       else {
-        val (decl, tpe) = contentTypeMapper(b.content.head.contentType, b.content.head.schema, streamingImplementation, b.required)
+        val schemaIsNullable = b.content.head.schema.nullable || (b.content.head.schema match {
+          case ref: OpenapiSchemaRef =>
+            doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
+          case _ => false
+        })
+        val (decl, tpe) =
+          contentTypeMapper(b.content.head.contentType, b.content.head.schema, streamingImplementation, b.required && !schemaIsNullable)
         Some(s".in($decl)" -> tpe)
       }
     }.unzip
@@ -384,7 +391,12 @@ class EndpointGenerator {
       resp.content match {
         case Nil => "" -> None
         case content +: Nil =>
-          val (decl, tpe) = contentTypeMapper(content.contentType, content.schema, streamingImplementation)
+          val schemaIsNullable = content.schema.nullable || (content.schema match {
+            case ref: OpenapiSchemaRef =>
+              doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
+            case _ => false
+          })
+          val (decl, tpe) = contentTypeMapper(content.contentType, content.schema, streamingImplementation, !schemaIsNullable)
           s"$decl$d" -> Some(tpe)
       }
     }
@@ -462,7 +474,7 @@ class EndpointGenerator {
       contentType: String,
       schema: OpenapiSchemaType,
       streamingImplementation: StreamingImplementation,
-      required: Boolean = true
+      required: Boolean
   )(implicit location: Location): (String, String) = {
     contentType match {
       case "text/plain" =>

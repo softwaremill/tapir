@@ -148,60 +148,69 @@ object OpenapiSchemaType {
     }
   }
 
+  def typeAndNullable(c: HCursor): Decoder.Result[(String, Boolean)] = {
+    val typeField = c.downField("type")
+    for {
+      tf <- typeField.as[String].map(Seq(_)).orElse(typeField.as[Seq[String]])
+      (t: String, nullableByType: Boolean) = tf match {
+        case Seq(t)                                       => t -> false
+        case seq if seq.size == 2 && seq.contains("null") => seq.find(_ != "null").getOrElse("null") -> true
+        case _ => DecodingFailure("Type lists are only supported for lists of length two where one type is 'null'", c.history)
+      }
+      nb <- c.downField("nullable").as[Option[Boolean]]
+    } yield (t, nullableByType || nb.contains(true))
+  }
+
   implicit val OpenapiSchemaBooleanDecoder: Decoder[OpenapiSchemaBoolean] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not boolean!", c.history))(_ == "boolean")
-      nb <- c.downField("nullable").as[Option[Boolean]]
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not boolean!", c.history))(_._1 == "boolean")
     } yield {
-      OpenapiSchemaBoolean(nb.getOrElse(false))
+      OpenapiSchemaBoolean(p._2)
     }
   }
 
   implicit val OpenapiSchemaStringTypeDecoder: Decoder[OpenapiSchemaStringType] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not string!", c.history))(_ == "string")
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not string!", c.history))(_._1 == "string")
       f <- c.downField("format").as[Option[String]]
-      nb <- c.downField("nullable").as[Option[Boolean]]
     } yield {
       f.fold[OpenapiSchemaStringType](
-        OpenapiSchemaString(nb.getOrElse(false))
+        OpenapiSchemaString(p._2)
       ) {
-        case "date"      => OpenapiSchemaDate(nb.getOrElse(false))
-        case "date-time" => OpenapiSchemaDateTime(nb.getOrElse(false))
-        case "byte"      => OpenapiSchemaByte(nb.getOrElse(false))
-        case "binary"    => OpenapiSchemaBinary(nb.getOrElse(false))
-        case "uuid"      => OpenapiSchemaUUID(nb.getOrElse(false))
-        case _           => OpenapiSchemaString(nb.getOrElse(false))
+        case "date"      => OpenapiSchemaDate(p._2)
+        case "date-time" => OpenapiSchemaDateTime(p._2)
+        case "byte"      => OpenapiSchemaByte(p._2)
+        case "binary"    => OpenapiSchemaBinary(p._2)
+        case "uuid"      => OpenapiSchemaUUID(p._2)
+        case _           => OpenapiSchemaString(p._2)
       }
     }
   }
 
   implicit val OpenapiSchemaNumericTypeDecoder: Decoder[OpenapiSchemaNumericType] = { (c: HCursor) =>
     for {
-      t <- c
-        .downField("type")
-        .as[String]
-        .ensure(DecodingFailure("Given type is not number/integer!", c.history))(v => v == "number" || v == "integer")
+      p <- typeAndNullable(c)
+        .ensure(DecodingFailure("Given type is not number/integer!", c.history))(v => v._1 == "number" || v._1 == "integer")
+      (t, nb) = p
       f <- c.downField("format").as[Option[String]]
-      nb <- c.downField("nullable").as[Option[Boolean]]
     } yield {
       if (t == "number") {
         f.fold[OpenapiSchemaNumericType](
-          OpenapiSchemaDouble(nb.getOrElse(false))
+          OpenapiSchemaDouble(nb)
         ) {
-          case "int64"  => OpenapiSchemaLong(nb.getOrElse(false))
-          case "int32"  => OpenapiSchemaInt(nb.getOrElse(false))
-          case "float"  => OpenapiSchemaFloat(nb.getOrElse(false))
-          case "double" => OpenapiSchemaDouble(nb.getOrElse(false))
-          case _        => OpenapiSchemaDouble(nb.getOrElse(false))
+          case "int64"  => OpenapiSchemaLong(nb)
+          case "int32"  => OpenapiSchemaInt(nb)
+          case "float"  => OpenapiSchemaFloat(nb)
+          case "double" => OpenapiSchemaDouble(nb)
+          case _        => OpenapiSchemaDouble(nb)
         }
       } else {
         f.fold[OpenapiSchemaNumericType](
-          OpenapiSchemaInt(nb.getOrElse(false))
+          OpenapiSchemaInt(nb)
         ) {
-          case "int64" => OpenapiSchemaLong(nb.getOrElse(false))
-          case "int32" => OpenapiSchemaInt(nb.getOrElse(false))
-          case _       => OpenapiSchemaInt(nb.getOrElse(false))
+          case "int64" => OpenapiSchemaLong(nb)
+          case "int32" => OpenapiSchemaInt(nb)
+          case _       => OpenapiSchemaInt(nb)
         }
       }
     }
@@ -268,11 +277,11 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaEnumDecoder: Decoder[OpenapiSchemaEnum] = { (c: HCursor) =>
     for {
-      tpe <- c.downField("type").as[String]
+      p <- typeAndNullable(c)
+      (tpe, nb) = p
       _ <- Either.cond(tpe == "string", (), DecodingFailure("only string enums are supported", c.history))
       items <- c.downField("enum").as[Seq[OpenapiSchemaConstantString]]
-      nb <- c.downField("nullable").as[Option[Boolean]]
-    } yield OpenapiSchemaEnum(tpe, items, nb.getOrElse(false))
+    } yield OpenapiSchemaEnum(tpe, items, nb)
   }
 
   implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json])] = { (c: HCursor) =>
@@ -283,33 +292,33 @@ object OpenapiSchemaType {
   }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not object!", c.history))(v => v == "object")
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
       fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json])]]]
       r <- c.downField("required").as[Option[Seq[String]]]
-      nb <- c.downField("nullable").as[Option[Boolean]]
+      (_, nb) = p
       fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d)) => k -> OpenapiSchemaField(f, d) }
     } yield {
-      OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb.getOrElse(false))
+      OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb)
     }
   }
 
   implicit val OpenapiSchemaMapDecoder: Decoder[OpenapiSchemaMap] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not object!", c.history))(v => v == "object")
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
       t <- c.downField("additionalProperties").as[OpenapiSchemaType]
-      nb <- c.downField("nullable").as[Option[Boolean]]
+      (_, nb) = p
     } yield {
-      OpenapiSchemaMap(t, nb.getOrElse(false))
+      OpenapiSchemaMap(t, nb)
     }
   }
 
   implicit val OpenapiSchemaArrayDecoder: Decoder[OpenapiSchemaArray] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not array!", c.history))(v => v == "array" || v == "object")
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not array!", c.history))(v => v._1 == "array" || v._1 == "object")
       f <- c.downField("items").as[OpenapiSchemaType]
-      nb <- c.downField("nullable").as[Option[Boolean]]
+      (_, nb) = p
     } yield {
-      OpenapiSchemaArray(f, nb.getOrElse(false))
+      OpenapiSchemaArray(f, nb)
     }
   }
 
