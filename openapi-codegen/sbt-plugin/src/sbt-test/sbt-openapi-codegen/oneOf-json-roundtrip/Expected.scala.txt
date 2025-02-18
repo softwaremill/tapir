@@ -1,3 +1,4 @@
+
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -66,6 +67,9 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
+  case class NotNullableThingy (
+    uuid: java.util.UUID
+  )
   case class SimpleError (
     message: String
   ) extends Error
@@ -122,6 +126,9 @@ object TapirGeneratedEndpoints {
     case object Bar extends AnEnum
     case object Baz extends AnEnum
   }
+  case class NullableThingy (
+    uuid: java.util.UUID
+  )
 
 
 
@@ -140,6 +147,22 @@ object TapirGeneratedEndpoints {
       .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()))
       .out(jsonBody[String].description("successful operation"))
 
+  type PutOptionalTestEndpoint = Endpoint[Unit, Option[NotNullableThingy], Unit, NotNullableThingy, Any]
+  lazy val putOptionalTest: PutOptionalTestEndpoint =
+    endpoint
+      .put
+      .in(("optional" / "test"))
+      .in(jsonBody[Option[NotNullableThingy]])
+      .out(jsonBody[NotNullableThingy].description("a non-optional response body"))
+
+  type PostOptionalTestEndpoint = Endpoint[Unit, Option[NullableThingy], Unit, Option[NullableThingy], Any]
+  lazy val postOptionalTest: PostOptionalTestEndpoint =
+    endpoint
+      .post
+      .in(("optional" / "test"))
+      .in(jsonBody[Option[NullableThingy]])
+      .out(jsonBody[Option[NullableThingy]].description("an optional response body"))
+
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
@@ -155,6 +178,14 @@ object TapirGeneratedEndpoints {
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithDiscriminatorNoMapping])
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
+
+  type GetOneofErrorTestEndpoint = Endpoint[Unit, Unit, Error, Unit, Any]
+  lazy val getOneofErrorTest: GetOneofErrorTestEndpoint =
+    endpoint
+      .get
+      .in(("oneof" / "error" / "test"))
+      .errorOut(oneOf[Error](oneOfVariant(sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")), oneOfVariant(sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
+      .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
 
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =
@@ -208,14 +239,6 @@ object TapirGeneratedEndpoints {
       extraCodecSupport[PostInlineEnumTestQueryOptSeqEnum]("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
   }
 
-  type GetOneofErrorTestEndpoint = Endpoint[Unit, Unit, Error, Unit, Any]
-  lazy val getOneofErrorTest: GetOneofErrorTestEndpoint =
-    endpoint
-      .get
-      .in(("oneof" / "error" / "test"))
-      .errorOut(oneOf[Error](oneOfVariant(sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")), oneOfVariant(sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
-      .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
-
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putAdtTest, postAdtTest, postInlineEnumTest, getOneofErrorTest)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, getOneofErrorTest, postInlineEnumTest)
 
 }

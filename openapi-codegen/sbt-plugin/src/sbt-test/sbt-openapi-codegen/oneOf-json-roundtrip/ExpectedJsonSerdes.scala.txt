@@ -16,6 +16,8 @@ object TapirGeneratedEndpointsJsonSerdes {
       }
     } yield res
   }
+  implicit lazy val notNullableThingyJsonDecoder: io.circe.Decoder[NotNullableThingy] = io.circe.generic.semiauto.deriveDecoder[NotNullableThingy]
+  implicit lazy val notNullableThingyJsonEncoder: io.circe.Encoder[NotNullableThingy] = io.circe.generic.semiauto.deriveEncoder[NotNullableThingy]
   implicit lazy val simpleErrorJsonDecoder: io.circe.Decoder[SimpleError] = io.circe.generic.semiauto.deriveDecoder[SimpleError]
   implicit lazy val simpleErrorJsonEncoder: io.circe.Encoder[SimpleError] = io.circe.generic.semiauto.deriveEncoder[SimpleError]
   implicit lazy val notFoundErrorJsonDecoder: io.circe.Decoder[NotFoundError] = io.circe.generic.semiauto.deriveDecoder[NotFoundError]
@@ -56,4 +58,6 @@ object TapirGeneratedEndpointsJsonSerdes {
       io.circe.Decoder[SubtypeWithoutD2].asInstanceOf[io.circe.Decoder[ADTWithoutDiscriminator]],
       io.circe.Decoder[SubtypeWithoutD3].asInstanceOf[io.circe.Decoder[ADTWithoutDiscriminator]]
     ).reduceLeft(_ or _)
+  implicit lazy val nullableThingyJsonDecoder: io.circe.Decoder[NullableThingy] = io.circe.generic.semiauto.deriveDecoder[NullableThingy]
+  implicit lazy val nullableThingyJsonEncoder: io.circe.Encoder[NullableThingy] = io.circe.generic.semiauto.deriveEncoder[NullableThingy]
 }
