@@ -95,6 +95,11 @@ object TapirGeneratedEndpoints {
     e: Option[AnEnum] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+
+  case class NullableThingy2 (
+    uuid: java.util.UUID
+  )
+
   case class ObjectWithInlineEnum (
     id: java.util.UUID,
     inlineEnum: ObjectWithInlineEnumInlineEnum
@@ -155,12 +160,12 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[NotNullableThingy]])
       .out(jsonBody[NotNullableThingy].description("a non-optional response body"))
 
-  type PostOptionalTestEndpoint = Endpoint[Unit, Option[NullableThingy], Unit, Option[NullableThingy], Any]
+  type PostOptionalTestEndpoint = Endpoint[Unit, Option[NullableThingy2], Unit, Option[NullableThingy], Any]
   lazy val postOptionalTest: PostOptionalTestEndpoint =
     endpoint
       .post
       .in(("optional" / "test"))
-      .in(jsonBody[Option[NullableThingy]])
+      .in(jsonBody[Option[NullableThingy2]])
       .out(jsonBody[Option[NullableThingy]].description("an optional response body"))
 
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]

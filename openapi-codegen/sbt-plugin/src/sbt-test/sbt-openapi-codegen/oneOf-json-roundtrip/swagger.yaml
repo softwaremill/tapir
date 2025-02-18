@@ -50,7 +50,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NullableThingy'
+              $ref: '#/components/schemas/NullableThingy2'
     put:
       responses:
         '200':
@@ -316,6 +316,17 @@ components:
       title: NullableThingy
       type: object
       nullable: true
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
+    NullableThingy2:
+      title: NullableThingy2
+      type:
+        - object
+        - "null"
       required:
         - uuid
       properties:
