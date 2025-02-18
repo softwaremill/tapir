@@ -154,7 +154,7 @@ object OpenapiSchemaType {
       tf <- typeField.as[String].map(Seq(_)).orElse(typeField.as[Seq[String]])
       (t: String, nullableByType: Boolean) = tf match {
         case Seq(t)                                       => t -> false
-        case seq if seq.size == 2 && seq.contains("null") => seq.find(_ != null).get -> true
+        case seq if seq.size == 2 && seq.contains("null") => seq.find(_ != "null").getOrElse("null") -> true
         case _ => DecodingFailure("Type lists are only supported for lists of length two where one type is 'null'", c.history)
       }
       nb <- c.downField("nullable").as[Option[Boolean]]
