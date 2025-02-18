@@ -61,7 +61,7 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       // schema file with serde file & schema file should compile
       (models + "\n" + serdes + "\n" + schemas) shouldCompile ()
       // Bookshop file should contain all endpoint definitions
-      endpoints.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 3
+      endpoints.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 4
       // endpoint file depends on models, serdes & schemas
       (models + "\n" + serdes + "\n" + schemas + "\n" + endpoints) shouldCompile ()
     }
