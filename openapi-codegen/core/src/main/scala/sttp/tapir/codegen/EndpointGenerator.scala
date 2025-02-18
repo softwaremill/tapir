@@ -467,6 +467,8 @@ class EndpointGenerator {
     contentType match {
       case "text/plain" =>
         "stringBody" -> "String"
+      case "text/html" =>
+        "htmlBodyUtf8" -> "String"
       case "application/json" =>
         val outT = schema match {
           case st: OpenapiSchemaSimpleType =>
