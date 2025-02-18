@@ -1,6 +1,6 @@
 // {cat=Security; effects=Future; server=Vert.x}: CORS interceptor
 
-//> using dep com.softwaremill.sttp.tapir::tapir-vertx-server:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-vertx-server:1.11.15
 //> using dep com.softwaremill.sttp.client3::core:3.10.2
 
 package sttp.tapir.examples.security

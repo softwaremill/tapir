@@ -1,7 +1,7 @@
 // {cat=WebSocket; effects=Direct; server=Netty}: Describe and implement a WebSocket endpoint
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.14
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.15
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.15
 
 package sttp.tapir.examples.websocket
 
