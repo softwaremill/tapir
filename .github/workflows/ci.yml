@@ -120,27 +120,16 @@ jobs:
 
   # identify binary incompatibilities (check build.sbt for details)
   mima:
+    uses: softwaremill/github-actions-workflows/.github/workflows/mima.yml@main
     # run on 1) push, 2) external PRs, 3) softwaremill-ci PRs
     # do not run on internal, non-steward PRs since those will be run by push to branch
     if: |
       github.event_name == 'push' || 
       github.event.pull_request.head.repo.full_name != github.repository ||
       github.event.pull_request.user.login == 'softwaremill-ci'
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # checkout tags so that dynver works properly (we need the version for MiMa)
-      - uses: sbt/setup-sbt@v1
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: 21
-          cache: 'sbt'
-      - name: Check MiMa
-        run: sbt $SBT_JAVA_OPTS -v mimaReportBinaryIssues
+    with:
+      java-version: '21'
+      java-opts: '-J-Xms4g -J-Xmx4g'
 
   publish:
     name: Publish release
@@ -199,49 +188,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
-  # `automerge` label is attached if there is exactly one file changed by steward and this file belongs to a
-  # whitelist specified by `labeler.yml`
   label:
-    name: Attach automerge label
     # only for PRs by softwaremill-ci
     if: github.event.pull_request.user.login == 'softwaremill-ci'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      - name: Launch labeler
-        uses: srvaroa/labeler@master
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+    uses: softwaremill/github-actions-workflows/.github/workflows/label.yml@main
+    secrets: inherit
 
   auto-merge-softwaremill-ci:
-    name: Auto merge softwaremill-ci
     # only for PRs by softwaremill-ci
     if: github.event.pull_request.user.login == 'softwaremill-ci'
     needs: [ ci, mima, label ]
-    runs-on: ubuntu-24.04
-    steps:
-      - id: automerge-softwaremill-ci
-        name: automerge-softwaremill-ci
-        uses: "pascalgn/automerge-action@v0.16.4"
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          MERGE_METHOD: "squash"
+    uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
+    secrets: inherit
 
-  # separate `automerge` job for dependabot as it doesn't need label job
-  # labeling is done by dependabot itself
   auto-merge-dependabot:
-    name: Auto merge dependabot
-    # only for PRs by dependabot
+    # only for PRs by softwaremill-ci
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     needs: [ ci, mima ]
-    runs-on: ubuntu-24.04
-    steps:
-      - id: automerge-dependabot
-        name: automerge-dependabot
-        uses: "pascalgn/automerge-action@v0.16.4"
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          MERGE_METHOD: "squash"
+    uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
+    secrets: inherit
