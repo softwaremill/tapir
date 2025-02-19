@@ -75,7 +75,6 @@ object TapirGeneratedEndpoints {
     a: Option[Seq[String]] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
 
-
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] {
     val values = findValues
@@ -100,7 +99,14 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping])
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
+  lazy val getOneofOptionTest =
+    endpoint
+      .get
+      .in(("oneof" / "option" / "test"))
+      .out(oneOf[Option[AnEnum]](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[AnEnum]].description("An enum")){ case Some(_: AnEnum) => true }))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest)
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest)
 
 }

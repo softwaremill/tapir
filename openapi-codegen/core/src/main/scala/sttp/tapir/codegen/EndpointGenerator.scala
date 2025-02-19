@@ -386,7 +386,7 @@ class EndpointGenerator {
         case _ => bail("We can handle only one return content!")
       }
     }
-    def bodyFmt(resp: OpenapiResponse): (String, Option[String]) = {
+    def bodyFmt(resp: OpenapiResponse, optional: Boolean = false): (String, Option[String]) = {
       val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
       resp.content match {
         case Nil => "" -> None
@@ -396,7 +396,7 @@ class EndpointGenerator {
               doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
             case _ => false
           })
-          val (decl, tpe) = contentTypeMapper(content.contentType, content.schema, streamingImplementation, !schemaIsNullable)
+          val (decl, tpe) = contentTypeMapper(content.contentType, content.schema, streamingImplementation, !(optional || schemaIsNullable))
           s"$decl$d" -> Some(tpe)
       }
     }
@@ -424,10 +424,18 @@ class EndpointGenerator {
         }
       case many =>
         if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
+        val canBeEmptyResponse = many.exists(_.content.isEmpty)
         val (oneOfs, types) = many.map { m =>
-          val (decl, tpe) = bodyFmt(m)
+          val (decl, tpe) = bodyFmt(m, optional = canBeEmptyResponse)
           val code = if (m.code == "default") "400" else m.code
-          s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
+          if (decl == "")
+            s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+              s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""" -> tpe
+          else if (canBeEmptyResponse) {
+            val (_, nonOptionalType) = bodyFmt(m)
+            val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
+            s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_$someType) => true }" -> tpe
+          } else s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
         }.unzip
         val parentMap = doc.components.toSeq
           .flatMap(_.schemas)
@@ -451,15 +459,18 @@ class EndpointGenerator {
           }
           .distinct
         val commmonType =
-          if (allElemTypes.size == 1) allElemTypes.head
-          else
-            allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
+          if (canBeEmptyResponse && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
+          else if (allElemTypes.size == 1) allElemTypes.head
+          else {
+            val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
               case s if s.isEmpty && targetScala3 => types.flatten.mkString(" | ")
               case s if s.isEmpty                 => "Any"
               case s if targetScala3              => s.mkString(" & ")
               case s                              => s.mkString(" with ")
             }
-        Some(s"oneOf[$commmonType](${oneOfs.mkString(", ")})") -> Some(commmonType)
+            if (canBeEmptyResponse) s"Option[$baseType]" else baseType
+          }
+        Some(s"oneOf[$commmonType](${oneOfs.mkString("\n  ", ",\n  ", "")})") -> Some(commmonType)
     }
 
     val (outDecls, outTypes) = mappedGroup(outs)

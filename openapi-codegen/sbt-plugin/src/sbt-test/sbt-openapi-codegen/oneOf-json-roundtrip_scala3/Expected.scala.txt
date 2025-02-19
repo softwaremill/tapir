@@ -44,7 +44,6 @@ object TapirGeneratedEndpoints {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
   }
 
-
   def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
     Map.from(
       for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
@@ -68,9 +67,17 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T: enumextensions.EnumMirror]: ExtraParamSupport[T] =
     EnumExtraParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
+  sealed trait AnyObjectWithInlineEnum
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
+  case class ObjectWithInlineEnum2 (
+    inlineEnum: ObjectWithInlineEnum2InlineEnum
+  ) extends AnyObjectWithInlineEnum
+
+  enum ObjectWithInlineEnum2InlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    case bar1, bar2
+  }
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
@@ -91,7 +98,7 @@ object TapirGeneratedEndpoints {
   case class ObjectWithInlineEnum (
     id: java.util.UUID,
     inlineEnum: ObjectWithInlineEnumInlineEnum
-  )
+  ) extends AnyObjectWithInlineEnum
 
   enum ObjectWithInlineEnumInlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
     case foo1, foo2, foo3, foo4
@@ -167,7 +174,15 @@ object TapirGeneratedEndpoints {
     case baz1, baz2, baz3
   }
 
+  lazy val getOneofOptionTest =
+    endpoint
+      .get
+      .in(("oneof" / "option" / "test"))
+      .out(oneOf[Option[AnyObjectWithInlineEnum]](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_: ObjectWithInlineEnum) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object")){ case Some(_: ObjectWithInlineEnum2) => true }))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postInlineEnumTest)
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postInlineEnumTest, getOneofOptionTest)
 
 }

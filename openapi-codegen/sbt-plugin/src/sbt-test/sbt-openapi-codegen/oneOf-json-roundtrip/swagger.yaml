@@ -176,6 +176,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/SimpleError'
 
+  '/oneof/option/test':
+    get:
+      responses:
+        "204":
+          description: "No response"
+        "200":
+          description: An object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+        "201":
+          description: Another object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum2'
+
 
 components:
   schemas:
@@ -297,6 +315,22 @@ components:
             - foo2
             - foo3
             - foo4
+    ObjectWithInlineEnum2:
+      title: ObjectWithInlineEnum2
+      required:
+        - inlineEnum
+      type: object
+      properties:
+        inlineEnum:
+          type: string
+          enum:
+            - bar1
+            - bar2
+    AnyObjectWithInlineEnum:
+      title: AnyObjectWithInlineEnum
+      oneOf:
+        - $ref: '#/components/schemas/ObjectWithInlineEnum'
+        - $ref: '#/components/schemas/ObjectWithInlineEnum2'
     Error:
       title: Error
       type: object

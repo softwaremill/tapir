@@ -63,13 +63,24 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
-  sealed trait Error
-  sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
+  sealed trait AnyObjectWithInlineEnum
+  sealed trait Error
   sealed trait ADTWithDiscriminatorNoMapping
+  sealed trait ADTWithoutDiscriminator
   case class NotNullableThingy (
     uuid: java.util.UUID
   )
+  case class ObjectWithInlineEnum2 (
+    inlineEnum: ObjectWithInlineEnum2InlineEnum
+  ) extends AnyObjectWithInlineEnum
+
+  sealed trait ObjectWithInlineEnum2InlineEnum extends enumeratum.EnumEntry
+  object ObjectWithInlineEnum2InlineEnum extends enumeratum.Enum[ObjectWithInlineEnum2InlineEnum] with enumeratum.CirceEnum[ObjectWithInlineEnum2InlineEnum] {
+    val values = findValues
+    case object bar1 extends ObjectWithInlineEnum2InlineEnum
+    case object bar2 extends ObjectWithInlineEnum2InlineEnum
+  }
   case class SimpleError (
     message: String
   ) extends Error
@@ -103,7 +114,7 @@ object TapirGeneratedEndpoints {
   case class ObjectWithInlineEnum (
     id: java.util.UUID,
     inlineEnum: ObjectWithInlineEnumInlineEnum
-  )
+  ) extends AnyObjectWithInlineEnum
 
   sealed trait ObjectWithInlineEnumInlineEnum extends enumeratum.EnumEntry
   object ObjectWithInlineEnumInlineEnum extends enumeratum.Enum[ObjectWithInlineEnumInlineEnum] with enumeratum.CirceEnum[ObjectWithInlineEnumInlineEnum] {
@@ -189,8 +200,20 @@ object TapirGeneratedEndpoints {
     endpoint
       .get
       .in(("oneof" / "error" / "test"))
-      .errorOut(oneOf[Error](oneOfVariant(sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")), oneOfVariant(sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
+      .errorOut(oneOf[Error](
+        oneOfVariant(sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")),
+        oneOfVariant(sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
       .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
+
+  type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnyObjectWithInlineEnum], Any]
+  lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
+    endpoint
+      .get
+      .in(("oneof" / "option" / "test"))
+      .out(oneOf[Option[AnyObjectWithInlineEnum]](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_: ObjectWithInlineEnum) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object")){ case Some(_: ObjectWithInlineEnum2) => true }))
 
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =
@@ -244,6 +267,6 @@ object TapirGeneratedEndpoints {
       extraCodecSupport[PostInlineEnumTestQueryOptSeqEnum]("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
   }
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, getOneofErrorTest, postInlineEnumTest)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, getOneofErrorTest, getOneofOptionTest, postInlineEnumTest)
 
 }
