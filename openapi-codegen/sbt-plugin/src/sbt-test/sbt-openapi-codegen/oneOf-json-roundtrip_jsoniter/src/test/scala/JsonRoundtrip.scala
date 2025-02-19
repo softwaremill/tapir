@@ -9,6 +9,7 @@ import TapirGeneratedEndpointsJsonSerdes._
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
 
+import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -142,5 +143,37 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       )
     }
 
+  }
+  "oneOf Option" in {
+    var returnSome: Boolean = false
+    val someResponse = AnEnum.Foo
+    val route = TapirGeneratedEndpoints.getOneofOptionTest.serverLogic[Future]({ _: Unit =>
+      Future successful Right[Unit, Option[AnEnum]](Option.when(returnSome)(someResponse))
+    })
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+    Await.result(
+      sttp.client3.basicRequest
+        .get(uri"http://test.com/oneof/option/test")
+        .send(stub)
+        .map { resp =>
+          resp.code.code === 204
+          resp.body shouldEqual Right("")
+        },
+      1.second
+    )
+    returnSome = true
+    Await.result(
+      sttp.client3.basicRequest
+        .get(uri"http://test.com/oneof/option/test")
+        .send(stub)
+        .map { resp =>
+          resp.code.code === 200
+          resp.body shouldEqual Right(s"\"Foo\"")
+        },
+      1.second
+    )
   }
 }

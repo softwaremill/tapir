@@ -3,6 +3,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.client3.UriContext
 import sttp.client3.testing.SttpBackendStub
+import sttp.tapir.generated.TapirGeneratedEndpoints.ObjectWithInlineEnum2InlineEnum.bar2
 import sttp.tapir.generated.TapirGeneratedEndpoints.ObjectWithInlineEnumInlineEnum.foo3
 import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJsonSerdes}
 import sttp.tapir.generated.TapirGeneratedEndpoints._
@@ -214,10 +215,16 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
   }
 
   "oneOf Option" in {
-    var returnSome: Boolean = false
-    val someResponse = ObjectWithInlineEnum(UUID.randomUUID(), foo3)
+    var returnVariant: Int = 0
+    val someResponse1 = ObjectWithInlineEnum(UUID.randomUUID(), foo3)
+    val someResponse2 = ObjectWithInlineEnum2(bar2)
+    def responseVariant = returnVariant match {
+      case 0 => None
+      case 1 => Some(someResponse1)
+      case 2 => Some(someResponse2)
+    }
     val route = TapirGeneratedEndpoints.getOneofOptionTest.serverLogic[Future]({ _: Unit =>
-      Future successful Right[Unit, Option[ObjectWithInlineEnum]](Option.when(returnSome)(someResponse))
+      Future successful Right[Unit, Option[AnyObjectWithInlineEnum]](responseVariant)
     })
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(route)
@@ -233,14 +240,25 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         },
       1.second
     )
-    returnSome = true
+    returnVariant = 1
     Await.result(
       sttp.client3.basicRequest
         .get(uri"http://test.com/oneof/option/test")
         .send(stub)
         .map { resp =>
           resp.code.code === 200
-          resp.body shouldEqual Right(s"""{"id":"${someResponse.id}","inlineEnum":"foo3"}""")
+          resp.body shouldEqual Right(s"""{"id":"${someResponse1.id}","inlineEnum":"foo3"}""")
+        },
+      1.second
+    )
+    returnVariant = 2
+    Await.result(
+      sttp.client3.basicRequest
+        .get(uri"http://test.com/oneof/option/test")
+        .send(stub)
+        .map { resp =>
+          resp.code.code === 200
+          resp.body shouldEqual Right(s"""{"inlineEnum":"bar2"}""")
         },
       1.second
     )

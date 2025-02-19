@@ -38,6 +38,17 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ADTWithoutDiscriminator'
+  '/oneof/option/test':
+    get:
+      responses:
+        "204":
+          description: "No response"
+        "200":
+          description: An enum
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnEnum'
 
 components:
   schemas:

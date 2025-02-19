@@ -187,6 +187,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ObjectWithInlineEnum'
+        "201":
+          description: Another object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum2'
 
 
 components:
@@ -309,6 +315,23 @@ components:
             - foo2
             - foo3
             - foo4
+    ObjectWithInlineEnum2:
+      title: ObjectWithInlineEnum2
+      required:
+        - inlineEnum
+      type: object
+      properties:
+        inlineEnum:
+          type: string
+          enum:
+            - bar1
+            - bar2
+    AnyObjectWithInlineEnum:
+      title: AnyObjectWithInlineEnum
+#      type: object
+      oneOf:
+        - $ref: '#/components/schemas/ObjectWithInlineEnum'
+        - $ref: '#/components/schemas/ObjectWithInlineEnum2'
     Error:
       title: Error
       type: object
