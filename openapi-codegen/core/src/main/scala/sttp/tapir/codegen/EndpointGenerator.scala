@@ -431,8 +431,11 @@ class EndpointGenerator {
           if (decl == "")
             s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
               s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""" -> tpe
-          else if (canBeEmptyResponse) s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_) => true }" -> tpe
-          else s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
+          else if (canBeEmptyResponse) {
+            val (_, nonOptionalType) = bodyFmt(m)
+            val someType = nonOptionalType.map(": " + _).getOrElse("")
+            s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_$someType) => true }" -> tpe
+          } else s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
         }.unzip
         val parentMap = doc.components.toSeq
           .flatMap(_.schemas)
@@ -448,24 +451,25 @@ class EndpointGenerator {
           .map { case (k, vs) => k -> vs.map(_._2) }
           .toMap
         val allElemTypes = many
-          .map(_.content.map(_.schema))
-          .map(_.map {
+          .flatMap(_.content.map(_.schema))
+          .map {
             case r: OpenapiSchemaRef        => r.stripped
             case x: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(x)._1
             case x                          => bail(s"Unexpected oneOf elem type $x")
-          })
-          .flatMap { case Nil => Seq("None"); case x => x }
+          }
           .distinct
         val commmonType =
-          if (allElemTypes.size == 1) allElemTypes.head
-          else if (allElemTypes.size == 2 && allElemTypes.contains("None")) s"Option[${allElemTypes.find(_ != "None").get}]"
-          else
-            allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
+          if (canBeEmptyResponse && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
+          else if (allElemTypes.size == 1) allElemTypes.head
+          else {
+            val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
               case s if s.isEmpty && targetScala3 => types.flatten.mkString(" | ")
               case s if s.isEmpty                 => "Any"
               case s if targetScala3              => s.mkString(" & ")
               case s                              => s.mkString(" with ")
             }
+            if (canBeEmptyResponse) s"Option[$baseType]" else baseType
+          }
         Some(s"oneOf[$commmonType](${oneOfs.mkString(", ")})") -> Some(commmonType)
     }
 
