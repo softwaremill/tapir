@@ -433,7 +433,7 @@ class EndpointGenerator {
               s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""" -> tpe
           else if (canBeEmptyResponse) {
             val (_, nonOptionalType) = bodyFmt(m)
-            val someType = nonOptionalType.map(": " + _).getOrElse("")
+            val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
             s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_$someType) => true }" -> tpe
           } else s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
         }.unzip

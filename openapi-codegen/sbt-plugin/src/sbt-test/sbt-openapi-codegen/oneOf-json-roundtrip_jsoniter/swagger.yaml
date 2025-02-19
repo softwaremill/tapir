@@ -143,6 +143,7 @@ components:
           type: string
     AnEnum:
       type: string
+      nullable: true
       enum:
         - Foo
         - Bar
