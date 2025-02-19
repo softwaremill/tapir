@@ -200,7 +200,9 @@ object TapirGeneratedEndpoints {
     endpoint
       .get
       .in(("oneof" / "error" / "test"))
-      .errorOut(oneOf[Error](oneOfVariant(sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")), oneOfVariant(sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
+      .errorOut(oneOf[Error](
+        oneOfVariant(sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")),
+        oneOfVariant(sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
       .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
 
   type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnyObjectWithInlineEnum], Any]
@@ -208,7 +210,10 @@ object TapirGeneratedEndpoints {
     endpoint
       .get
       .in(("oneof" / "option" / "test"))
-      .out(oneOf[Option[AnyObjectWithInlineEnum]](oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None), oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_: ObjectWithInlineEnum) => true }, oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object")){ case Some(_: ObjectWithInlineEnum2) => true }))
+      .out(oneOf[Option[AnyObjectWithInlineEnum]](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_: ObjectWithInlineEnum) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object")){ case Some(_: ObjectWithInlineEnum2) => true }))
 
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =

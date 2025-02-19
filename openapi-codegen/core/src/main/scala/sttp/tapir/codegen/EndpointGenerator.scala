@@ -470,7 +470,7 @@ class EndpointGenerator {
             }
             if (canBeEmptyResponse) s"Option[$baseType]" else baseType
           }
-        Some(s"oneOf[$commmonType](${oneOfs.mkString(", ")})") -> Some(commmonType)
+        Some(s"oneOf[$commmonType](${oneOfs.mkString("\n  ", ",\n  ", "")})") -> Some(commmonType)
     }
 
     val (outDecls, outTypes) = mappedGroup(outs)
