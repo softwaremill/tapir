@@ -9,7 +9,6 @@ import TapirGeneratedEndpointsJsonSerdes._
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
 
-import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -43,7 +42,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
             resp.body shouldEqual Right(respJsonBody)
           },
         1.second
@@ -64,7 +63,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .send(stub)
           .map { resp =>
             resp.body shouldEqual Right(respJsonBody)
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
           },
         1.second
       )
@@ -84,7 +83,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .send(stub)
           .map { resp =>
             resp.body shouldEqual Right(respJsonBody)
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
           },
         1.second
       )
@@ -116,7 +115,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
             resp.body shouldEqual Right(respJsonBody)
           },
         1.second
@@ -136,7 +135,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
             resp.body shouldEqual Right(respJsonBody)
           },
         1.second
@@ -159,7 +158,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         .get(uri"http://test.com/oneof/option/test")
         .send(stub)
         .map { resp =>
-          resp.code.code === 204
+          resp.code.code shouldEqual 204
           resp.body shouldEqual Right("")
         },
       1.second
@@ -170,7 +169,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         .get(uri"http://test.com/oneof/option/test")
         .send(stub)
         .map { resp =>
-          resp.code.code === 200
+          resp.code.code shouldEqual 200
           resp.body shouldEqual Right(s"\"Foo\"")
         },
       1.second

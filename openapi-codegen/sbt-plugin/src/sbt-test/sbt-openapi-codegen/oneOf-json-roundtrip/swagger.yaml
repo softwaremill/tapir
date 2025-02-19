@@ -328,7 +328,6 @@ components:
             - bar2
     AnyObjectWithInlineEnum:
       title: AnyObjectWithInlineEnum
-#      type: object
       oneOf:
         - $ref: '#/components/schemas/ObjectWithInlineEnum'
         - $ref: '#/components/schemas/ObjectWithInlineEnum2'

@@ -43,7 +43,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
           },
         1.second
@@ -64,7 +64,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .send(stub)
           .map { resp =>
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
           },
         1.second
       )
@@ -84,7 +84,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .send(stub)
           .map { resp =>
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
           },
         1.second
       )
@@ -116,7 +116,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
           },
         1.second
@@ -136,7 +136,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
           },
         1.second
@@ -176,7 +176,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 204
             resp.body shouldEqual Right("")
           },
         1.second
@@ -200,7 +200,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 204
             resp.body shouldEqual Right("")
           },
         1.second
@@ -235,7 +235,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         .get(uri"http://test.com/oneof/option/test")
         .send(stub)
         .map { resp =>
-          resp.code.code === 204
+          resp.code.code shouldEqual 204
           resp.body shouldEqual Right("")
         },
       1.second
@@ -246,7 +246,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         .get(uri"http://test.com/oneof/option/test")
         .send(stub)
         .map { resp =>
-          resp.code.code === 200
+          resp.code.code shouldEqual 200
           resp.body shouldEqual Right(s"""{"id":"${someResponse1.id}","inlineEnum":"foo3"}""")
         },
       1.second
@@ -257,7 +257,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         .get(uri"http://test.com/oneof/option/test")
         .send(stub)
         .map { resp =>
-          resp.code.code === 200
+          resp.code.code shouldEqual 201
           resp.body shouldEqual Right(s"""{"inlineEnum":"bar2"}""")
         },
       1.second
