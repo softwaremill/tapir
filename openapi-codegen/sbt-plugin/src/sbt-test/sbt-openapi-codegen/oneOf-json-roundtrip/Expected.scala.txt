@@ -192,6 +192,13 @@ object TapirGeneratedEndpoints {
       .errorOut(oneOf[Error](oneOfVariant(sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")), oneOfVariant(sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
       .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
 
+  type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[ObjectWithInlineEnum], Any]
+  lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
+    endpoint
+      .get
+      .in(("oneof" / "option" / "test"))
+      .out(oneOf[Option[ObjectWithInlineEnum]](oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None), oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_) => true }))
+
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =
     endpoint
@@ -244,6 +251,6 @@ object TapirGeneratedEndpoints {
       extraCodecSupport[PostInlineEnumTestQueryOptSeqEnum]("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
   }
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, getOneofErrorTest, postInlineEnumTest)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, getOneofErrorTest, getOneofOptionTest, postInlineEnumTest)
 
 }

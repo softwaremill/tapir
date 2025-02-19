@@ -3,6 +3,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.client3.UriContext
 import sttp.client3.testing.SttpBackendStub
+import sttp.tapir.generated.TapirGeneratedEndpoints.ObjectWithInlineEnumInlineEnum.foo3
 import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJsonSerdes}
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
@@ -210,5 +211,39 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       d shouldEqual None
       e shouldEqual reqBody
     }
+  }
+
+  "oneOf Option" in {
+    var returnSome: Boolean = false
+    val someResponse = ObjectWithInlineEnum(UUID.randomUUID(), foo3)
+    val route = TapirGeneratedEndpoints.getOneofOptionTest.serverLogic[Future]({ _: Unit =>
+      Future successful Right[Unit, Option[ObjectWithInlineEnum]](Option.when(returnSome)(someResponse))
+    })
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+    Await.result(
+      sttp.client3.basicRequest
+        .get(uri"http://test.com/oneof/option/test")
+        .send(stub)
+        .map { resp =>
+          resp.code.code === 204
+          resp.body shouldEqual Right("")
+        },
+      1.second
+    )
+    returnSome = true
+    Await.result(
+      sttp.client3.basicRequest
+        .get(uri"http://test.com/oneof/option/test")
+        .send(stub)
+        .map { resp =>
+          resp.code.code === 200
+          resp.body shouldEqual Right(s"""{"id":"${someResponse.id}","inlineEnum":"foo3"}""")
+        },
+      1.second
+    )
+
   }
 }

@@ -386,7 +386,7 @@ class EndpointGenerator {
         case _ => bail("We can handle only one return content!")
       }
     }
-    def bodyFmt(resp: OpenapiResponse): (String, Option[String]) = {
+    def bodyFmt(resp: OpenapiResponse, optional: Boolean = false): (String, Option[String]) = {
       val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
       resp.content match {
         case Nil => "" -> None
@@ -396,7 +396,7 @@ class EndpointGenerator {
               doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
             case _ => false
           })
-          val (decl, tpe) = contentTypeMapper(content.contentType, content.schema, streamingImplementation, !schemaIsNullable)
+          val (decl, tpe) = contentTypeMapper(content.contentType, content.schema, streamingImplementation, !(optional || schemaIsNullable))
           s"$decl$d" -> Some(tpe)
       }
     }
@@ -424,10 +424,15 @@ class EndpointGenerator {
         }
       case many =>
         if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
+        val canBeEmptyResponse = many.exists(_.content.isEmpty)
         val (oneOfs, types) = many.map { m =>
-          val (decl, tpe) = bodyFmt(m)
+          val (decl, tpe) = bodyFmt(m, optional = canBeEmptyResponse)
           val code = if (m.code == "default") "400" else m.code
-          s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
+          if (decl == "")
+            s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+              s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""" -> tpe
+          else if (canBeEmptyResponse) s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_) => true }" -> tpe
+          else s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
         }.unzip
         val parentMap = doc.components.toSeq
           .flatMap(_.schemas)
@@ -443,15 +448,17 @@ class EndpointGenerator {
           .map { case (k, vs) => k -> vs.map(_._2) }
           .toMap
         val allElemTypes = many
-          .flatMap(_.content.map(_.schema))
-          .map {
+          .map(_.content.map(_.schema))
+          .map(_.map {
             case r: OpenapiSchemaRef        => r.stripped
             case x: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(x)._1
             case x                          => bail(s"Unexpected oneOf elem type $x")
-          }
+          })
+          .flatMap { case Nil => Seq("None"); case x => x }
           .distinct
         val commmonType =
           if (allElemTypes.size == 1) allElemTypes.head
+          else if (allElemTypes.size == 2 && allElemTypes.contains("None")) s"Option[${allElemTypes.find(_ != "None").get}]"
           else
             allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
               case s if s.isEmpty && targetScala3 => types.flatten.mkString(" | ")
