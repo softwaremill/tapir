@@ -12,7 +12,7 @@ import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, S
 import scala.concurrent.Future
 
 class VertxCatsCreateServerStubTest extends CreateServerStubTest[IO, VertxCatsServerOptions[IO]] {
-  private val (dispatcher, shutdownDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
+  private val (dispatcher, shutdownDispatcher) = Dispatcher.parallel[IO].allocated.unsafeRunSync()
 
   override def customiseInterceptors: CustomiseInterceptors[IO, VertxCatsServerOptions[IO]] =
     VertxCatsServerOptions.customiseInterceptors(dispatcher)

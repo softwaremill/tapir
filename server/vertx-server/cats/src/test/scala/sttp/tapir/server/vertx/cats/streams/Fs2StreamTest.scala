@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 
 class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
 
-  private val (dispatcher, shutdownDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
+  private val (dispatcher, shutdownDispatcher) = Dispatcher.parallel[IO].allocated.unsafeRunSync()
 
   override protected def afterAll(): Unit = {
     shutdownDispatcher.unsafeRunSync()
