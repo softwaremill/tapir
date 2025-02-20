@@ -2,7 +2,7 @@ package sttp.tapir.client.sttp4
 
 import sttp.capabilities.Streams
 import sttp.tapir.WebSocketBodyOutput
-import sttp.ws.WebSocket
+import sttp.ws.{WebSocket, WebSocketFrame}
 
 /** Captures the logic of converting a [[WebSocket]] to an interpreter-specific pipe, which is then returned to the client. Implementations
   * of this trait are looked up in the implicit scope by the compiler, depending on the capabilities that are required by the endpoint to be
@@ -28,6 +28,9 @@ trait WebSocketToPipe[-R] {
   I have no idea why.
    */
   def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, S]): Any
+  
+  val streams: S
+  val pipe: streams.Pipe[WebSocketFrame.Data[_], WebSocketFrame]
 }
 
 object WebSocketToPipe {
@@ -35,8 +38,13 @@ object WebSocketToPipe {
     override type S = Nothing
     override type F[X] = X
 
+    private val exceptionMsg = "WebSockets are not supported"
     override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, Nothing]): Any =
-      throw new RuntimeException("WebSockets are not supported")
+      throw new RuntimeException(exceptionMsg)
+
+    override def streams: Nothing = throw new RuntimeException(exceptionMsg)
+
+    override def pipe: Nothing = throw new RuntimeException(exceptionMsg)
   }
   // default case; supporting implementations can import
   implicit def webSocketsNotSupported[T]: WebSocketToPipe[T] = notSupported
