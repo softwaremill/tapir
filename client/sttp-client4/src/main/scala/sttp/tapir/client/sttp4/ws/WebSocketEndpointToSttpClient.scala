@@ -6,13 +6,13 @@ import sttp.client4.ws.stream
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.client.ClientOutputParams
-import sttp.tapir.client.sttp4.{EndpointToSttpClient, EndpointToSttpClientExtensions, WebSocketToPipe}
+import sttp.tapir.client.sttp4.{EndpointToSttpClient, WebSocketEndpointToSttpClientExtensions, WebSocketToPipe}
 import sttp.tapir.internal._
 import sttp.ws.WebSocket
 
 private[sttp] class WebSocketEndpointToSttpClient[S <: Streams[S]](wsToPipe: WebSocketToPipe[S])
     extends EndpointToSttpClient
-    with EndpointToSttpClientExtensions {
+    with WebSocketEndpointToSttpClientExtensions {
   def toSttpRequest[F[_], A, E, O, I](
       e: Endpoint[A, I, E, O, S],
       baseUri: Option[Uri]
