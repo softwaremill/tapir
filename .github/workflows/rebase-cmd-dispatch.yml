@@ -5,15 +5,7 @@ on:
   issue_comment:
     types: [created]
 jobs:
-  slashCommandDispatch:
-    # to fast-skip for typical, non-rebase comments
-    if: contains(github.event.comment.body, '/rebase')
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Slash Command Dispatch
-        uses: peter-evans/slash-command-dispatch@v4
-        with:
-          token: ${{ secrets.REPO_GITHUB_TOKEN }}
-          commands: rebase
-          permission: write
-          issue-type: pull-request
+  rebase-cmd-dispatch:
+    uses: softwaremill/github-actions-workflows/.github/workflows/rebase-cmd-dispatch.yml@main
+    secrets:
+      repo-github-token: ${{ secrets.REPO_GITHUB_TOKEN }}
