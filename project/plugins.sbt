@@ -7,7 +7,7 @@ addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-publish" % 
 addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-browser-test-js" % sbtSoftwareMillVersion)
 //addSbtPlugin("io.spray" % "sbt-boilerplate" % "0.6.1")
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.4")
-addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "2.0.7")
+addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "2.0.8")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.6.4")
 addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.10.1")
 addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.2")
