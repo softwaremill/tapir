@@ -210,10 +210,10 @@ class HttpServer(port: HttpServer.Port) {
   //
 
   def build: Resource[IO, server.Server] = BlazeServerBuilder[IO]
-      .withExecutionContext(ExecutionContext.global)
-      .bindHttp(port)
-      .withHttpWebSocketApp(app)
-      .resource
-      .evalTap(_ => IO(logger.info(s"Server on port $port started")))
-      .onFinalize(IO(logger.info(s"Server on port $port stopped")))
+    .withExecutionContext(ExecutionContext.global)
+    .bindHttp(port)
+    .withHttpWebSocketApp(app)
+    .resource
+    .evalTap(_ => IO(logger.info(s"Server on port $port started")))
+    .onFinalize(IO(logger.info(s"Server on port $port stopped")))
 }

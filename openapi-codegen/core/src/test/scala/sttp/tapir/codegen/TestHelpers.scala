@@ -123,6 +123,17 @@ object TestHelpers {
       |          description: 'deletion failed'
       |      tags:
       |        - Bookshop
+      |    put:
+      |      operationId: genericOperation
+      |      responses:
+      |        '200':
+      |          description: 'returns some html'
+      |          content:
+      |            text/html:
+      |              schema:
+      |                type: string
+      |      tags:
+      |        - Bookshop
       |components:
       |  schemas:
       |    Book:
@@ -178,6 +189,17 @@ object TestHelpers {
             summary = None,
             tags = Some(Seq("Bookshop")),
             operationId = Some("getBooksGenreYear")
+          ),
+          OpenapiPathMethod(
+            methodType = "put",
+            parameters = Nil,
+            responses = Seq(
+              OpenapiResponse("200", "returns some html", Seq(OpenapiResponseContent("text/html", OpenapiSchemaString(false))))
+            ),
+            requestBody = None,
+            summary = None,
+            tags = Some(Seq("Bookshop")),
+            operationId = Some("genericOperation")
           ),
           OpenapiPathMethod(
             methodType = "post",

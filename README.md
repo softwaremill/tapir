@@ -139,7 +139,7 @@ val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] 
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.11.14"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.11.15"
 ```
 
 Then, import:

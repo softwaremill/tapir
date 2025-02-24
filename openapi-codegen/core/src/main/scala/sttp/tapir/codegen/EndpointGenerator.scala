@@ -145,7 +145,7 @@ class EndpointGenerator {
         val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
         val (securityDecl, securityTypes) = security(securitySchemes, m.security)
         val (inParams, maybeLocalEnums, inTypes) =
-          ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation)
+          ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation, doc)
         val (outDecl, outTypes, errTypes) = outs(m.responses, streamingImplementation, doc, targetScala3)
         val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
         val definition =
@@ -257,7 +257,8 @@ class EndpointGenerator {
       endpointName: String,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
-      streamingImplementation: StreamingImplementation
+      streamingImplementation: StreamingImplementation,
+      doc: OpenapiDocument
   )(implicit location: Location): (String, Option[String], Seq[String]) = {
     def getEnumParamDefn(param: OpenapiParameter, e: OpenapiSchemaEnum, isArray: Boolean) = {
       val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
@@ -320,7 +321,13 @@ class EndpointGenerator {
       if (b.content.isEmpty) None
       else if (b.content.size != 1) bail(s"We can handle only one requestBody content! Saw ${b.content.map(_.contentType)}")
       else {
-        val (decl, tpe) = contentTypeMapper(b.content.head.contentType, b.content.head.schema, streamingImplementation, b.required)
+        val schemaIsNullable = b.content.head.schema.nullable || (b.content.head.schema match {
+          case ref: OpenapiSchemaRef =>
+            doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
+          case _ => false
+        })
+        val (decl, tpe) =
+          contentTypeMapper(b.content.head.contentType, b.content.head.schema, streamingImplementation, b.required && !schemaIsNullable)
         Some(s".in($decl)" -> tpe)
       }
     }.unzip
@@ -379,12 +386,17 @@ class EndpointGenerator {
         case _ => bail("We can handle only one return content!")
       }
     }
-    def bodyFmt(resp: OpenapiResponse): (String, Option[String]) = {
+    def bodyFmt(resp: OpenapiResponse, optional: Boolean = false): (String, Option[String]) = {
       val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
       resp.content match {
         case Nil => "" -> None
         case content +: Nil =>
-          val (decl, tpe) = contentTypeMapper(content.contentType, content.schema, streamingImplementation)
+          val schemaIsNullable = content.schema.nullable || (content.schema match {
+            case ref: OpenapiSchemaRef =>
+              doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
+            case _ => false
+          })
+          val (decl, tpe) = contentTypeMapper(content.contentType, content.schema, streamingImplementation, !(optional || schemaIsNullable))
           s"$decl$d" -> Some(tpe)
       }
     }
@@ -412,10 +424,18 @@ class EndpointGenerator {
         }
       case many =>
         if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
+        val canBeEmptyResponse = many.exists(_.content.isEmpty)
         val (oneOfs, types) = many.map { m =>
-          val (decl, tpe) = bodyFmt(m)
+          val (decl, tpe) = bodyFmt(m, optional = canBeEmptyResponse)
           val code = if (m.code == "default") "400" else m.code
-          s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
+          if (decl == "")
+            s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+              s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""" -> tpe
+          else if (canBeEmptyResponse) {
+            val (_, nonOptionalType) = bodyFmt(m)
+            val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
+            s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_$someType) => true }" -> tpe
+          } else s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)" -> tpe
         }.unzip
         val parentMap = doc.components.toSeq
           .flatMap(_.schemas)
@@ -439,15 +459,18 @@ class EndpointGenerator {
           }
           .distinct
         val commmonType =
-          if (allElemTypes.size == 1) allElemTypes.head
-          else
-            allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
+          if (canBeEmptyResponse && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
+          else if (allElemTypes.size == 1) allElemTypes.head
+          else {
+            val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
               case s if s.isEmpty && targetScala3 => types.flatten.mkString(" | ")
               case s if s.isEmpty                 => "Any"
               case s if targetScala3              => s.mkString(" & ")
               case s                              => s.mkString(" with ")
             }
-        Some(s"oneOf[$commmonType](${oneOfs.mkString(", ")})") -> Some(commmonType)
+            if (canBeEmptyResponse) s"Option[$baseType]" else baseType
+          }
+        Some(s"oneOf[$commmonType](${oneOfs.mkString("\n  ", ",\n  ", "")})") -> Some(commmonType)
     }
 
     val (outDecls, outTypes) = mappedGroup(outs)
@@ -462,11 +485,13 @@ class EndpointGenerator {
       contentType: String,
       schema: OpenapiSchemaType,
       streamingImplementation: StreamingImplementation,
-      required: Boolean = true
+      required: Boolean
   )(implicit location: Location): (String, String) = {
     contentType match {
       case "text/plain" =>
         "stringBody" -> "String"
+      case "text/html" =>
+        "htmlBodyUtf8" -> "String"
       case "application/json" =>
         val outT = schema match {
           case st: OpenapiSchemaSimpleType =>
