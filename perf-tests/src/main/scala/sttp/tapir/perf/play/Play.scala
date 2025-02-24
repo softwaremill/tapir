@@ -89,9 +89,7 @@ object Play {
 
   private val actorSystem = Resource.make(
     IO(ActorSystem("tapir-play"))
-  )(
-    aSystem => IO.fromFuture(IO(aSystem.terminate())).void
-  )
+  )(aSystem => IO.fromFuture(IO(aSystem.terminate())).void)
 
   private def httpServer(routes: Routes, actSys: ActorSystem) = Resource.make(IO {
     val server = new DefaultPekkoHttpServerComponents {
@@ -102,17 +100,19 @@ object Play {
     server.server
   })(server => IO(server.stop()))
 
-  def runServer(routes: ActorSystem => Routes): Resource[IO, Unit] = actorSystem.flatMap {
-    aSystem => httpServer(
-      List(routes(aSystem)).reduce((a: Routes, b: Routes) => {
-        val handler: PartialFunction[RequestHeader, Handler] = { case request =>
-          a.applyOrElse(request, b)
-        }
-        handler
-      }),
-      aSystem
-    )
-  }.map(_ => ())
+  def runServer(routes: ActorSystem => Routes): Resource[IO, Unit] = actorSystem
+    .flatMap { aSystem =>
+      httpServer(
+        List(routes(aSystem)).reduce((a: Routes, b: Routes) => {
+          val handler: PartialFunction[RequestHeader, Handler] = { case request =>
+            a.applyOrElse(request, b)
+          }
+          handler
+        }),
+        aSystem
+      )
+    }
+    .map(_ => ())
 }
 
 object TapirServer extends ServerRunner { override def runServer = Play.runServer(Tapir.router(1)) }

@@ -213,5 +213,4 @@ class HttpServer(port: Port) {
     .build
     .evalTap(_ => IO(logger.info(s"Server on port $port started")))
     .onFinalize(IO(logger.info(s"Server on port $port stopped")))
-
 }

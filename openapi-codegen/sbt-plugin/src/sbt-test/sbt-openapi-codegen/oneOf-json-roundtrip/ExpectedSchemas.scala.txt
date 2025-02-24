@@ -5,8 +5,13 @@ object TapirGeneratedEndpointsSchemas {
   import sttp.tapir.generic.auto._
   implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derived
   implicit lazy val notFoundErrorTapirSchema: sttp.tapir.Schema[NotFoundError] = sttp.tapir.Schema.derived
+  implicit lazy val notNullableThingyTapirSchema: sttp.tapir.Schema[NotNullableThingy] = sttp.tapir.Schema.derived
+  implicit lazy val nullableThingyTapirSchema: sttp.tapir.Schema[NullableThingy] = sttp.tapir.Schema.derived
+  implicit lazy val nullableThingy2TapirSchema: sttp.tapir.Schema[NullableThingy2] = sttp.tapir.Schema.derived
   implicit lazy val objectWithInlineEnumInlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnumInlineEnum] = sttp.tapir.Schema.derived
   implicit lazy val objectWithInlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnum] = sttp.tapir.Schema.derived
+  implicit lazy val objectWithInlineEnum2InlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnum2InlineEnum] = sttp.tapir.Schema.derived
+  implicit lazy val objectWithInlineEnum2TapirSchema: sttp.tapir.Schema[ObjectWithInlineEnum2] = sttp.tapir.Schema.derived
   implicit lazy val simpleErrorTapirSchema: sttp.tapir.Schema[SimpleError] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithD1TapirSchema: sttp.tapir.Schema[SubtypeWithD1] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithD2TapirSchema: sttp.tapir.Schema[SubtypeWithD2] = sttp.tapir.Schema.derived
@@ -40,6 +45,7 @@ object TapirGeneratedEndpointsSchemas {
       case _ => throw new IllegalStateException("Derived schema for ADTWithDiscriminatorNoMapping should be a coproduct")
     }
   }
+  implicit lazy val anyObjectWithInlineEnumTapirSchema: sttp.tapir.Schema[AnyObjectWithInlineEnum] = sttp.tapir.Schema.derived
   implicit lazy val errorTapirSchema: sttp.tapir.Schema[Error] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD3TapirSchema: sttp.tapir.Schema[SubtypeWithoutD3] = sttp.tapir.Schema.derived
   implicit lazy val aDTWithoutDiscriminatorTapirSchema: sttp.tapir.Schema[ADTWithoutDiscriminator] = sttp.tapir.Schema.derived

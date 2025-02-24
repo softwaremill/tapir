@@ -35,6 +35,37 @@ paths:
               description: "csv file"
               type: string
               format: binary
+  '/optional/test':
+    post:
+      responses:
+        '200':
+          description: an optional response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NullableThingy'
+      requestBody:
+        required: true
+        description: an optional request body (nullable)
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullableThingy2'
+    put:
+      responses:
+        '200':
+          description: a non-optional response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+      requestBody:
+        required: false
+        description: an optional request body (not required)
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotNullableThingy'
   '/adt/test':
     post:
       responses:
@@ -144,6 +175,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SimpleError'
+
+  '/oneof/option/test':
+    get:
+      responses:
+        "204":
+          description: "No response"
+        "200":
+          description: An object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+        "201":
+          description: Another object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum2'
 
 
 components:
@@ -266,12 +315,58 @@ components:
             - foo2
             - foo3
             - foo4
+    ObjectWithInlineEnum2:
+      title: ObjectWithInlineEnum2
+      required:
+        - inlineEnum
+      type: object
+      properties:
+        inlineEnum:
+          type: string
+          enum:
+            - bar1
+            - bar2
+    AnyObjectWithInlineEnum:
+      title: AnyObjectWithInlineEnum
+      oneOf:
+        - $ref: '#/components/schemas/ObjectWithInlineEnum'
+        - $ref: '#/components/schemas/ObjectWithInlineEnum2'
     Error:
       title: Error
       type: object
       oneOf:
         - $ref: '#/components/schemas/NotFoundError'
         - $ref: '#/components/schemas/SimpleError'
+    NotNullableThingy:
+      title: NotNullableThingy
+      type: object
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
+    NullableThingy:
+      title: NullableThingy
+      type: object
+      nullable: true
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
+    NullableThingy2:
+      title: NullableThingy2
+      type:
+        - object
+        - "null"
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
     NotFoundError:
       title: NotFoundError
       required:

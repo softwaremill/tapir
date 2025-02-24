@@ -133,9 +133,8 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
     Test(name)(
       resources
         .use { port =>
-          runTest(backend, uri"http://localhost:$port").guaranteeCase(exitCase =>
-            IO(logger.info(s"Test on port $port: ${exitCase.getClass.getSimpleName}"))
-          )
+          runTest(backend, uri"http://localhost:$port")
+            .guaranteeCase(exitCase => IO(logger.info(s"Test on port $port: ${exitCase.getClass.getSimpleName}")))
         }
         .unsafeToFuture()
     )

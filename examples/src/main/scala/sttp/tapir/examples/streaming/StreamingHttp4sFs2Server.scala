@@ -1,7 +1,7 @@
 // {cat=Streaming; effects=cats-effect; server=http4s}: Stream response as an fs2 stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.14
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.14
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.15
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.15
 //> using dep com.softwaremill.sttp.client3::core:3.9.8
 //> using dep org.http4s::http4s-ember-server:0.23.30
 

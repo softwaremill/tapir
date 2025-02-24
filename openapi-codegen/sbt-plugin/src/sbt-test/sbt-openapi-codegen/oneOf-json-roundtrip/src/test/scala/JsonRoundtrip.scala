@@ -3,6 +3,8 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.client3.UriContext
 import sttp.client3.testing.SttpBackendStub
+import sttp.tapir.generated.TapirGeneratedEndpoints.ObjectWithInlineEnum2InlineEnum.bar2
+import sttp.tapir.generated.TapirGeneratedEndpoints.ObjectWithInlineEnumInlineEnum.foo3
 import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJsonSerdes}
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
@@ -41,7 +43,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
           },
         1.second
@@ -62,7 +64,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .send(stub)
           .map { resp =>
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
           },
         1.second
       )
@@ -82,7 +84,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .send(stub)
           .map { resp =>
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
           },
         1.second
       )
@@ -114,7 +116,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
           },
         1.second
@@ -134,7 +136,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 200
             resp.body.map(normalise) shouldEqual Right(respJsonBody)
           },
         1.second
@@ -174,7 +176,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 204
             resp.body shouldEqual Right("")
           },
         1.second
@@ -198,7 +200,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
-            resp.code.code === 200
+            resp.code.code shouldEqual 204
             resp.body shouldEqual Right("")
           },
         1.second
@@ -210,5 +212,56 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       d shouldEqual None
       e shouldEqual reqBody
     }
+  }
+
+  "oneOf Option" in {
+    var returnVariant: Int = 0
+    val someResponse1 = ObjectWithInlineEnum(UUID.randomUUID(), foo3)
+    val someResponse2 = ObjectWithInlineEnum2(bar2)
+    def responseVariant = returnVariant match {
+      case 0 => None
+      case 1 => Some(someResponse1)
+      case 2 => Some(someResponse2)
+    }
+    val route = TapirGeneratedEndpoints.getOneofOptionTest.serverLogic[Future]({ _: Unit =>
+      Future successful Right[Unit, Option[AnyObjectWithInlineEnum]](responseVariant)
+    })
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+    Await.result(
+      sttp.client3.basicRequest
+        .get(uri"http://test.com/oneof/option/test")
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 204
+          resp.body shouldEqual Right("")
+        },
+      1.second
+    )
+    returnVariant = 1
+    Await.result(
+      sttp.client3.basicRequest
+        .get(uri"http://test.com/oneof/option/test")
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 200
+          resp.body shouldEqual Right(s"""{"id":"${someResponse1.id}","inlineEnum":"foo3"}""")
+        },
+      1.second
+    )
+    returnVariant = 2
+    Await.result(
+      sttp.client3.basicRequest
+        .get(uri"http://test.com/oneof/option/test")
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 201
+          resp.body shouldEqual Right(s"""{"inlineEnum":"bar2"}""")
+        },
+      1.second
+    )
+
   }
 }
