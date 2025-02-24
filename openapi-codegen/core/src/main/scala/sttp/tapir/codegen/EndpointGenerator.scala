@@ -162,7 +162,10 @@ class EndpointGenerator {
         val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
         val queryOrPathParamRefs = m.resolvedParameters
           .collect { case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" => queryParam.schema }
-          .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
+          .collect {
+            case ref: OpenapiSchemaRef if ref.isSchema                        => ref.stripped
+            case OpenapiSchemaArray(ref: OpenapiSchemaRef, _) if ref.isSchema => ref.stripped
+          }
           .toSet
         val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
           m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
