@@ -491,7 +491,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val gen = new ClassDefinitionGenerator()
     val res1 = Try(gen.classDefs(OpenapiDocument("", null, null, Some(doc)))).toEither
 
-    res1.left.get.getMessage shouldEqual "Cannot render a number as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString."
+    res1.left.get.getMessage shouldEqual "Generating class for ReqWithDefaults: Cannot render a number as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString."
 
   }
 

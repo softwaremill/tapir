@@ -113,7 +113,7 @@ object TapirGeneratedEndpoints {
 
   case class ObjectWithInlineEnum (
     id: java.util.UUID,
-    inlineEnum: ObjectWithInlineEnumInlineEnum
+    inlineEnum: ObjectWithInlineEnumInlineEnum = ObjectWithInlineEnumInlineEnum.foo3
   ) extends AnyObjectWithInlineEnum
 
   sealed trait ObjectWithInlineEnumInlineEnum extends enumeratum.EnumEntry

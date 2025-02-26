@@ -2,12 +2,14 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.{OpenapiSchemaType, DefaultValueRenderer}
+import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
 
 case class GeneratedClassDefinitions(classRepr: String, serdeRepr: Option[String], schemaRepr: Seq[String])
+
+case class InlineEnumDefn(enumName: String, impl: String)
 
 class ClassDefinitionGenerator {
 
@@ -205,7 +207,7 @@ class ClassDefinitionGenerator {
       adtInheritanceMap: Map[String, Seq[(String, OpenapiSchemaOneOf)]],
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
       targetScala3: Boolean
-  ): Seq[String] = {
+  ): Seq[String] = try {
     val isJson = jsonParamRefs contains name
     def rec(name: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
       val innerClasses = obj.properties
@@ -253,9 +255,13 @@ class ClassDefinitionGenerator {
           val fixedKey = fixKey(key)
           val optional = schemaType.nullable || !obj.required.contains(key)
           val maybeExplicitDefault =
-            maybeDefault.map(" = " + DefaultValueRenderer.render(allModels = allSchemas, thisType = schemaType, optional)(_))
+            maybeDefault.map(
+              " = " +
+                DefaultValueRenderer
+                  .render(allModels = allSchemas, thisType = schemaType, optional, RenderConfig(maybeEnum.map(_.enumName)))(_)
+            )
           val default = maybeExplicitDefault getOrElse (if (optional) " = None" else "")
-          s"$fixedKey: $tpe$default" -> maybeEnum
+          s"$fixedKey: $tpe$default" -> maybeEnum.map(_.impl)
         }
         .unzip
 
@@ -266,6 +272,8 @@ class ClassDefinitionGenerator {
     }
 
     rec(addName("", name), obj, Nil)
+  } catch {
+    case t: Throwable => throw new NotImplementedError(s"Generating class for $name: ${t.getMessage}")
   }
 
   private def mapSchemaTypeToType(
@@ -276,7 +284,7 @@ class ClassDefinitionGenerator {
       isJson: Boolean,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
       targetScala3: Boolean
-  ): (String, Option[String]) = {
+  ): (String, Option[InlineEnumDefn]) = {
     val ((tpe, optional), maybeEnum) = schemaType match {
       case simpleType: OpenapiSchemaSimpleType =>
         mapSchemaSimpleTypeToType(simpleType, multipartForm = !isJson) -> None
@@ -312,7 +320,7 @@ class ClassDefinitionGenerator {
           jsonSerdeLib,
           if (isJson) Set(enumName) else Set.empty
         )
-        (enumName -> e.nullable, Some(enumDefn.mkString("\n")))
+        (enumName -> e.nullable, Some(InlineEnumDefn(enumName, enumDefn.mkString("\n"))))
 
       case _ =>
         throw new NotImplementedError(s"We can't serialize some of the properties yet! $parentName $key $schemaType")
