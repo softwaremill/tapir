@@ -167,4 +167,16 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
+
+  test("coproduct using an enum discriminator, added using `.addDiscriminatorField`") {
+    val petEndpoint = endpoint.post
+      .in("figure")
+      .in(jsonBody[Pet])
+
+    val expectedYaml = load("coproduct/expected_coproduct_discriminator_enum.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(petEndpoint), "title", "1.0").toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
