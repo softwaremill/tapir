@@ -1,0 +1,63 @@
+openapi: 3.1.0
+info:
+  title: title
+  version: '1.0'
+paths:
+  /figure:
+    post:
+      operationId: postFigure
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+        required: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Cat:
+      title: Cat
+      type: object
+      required:
+      - name
+      - petType
+      properties:
+        name:
+          type: string
+        petType:
+          $ref: '#/components/schemas/PetType'
+    Dog:
+      title: Dog
+      type: object
+      required:
+      - breed
+      - petType
+      properties:
+        breed:
+          type: string
+        petType:
+          $ref: '#/components/schemas/PetType'
+    Pet:
+      title: Pet
+      oneOf:
+      - $ref: '#/components/schemas/Cat'
+      - $ref: '#/components/schemas/Dog'
+      discriminator:
+        propertyName: petType
+        mapping:
+          Canine: '#/components/schemas/Dog'
+          Feline: '#/components/schemas/Cat'
+    PetType:
+      title: PetType
+      type: string
+      enum:
+      - Canine
+      - Feline

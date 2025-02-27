@@ -53,6 +53,8 @@ private[docs] object ToKeyedSchemas {
     if (s1.deprecated != s2.deprecated) result = result.deprecated(false)
     if (s1.attributes.get(Title.Attribute) != s2.attributes.get(Title.Attribute))
       result = result.copy(attributes = result.attributes.remove(Title.Attribute))
+    if (s1.attributes.get(TSchema.EncodedDiscriminatorValue.Attribute) != s2.attributes.get(TSchema.EncodedDiscriminatorValue.Attribute))
+      result = result.copy(attributes = result.attributes.remove(TSchema.EncodedDiscriminatorValue.Attribute))
     result
   }
 }
