@@ -244,6 +244,43 @@ class ZioHttpServerTest extends TestSuite {
 
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
+          Test("Streaming works through the stub backend, when decoded as an either") {
+            // given
+            val backendStub: TapirStubInterpreter[Task, ZioStreams, Unit] =
+              TapirStubInterpreter[Task, ZioStreams](SttpBackendStub[Task, ZioStreams](new RIOMonadError[Any]))
+
+            val streamingEndpoint: sttp.tapir.ztapir.ZServerEndpoint[Any, ZioStreams] =
+              endpoint.post
+                .in("hello")
+                .in(streamBinaryBody(ZioStreams)(CodecFormat.TextPlain()))
+                .out(streamBinaryBody(ZioStreams)(CodecFormat.TextPlain()))
+                .zServerLogic(stream => ZIO.succeed(stream))
+
+            val testString = "Hello, world!" * 100
+            val input: ZStream[Any, Nothing, Byte] = ZStream(testString.getBytes(): _*)
+
+            val makeRequest = sttp.client3.basicRequest
+              .streamBody(ZioStreams)(input)
+              .post(uri"/hello")
+              .response(asStreamUnsafe(ZioStreams))
+
+            val backend = backendStub.whenServerEndpointRunLogic(streamingEndpoint).backend()
+
+            // when
+            val test: ZIO[Any, Throwable, Assertion] =
+              makeRequest
+                .send(backend)
+                .flatMap(response =>
+                  response.body.right.get
+                    .via(ZPipeline.utf8Decode)
+                    .runCollect
+                    .map(_.toList.mkString(""))
+                )
+                // then
+                .map(_ shouldBe testString)
+
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
           createServerTest.testServer(
             endpoint
               .out(
