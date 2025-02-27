@@ -176,7 +176,6 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("coproduct/expected_coproduct_discriminator_enum.yml")
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(petEndpoint), "title", "1.0").toYaml
-    println(actualYaml)
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
