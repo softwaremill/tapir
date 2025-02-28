@@ -51,17 +51,28 @@ paths:
                 $ref: '#/components/schemas/AnEnum'
   '/generic/json':
     post:
+      parameters:
+        - in: query
+          name: aTrickyParam
+          style: form
+          explode: false
+          required: false
+          description: A very thorough description
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/AnEnum'
       requestBody:
         description: anything
         content:
           application/json:
-            schema: {}
+            schema: { }
       responses:
         "200":
           description: anything back
           content:
             application/json:
-              schema: {}
+              schema: { }
 
 components:
   schemas:

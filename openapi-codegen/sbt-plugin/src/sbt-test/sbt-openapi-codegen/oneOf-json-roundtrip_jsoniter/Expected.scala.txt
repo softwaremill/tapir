@@ -45,7 +45,24 @@ object TapirGeneratedEndpoints {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
   }
 
-
+  case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
+    // Case-insensitive mapping
+    def decode(s: String): sttp.tapir.DecodeResult[T] =
+      scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
+        .fold(
+          _ =>
+            sttp.tapir.DecodeResult.Error(
+              s,
+              new NoSuchElementException(
+                s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
+              )
+            ),
+          sttp.tapir.DecodeResult.Value(_)
+        )
+    def encode(t: T): String = t.entryName
+  }
+  def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
+    EnumExtraParamSupport(enumName, T)
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
@@ -81,25 +98,29 @@ object TapirGeneratedEndpoints {
     case object Foo extends AnEnum
     case object Bar extends AnEnum
     case object Baz extends AnEnum
+    implicit val enumCodecSupportAnEnum: ExtraParamSupport[AnEnum] =
+      extraCodecSupport[AnEnum]("AnEnum", AnEnum)
   }
 
 
-
-  lazy val putAdtTest =
+  type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
+  lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
       .put
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithoutDiscriminator])
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
-  lazy val postAdtTest =
+  type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
+  lazy val postAdtTest: PostAdtTestEndpoint =
     endpoint
       .post
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithDiscriminatorNoMapping])
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
-  lazy val getOneofOptionTest =
+  type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnEnum], Any]
+  lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
     endpoint
       .get
       .in(("oneof" / "option" / "test"))
@@ -107,10 +128,12 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[AnEnum]].description("An enum")){ case Some(_: AnEnum) => true }))
 
-  lazy val postGenericJson =
+  type PostGenericJsonEndpoint = Endpoint[Unit, (Option[List[AnEnum]], Option[io.circe.Json]), Unit, io.circe.Json, Any]
+  lazy val postGenericJson: PostGenericJsonEndpoint =
     endpoint
       .post
       .in(("generic" / "json"))
+      .in(query[Option[CommaSeparatedValues[AnEnum]]]("aTrickyParam").map(_.map(_.values))(_.map(CommaSeparatedValues(_))).description("A very thorough description"))
       .in(jsonBody[Option[io.circe.Json]])
       .out(jsonBody[io.circe.Json].description("anything back"))
 
