@@ -8,15 +8,15 @@ lazy val root = (project in file("."))
   )
 
 libraryDependencies ++= Seq(
-  "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.11.15",
-  "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.11.15",
-  "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % "1.11.15",
+  "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.11.16",
+  "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.11.16",
+  "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % "1.11.16",
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.7",
   "io.circe" %% "circe-generic" % "0.14.10",
   "com.beachape" %% "enumeratum" % "1.7.5",
   "com.beachape" %% "enumeratum-circe" % "1.7.5",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.15" % Test
+  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
 )
 
 import scala.io.Source
