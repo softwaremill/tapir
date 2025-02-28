@@ -5,7 +5,7 @@ info:
   description: File for testing json roundtripping of oneOf defns in scala 2.x with jsoniter-scala
   version: 1.0.20-SNAPSHOT
   title: OneOf Json test for jsoniter-scala
-tags: []
+tags: [ ]
 paths:
   '/adt/test':
     post:
@@ -49,6 +49,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnEnum'
+  '/generic/json':
+    post:
+      requestBody:
+        description: anything
+        content:
+          application/json:
+            schema: {}
+      responses:
+        "200":
+          description: anything back
+          content:
+            application/json:
+              schema: {}
 
 components:
   schemas:

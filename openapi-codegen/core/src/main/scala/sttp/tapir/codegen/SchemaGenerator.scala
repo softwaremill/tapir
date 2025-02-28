@@ -30,42 +30,28 @@ object SchemaGenerator {
       allSchemas: Map[String, OpenapiSchemaType],
       fullModelPath: String,
       jsonSerdeLib: JsonSerdeLib,
-      maxSchemasPerFile: Int
+      maxSchemasPerFile: Int,
+      schemasContainAny: Boolean
   ): Seq[String] = {
-    def schemaContainsAny(schema: OpenapiSchemaType): Boolean = schema match {
-      case _: OpenapiSchemaAny           => true
-      case OpenapiSchemaArray(items, _)  => schemaContainsAny(items)
-      case OpenapiSchemaMap(items, _)    => schemaContainsAny(items)
-      case OpenapiSchemaObject(fs, _, _) => fs.values.map(_.`type`).exists(schemaContainsAny)
-      case OpenapiSchemaOneOf(types, _)  => types.exists(schemaContainsAny)
-      case OpenapiSchemaAllOf(types)     => types.exists(schemaContainsAny)
-      case OpenapiSchemaAnyOf(types)     => types.exists(schemaContainsAny)
-      case OpenapiSchemaNot(item)        => schemaContainsAny(item)
-      case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString | _: OpenapiSchemaRef => false
-    }
-    val schemasWithAny = allSchemas.filter { case (_, schema) =>
-      schemaContainsAny(schema)
-    }
-    val maybeAnySchema: Option[(OpenapiSchemaType, String)] =
-      if (schemasWithAny.isEmpty) None
-      else if (jsonSerdeLib == JsonSerdeLib.Circe)
+    val maybeAnySchema: Option[(String, String)] =
+      if (!schemasContainAny) None
+      else if (jsonSerdeLib == JsonSerdeLib.Circe || jsonSerdeLib == JsonSerdeLib.Jsoniter)
         Some(
-          OpenapiSchemaAny(
-            false
-          ) -> "implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]"
+          "anyTapirSchema" -> "implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]"
         )
-      else
-        throw new NotImplementedError(
-          s"any not implemented for json libs other than circe (problematic models: ${schemasWithAny.map(_._1)})"
-        )
+      else throw new NotImplementedError("any not implemented for json libs other than circe and jsoniter")
+    val maybeAnySchemaSchema = Seq(maybeAnySchema.map { case (_, _) => "anyTapirSchema" -> OpenapiSchemaAny(false) }.toSeq)
     val openApiSchemasWithTapirSchemas = doc.components
-      .map(_.schemas.map {
+      .map(_.schemas.flatMap {
         case (name, _: OpenapiSchemaEnum) =>
-          name -> s"implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
-        case (name, obj: OpenapiSchemaObject) => name -> schemaForObject(name, obj)
-        case (name, schema: OpenapiSchemaMap) => name -> schemaForMap(name, schema)
+          Some(
+            name -> s"implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
+          )
+        case (name, obj: OpenapiSchemaObject) => Some(name -> schemaForObject(name, obj))
+        case (name, schema: OpenapiSchemaMap) => Some(name -> schemaForMap(name, schema))
+        case (_, _: OpenapiSchemaAny)         => None
         case (name, schema: OpenapiSchemaOneOf) =>
-          name -> genADTSchema(name, schema, if (fullModelPath.isEmpty) None else Some(fullModelPath))
+          Some(name -> genADTSchema(name, schema, if (fullModelPath.isEmpty) None else Some(fullModelPath)))
         case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
       })
       .toSeq
@@ -79,9 +65,9 @@ object SchemaGenerator {
     // 2) Order the definitions, such that objects appear before any places they're referenced
     val orderedLayers = orderLayers(groupedByRing)
     // 3) Group the definitions into at most `maxSchemasPerFile`, whilst avoiding splitting groups across files
-    val foldedLayers = foldLayers(maxSchemasPerFile)(orderedLayers)
+    val foldedLayers = foldLayers(maxSchemasPerFile)(maybeAnySchemaSchema ++ orderedLayers)
     // Our output will now only need to imports the 'earlier' files into the 'later' files, and _not_ vice verse
-    maybeAnySchema.map(_._2).toSeq ++ foldedLayers.map(ring => ring.map(openApiSchemasWithTapirSchemas apply _._1).mkString("\n"))
+    foldedLayers.map(ring => ring.map(openApiSchemasWithTapirSchemas apply _._1).mkString("\n"))
   }
   // Group files into chunks of size < maxLayerSize
   private def foldLayers(maxSchemasPerFile: Int)(layers: Seq[Seq[(String, OpenapiSchemaType)]]): Seq[Seq[(String, OpenapiSchemaType)]] = {
