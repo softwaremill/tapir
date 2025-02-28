@@ -107,6 +107,13 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[AnEnum]].description("An enum")){ case Some(_: AnEnum) => true }))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest)
+  lazy val postGenericJson =
+    endpoint
+      .post
+      .in(("generic" / "json"))
+      .in(jsonBody[Option[io.circe.Json]])
+      .out(jsonBody[io.circe.Json].description("anything back"))
+
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest, postGenericJson)
 
 }

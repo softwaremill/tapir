@@ -1,6 +1,7 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
+import sttp.tapir.codegen.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
@@ -17,7 +18,7 @@ class ClassDefinitionGenerator {
       doc: OpenapiDocument,
       targetScala3: Boolean = false,
       queryOrPathParamRefs: Set[String] = Set.empty,
-      jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = JsonSerdeLib.Circe,
+      jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = Circe,
       jsonParamRefs: Set[String] = Set.empty,
       fullModelPath: String = "",
       validateNonDiscriminatedOneOfs: Boolean = true,
@@ -44,7 +45,13 @@ class ClassDefinitionGenerator {
 
     val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
-    val schemas = SchemaGenerator.generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile)
+    val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
+    val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
+    if (schemasContainAny && !Set(Circe, Jsoniter).contains(jsonSerdeLib))
+      throw new NotImplementedError(
+        s"any not implemented for json libs other than circe and jsoniter (problematic models: ${schemasWithAny.keys})"
+      )
+    val schemas = SchemaGenerator.generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile, schemasContainAny)
     val jsonSerdes = JsonSerdeGenerator.serdeDefs(
       doc,
       jsonSerdeLib,
@@ -52,7 +59,8 @@ class ClassDefinitionGenerator {
       allTransitiveJsonParamRefs,
       validateNonDiscriminatedOneOfs,
       adtInheritanceMap.mapValues(_.map(_._1)),
-      targetScala3
+      targetScala3,
+      schemasContainAny
     )
     val defns = doc.components
       .map(_.schemas.flatMap {
@@ -338,5 +346,17 @@ class ClassDefinitionGenerator {
       s"`$key`"
     else
       key
+  }
+
+  private def schemaContainsAny(schema: OpenapiSchemaType): Boolean = schema match {
+    case _: OpenapiSchemaAny           => true
+    case OpenapiSchemaArray(items, _)  => schemaContainsAny(items)
+    case OpenapiSchemaMap(items, _)    => schemaContainsAny(items)
+    case OpenapiSchemaObject(fs, _, _) => fs.values.map(_.`type`).exists(schemaContainsAny)
+    case OpenapiSchemaOneOf(types, _)  => types.exists(schemaContainsAny)
+    case OpenapiSchemaAllOf(types)     => types.exists(schemaContainsAny)
+    case OpenapiSchemaAnyOf(types)     => types.exists(schemaContainsAny)
+    case OpenapiSchemaNot(item)        => schemaContainsAny(item)
+    case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString | _: OpenapiSchemaRef => false
   }
 }
