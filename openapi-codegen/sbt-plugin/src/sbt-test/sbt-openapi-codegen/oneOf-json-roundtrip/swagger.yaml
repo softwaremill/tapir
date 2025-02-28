@@ -106,6 +106,7 @@ paths:
           required: true
           schema:
             type: string
+            default: bar1
             enum:
               - bar1
               - bar2
@@ -294,6 +295,7 @@ components:
           type: string
     AnEnum:
       type: string
+      default: Foo
       enum:
         - Foo
         - Bar
@@ -310,6 +312,7 @@ components:
           format: uuid
         inlineEnum:
           type: string
+          default: foo3
           enum:
             - foo1
             - foo2

@@ -129,27 +129,27 @@ class EndpointGenerator {
       .map(_.withResolvedParentParameters(parameters, p.parameters))
       .map { m =>
         implicit val location: Location = Location(p.url, m.methodType)
-
-        val attributeString = {
-          val pathAttributes = attributes(p.specificationExtensions)
-          val operationAttributes = attributes(m.specificationExtensions)
-          (pathAttributes, operationAttributes) match {
-            case (None, None)                          => ""
-            case (Some(atts), None)                    => indent(2)(atts)
-            case (None, Some(atts))                    => indent(2)(atts)
-            case (Some(pathAtts), Some(operationAtts)) => indent(2)(pathAtts + "\n" + operationAtts)
+        try {
+          val attributeString = {
+            val pathAttributes = attributes(p.specificationExtensions)
+            val operationAttributes = attributes(m.specificationExtensions)
+            (pathAttributes, operationAttributes) match {
+              case (None, None)                          => ""
+              case (Some(atts), None)                    => indent(2)(atts)
+              case (None, Some(atts))                    => indent(2)(atts)
+              case (Some(pathAtts), Some(operationAtts)) => indent(2)(pathAtts + "\n" + operationAtts)
+            }
           }
-        }
 
-        val name = strippedToCamelCase(m.operationId.getOrElse(m.methodType + p.url.capitalize))
-        val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
-        val (securityDecl, securityTypes) = security(securitySchemes, m.security)
-        val (inParams, maybeLocalEnums, inTypes) =
-          ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation, doc)
-        val (outDecl, outTypes, errTypes) = outs(m.responses, streamingImplementation, doc, targetScala3)
-        val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
-        val definition =
-          s"""|endpoint
+          val name = strippedToCamelCase(m.operationId.getOrElse(m.methodType + p.url.capitalize))
+          val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
+          val (securityDecl, securityTypes) = security(securitySchemes, m.security)
+          val (inParams, maybeLocalEnums, inTypes) =
+            ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation, doc)
+          val (outDecl, outTypes, errTypes) = outs(m.responses, streamingImplementation, doc, targetScala3)
+          val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
+          val definition =
+            s"""|endpoint
               |  .${m.methodType}
               |  $pathDecl
               |${indent(2)(securityDecl)}
@@ -159,34 +159,38 @@ class EndpointGenerator {
               |$attributeString
               |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
 
-        val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
-        val queryOrPathParamRefs = m.resolvedParameters
-          .collect { case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" => queryParam.schema }
-          .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
-          .toSet
-        val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
-          m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
-          .collect { case (contentType, schema) if contentType == "application/json" => schema }
-          .collect {
-            case ref: OpenapiSchemaRef if ref.isSchema                        => ref.stripped
-            case OpenapiSchemaArray(ref: OpenapiSchemaRef, _) if ref.isSchema => ref.stripped
-            case OpenapiSchemaArray(OpenapiSchemaAny(_), _) =>
-              bail("Cannot generate schema for 'Any' with jsoniter library")
-            case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _) =>
-              val name = BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
-              s"List[$name]"
-            case simple: OpenapiSchemaSimpleType =>
-              BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
-            case OpenapiSchemaMap(simple: OpenapiSchemaSimpleType, _) =>
-              val name = BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
-              s"Map[String, $name]"
-          }
-          .toSet
-        (
-          (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums, allTypes)),
-          (queryOrPathParamRefs, jsonParamRefs),
-          maybeLocalEnums.isDefined
-        )
+          val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
+          val queryOrPathParamRefs = m.resolvedParameters
+            .collect { case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" => queryParam.schema }
+            .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
+            .toSet
+          val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
+            m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
+            .collect { case (contentType, schema) if contentType == "application/json" => schema }
+            .collect {
+              case ref: OpenapiSchemaRef if ref.isSchema                        => ref.stripped
+              case OpenapiSchemaArray(ref: OpenapiSchemaRef, _) if ref.isSchema => ref.stripped
+              case OpenapiSchemaArray(OpenapiSchemaAny(_), _) =>
+                bail("Cannot generate schema for 'Any' with jsoniter library")
+              case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _) =>
+                val name = BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
+                s"List[$name]"
+              case simple: OpenapiSchemaSimpleType =>
+                BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
+              case OpenapiSchemaMap(simple: OpenapiSchemaSimpleType, _) =>
+                val name = BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
+                s"Map[String, $name]"
+            }
+            .toSet
+          (
+            (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums, allTypes)),
+            (queryOrPathParamRefs, jsonParamRefs),
+            maybeLocalEnums.isDefined
+          )
+        } catch {
+          case e: NotImplementedError => throw e
+          case e: Throwable           => bail(s"Unexpected error (${e.getMessage})")
+        }
       }
       .unzip3
     val (unflattenedQueryParamRefs, unflattenedJsonParamRefs) = unflattenedParamRefs.unzip
@@ -271,7 +275,9 @@ class EndpointGenerator {
         jsonSerdeLib,
         Set.empty
       )
+
       def arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
+
       val tpe = if (isArray) s"$arrayType[$enumName]" else enumName
       val required = param.required.getOrElse(true)
       // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
@@ -283,11 +289,14 @@ class EndpointGenerator {
         case (false, true)  => enumName
         case (false, false) => s"Option[$enumName]"
       }
+
       def mapToList =
         if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
+
       val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
       (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", Some(enumDefn), outType)
     }
+
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     // .in(header[AuthToken]("X-Auth-Token"))
     val (params, maybeEnumDefns, inTypes) = parameters
@@ -307,7 +316,9 @@ class EndpointGenerator {
             // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
             val noOptionWrapper = required || param.isExploded
             val req = if (noOptionWrapper) arr else s"Option[$arr]"
+
             def mapToList = if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
+
             val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
             (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", None, req)
           case e @ OpenapiSchemaEnum(_, _, _)              => getEnumParamDefn(param, e, isArray = false)
