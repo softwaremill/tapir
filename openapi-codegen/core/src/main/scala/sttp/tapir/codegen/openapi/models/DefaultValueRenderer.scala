@@ -51,7 +51,9 @@ object DefaultValueRenderer {
       case OpenapiSchemaObject(properties, required, _) =>
         val kvsWithProps = kvs.map { case (k, v) => (k, (v, properties.get(k).getOrElse(errorForKey(k)))) }
         s"$name(${kvsWithProps
-            .map { case (k, (v, p)) => s"""$k = ${render(allModels, p.`type`, p.`type`.nullable || !required.contains(k), RenderConfig())(v)}""" }
+            .map { case (k, (v, p)) =>
+              s"""$k = ${render(allModels, p.`type`, p.`type`.nullable || !required.contains(k), RenderConfig())(v)}"""
+            }
             .mkString(", ")})"
       case other => throw new IllegalArgumentException(s"Cannot render a map as type ${other.getClass.getName}")
     }
