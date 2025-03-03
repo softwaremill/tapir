@@ -265,32 +265,52 @@ object JsonSerdeGenerator {
            |implicit def optionCodec[T: $jsoniterPkgCore.JsonValueCodec]: $jsoniterPkgCore.JsonValueCodec[Option[T]] =
            |  $jsoniterPkgMacros.JsonCodecMaker.make[Option[T]]
            |""".stripMargin
-    doc.components
-      .map(_.schemas.flatMap {
+    val docSchemas = doc.components.toSeq.flatMap(_.schemas)
+    val pathSchemas =
+      doc.paths.flatMap(p =>
+        p.methods.flatMap(m =>
+          m.responses
+            .flatMap(_.content)
+            .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
+            .map(c => (m.name(p.url) + "Response", c.schema, true)) ++
+            m.requestBody.toSeq
+              .flatMap(_.content)
+              .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
+              .map(c => (m.name(p.url) + "Request", c.schema, true))
+        )
+      )
+    (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
+      .flatMap {
         // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
-        case (name, _: OpenapiSchemaObject) =>
+        case (name, _: OpenapiSchemaObject, isJson) =>
           val supertypes =
-            adtInheritanceMap.get(name).getOrElse(Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
-          if (jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty)) Some(genJsoniterClassSerde(supertypes)(name))
+            adtInheritanceMap.getOrElse(name, Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
+          if (isJson || jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty))
+            Some(genJsoniterClassSerde(supertypes)(name))
           else None
-        // For named maps or seqs, only generate the schema if it's a 'top level' json schema
-        case (name, _: OpenapiSchemaMap) if jsonParamRefs.contains(name) =>
+        // For named maps, only generate the schema if it's a 'top level' json schema
+        case (name, _: OpenapiSchemaMap, isJson) if jsonParamRefs.contains(name) || isJson =>
           Some(genJsoniterNamedSerde(name))
         // For enums, generate the serde if it's referenced in any json model
-        case (name, _: OpenapiSchemaEnum) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, _: OpenapiSchemaEnum, _) if allTransitiveJsonParamRefs.contains(name) =>
           Some(genJsoniterEnumSerde(name))
         // For ADTs, generate the serde if it's referenced in any json model
-        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaOneOf, _) if allTransitiveJsonParamRefs.contains(name) =>
           Some(generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs))
         case (
               _,
               _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf |
-              _: OpenapiSchemaAny
+              _: OpenapiSchemaAny,
+              _
             ) =>
           None
-        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
-      })
-      .map(jsonSerdeHelpers + additionalExplicitSerdes + _.mkString("\n"))
+        case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
+      }
+      .foldLeft(Option.empty[String]) {
+        case (Some(a), b) => Some(a + "\n" + b)
+        case (None, a)    => Some(a)
+      }
+      .map(jsonSerdeHelpers + additionalExplicitSerdes + _)
   }
 
   private def genJsoniterClassSerde(supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {

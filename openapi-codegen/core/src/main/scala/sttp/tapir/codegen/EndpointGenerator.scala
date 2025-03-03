@@ -52,7 +52,8 @@ case class GeneratedEndpoints(
     namesAndParamsByFile: Seq[GeneratedEndpointsForFile],
     queryParamRefs: Set[String],
     jsonParamRefs: Set[String],
-    definesEnumQueryParam: Boolean
+    definesEnumQueryParam: Boolean,
+    inlineDefns: Seq[String]
 ) {
   def merge(that: GeneratedEndpoints): GeneratedEndpoints =
     GeneratedEndpoints(
@@ -62,14 +63,16 @@ case class GeneratedEndpoints(
         .toSeq,
       queryParamRefs ++ that.queryParamRefs,
       jsonParamRefs ++ that.jsonParamRefs,
-      definesEnumQueryParam || that.definesEnumQueryParam
+      definesEnumQueryParam || that.definesEnumQueryParam,
+      inlineDefns ++ that.inlineDefns
     )
 }
 case class EndpointDefs(
     endpointDecls: Map[Option[String], String],
     queryOrPathParamRefs: Set[String],
     jsonParamRefs: Set[String],
-    enumsDefinedOnEndpointParams: Boolean
+    enumsDefinedOnEndpointParams: Boolean,
+    inlineDefns: Seq[String]
 )
 
 class EndpointGenerator {
@@ -100,10 +103,10 @@ class EndpointGenerator {
   ): EndpointDefs = {
     val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
-    val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam) =
+    val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns) =
       doc.paths
         .map(generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, streamingImplementation, doc))
-        .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false))(_ merge _)
+        .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false, Nil))(_ merge _)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
       val definitions = ge
         .map { case GeneratedEndpoint(name, definition, maybeInlineDefns, types) =>
@@ -126,7 +129,7 @@ class EndpointGenerator {
           |$allEP
           |""".stripMargin
     }.toMap
-    EndpointDefs(endpointDecls, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam)
+    EndpointDefs(endpointDecls, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns)
   }
 
   private[codegen] def generatedEndpoints(
@@ -140,7 +143,7 @@ class EndpointGenerator {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
 
-    val (fileNamesAndParams, unflattenedParamRefs, definesParams) = p.methods
+    val (fileNamesAndParams, unflattenedParamRefs, inlineParamInfo) = p.methods
       .map(_.withResolvedParentParameters(parameters, p.parameters))
       .map { m =>
         implicit val location: Location = Location(p.url, m.methodType)
@@ -156,7 +159,7 @@ class EndpointGenerator {
             }
           }
 
-          val name = strippedToCamelCase(m.operationId.getOrElse(m.methodType + p.url.capitalize))
+          val name = m.name(p.url)
           val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
           val (securityDecl, securityTypes) = security(securitySchemes, m.security)
           val (inParams, maybeLocalEnums, inTypes, inlineInDefns) =
@@ -202,9 +205,9 @@ class EndpointGenerator {
             }
             .toSet
           (
-            (maybeTargetFileName, GeneratedEndpoint(name, definition, combine(maybeLocalEnums, inlineDefn), allTypes)),
+            (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums, allTypes)),
             (queryOrPathParamRefs, jsonParamRefs),
-            maybeLocalEnums.isDefined
+            (maybeLocalEnums.isDefined, inlineDefn)
           )
         } catch {
           case e: NotImplementedError => throw e
@@ -217,11 +220,13 @@ class EndpointGenerator {
       .groupBy(_._1)
       .toSeq
       .map { case (maybeTargetFileName, defns) => GeneratedEndpointsForFile(maybeTargetFileName, defns.map(_._2)) }
+    val (definesParams, inlineDefns) = inlineParamInfo.unzip
     GeneratedEndpoints(
       namesAndParamsByFile,
       unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _),
       unflattenedJsonParamRefs.foldLeft(Set.empty[String])(_ ++ _),
-      definesParams.contains(true)
+      definesParams.contains(true),
+      inlineDefns.flatten
     )
   }
 
@@ -569,20 +574,34 @@ class EndpointGenerator {
       case "text/html" =>
         MappedContentType("htmlBodyUtf8", "String")
       case "application/json" =>
-        val outT = schema match {
+        val (outT, maybeInline) = schema match {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            t
+            t -> None
           case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            s"List[$t]"
+            s"List[$t]" -> None
           case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            s"Map[String, $t]"
+            s"Map[String, $t]" -> None
+          case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]) =>
+            val inlineClassName = endpointName.capitalize + position
+            val properties = schemaRef.properties.map { case (k, v) =>
+              val (st, nb) = mapSchemaSimpleTypeToType(v.`type`.asInstanceOf[OpenapiSchemaSimpleType], multipartForm = true)
+              val default = v.default
+                .map(j => " = " + DefaultValueRenderer.render(Map.empty, v.`type`, schemaRef.required.contains(k) || nb, RenderConfig())(j))
+                .getOrElse("")
+              s"$k: $st$default"
+            }
+            val inlineClassDefn =
+              s"""case class $inlineClassName (
+                 |${indent(2)(properties.mkString(",\n"))}
+                 |)""".stripMargin
+            inlineClassName -> Some(inlineClassDefn)
           case x => bail(s"Can't create non-simple or array params as output (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
-        MappedContentType(s"jsonBody[$req]", req)
+        MappedContentType(s"jsonBody[$req]", req, maybeInline)
 
       case "multipart/form-data" =>
         schema match {
@@ -591,7 +610,6 @@ class EndpointGenerator {
           case schemaRef: OpenapiSchemaRef =>
             val (t, _) = mapSchemaSimpleTypeToType(schemaRef, multipartForm = true)
             MappedContentType(s"multipartBody[$t]", t)
-          // sack
           case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaStringType]) =>
             val inlineClassName = endpointName.capitalize + position
             val properties = schemaRef.properties.map { case (k, v) =>

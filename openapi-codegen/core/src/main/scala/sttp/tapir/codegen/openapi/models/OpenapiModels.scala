@@ -4,6 +4,7 @@ import cats.implicits.toTraverseOps
 import cats.syntax.either._
 import OpenapiSchemaType.OpenapiSchemaRef
 import io.circe.Json
+import sttp.tapir.codegen.BasicGenerator.strippedToCamelCase
 // https://swagger.io/specification/
 object OpenapiModels {
 
@@ -50,6 +51,7 @@ object OpenapiModels {
       operationId: Option[String] = None,
       specificationExtensions: Map[String, Json] = Map.empty
   ) {
+    def name(url: String) = strippedToCamelCase(operationId.getOrElse(methodType + url.capitalize))
     def resolvedParameters: Seq[OpenapiParameter] = parameters.collect { case Resolved(t) => t }
     def withResolvedParentParameters(
         pMap: Map[String, OpenapiParameter],
