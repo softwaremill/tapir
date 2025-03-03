@@ -441,10 +441,14 @@ class EndpointGenerator {
       case many =>
         if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
         val canBeEmptyResponse = many.exists(_.content.isEmpty)
+        val allAreEmptyResponses = many.forall(_.content.isEmpty)
         val (oneOfs, types) = many.map { m =>
           val (decl, tpe) = bodyFmt(m, optional = canBeEmptyResponse)
           val code = if (m.code == "default") "400" else m.code
-          if (decl == "")
+          if (decl == "" && allAreEmptyResponses)
+            s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+              s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(())""" -> tpe
+          else if (decl == "")
             s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
               s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""" -> tpe
           else if (canBeEmptyResponse) {
@@ -474,8 +478,9 @@ class EndpointGenerator {
             case x                          => bail(s"Unexpected oneOf elem type $x")
           }
           .distinct
-        val commmonType =
-          if (canBeEmptyResponse && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
+        val commmonType = {
+          if (allAreEmptyResponses) "Unit"
+          else if (canBeEmptyResponse && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
           else if (allElemTypes.size == 1) allElemTypes.head
           else {
             val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
@@ -486,6 +491,7 @@ class EndpointGenerator {
             }
             if (canBeEmptyResponse) s"Option[$baseType]" else baseType
           }
+        }
         Some(s"oneOf[$commmonType](${oneOfs.mkString("\n  ", ",\n  ", "")})") -> Some(commmonType)
     }
 
