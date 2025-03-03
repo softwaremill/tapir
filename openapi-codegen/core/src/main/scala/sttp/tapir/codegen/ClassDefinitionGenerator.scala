@@ -68,8 +68,9 @@ class ClassDefinitionGenerator {
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
         case (name, obj: OpenapiSchemaEnum) =>
           EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
-        case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema)
-        case (_, _: OpenapiSchemaOneOf)               => Nil
+        case (name, OpenapiSchemaMap(valueSchema, _))   => generateMap(name, valueSchema)
+        case (name, OpenapiSchemaArray(valueSchema, _)) => generateArray(name, valueSchema)
+        case (_, _: OpenapiSchemaOneOf)                 => Nil
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
@@ -205,6 +206,17 @@ class ClassDefinitionGenerator {
       case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named maps (found $otherType)")
     }
     Seq(s"""type $name = Map[String, $valueSchemaName]""")
+  }
+
+  private[codegen] def generateArray(
+      name: String,
+      valueSchema: OpenapiSchemaType
+  ): Seq[String] = {
+    val valueSchemaName = valueSchema match {
+      case simpleType: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(simpleType)._1
+      case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named maps (found $otherType)")
+    }
+    Seq(s"""type $name = List[$valueSchemaName]""")
   }
 
   private[codegen] def generateClass(
