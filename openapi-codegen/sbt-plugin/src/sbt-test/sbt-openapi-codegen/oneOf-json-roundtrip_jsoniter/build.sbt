@@ -3,7 +3,8 @@ lazy val root = (project in file("."))
   .settings(
     scalaVersion := "2.13.16",
     version := "0.1",
-    openapiJsonSerdeLib := "jsoniter"
+    openapiJsonSerdeLib := "jsoniter",
+    openapiGenerateEndpointTypes := true
   )
 
 libraryDependencies ++= Seq(

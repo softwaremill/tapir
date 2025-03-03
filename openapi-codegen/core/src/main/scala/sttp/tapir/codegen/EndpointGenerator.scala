@@ -162,7 +162,10 @@ class EndpointGenerator {
           val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
           val queryOrPathParamRefs = m.resolvedParameters
             .collect { case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" => queryParam.schema }
-            .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
+            .collect {
+              case ref: OpenapiSchemaRef if ref.isSchema                        => ref.stripped
+              case OpenapiSchemaArray(ref: OpenapiSchemaRef, _) if ref.isSchema => ref.stripped
+            }
             .toSet
           val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
@@ -264,6 +267,12 @@ class EndpointGenerator {
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument
   )(implicit location: Location): (String, Option[String], Seq[String]) = {
+    def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
+      case (true, true)   => s"List[$baseType]"
+      case (true, false)  => s"Option[List[$baseType]]"
+      case (false, true)  => baseType
+      case (false, false) => s"Option[$baseType]"
+    }
     def getEnumParamDefn(param: OpenapiParameter, e: OpenapiSchemaEnum, isArray: Boolean) = {
       val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
       val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
@@ -283,12 +292,7 @@ class EndpointGenerator {
       // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
       val noOptionWrapper = required || (isArray && param.isExploded)
       val req = if (noOptionWrapper) tpe else s"Option[$tpe]"
-      val outType = (isArray, noOptionWrapper) match {
-        case (true, true)   => s"List[$enumName]"
-        case (true, false)  => s"Option[List[$enumName]]"
-        case (false, true)  => enumName
-        case (false, false) => s"Option[$enumName]"
-      }
+      val outType = toOutType(enumName, isArray, noOptionWrapper)
 
       def mapToList =
         if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
@@ -320,7 +324,8 @@ class EndpointGenerator {
             def mapToList = if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
 
             val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-            (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", None, req)
+            val outType = toOutType(t, true, noOptionWrapper)
+            (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", None, outType)
           case e @ OpenapiSchemaEnum(_, _, _)              => getEnumParamDefn(param, e, isArray = false)
           case OpenapiSchemaArray(e: OpenapiSchemaEnum, _) => getEnumParamDefn(param, e, isArray = true)
           case x                                           => bail(s"Can't create non-simple params to input - found $x")
