@@ -214,7 +214,7 @@ class ClassDefinitionGenerator {
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
       case simpleType: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(simpleType)._1
-      case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named maps (found $otherType)")
+      case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named arrays (found $otherType)")
     }
     Seq(s"""type $name = List[$valueSchemaName]""")
   }
