@@ -6,7 +6,7 @@ import sttp.tapir.client.sttp4.{SttpClientInterpreter, SttpClientOptions, WebSoc
 import sttp.tapir.{DecodeResult, Endpoint, PublicEndpoint}
 import sttp.capabilities.{Streams, WebSockets}
 
-trait WebSocketSttpClientInterpreter extends SttpClientInterpreter with WebSocketSttpClientInterpreterExtensions { // extends Extensions???
+trait WebSocketSttpClientInterpreter extends SttpClientInterpreter {
 
   def sttpClientOptions: SttpClientOptions = SttpClientOptions.default
 

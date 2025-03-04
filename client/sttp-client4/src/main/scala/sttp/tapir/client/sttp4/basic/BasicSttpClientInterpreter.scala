@@ -5,7 +5,7 @@ import sttp.model.Uri
 import sttp.tapir.client.sttp4.{SttpClientInterpreter, SttpClientOptions}
 import sttp.tapir.{DecodeResult, Endpoint, PublicEndpoint}
 
-trait BasicSttpClientInterpreter extends SttpClientInterpreter with BasicSttpClientInterpreterExtensions { // extends Extensions???
+trait BasicSttpClientInterpreter extends SttpClientInterpreter { // extends Extensions???
   def sttpClientOptions: SttpClientOptions = SttpClientOptions.default
 
   // public
