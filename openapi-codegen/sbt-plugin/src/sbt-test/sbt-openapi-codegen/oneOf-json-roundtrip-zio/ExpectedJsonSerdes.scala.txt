@@ -64,4 +64,6 @@ object TapirGeneratedEndpointsJsonSerdes {
       zio.json.JsonDecoder[SubtypeWithoutD2].asInstanceOf[zio.json.JsonDecoder[ADTWithoutDiscriminator]],
       zio.json.JsonDecoder[SubtypeWithoutD3].asInstanceOf[zio.json.JsonDecoder[ADTWithoutDiscriminator]]
     ).reduceLeft(_ orElse _)
+  implicit lazy val postInlineSimpleObjectRequestJsonDecoder: zio.json.JsonDecoder[PostInlineSimpleObjectRequest] = zio.json.DeriveJsonDecoder.gen[PostInlineSimpleObjectRequest]
+  implicit lazy val postInlineSimpleObjectRequestJsonEncoder: zio.json.JsonEncoder[PostInlineSimpleObjectRequest] = zio.json.DeriveJsonEncoder.gen[PostInlineSimpleObjectRequest]
 }

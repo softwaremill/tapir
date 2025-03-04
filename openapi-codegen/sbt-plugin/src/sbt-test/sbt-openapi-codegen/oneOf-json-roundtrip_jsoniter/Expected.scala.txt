@@ -66,6 +66,9 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
+  case class NotNullableThingy (
+    uuid: java.util.UUID
+  )
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
@@ -101,6 +104,20 @@ object TapirGeneratedEndpoints {
     implicit val enumCodecSupportAnEnum: ExtraParamSupport[AnEnum] =
       extraCodecSupport[AnEnum]("AnEnum", AnEnum)
   }
+  type ListType = List[String]
+  case class PutInlineSimpleObjectRequest (
+    foo: String,
+    bar: java.util.UUID
+  )
+  case class PutInlineSimpleObjectResponse (
+    foo: String,
+    bar: java.util.UUID
+  )
+  case class PostInlineSimpleObjectRequest (
+    foo: String,
+    bar: java.util.UUID
+  )
+
 
 
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
@@ -137,6 +154,45 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[io.circe.Json]])
       .out(jsonBody[io.circe.Json].description("anything back"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest, postGenericJson)
+  type PutInlineSimpleObjectEndpoint = Endpoint[Unit, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
+  lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
+    endpoint
+      .put
+      .in(("inline" / "simple" / "object"))
+      .in(multipartBody[PutInlineSimpleObjectRequest])
+      .errorOut(oneOf[Array[Byte]](
+        oneOfVariant[Array[Byte]](sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position")),
+        oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2"))))
+      .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
+
+  type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, Unit, Any]
+  lazy val postInlineSimpleObject: PostInlineSimpleObjectEndpoint =
+    endpoint
+      .post
+      .in(("inline" / "simple" / "object"))
+      .in(jsonBody[Option[PostInlineSimpleObjectRequest]])
+
+  type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
+  lazy val deleteInlineSimpleObject: DeleteInlineSimpleObjectEndpoint =
+    endpoint
+      .delete
+      .in(("inline" / "simple" / "object"))
+      .errorOut(oneOf[Unit](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("empty response 3"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(402), emptyOutput.description("empty response 4"))(())))
+      .out(oneOf[Unit](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2"))(())))
+
+  type PatchInlineSimpleObjectEndpoint = Endpoint[Unit, Option[ListType], ListType, ListType, Any]
+  lazy val patchInlineSimpleObject: PatchInlineSimpleObjectEndpoint =
+    endpoint
+      .patch
+      .in(("inline" / "simple" / "object"))
+      .in(jsonBody[Option[ListType]])
+      .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
+      .out(jsonBody[ListType].description("list type out"))
+  
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest, postGenericJson, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 }
