@@ -129,7 +129,7 @@ jobs:
       github.event.pull_request.user.login == 'softwaremill-ci'
     with:
       java-version: '21'
-      java-opts: '-Xms4g -Xmx4g'
+      java-opts: '-Xms4g -Xmx4g' # SBT_JAVA_OPTS env parameter adapted for JVM
 
   publish:
     name: Publish release
