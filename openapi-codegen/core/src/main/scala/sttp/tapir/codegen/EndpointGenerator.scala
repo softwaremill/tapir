@@ -92,6 +92,10 @@ class EndpointGenerator {
     case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
     case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
   }
+  private def capabilityType(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
+    case StreamingImplementation.FS2 => "fs2.Stream[cats.effect.IO, Byte]"
+    case x                           => s"${capabilityImpl(x)}.BinaryStream"
+  }
 
   def endpointDefs(
       doc: OpenapiDocument,
@@ -370,7 +374,8 @@ class EndpointGenerator {
             streamingImplementation,
             b.required && !schemaIsNullable,
             endpointName,
-            "Request"
+            "Request",
+            false
           )
         Some((s".in($decl)", tpe, maybeInlineDefn))
       }
@@ -432,7 +437,7 @@ class EndpointGenerator {
         case _ => bail("We can handle only one return content!")
       }
     }
-    def bodyFmt(resp: OpenapiResponse, optional: Boolean = false): (String, Option[String], Option[String]) = {
+    def bodyFmt(resp: OpenapiResponse, isErrorPosition: Boolean, optional: Boolean = false): (String, Option[String], Option[String]) = {
       val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
       resp.content match {
         case Nil => ("", None, None)
@@ -449,12 +454,13 @@ class EndpointGenerator {
               streamingImplementation,
               !(optional || schemaIsNullable),
               endpointName,
-              "Response"
+              "Response",
+              isErrorPosition
             )
           (s"$decl$d", Some(tpe), maybeInlineDefn)
       }
     }
-    def mappedGroup(group: Seq[OpenapiResponse]): (Option[String], Option[String], Option[String]) = group match {
+    def mappedGroup(group: Seq[OpenapiResponse], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) = group match {
       case Nil => (None, None, None)
       case resp +: Nil =>
         resp.content match {
@@ -470,7 +476,7 @@ class EndpointGenerator {
               None
             )
           case _ =>
-            val (decl, tpe, inlineDefn) = bodyFmt(resp)
+            val (decl, tpe, inlineDefn) = bodyFmt(resp, isErrorPosition)
             (
               Some(resp.code match {
                 case "200" | "default" => decl
@@ -486,7 +492,7 @@ class EndpointGenerator {
         val canBeEmptyResponse = many.exists(_.content.isEmpty)
         val allAreEmptyResponses = many.forall(_.content.isEmpty)
         val (oneOfs, types, inlineDefns) = many.map { m =>
-          val (decl, tpe, inlineDefn1) = bodyFmt(m, optional = canBeEmptyResponse)
+          val (decl, tpe, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = canBeEmptyResponse)
           val code = if (m.code == "default") "400" else m.code
           // Might be nice to have some signal values for the interpreter, but not doing that for now.
           if (decl == "" && allAreEmptyResponses)
@@ -504,11 +510,11 @@ class EndpointGenerator {
               inlineDefn1
             )
           else if (canBeEmptyResponse) {
-            val (_, nonOptionalType, inlineDefn2) = bodyFmt(m)
+            val (_, nonOptionalType, inlineDefn2) = bodyFmt(m, isErrorPosition)
             val inlineDefns = combine(inlineDefn1, inlineDefn2)
             val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
             (s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_$someType) => true }", tpe, inlineDefns)
-          } else (s"oneOfVariant(sttp.model.StatusCode(${code}), $decl)", tpe, inlineDefn1)
+          } else (s"oneOfVariant${tpe.map(s => s"[$s]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl)", tpe, inlineDefn1)
         }.unzip3
         val parentMap = doc.components.toSeq
           .flatMap(_.schemas)
@@ -524,11 +530,14 @@ class EndpointGenerator {
           .map { case (k, vs) => k -> vs.map(_._2) }
           .toMap
         val allElemTypes = many
-          .flatMap(_.content.map(_.schema))
+          .flatMap(_.content.map(x => x.contentType -> x.schema))
           .map {
-            case r: OpenapiSchemaRef        => r.stripped
-            case x: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(x)._1
-            case x                          => bail(s"Unexpected oneOf elem type $x")
+            case (ct, _) if ct.startsWith("text/")                  => "String"
+            case ("application/octet-stream", _) if isErrorPosition => "Array[Byte]"
+            case ("application/octet-stream", _)                    => capabilityType(streamingImplementation)
+            case (_, r: OpenapiSchemaRef)                           => r.stripped
+            case (_, x: OpenapiSchemaSimpleType)                    => mapSchemaSimpleTypeToType(x)._1
+            case (ct, x)                                            => bail(s"Unexpected oneOf elem type $x with content type $ct")
           }
           .distinct
         val commmonType = {
@@ -552,9 +561,9 @@ class EndpointGenerator {
         )
     }
 
-    val (outDecls, outTypes, inlineOutDefns) = mappedGroup(outs)
+    val (outDecls, outTypes, inlineOutDefns) = mappedGroup(outs, false)
     val mappedOuts = outDecls.map(s => s".out($s)")
-    val (errDecls, errTypes, inlineErrDefns) = mappedGroup(errorOuts)
+    val (errDecls, errTypes, inlineErrDefns) = mappedGroup(errorOuts, true)
     val mappedErrorOuts = errDecls.map(s => s".errorOut($s)")
 
     (Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n"), outTypes, errTypes, combine(inlineOutDefns, inlineErrDefns))
@@ -566,7 +575,8 @@ class EndpointGenerator {
       streamingImplementation: StreamingImplementation,
       required: Boolean,
       endpointName: String,
-      position: String
+      position: String,
+      isErrorPosition: Boolean // no streaming support for errorOut
   )(implicit location: Location): MappedContentType = {
     contentType match {
       case "text/plain" =>
@@ -626,11 +636,14 @@ class EndpointGenerator {
             MappedContentType(s"multipartBody[$inlineClassName]", inlineClassName, Some(inlineClassDefn))
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
+      case "application/octet-stream" if isErrorPosition =>
+        MappedContentType("rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody)", "Array[Byte]")
       case "application/octet-stream" =>
         val capability = capabilityImpl(streamingImplementation)
+        val tpe = capabilityType(streamingImplementation)
         schema match {
           case _: OpenapiSchemaString =>
-            MappedContentType(s"streamTextBody($capability)(CodecFormat.OctetStream())", s"$capability.BinaryStream")
+            MappedContentType(s"streamTextBody($capability)(CodecFormat.OctetStream())", tpe)
           case schema =>
             val outT = schema match {
               case st: OpenapiSchemaSimpleType =>
@@ -644,7 +657,7 @@ class EndpointGenerator {
                 s"Map[String, $t]"
               case x => bail(s"Can't create this param as output (found $x)")
             }
-            MappedContentType(s"streamBody($capability)(Schema.binary[$outT], CodecFormat.OctetStream())", s"$capability.BinaryStream")
+            MappedContentType(s"streamBody($capability)(Schema.binary[$outT], CodecFormat.OctetStream())", tpe)
         }
 
       case x => bail(s"Not all content types supported! Found $x")
