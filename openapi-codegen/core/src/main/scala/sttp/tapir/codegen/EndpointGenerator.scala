@@ -569,6 +569,22 @@ class EndpointGenerator {
     (Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n"), outTypes, errTypes, combine(inlineOutDefns, inlineErrDefns))
   }
 
+  private def inlineDefn(endpointName: String, position: String, schemaRef: OpenapiSchemaObject) = {
+    require(schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]))
+    val inlineClassName = endpointName.capitalize + position
+    val properties = schemaRef.properties.map { case (k, v) =>
+      val (st, nb) = mapSchemaSimpleTypeToType(v.`type`.asInstanceOf[OpenapiSchemaSimpleType], multipartForm = true)
+      val default = v.default
+        .map(j => " = " + DefaultValueRenderer.render(Map.empty, v.`type`, schemaRef.required.contains(k) || nb, RenderConfig())(j))
+        .getOrElse("")
+      s"$k: $st$default"
+    }
+    val inlineClassDefn =
+      s"""case class $inlineClassName (
+         |${indent(2)(properties.mkString(",\n"))}
+         |)""".stripMargin
+    inlineClassName -> Some(inlineClassDefn)
+  }
   private def contentTypeMapper(
       contentType: String,
       schema: OpenapiSchemaType,
@@ -595,19 +611,7 @@ class EndpointGenerator {
             val (t, _) = mapSchemaSimpleTypeToType(st)
             s"Map[String, $t]" -> None
           case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]) =>
-            val inlineClassName = endpointName.capitalize + position
-            val properties = schemaRef.properties.map { case (k, v) =>
-              val (st, nb) = mapSchemaSimpleTypeToType(v.`type`.asInstanceOf[OpenapiSchemaSimpleType], multipartForm = true)
-              val default = v.default
-                .map(j => " = " + DefaultValueRenderer.render(Map.empty, v.`type`, schemaRef.required.contains(k) || nb, RenderConfig())(j))
-                .getOrElse("")
-              s"$k: $st$default"
-            }
-            val inlineClassDefn =
-              s"""case class $inlineClassName (
-                 |${indent(2)(properties.mkString(",\n"))}
-                 |)""".stripMargin
-            inlineClassName -> Some(inlineClassDefn)
+            inlineDefn(endpointName, position, schemaRef)
           case x => bail(s"Can't create non-simple or array params as output (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
@@ -620,20 +624,9 @@ class EndpointGenerator {
           case schemaRef: OpenapiSchemaRef =>
             val (t, _) = mapSchemaSimpleTypeToType(schemaRef, multipartForm = true)
             MappedContentType(s"multipartBody[$t]", t)
-          case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaStringType]) =>
-            val inlineClassName = endpointName.capitalize + position
-            val properties = schemaRef.properties.map { case (k, v) =>
-              val (st, nb) = mapSchemaSimpleTypeToType(v.`type`.asInstanceOf[OpenapiSchemaStringType], multipartForm = true)
-              val default = v.default
-                .map(j => " = " + DefaultValueRenderer.render(Map.empty, v.`type`, schemaRef.required.contains(k) || nb, RenderConfig())(j))
-                .getOrElse("")
-              s"$k: $st$default"
-            }
-            val inlineClassDefn =
-              s"""case class $inlineClassName (
-                 |${indent(2)(properties.mkString(",\n"))}
-                 |)""".stripMargin
-            MappedContentType(s"multipartBody[$inlineClassName]", inlineClassName, Some(inlineClassDefn))
+          case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]) =>
+            val (inlineClassName, inlineClassDefn) = inlineDefn(endpointName, position, schemaRef)
+            MappedContentType(s"multipartBody[$inlineClassName]", inlineClassName, inlineClassDefn)
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
       case "application/octet-stream" if isErrorPosition =>
