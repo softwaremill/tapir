@@ -47,12 +47,13 @@ object SchemaGenerator {
           Some(
             name -> s"implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
           )
-        case (name, obj: OpenapiSchemaObject) => Some(name -> schemaForObject(name, obj))
-        case (name, schema: OpenapiSchemaMap) => Some(name -> schemaForMap(name, schema))
-        case (_, _: OpenapiSchemaAny)         => None
+        case (name, obj: OpenapiSchemaObject)   => Some(name -> schemaForObject(name, obj))
+        case (name, schema: OpenapiSchemaMap)   => Some(name -> schemaForMapOrArray(name, schema.items))
+        case (name, schema: OpenapiSchemaArray) => Some(name -> schemaForMapOrArray(name, schema.items))
+        case (_, _: OpenapiSchemaAny)           => None
         case (name, schema: OpenapiSchemaOneOf) =>
           Some(name -> genADTSchema(name, schema, if (fullModelPath.isEmpty) None else Some(fullModelPath)))
-        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
+        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       })
       .toSeq
       .flatMap(maybeAnySchema.toSeq ++ _)
@@ -197,8 +198,8 @@ object SchemaGenerator {
     }
     s"${subs}implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
   }
-  private def schemaForMap(name: String, schema: OpenapiSchemaMap): String = {
-    val subs = schema.items match {
+  private def schemaForMapOrArray(name: String, schema: OpenapiSchemaType): String = {
+    val subs = schema match {
       case `type`: OpenapiSchemaObject => Some(schemaForObject(s"${name}ObjectsItem", `type`))
       case _                           => None
     }

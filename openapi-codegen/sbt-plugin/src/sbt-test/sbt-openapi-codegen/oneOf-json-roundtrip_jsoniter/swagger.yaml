@@ -73,6 +73,107 @@ paths:
           content:
             application/json:
               schema: { }
+  '/inline/simple/object':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+    put:
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+        "400":
+          description: application/octet-stream in error position
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+        "401":
+          description: application/octet-stream in error position 2
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+    delete:
+      responses:
+        "200":
+          description: empty response 1
+        "201":
+          description: empty response 2
+        "401":
+          description: empty response 3
+        "402":
+          description: empty response 4
+    patch:
+      requestBody:
+        description: list type in
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListType'
+      responses:
+        "200":
+          description: list type out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListType'
+        "400":
+          description: list type error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListType'
 
 components:
   schemas:
@@ -172,3 +273,17 @@ components:
         - Foo
         - Bar
         - Baz
+    NotNullableThingy:
+      title: NotNullableThingy
+      type: object
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
+    ListType:
+      title: ListType
+      type: array
+      items:
+        type: string
