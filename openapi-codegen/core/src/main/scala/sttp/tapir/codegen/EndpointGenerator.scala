@@ -574,10 +574,12 @@ class EndpointGenerator {
     val inlineClassName = endpointName.capitalize + position
     val properties = schemaRef.properties.map { case (k, v) =>
       val (st, nb) = mapSchemaSimpleTypeToType(v.`type`.asInstanceOf[OpenapiSchemaSimpleType], multipartForm = true)
+      val optional = !schemaRef.required.contains(k) || nb
+      val t = if (optional) s"Option[$st]" else st
       val default = v.default
-        .map(j => " = " + DefaultValueRenderer.render(Map.empty, v.`type`, schemaRef.required.contains(k) || nb, RenderConfig())(j))
-        .getOrElse("")
-      s"$k: $st$default"
+        .map(j => " = " + DefaultValueRenderer.render(Map.empty, v.`type`, optional, RenderConfig())(j))
+        .getOrElse(if (optional) " = None" else "")
+      s"$k: $t$default"
     }
     val inlineClassDefn =
       s"""case class $inlineClassName (

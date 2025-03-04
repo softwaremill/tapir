@@ -107,15 +107,15 @@ object TapirGeneratedEndpoints {
   type ListType = List[String]
   case class PutInlineSimpleObjectRequest (
     foo: String,
-    bar: java.util.UUID
+    bar: Option[java.util.UUID] = None
   )
   case class PutInlineSimpleObjectResponse (
     foo: String,
-    bar: java.util.UUID
+    bar: Option[java.util.UUID] = None
   )
   case class PostInlineSimpleObjectRequest (
     foo: String,
-    bar: java.util.UUID
+    bar: Option[java.util.UUID] = None
   )
 
 
