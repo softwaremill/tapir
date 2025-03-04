@@ -129,7 +129,7 @@ jobs:
       github.event.pull_request.user.login == 'softwaremill-ci'
     with:
       java-version: '21'
-      java-opts: '-J-Xms4g -J-Xmx4g'
+      java-opts: '-Xms4g -Xmx4g'
 
   publish:
     name: Publish release
