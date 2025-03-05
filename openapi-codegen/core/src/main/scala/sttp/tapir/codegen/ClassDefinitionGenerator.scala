@@ -28,7 +28,8 @@ class ClassDefinitionGenerator {
       fullModelPath: String = "",
       validateNonDiscriminatedOneOfs: Boolean = true,
       maxSchemasPerFile: Int = 400,
-      enumsDefinedOnEndpointParams: Boolean = false
+      enumsDefinedOnEndpointParams: Boolean = false,
+      xmlParamRefs: Set[String] = Set.empty
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -67,7 +68,7 @@ class ClassDefinitionGenerator {
       targetScala3,
       schemasContainAny
     )
-    val xmlSerdes = XmlSerdeGenerator.generateSerdes()
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes(doc, xmlParamRefs)
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
