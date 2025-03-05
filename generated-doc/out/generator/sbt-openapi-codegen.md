@@ -9,7 +9,7 @@ This is a really early alpha implementation.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.15")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.17")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -44,6 +44,8 @@ openapiJsonSerdeLib                   circe                                The j
 openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
 openapiMaxSchemasPerFile              400                                  Maximum number of schemas to generate in a single file (tweak if hitting javac class size limits).
 openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
+openapiStreamingImplementation        fs2                                  Implementation for streamTextBody. Supports: akka, fs2, pekko, zio
+openapiGenerateEndpointTypes          false                                Whether to emit explicit types for endpoint defns
 ===================================== ==================================== ==================================================================================================
 ```
 
@@ -108,7 +110,7 @@ location. This would be in addition to files generated in `openapiPackage` from 
 ===================== ================================================================== ===================================================================
 circe                 "io.circe" %% "circe-core"                                         "com.beachape" %% "enumeratum-circe" (scala 2 enum support).
                       "io.circe" %% "circe-generic"                                      "org.latestbit" %% "circe-tagged-adt-codec" (scala 3 enum support).
-jsoniter              "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"
+jsoniter              "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-circe" (free-form json support)
                       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros"
 ===================== ================================================================== ===================================================================
 ```

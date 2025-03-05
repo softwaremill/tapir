@@ -69,7 +69,7 @@ object BasicGenerator {
         StreamingImplementation.FS2
     }
 
-    val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams) =
+    val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams, inlineDefns) =
       endpointGenerator.endpointDefs(
         doc,
         useHeadTagForObjectNames,
@@ -214,6 +214,7 @@ object BasicGenerator {
         |${indent(2)(queryParamSupport)}
         |
         |${indent(2)(classDefns)}
+        |${indent(2)(inlineDefns.mkString("\n"))}
         |
         |${indent(2)(maybeSpecificationExtensionKeys)}
         |

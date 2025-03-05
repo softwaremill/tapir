@@ -425,7 +425,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.14")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.16")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.10",
@@ -528,7 +528,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.18.2",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.18.3",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.179",

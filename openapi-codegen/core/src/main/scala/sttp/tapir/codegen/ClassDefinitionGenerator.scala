@@ -1,13 +1,16 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
+import sttp.tapir.codegen.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.{OpenapiSchemaType, DefaultValueRenderer}
+import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
 
 case class GeneratedClassDefinitions(classRepr: String, serdeRepr: Option[String], schemaRepr: Seq[String])
+
+case class InlineEnumDefn(enumName: String, impl: String)
 
 class ClassDefinitionGenerator {
 
@@ -15,7 +18,7 @@ class ClassDefinitionGenerator {
       doc: OpenapiDocument,
       targetScala3: Boolean = false,
       queryOrPathParamRefs: Set[String] = Set.empty,
-      jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = JsonSerdeLib.Circe,
+      jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = Circe,
       jsonParamRefs: Set[String] = Set.empty,
       fullModelPath: String = "",
       validateNonDiscriminatedOneOfs: Boolean = true,
@@ -42,7 +45,13 @@ class ClassDefinitionGenerator {
 
     val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
-    val schemas = SchemaGenerator.generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile)
+    val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
+    val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
+    if (schemasContainAny && !Set(Circe, Jsoniter).contains(jsonSerdeLib))
+      throw new NotImplementedError(
+        s"any not implemented for json libs other than circe and jsoniter (problematic models: ${schemasWithAny.keys})"
+      )
+    val schemas = SchemaGenerator.generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile, schemasContainAny)
     val jsonSerdes = JsonSerdeGenerator.serdeDefs(
       doc,
       jsonSerdeLib,
@@ -50,7 +59,8 @@ class ClassDefinitionGenerator {
       allTransitiveJsonParamRefs,
       validateNonDiscriminatedOneOfs,
       adtInheritanceMap.mapValues(_.map(_._1)),
-      targetScala3
+      targetScala3,
+      schemasContainAny
     )
     val defns = doc.components
       .map(_.schemas.flatMap {
@@ -58,8 +68,9 @@ class ClassDefinitionGenerator {
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
         case (name, obj: OpenapiSchemaEnum) =>
           EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
-        case (name, OpenapiSchemaMap(valueSchema, _)) => generateMap(name, valueSchema)
-        case (_, _: OpenapiSchemaOneOf)               => Nil
+        case (name, OpenapiSchemaMap(valueSchema, _))   => generateMap(name, valueSchema)
+        case (name, OpenapiSchemaArray(valueSchema, _)) => generateArray(name, valueSchema)
+        case (_, _: OpenapiSchemaOneOf)                 => Nil
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
@@ -197,6 +208,17 @@ class ClassDefinitionGenerator {
     Seq(s"""type $name = Map[String, $valueSchemaName]""")
   }
 
+  private[codegen] def generateArray(
+      name: String,
+      valueSchema: OpenapiSchemaType
+  ): Seq[String] = {
+    val valueSchemaName = valueSchema match {
+      case simpleType: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(simpleType)._1
+      case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named arrays (found $otherType)")
+    }
+    Seq(s"""type $name = List[$valueSchemaName]""")
+  }
+
   private[codegen] def generateClass(
       allSchemas: Map[String, OpenapiSchemaType],
       name: String,
@@ -205,7 +227,7 @@ class ClassDefinitionGenerator {
       adtInheritanceMap: Map[String, Seq[(String, OpenapiSchemaOneOf)]],
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
       targetScala3: Boolean
-  ): Seq[String] = {
+  ): Seq[String] = try {
     val isJson = jsonParamRefs contains name
     def rec(name: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
       val innerClasses = obj.properties
@@ -253,9 +275,13 @@ class ClassDefinitionGenerator {
           val fixedKey = fixKey(key)
           val optional = schemaType.nullable || !obj.required.contains(key)
           val maybeExplicitDefault =
-            maybeDefault.map(" = " + DefaultValueRenderer.render(allModels = allSchemas, thisType = schemaType, optional)(_))
+            maybeDefault.map(
+              " = " +
+                DefaultValueRenderer
+                  .render(allModels = allSchemas, thisType = schemaType, optional, RenderConfig(maybeEnum.map(_.enumName)))(_)
+            )
           val default = maybeExplicitDefault getOrElse (if (optional) " = None" else "")
-          s"$fixedKey: $tpe$default" -> maybeEnum
+          s"$fixedKey: $tpe$default" -> maybeEnum.map(_.impl)
         }
         .unzip
 
@@ -266,6 +292,8 @@ class ClassDefinitionGenerator {
     }
 
     rec(addName("", name), obj, Nil)
+  } catch {
+    case t: Throwable => throw new NotImplementedError(s"Generating class for $name: ${t.getMessage}")
   }
 
   private def mapSchemaTypeToType(
@@ -276,7 +304,7 @@ class ClassDefinitionGenerator {
       isJson: Boolean,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
       targetScala3: Boolean
-  ): (String, Option[String]) = {
+  ): (String, Option[InlineEnumDefn]) = {
     val ((tpe, optional), maybeEnum) = schemaType match {
       case simpleType: OpenapiSchemaSimpleType =>
         mapSchemaSimpleTypeToType(simpleType, multipartForm = !isJson) -> None
@@ -312,7 +340,7 @@ class ClassDefinitionGenerator {
           jsonSerdeLib,
           if (isJson) Set(enumName) else Set.empty
         )
-        (enumName -> e.nullable, Some(enumDefn.mkString("\n")))
+        (enumName -> e.nullable, Some(InlineEnumDefn(enumName, enumDefn.mkString("\n"))))
 
       case _ =>
         throw new NotImplementedError(s"We can't serialize some of the properties yet! $parentName $key $schemaType")
@@ -330,5 +358,17 @@ class ClassDefinitionGenerator {
       s"`$key`"
     else
       key
+  }
+
+  private def schemaContainsAny(schema: OpenapiSchemaType): Boolean = schema match {
+    case _: OpenapiSchemaAny           => true
+    case OpenapiSchemaArray(items, _)  => schemaContainsAny(items)
+    case OpenapiSchemaMap(items, _)    => schemaContainsAny(items)
+    case OpenapiSchemaObject(fs, _, _) => fs.values.map(_.`type`).exists(schemaContainsAny)
+    case OpenapiSchemaOneOf(types, _)  => types.exists(schemaContainsAny)
+    case OpenapiSchemaAllOf(types)     => types.exists(schemaContainsAny)
+    case OpenapiSchemaAnyOf(types)     => types.exists(schemaContainsAny)
+    case OpenapiSchemaNot(item)        => schemaContainsAny(item)
+    case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString | _: OpenapiSchemaRef => false
   }
 }
