@@ -8,7 +8,12 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
 
-case class GeneratedClassDefinitions(classRepr: String, serdeRepr: Option[String], schemaRepr: Seq[String])
+case class GeneratedClassDefinitions(
+    classRepr: String,
+    jsonSerdeRepr: Option[String],
+    schemaRepr: Seq[String],
+    xmlSerdeRepr: Option[String]
+)
 
 case class InlineEnumDefn(enumName: String, impl: String)
 
@@ -62,6 +67,7 @@ class ClassDefinitionGenerator {
       targetScala3,
       schemasContainAny
     )
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes()
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
@@ -78,7 +84,7 @@ class ClassDefinitionGenerator {
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
     // Json serdes & schemas live in separate files from the class defns
-    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas))
+    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas, xmlSerdes))
   }
 
   private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[(String, OpenapiSchemaOneOf)]] =
