@@ -69,7 +69,7 @@ object BasicGenerator {
         StreamingImplementation.FS2
     }
 
-    val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams, inlineDefns) =
+    val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams, inlineDefns, xmlParamRefs) =
       endpointGenerator.endpointDefs(
         doc,
         useHeadTagForObjectNames,
@@ -78,7 +78,7 @@ object BasicGenerator {
         normalisedStreamingImplementation,
         generateEndpointTypes
       )
-    val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas) =
+    val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas, xmlSerdes) =
       classGenerator
         .classDefs(
           doc = doc,
@@ -91,15 +91,17 @@ object BasicGenerator {
           maxSchemasPerFile = maxSchemasPerFile,
           enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams
         )
-        .getOrElse(GeneratedClassDefinitions("", None, Nil))
+        .getOrElse(GeneratedClassDefinitions("", None, Nil, None))
     val hasJsonSerdes = jsonSerdes.nonEmpty
+    val hasXmlSerdes = xmlSerdes.nonEmpty
 
     val maybeJsonImport = if (hasJsonSerdes) s"\nimport $packagePath.${objName}JsonSerdes._" else ""
+    val maybeXmlImport = if (hasXmlSerdes) s"\nimport $packagePath.${objName}XmlSerdes._" else ""
     val maybeSchemaImport =
       if (schemas.size > 1) (1 to schemas.size).map(i => s"import ${objName}Schemas$i._").mkString("\n", "\n", "")
       else if (schemas.size == 1) s"\nimport ${objName}Schemas._"
       else ""
-    val internalImports = s"import $packagePath.$objName._$maybeJsonImport$maybeSchemaImport"
+    val internalImports = s"import $packagePath.$objName._$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
 
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
@@ -122,6 +124,16 @@ object BasicGenerator {
       s"""package $packagePath
          |
          |object ${objName}JsonSerdes {
+         |  import $packagePath.$objName._
+         |  import sttp.tapir.generic.auto._
+         |${indent(2)(body)}
+         |}""".stripMargin
+    }
+
+    val xmlSerdeObj = xmlSerdes.map { body =>
+      s"""package $packagePath
+         |
+         |object ${objName}XmlSerdes {
          |  import $packagePath.$objName._
          |  import sttp.tapir.generic.auto._
          |${indent(2)(body)}
@@ -242,7 +254,8 @@ object BasicGenerator {
         |
         |}
         |""".stripMargin
-    taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ schemaObjs + (objName -> mainObj)
+    taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ xmlSerdeObj.map(s"${objName}XmlSerdes" -> _) ++
+      schemaObjs + (objName -> mainObj)
   }
 
   private[codegen] def imports(jsonSerdeLib: JsonSerdeLib.JsonSerdeLib): String = {

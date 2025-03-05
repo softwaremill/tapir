@@ -42,7 +42,8 @@ case class GeneratedEndpoints(
     queryParamRefs: Set[String],
     jsonParamRefs: Set[String],
     definesEnumQueryParam: Boolean,
-    inlineDefns: Seq[String]
+    inlineDefns: Seq[String],
+    xmlParamRefs: Set[String]
 ) {
   def merge(that: GeneratedEndpoints): GeneratedEndpoints =
     GeneratedEndpoints(
@@ -53,7 +54,8 @@ case class GeneratedEndpoints(
       queryParamRefs ++ that.queryParamRefs,
       jsonParamRefs ++ that.jsonParamRefs,
       definesEnumQueryParam || that.definesEnumQueryParam,
-      inlineDefns ++ that.inlineDefns
+      inlineDefns ++ that.inlineDefns,
+      xmlParamRefs ++ that.xmlParamRefs
     )
 }
 case class EndpointDefs(
@@ -61,7 +63,8 @@ case class EndpointDefs(
     queryOrPathParamRefs: Set[String],
     jsonParamRefs: Set[String],
     enumsDefinedOnEndpointParams: Boolean,
-    inlineDefns: Seq[String]
+    inlineDefns: Seq[String],
+    xmlParamRefs: Set[String]
 )
 
 class EndpointGenerator {
@@ -96,10 +99,10 @@ class EndpointGenerator {
   ): EndpointDefs = {
     val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
-    val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns) =
+    val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns, xmlParamRefs) =
       doc.paths
         .map(generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, streamingImplementation, doc))
-        .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false, Nil))(_ merge _)
+        .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false, Nil, Set.empty))(_ merge _)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
       val definitions = ge
         .map { case GeneratedEndpoint(name, definition, maybeInlineDefns, types) =>
@@ -122,7 +125,7 @@ class EndpointGenerator {
           |$allEP
           |""".stripMargin
     }.toMap
-    EndpointDefs(endpointDecls, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns)
+    EndpointDefs(endpointDecls, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns, xmlParamRefs)
   }
 
   private[codegen] def generatedEndpoints(
@@ -179,6 +182,13 @@ class EndpointGenerator {
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _) if ref.isSchema => ref.stripped
             }
             .toSet
+          val xmlParamRefs: Seq[String] = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
+            m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
+            .collect { case (contentType, schema) if contentType == "application/xml" => schema }
+            .collect {
+              case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
+              case other => bail(s"Can only generate xml schemas when req/resp body schema is a ref. Found $other")
+            }
           val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
             .collect { case (contentType, schema) if contentType == "application/json" => schema }
@@ -199,7 +209,7 @@ class EndpointGenerator {
             .toSet
           (
             (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums, allTypes)),
-            (queryOrPathParamRefs, jsonParamRefs),
+            (queryOrPathParamRefs, jsonParamRefs, xmlParamRefs),
             (maybeLocalEnums.isDefined, inlineDefn)
           )
         } catch {
@@ -208,7 +218,7 @@ class EndpointGenerator {
         }
       }
       .unzip3
-    val (unflattenedQueryParamRefs, unflattenedJsonParamRefs) = unflattenedParamRefs.unzip
+    val (unflattenedQueryParamRefs, unflattenedJsonParamRefs, xmlParamRefs) = unflattenedParamRefs.unzip3
     val namesAndParamsByFile = fileNamesAndParams
       .groupBy(_._1)
       .toSeq
@@ -219,7 +229,8 @@ class EndpointGenerator {
       unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _),
       unflattenedJsonParamRefs.foldLeft(Set.empty[String])(_ ++ _),
       definesParams.contains(true),
-      inlineDefns.flatten
+      inlineDefns.flatten,
+      xmlParamRefs.flatten.toSet
     )
   }
 
@@ -590,6 +601,15 @@ class EndpointGenerator {
         MappedContentType("stringBody", "String")
       case "text/html" =>
         MappedContentType("htmlBodyUtf8", "String")
+      case "application/xml" =>
+        val (outT, maybeInline) = schema match {
+          case st: OpenapiSchemaRef =>
+            val (t, _) = mapSchemaSimpleTypeToType(st)
+            t -> None
+          case x => bail(s"Only ref schemas supported for xml body (found $x)")
+        }
+        val req = if (required) outT else s"Option[$outT]"
+        MappedContentType(s"xmlBody[$req]", req, maybeInline)
       case "application/json" =>
         val (outT, maybeInline) = schema match {
           case st: OpenapiSchemaSimpleType =>
