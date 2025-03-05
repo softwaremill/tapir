@@ -39,12 +39,12 @@ class ClassDefinitionGenerator {
         .collect { case (name, _: OpenapiSchemaEnum) => name }
         .exists(queryOrPathParamRefs.contains)
 
-    def fetchJsonParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
+    def fetchTransitiveParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
       case head +: tail => recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
     }
 
-    val allTransitiveJsonParamRefs = fetchJsonParamRefs(
+    val allTransitiveJsonParamRefs = fetchTransitiveParamRefs(
       jsonParamRefs,
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
@@ -68,7 +68,11 @@ class ClassDefinitionGenerator {
       targetScala3,
       schemasContainAny
     )
-    val xmlSerdes = XmlSerdeGenerator.generateSerdes(doc, xmlParamRefs)
+    val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
+      xmlParamRefs,
+      xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
+    )
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes(doc, allTransitiveXmlParamRefs)
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
