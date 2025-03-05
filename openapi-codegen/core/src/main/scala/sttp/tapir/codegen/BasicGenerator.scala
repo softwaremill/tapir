@@ -89,7 +89,8 @@ object BasicGenerator {
           fullModelPath = s"$packagePath.$objName",
           validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs,
           maxSchemasPerFile = maxSchemasPerFile,
-          enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams
+          enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams,
+          xmlParamRefs = xmlParamRefs
         )
         .getOrElse(GeneratedClassDefinitions("", None, Nil, None))
     val hasJsonSerdes = jsonSerdes.nonEmpty
@@ -181,7 +182,8 @@ object BasicGenerator {
       }
       .mkString("\n")
 
-    val expectedTypes = Set("text/plain", "text/html", "application/json", "multipart/form-data", "application/octet-stream")
+    val expectedTypes =
+      Set("text/plain", "text/html", "application/json", "application/xml", "multipart/form-data", "application/octet-stream")
     val mediaType = "([^/]+)/(.+)".r
     val customTypes = doc.paths
       .flatMap(
@@ -200,7 +202,7 @@ object BasicGenerator {
         case ct => throw new NotImplementedError(s"Cannot handle content type '$ct'")
       }
       .mkString("\n")
-    val extraImports = if (endpointsInMain.nonEmpty) s"$maybeJsonImport$maybeSchemaImport" else ""
+    val extraImports = if (endpointsInMain.nonEmpty) s"$maybeJsonImport$maybeXmlImport$maybeSchemaImport" else ""
     val queryParamSupport =
       """
       |case class CommaSeparatedValues[T](values: List[T])
