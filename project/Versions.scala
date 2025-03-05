@@ -50,7 +50,7 @@ object Versions {
   val jsScalaJavaTime = "2.6.0"
   val nativeScalaJavaTime = "2.6.0"
   val jwtScala = "10.0.4"
-  val derevo = "0.13.0"
+  val derevo = "0.14.0"
   val newtype = "0.4.4"
   val monixNewtype = "0.3.0"
   val zioPrelude = "1.0.0-RC39"
