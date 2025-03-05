@@ -18,6 +18,8 @@ libraryDependencies ++= Seq(
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.33.2",
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.33.2" % "compile-internal",
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-circe" % "2.33.2",
+  "com.github.geirolz" %% "cats-xml" % "0.0.19+14-63a79e6e+20250305-1222-SNAPSHOT",
+  "com.github.geirolz" %% "cats-xml-generic" % "0.0.19+14-63a79e6e+20250305-1222-SNAPSHOT",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % tapirVersion % Test
 )
