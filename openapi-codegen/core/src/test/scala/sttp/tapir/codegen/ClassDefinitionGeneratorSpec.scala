@@ -18,7 +18,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -35,7 +35,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -56,7 +56,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -73,7 +73,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -94,7 +94,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -115,7 +115,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -132,7 +132,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -155,7 +155,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -184,7 +184,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -213,7 +213,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc1 = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -225,7 +225,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc2 = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -245,7 +245,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc1 = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -257,7 +257,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc2 = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -276,7 +276,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -336,7 +336,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "",
       null,
-      null,
+      Nil,
       Some(
         OpenapiComponent(
           Map(
@@ -489,9 +489,9 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       .toTry
       .get
     val gen = new ClassDefinitionGenerator()
-    val res1 = Try(gen.classDefs(OpenapiDocument("", null, null, Some(doc)))).toEither
+    val res1 = Try(gen.classDefs(OpenapiDocument("", null, Nil, Some(doc)))).toEither
 
-    res1.left.get.getMessage shouldEqual "Cannot render a number as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString."
+    res1.left.get.getMessage shouldEqual "Generating class for ReqWithDefaults: Cannot render a number as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString."
 
   }
 

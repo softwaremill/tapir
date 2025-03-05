@@ -1,6 +1,6 @@
 package sttp.tapir.docs.apispec.schema
 
-import sttp.tapir.Schema.Title
+import sttp.tapir.Schema.{EncodedDiscriminatorValue, Title}
 import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 
 private[docs] object ToKeyedSchemas {
@@ -53,6 +53,8 @@ private[docs] object ToKeyedSchemas {
     if (s1.deprecated != s2.deprecated) result = result.deprecated(false)
     if (s1.attributes.get(Title.Attribute) != s2.attributes.get(Title.Attribute))
       result = result.copy(attributes = result.attributes.remove(Title.Attribute))
+    if (s1.attributes.get(EncodedDiscriminatorValue.Attribute) != s2.attributes.get(EncodedDiscriminatorValue.Attribute))
+      result = result.copy(attributes = result.attributes.remove(EncodedDiscriminatorValue.Attribute))
     result
   }
 }

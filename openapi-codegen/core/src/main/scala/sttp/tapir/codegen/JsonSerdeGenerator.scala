@@ -4,6 +4,7 @@ import sttp.tapir.codegen.BasicGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaBoolean,
   OpenapiSchemaEnum,
@@ -27,7 +28,8 @@ object JsonSerdeGenerator {
       allTransitiveJsonParamRefs: Set[String],
       validateNonDiscriminatedOneOfs: Boolean,
       adtInheritanceMap: Map[String, Seq[String]],
-      targetScala3: Boolean
+      targetScala3: Boolean,
+      schemasContainAny: Boolean
   ): Option[String] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
 
@@ -40,7 +42,8 @@ object JsonSerdeGenerator {
           jsonParamRefs,
           allTransitiveJsonParamRefs,
           adtInheritanceMap,
-          validateNonDiscriminatedOneOfs
+          validateNonDiscriminatedOneOfs,
+          schemasContainAny
         )
       case JsonSerdeLib.Zio => genZioSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs, targetScala3)
     }
@@ -105,6 +108,20 @@ object JsonSerdeGenerator {
     if (problems.nonEmpty)
       throw new IllegalArgumentException(problems.mkString("Problems in non-discriminated oneOf declaration (", "; ", ")"))
   }
+
+  private def inlineEndpointSchemas(doc: OpenapiDocument): Seq[(String, OpenapiSchemaType, Boolean)] =
+    doc.paths.flatMap(p =>
+      p.methods.flatMap(m =>
+        m.responses
+          .flatMap(_.content)
+          .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
+          .map(c => (m.name(p.url).capitalize + "Response", c.schema, true)) ++
+          m.requestBody.toSeq
+            .flatMap(_.content)
+            .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
+            .map(c => (m.name(p.url).capitalize + "Request", c.schema, true))
+      )
+    )
   ///
   /// Circe
   ///
@@ -114,21 +131,29 @@ object JsonSerdeGenerator {
       allTransitiveJsonParamRefs: Set[String],
       validateNonDiscriminatedOneOfs: Boolean
   ): Option[String] = {
-    doc.components
-      .map(_.schemas.flatMap {
+    val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
+    val pathSchemas = inlineEndpointSchemas(doc)
+    (docSchemas ++ pathSchemas)
+      .flatMap {
         // Enum serdes are generated at the declaration site
-        case (_, _: OpenapiSchemaEnum) => None
+        case (_, _: OpenapiSchemaEnum, _) => None
         // We generate the serde if it's referenced in any json model
-        case (name, schema: OpenapiSchemaObject) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaObject, true) =>
           Some(genCirceObjectSerde(name, schema))
-        case (name, schema: OpenapiSchemaMap) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(genCirceMapSerde(name, schema))
-        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaMap, true) =>
+          Some(genCirceMapOrArraySerde(name, schema.items))
+        case (name, schema: OpenapiSchemaArray, true) =>
+          Some(genCirceMapOrArraySerde(name, schema.items))
+        case (name, schema: OpenapiSchemaOneOf, true) =>
           Some(genCirceAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
-        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
-        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
-      })
-      .map(_.mkString("\n"))
+        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf | _: OpenapiSchemaAny, _) =>
+          None
+        case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
+      }
+      .foldLeft(Option.empty[String]) {
+        case (Some(a), b) => Some(a + "\n" + b)
+        case (None, a)    => Some(a)
+      }
   }
 
   private def genCirceObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
@@ -146,8 +171,8 @@ object JsonSerdeGenerator {
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.generic.semiauto.deriveDecoder[$name]
        |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.generic.semiauto.deriveEncoder[$name]""".stripMargin
   }
-  private def genCirceMapSerde(name: String, schema: OpenapiSchemaMap): String = {
-    val subs = schema.items match {
+  private def genCirceMapOrArraySerde(name: String, schema: OpenapiSchemaType): String = {
+    val subs = schema match {
       case `type`: OpenapiSchemaObject => Some(genCirceObjectSerde(s"${name}ObjectsItem", `type`))
       case _                           => None
     }
@@ -231,17 +256,25 @@ object JsonSerdeGenerator {
       jsonParamRefs: Set[String],
       allTransitiveJsonParamRefs: Set[String],
       adtInheritanceMap: Map[String, Seq[String]],
-      validateNonDiscriminatedOneOfs: Boolean
+      validateNonDiscriminatedOneOfs: Boolean,
+      schemasContainAny: Boolean
   ): Option[String] = {
+    // if schemas contain an 'any' (i.e. any json), we assume jsoniter-scala-circe is a dependency
+    val maybeAnySerde =
+      if (schemasContainAny)
+        Some(
+          "implicit lazy val anyJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.Json] = com.github.plokhotnyuk.jsoniter_scala.circe.JsoniterScalaCodec.jsonCodec()"
+        )
+      else None
     // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
     // This should be the set of all json param refs not included in our schema definitions
-    val additionalExplicitSerdes = jsonParamRefs.toSeq
-      .filter(x => !allSchemas.contains(x))
+    val additionalExplicitSerdes = (jsonParamRefs.toSeq
+      .filter(x => !allSchemas.contains(x) && x != "io.circe.Json")
       .map { s =>
         val name = s.replace(" ", "").replace(",", "_").replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
         s"""implicit lazy val $name: $jsoniterPkgCore.JsonValueCodec[$s] =
            |  $jsoniterPkgMacros.JsonCodecMaker.make[$s]""".stripMargin
-      }
+      } ++ maybeAnySerde)
       .mkString("", "\n", "\n")
 
     // Permits usage of Option/Seq wrapped classes at top level without having to be explicit
@@ -252,27 +285,42 @@ object JsonSerdeGenerator {
            |implicit def optionCodec[T: $jsoniterPkgCore.JsonValueCodec]: $jsoniterPkgCore.JsonValueCodec[Option[T]] =
            |  $jsoniterPkgMacros.JsonCodecMaker.make[Option[T]]
            |""".stripMargin
-    doc.components
-      .map(_.schemas.flatMap {
+    val docSchemas = doc.components.toSeq.flatMap(_.schemas)
+    val pathSchemas = inlineEndpointSchemas(doc)
+    (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
+      .flatMap {
         // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
-        case (name, _: OpenapiSchemaObject) =>
+        case (name, _: OpenapiSchemaObject, isJson) =>
           val supertypes =
-            adtInheritanceMap.get(name).getOrElse(Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
-          if (jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty)) Some(genJsoniterClassSerde(supertypes)(name))
+            adtInheritanceMap.getOrElse(name, Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
+          if (isJson || jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty))
+            Some(genJsoniterClassSerde(supertypes)(name))
           else None
-        // For named maps, only generate the schema if it's a 'top level' json schema
-        case (name, _: OpenapiSchemaMap) if jsonParamRefs.contains(name) =>
+        // For named maps and arrays, only generate the schema if it's a 'top level' json schema
+        case (name, _: OpenapiSchemaMap, isJson) if jsonParamRefs.contains(name) || isJson =>
+          Some(genJsoniterNamedSerde(name))
+        case (name, _: OpenapiSchemaArray, isJson) if jsonParamRefs.contains(name) || isJson =>
           Some(genJsoniterNamedSerde(name))
         // For enums, generate the serde if it's referenced in any json model
-        case (name, _: OpenapiSchemaEnum) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, _: OpenapiSchemaEnum, _) if allTransitiveJsonParamRefs.contains(name) =>
           Some(genJsoniterEnumSerde(name))
         // For ADTs, generate the serde if it's referenced in any json model
-        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaOneOf, _) if allTransitiveJsonParamRefs.contains(name) =>
           Some(generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs))
-        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
-        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
-      })
-      .map(jsonSerdeHelpers + additionalExplicitSerdes + _.mkString("\n"))
+        case (
+              _,
+              _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf |
+              _: OpenapiSchemaAny,
+              _
+            ) =>
+          None
+        case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
+      }
+      .foldLeft(Option.empty[String]) {
+        case (Some(a), b) => Some(a + "\n" + b)
+        case (None, a)    => Some(a)
+      }
+      .map(jsonSerdeHelpers + additionalExplicitSerdes + _)
   }
 
   private def genJsoniterClassSerde(supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {
@@ -376,22 +424,30 @@ object JsonSerdeGenerator {
       validateNonDiscriminatedOneOfs: Boolean,
       targetScala3: Boolean
   ): Option[String] = {
-    doc.components
-      .map(_.schemas.flatMap {
+    val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
+    val pathSchemas = inlineEndpointSchemas(doc)
+    (docSchemas ++ pathSchemas)
+      .flatMap {
         // Only enumeratum (scala 2) enum types currently supported for zio-json
-        case (name, _: OpenapiSchemaEnum) if !targetScala3 && allTransitiveJsonParamRefs.contains(name) =>
+        case (name, _: OpenapiSchemaEnum, true) if !targetScala3 =>
           Some(genZioEnumSerde(name))
         // We generate the serde if it's referenced in any json model
-        case (name, schema: OpenapiSchemaObject) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaObject, true) =>
           Some(genZioObjectSerde(name, schema))
-        case (name, schema: OpenapiSchemaMap) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(genZioMapSerde(name, schema))
-        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaMap, true) =>
+          Some(genZioMapOrArraySerde(name, schema.items))
+        case (name, schema: OpenapiSchemaArray, true) =>
+          Some(genZioMapOrArraySerde(name, schema.items))
+        case (name, schema: OpenapiSchemaOneOf, true) =>
           Some(genZioAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
-        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
-        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
-      })
-      .map(_.mkString("\n"))
+        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf, _) =>
+          None
+        case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
+      }
+      .foldLeft(Option.empty[String]) {
+        case (Some(a), b) => Some(a + "\n" + b)
+        case (None, a)    => Some(a)
+      }
   }
 
   private def genZioObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
@@ -410,8 +466,8 @@ object JsonSerdeGenerator {
        |implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = zio.json.DeriveJsonEncoder.gen[$name]""".stripMargin
   }
 
-  private def genZioMapSerde(name: String, schema: OpenapiSchemaMap): String = {
-    val subs = schema.items match {
+  private def genZioMapOrArraySerde(name: String, schema: OpenapiSchemaType): String = {
+    val subs = schema match {
       case `type`: OpenapiSchemaObject => Some(genZioObjectSerde(s"${name}ObjectsItem", `type`))
       case _                           => None
     }
