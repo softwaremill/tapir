@@ -631,31 +631,47 @@ class EndpointGenerator {
             MappedContentType(s"multipartBody[$inlineClassName]", inlineClassName, inlineClassDefn)
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
-      case "application/octet-stream" if isErrorPosition =>
-        MappedContentType("rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody)", "Array[Byte]")
-      case "application/octet-stream" =>
-        val capability = capabilityImpl(streamingImplementation)
-        val tpe = capabilityType(streamingImplementation)
-        schema match {
-          case _: OpenapiSchemaString =>
-            MappedContentType(s"streamTextBody($capability)(CodecFormat.OctetStream())", tpe)
-          case schema =>
-            val outT = schema match {
-              case st: OpenapiSchemaSimpleType =>
-                val (t, _) = mapSchemaSimpleTypeToType(st)
-                t
-              case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _) =>
-                val (t, _) = mapSchemaSimpleTypeToType(st)
-                s"List[$t]"
-              case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _) =>
-                val (t, _) = mapSchemaSimpleTypeToType(st)
-                s"Map[String, $t]"
-              case x => bail(s"Can't create this param as output (found $x)")
-            }
-            MappedContentType(s"streamBody($capability)(Schema.binary[$outT], CodecFormat.OctetStream())", tpe)
-        }
-
-      case x => bail(s"Not all content types supported! Found $x")
+      case other => failoverBinaryCase(other, schema, isErrorPosition, streamingImplementation)
+      case x     => bail(s"Not all content types supported! Found $x")
+    }
+  }
+  private def failoverBinaryCase(
+      contentType: String,
+      schema: OpenapiSchemaType,
+      isErrorPosition: Boolean,
+      streamingImplementation: StreamingImplementation
+  )(implicit location: Location): MappedContentType = {
+    def eagerBody = contentType match {
+      case "application/octet-stream" => "rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody)"
+      case o if o.startsWith("text/") => s"stringBodyUtf8AnyFormat(`${o}CodecFormat`())"
+      case o                          => s"EndpointIO.Body(RawBodyType.ByteArrayBody, `${o}CodecFormat`(), EndpointIO.Info.empty)"
+    }
+    def streamingBody = contentType match {
+      case "application/octet-stream" => "CodecFormat.OctetStream()"
+      case o                          => s"`${o}CodecFormat`()"
+    }
+    if (isErrorPosition) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")
+    else {
+      val capability = capabilityImpl(streamingImplementation)
+      val tpe = capabilityType(streamingImplementation)
+      schema match {
+        case _: OpenapiSchemaString =>
+          MappedContentType(s"streamTextBody($capability)($streamingBody)", tpe)
+        case schema =>
+          val outT = schema match {
+            case st: OpenapiSchemaSimpleType =>
+              val (t, _) = mapSchemaSimpleTypeToType(st)
+              t
+            case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _) =>
+              val (t, _) = mapSchemaSimpleTypeToType(st)
+              s"List[$t]"
+            case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _) =>
+              val (t, _) = mapSchemaSimpleTypeToType(st)
+              s"Map[String, $t]"
+            case x => bail(s"Can't create this param as output (found $x)")
+          }
+          MappedContentType(s"streamBody($capability)(Schema.binary[$outT], $streamingBody)", tpe)
+      }
     }
   }
 
