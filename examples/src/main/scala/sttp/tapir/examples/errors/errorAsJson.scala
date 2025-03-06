@@ -1,8 +1,8 @@
 // {cat=Error handling; effects=Future; server=Pekko HTTP; json=circe}: Default error handler returning errors as JSON
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.15
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.15
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.15
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
 //> using dep com.softwaremill.sttp.client3::core:3.10.2

@@ -1,9 +1,9 @@
 // {cat=Observability; effects=Future; server=Netty; json=circe}: Reporting OpenTelemetry metrics
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.15
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.15
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.15
-//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.15
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.17
 //> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.47.0
 //> using dep org.slf4j:slf4j-api:2.0.13
 
