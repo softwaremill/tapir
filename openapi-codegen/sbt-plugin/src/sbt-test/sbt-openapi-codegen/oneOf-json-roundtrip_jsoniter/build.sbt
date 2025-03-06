@@ -8,6 +8,8 @@ lazy val root = (project in file("."))
     openapiGenerateEndpointTypes := true
   )
 
+val catsXmlVersion = "0.0.20"
+val jsoniterScalaVersion = "2.33.2"
 val tapirVersion = "1.11.18"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,
@@ -15,11 +17,11 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.7",
   "com.beachape" %% "enumeratum" % "1.7.5",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.33.2",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.33.2" % "compile-internal",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-circe" % "2.33.2",
-  "com.github.geirolz" %% "cats-xml" % "0.0.19+14-63a79e6e+20250305-1222-SNAPSHOT",
-  "com.github.geirolz" %% "cats-xml-generic" % "0.0.19+14-63a79e6e+20250305-1222-SNAPSHOT",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % jsoniterScalaVersion,
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterScalaVersion % "compile-internal",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-circe" % jsoniterScalaVersion,
+  "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
+  "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % tapirVersion % Test
 )
