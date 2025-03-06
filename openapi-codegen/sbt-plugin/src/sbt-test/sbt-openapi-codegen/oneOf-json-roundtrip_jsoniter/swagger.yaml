@@ -174,28 +174,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListType'
-  '/content-type/negotiation':
+  '/custom/content-types':
     post:
       requestBody:
         content:
-#          text/csv:
-#            schema:
-#              type: object
           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
             schema:
               $ref: '#/components/schemas/SomeBinaryType'
       responses:
         "200":
-          description: Upload succeeded
-    get:
+          description: text success
+          content:
+            text/csv:
+              schema:
+                $ref: '#/components/schemas/SomeBinaryType'
+        "400":
+          description: binary error
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                $ref: '#/components/schemas/SomeBinaryType'
+    put:
+      requestBody:
+        content:
+          text/csv:
+            schema:
+              $ref: '#/components/schemas/SomeBinaryType'
       responses:
         "200":
-          description: Download the upload
+          description: binary success
           content:
-#            text/csv:
-#              schema:
-#                type: object
             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                $ref: '#/components/schemas/SomeBinaryType'
+        "400":
+          description: text error
+          content:
+            text/csv:
               schema:
                 $ref: '#/components/schemas/SomeBinaryType'
 
