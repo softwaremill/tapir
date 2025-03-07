@@ -186,7 +186,8 @@ object BasicGenerator {
            |  override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "$mainType", subType = "$subType")
            |}""".stripMargin
         case ct => throw new NotImplementedError(s"Cannot handle content type '$ct'")
-      }.mkString("\n")
+      }
+      .mkString("\n")
     val extraImports = if (endpointsInMain.nonEmpty) s"$maybeJsonImport$maybeSchemaImport" else ""
     val queryParamSupport =
       """
