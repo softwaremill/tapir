@@ -143,17 +143,13 @@ object BasicGenerator {
          |  import cats.xml.cursor.Cursor
          |  import cats.xml.generic.{XmlElemType, XmlTypeInterpreter}
          |  import cats.xml.syntax._
-         |  import cats.xml.generic.decoder.semiauto._
-         |  import cats.xml.generic.encoder.semiauto._
+         |  import cats.xml.generic.decoder.configured.semiauto._
+         |  import cats.xml.generic.encoder.configured.semiauto._
          |
          |  private type XmlParseResult[T] = Either[Throwable, T]
+         |  implicit val config: cats.xml.generic.Configuration = cats.xml.generic.Configuration.default.withUseLabelsForNodes(true)
          |  implicit val mkOptionXmlTypeInterpreter: XmlTypeInterpreter[Option[?]] = XmlTypeInterpreter.auto[Option[?]](
-         |    (_, tpeInfo) => tpeInfo.isString ||
-         |      tpeInfo.isPrimitive ||
-         |      tpeInfo.isPrimitiveWrapper ||
-         |     tpeInfo.isValueClass ||
-         |     tpeInfo.isOptionOfAnyPrimitiveOrString,
-         |    (_, _) => false)
+         |    (_, _) => false, (_, _) => false)
          |  implicit def optionDecoder[T: Decoder]: Decoder[Option[T]] = new Decoder[Option[T]] {
          |    private val delegate = implicitly[Decoder[T]]
          |
@@ -183,27 +179,47 @@ object BasicGenerator {
          |      case Left(errs) => cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.CursorFailed(errs)))
          |    }
          |  }
-         |  def seqEncoder[T: Encoder](nodeName: String): Encoder[Seq[T]] = new Encoder[Seq[T]] {
-         |    private val delegate = implicitly[Encoder[T]]
+         |  def seqEncoder[T: Encoder](nodeName: String, isWrapped: Boolean = true, itemName: String = "item"): Encoder[Seq[T]] =
+         |    new Encoder[Seq[T]] {
+         |      private val delegate = implicitly[Encoder[T]]
          |
-         |    override def encode(t: Seq[T]): Xml = {
-         |      val content: NodeContent = NonEmptyList.fromList(t.map(delegate.encode).toList) match {
-         |        case None => NodeContent.empty
-         |        case Some(nel) =>
-         |          nel.map(_.asNode) match {
-         |            case n if n.forall(_.isDefined) => new NodeContent.Children(n.map(_.get))
-         |            case n if n.forall(_.isEmpty) =>
-         |              nel.map(_.asData) match {
-         |                case n if n.forall(_.isDefined) => new NodeContent.Text(new cats.xml.XmlData.XmlArray(n.map(_.get).toList.toArray))
-         |                case n if n.exists(_.isDefined) => throw new IllegalStateException("Unable to encode heterogeneous lists")
-         |                case _                          => throw new IllegalStateException(s"Unable to encode list with elements like: $${nel.head}")
-         |              }
-         |            case _ => throw new IllegalStateException("Unable to encode heterogeneous lists")
-         |          }
+         |      override def encode(t: Seq[T]): Xml = if (isWrapped) {
+         |        val content: NodeContent = NonEmptyList.fromList(t.map(delegate.encode).toList) match {
+         |          case None => NodeContent.empty
+         |          case Some(nel) =>
+         |            nel.map(_.asNode) match {
+         |              case n if n.forall(_.isDefined) => new NodeContent.Children(n.map(_.get.withLabel(itemName)))
+         |              case n if n.forall(_.isEmpty) =>
+         |                nel.map(_.asData) match {
+         |                  case n if n.forall(_.isDefined) =>
+         |                    NodeContent.children(n.map(_.get).toList.map(d => XmlNode(itemName, content = NodeContent.text(d))))
+         |                  case n if n.exists(_.isDefined) => throw new IllegalStateException("Unable to encode heterogeneous lists")
+         |                  case _ => throw new IllegalStateException(s"Unable to encode list with elements like: $${nel.head}")
+         |                }
+         |              case _ => throw new IllegalStateException("Unable to encode heterogeneous lists")
+         |            }
+         |        }
+         |        XmlNode(nodeName, content = content)
+         |      } else {
+         |        NonEmptyList.fromList(t.map(delegate.encode).toList) match {
+         |          case None => Xml.Null
+         |          case Some(nel) =>
+         |            nel.map(_.asNode) match {
+         |              case n if n.forall(_.isDefined) =>
+         |                XmlNode.group(n.toList.map(d => XmlNode(nodeName, content = NodeContent.children(Seq(d.get)))))
+         |              case n if n.forall(_.isEmpty) =>
+         |                nel.map(_.asData) match {
+         |                  case n if n.forall(_.isDefined) =>
+         |                    XmlNode.group(n.map(_.get).toList.map(d => XmlNode(nodeName, content = NodeContent.text(d))))
+         |                  case n if n.exists(_.isDefined) => throw new IllegalStateException("Unable to encode heterogeneous lists")
+         |                  case _ => throw new IllegalStateException(s"Unable to encode list with elements like: $${nel.head}")
+         |                }
+         |              case _ => throw new IllegalStateException("Unable to encode heterogeneous lists")
+         |            }
+         |        }
+         |
          |      }
-         |      XmlNode(nodeName, content = content)
          |    }
-         |  }
          |  def xmlToDecodeResult[T: Decoder](s: String): sttp.tapir.DecodeResult[T] = s.parseXml[XmlParseResult] match {
          |    case Right(xml: XmlNode) => xml.as[T] match {
          |      case cats.data.Validated.Invalid(e) => sttp.tapir.DecodeResult.Multiple(e.toList)

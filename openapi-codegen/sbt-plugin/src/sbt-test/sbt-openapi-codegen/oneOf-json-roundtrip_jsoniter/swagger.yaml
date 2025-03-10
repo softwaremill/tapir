@@ -73,21 +73,21 @@ paths:
           content:
             application/json:
               schema: { }
-#  '/xml/endpoint':
-#    post:
-#      requestBody:
-#        required: true
-#        content:
-#          application/xml:
-#            schema:
-#              $ref: '#/components/schemas/Pet'
-#      responses:
-#        "200":
-#          description: An object
-#          content:
-#            application/xml:
-#              schema:
-#                $ref: '#/components/schemas/Pet'
+  '/xml/endpoint':
+    post:
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        "200":
+          description: An object
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Pet'
   '/inline/simple/object':
     post:
       requestBody:
