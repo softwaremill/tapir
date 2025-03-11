@@ -40,15 +40,15 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
         """<Pet>
           | <status>pending</status>
           | <tags>
-          |  <tag>
+          |  <tags>
           |   <id>1</id>
           |   <name>foo</name>
-          |  </tag>
+          |  </tags>
           | </tags>
           | <id>2</id>
           | <photoUrls>
-          |  <item>uri1</item>
-          |  <item>uri2</item>
+          |  <photoUrls>uri1</photoUrls>
+          |  <photoUrls>uri2</photoUrls>
           | </photoUrls>
           | <name>a name</name>
           | <category>

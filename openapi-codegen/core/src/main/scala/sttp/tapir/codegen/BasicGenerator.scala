@@ -150,6 +150,20 @@ object BasicGenerator {
          |  implicit val config: cats.xml.generic.Configuration = cats.xml.generic.Configuration.default.withUseLabelsForNodes(true)
          |  implicit val mkOptionXmlTypeInterpreter: XmlTypeInterpreter[Option[?]] = XmlTypeInterpreter.auto[Option[?]](
          |    (_, _) => false, (_, _) => false)
+         |  def enumDecoder[T <: enumeratum.EnumEntry: scala.reflect.ClassTag](e: enumeratum.Enum[T]): Decoder[T] =
+         |    Decoder.instance { case x: XmlNode.Node =>
+         |      x.content match {
+         |        case NodeContent.Text(t) =>
+         |          scala.util.Try(e.withName(t.asString)) match {
+         |            case scala.util.Success(v) => cats.data.Validated.Valid(v)
+         |            case scala.util.Failure(f) =>
+         |              cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.UnableToDecodeType(f)))
+         |          }
+         |        case _ => cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.NoTextAvailable(x)))
+         |      }
+         |    }
+         |  def enumEncoder[T <: enumeratum.EnumEntry](label: String): Encoder[T] =
+         |    cats.xml.codec.Encoder.of(x => XmlNode(label, Nil, content = NodeContent.text(x.entryName)))
          |  implicit def optionDecoder[T: Decoder]: Decoder[Option[T]] = new Decoder[Option[T]] {
          |    private val delegate = implicitly[Decoder[T]]
          |

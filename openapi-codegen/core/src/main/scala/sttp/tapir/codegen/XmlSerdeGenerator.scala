@@ -4,6 +4,7 @@ import sttp.tapir.codegen.BasicGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
+  OpenapiSchemaEnum,
   OpenapiSchemaField,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
@@ -25,32 +26,51 @@ object XmlSerdeGenerator {
               .collect { case OpenapiSchemaObject(props, required, _) => props.map(p => p -> required.contains(p._1)) }
               .flatMap {
                 _.collect {
+                  case ((n, OpenapiSchemaField(t: OpenapiSchemaRef, _)), r)
+                      if doc.components.exists(_.schemas.get(t.stripped).exists(_.isInstanceOf[OpenapiSchemaEnum])) =>
+                    val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
+                    val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
+                    (n, d, tpe, 2)
                   case ((n, OpenapiSchemaField(OpenapiSchemaArray(t: OpenapiSchemaSimpleType, _), _)), _) =>
-                    (n, BasicGenerator.mapSchemaSimpleTypeToType(t)._1, true)
+                    val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
+                    (n, tpe, tpe, 0)
                   case ((n, OpenapiSchemaField(t: OpenapiSchemaRef, _)), r) =>
                     val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
                     val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
-                    (n, d, false)
+                    (n, d, tpe, 1)
+//                  case ((n, OpenapiSchemaField(t: OpenapiSchemaEnum, _)), r) =>
+                  //                    val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
+                  //                    val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
+                  //                    (n, d, 2)
                 }
               }
               .distinct
             // TODO: parse `xml` on schema and use it to configure these
             val maybeElemSeqDecoders = mappedArraysOfSimpleSchemas
               .map {
-                case (n, t, true)  => s"""implicit val $ref${n.capitalize}SeqDecoder: Decoder[Seq[$t]] = seqDecoder[$t]("$n")"""
-                case (n, t, false) => s"""// implicit val $ref${n.capitalize}Decoder: Decoder[$t] = deriveConfiguredDecoder[$t]"""
+                case (n, t, _, 0) => s"""implicit val $ref${n.capitalize}SeqDecoder: Decoder[Seq[$t]] = seqDecoder[$t]("$n")"""
+                case (n, t, _, 1) => s"""// implicit val $ref${n.capitalize}Decoder: Decoder[$t] = deriveConfiguredDecoder[$t]"""
+                case (n, t, tpe, 2) if t == tpe =>
+                  s"""implicit val $ref${n.capitalize}Decoder: Decoder[$t] = enumDecoder($ref${n.capitalize})"""
+                case (n, t, tpe, 2) =>
+                  s"""implicit val $ref${n.capitalize}OptionDecoder: Decoder[$t] = optionDecoder[$tpe](enumDecoder[$tpe]($tpe))""".stripMargin
               } match {
               case s if s.isEmpty => None
               case s              => Some(s.mkString("\n"))
             }
             val maybeElemSeqEncoders = mappedArraysOfSimpleSchemas
               .map {
-                // TODO: Parameterisation here must come from openapi
-                case (n, t, true) =>
-                  s"""implicit val $ref${n.capitalize}SeqEncoder: Encoder[Seq[$t]] = seqEncoder[$t]("$n", itemName = "${n.stripSuffix(
-                      "s"
-                    )}")"""
-                case (n, t, false) => s"""implicit val $ref${n.capitalize}Encoder: Encoder[$t] = deriveConfiguredEncoder[$t]""".stripMargin
+                case (n, t, _, 0) =>
+                  // TODO: Parameterisation here must come from openapi
+                  val isWrapped = true
+                  val itemName = n
+                  s"""implicit val $ref${n.capitalize}SeqEncoder: Encoder[Seq[$t]] = seqEncoder[$t]("$n", isWrapped = $isWrapped, itemName = "${itemName}")"""
+                case (n, t, _, 1) => s"""implicit val $ref${n.capitalize}Encoder: Encoder[$t] = deriveConfiguredEncoder[$t]""".stripMargin
+                case (n, t, tpe, 2) if t == tpe =>
+                  s"""implicit val $ref${n.capitalize}Encoder: Encoder[$tpe] = enumEncoder[$tpe]("$n")""".stripMargin
+                case (n, t, tpe, 2) =>
+                  s"""implicit val $ref${n.capitalize}Encoder: Encoder[$tpe] = enumEncoder[$tpe]("$n")
+                     |implicit val $ref${n.capitalize}OptionEncoder: Encoder[$t] = optionEncoder[$tpe]($ref${n.capitalize}Encoder)""".stripMargin
               } match {
               case s if s.isEmpty => None
               case s              => Some(s.mkString("\n"))
@@ -71,6 +91,7 @@ object XmlSerdeGenerator {
                    |  deriveConfiguredEncoder[$ref]
                    |}""".stripMargin
             }
+            // TODO: Attribute configuration here should come from xml fields of openapi
             s"""
                |implicit lazy val ${ref}XmlTypeInterpreter: XmlTypeInterpreter[$ref] = XmlTypeInterpreter.auto[$ref](
                |  (_, _) => false, (_, _) => false)
