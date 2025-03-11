@@ -49,64 +49,67 @@ import scala.io.StdIn
   * exporter is available at http://localhost:4317), but you might want to customize the service name by setting the `OTEL_SERVICE_NAME=`
   * variable.
   */
-@main def openTelemetryTracingExample(): Unit =
-  val logger: Logger = LoggerFactory.getLogger(this.getClass().getName)
-  val otel: OpenTelemetry = AutoConfiguredOpenTelemetrySdk.initialize().getOpenTelemetrySdk()
+object OpenTelemetryTracingExample extends OxApp:
+  override def run(args: Vector[String])(using Ox): ExitCode =
+    val logger: Logger = LoggerFactory.getLogger(this.getClass().getName)
+    val otel: OpenTelemetry = AutoConfiguredOpenTelemetrySdk.initialize().getOpenTelemetrySdk()
 
-  // this Tracer instance is used for reporting spans inside the server logic
-  val tracer = otel.getTracer("example")
+    // this Tracer instance is used for reporting spans inside the server logic
+    val tracer = otel.getTracer("example")
 
-  case class Person(name: String)
+    case class Person(name: String)
 
-  // Simple endpoint returning 200 or 400 response with string body
-  val personEndpoint: ServerEndpoint[Any, Identity] =
-    endpoint.post
-      .in("person")
-      .in(jsonBody[Person])
-      .out(stringBody)
-      .errorOut(stringBody)
-      .handle { p =>
-        // Creating some artificial spans to demonstrate how they are correlated into a single trace,
-        // together with the span created by the request interceptor
-        withSpan(tracer, "handlePersonRequest") { _ =>
-          withSpan(tracer, "warmupAuthorization") { _ =>
-            Thread.sleep(1000)
-          }
-          withSpan(tracer, "performAuthorization") { span =>
-            Thread.sleep(2000)
-            if p.name == "Jane" then
-              span.addEvent("authorization successful")
-              Right("Welcome")
-            else
-              span.addEvent("authorization failed")
-              Left("Unauthorized")
+    // Simple endpoint returning 200 or 400 response with string body
+    val personEndpoint: ServerEndpoint[Any, Identity] =
+      endpoint.post
+        .in("person")
+        .in(jsonBody[Person])
+        .out(stringBody)
+        .errorOut(stringBody)
+        .handle { p =>
+          // Creating some artificial spans to demonstrate how they are correlated into a single trace,
+          // together with the span created by the request interceptor
+          withSpan(tracer, "handlePersonRequest") { _ =>
+            withSpan(tracer, "warmupAuthorization") { _ =>
+              Thread.sleep(1000)
+            }
+            withSpan(tracer, "performAuthorization") { span =>
+              Thread.sleep(2000)
+              if p.name == "Jane" then
+                span.addEvent("authorization successful")
+                Right("Welcome")
+              else
+                span.addEvent("authorization failed")
+                Left("Unauthorized")
+            }
           }
         }
-      }
 
-  val serverOptions: NettySyncServerOptions =
-    NettySyncServerOptions.customiseInterceptors
-      // The crucial step: adding the OpenTelemetry tracing interceptor, which is called before any other interceptors
-      .prependInterceptor(OpenTelemetryTracing(otel))
-      .options
+    val serverOptions: NettySyncServerOptions =
+      NettySyncServerOptions.customiseInterceptors
+        // The crucial step: adding the OpenTelemetry tracing interceptor, which is called before any other interceptors
+        .prependInterceptor(OpenTelemetryTracing(otel))
+        .options
 
-  supervised {
     useInScope(NettySyncServer().options(serverOptions).addEndpoint(personEndpoint).start())(_.stop()).discard
 
     logger.info(s"""Server started. Try it with: curl -X POST http://localhost:8080/person -d '{"name": "Jane"}'""")
     logger.info("Press ENTER key to exit.")
     StdIn.readLine()
-  }.discard
+    ExitCode.Success
+  end run
 
-def withSpan[T](tracer: Tracer, spanName: String)(f: Span => T): T =
-  val span = tracer.spanBuilder(spanName).startSpan()
-  try
-    val scope = span.makeCurrent()
-    try f(span)
-    catch
-      case e: Exception =>
-        span.setStatus(io.opentelemetry.api.trace.StatusCode.ERROR)
-        span.recordException(e).discard
-        throw e
-    finally scope.close()
-  finally span.end()
+  def withSpan[T](tracer: Tracer, spanName: String)(f: Span => T): T =
+    val span = tracer.spanBuilder(spanName).startSpan()
+    try
+      val scope = span.makeCurrent()
+      try f(span)
+      catch
+        case e: Exception =>
+          span.setStatus(io.opentelemetry.api.trace.StatusCode.ERROR)
+          span.recordException(e).discard
+          throw e
+      finally scope.close()
+    finally span.end()
+
+end OpenTelemetryTracingExample
