@@ -1,5 +1,9 @@
 # Observability
 
+Observability includes metrics & tracing integrations.
+
+## Metrics
+
 Metrics collection is possible by creating `Metric` instances and adding them to server options via `MetricsInterceptor`. 
 Certain endpoints can be ignored by adding their definitions to `ignoreEndpoints` list.
 
@@ -19,7 +23,7 @@ There are three callbacks in `EndpointMetric`:
 3. `onException` - called after exception is thrown (in underlying streamed body, and/or on any other exception when
    there's no default response)
 
-## Labels
+## Metric labels
 
 By default, request metrics are labeled by path and method. Response labels are additionally labelled by status code
 group. For example GET endpoint like `http://h:p/api/persons?name=Mike` returning 200 response will be labeled
@@ -216,7 +220,6 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
   .addCustom(responsesTotal)
 ```
 
-
 ## Zio Metrics
 
 Add the following dependency:
@@ -277,4 +280,41 @@ object ZioEndpoint:
 
   val metricsEndpoint =
     endpoint.get.in("metrics").out(stringBody).serverLogicSuccess(_ => getMetricsEffect)
+```
+
+## OpenTelemetry tracing
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "@VERSION@"
+```
+
+OpenTelemetry tracing is vendor-agnostic and can be exported using an exporters, such as Jaeger, Zipkin, DataDog, 
+Grafana, etc.
+
+Currently, a `OpenTelemetrySyncTracing` interceptor is available, which creates a span for each request, populating the
+context appropriately (with the request method, path, status code, etc.). Any spans created as part of the server's 
+logic are then correlated  with the request-span, into a single trace.
+
+To propagate the context, the configured OpenTelemetry `ContextStorage` is used, which by default is 
+`ThreadLocal`-based. Hence, this approach is mostly useable with direct-style, "synchronous" servers, including ones 
+leveraging Ox and virtual threads. `Future`- or functional effect-based servers and server logic will not correlate the
+spans correctly, as the context won't be available in other threads/fibers.
+
+The interceptor should be added before any others, so that it handles the request early. E.g.:
+
+```scala mdoc:compile-only
+import io.opentelemetry.api.OpenTelemetry
+import sttp.tapir.server.netty.sync.{NettySyncServer, NettySyncServerOptions}
+import sttp.tapir.server.tracing.opentelemetry.OpenTelemetrySyncTracing
+
+val otel: OpenTelemetry = ???
+
+val serverOptions: NettySyncServerOptions =
+  NettySyncServerOptions.customiseInterceptors
+    .prependInterceptor(OpenTelemetrySyncTracing(otel))
+    .options
+
+NettySyncServer().options(serverOptions).addEndpoint(???).startAndWait()
 ```

@@ -25,6 +25,7 @@ object TestUtil {
       .serverLogic(logic)
   }
 
+  // TODO: use serverRequestFromUri in the tests and remove the below
   object PersonsApi {
     val defaultLogic: String => Identity[Either[String, String]] = name => (if (name == "Jacob") Right("hello") else Left(":(")).unit
 
@@ -44,4 +45,19 @@ object TestUtil {
       }
     }
   }
+
+  def serverRequestFromUri(_uri: Uri, _method: Method = Method.GET, _headers: List[Header] = Nil): ServerRequest =
+    new ServerRequest {
+      override def protocol: String = uri.scheme.getOrElse("http")
+      override def connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
+      override def underlying: Any = ()
+      override def pathSegments: List[String] = uri.pathSegments.segments.map(_.v).toList
+      override def queryParameters: QueryParams = uri.params
+      override def method: Method = _method
+      override def uri: Uri = _uri
+      override def headers: immutable.Seq[Header] = _headers
+      override def attribute[T](k: AttributeKey[T]): Option[T] = None
+      override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
+      override def withUnderlying(underlying: Any): ServerRequest = this
+    }
 }

@@ -47,7 +47,7 @@ object OpenTelemetryMetrics {
     forRequest = List(
       "http.request.method" -> { case (_, req) => req.method.method },
       "url.scheme" -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
-      "path" -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) }
+      "http.route" -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) } // TODO: use constants
     ),
     forResponse = List(
       "http.response.status_code" -> {
