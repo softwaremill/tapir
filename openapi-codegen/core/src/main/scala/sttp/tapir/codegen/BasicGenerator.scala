@@ -181,15 +181,19 @@ object BasicGenerator {
          |      case Some(t) => delegate.encode(t)
          |    }
          |  }
-         |  def seqDecoder[T: Decoder](nodeName: String): Decoder[Seq[T]] = new Decoder[Seq[T]] {
+         |  def seqDecoder[T: Decoder](nodeName: String, isWrapped: Boolean = true): Decoder[Seq[T]] = new Decoder[Seq[T]] {
          |    private val delegate = implicitly[Decoder[T]]
          |
          |    def decodeCursorResult(cursorResult: Cursor.Result[Xml]): Decoder.Result[Seq[T]] = cursorResult match {
-         |      case Right(x: XmlNode) if x.label == nodeName =>
+         |      case Right(x: XmlNode) if isWrapped =>
          |        x.content match {
          |          case NodeContent.Children(c) => c.traverse(delegate.decode).map(_.toList)
          |          case NodeContent.Empty       => cats.data.Validated.Valid(Nil)
          |        }
+         |      case Right(x: XmlNode.Group) if !isWrapped =>
+         |       NonEmptyList.fromList(x.children).map(_.traverse(delegate.decode).map(_.toList)).getOrElse(cats.data.Validated.Valid(Nil))
+         |      case Right(x: XmlNode.Node) if !isWrapped =>
+         |       delegate.decode(x).map(List(_))
          |      case Left(errs) => cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.CursorFailed(errs)))
          |    }
          |  }
@@ -220,7 +224,7 @@ object BasicGenerator {
          |          case Some(nel) =>
          |            nel.map(_.asNode) match {
          |              case n if n.forall(_.isDefined) =>
-         |                XmlNode.group(n.toList.map(d => XmlNode(nodeName, content = NodeContent.children(Seq(d.get)))))
+         |                XmlNode.group(n.toList.map(_.get.withLabel(nodeName)))
          |              case n if n.forall(_.isEmpty) =>
          |                nel.map(_.asData) match {
          |                  case n if n.forall(_.isDefined) =>

@@ -10,6 +10,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaRef,
   OpenapiSchemaSimpleType
 }
+import sttp.tapir.codegen.openapi.models.OpenapiXml
 
 object XmlSerdeGenerator {
 
@@ -23,21 +24,21 @@ object XmlSerdeGenerator {
             val encoderName = s"${ref}XmlEncoder"
             val mappedArraysOfSimpleSchemas = doc.components.toSeq
               .flatMap(_.schemas.get(ref))
-              .collect { case OpenapiSchemaObject(props, required, _) => props.map(p => p -> required.contains(p._1)) }
+              .collect { case OpenapiSchemaObject(props, required, _, _) => props.map(p => p -> required.contains(p._1)) }
               .flatMap {
                 _.collect {
                   case ((n, OpenapiSchemaField(t: OpenapiSchemaRef, _)), r)
                       if doc.components.exists(_.schemas.get(t.stripped).exists(_.isInstanceOf[OpenapiSchemaEnum])) =>
                     val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
                     val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
-                    (n, d, tpe, 2)
-                  case ((n, OpenapiSchemaField(OpenapiSchemaArray(t: OpenapiSchemaSimpleType, _), _)), _) =>
+                    (n, d, tpe, 2, None)
+                  case ((n, OpenapiSchemaField(OpenapiSchemaArray(t: OpenapiSchemaSimpleType, _, maybeXml), _)), _) =>
                     val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
-                    (n, tpe, tpe, 0)
+                    (n, tpe, tpe, 0, maybeXml)
                   case ((n, OpenapiSchemaField(t: OpenapiSchemaRef, _)), r) =>
                     val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
                     val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
-                    (n, d, tpe, 1)
+                    (n, d, tpe, 1, None)
 //                  case ((n, OpenapiSchemaField(t: OpenapiSchemaEnum, _)), r) =>
                   //                    val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
                   //                    val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
@@ -48,11 +49,17 @@ object XmlSerdeGenerator {
             // TODO: parse `xml` on schema and use it to configure these
             val maybeElemSeqDecoders = mappedArraysOfSimpleSchemas
               .map {
-                case (n, t, _, 0) => s"""implicit val $ref${n.capitalize}SeqDecoder: Decoder[Seq[$t]] = seqDecoder[$t]("$n")"""
-                case (n, t, _, 1) => s"""// implicit val $ref${n.capitalize}Decoder: Decoder[$t] = deriveConfiguredDecoder[$t]"""
-                case (n, t, tpe, 2) if t == tpe =>
+                case (n, t, _, 0, c: Option[OpenapiXml.XmlArrayConfiguration @unchecked]) =>
+                  val name = c.flatMap(_.name).getOrElse(n)
+                  val w = c.exists(_.isWrapped)
+//                  val maybeP = if (w)
+//                    s"""
+//                       |""".stripMargin else ""
+                  s"""implicit val $ref${n.capitalize}SeqDecoder: Decoder[Seq[$t]] = seqDecoder[$t]("$name", isWrapped = $w)"""
+                case (n, t, _, 1, _) => s"""// implicit val $ref${n.capitalize}Decoder: Decoder[$t] = deriveConfiguredDecoder[$t]"""
+                case (n, t, tpe, 2, _) if t == tpe =>
                   s"""implicit val $ref${n.capitalize}Decoder: Decoder[$t] = enumDecoder($ref${n.capitalize})"""
-                case (n, t, tpe, 2) =>
+                case (n, t, tpe, 2, _) =>
                   s"""implicit val $ref${n.capitalize}OptionDecoder: Decoder[$t] = optionDecoder[$tpe](enumDecoder[$tpe]($tpe))""".stripMargin
               } match {
               case s if s.isEmpty => None
@@ -60,15 +67,17 @@ object XmlSerdeGenerator {
             }
             val maybeElemSeqEncoders = mappedArraysOfSimpleSchemas
               .map {
-                case (n, t, _, 0) =>
+                case (n, t, _, 0, c: Option[OpenapiXml.XmlArrayConfiguration @unchecked]) =>
                   // TODO: Parameterisation here must come from openapi
-                  val isWrapped = true
-                  val itemName = n
-                  s"""implicit val $ref${n.capitalize}SeqEncoder: Encoder[Seq[$t]] = seqEncoder[$t]("$n", isWrapped = $isWrapped, itemName = "${itemName}")"""
-                case (n, t, _, 1) => s"""implicit val $ref${n.capitalize}Encoder: Encoder[$t] = deriveConfiguredEncoder[$t]""".stripMargin
-                case (n, t, tpe, 2) if t == tpe =>
+                  val in = c.flatMap(_.itemName).getOrElse(n)
+                  val w = c.exists(_.isWrapped)
+                  s"""implicit val $ref${n.capitalize}SeqEncoder: Encoder[Seq[$t]] =
+                     |  seqEncoder[$t]("${c.flatMap(_.name).getOrElse(n)}", isWrapped = $w, itemName = "$in")""".stripMargin
+                case (n, t, _, 1, _) =>
+                  s"""implicit val $ref${n.capitalize}Encoder: Encoder[$t] = deriveConfiguredEncoder[$t]""".stripMargin
+                case (n, t, tpe, 2, _) if t == tpe =>
                   s"""implicit val $ref${n.capitalize}Encoder: Encoder[$tpe] = enumEncoder[$tpe]("$n")""".stripMargin
-                case (n, t, tpe, 2) =>
+                case (n, t, tpe, 2, _) =>
                   s"""implicit val $ref${n.capitalize}Encoder: Encoder[$tpe] = enumEncoder[$tpe]("$n")
                      |implicit val $ref${n.capitalize}OptionEncoder: Encoder[$t] = optionEncoder[$tpe]($ref${n.capitalize}Encoder)""".stripMargin
               } match {
@@ -91,10 +100,27 @@ object XmlSerdeGenerator {
                    |  deriveConfiguredEncoder[$ref]
                    |}""".stripMargin
             }
-            // TODO: Attribute configuration here should come from xml fields of openapi
+            // TODO: Should be able to rename non-array fields too
+            val renamedFields = mappedArraysOfSimpleSchemas
+              .collect { case (n, t, _, 0, c: Option[OpenapiXml.XmlArrayConfiguration @unchecked]) =>
+                n -> c.flatMap(_.name)
+              }
+              .collect { case (n, Some(n2)) if n != n2 => n -> n2 }
+            val interpreter =
+              if (renamedFields.nonEmpty) {
+                val cases = renamedFields
+                  .map { case (from, to) =>
+                    s"""case (cats.xml.utils.generic.ParamName("$from"), _) =>
+                     |  (XmlElemType.Child, { case "$from" => "$to"; case "$to" => "$from"; case x => x})""".stripMargin
+                  }
+                  .mkString("\n")
+                s"""XmlTypeInterpreter.fullOf[$ref]{
+                   |${indent(4)(cases)}
+                   |    case (_, _) => (XmlElemType.Child, identity)
+                   |  }""".stripMargin
+              } else s"""XmlTypeInterpreter.auto[$ref]((_, _) => false, (_, _) => false)""".stripMargin
             s"""
-               |implicit lazy val ${ref}XmlTypeInterpreter: XmlTypeInterpreter[$ref] = XmlTypeInterpreter.auto[$ref](
-               |  (_, _) => false, (_, _) => false)
+               |implicit lazy val ${ref}XmlTypeInterpreter: XmlTypeInterpreter[$ref] = $interpreter
                |implicit lazy val $decoderName: Decoder[$ref] = $decoderDefn
                |implicit lazy val $encoderName: Encoder[$ref] = $encoderDefn
                |implicit lazy val ${ref}XmlSerde: sttp.tapir.Codec.XmlCodec[${ref.capitalize}] =

@@ -381,6 +381,13 @@ components:
             $ref: '#/components/schemas/Tag'
             xml:
               name: tag
+        tags2:
+          type: array
+          xml:
+            wrapped: false
+            name: extra-tags
+          items:
+            $ref: '#/components/schemas/Tag2'
         status:
           $ref: '#/components/schemas/PetStatus'
       xml:
@@ -395,6 +402,17 @@ components:
         - sold
     Tag:
       x-swagger-router-model: io.swagger.petstore.model.Tag
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+      xml:
+        name: tag
+      type: object
+    Tag2:
+      x-swagger-router-model: io.swagger.petstore.model.Tag2
       properties:
         id:
           type: integer
