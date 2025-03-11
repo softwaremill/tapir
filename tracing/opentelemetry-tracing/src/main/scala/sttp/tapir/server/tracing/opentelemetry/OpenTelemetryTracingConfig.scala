@@ -10,7 +10,7 @@ import sttp.tapir.AnyEndpoint
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.model.ServerResponse
 
-/** Configuration for OpenTelemetry tracing of server requests, used by [[OpenTelemetrySyncTracing]]. Use one of the [[apply]] methods to
+/** Configuration for OpenTelemetry tracing of server requests, used by [[OpenTelemetryTracing]]. Use one of the [[apply]] methods to
   * override only some of the configuration options, while using the defaults for the rest.
   *
   * The default values follow OpenTelemetry semantic conventions, as described in [their
@@ -35,7 +35,7 @@ import sttp.tapir.server.model.ServerResponse
   *   Calculates additional attributes of the span, given an error that occurred while processing the request (an exception); although
   *   usually, exceptions are translated into 5xx responses earlier in the interceptor chain.
   */
-case class OpenTelemetryTracingSyncConfig(
+case class OpenTelemetryTracingConfig(
     tracer: Tracer,
     spanName: ServerRequest => String,
     requestAttributes: ServerRequest => Attributes,
@@ -45,7 +45,7 @@ case class OpenTelemetryTracingSyncConfig(
     errorAttributes: Either[StatusCode, Throwable] => Attributes
 )
 
-object OpenTelemetryTracingSyncConfig {
+object OpenTelemetryTracingConfig {
   def apply(
       openTelemetry: OpenTelemetry,
       spanName: ServerRequest => String = Defaults.spanName _,
@@ -55,7 +55,7 @@ object OpenTelemetryTracingSyncConfig {
       responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes = Defaults.responseAttributes _,
       noEndpointsMatchAttributes: Attributes = Defaults.noEndpointsMatchAttributes,
       errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes _
-  ): OpenTelemetryTracingSyncConfig = usingTracer(
+  ): OpenTelemetryTracingConfig = usingTracer(
     openTelemetry.tracerBuilder(Defaults.instrumentationScopeName).setInstrumentationVersion(Defaults.instrumentationScopeVersion).build(),
     spanName = spanName,
     requestAttributes = requestAttributes,
@@ -74,8 +74,8 @@ object OpenTelemetryTracingSyncConfig {
       responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes = Defaults.responseAttributes _,
       noEndpointsMatchAttributes: Attributes = Defaults.noEndpointsMatchAttributes,
       errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes _
-  ): OpenTelemetryTracingSyncConfig =
-    new OpenTelemetryTracingSyncConfig(
+  ): OpenTelemetryTracingConfig =
+    new OpenTelemetryTracingConfig(
       tracer,
       spanName,
       requestAttributes,

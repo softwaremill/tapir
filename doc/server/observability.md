@@ -293,7 +293,7 @@ Add the following dependency:
 OpenTelemetry tracing is vendor-agnostic and can be exported using an exporters, such as Jaeger, Zipkin, DataDog, 
 Grafana, etc.
 
-Currently, a `OpenTelemetrySyncTracing` interceptor is available, which creates a span for each request, populating the
+Currently, a `OpenTelemetryTracing` interceptor is available, which creates a span for each request, populating the
 context appropriately (with the request method, path, status code, etc.). Any spans created as part of the server's 
 logic are then correlated  with the request-span, into a single trace.
 
@@ -307,13 +307,13 @@ The interceptor should be added before any others, so that it handles the reques
 ```scala mdoc:compile-only
 import io.opentelemetry.api.OpenTelemetry
 import sttp.tapir.server.netty.sync.{NettySyncServer, NettySyncServerOptions}
-import sttp.tapir.server.tracing.opentelemetry.OpenTelemetrySyncTracing
+import sttp.tapir.server.tracing.opentelemetry.OpenTelemetryTracing
 
 val otel: OpenTelemetry = ???
 
 val serverOptions: NettySyncServerOptions =
   NettySyncServerOptions.customiseInterceptors
-    .prependInterceptor(OpenTelemetrySyncTracing(otel))
+    .prependInterceptor(OpenTelemetryTracing(otel))
     .options
 
 NettySyncServer().options(serverOptions).addEndpoint(???).startAndWait()

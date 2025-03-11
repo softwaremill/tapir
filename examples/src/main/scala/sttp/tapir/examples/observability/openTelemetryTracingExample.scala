@@ -20,7 +20,7 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.sync.{NettySyncServer, NettySyncServerOptions}
-import sttp.tapir.server.tracing.opentelemetry.OpenTelemetrySyncTracing
+import sttp.tapir.server.tracing.opentelemetry.OpenTelemetryTracing
 
 import scala.io.StdIn
 
@@ -87,7 +87,7 @@ import scala.io.StdIn
   val serverOptions: NettySyncServerOptions =
     NettySyncServerOptions.customiseInterceptors
       // The crucial step: adding the OpenTelemetry tracing interceptor, which is called before any other interceptors
-      .prependInterceptor(OpenTelemetrySyncTracing(otel))
+      .prependInterceptor(OpenTelemetryTracing(otel))
       .options
 
   supervised {

@@ -35,7 +35,7 @@ class OpenTelemetrySyncTracingTest extends AnyFlatSpec with Matchers {
         _ => List(e),
         TestRequestBody,
         StringToResponseBody,
-        List(OpenTelemetrySyncTracing(otel)),
+        List(OpenTelemetryTracing(otel)),
         _ => ()
       )
 
