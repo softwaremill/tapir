@@ -15,12 +15,12 @@ import scala.concurrent.{Await, Future}
 
 class XmlRoundtrip extends AnyFreeSpec with Matchers {
   "can roundtrip xml" in {
-//    val route = TapirGeneratedEndpoints.postXmlEndpoint.serverLogic[Future](Future successful Right(_))
-//
-//    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
-//      .whenServerEndpoint(route)
-//      .thenRunLogic()
-//      .backend()
+    val route = TapirGeneratedEndpoints.postXmlEndpoint.serverLogic[Future](Future successful Right(_))
+
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
 
     locally {
       val reqBody = Pet(
@@ -56,18 +56,18 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
           |  <name>a category</name>
           | </category>
           |</Pet>""".stripMargin
-//      Await.result(
-//        sttp.client3.basicRequest
-//          .post(uri"http://test.com/xml/endpoint")
-//          .body(reqXmlBody)
-//          .header("content-type", "application/xml")
-//          .send(stub)
-//          .map { resp =>
-//            resp.body shouldEqual Right(reqXmlBody)
-//            resp.code.code shouldEqual 200
-//          },
-//        1.second
-//      )
+      Await.result(
+        sttp.client3.basicRequest
+          .post(uri"http://test.com/xml/endpoint")
+          .body(reqXmlBody)
+          .header("content-type", "application/xml")
+          .send(stub)
+          .map { resp =>
+            resp.body shouldEqual Right(reqXmlBody)
+            resp.code.code shouldEqual 200
+          },
+        1.second
+      )
     }
   }
 }
