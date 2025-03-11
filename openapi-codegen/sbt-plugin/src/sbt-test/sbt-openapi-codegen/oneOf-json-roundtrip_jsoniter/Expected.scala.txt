@@ -11,6 +11,7 @@ object TapirGeneratedEndpoints {
   import com.github.plokhotnyuk.jsoniter_scala.core._
 
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
+  import sttp.tapir.generated.TapirGeneratedEndpointsXmlSerdes._
   import TapirGeneratedEndpointsSchemas._
 
   case class `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`() extends CodecFormat {
@@ -73,6 +74,26 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
+
+  sealed trait PetStatus extends enumeratum.EnumEntry
+  object PetStatus extends enumeratum.Enum[PetStatus] {
+    val values = findValues
+    case object available extends PetStatus
+    case object pending extends PetStatus
+    case object sold extends PetStatus
+  }
+  case class Pet (
+    status: Option[PetStatus] = None,
+    tags: Option[Seq[Tag]] = None,
+    id: Option[Long] = None,
+    photoUrls: Seq[String],
+    name: String,
+    category: Option[Category] = None
+  )
+  case class Category (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
   case class NotNullableThingy (
     uuid: java.util.UUID
   )
@@ -110,6 +131,10 @@ object TapirGeneratedEndpoints {
     s: String,
     a: Option[Seq[String]] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class Tag (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
 
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] {
@@ -141,7 +166,13 @@ object TapirGeneratedEndpoints {
     bar: Option[java.util.UUID] = None
   )
 
-
+  type PostXmlEndpointEndpoint = Endpoint[Unit, Pet, Unit, Pet, Any]
+  lazy val postXmlEndpoint: PostXmlEndpointEndpoint =
+    endpoint
+      .post
+      .in(("xml" / "endpoint"))
+      .in(xmlBody[Pet])
+      .out(xmlBody[Pet].description("An object"))
 
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
@@ -235,6 +266,6 @@ object TapirGeneratedEndpoints {
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postGenericJson, getOneofOptionTest, putCustomContentTypes, postCustomContentTypes, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(postXmlEndpoint, putAdtTest, postAdtTest, postGenericJson, getOneofOptionTest, putCustomContentTypes, postCustomContentTypes, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 }
