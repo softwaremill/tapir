@@ -4,6 +4,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.client3.UriContext
 import sttp.client3.testing.SttpBackendStub
+import sttp.tapir.DecodeResult
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
 import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJsonSerdes, TapirGeneratedEndpointsXmlSerdes}
@@ -25,8 +26,9 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
     locally {
       val reqBody = Pet(
         Some(PetStatus.pending),
-        Some(Seq(Tag(Some(1), Some("foo")))),
+        Some(Seq(Tag(Some(1), Some("foo")), Tag(Some(2), None))),
         Some(2L),
+        Some(Seq(Tag2(Some(3), Some("bar")), Tag2(Some(4), None))),
         Seq("uri1", "uri2"),
         "a name",
         Some(Category(Some(3L), Some("a category")))
@@ -40,15 +42,25 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
         """<Pet>
           | <status>pending</status>
           | <tags>
-          |  <tags>
+          |  <tag>
           |   <id>1</id>
           |   <name>foo</name>
-          |  </tags>
+          |  </tag>
+          |  <tag>
+          |   <id>2</id>
+          |  </tag>
           | </tags>
           | <id>2</id>
+          | <extra-tags>
+          |  <id>3</id>
+          |  <name>bar</name>
+          | </extra-tags>
+          | <extra-tags>
+          |  <id>4</id>
+          | </extra-tags>
           | <photoUrls>
-          |  <photoUrls>uri1</photoUrls>
-          |  <photoUrls>uri2</photoUrls>
+          |  <photoUrl>uri1</photoUrl>
+          |  <photoUrl>uri2</photoUrl>
           | </photoUrls>
           | <name>a name</name>
           | <category>

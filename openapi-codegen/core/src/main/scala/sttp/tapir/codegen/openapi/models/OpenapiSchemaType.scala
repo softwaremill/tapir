@@ -113,7 +113,8 @@ object OpenapiSchemaType {
   // no minItems/maxItems, uniqueItems support
   case class OpenapiSchemaArray(
       items: OpenapiSchemaType,
-      nullable: Boolean
+      nullable: Boolean,
+      xml: Option[OpenapiXml.XmlArrayConfiguration] = None
   ) extends OpenapiSchemaType
 
   case class OpenapiSchemaField(
@@ -124,7 +125,8 @@ object OpenapiSchemaType {
   case class OpenapiSchemaObject(
       properties: Map[String, OpenapiSchemaField],
       required: Seq[String],
-      nullable: Boolean
+      nullable: Boolean,
+      xml: Option[OpenapiXml.XmlObjectConfiguration] = None
   ) extends OpenapiSchemaType
 
   // no readOnly/writeOnly, minProperties/maxProperties support
@@ -312,13 +314,26 @@ object OpenapiSchemaType {
     }
   }
 
+  implicit val xmlArrayConfigurationDecoder: Decoder[OpenapiXml.XmlArrayConfiguration] = { (c: HCursor) =>
+    for {
+      name <- c.downField("name").as[Option[String]]
+      wrapped <- c.downField("wrapped").as[Option[Boolean]]
+    } yield OpenapiXml.XmlArrayConfiguration(name, wrapped, None)
+  }
+
   implicit val OpenapiSchemaArrayDecoder: Decoder[OpenapiSchemaArray] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not array!", c.history))(v => v._1 == "array" || v._1 == "object")
       f <- c.downField("items").as[OpenapiSchemaType]
+      xmlItemName <- c.downField("items").downField("xml").downField("name").as[Option[String]]
       (_, nb) = p
+      xmlArray <- c.downField("xml").as[Option[OpenapiXml.XmlArrayConfiguration]]
+      xml = xmlArray match {
+        case Some(some) => Some(some.copy(itemName = xmlItemName))
+        case None       => xmlItemName.map(n => OpenapiXml.XmlArrayConfiguration(itemName = Some(n)))
+      }
     } yield {
-      OpenapiSchemaArray(f, nb)
+      OpenapiSchemaArray(f, nb, xml)
     }
   }
 
