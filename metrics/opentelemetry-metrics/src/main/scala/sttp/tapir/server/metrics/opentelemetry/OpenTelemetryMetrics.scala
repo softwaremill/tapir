@@ -1,16 +1,18 @@
 package sttp.tapir.server.metrics.opentelemetry
 
+import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.metrics.{DoubleHistogram, LongCounter, LongUpDownCounter, Meter}
+import io.opentelemetry.semconv.{ErrorAttributes, HttpAttributes, UrlAttributes}
 import sttp.tapir.AnyEndpoint
-import OpenTelemetryMetrics._
-import io.opentelemetry.api.OpenTelemetry
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabels}
 import sttp.tapir.server.model.ServerResponse
 
 import java.time.{Duration, Instant}
+
+import OpenTelemetryMetrics._
 
 case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]]) {
 
@@ -45,17 +47,17 @@ object OpenTelemetryMetrics {
     */
   lazy val OpenTelemetryAttributes: MetricLabels = MetricLabels(
     forRequest = List(
-      "http.request.method" -> { case (_, req) => req.method.method },
-      "url.scheme" -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
-      "http.route" -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) } // TODO: use constants
+      HttpAttributes.HTTP_REQUEST_METHOD.getKey -> { case (_, req) => req.method.method },
+      UrlAttributes.URL_SCHEME.getKey -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
+      HttpAttributes.HTTP_ROUTE.getKey -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) } // TODO: use constants
     ),
     forResponse = List(
-      "http.response.status_code" -> {
+      HttpAttributes.HTTP_RESPONSE_STATUS_CODE.getKey -> {
         case Right(r) => Some(r.code.code.toString)
         // Default to 500 for exceptions
         case Left(_) => Some("500")
       },
-      "error.type" -> {
+      ErrorAttributes.ERROR_TYPE.getKey -> {
         case Left(ex) => Some(ex.getClass.getName) // Exception class name for errors
         case Right(_) => None
       }
