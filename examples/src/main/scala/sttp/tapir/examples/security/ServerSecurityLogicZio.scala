@@ -1,7 +1,7 @@
 // {cat=Security; effects=ZIO; server=ZIO HTTP}: Separating security and server logic, with a reusable base endpoint, accepting & refreshing credentials via cookies
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.15
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.15
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.17
 //> using dep com.softwaremill.sttp.client3::async-http-client-backend-zio:3.10.3
 
 package sttp.tapir.examples.security
