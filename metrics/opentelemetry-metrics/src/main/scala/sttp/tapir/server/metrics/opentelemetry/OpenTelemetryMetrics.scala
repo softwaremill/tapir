@@ -42,14 +42,15 @@ object OpenTelemetryMetrics {
     * https://opentelemetry.io/docs/specs/semconv/http/http-metrics/#http-server
     *
     *   - `http.request.method` - HTTP request method (e.g., GET, POST).
-    *   - `path` - The request path or route template.
+    *   - `url.scheme` - the scheme of the request URL (e.g., http, https).
+    *   - `http.route` - the request path or route template.
     *   - `http.response.status_code` - HTTP response status code (200, 404, etc.).
     */
   lazy val OpenTelemetryAttributes: MetricLabels = MetricLabels(
     forRequest = List(
       HttpAttributes.HTTP_REQUEST_METHOD.getKey -> { case (_, req) => req.method.method },
       UrlAttributes.URL_SCHEME.getKey -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
-      HttpAttributes.HTTP_ROUTE.getKey -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) } // TODO: use constants
+      HttpAttributes.HTTP_ROUTE.getKey -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) }
     ),
     forResponse = List(
       HttpAttributes.HTTP_RESPONSE_STATUS_CODE.getKey -> {
