@@ -21,8 +21,8 @@ class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO])
     es.map(interpreter.toRoute).last
   }
 
-  override def serverWithStop(
+  override def server(
       routes: NonEmptyList[FinatraRoute],
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = FinatraTestServerInterpreter.serverWithStop(routes, gracefulShutdownTimeout)
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, Port] = new FinatraTestServerInterpreter().server(routes, gracefulShutdownTimeout)
 }
