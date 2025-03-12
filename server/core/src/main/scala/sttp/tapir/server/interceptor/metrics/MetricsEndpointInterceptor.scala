@@ -31,7 +31,6 @@ class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, _]], ignoreEndpoin
         .flatMap { endpointMetrics =>
           requestHandler(new MetricsEndpointInterceptor[F](endpointMetrics.reverse, ignoreEndpoints)).apply(request, endpoints)
         }
-      // TODO: what if 404?
     }
 }
 
