@@ -72,7 +72,7 @@ class HttpServer(port: HttpServer.Port) {
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
       r.decode[multipart.Multipart[IO]] { mp =>
         val parts: Vector[multipart.Part[IO]] = mp.parts
-        def toString(s: fs2.Stream[IO, Byte]): IO[String] = s.through(fs2.text.utf8Decode).compile.foldMonoid
+        def toString(s: fs2.Stream[IO, Byte]): IO[String] = s.through(fs2.text.utf8.decode).compile.foldMonoid
         def partToString(name: String): IO[String] = parts.find(_.name.contains(name)).map(p => toString(p.body)).getOrElse(IO.pure(""))
         partToString("fruit").product(partToString("amount")).flatMap { case (fruit, amount) =>
           Ok(s"$fruit=$amount")
