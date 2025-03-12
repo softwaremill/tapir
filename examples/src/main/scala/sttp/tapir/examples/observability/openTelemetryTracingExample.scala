@@ -66,14 +66,14 @@ object OpenTelemetryTracingExample extends OxApp:
         .in(jsonBody[Person])
         .out(stringBody)
         .errorOut(stringBody)
-        .handle { p =>
+        .handle: p =>
           // Creating some artificial spans to demonstrate how they are correlated into a single trace,
           // together with the span created by the request interceptor
-          withSpan(tracer, "handlePersonRequest") { _ =>
-            withSpan(tracer, "warmupAuthorization") { _ =>
+          withSpan(tracer, "handlePersonRequest"): _ =>
+            withSpan(tracer, "warmupAuthorization"): _ =>
               Thread.sleep(1000)
-            }
-            withSpan(tracer, "performAuthorization") { span =>
+
+            withSpan(tracer, "performAuthorization"): span =>
               Thread.sleep(2000)
               if p.name == "Jane" then
                 span.addEvent("authorization successful")
@@ -81,9 +81,6 @@ object OpenTelemetryTracingExample extends OxApp:
               else
                 span.addEvent("authorization failed")
                 Left("Unauthorized")
-            }
-          }
-        }
 
     val serverOptions: NettySyncServerOptions =
       NettySyncServerOptions.customiseInterceptors
@@ -100,16 +97,10 @@ object OpenTelemetryTracingExample extends OxApp:
   end run
 
   def withSpan[T](tracer: Tracer, spanName: String)(f: Span => T): T =
-    val span = tracer.spanBuilder(spanName).startSpan()
-    try
-      val scope = span.makeCurrent()
-      try f(span)
-      catch
-        case e: Exception =>
+    useInterruptible(tracer.spanBuilder(spanName).startSpan(), _.end()): span =>
+      useInterruptible(span.makeCurrent(), _.close()): _ =>
+        f(span).tapException: e =>
           span.setStatus(io.opentelemetry.api.trace.StatusCode.ERROR)
           span.recordException(e).discard
-          throw e
-      finally scope.close()
-    finally span.end()
 
 end OpenTelemetryTracingExample
