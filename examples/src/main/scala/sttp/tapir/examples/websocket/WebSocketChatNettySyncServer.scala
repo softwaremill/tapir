@@ -6,7 +6,7 @@
 package sttp.tapir.examples.websocket
 
 import ox.channels.{Actor, ActorRef, Channel, ChannelClosed, Default, DefaultResult, selectOrClosed}
-import ox.{ExitCode, Ox, OxApp, forkDiscard, never, releaseAfterScope, supervised}
+import ox.{ExitCode, Ox, OxApp, fork, never, releaseAfterScope, supervised}
 import sttp.tapir.*
 import sttp.tapir.CodecFormat.*
 import sttp.tapir.server.netty.sync.{NettySyncServer, OxStreams}
@@ -61,7 +61,7 @@ def chatProcessor(a: ActorRef[ChatRoom]): OxStreams.Pipe[Message, Message] = inc
 
       a.tell(_.connected(member))
 
-      forkDiscard:
+      fork:
         incoming.runForeach: msg =>
           a.tell(_.incoming(msg))
         // all incoming messages are processed (= client closed), completing the outgoing channel as well
