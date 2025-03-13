@@ -53,7 +53,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.11.18"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.11.19"
 ```
 
 `PrometheusMetrics` encapsulates `PrometheusReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -132,7 +132,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.de
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.11.18"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.11.19"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -159,7 +159,7 @@ val metricsInterceptor = metrics.metricsInterceptor() // add to your server opti
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.11.18"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.11.19"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -225,7 +225,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.11.18"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.11.19"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.
@@ -287,20 +287,21 @@ object ZioEndpoint:
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.11.18"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.11.19"
 ```
 
 OpenTelemetry tracing is vendor-agnostic and can be exported using an exporters, such as Jaeger, Zipkin, DataDog, 
 Grafana, etc.
 
 Currently, a `OpenTelemetryTracing` interceptor is available, which creates a span for each request, populating the
-context appropriately (with the request method, path, status code, etc.). Any spans created as part of the server's 
-logic are then correlated  with the request-span, into a single trace.
+context appropriately (with context extracted from the request headers, the request method, path, status code, etc.).
+Any spans created as part of the server's logic are then correlated with the request-span, into a single trace.
 
 To propagate the context, the configured OpenTelemetry `ContextStorage` is used, which by default is 
-`ThreadLocal`-based. Hence, this approach is mostly useable with direct-style, "synchronous" servers, including ones 
-leveraging Ox and virtual threads. `Future`- or functional effect-based servers and server logic will not correlate the
-spans correctly, as the context won't be available in other threads/fibers.
+`ThreadLocal`-based, which works with synchronous/direct-style environments, including ones leveraging Ox and virtual
+threads. [[Future]]s are supported through instrumentation provided by the 
+[OpenTelemetry javaagent](https://opentelemetry.io/docs/zero-code/java/agent/). For functional effect systems, usually
+a dedicated integration library is required.
 
 The interceptor should be added before any others, so that it handles the request early. E.g.:
 
