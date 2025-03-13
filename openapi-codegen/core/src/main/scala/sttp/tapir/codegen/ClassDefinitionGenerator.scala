@@ -72,7 +72,7 @@ class ClassDefinitionGenerator {
       xmlParamRefs,
       xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
-    val xmlSerdes = XmlSerdeGenerator.generateSerdes(doc, allTransitiveXmlParamRefs)
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes(doc, allTransitiveXmlParamRefs, targetScala3)
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>

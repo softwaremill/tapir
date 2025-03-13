@@ -14,7 +14,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiXml
 
 object XmlSerdeGenerator {
 
-  def generateSerdes(doc: OpenapiDocument, xmlParamRefs: Set[String]): Option[String] = {
+  def generateSerdes(doc: OpenapiDocument, xmlParamRefs: Set[String], targetScala3: Boolean): Option[String] = {
     if (xmlParamRefs.isEmpty) None
     else
       Some {
@@ -47,6 +47,7 @@ object XmlSerdeGenerator {
               }
               .distinct
             // TODO: parse `xml` on schema and use it to configure these
+            def decoderFor(tpe: String) = if (targetScala3) s"$tpe.valueOf" else tpe
             val maybeElemSeqDecoders = mappedArraysOfSimpleSchemas
               .map {
                 case (n, t, _, 0, c: Option[OpenapiXml.XmlArrayConfiguration @unchecked]) =>
@@ -58,9 +59,11 @@ object XmlSerdeGenerator {
                   s"""implicit val $ref${n.capitalize}SeqDecoder: Decoder[Seq[$t]] = seqDecoder[$t]("$name", isWrapped = $w)"""
                 case (n, t, _, 1, _) => s"""// implicit val $ref${n.capitalize}Decoder: Decoder[$t] = deriveConfiguredDecoder[$t]"""
                 case (n, t, tpe, 2, _) if t == tpe =>
-                  s"""implicit val $ref${n.capitalize}Decoder: Decoder[$t] = enumDecoder($ref${n.capitalize})"""
+                  s"""implicit val $ref${n.capitalize}Decoder: Decoder[$t] = enumDecoder(${decoderFor(s"$ref${n.capitalize}")})"""
                 case (n, t, tpe, 2, _) =>
-                  s"""implicit val $ref${n.capitalize}OptionDecoder: Decoder[$t] = optionDecoder[$tpe](enumDecoder[$tpe]($tpe))""".stripMargin
+                  s"""implicit val $ref${n.capitalize}OptionDecoder: Decoder[$t] = optionDecoder[$tpe](enumDecoder[$tpe](${decoderFor(
+                      tpe
+                    )}))""".stripMargin
               } match {
               case s if s.isEmpty => None
               case s              => Some(s.mkString("\n"))
@@ -128,5 +131,141 @@ object XmlSerdeGenerator {
           }
           .mkString("\n")
       }
+  }
+
+  def wrapBody(packagePath: String, objName: String, targetScala3: Boolean, body: String) = {
+    val enumDecoder =
+      if (targetScala3)
+        """  def enumDecoder[T: scala.reflect.ClassTag](fn: String => T): Decoder[T] =
+        |    Decoder.instance { case x: XmlNode.Node =>
+        |      x.content match {
+        |        case NodeContent.Text(t) =>
+        |          scala.util.Try(fn(t.asString)) match {
+        |            case scala.util.Success(v) => cats.data.Validated.Valid(v)
+        |            case scala.util.Failure(f) =>
+        |              cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.UnableToDecodeType(f)))
+        |          }
+        |        case _ => cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.NoTextAvailable(x)))
+        |      }
+        |    }
+        |  def enumEncoder[T](label: String): Encoder[T] =
+        |    cats.xml.codec.Encoder.of(x => XmlNode(label, Nil, content = NodeContent.text(x.toString)))""".stripMargin
+      else
+        """  def enumDecoder[T <: enumeratum.EnumEntry: scala.reflect.ClassTag](e: enumeratum.Enum[T]): Decoder[T] =
+        |    Decoder.instance { case x: XmlNode.Node =>
+        |      x.content match {
+        |        case NodeContent.Text(t) =>
+        |          scala.util.Try(e.withName(t.asString)) match {
+        |            case scala.util.Success(v) => cats.data.Validated.Valid(v)
+        |            case scala.util.Failure(f) =>
+        |              cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.UnableToDecodeType(f)))
+        |          }
+        |        case _ => cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.NoTextAvailable(x)))
+        |      }
+        |    }
+        |  def enumEncoder[T <: enumeratum.EnumEntry](label: String): Encoder[T] =
+        |    cats.xml.codec.Encoder.of(x => XmlNode(label, Nil, content = NodeContent.text(x.entryName)))""".stripMargin
+    s"""package $packagePath
+       |
+       |object ${objName}XmlSerdes {
+       |  import $packagePath.$objName._
+       |  import sttp.tapir.generic.auto._
+       |  import cats.data.NonEmptyList
+       |  import cats.xml.{NodeContent, Xml, XmlData, XmlNode}
+       |  import cats.xml.codec.{Decoder, Encoder}
+       |  import cats.xml.cursor.Cursor
+       |  import cats.xml.generic.{XmlElemType, XmlTypeInterpreter}
+       |  import cats.xml.syntax._
+       |  import cats.xml.generic.decoder.configured.semiauto._
+       |  import cats.xml.generic.encoder.configured.semiauto._
+       |
+       |  private type XmlParseResult[T] = Either[Throwable, T]
+       |  implicit val config: cats.xml.generic.Configuration = cats.xml.generic.Configuration.default.withUseLabelsForNodes(true)
+       |  implicit val mkOptionXmlTypeInterpreter: XmlTypeInterpreter[Option[?]] = XmlTypeInterpreter.auto[Option[?]](
+       |    (_, _) => false, (_, _) => false)
+       |$enumDecoder
+       |  implicit def optionDecoder[T: Decoder]: Decoder[Option[T]] = new Decoder[Option[T]] {
+       |    private val delegate = implicitly[Decoder[T]]
+       |
+       |    override def decodeCursorResult(cursorResult: Cursor.Result[Xml]): Decoder.Result[Option[T]] = cursorResult match {
+       |      case Right(x) if x.isNull => cats.data.Validated.Valid(None)
+       |      case Left(e) if e.isMissing => cats.data.Validated.Valid(None)
+       |      case o => delegate.decodeCursorResult(o).map(Some(_))
+       |    }
+       |  }
+       |  implicit def optionEncoder[T: Encoder]: Encoder[Option[T]] = new Encoder[Option[T]] {
+       |    private val delegate = implicitly[Encoder[T]]
+       |
+       |    override def encode(t: Option[T]): Xml = t match {
+       |      case None => Xml.Null
+       |      case Some(t) => delegate.encode(t)
+       |    }
+       |  }
+       |  def seqDecoder[T: Decoder](nodeName: String, isWrapped: Boolean = true): Decoder[Seq[T]] = new Decoder[Seq[T]] {
+       |    private val delegate = implicitly[Decoder[T]]
+       |
+       |    def decodeCursorResult(cursorResult: Cursor.Result[Xml]): Decoder.Result[Seq[T]] = cursorResult match {
+       |      case Right(x: XmlNode) if isWrapped =>
+       |        x.content match {
+       |          case NodeContent.Children(c) => c.traverse(delegate.decode).map(_.toList)
+       |          case NodeContent.Empty       => cats.data.Validated.Valid(Nil)
+       |        }
+       |      case Right(x: XmlNode.Group) if !isWrapped =>
+       |       NonEmptyList.fromList(x.children).map(_.traverse(delegate.decode).map(_.toList)).getOrElse(cats.data.Validated.Valid(Nil))
+       |      case Right(x: XmlNode.Node) if !isWrapped =>
+       |       delegate.decode(x).map(List(_))
+       |      case Left(errs) => cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.CursorFailed(errs)))
+       |    }
+       |  }
+       |  def seqEncoder[T: Encoder](nodeName: String, isWrapped: Boolean = true, itemName: String = "item"): Encoder[Seq[T]] =
+       |    new Encoder[Seq[T]] {
+       |      private val delegate = implicitly[Encoder[T]]
+       |
+       |      override def encode(t: Seq[T]): Xml = if (isWrapped) {
+       |        val content: NodeContent = NonEmptyList.fromList(t.map(delegate.encode).toList) match {
+       |          case None => NodeContent.empty
+       |          case Some(nel) =>
+       |            nel.map(_.asNode) match {
+       |              case n if n.forall(_.isDefined) => new NodeContent.Children(n.map(_.get.withLabel(itemName)))
+       |              case n if n.forall(_.isEmpty) =>
+       |                nel.map(_.asData) match {
+       |                  case n if n.forall(_.isDefined) =>
+       |                    NodeContent.children(n.map(_.get).toList.map(d => XmlNode(itemName, content = NodeContent.text(d))))
+       |                  case n if n.exists(_.isDefined) => throw new IllegalStateException("Unable to encode heterogeneous lists")
+       |                  case _ => throw new IllegalStateException(s"Unable to encode list with elements like: $${nel.head}")
+       |                }
+       |              case _ => throw new IllegalStateException("Unable to encode heterogeneous lists")
+       |            }
+       |        }
+       |        XmlNode(nodeName, content = content)
+       |      } else {
+       |        NonEmptyList.fromList(t.map(delegate.encode).toList) match {
+       |          case None => Xml.Null
+       |          case Some(nel) =>
+       |            nel.map(_.asNode) match {
+       |              case n if n.forall(_.isDefined) =>
+       |                XmlNode.group(n.toList.map(_.get.withLabel(nodeName)))
+       |              case n if n.forall(_.isEmpty) =>
+       |                nel.map(_.asData) match {
+       |                  case n if n.forall(_.isDefined) =>
+       |                    XmlNode.group(n.map(_.get).toList.map(d => XmlNode(nodeName, content = NodeContent.text(d))))
+       |                  case n if n.exists(_.isDefined) => throw new IllegalStateException("Unable to encode heterogeneous lists")
+       |                  case _ => throw new IllegalStateException(s"Unable to encode list with elements like: $${nel.head}")
+       |                }
+       |              case _ => throw new IllegalStateException("Unable to encode heterogeneous lists")
+       |            }
+       |        }
+       |
+       |      }
+       |    }
+       |  def xmlToDecodeResult[T: Decoder](s: String): sttp.tapir.DecodeResult[T] = s.parseXml[XmlParseResult] match {
+       |    case Right(xml: XmlNode) => xml.as[T] match {
+       |      case cats.data.Validated.Invalid(e) => sttp.tapir.DecodeResult.Multiple(e.toList)
+       |      case cats.data.Validated.Valid(v) => sttp.tapir.DecodeResult.Value(v)
+       |    }
+       |    case Left(t) => sttp.tapir.DecodeResult.Error(s, t)
+       |  }
+       |${indent(2)(body)}
+       |}""".stripMargin
   }
 }
