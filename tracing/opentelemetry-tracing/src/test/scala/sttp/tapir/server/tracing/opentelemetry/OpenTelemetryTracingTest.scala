@@ -1,5 +1,7 @@
 package sttp.tapir.server.tracing.opentelemetry
 
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
+import io.opentelemetry.context.propagation.ContextPropagators
 import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.SdkTracerProvider
@@ -28,7 +30,11 @@ class OpenTelemetrySyncTracingTest extends AnyFlatSpec with Matchers {
     // given
     val spanExporter = InMemorySpanExporter.create()
     val tracerProvider = SdkTracerProvider.builder().addSpanProcessor(SimpleSpanProcessor.create(spanExporter)).build()
-    val otel = OpenTelemetrySdk.builder().setTracerProvider(tracerProvider).build()
+    val otel = OpenTelemetrySdk
+      .builder()
+      .setTracerProvider(tracerProvider)
+      .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
+      .build()
 
     val interpreter =
       new ServerInterpreter[Any, Identity, String, NoStreams](
@@ -110,6 +116,22 @@ class OpenTelemetrySyncTracingTest extends AnyFlatSpec with Matchers {
       )
     ) { span =>
       span.getAttributes().get(ServerAttributes.SERVER_ADDRESS) shouldBe "softwaremill.com"
+    }
+  }
+
+  it should "extract the context attributes from the headers" in {
+    testEndpointWithSpan(
+      endpoint
+        .in("hello")
+        .out(stringBody)
+        .errorOut(stringBody)
+        .handle(_ => Right("hello")),
+      serverRequestFromUri(
+        uri"http://example.com/hello",
+        _headers = List(Header("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"))
+      )
+    ) { span =>
+      span.getTraceId() shouldBe "4bf92f3577b34da6a3ce929d0e0e4736"
     }
   }
 }

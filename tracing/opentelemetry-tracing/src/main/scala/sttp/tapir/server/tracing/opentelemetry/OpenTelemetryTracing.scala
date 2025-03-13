@@ -1,7 +1,9 @@
 package sttp.tapir.server.tracing.opentelemetry
 
 import io.opentelemetry.api.OpenTelemetry
-import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.api.trace.{Span, Tracer}
+import io.opentelemetry.context.Context
+import io.opentelemetry.context.propagation.{ContextPropagators, TextMapGetter}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.AnyEndpoint
@@ -21,7 +23,8 @@ import sttp.tapir.server.interceptor.{
 }
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.model.ServerResponse
-import io.opentelemetry.api.trace.Span
+
+import collection.JavaConverters._
 
 /** Interceptor which traces requests using OpenTelemetry.
   *
@@ -43,50 +46,57 @@ import io.opentelemetry.api.trace.Span
   */
 class OpenTelemetryTracing[F[_]](config: OpenTelemetryTracingConfig) extends RequestInterceptor[F] {
 
+  private val getter = new TextMapGetter[ServerRequest] {
+    override def get(carrier: ServerRequest, key: String): String = carrier.header(key).getOrElse(null)
+    override def keys(carrier: ServerRequest): java.lang.Iterable[String] = carrier.headers.map(_.name).asJava
+  }
+
   override def apply[R, B](
       responder: Responder[F, B],
       requestHandler: EndpointInterceptor[F] => RequestHandler[F, R, B]
   ): RequestHandler[F, R, B] = new RequestHandler[F, R, B] {
     override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
         monad: MonadError[F]
-    ): F[RequestResult[B]] = monad
-      .eval {
-        config.tracer
-          .spanBuilder(config.spanName(request))
-          .setAllAttributes(config.requestAttributes(request))
-          .startSpan()
-      }
-      .flatMap { span =>
-        monad.ensure(
-          {
-            val scope = span.makeCurrent()
-            monad.ensure(
-              requestHandler(knownEndpointInterceptor(request, span))(request, endpoints)
-                .map { result =>
-                  result match {
-                    case Response(response) =>
-                      span.setAllAttributes(config.responseAttributes(request, response))
-                      // https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
-                      if (response.isServerError) {
-                        span.setStatus(io.opentelemetry.api.trace.StatusCode.ERROR)
-                        val _ = span.setAllAttributes(config.errorAttributes(Left(response.code)))
-                      }
-                    case Failure(_) => span.setAllAttributes(config.noEndpointsMatchAttributes)
-                  }
+    ): F[RequestResult[B]] = withPropagatedContext(request) {
+      val span = config.tracer
+        .spanBuilder(config.spanName(request))
+        .setAllAttributes(config.requestAttributes(request))
+        .startSpan()
 
-                  result
-                }
-                .handleError { case e: Exception =>
+      withSpan(span) {
+        requestHandler(knownEndpointInterceptor(request, span))(request, endpoints)
+          .map { result =>
+            result match {
+              case Response(response) =>
+                span.setAllAttributes(config.responseAttributes(request, response))
+                // https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+                if (response.isServerError) {
                   span.setStatus(io.opentelemetry.api.trace.StatusCode.ERROR)
-                  span.setAllAttributes(config.errorAttributes(Right(e)))
-                  monad.error(e)
-                },
-              monad.eval(scope.close())
-            )
-          },
-          monad.eval(span.end())
-        )
+                  val _ = span.setAllAttributes(config.errorAttributes(Left(response.code)))
+                }
+              case Failure(_) => span.setAllAttributes(config.noEndpointsMatchAttributes)
+            }
+
+            result
+          }
+          .handleError { case e: Exception =>
+            span.setStatus(io.opentelemetry.api.trace.StatusCode.ERROR)
+            span.setAllAttributes(config.errorAttributes(Right(e)))
+            monad.error(e)
+          }
       }
+    }
+  }
+
+  private def withPropagatedContext[T](request: ServerRequest)(f: => F[T])(implicit monad: MonadError[F]): F[T] = {
+    val amendedContext = config.propagators.getTextMapPropagator().extract(Context.current(), request, getter)
+    val scope = amendedContext.makeCurrent()
+    monad.ensure(f, monad.eval(scope.close()))
+  }
+
+  private def withSpan[T](span: Span)(f: => F[T])(implicit monad: MonadError[F]): F[T] = {
+    val scope = span.makeCurrent()
+    monad.ensure(monad.ensure(f, monad.eval(scope.close())), monad.eval(span.end()))
   }
 
   private def knownEndpointInterceptor(request: ServerRequest, span: Span) = new EndpointInterceptor[F] {
@@ -135,5 +145,7 @@ object OpenTelemetryTracing {
   def apply[F[_]](openTelemetry: OpenTelemetry): OpenTelemetryTracing[F] = apply(OpenTelemetryTracingConfig(openTelemetry))
 
   /** Create the tracing interceptor using the default configuration, created using the given [[Tracer]] instance. */
-  def apply[F[_]](tracer: Tracer): OpenTelemetryTracing[F] = apply(OpenTelemetryTracingConfig.usingTracer(tracer))
+  def apply[F[_]](tracer: Tracer, propagators: ContextPropagators): OpenTelemetryTracing[F] = apply(
+    OpenTelemetryTracingConfig.usingTracer(tracer, propagators)
+  )
 }
