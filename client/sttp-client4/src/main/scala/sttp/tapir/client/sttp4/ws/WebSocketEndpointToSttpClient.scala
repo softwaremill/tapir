@@ -44,12 +44,15 @@ private[sttp] class WebSocketEndpointToSttpClient[R <: Streams[_] with WebSocket
   private val clientOutputParams = new ClientOutputParams {
     override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] = {
       val streams = o.streams.asInstanceOf[wsToPipe.S]
+
+      val bodyEitherUnsafe =
+        body.asInstanceOf[Either[Any, Any]].getOrElse(throw new RuntimeException(s"WebSocketBody is of a wrong type! Body: $body"))
       o.codec
         .asInstanceOf[Codec[Any, _, CodecFormat]]
         .decode(
           wsToPipe
             .apply(streams)(
-              body.asInstanceOf[WebSocket[wsToPipe.F]],
+              bodyEitherUnsafe.asInstanceOf[WebSocket[wsToPipe.F]],
               o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
             )
         )
