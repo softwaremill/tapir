@@ -294,13 +294,14 @@ OpenTelemetry tracing is vendor-agnostic and can be exported using an exporters,
 Grafana, etc.
 
 Currently, a `OpenTelemetryTracing` interceptor is available, which creates a span for each request, populating the
-context appropriately (with the request method, path, status code, etc.). Any spans created as part of the server's 
-logic are then correlated  with the request-span, into a single trace.
+context appropriately (with context extracted from the request headers, the request method, path, status code, etc.).
+Any spans created as part of the server's logic are then correlated with the request-span, into a single trace.
 
 To propagate the context, the configured OpenTelemetry `ContextStorage` is used, which by default is 
-`ThreadLocal`-based. Hence, this approach is mostly useable with direct-style, "synchronous" servers, including ones 
-leveraging Ox and virtual threads. `Future`- or functional effect-based servers and server logic will not correlate the
-spans correctly, as the context won't be available in other threads/fibers.
+`ThreadLocal`-based, which works with synchronous/direct-style environments, including ones leveraging Ox and virtual
+threads. [[Future]]s are supported through instrumentation provided by the 
+[OpenTelemetry javaagent](https://opentelemetry.io/docs/zero-code/java/agent/). For functional effect systems, usually
+a dedicated integration library is required.
 
 The interceptor should be added before any others, so that it handles the request early. E.g.:
 

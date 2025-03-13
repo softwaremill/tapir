@@ -3,6 +3,7 @@ package sttp.tapir.server.tracing.opentelemetry
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.{Attributes, AttributesBuilder}
 import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.context.propagation.ContextPropagators
 import io.opentelemetry.semconv.{ErrorAttributes, HttpAttributes, ServerAttributes, UrlAttributes}
 import sttp.model.headers.{Forwarded, Host}
 import sttp.model.{HeaderNames, StatusCode}
@@ -18,6 +19,8 @@ import sttp.tapir.server.model.ServerResponse
   *
   * @param tracer
   *   The tracer instance to use. To obtain a default one using an [[OpenTelemetry]] instance, use the appropriate [[apply]] variant.
+  * @param propagators
+  *   The context propagators to use. To obtain a default one using an [[OpenTelemetry]] instance, use the appropriate [[apply]] variant.
   * @param spanName
   *   Calculates the name of the span, given an incoming request.
   * @param requestAttributes
@@ -37,6 +40,7 @@ import sttp.tapir.server.model.ServerResponse
   */
 case class OpenTelemetryTracingConfig(
     tracer: Tracer,
+    propagators: ContextPropagators,
     spanName: ServerRequest => String,
     requestAttributes: ServerRequest => Attributes,
     spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes),
@@ -57,6 +61,7 @@ object OpenTelemetryTracingConfig {
       errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes _
   ): OpenTelemetryTracingConfig = usingTracer(
     openTelemetry.tracerBuilder(Defaults.instrumentationScopeName).setInstrumentationVersion(Defaults.instrumentationScopeVersion).build(),
+    openTelemetry.getPropagators(),
     spanName = spanName,
     requestAttributes = requestAttributes,
     spanNameFromEndpointAndAttributes = spanNameFromEndpointAndAttributes,
@@ -67,6 +72,7 @@ object OpenTelemetryTracingConfig {
 
   def usingTracer(
       tracer: Tracer,
+      propagators: ContextPropagators,
       spanName: ServerRequest => String = Defaults.spanName _,
       requestAttributes: ServerRequest => Attributes = Defaults.requestAttributes _,
       spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes) =
@@ -77,6 +83,7 @@ object OpenTelemetryTracingConfig {
   ): OpenTelemetryTracingConfig =
     new OpenTelemetryTracingConfig(
       tracer,
+      propagators,
       spanName,
       requestAttributes,
       spanNameFromEndpointAndAttributes,
