@@ -1,4 +1,3 @@
-
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -86,6 +85,7 @@ object TapirGeneratedEndpoints {
     status: Option[PetStatus] = None,
     tags: Option[Seq[Tag]] = None,
     id: Option[Long] = None,
+    tags2: Option[Seq[Tag2]] = None,
     photoUrls: Seq[String],
     name: String,
     category: Option[Category] = None
@@ -145,6 +145,10 @@ object TapirGeneratedEndpoints {
     implicit val enumCodecSupportAnEnum: ExtraParamSupport[AnEnum] =
       extraCodecSupport[AnEnum]("AnEnum", AnEnum)
   }
+  case class Tag2 (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
   type ListType = List[String]
   case class SomeBinaryType (
 

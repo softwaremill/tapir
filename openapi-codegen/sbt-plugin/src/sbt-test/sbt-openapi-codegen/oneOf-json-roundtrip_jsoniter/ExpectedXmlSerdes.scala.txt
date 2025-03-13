@@ -47,15 +47,19 @@ object TapirGeneratedEndpointsXmlSerdes {
       case Some(t) => delegate.encode(t)
     }
   }
-  def seqDecoder[T: Decoder](nodeName: String): Decoder[Seq[T]] = new Decoder[Seq[T]] {
+  def seqDecoder[T: Decoder](nodeName: String, isWrapped: Boolean = true): Decoder[Seq[T]] = new Decoder[Seq[T]] {
     private val delegate = implicitly[Decoder[T]]
 
     def decodeCursorResult(cursorResult: Cursor.Result[Xml]): Decoder.Result[Seq[T]] = cursorResult match {
-      case Right(x: XmlNode) if x.label == nodeName =>
+      case Right(x: XmlNode) if isWrapped =>
         x.content match {
           case NodeContent.Children(c) => c.traverse(delegate.decode).map(_.toList)
           case NodeContent.Empty       => cats.data.Validated.Valid(Nil)
         }
+      case Right(x: XmlNode.Group) if !isWrapped =>
+       NonEmptyList.fromList(x.children).map(_.traverse(delegate.decode).map(_.toList)).getOrElse(cats.data.Validated.Valid(Nil))
+      case Right(x: XmlNode.Node) if !isWrapped =>
+       delegate.decode(x).map(List(_))
       case Left(errs) => cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.CursorFailed(errs)))
     }
   }
@@ -86,7 +90,7 @@ object TapirGeneratedEndpointsXmlSerdes {
           case Some(nel) =>
             nel.map(_.asNode) match {
               case n if n.forall(_.isDefined) =>
-                XmlNode.group(n.toList.map(d => XmlNode(nodeName, content = NodeContent.children(Seq(d.get)))))
+                XmlNode.group(n.toList.map(_.get.withLabel(nodeName)))
               case n if n.forall(_.isEmpty) =>
                 nel.map(_.asData) match {
                   case n if n.forall(_.isDefined) =>
@@ -108,44 +112,55 @@ object TapirGeneratedEndpointsXmlSerdes {
     case Left(t) => sttp.tapir.DecodeResult.Error(s, t)
   }
 
-  implicit lazy val PetXmlTypeInterpreter: XmlTypeInterpreter[Pet] = XmlTypeInterpreter.auto[Pet](
-    (_, _) => false, (_, _) => false)
-  implicit lazy val PetXmlDecoder: Decoder[Pet] = {
-    // implicit val PetCategoryDecoder: Decoder[Option[Category]] = deriveConfiguredDecoder[Option[Category]]
-    implicit val PetTagsSeqDecoder: Decoder[Seq[Tag]] = seqDecoder[Tag]("tags")
-    implicit val PetPhotoUrlsSeqDecoder: Decoder[Seq[String]] = seqDecoder[String]("photoUrls")
-    implicit val PetStatusOptionDecoder: Decoder[Option[PetStatus]] = optionDecoder[PetStatus](enumDecoder[PetStatus](PetStatus))
-    deriveConfiguredDecoder[Pet]
-  }
-  implicit lazy val PetXmlEncoder: Encoder[Pet] = {
-    implicit val PetCategoryEncoder: Encoder[Option[Category]] = deriveConfiguredEncoder[Option[Category]]
-    implicit val PetTagsSeqEncoder: Encoder[Seq[Tag]] = seqEncoder[Tag]("tags", isWrapped = true, itemName = "tags")
-    implicit val PetPhotoUrlsSeqEncoder: Encoder[Seq[String]] = seqEncoder[String]("photoUrls", isWrapped = true, itemName = "photoUrls")
-    implicit val PetStatusEncoder: Encoder[PetStatus] = enumEncoder[PetStatus]("status")
-    implicit val PetStatusOptionEncoder: Encoder[Option[PetStatus]] = optionEncoder[PetStatus](PetStatusEncoder)
-    deriveConfiguredEncoder[Pet]
-  }
-  implicit lazy val PetXmlSerde: sttp.tapir.Codec.XmlCodec[Pet] =
-    sttp.tapir.Codec.xml(xmlToDecodeResult[Pet])(_.toXml.toString)
-
-  implicit lazy val TagXmlTypeInterpreter: XmlTypeInterpreter[Tag] = XmlTypeInterpreter.auto[Tag](
-    (_, _) => false, (_, _) => false)
+  implicit lazy val TagXmlTypeInterpreter: XmlTypeInterpreter[Tag] = XmlTypeInterpreter.auto[Tag]((_, _) => false, (_, _) => false)
   implicit lazy val TagXmlDecoder: Decoder[Tag] = deriveConfiguredDecoder[Tag]
   implicit lazy val TagXmlEncoder: Encoder[Tag] = deriveConfiguredEncoder[Tag]
   implicit lazy val TagXmlSerde: sttp.tapir.Codec.XmlCodec[Tag] =
     sttp.tapir.Codec.xml(xmlToDecodeResult[Tag])(_.toXml.toString)
 
-  implicit lazy val PetStatusXmlTypeInterpreter: XmlTypeInterpreter[PetStatus] = XmlTypeInterpreter.auto[PetStatus](
-    (_, _) => false, (_, _) => false)
-  implicit lazy val PetStatusXmlDecoder: Decoder[PetStatus] = deriveConfiguredDecoder[PetStatus]
-  implicit lazy val PetStatusXmlEncoder: Encoder[PetStatus] = deriveConfiguredEncoder[PetStatus]
-  implicit lazy val PetStatusXmlSerde: sttp.tapir.Codec.XmlCodec[PetStatus] =
-    sttp.tapir.Codec.xml(xmlToDecodeResult[PetStatus])(_.toXml.toString)
+  implicit lazy val Tag2XmlTypeInterpreter: XmlTypeInterpreter[Tag2] = XmlTypeInterpreter.auto[Tag2]((_, _) => false, (_, _) => false)
+  implicit lazy val Tag2XmlDecoder: Decoder[Tag2] = deriveConfiguredDecoder[Tag2]
+  implicit lazy val Tag2XmlEncoder: Encoder[Tag2] = deriveConfiguredEncoder[Tag2]
+  implicit lazy val Tag2XmlSerde: sttp.tapir.Codec.XmlCodec[Tag2] =
+    sttp.tapir.Codec.xml(xmlToDecodeResult[Tag2])(_.toXml.toString)
 
-  implicit lazy val CategoryXmlTypeInterpreter: XmlTypeInterpreter[Category] = XmlTypeInterpreter.auto[Category](
-    (_, _) => false, (_, _) => false)
+  implicit lazy val CategoryXmlTypeInterpreter: XmlTypeInterpreter[Category] = XmlTypeInterpreter.auto[Category]((_, _) => false, (_, _) => false)
   implicit lazy val CategoryXmlDecoder: Decoder[Category] = deriveConfiguredDecoder[Category]
   implicit lazy val CategoryXmlEncoder: Encoder[Category] = deriveConfiguredEncoder[Category]
   implicit lazy val CategoryXmlSerde: sttp.tapir.Codec.XmlCodec[Category] =
     sttp.tapir.Codec.xml(xmlToDecodeResult[Category])(_.toXml.toString)
+
+  implicit lazy val PetXmlTypeInterpreter: XmlTypeInterpreter[Pet] = XmlTypeInterpreter.fullOf[Pet]{
+      case (cats.xml.utils.generic.ParamName("tags2"), _) =>
+        (XmlElemType.Child, { case "tags2" => "extra-tags"; case "extra-tags" => "tags2"; case x => x})
+      case (_, _) => (XmlElemType.Child, identity)
+    }
+  implicit lazy val PetXmlDecoder: Decoder[Pet] = {
+    // implicit val PetCategoryDecoder: Decoder[Option[Category]] = deriveConfiguredDecoder[Option[Category]]
+    implicit val PetTagsSeqDecoder: Decoder[Seq[Tag]] = seqDecoder[Tag]("tags", isWrapped = true)
+    implicit val PetTags2SeqDecoder: Decoder[Seq[Tag2]] = seqDecoder[Tag2]("extra-tags", isWrapped = false)
+    implicit val PetStatusOptionDecoder: Decoder[Option[PetStatus]] = optionDecoder[PetStatus](enumDecoder[PetStatus](PetStatus))
+    implicit val PetPhotoUrlsSeqDecoder: Decoder[Seq[String]] = seqDecoder[String]("photoUrls", isWrapped = true)
+    deriveConfiguredDecoder[Pet]
+  }
+  implicit lazy val PetXmlEncoder: Encoder[Pet] = {
+    implicit val PetCategoryEncoder: Encoder[Option[Category]] = deriveConfiguredEncoder[Option[Category]]
+    implicit val PetTagsSeqEncoder: Encoder[Seq[Tag]] =
+      seqEncoder[Tag]("tags", isWrapped = true, itemName = "tag")
+    implicit val PetTags2SeqEncoder: Encoder[Seq[Tag2]] =
+      seqEncoder[Tag2]("extra-tags", isWrapped = false, itemName = "tags2")
+    implicit val PetStatusEncoder: Encoder[PetStatus] = enumEncoder[PetStatus]("status")
+    implicit val PetStatusOptionEncoder: Encoder[Option[PetStatus]] = optionEncoder[PetStatus](PetStatusEncoder)
+    implicit val PetPhotoUrlsSeqEncoder: Encoder[Seq[String]] =
+      seqEncoder[String]("photoUrls", isWrapped = true, itemName = "photoUrl")
+    deriveConfiguredEncoder[Pet]
+  }
+  implicit lazy val PetXmlSerde: sttp.tapir.Codec.XmlCodec[Pet] =
+    sttp.tapir.Codec.xml(xmlToDecodeResult[Pet])(_.toXml.toString)
+
+  implicit lazy val PetStatusXmlTypeInterpreter: XmlTypeInterpreter[PetStatus] = XmlTypeInterpreter.auto[PetStatus]((_, _) => false, (_, _) => false)
+  implicit lazy val PetStatusXmlDecoder: Decoder[PetStatus] = deriveConfiguredDecoder[PetStatus]
+  implicit lazy val PetStatusXmlEncoder: Encoder[PetStatus] = deriveConfiguredEncoder[PetStatus]
+  implicit lazy val PetStatusXmlSerde: sttp.tapir.Codec.XmlCodec[PetStatus] =
+    sttp.tapir.Codec.xml(xmlToDecodeResult[PetStatus])(_.toXml.toString)
 }
