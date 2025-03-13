@@ -90,15 +90,22 @@ class OpenTelemetryTracing[F[_]](config: OpenTelemetryTracingConfig) extends Req
     }
   }
 
-  private def withPropagatedContext[T](request: ServerRequest)(f: => F[T])(implicit monad: MonadError[F]): F[T] = {
+  private def withPropagatedContext[T](request: ServerRequest)(f: => F[T]): F[T] = {
     val amendedContext = config.propagators.getTextMapPropagator().extract(Context.current(), request, getter)
     val scope = amendedContext.makeCurrent()
-    monad.ensure(f, monad.eval(scope.close()))
+    try f
+    finally scope.close()
   }
 
   private def withSpan[T](span: Span)(f: => F[T])(implicit monad: MonadError[F]): F[T] = {
     val scope = span.makeCurrent()
-    monad.ensure(monad.ensure(f, monad.eval(scope.close())), monad.eval(span.end()))
+    monad.ensure(
+      {
+        try f
+        finally scope.close()
+      },
+      monad.eval(span.end())
+    )
   }
 
   private def knownEndpointInterceptor(request: ServerRequest, span: Span) = new EndpointInterceptor[F] {
