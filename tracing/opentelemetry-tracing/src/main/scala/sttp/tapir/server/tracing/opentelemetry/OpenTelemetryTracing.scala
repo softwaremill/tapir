@@ -42,7 +42,9 @@ import collection.JavaConverters._
   * }}}
   *
   * Relies on the built-in OpenTelemetry Java SDK [[io.opentelemetry.context.ContextStorage]] mechanism of propagating the tracing context;
-  * by default, this is using [[ThreadLocal]]s, and is hence mostly useable in synchronous/direct-style environments.
+  * by default, this is using [[ThreadLocal]]s, which works with synchronous/direct-style environments. [[Future]]s are supported through
+  * instrumentation provided by the OpenTelemetry javaagent. For functional effect systems, usually a dedicated integration library is
+  * required.
   */
 class OpenTelemetryTracing[F[_]](config: OpenTelemetryTracingConfig) extends RequestInterceptor[F] {
 
