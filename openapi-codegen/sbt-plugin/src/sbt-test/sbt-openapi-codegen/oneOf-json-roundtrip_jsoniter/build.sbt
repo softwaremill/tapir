@@ -8,7 +8,7 @@ lazy val root = (project in file("."))
     openapiGenerateEndpointTypes := true
   )
 
-val tapirVersion = "1.11.17"
+val tapirVersion = "1.11.18"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
