@@ -49,7 +49,7 @@ abstract class WebSocketSttpClientPekkoTestsSender extends ClientTests[WebSocket
     IO.fromFuture(
       IO {
         WebSocketSttpClientInterpreter()
-          .toSecureRequest(e, Some(uri"http://localhost:$port"))
+          .toSecureRequest[Future, A, I, E, O, WebSockets with PekkoStreams](e, Some(uri"http://localhost:$port"))
           .apply(securityArgs)
           .apply(args)
           .send(backend)

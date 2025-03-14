@@ -23,7 +23,7 @@ trait StreamingSttpClientInterpreter extends SttpClientInterpreter { // extends 
       baseUri: Option[Uri],
       backend: StreamBackend[F, S]
   )(implicit ev: StreamsNotWebSockets[S]): I => F[DecodeResult[Either[E, O]]] = { (i: I) =>
-    val req = toRequest(e, baseUri)
+    val req = toRequest[I, E, O, S](e, baseUri)
     backend.monad.map(req(i).send(backend))(_.body)
   }
 
@@ -39,7 +39,7 @@ trait StreamingSttpClientInterpreter extends SttpClientInterpreter { // extends 
       baseUri: Option[Uri],
       backend: StreamBackend[F, S]
   )(implicit ev: StreamsNotWebSockets[S]): I => F[Either[E, O]] = {
-    val req = toRequestThrowDecodeFailures(e, baseUri)
+    val req = toRequestThrowDecodeFailures[I, E, O, S](e, baseUri)
     (i: I) => backend.monad.map(req(i).send(backend))(_.body)
   }
 
@@ -55,7 +55,7 @@ trait StreamingSttpClientInterpreter extends SttpClientInterpreter { // extends 
       baseUri: Option[Uri],
       backend: StreamBackend[F, S]
   )(implicit ev: StreamsNotWebSockets[S]): I => F[O] = {
-    val req = toRequestThrowErrors(e, baseUri)
+    val req = toRequestThrowErrors[I, E, O, S](e, baseUri)
     (i: I) => backend.monad.map(req(i).send(backend))(_.body)
   }
 
@@ -128,7 +128,7 @@ trait StreamingSttpClientInterpreter extends SttpClientInterpreter { // extends 
       baseUri: Option[Uri],
       backend: StreamBackend[F, S]
   )(implicit ev: StreamsNotWebSockets[S]): A => I => F[DecodeResult[Either[E, O]]] = {
-    val req = toSecureRequest(e, baseUri)
+    val req = toSecureRequest[A, I, E, O, S](e, baseUri)
     (a: A) => (i: I) => backend.monad.map(req(a)(i).send(backend))(_.body)
   }
 
@@ -144,7 +144,7 @@ trait StreamingSttpClientInterpreter extends SttpClientInterpreter { // extends 
       baseUri: Option[Uri],
       backend: StreamBackend[F, S]
   )(implicit ev: StreamsNotWebSockets[S]): A => I => F[Either[E, O]] = {
-    val req = toSecureRequestThrowDecodeFailures(e, baseUri)
+    val req = toSecureRequestThrowDecodeFailures[A, I, E, O, S](e, baseUri)
     (a: A) => (i: I) => backend.monad.map(req(a)(i).send(backend))(_.body)
   }
 
@@ -161,7 +161,7 @@ trait StreamingSttpClientInterpreter extends SttpClientInterpreter { // extends 
       baseUri: Option[Uri],
       backend: StreamBackend[F, S]
   )(implicit ev: StreamsNotWebSockets[S]): A => I => F[O] = {
-    val req = toSecureRequestThrowErrors(e, baseUri)
+    val req = toSecureRequestThrowErrors[A, I, E, O, S](e, baseUri)
     (a: A) => (i: I) => backend.monad.map(req(a)(i).send(backend))(_.body)
   }
 

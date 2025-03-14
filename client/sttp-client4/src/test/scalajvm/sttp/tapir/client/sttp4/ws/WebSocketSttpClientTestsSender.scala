@@ -39,7 +39,7 @@ abstract class WebSocketSttpClientTestsSender extends ClientTests[WebSockets wit
   ): IO[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[WebSockets with Fs2Streams[IO]] = wsToPipe
     WebSocketSttpClientInterpreter()
-      .toSecureRequest(e, Some(uri"http://localhost:$port"))
+      .toSecureRequest[IO, A, I, E, O, WebSockets with Fs2Streams[IO]](e, Some(uri"http://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)

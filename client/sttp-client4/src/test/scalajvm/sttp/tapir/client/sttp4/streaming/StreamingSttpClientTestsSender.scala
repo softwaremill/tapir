@@ -21,7 +21,7 @@ abstract class StreamingSttpClientTestsSender extends ClientTests[Fs2Streams[IO]
       scheme: String = "http"
   ): IO[Either[E, O]] = {
     StreamingSttpClientInterpreter()
-      .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
+      .toSecureRequestThrowDecodeFailures[A, I, E, O, Fs2Streams[IO]](e, Some(uri"$scheme://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)
@@ -35,7 +35,7 @@ abstract class StreamingSttpClientTestsSender extends ClientTests[Fs2Streams[IO]
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     StreamingSttpClientInterpreter()
-      .toSecureRequest(e, Some(uri"http://localhost:$port"))
+      .toSecureRequest[A, I, E, O, Fs2Streams[IO]](e, Some(uri"http://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)

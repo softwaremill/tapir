@@ -21,7 +21,7 @@ abstract class BasicSttpClientZioTestsSender extends ClientTests[Any] {
   ): IO[Either[E, O]] =
     IO.fromFuture(IO.delay {
       val send = BasicSttpClientInterpreter()
-        .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
+        .toSecureRequestThrowDecodeFailures[A, I, E, O](e, Some(uri"$scheme://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
         .send(backend)
@@ -38,7 +38,7 @@ abstract class BasicSttpClientZioTestsSender extends ClientTests[Any] {
   ): IO[DecodeResult[Either[E, O]]] =
     IO.fromFuture(IO.delay {
       val send = BasicSttpClientInterpreter()
-        .toSecureRequest(e, Some(uri"http://localhost:$port"))
+        .toSecureRequest[A, I, E, O](e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
         .send(backend)

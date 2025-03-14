@@ -20,7 +20,7 @@ abstract class BasicSttpClientTestsSender extends ClientTests[Any] {
   ): IO[Either[E, O]] = {
     val response: Try[Either[E, O]] =
       BasicSttpClientInterpreter()
-        .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
+        .toSecureRequestThrowDecodeFailures[A, I, E, O](e, Some(uri"$scheme://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
         .send(backend)
@@ -36,7 +36,7 @@ abstract class BasicSttpClientTestsSender extends ClientTests[Any] {
   ): IO[DecodeResult[Either[E, O]]] = {
     def response: Try[DecodeResult[Either[E, O]]] =
       BasicSttpClientInterpreter()
-        .toSecureRequest(e, Some(uri"http://localhost:$port"))
+        .toSecureRequest[A, I, E, O](e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
         .send(backend)
