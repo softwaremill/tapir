@@ -7,21 +7,19 @@ import sttp.tapir.{DecodeResult, Endpoint}
 import sttp.tapir.client.tests.ClientTests
 import sttp.client4._
 
-abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
+abstract class BasicSttpClientTestsSender extends ClientTests[Any] {
 
-  val backend: SttpBackend[Try, R] = CurlTryBackend(verbose = false)
-  def wsToPipe: WebSocketToPipe[R]
+  val backend: Backend[Try] = CurlTryBackend(verbose = false)
 
   override def send[A, I, E, O](
-      e: Endpoint[A, I, E, O, R],
+      e: Endpoint[A, I, E, O, Any],
       port: Port,
       securityArgs: A,
       args: I,
       scheme: String = "http"
   ): IO[Either[E, O]] = {
-    implicit val wst: WebSocketToPipe[R] = wsToPipe
     val response: Try[Either[E, O]] =
-      SttpClientInterpreter()
+      BasicSttpClientInterpreter()
         .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
@@ -31,14 +29,13 @@ abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
   }
 
   override def safeSend[A, I, E, O](
-      e: Endpoint[A, I, E, O, R],
+      e: Endpoint[A, I, E, O, Any],
       port: Port,
       securityArgs: A,
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
-    implicit val wst: WebSocketToPipe[R] = wsToPipe
     def response: Try[DecodeResult[Either[E, O]]] =
-      SttpClientInterpreter()
+      BasicSttpClientInterpreter()
         .toSecureRequest(e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
