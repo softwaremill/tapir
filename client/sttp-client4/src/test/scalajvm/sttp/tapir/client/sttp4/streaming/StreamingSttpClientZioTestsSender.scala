@@ -22,7 +22,7 @@ abstract class StreamingSttpClientZioTestsSender extends ClientTests[ZioStreams]
   ): IO[Either[E, O]] =
     IO.fromFuture(IO.delay {
       val send = StreamingSttpClientInterpreter()
-        .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
+        .toSecureRequestThrowDecodeFailures[A, I, E, O, ZioStreams](e, Some(uri"$scheme://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
         .send[Task, ZioStreams](backend)
@@ -39,7 +39,7 @@ abstract class StreamingSttpClientZioTestsSender extends ClientTests[ZioStreams]
   ): IO[DecodeResult[Either[E, O]]] =
     IO.fromFuture(IO.delay {
       val send = StreamingSttpClientInterpreter()
-        .toSecureRequest(e, Some(uri"http://localhost:$port"))
+        .toSecureRequest[A, I, E, O, ZioStreams](e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
         .send[Task, ZioStreams](backend)

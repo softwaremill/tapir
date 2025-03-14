@@ -44,7 +44,7 @@ abstract class WebSocketSttpClientZioTestsSender extends ClientTests[WebSockets 
     implicit val wst: WebSocketToPipe[WebSockets with ZioStreams] = wsToPipe
     IO.fromFuture(IO.delay {
       val send = WebSocketSttpClientInterpreter()
-        .toSecureRequest(e, Some(uri"http://localhost:$port"))
+        .toSecureRequest[Task, A, I, E, O, WebSockets with ZioStreams](e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
         .send(backend)
