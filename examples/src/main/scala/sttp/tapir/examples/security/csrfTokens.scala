@@ -1,7 +1,7 @@
 // {cat=Security; effects=Future; server=Netty}: Securing endpoint with CSRF tokens example
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.19
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.19
 //> using dep com.softwaremill.sttp.client3::core:3.10.2
 
 package sttp.tapir.examples.security
