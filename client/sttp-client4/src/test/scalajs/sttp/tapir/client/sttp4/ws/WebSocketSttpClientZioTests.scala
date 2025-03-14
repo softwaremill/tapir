@@ -1,14 +1,14 @@
-package sttp.tapir.client.sttp4
+package sttp.tapir.client.sttp4.ws
 
 import cats.effect.IO
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.client.sttp4.ws.zio._
-import sttp.tapir.client.tests.ClientWebSocketTests
+import _root_.zio.stream.{Stream, ZStream}
 import sttp.tapir.client.sttp4.WebSocketToPipe
-import zio.stream.{Stream, ZStream}
+import sttp.tapir.client.tests.ClientWebSocketTests
 
-class SttpClientWebSocketZioTests extends SttpClientZioTests[WebSockets with ZioStreams] with ClientWebSocketTests[ZioStreams] {
+class WebSocketSttpClientZioTests extends WebSocketSttpClientZioTestsSender with ClientWebSocketTests[ZioStreams] {
   override val streams: ZioStreams = ZioStreams
   override def wsToPipe: WebSocketToPipe[WebSockets with ZioStreams] = implicitly
 
@@ -19,7 +19,7 @@ class SttpClientWebSocketZioTests extends SttpClientZioTests[WebSockets with Zio
   ): IO[List[B]] = IO.fromFuture(
     IO.delay {
       unsafeToFuture(
-        ZStream(as: _*).viaFunction(p).take(receiveCount).runCollect.map(_.toList)
+        ZStream(as: _*).viaFunction(p).take(receiveCount.longValue).runCollect.map(_.toList)
       ).future
     }
   )
