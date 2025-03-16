@@ -187,6 +187,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   datadogMetrics.projectRefs ++
   zioMetrics.projectRefs ++
   opentelemetryTracing.projectRefs ++
+  otel4sTracing.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   play29Json.projectRefs ++
@@ -1088,6 +1089,20 @@ lazy val opentelemetryTracing: ProjectMatrix = (projectMatrix in file("tracing/o
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore % CompileAndTest)
+
+lazy val otel4sTracing: ProjectMatrix = (projectMatrix in file("tracing/otel4s-tracing"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-otel4s-tracing",
+    libraryDependencies ++= Seq(
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
+      "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
+      "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
 
 // docs
 
@@ -2126,6 +2141,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     nettyServerZio,
     opentelemetryMetrics,
     opentelemetryTracing,
+    otel4sTracing,
     pekkoHttpServer,
     picklerJson,
     prometheusMetrics,
@@ -2194,6 +2210,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     openapiVerifier,
     opentelemetryMetrics,
     opentelemetryTracing,
+    otel4sTracing,
     pekkoHttpServer,
     picklerJson,
     playClient,
