@@ -345,7 +345,7 @@ import org.typelevel.otel4s.oteljava.OtelJava
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.tracing.otel4sTracing.Otel4sTracing
+import sttp.tapir.server.tracing.otel4s.Otel4sTracing
 
 OtelJava
   .autoConfigured[IO]()
