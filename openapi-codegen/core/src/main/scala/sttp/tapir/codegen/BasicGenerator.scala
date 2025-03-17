@@ -169,6 +169,25 @@ object BasicGenerator {
       }
       .mkString("\n")
 
+    val expectedTypes = Set("text/plain", "text/html", "application/json", "multipart/form-data", "application/octet-stream")
+    val mediaType = "([^/]+)/(.+)".r
+    val customTypes = doc.paths
+      .flatMap(
+        _.methods.flatMap(m =>
+          m.requestBody.toSeq.flatMap(_.content.map(_.contentType)) ++ m.responses.flatMap(_.content.map(_.contentType))
+        )
+      )
+      .distinct
+      .sorted
+      .filterNot(expectedTypes.contains)
+      .map {
+        case ct @ mediaType(mainType, subType) =>
+          s"""case class `${ct}CodecFormat`() extends CodecFormat {
+           |  override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "$mainType", subType = "$subType")
+           |}""".stripMargin
+        case ct => throw new NotImplementedError(s"Cannot handle content type '$ct'")
+      }
+      .mkString("\n")
     val extraImports = if (endpointsInMain.nonEmpty) s"$maybeJsonImport$maybeSchemaImport" else ""
     val queryParamSupport =
       """
@@ -211,6 +230,7 @@ object BasicGenerator {
         |
         |${indent(2)(imports(normalisedJsonLib) + extraImports)}
         |
+        |${indent(2)(customTypes)}
         |${indent(2)(queryParamSupport)}
         |
         |${indent(2)(classDefns)}

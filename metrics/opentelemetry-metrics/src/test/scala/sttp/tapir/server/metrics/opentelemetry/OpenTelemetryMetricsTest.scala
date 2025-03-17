@@ -54,7 +54,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     point.getAttributes shouldBe Attributes.of(
       AttributeKey.stringKey("http.request.method"),
       "GET",
-      AttributeKey.stringKey("path"),
+      AttributeKey.stringKey("http.route"),
       "/person",
       AttributeKey.stringKey("url.scheme"),
       "http"
@@ -66,7 +66,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       point.getAttributes shouldBe Attributes.of(
         AttributeKey.stringKey("http.request.method"),
         "GET",
-        AttributeKey.stringKey("path"),
+        AttributeKey.stringKey("http.route"),
         "/person",
         AttributeKey.stringKey("url.scheme"),
         "http"
@@ -103,7 +103,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
             if dp.getAttributes == Attributes.of(
               AttributeKey.stringKey("http.request.method"),
               "GET",
-              AttributeKey.stringKey("path"),
+              AttributeKey.stringKey("http.route"),
               "/person",
               AttributeKey.stringKey("url.scheme"),
               "http",
@@ -115,7 +115,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
             if dp.getAttributes == Attributes.of(
               AttributeKey.stringKey("http.request.method"),
               "GET",
-              AttributeKey.stringKey("path"),
+              AttributeKey.stringKey("http.route"),
               "/person",
               AttributeKey.stringKey("url.scheme"),
               "http",
@@ -160,7 +160,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       Attributes.of(
         AttributeKey.stringKey("http.request.method"),
         "GET",
-        AttributeKey.stringKey("path"),
+        AttributeKey.stringKey("http.route"),
         "/person",
         AttributeKey.stringKey("http.response.status_code"),
         "200",
@@ -219,7 +219,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     point.getAttributes shouldBe Attributes.of(
       AttributeKey.stringKey("http.request.method"),
       "GET",
-      AttributeKey.stringKey("path"),
+      AttributeKey.stringKey("http.route"),
       "/person",
       AttributeKey.stringKey("url.scheme"),
       "http",

@@ -186,6 +186,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   opentelemetryMetrics.projectRefs ++
   datadogMetrics.projectRefs ++
   zioMetrics.projectRefs ++
+  opentelemetryTracing.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   play29Json.projectRefs ++
@@ -1034,6 +1035,7 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
       "io.opentelemetry" % "opentelemetry-api" % Versions.openTelemetry,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
       "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry % Test,
       "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test,
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry % Test,
@@ -1064,6 +1066,24 @@ lazy val zioMetrics: ProjectMatrix = (projectMatrix in file("metrics/zio-metrics
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-test" % Versions.zio % Test,
       "dev.zio" %% "zio-test-sbt" % Versions.zio % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest)
+
+// tracing
+
+lazy val opentelemetryTracing: ProjectMatrix = (projectMatrix in file("tracing/opentelemetry-tracing"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-opentelemetry-tracing",
+    libraryDependencies ++= Seq(
+      "io.opentelemetry" % "opentelemetry-api" % Versions.openTelemetry,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
+      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry % Test,
+      "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test,
+      "io.opentelemetry" % "opentelemetry-sdk-trace" % Versions.openTelemetry % Test,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
@@ -2105,6 +2125,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     nettyServerSync,
     nettyServerZio,
     opentelemetryMetrics,
+    opentelemetryTracing,
     pekkoHttpServer,
     picklerJson,
     prometheusMetrics,
@@ -2172,6 +2193,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     openapiDocs,
     openapiVerifier,
     opentelemetryMetrics,
+    opentelemetryTracing,
     pekkoHttpServer,
     picklerJson,
     playClient,

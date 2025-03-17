@@ -11,7 +11,7 @@ class SttpClientStreamingTests extends SttpClientTests[Fs2Streams[IO]] with Clie
 
   override def mkStream(s: String): fs2.Stream[IO, Byte] = fs2.Stream.emits(s.getBytes("utf-8"))
   override def rmStream(s: fs2.Stream[IO, Byte]): String =
-    s.through(fs2.text.utf8Decode)
+    s.through(fs2.text.utf8.decode)
       .compile
       .foldMonoid
       .unsafeRunSync()

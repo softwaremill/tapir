@@ -52,6 +52,7 @@
 
 ## Observability
 
+* [OpenTelemetry tracing interceptor](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/OpenTelemetryTracingExample.scala) <span class="example-tag example-effects">Direct</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">Netty</span>
 * [Otel4s collecting traces](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/Otel4sTracingExample.scala) <span class="example-tag example-effects">cats-effect</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">Netty</span>
 * [Reporting DataDog metrics](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/datadogMetricsExample.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">Netty</span>
 * [Reporting OpenTelemetry metrics](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/openTelemetryMetricsExample.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">Netty</span>
