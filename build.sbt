@@ -1101,7 +1101,7 @@ lazy val otel4sTracing: ProjectMatrix = (projectMatrix in file("tracing/otel4s-t
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
 
 // docs
