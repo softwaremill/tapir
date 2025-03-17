@@ -11,18 +11,18 @@ import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.otel4s.oteljava.testkit.OtelJavaTestkit
 import sttp.capabilities.Streams
-import sttp.model.*
-import sttp.model.Uri.*
+import sttp.model._
+import sttp.model.Uri._
 import sttp.model.headers.Forwarded
 import sttp.monad.MonadError
-import sttp.tapir.*
+import sttp.tapir._
 import sttp.tapir.TestUtil.serverRequestFromUri
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.TestUtil.StringToResponseBody
-import sttp.tapir.server.interpreter.*
+import sttp.tapir.server.interpreter._
 
 import scala.util.{Success, Try}
 
