@@ -6,8 +6,8 @@ import sttp.client3.UriContext
 import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJsonSerdes}
 import TapirGeneratedEndpointsJsonSerdes._
-import sttp.tapir.generated.TapirGeneratedEndpoints.SubtypeWithoutD3E2.A
 import sttp.capabilities.pekko.PekkoStreams
+import sttp.tapir.generated.TapirGeneratedEndpoints.SubtypeWithoutD3E2.A
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
 
