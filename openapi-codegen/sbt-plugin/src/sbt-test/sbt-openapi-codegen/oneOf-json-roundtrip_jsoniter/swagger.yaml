@@ -303,6 +303,12 @@ components:
           type: integer
         e:
           $ref: '#/components/schemas/AnEnum'
+        e2:
+          type: string
+          enum:
+            - A
+            - B
+            - C
         absent:
           type: string
     AnEnum:
