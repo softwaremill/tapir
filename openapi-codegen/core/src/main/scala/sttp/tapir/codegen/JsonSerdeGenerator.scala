@@ -287,35 +287,43 @@ object JsonSerdeGenerator {
            |""".stripMargin
     val docSchemas = doc.components.toSeq.flatMap(_.schemas)
     val pathSchemas = inlineEndpointSchemas(doc)
-    (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
-      .flatMap {
-        // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
-        case (name, _: OpenapiSchemaObject, isJson) =>
-          val supertypes =
-            adtInheritanceMap.getOrElse(name, Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
+    def getSerdeString(name: String, t: OpenapiSchemaType, isJson: Boolean): Seq[String] = (name, t, isJson) match {
+      // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
+      case (name, o: OpenapiSchemaObject, isJson) =>
+        val inlinedEnumDefns = if (allTransitiveJsonParamRefs.contains(name)) {
+          o.properties.collect {
+            case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _)) => genJsoniterEnumSerde(name + en.capitalize)
+          }
+        } else Nil
+        val supertypes =
+          adtInheritanceMap.getOrElse(name, Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
+        val topLevelDefn =
           if (isJson || jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty))
-            Some(genJsoniterClassSerde(supertypes)(name))
-          else None
-        // For named maps and arrays, only generate the schema if it's a 'top level' json schema
-        case (name, _: OpenapiSchemaMap, isJson) if jsonParamRefs.contains(name) || isJson =>
-          Some(genJsoniterNamedSerde(name))
-        case (name, _: OpenapiSchemaArray, isJson) if jsonParamRefs.contains(name) || isJson =>
-          Some(genJsoniterNamedSerde(name))
-        // For enums, generate the serde if it's referenced in any json model
-        case (name, _: OpenapiSchemaEnum, _) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(genJsoniterEnumSerde(name))
-        // For ADTs, generate the serde if it's referenced in any json model
-        case (name, schema: OpenapiSchemaOneOf, _) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs))
-        case (
-              _,
-              _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf |
-              _: OpenapiSchemaAny,
-              _
-            ) =>
-          None
-        case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
-      }
+            Seq(genJsoniterClassSerde(supertypes)(name))
+          else Nil
+        topLevelDefn ++ inlinedEnumDefns
+      // For named maps and arrays, only generate the schema if it's a 'top level' json schema
+      case (name, _: OpenapiSchemaMap, isJson) if jsonParamRefs.contains(name) || isJson =>
+        Seq(genJsoniterNamedSerde(name))
+      case (name, _: OpenapiSchemaArray, isJson) if jsonParamRefs.contains(name) || isJson =>
+        Seq(genJsoniterNamedSerde(name))
+      // For enums, generate the serde if it's referenced in any json model
+      case (name, _: OpenapiSchemaEnum, _) if allTransitiveJsonParamRefs.contains(name) =>
+        Seq(genJsoniterEnumSerde(name))
+      // For ADTs, generate the serde if it's referenced in any json model
+      case (name, schema: OpenapiSchemaOneOf, _) if allTransitiveJsonParamRefs.contains(name) =>
+        Seq(generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs))
+      case (
+            _,
+            _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf |
+            _: OpenapiSchemaAny,
+            _
+          ) =>
+        Nil
+      case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
+    }
+    (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
+      .flatMap { (getSerdeString _).tupled }
       .foldLeft(Option.empty[String]) {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)

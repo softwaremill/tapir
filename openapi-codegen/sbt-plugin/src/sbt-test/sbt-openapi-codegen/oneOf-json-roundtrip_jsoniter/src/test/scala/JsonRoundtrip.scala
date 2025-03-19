@@ -77,8 +77,8 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       val reqJsonBody = writeToString(reqBody)
       val respBody = SubtypeWithoutD3(s = "a string+SubtypeWithoutD3", i = Some(123), e = Some(AnEnum.Foo), e2 = Some(SubtypeWithoutD3E2.A))
       val respJsonBody = writeToString(respBody)
-      reqJsonBody shouldEqual """{"s":"a string","i":123,"e":"Foo","e2":"A"}"""
-      respJsonBody shouldEqual """{"s":"a string+SubtypeWithoutD3","i":123,"e":"Foo","e2":"A"}"""
+      reqJsonBody shouldEqual """{"s":"a string","i":123,"e2":"A","e":"Foo"}"""
+      respJsonBody shouldEqual """{"s":"a string+SubtypeWithoutD3","i":123,"e2":"A","e":"Foo"}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")
