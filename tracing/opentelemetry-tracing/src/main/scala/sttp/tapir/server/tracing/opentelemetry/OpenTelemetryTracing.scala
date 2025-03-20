@@ -99,7 +99,7 @@ class OpenTelemetryTracing[F[_]](config: OpenTelemetryTracingConfig) extends Req
 
   private def withSpan[T](span: Span)(f: => F[T])(implicit monad: MonadError[F]): F[T] = {
     val scope = span.makeCurrent()
-    monad.ensure(
+    monad.ensure2(
       {
         try f
         finally scope.close()
