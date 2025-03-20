@@ -88,11 +88,20 @@ object TapirGeneratedEndpoints {
     d: Option[Double] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
   case class SubtypeWithoutD3 (
+    absent: Option[String] = None,
     s: String,
     i: Option[Int] = None,
-    e: Option[AnEnum] = None,
-    absent: Option[String] = None
+    e2: Option[SubtypeWithoutD3E2] = None,
+    e: Option[AnEnum] = None
   ) extends ADTWithoutDiscriminator
+
+  sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry
+  object SubtypeWithoutD3E2 extends enumeratum.Enum[SubtypeWithoutD3E2] {
+    val values = findValues
+    case object A extends SubtypeWithoutD3E2
+    case object B extends SubtypeWithoutD3E2
+    case object C extends SubtypeWithoutD3E2
+  }
   case class SubtypeWithoutD2 (
     a: Seq[String],
     absent: Option[String] = None
@@ -131,6 +140,8 @@ object TapirGeneratedEndpoints {
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+
+
 
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =

@@ -6,6 +6,7 @@ import sttp.client3.UriContext
 import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJsonSerdes}
 import TapirGeneratedEndpointsJsonSerdes._
+import sttp.tapir.generated.TapirGeneratedEndpoints.SubtypeWithoutD3E2.A
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
 
@@ -20,7 +21,9 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD1(foo.s + "+SubtypeWithoutD1", foo.i, foo.a))
       case foo: SubtypeWithoutD2 => Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD2(foo.a :+ "+SubtypeWithoutD2"))
       case foo: SubtypeWithoutD3 =>
-        Future successful Right[Unit, ADTWithoutDiscriminator](SubtypeWithoutD3(foo.s + "+SubtypeWithoutD3", foo.i, foo.e))
+        Future successful Right[Unit, ADTWithoutDiscriminator](
+          SubtypeWithoutD3(s = foo.s + "+SubtypeWithoutD3", i = foo.i, e = foo.e, e2 = foo.e2)
+        )
     })
 
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
@@ -70,12 +73,12 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     }
 
     locally {
-      val reqBody = SubtypeWithoutD3("a string", Some(123), Some(AnEnum.Foo))
+      val reqBody = SubtypeWithoutD3(s = "a string", i = Some(123), e = Some(AnEnum.Foo), e2 = Some(SubtypeWithoutD3E2.A))
       val reqJsonBody = writeToString(reqBody)
-      val respBody = SubtypeWithoutD3("a string+SubtypeWithoutD3", Some(123), Some(AnEnum.Foo))
+      val respBody = SubtypeWithoutD3(s = "a string+SubtypeWithoutD3", i = Some(123), e = Some(AnEnum.Foo), e2 = Some(SubtypeWithoutD3E2.A))
       val respJsonBody = writeToString(respBody)
-      reqJsonBody shouldEqual """{"s":"a string","i":123,"e":"Foo"}"""
-      respJsonBody shouldEqual """{"s":"a string+SubtypeWithoutD3","i":123,"e":"Foo"}"""
+      reqJsonBody shouldEqual """{"s":"a string","i":123,"e2":"A","e":"Foo"}"""
+      respJsonBody shouldEqual """{"s":"a string+SubtypeWithoutD3","i":123,"e2":"A","e":"Foo"}"""
       Await.result(
         sttp.client3.basicRequest
           .put(uri"http://test.com/adt/test")
