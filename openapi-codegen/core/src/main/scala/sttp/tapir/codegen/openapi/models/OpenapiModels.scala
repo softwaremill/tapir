@@ -5,6 +5,7 @@ import cats.syntax.either._
 import OpenapiSchemaType.OpenapiSchemaRef
 import io.circe.Json
 import sttp.tapir.codegen.BasicGenerator.strippedToCamelCase
+import sttp.tapir.codegen.util.MapUtils
 // https://swagger.io/specification/
 object OpenapiModels {
 
@@ -45,7 +46,7 @@ object OpenapiModels {
       parameters: Seq[Resolvable[OpenapiParameter]],
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
-      security: Seq[Seq[String]] = Nil,
+      security: Map[String, Seq[String]] = Map.empty,
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
       operationId: Option[String] = None,
@@ -194,7 +195,9 @@ object OpenapiModels {
         parameters,
         responses,
         requestBody,
-        security.map(_.keys.toSeq),
+        // This probably isn't the right semantics -- since it's a list of name-array pairs rather than a map, I assume
+        // that the intended semantics are DNF. But we don't do anything with the scopes anyway for now.
+        security.foldLeft(Map.empty[String, Seq[String]])(MapUtils.merge),
         summary,
         tags,
         operationId,
