@@ -53,7 +53,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.11.19"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.11.20"
 ```
 
 `PrometheusMetrics` encapsulates `PrometheusReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -132,7 +132,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.de
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.11.19"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.11.20"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -159,7 +159,7 @@ val metricsInterceptor = metrics.metricsInterceptor() // add to your server opti
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.11.19"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.11.20"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -225,7 +225,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.11.19"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.11.20"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.
@@ -287,7 +287,7 @@ object ZioEndpoint:
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.11.19"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.11.20"
 ```
 
 OpenTelemetry tracing is vendor-agnostic and can be exported using an exporters, such as Jaeger, Zipkin, DataDog, 
@@ -319,3 +319,45 @@ val serverOptions: NettySyncServerOptions =
 
 NettySyncServer().options(serverOptions).addEndpoint(???).startAndWait()
 ```
+
+## otel4s OpenTelemetry tracing
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-otel4s-tracing" % "1.11.20"
+```
+
+The `Otel4sTracing` interceptor provides integration with the [otel4s](https://typelevel.org/otel4s/) library for OpenTelemetry tracing.
+This allows you to create traces for your tapir endpoints using a purely functional API.
+
+`Otel4sTracing` creates a span for each request, extracts context from request headers, and populates spans with relevant metadata (request method, path, status code).
+All spans created as part of the request processing will be properly correlated into a single trace.
+
+For details on context propagation with otel4s, see the [official documentation](https://typelevel.org/otel4s/oteljava/tracing-context-propagation.html).
+
+The interceptor should be added before any others to ensure it handles the request early:
+
+Example using Http4s:
+```scala
+import cats.effect.IO
+import org.typelevel.otel4s.oteljava.OtelJava
+import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerOptions
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.tracing.otel4s.Otel4sTracing
+
+OtelJava
+  .autoConfigured[IO]()
+  .use { otel4s =>
+    otel4s.tracerProvider.get("tracer-name").flatMap { tracer =>
+      val endpoints: List[ServerEndpoint[Any, IO]] = ???
+      val routes =
+        Http4sServerInterpreter[IO](Http4sServerOptions.default[IO].prependInterceptor(Otel4sTracing(tracer)))
+          .toRoutes(endpoints)
+      // start your server
+      ???
+    }
+  }
+```
+
