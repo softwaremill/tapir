@@ -1,8 +1,8 @@
 // {cat=Error handling; effects=Future; server=Pekko HTTP; JSON=circe}: Optional returned from the server logic, resulting in 404 if None
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.20
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.20
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.20
 //> using dep com.softwaremill.sttp.client3::core:3.10.2
 
 package sttp.tapir.examples.errors
