@@ -13,6 +13,7 @@ paths:
         - petstore_auth:
             - write:pets
             - read:pets
+        - BearerAuth: [ ]
       responses:
         "200":
           description: "Response CSV body"
@@ -76,6 +77,8 @@ paths:
               $ref: '#/components/schemas/NotNullableThingy'
   '/adt/test':
     post:
+      security:
+        - api_key: []
       responses:
         '200':
           description: successful operation
@@ -320,6 +323,10 @@ components:
       type: apiKey
       name: api_key
       in: header
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     ADTWithDiscriminator:
       type: object

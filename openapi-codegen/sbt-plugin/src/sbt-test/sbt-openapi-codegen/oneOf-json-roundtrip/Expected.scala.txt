@@ -165,7 +165,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .get
       .in(("binary" / "test"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .securityIn(auth.bearer[String]())
       .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()).description("Response CSV body"))
 
   type PostBinaryTestEndpoint = Endpoint[String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, String, sttp.capabilities.pekko.PekkoStreams]
@@ -201,11 +201,12 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithoutDiscriminator])
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
-  type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
+  type PostAdtTestEndpoint = Endpoint[String, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
   lazy val postAdtTest: PostAdtTestEndpoint =
     endpoint
       .post
       .in(("adt" / "test"))
+      .securityIn(auth.apiKey(header[String]("api_key")))
       .in(jsonBody[ADTWithDiscriminatorNoMapping])
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
