@@ -91,7 +91,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Seq(Seq("httpBearer")),
+              security = Map("httpBearer" -> Seq()),
               summary = None,
               tags = None
             ),
@@ -100,7 +100,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Seq(Seq("httpBasic")),
+              security = Map("httpBasic" -> Seq()),
               summary = None,
               tags = None
             ),
@@ -109,7 +109,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Seq(Seq("apiKeyHeader")),
+              security = Map("httpBearer" -> Seq()),
               summary = None,
               tags = None
             ),
@@ -118,7 +118,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Seq(Seq("apiKeyCookie")),
+              security = Map("apiKeyCookie" -> Seq()),
               summary = None,
               tags = None
             ),
@@ -127,7 +127,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Seq(Seq("apiKeyQuery")),
+              security = Map("apiKeyQuery" -> Seq()),
               summary = None,
               tags = None
             )
