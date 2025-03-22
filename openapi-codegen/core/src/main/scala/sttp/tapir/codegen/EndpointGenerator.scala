@@ -253,41 +253,37 @@ class EndpointGenerator {
   private def security(securitySchemes: Map[String, OpenapiSecuritySchemeType], security: Map[String, Seq[String]])(implicit
       location: Location
   ) = {
-//    if (security.size > 1 || security.exists(_.size > 1))
-//      bail("We can handle only single security entry!")
-//
 
     // Would be nice to do something to respect scopes here
     val inner = security.flatMap { case (schemeName, _ /*scopes*/ ) =>
       securitySchemes.get(schemeName) match {
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeBearerType) =>
-          Seq("auth.bearer[String]()")
+          Seq("auth.bearer[String]()" -> "Bearer")
 
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeBasicType) =>
-          Seq("auth.basic[UsernamePassword]()")
+          Seq("auth.basic[UsernamePassword]()" -> "Basic")
 
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeApiKeyType(in, name)) =>
-          Seq(s"""auth.apiKey($in[String]("$name"))""")
+          Seq(s"""auth.apiKey($in[String]("$name"))""" -> "ApiKey")
 
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeOAuth2Type(flows)) if flows.isEmpty => Nil
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeOAuth2Type(flows)) =>
           flows.map {
+            case (OAuth2FlowType.password, _) =>
+              "auth.bearer[String]()" -> "Bearer"
             case (OAuth2FlowType.`implicit`, f) =>
-              "auth.bearer[String]()"
-//              val authUrl = f.authorizationUrl.getOrElse(bail("authorizationUrl required for implicit flow"))
-//              val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
-//              s"""auth.oauth2.implicitFlow("$authUrl", $refreshUrl)"""
+              val authUrl = f.authorizationUrl.getOrElse(bail("authorizationUrl required for implicit flow"))
+              val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
+              s"""auth.oauth2.implicitFlow("$authUrl", $refreshUrl)""" -> "Bearer"
             case (OAuth2FlowType.clientCredentials, f) =>
-              "auth.bearer[String]()"
-//              val tokenUrl = f.tokenUrl.getOrElse(bail("authorizationUrl required for implicit flow"))
-//              val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
-//              s"""auth.oauth2.clientCredentialsFlow("$tokenUrl", $refreshUrl)"""
+              val tokenUrl = f.tokenUrl.getOrElse(bail("tokenUrl required for clientCredentials flow"))
+              val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
+              s"""auth.oauth2.clientCredentialsFlow("$tokenUrl", $refreshUrl)""" -> "Bearer"
             case (OAuth2FlowType.authorizationCode, f) =>
-              "auth.bearer[String]()"
-//              val authUrl = f.authorizationUrl.getOrElse(bail("authorizationUrl required for implicit flow"))
-//              val tokenUrl = f.tokenUrl.getOrElse(bail("authorizationUrl required for implicit flow"))
-//              val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
-//              s"""auth.oauth2.authorizationCodeFlow("$authUrl", "$tokenUrl", $refreshUrl)"""
+              val authUrl = f.authorizationUrl.getOrElse(bail("authorizationUrl required for authorizationCode flow"))
+              val tokenUrl = f.tokenUrl.getOrElse(bail("tokenUrl required for authorizationCode flow"))
+              val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
+              s"""auth.oauth2.authorizationCodeFlow("$authUrl", "$tokenUrl", $refreshUrl)""" -> "Bearer"
           }
 
         case None =>
@@ -295,11 +291,21 @@ class EndpointGenerator {
       }
     }.toList
     inner.distinct match {
-      case Nil      => "" -> None
-      case h +: Nil => s".securityIn($h)" -> Some("String")
+      case Nil           => "" -> None
+      case (h, _) +: Nil => s".securityIn($h)" -> Some("String")
       case s =>
-        val oneOfs = s.map { x => s"oneOfVariant($x)" }.mkString(", ")
-        s".securityIn(oneOf[String]($oneOfs))" -> Some("String")
+        s.map(_._2).distinct match {
+          case h +: Nil =>
+            h match {
+              case "Bearer" => ".securityIn(auth.bearer[String]())" -> Some("String")
+              case "Basic"  => ".securityIn(auth.basic[UsernamePassword]())" -> Some("String")
+              case "ApiKey" => bail("Cannot support multiple api key authentication declarations on same endpoint")
+            }
+          case _ =>
+            bail(
+              "can only support multiple security declarations on the same endpoint when they resolve to the same input type (e.g. bearer auth header)"
+            )
+        }
     }
   }
 
