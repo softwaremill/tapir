@@ -9,6 +9,10 @@ tags: [ ]
 paths:
   '/binary/test':
     get:
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
       responses:
         "200":
           description: "Response CSV body"
@@ -35,6 +39,10 @@ paths:
               description: "csv file"
               type: string
               format: binary
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
   '/optional/test':
     post:
       responses:
@@ -299,6 +307,19 @@ paths:
 
 
 components:
+  securitySchemes:
+    petstore_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://petstore3.swagger.io/oauth/authorize
+          scopes:
+            "write:pets": modify pets in your account
+            "read:pets": read your pets
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
   schemas:
     ADTWithDiscriminator:
       type: object

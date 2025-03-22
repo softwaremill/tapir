@@ -12,6 +12,8 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
 
+
+
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -105,11 +107,9 @@ object TapirGeneratedEndpoints {
     e: Option[AnEnum] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
-
   case class NullableThingy2 (
     uuid: java.util.UUID
   )
-
   case class ObjectWithInlineEnum (
     id: java.util.UUID,
     inlineEnum: ObjectWithInlineEnumInlineEnum = ObjectWithInlineEnumInlineEnum.foo3
@@ -160,18 +160,20 @@ object TapirGeneratedEndpoints {
 
 
 
-  type GetBinaryTestEndpoint = Endpoint[Unit, Unit, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
+  type GetBinaryTestEndpoint = Endpoint[String, Unit, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
   lazy val getBinaryTest: GetBinaryTestEndpoint =
     endpoint
       .get
       .in(("binary" / "test"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()).description("Response CSV body"))
 
-  type PostBinaryTestEndpoint = Endpoint[Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, String, sttp.capabilities.pekko.PekkoStreams]
+  type PostBinaryTestEndpoint = Endpoint[String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, String, sttp.capabilities.pekko.PekkoStreams]
   lazy val postBinaryTest: PostBinaryTestEndpoint =
     endpoint
       .post
       .in(("binary" / "test"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()))
       .out(jsonBody[String].description("successful operation"))
 
