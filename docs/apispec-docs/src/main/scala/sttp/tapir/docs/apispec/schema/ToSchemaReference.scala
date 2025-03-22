@@ -2,7 +2,7 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.apispec.{Schema => ASchema}
 import sttp.tapir.{Schema => TSchema}
-import sttp.tapir.Schema.Title
+import sttp.tapir.Schema.{Title, Nullable}
 import sttp.tapir.docs.apispec.schema.TSchemaToASchema.{tDefaultToADefault, tExampleToAExample}
 
 private[schema] class ToSchemaReference(
@@ -23,6 +23,10 @@ private[schema] class ToSchemaReference(
       if (originalSchema.deprecated != schema.deprecated && schema.deprecated) result = result.copy(deprecated = Some(schema.deprecated))
       if (originalSchema.attributes.get(Title.Attribute) != schema.attributes.get(Title.Attribute))
         result = result.copy(title = schema.attributes.get(Title.Attribute).map(_.value))
+      if (
+        originalSchema.attributes.get(Nullable.Attribute).exists(_.nullable) || schema.attributes.get(Nullable.Attribute).exists(_.nullable)
+      )
+        result = result.nullable
     }
     result
   }

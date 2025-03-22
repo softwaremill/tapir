@@ -332,6 +332,12 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
   }
 
+  /** Corresponds to OpenAPI's `nullable` parameter which should be used for defining nullable fields. */
+  case class Nullable(nullable: Boolean)
+  object Nullable {
+    val Attribute: AttributeKey[Nullable] = new AttributeKey[Nullable]("sttp.tapir.Schema.Nullable")
+  }
+
   /** Used in combination with explode, to properly represent delimited values in examples and default values (#3581) */
   case class Delimiter(delimiter: String)
   object Delimiter {
