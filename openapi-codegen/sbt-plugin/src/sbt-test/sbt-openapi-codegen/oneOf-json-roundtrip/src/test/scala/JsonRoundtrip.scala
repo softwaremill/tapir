@@ -91,10 +91,13 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     }
   }
   "oneOf with discriminator can be round-tripped by generated serdes" in {
-    val route = TapirGeneratedEndpoints.postAdtTest.serverLogic[Future]({
-      case foo: SubtypeWithD1 => Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD1(foo.s + "+SubtypeWithD1", foo.i, foo.d))
-      case foo: SubtypeWithD2 => Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD2(foo.s + "+SubtypeWithD2", foo.a))
-    })
+    val route = TapirGeneratedEndpoints.postAdtTest
+      .serverSecurityLogicSuccess(_ => Future.successful(()))
+      .serverLogic(_ => {
+        case foo: SubtypeWithD1 =>
+          Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD1(foo.s + "+SubtypeWithD1", foo.i, foo.d))
+        case foo: SubtypeWithD2 => Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD2(foo.s + "+SubtypeWithD2", foo.a))
+      })
 
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(route)
@@ -113,6 +116,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       Await.result(
         sttp.client3.basicRequest
           .post(uri"http://test.com/adt/test")
+          .header("api_key", "the key")
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
@@ -133,6 +137,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       Await.result(
         sttp.client3.basicRequest
           .post(uri"http://test.com/adt/test")
+          .header("api_key", "the key")
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
