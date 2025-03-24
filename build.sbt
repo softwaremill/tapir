@@ -2052,7 +2052,7 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.28.2" % Provided
     )
   )
-  .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test)
+  .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
 
 lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
   .enablePlugins(SbtPlugin)
@@ -2074,7 +2074,7 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     )
   )
-  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 
 lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
   .enablePlugins(BuildInfoPlugin)
@@ -2089,7 +2089,7 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
-  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 
 // other
 
