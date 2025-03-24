@@ -160,4 +160,21 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     result.asJson.deepDropNullValues shouldBe
       json"""{"$$schema" : "http://json-schema.org/draft/2020-12/schema#", "title" : "Tuple2_Int_String", "type" : "array", "prefixItems" : [{"type" : "integer", "format" : "int32"}, {"type" : "string"}]}"""
   }
+
+  it should "handle as nullable if marked with Nullable attribute" in {
+    // given
+    case class Parent(innerChildField: Child, nullableInnerChild: Child)
+    case class Child(childName: Option[String])
+
+    val tSchema =
+      implicitly[Schema[Parent]]
+        .modify(_.innerChildField.childName)(_.attribute(Schema.Nullable.Attribute, ()))
+        .modify(_.nullableInnerChild)(_.attribute(Schema.Nullable.Attribute, ()))
+
+    // when
+    val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = false)
+
+    // then
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft/2020-12/schema#","title":"Parent","required":["innerChildField","nullableInnerChild"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"},"nullableInnerChild":{"title":"Child","anyOf":[{"$$ref":"#/$$defs/Child"},{"type":"null"}]}},"$$defs":{"Child":{"title":"Child","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
+  }
 }

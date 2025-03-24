@@ -332,6 +332,11 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
   }
 
+  /** Will override a schema's typing to include a `null` type, overriding the default behavior. */
+  object Nullable {
+    val Attribute: AttributeKey[Unit] = new AttributeKey[Unit]("sttp.tapir.Schema.Nullable")
+  }
+
   /** Used in combination with explode, to properly represent delimited values in examples and default values (#3581) */
   case class Delimiter(delimiter: String)
   object Delimiter {
