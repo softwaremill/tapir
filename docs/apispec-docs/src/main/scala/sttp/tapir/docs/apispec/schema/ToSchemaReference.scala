@@ -23,9 +23,7 @@ private[schema] class ToSchemaReference(
       if (originalSchema.deprecated != schema.deprecated && schema.deprecated) result = result.copy(deprecated = Some(schema.deprecated))
       if (originalSchema.attributes.get(Title.Attribute) != schema.attributes.get(Title.Attribute))
         result = result.copy(title = schema.attributes.get(Title.Attribute).map(_.value))
-      if (
-        originalSchema.attributes.get(Nullable.Attribute).exists(_.nullable) || schema.attributes.get(Nullable.Attribute).exists(_.nullable)
-      )
+      if (originalSchema.attributes.get(Nullable.Attribute).isDefined || schema.attributes.get(Nullable.Attribute).isDefined)
         result = result.nullable
     }
     result
