@@ -40,10 +40,6 @@ object XmlSerdeGenerator {
                     val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
                     val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                     (n, d, tpe, 1, None)
-//                  case ((n, OpenapiSchemaField(t: OpenapiSchemaEnum, _)), r) =>
-                  //                    val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
-                  //                    val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
-                  //                    (n, d, 2)
                 }
               }
               .distinct
@@ -54,9 +50,6 @@ object XmlSerdeGenerator {
                 case (n, t, _, 0, c: Option[OpenapiXml.XmlArrayConfiguration @unchecked]) =>
                   val name = c.flatMap(_.name).getOrElse(n)
                   val w = c.exists(_.isWrapped)
-//                  val maybeP = if (w)
-//                    s"""
-//                       |""".stripMargin else ""
                   s"""implicit val $ref${n.capitalize}SeqDecoder: Decoder[Seq[$t]] = seqDecoder[$t]("$name", isWrapped = $w)"""
                 case (n, t, _, 1, _) => s"""// implicit val $ref${n.capitalize}Decoder: Decoder[$t] = deriveConfiguredDecoder[$t]"""
                 case (n, t, tpe, 2, _) if t == tpe =>
