@@ -8,7 +8,7 @@ lazy val root = (project in file("."))
     openapiGenerateEndpointTypes := true
   )
 
-val catsXmlVersion = "0.0.20+8-506b0e7d+20250313-1350-SNAPSHOT"
+val catsXmlVersion = "0.0.20"
 val jsoniterScalaVersion = "2.33.2"
 val tapirVersion = "1.11.18"
 libraryDependencies ++= Seq(
