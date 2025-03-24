@@ -119,7 +119,8 @@ jsoniter              "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala
 ### XML Support
 
 Xml support is still fairly experimental. Available options are 'cats-xml' and 'none'. 'none' will fallback to a
-streaming binary 'non-implementation'
+streaming binary 'non-implementation'. The minimal supported version of cats-xml is 0.0.20 for scala 2 and TBD for
+scala 3.
 
 ```{eval-rst}
 ===================== ========================================================================================
