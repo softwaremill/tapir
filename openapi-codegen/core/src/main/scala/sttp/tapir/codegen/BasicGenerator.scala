@@ -63,7 +63,7 @@ object BasicGenerator {
       case "none"     => XmlSerdeLib.NoSupport
       case _ =>
         System.err.println(
-          s"!!! Unrecognised value $xmlSerdeLib for json serde lib -- should be one of cats-xml, none. Defaulting to none !!!"
+          s"!!! Unrecognised value $xmlSerdeLib for xml serde lib -- should be one of cats-xml, none. Defaulting to none !!!"
         )
         XmlSerdeLib.NoSupport
     }
