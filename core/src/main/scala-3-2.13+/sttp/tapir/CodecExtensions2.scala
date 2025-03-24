@@ -21,8 +21,8 @@ trait CodecExtensions2 {
       .schema(
         codec.schema
           .asIterable[List]
-          .attribute(Schema.Explode.Attribute, Schema.Explode(false))
-          .attribute(Schema.Delimiter.Attribute, Schema.Delimiter(delimiter.value))
+          .explode(false)
+          .delimiter(delimiter.value)
       )
       .map(Delimited[D, T](_))(_.values)
 }

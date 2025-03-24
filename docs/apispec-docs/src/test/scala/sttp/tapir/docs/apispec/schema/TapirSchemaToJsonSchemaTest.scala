@@ -168,8 +168,8 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
 
     val tSchema =
       implicitly[Schema[Parent]]
-        .modify(_.innerChildField.childName)(_.attribute(Schema.Nullable.Attribute, ()))
-        .modify(_.nullableInnerChild)(_.attribute(Schema.Nullable.Attribute, ()))
+        .modify(_.innerChildField.childName)(_.nullable)
+        .modify(_.nullableInnerChild)(_.nullable)
 
     // when
     val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = false)

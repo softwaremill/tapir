@@ -308,7 +308,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
       childProduct.fields.find(_.name.name == "kind") shouldBe Some(
         SProductField(
           FieldName("kind"),
-          Schema.string.attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue(discValue)),
+          Schema.string.encodedDiscriminatorValue(discValue),
           (_: Any) => None
         )
       )

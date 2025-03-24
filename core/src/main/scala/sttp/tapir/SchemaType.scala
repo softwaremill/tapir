@@ -152,7 +152,7 @@ object SchemaType {
                   case Some(v) =>
                     SProductField(
                       field.name,
-                      field.schema.attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue(v)),
+                      field.schema.encodedDiscriminatorValue(v),
                       field.get
                     )
                   case None => field
