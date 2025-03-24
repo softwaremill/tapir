@@ -9,8 +9,8 @@ object TapirGeneratedEndpoints {
   import io.circe.generic.semiauto._
 
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
-  import sttp.tapir.generated.TapirGeneratedEndpointsXmlSerdes._
   import TapirGeneratedEndpointsSchemas._
+
 
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
@@ -71,23 +71,6 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
-
-  enum PetStatus {
-    case available, pending, sold
-  }
-  case class Pet (
-    status: Option[PetStatus] = None,
-    tags: Option[Seq[Tag]] = None,
-    id: Option[Long] = None,
-    tags2: Option[Seq[Tag2]] = None,
-    photoUrls: Seq[String],
-    name: String,
-    category: Option[Category] = None
-  )
-  case class Category (
-    id: Option[Long] = None,
-    name: Option[String] = None
-  )
   case class NotNullableThingy (
     uuid: java.util.UUID
   )
@@ -131,18 +114,10 @@ object TapirGeneratedEndpoints {
     s: String,
     a: Option[Seq[String]] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
-  case class Tag (
-    id: Option[Long] = None,
-    name: Option[String] = None
-  )
 
   enum AnEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
     case Foo, Bar, Baz
   }
-  case class Tag2 (
-    id: Option[Long] = None,
-    name: Option[String] = None
-  )
   type ListType = List[String]
   case class PutInlineSimpleObjectRequest (
     foo: String,
@@ -159,14 +134,6 @@ object TapirGeneratedEndpoints {
 
 
 
-  type PostXmlEndpointEndpoint = Endpoint[Unit, Pet, Unit, Pet, Any]
-  lazy val postXmlEndpoint: PostXmlEndpointEndpoint =
-    endpoint
-      .post
-      .in(("xml" / "endpoint"))
-      .in(xmlBody[Pet])
-      .out(xmlBody[Pet].description("An object"))
-
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
@@ -182,16 +149,6 @@ object TapirGeneratedEndpoints {
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithDiscriminatorNoMapping])
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
-
-  type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnyObjectWithInlineEnum], Any]
-  lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
-    endpoint
-      .get
-      .in(("oneof" / "option" / "test"))
-      .out(oneOf[Option[AnyObjectWithInlineEnum]](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_: ObjectWithInlineEnum) => true },
-        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object")){ case Some(_: ObjectWithInlineEnum2) => true }))
 
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], List[PostInlineEnumTestQueryOptSeqEnum], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =
@@ -237,6 +194,16 @@ object TapirGeneratedEndpoints {
     case baz1, baz2, baz3
   }
 
+  type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnyObjectWithInlineEnum], Any]
+  lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
+    endpoint
+      .get
+      .in(("oneof" / "option" / "test"))
+      .out(oneOf[Option[AnyObjectWithInlineEnum]](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_: ObjectWithInlineEnum) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object")){ case Some(_: ObjectWithInlineEnum2) => true }))
+
   type PutInlineSimpleObjectEndpoint = Endpoint[Unit, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
@@ -276,7 +243,6 @@ object TapirGeneratedEndpoints {
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
 
-  
-  lazy val generatedEndpoints = List(postXmlEndpoint, putAdtTest, postAdtTest, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postInlineEnumTest, getOneofOptionTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 }
