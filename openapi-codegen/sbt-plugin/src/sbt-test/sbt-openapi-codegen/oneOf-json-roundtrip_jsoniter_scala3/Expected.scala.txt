@@ -1,3 +1,4 @@
+
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -11,6 +12,7 @@ object TapirGeneratedEndpoints {
 
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
+
 
 
   case class CommaSeparatedValues[T](values: List[T])
@@ -45,10 +47,26 @@ object TapirGeneratedEndpoints {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
   }
 
-
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
+
+  enum PetStatus {
+    case available, pending, sold
+  }
+  case class Pet (
+    status: Option[PetStatus] = None,
+    tags: Option[Seq[Tag]] = None,
+    id: Option[Long] = None,
+    tags2: Option[Seq[Tag2]] = None,
+    photoUrls: Seq[String],
+    name: String,
+    category: Option[Category] = None
+  )
+  case class Category (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
@@ -74,10 +92,19 @@ object TapirGeneratedEndpoints {
     s: String,
     a: Option[Seq[String]] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class Tag (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
 
   enum AnEnum {
     case Foo, Bar, Baz
   }
+  case class Tag2 (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
+
 
 
 
@@ -95,7 +122,14 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping])
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
+  lazy val postXmlEndpoint =
+    endpoint
+      .post
+      .in(("xml" / "endpoint"))
+      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Pet], CodecFormat.Xml()))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Pet], CodecFormat.Xml()).description("An object"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest)
+
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postXmlEndpoint)
 
 }

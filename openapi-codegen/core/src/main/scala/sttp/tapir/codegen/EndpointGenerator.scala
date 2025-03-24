@@ -3,6 +3,7 @@ import io.circe.Json
 import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.StreamingImplementation.StreamingImplementation
+import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
@@ -94,6 +95,7 @@ class EndpointGenerator {
       useHeadTagForObjectNames: Boolean,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
+      xmlSerdeLib: XmlSerdeLib,
       streamingImplementation: StreamingImplementation,
       generateEndpointTypes: Boolean
   ): EndpointDefs = {
@@ -101,7 +103,9 @@ class EndpointGenerator {
     val components = Option(doc.components).flatten
     val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns, xmlParamRefs) =
       doc.paths
-        .map(generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, streamingImplementation, doc))
+        .map(
+          generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, xmlSerdeLib, streamingImplementation, doc)
+        )
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false, Nil, Set.empty))(_ merge _)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
       val definitions = ge
@@ -133,6 +137,7 @@ class EndpointGenerator {
       useHeadTagForObjectNames: Boolean,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
+      xmlSerdeLib: XmlSerdeLib,
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument
   )(p: OpenapiPath): GeneratedEndpoints = {
@@ -159,8 +164,8 @@ class EndpointGenerator {
           val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
           val (securityDecl, securityTypes) = security(securitySchemes, m.security)
           val (inParams, maybeLocalEnums, inTypes, inlineInDefns) =
-            ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, streamingImplementation, doc)
-          val (outDecl, outTypes, errTypes, inlineDefns) = outs(m.responses, streamingImplementation, doc, targetScala3, name)
+            ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, xmlSerdeLib, streamingImplementation, doc)
+          val (outDecl, outTypes, errTypes, inlineDefns) = outs(m.responses, streamingImplementation, doc, targetScala3, name, xmlSerdeLib)
           val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
           val inlineDefn = combine(inlineInDefns, inlineDefns)
           val definition =
@@ -289,6 +294,7 @@ class EndpointGenerator {
       endpointName: String,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
+      xmlSerdeLib: XmlSerdeLib,
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument
   )(implicit location: Location): (String, Option[String], Seq[String], Option[String]) = {
@@ -375,7 +381,8 @@ class EndpointGenerator {
             b.required && !schemaIsNullable,
             endpointName,
             "Request",
-            false
+            false,
+            xmlSerdeLib
           )
         Some((s".in($decl)", tpe, maybeInlineDefn))
       }
@@ -419,7 +426,8 @@ class EndpointGenerator {
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument,
       targetScala3: Boolean,
-      endpointName: String
+      endpointName: String,
+      xmlSerdeLib: XmlSerdeLib
   )(implicit
       location: Location
   ) = {
@@ -455,7 +463,8 @@ class EndpointGenerator {
               !(optional || schemaIsNullable),
               endpointName,
               "Response",
-              isErrorPosition
+              isErrorPosition,
+              xmlSerdeLib
             )
           (s"$decl$d", Some(tpe), maybeInlineDefn)
       }
@@ -594,14 +603,15 @@ class EndpointGenerator {
       required: Boolean,
       endpointName: String,
       position: String,
-      isErrorPosition: Boolean // no streaming support for errorOut
+      isErrorPosition: Boolean, // no streaming support for errorOut
+      xmlSerdeLib: XmlSerdeLib
   )(implicit location: Location): MappedContentType = {
     contentType match {
       case "text/plain" =>
         MappedContentType("stringBody", "String")
       case "text/html" =>
         MappedContentType("htmlBodyUtf8", "String")
-      case "application/xml" =>
+      case "application/xml" if xmlSerdeLib != XmlSerdeLib.NoSupport =>
         val (outT, maybeInline) = schema match {
           case st: OpenapiSchemaRef =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
@@ -660,10 +670,12 @@ class EndpointGenerator {
     def eagerBody = contentType match {
       case "application/octet-stream" => "rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody)"
       case o if o.startsWith("text/") => s"stringBodyUtf8AnyFormat(${codec("String", o)})"
+      case "application/xml"          => s"EndpointIO.Body(RawBodyType.ByteArrayBody, CodecFormat.Xml(), EndpointIO.Info.empty)"
       case o                          => s"EndpointIO.Body(RawBodyType.ByteArrayBody, ${codec("Array[Byte]", o)}, EndpointIO.Info.empty)"
     }
     def streamingBody = contentType match {
       case "application/octet-stream" => "CodecFormat.OctetStream()"
+      case "application/xml"          => "CodecFormat.Xml()"
       case o                          => s"`${o}CodecFormat`()"
     }
     if (isErrorPosition) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")

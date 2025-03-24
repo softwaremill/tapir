@@ -1,6 +1,7 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.BasicGenerator.indent
+import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
@@ -14,8 +15,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiXml
 
 object XmlSerdeGenerator {
 
-  def generateSerdes(doc: OpenapiDocument, xmlParamRefs: Set[String], targetScala3: Boolean): Option[String] = {
-    if (xmlParamRefs.isEmpty) None
+  def generateSerdes(xmlSerdeLib: XmlSerdeLib, doc: OpenapiDocument, xmlParamRefs: Set[String], targetScala3: Boolean): Option[String] = {
+    if (xmlParamRefs.isEmpty || xmlSerdeLib == XmlSerdeLib.NoSupport) None
     else
       Some {
         xmlParamRefs
@@ -133,10 +134,13 @@ object XmlSerdeGenerator {
       }
   }
 
-  def wrapBody(packagePath: String, objName: String, targetScala3: Boolean, body: String) = {
-    val enumDecoder =
-      if (targetScala3)
-        """  def enumDecoder[T: scala.reflect.ClassTag](fn: String => T): Decoder[T] =
+  def wrapBody(xmlSerdeLib: XmlSerdeLib, packagePath: String, objName: String, targetScala3: Boolean, body: String): String = xmlSerdeLib match {
+    case XmlSerdeLib.NoSupport =>
+      throw new IllegalStateException("Codegen should not be attempting to generate serdes when specified xml lib is 'none'")
+    case XmlSerdeLib.CatsXml =>
+      val enumDecoder =
+        if (targetScala3)
+          """  def enumDecoder[T: scala.reflect.ClassTag](fn: String => T): Decoder[T] =
         |    Decoder.instance { case x: XmlNode.Node =>
         |      x.content match {
         |        case NodeContent.Text(t) =>
@@ -150,8 +154,8 @@ object XmlSerdeGenerator {
         |    }
         |  def enumEncoder[T](label: String): Encoder[T] =
         |    cats.xml.codec.Encoder.of(x => XmlNode(label, Nil, content = NodeContent.text(x.toString)))""".stripMargin
-      else
-        """  def enumDecoder[T <: enumeratum.EnumEntry: scala.reflect.ClassTag](e: enumeratum.Enum[T]): Decoder[T] =
+        else
+          """  def enumDecoder[T <: enumeratum.EnumEntry: scala.reflect.ClassTag](e: enumeratum.Enum[T]): Decoder[T] =
         |    Decoder.instance { case x: XmlNode.Node =>
         |      x.content match {
         |        case NodeContent.Text(t) =>
@@ -165,7 +169,7 @@ object XmlSerdeGenerator {
         |    }
         |  def enumEncoder[T <: enumeratum.EnumEntry](label: String): Encoder[T] =
         |    cats.xml.codec.Encoder.of(x => XmlNode(label, Nil, content = NodeContent.text(x.entryName)))""".stripMargin
-    s"""package $packagePath
+      s"""package $packagePath
        |
        |object ${objName}XmlSerdes {
        |  import $packagePath.$objName._

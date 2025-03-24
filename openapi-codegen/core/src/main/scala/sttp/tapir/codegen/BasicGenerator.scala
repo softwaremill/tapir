@@ -21,13 +21,13 @@ object JsonSerdeLib extends Enumeration {
   val Circe, Jsoniter, Zio = Value
   type JsonSerdeLib = Value
 }
+object XmlSerdeLib extends Enumeration {
+  val CatsXml, NoSupport = Value
+  type XmlSerdeLib = Value
+}
 object StreamingImplementation extends Enumeration {
   val Akka, FS2, Pekko, Zio = Value
   type StreamingImplementation = Value
-}
-object EndpointCapabilites extends Enumeration {
-  val Akka, FS2, Nothing, Pekko, Zio = Value
-  type EndpointCapabilites = Value
 }
 
 object BasicGenerator {
@@ -42,6 +42,7 @@ object BasicGenerator {
       targetScala3: Boolean,
       useHeadTagForObjectNames: Boolean,
       jsonSerdeLib: String,
+      xmlSerdeLib: String,
       streamingImplementation: String,
       validateNonDiscriminatedOneOfs: Boolean,
       maxSchemasPerFile: Int,
@@ -53,9 +54,18 @@ object BasicGenerator {
       case "zio"      => JsonSerdeLib.Zio
       case _ =>
         System.err.println(
-          s"!!! Unrecognised value $jsonSerdeLib for json serde lib -- should be one of circe, jsoniter. Defaulting to circe !!!"
+          s"!!! Unrecognised value $jsonSerdeLib for json serde lib -- should be one of circe, jsoniter, zio. Defaulting to circe !!!"
         )
         JsonSerdeLib.Circe
+    }
+    val normalisedXmlLib = xmlSerdeLib.toLowerCase match {
+      case "cats-xml" => XmlSerdeLib.CatsXml
+      case "none"     => XmlSerdeLib.NoSupport
+      case _ =>
+        System.err.println(
+          s"!!! Unrecognised value $xmlSerdeLib for json serde lib -- should be one of cats-xml, none. Defaulting to none !!!"
+        )
+        XmlSerdeLib.NoSupport
     }
     val normalisedStreamingImplementation = streamingImplementation.toLowerCase match {
       case "akka"  => StreamingImplementation.Akka
@@ -75,6 +85,7 @@ object BasicGenerator {
         useHeadTagForObjectNames,
         targetScala3,
         normalisedJsonLib,
+        normalisedXmlLib,
         normalisedStreamingImplementation,
         generateEndpointTypes
       )
@@ -85,6 +96,7 @@ object BasicGenerator {
           targetScala3 = targetScala3,
           queryOrPathParamRefs = queryOrPathParamRefs,
           jsonSerdeLib = normalisedJsonLib,
+          xmlSerdeLib = normalisedXmlLib,
           jsonParamRefs = jsonParamRefs,
           fullModelPath = s"$packagePath.$objName",
           validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs,
@@ -131,7 +143,7 @@ object BasicGenerator {
          |}""".stripMargin
     }
 
-    val xmlSerdeObj = xmlSerdes.map(XmlSerdeGenerator.wrapBody(packagePath, objName, targetScala3, _))
+    val xmlSerdeObj = xmlSerdes.map(XmlSerdeGenerator.wrapBody(normalisedXmlLib, packagePath, objName, targetScala3, _))
 
     val schemaObjs = if (schemas.size > 1) schemas.zipWithIndex.map { case (body, idx) =>
       val priorImports = (0 until idx).map { i => s"import $packagePath.${objName}Schemas${i + 1}._" }.mkString("\n")

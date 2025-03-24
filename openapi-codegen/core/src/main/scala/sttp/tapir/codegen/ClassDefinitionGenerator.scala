@@ -24,6 +24,7 @@ class ClassDefinitionGenerator {
       targetScala3: Boolean = false,
       queryOrPathParamRefs: Set[String] = Set.empty,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = Circe,
+      xmlSerdeLib: XmlSerdeLib.XmlSerdeLib = XmlSerdeLib.CatsXml,
       jsonParamRefs: Set[String] = Set.empty,
       fullModelPath: String = "",
       validateNonDiscriminatedOneOfs: Boolean = true,
@@ -72,7 +73,7 @@ class ClassDefinitionGenerator {
       xmlParamRefs,
       xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
-    val xmlSerdes = XmlSerdeGenerator.generateSerdes(doc, allTransitiveXmlParamRefs, targetScala3)
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3)
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
