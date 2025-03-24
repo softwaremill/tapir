@@ -28,7 +28,7 @@ trait SchemaMagnoliaDerivation {
               Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeInfo, ctx.annotations)))
             }
           if (ctx.typeInfo.full.startsWith("scala.Tuple")) {
-            result = result.attribute(Schema.Tuple.Attribute, Schema.Tuple(true))
+            result = result.tuple(true)
           }
           enrichSchema(result, mergeAnnotations(ctx.annotations, ctx.inheritedAnnotations))
         }
