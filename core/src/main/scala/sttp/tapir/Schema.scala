@@ -332,7 +332,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
     val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
   }
 
-  /** Corresponds to OpenAPI's `nullable` parameter which should be used for defining nullable fields. */
+  /** Will override a schema's typing to include a `null` type, overriding the default behavior. */
   object Nullable {
     val Attribute: AttributeKey[Unit] = new AttributeKey[Unit]("sttp.tapir.Schema.Nullable")
   }
