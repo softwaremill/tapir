@@ -62,6 +62,9 @@ object GenScala {
   private val jsonLibOpt: Opts[Option[String]] =
     Opts.option[String]("jsonLib", "Json library to use for serdes", "j").orNone
 
+  private val xmlLibOpt: Opts[Option[String]] =
+    Opts.option[String]("xmlLib", "XML library to use for serdes", "x").orNone
+
   private val streamingImplementationOpt: Opts[Option[String]] =
     Opts.option[String]("streamingImplementation", "Capability to use for binary streams", "s").orNone
 
@@ -89,6 +92,7 @@ object GenScala {
       targetScala3Opt,
       headTagForNamesOpt,
       jsonLibOpt,
+      xmlLibOpt,
       validateNonDiscriminatedOneOfsOpt,
       maxSchemasPerFileOpt,
       streamingImplementationOpt,
@@ -103,6 +107,7 @@ object GenScala {
               targetScala3,
               headTagForNames,
               jsonLib,
+              xmlLib,
               validateNonDiscriminatedOneOfs,
               maxSchemasPerFile,
               streamingImplementation,
@@ -119,6 +124,7 @@ object GenScala {
                 targetScala3,
                 headTagForNames,
                 jsonLib.getOrElse("circe"),
+                xmlLib.getOrElse("cats-xml"),
                 streamingImplementation.getOrElse("fs2"),
                 validateNonDiscriminatedOneOfs,
                 maxSchemasPerFile.getOrElse(400),

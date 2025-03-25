@@ -288,7 +288,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val gen = new ClassDefinitionGenerator()
     def concatted(res: GeneratedClassDefinitions): String = {
-      (res.classRepr + res.serdeRepr.fold("")("\n" + _)).linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
+      (res.classRepr + res.jsonSerdeRepr.fold("")("\n" + _)).linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
     }
     val res = gen
       .classDefs(doc, true, jsonParamRefs = Set("Test"))
@@ -396,6 +396,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             useHeadTagForObjectNames = false,
             targetScala3 = false,
             jsonSerdeLib = JsonSerdeLib.Circe,
+            xmlSerdeLib = XmlSerdeLib.CatsXml,
             streamingImplementation = StreamingImplementation.FS2,
             generateEndpointTypes = false
           )
@@ -501,7 +502,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _, _) =
         gen
           .classDefs(
             doc,
@@ -534,7 +535,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _, _) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
       val fullRes = (res + "\n" + jsonSerdes.get)

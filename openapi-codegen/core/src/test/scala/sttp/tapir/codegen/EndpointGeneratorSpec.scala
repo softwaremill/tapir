@@ -68,6 +68,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           useHeadTagForObjectNames = false,
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
+          xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
           generateEndpointTypes = false
         )
@@ -154,6 +155,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           useHeadTagForObjectNames = false,
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
+          xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
           generateEndpointTypes = false
         )
@@ -207,6 +209,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           useHeadTagForObjectNames = false,
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
+          xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
           generateEndpointTypes = false
         )
@@ -273,6 +276,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       targetScala3 = false,
       useHeadTagForObjectNames = false,
       jsonSerdeLib = "circe",
+      xmlSerdeLib = "cats-xml",
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
@@ -296,6 +300,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       targetScala3 = false,
       useHeadTagForObjectNames = false,
       jsonSerdeLib = "circe",
+      xmlSerdeLib = "cats-xml",
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",

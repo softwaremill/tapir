@@ -8,7 +8,12 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
 import scala.annotation.tailrec
 
-case class GeneratedClassDefinitions(classRepr: String, serdeRepr: Option[String], schemaRepr: Seq[String])
+case class GeneratedClassDefinitions(
+    classRepr: String,
+    jsonSerdeRepr: Option[String],
+    schemaRepr: Seq[String],
+    xmlSerdeRepr: Option[String]
+)
 
 case class InlineEnumDefn(enumName: String, impl: String)
 
@@ -19,11 +24,13 @@ class ClassDefinitionGenerator {
       targetScala3: Boolean = false,
       queryOrPathParamRefs: Set[String] = Set.empty,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = Circe,
+      xmlSerdeLib: XmlSerdeLib.XmlSerdeLib = XmlSerdeLib.CatsXml,
       jsonParamRefs: Set[String] = Set.empty,
       fullModelPath: String = "",
       validateNonDiscriminatedOneOfs: Boolean = true,
       maxSchemasPerFile: Int = 400,
-      enumsDefinedOnEndpointParams: Boolean = false
+      enumsDefinedOnEndpointParams: Boolean = false,
+      xmlParamRefs: Set[String] = Set.empty
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -33,12 +40,12 @@ class ClassDefinitionGenerator {
         .collect { case (name, _: OpenapiSchemaEnum) => name }
         .exists(queryOrPathParamRefs.contains)
 
-    def fetchJsonParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
+    def fetchTransitiveParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
       case head +: tail => recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
     }
 
-    val allTransitiveJsonParamRefs = fetchJsonParamRefs(
+    val allTransitiveJsonParamRefs = fetchTransitiveParamRefs(
       jsonParamRefs,
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
@@ -62,15 +69,20 @@ class ClassDefinitionGenerator {
       targetScala3,
       schemasContainAny
     )
+    val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
+      xmlParamRefs,
+      xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
+    )
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3)
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, obj: OpenapiSchemaObject) =>
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
         case (name, obj: OpenapiSchemaEnum) =>
           EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
-        case (name, OpenapiSchemaMap(valueSchema, _))   => generateMap(name, valueSchema)
-        case (name, OpenapiSchemaArray(valueSchema, _)) => generateArray(name, valueSchema)
-        case (_, _: OpenapiSchemaOneOf)                 => Nil
+        case (name, OpenapiSchemaMap(valueSchema, _))      => generateMap(name, valueSchema)
+        case (name, OpenapiSchemaArray(valueSchema, _, _)) => generateArray(name, valueSchema)
+        case (_, _: OpenapiSchemaOneOf)                    => Nil
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
@@ -78,7 +90,7 @@ class ClassDefinitionGenerator {
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
     // Json serdes & schemas live in separate files from the class defns
-    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas))
+    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas, xmlSerdes))
   }
 
   private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[(String, OpenapiSchemaOneOf)]] =
@@ -173,14 +185,14 @@ class ClassDefinitionGenerator {
           case Nil          => None
           case next +: rest => Some((next, checked + name, rest))
         }
-      case OpenapiSchemaArray(items, _)                                => Some((items, checked, tail))
-      case OpenapiSchemaNot(items)                                     => Some((items, checked, tail))
-      case OpenapiSchemaMap(items, _)                                  => Some((items, checked, tail))
-      case OpenapiSchemaOneOf(types, _)                                => nextParamsFromTypeSeq(types)
-      case OpenapiSchemaAnyOf(types)                                   => nextParamsFromTypeSeq(types)
-      case OpenapiSchemaAllOf(types)                                   => nextParamsFromTypeSeq(types)
-      case OpenapiSchemaObject(properties, _, _) if properties.isEmpty => None
-      case OpenapiSchemaObject(properties, required, nullable) =>
+      case OpenapiSchemaArray(items, _, _)                                => Some((items, checked, tail))
+      case OpenapiSchemaNot(items)                                        => Some((items, checked, tail))
+      case OpenapiSchemaMap(items, _)                                     => Some((items, checked, tail))
+      case OpenapiSchemaOneOf(types, _)                                   => nextParamsFromTypeSeq(types)
+      case OpenapiSchemaAnyOf(types)                                      => nextParamsFromTypeSeq(types)
+      case OpenapiSchemaAllOf(types)                                      => nextParamsFromTypeSeq(types)
+      case OpenapiSchemaObject(properties, _, _, _) if properties.isEmpty => None
+      case OpenapiSchemaObject(properties, required, nullable, _) =>
         val propToCheck = properties.head
         val (propToCheckName, OpenapiSchemaField(propToCheckType, _)) = propToCheck
         val objectWithoutHeadField = OpenapiSchemaObject(properties - propToCheckName, required, nullable)
@@ -241,7 +253,7 @@ class ClassDefinitionGenerator {
             val newName = addName(addName(name, propName), "item")
             rec(newName, st, Nil)
 
-          case (propName, OpenapiSchemaField(OpenapiSchemaArray(st: OpenapiSchemaObject, _), _)) =>
+          case (propName, OpenapiSchemaField(OpenapiSchemaArray(st: OpenapiSchemaObject, _, _), _)) =>
             val newName = addName(addName(name, propName), "item")
             rec(newName, st, Nil)
         }
@@ -362,14 +374,14 @@ class ClassDefinitionGenerator {
   }
 
   private def schemaContainsAny(schema: OpenapiSchemaType): Boolean = schema match {
-    case _: OpenapiSchemaAny           => true
-    case OpenapiSchemaArray(items, _)  => schemaContainsAny(items)
-    case OpenapiSchemaMap(items, _)    => schemaContainsAny(items)
-    case OpenapiSchemaObject(fs, _, _) => fs.values.map(_.`type`).exists(schemaContainsAny)
-    case OpenapiSchemaOneOf(types, _)  => types.exists(schemaContainsAny)
-    case OpenapiSchemaAllOf(types)     => types.exists(schemaContainsAny)
-    case OpenapiSchemaAnyOf(types)     => types.exists(schemaContainsAny)
-    case OpenapiSchemaNot(item)        => schemaContainsAny(item)
+    case _: OpenapiSchemaAny              => true
+    case OpenapiSchemaArray(items, _, _)  => schemaContainsAny(items)
+    case OpenapiSchemaMap(items, _)       => schemaContainsAny(items)
+    case OpenapiSchemaObject(fs, _, _, _) => fs.values.map(_.`type`).exists(schemaContainsAny)
+    case OpenapiSchemaOneOf(types, _)     => types.exists(schemaContainsAny)
+    case OpenapiSchemaAllOf(types)        => types.exists(schemaContainsAny)
+    case OpenapiSchemaAnyOf(types)        => types.exists(schemaContainsAny)
+    case OpenapiSchemaNot(item)           => schemaContainsAny(item)
     case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString | _: OpenapiSchemaRef => false
   }
 }
