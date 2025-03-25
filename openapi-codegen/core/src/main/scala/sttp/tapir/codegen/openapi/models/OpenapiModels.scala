@@ -96,7 +96,7 @@ object OpenapiModels {
       code: String,
       $ref: OpenapiSchemaRef
   ) extends OpenapiResponse {
-    def strippedRef: String = $ref.name.stripPrefix("#/components/responses")
+    def strippedRef: String = $ref.name.stripPrefix("#/components/responses/")
     def resolve(doc: OpenapiDocument): OpenapiResponseDef =
       doc.components
         .flatMap(_.responses.get(strippedRef))
@@ -117,7 +117,7 @@ object OpenapiModels {
   case class OpenapiRequestRef(
       $ref: OpenapiSchemaRef
   ) extends OpenapiRequestBody {
-    def strippedRef: String = $ref.name.stripPrefix("#/components/requestBodies")
+    def strippedRef: String = $ref.name.stripPrefix("#/components/requestBodies/")
     def resolve(doc: OpenapiDocument): OpenapiRequestBodyDefn =
       doc.components
         .flatMap(_.requestBodies.get(strippedRef))
