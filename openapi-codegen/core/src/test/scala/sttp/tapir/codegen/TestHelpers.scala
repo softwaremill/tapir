@@ -495,7 +495,7 @@ object TestHelpers {
             parameters = Seq(),
             responses = Seq(),
             requestBody = None,
-            security = Seq(Seq("basicAuth"))
+            security = Map("basicAuth" -> Nil)
           )
         )
       )
@@ -531,7 +531,7 @@ object TestHelpers {
             parameters = Seq(),
             responses = Seq(),
             requestBody = None,
-            security = Seq(Seq("bearerAuth"), Seq("basicAuth", "apiKeyAuth"))
+            security = Map("bearerAuth" -> Nil, "basicAuth" -> Nil, "apiKeyAuth" -> Nil)
           )
         )
       )
@@ -759,7 +759,7 @@ object TestHelpers {
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithDefaults")))
               )
             ),
-            List(),
+            Map.empty,
             None,
             None,
             None
@@ -1052,7 +1052,7 @@ object TestHelpers {
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithVariants")))
               )
             ),
-            List(),
+            Map.empty,
             None,
             None,
             None
