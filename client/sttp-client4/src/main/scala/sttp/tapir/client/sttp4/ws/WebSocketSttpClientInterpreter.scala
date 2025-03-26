@@ -2,11 +2,11 @@ package sttp.tapir.client.sttp4.ws
 
 import sttp.client4.{WebSocketBackend, WebSocketRequest}
 import sttp.model.Uri
-import sttp.tapir.client.sttp4.{SttpClientInterpreter, SttpClientOptions, WebSocketToPipe}
+import sttp.tapir.client.sttp4._
 import sttp.tapir.{DecodeResult, Endpoint, PublicEndpoint}
 import sttp.capabilities.{Streams, WebSockets}
 
-trait WebSocketSttpClientInterpreter extends SttpClientInterpreter {
+trait WebSocketSttpClientInterpreter {
 
   def sttpClientOptions: SttpClientOptions = SttpClientOptions.default
 

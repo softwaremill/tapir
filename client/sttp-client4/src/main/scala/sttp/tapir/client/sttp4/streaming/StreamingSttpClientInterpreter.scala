@@ -3,10 +3,10 @@ package sttp.tapir.client.sttp4.streaming
 import sttp.capabilities.Streams
 import sttp.client4.{StreamBackend, StreamRequest}
 import sttp.model.Uri
-import sttp.tapir.client.sttp4.{SttpClientInterpreter, SttpClientOptions}
+import sttp.tapir.client.sttp4._
 import sttp.tapir.{DecodeResult, Endpoint, PublicEndpoint}
 
-trait StreamingSttpClientInterpreter extends SttpClientInterpreter { // extends Extensions???
+trait StreamingSttpClientInterpreter {
   def sttpClientOptions: SttpClientOptions = SttpClientOptions.default
 
   // public
