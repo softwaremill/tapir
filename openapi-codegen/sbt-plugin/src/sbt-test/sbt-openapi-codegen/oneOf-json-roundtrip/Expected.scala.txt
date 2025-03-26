@@ -13,7 +13,7 @@ object TapirGeneratedEndpoints {
   import TapirGeneratedEndpointsSchemas._
 
 
-  
+
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -224,15 +224,15 @@ object TapirGeneratedEndpoints {
         oneOfVariant[SimpleError](sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
       .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
 
-  type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnyObjectWithInlineEnum], Any]
+  type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, (Option[AnyObjectWithInlineEnum], Option[String]), Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
     endpoint
       .get
       .in(("oneof" / "option" / "test"))
-      .out(oneOf[Option[AnyObjectWithInlineEnum]](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_: ObjectWithInlineEnum) => true },
-        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object")){ case Some(_: ObjectWithInlineEnum2) => true }))
+      .out(oneOf[(Option[AnyObjectWithInlineEnum], Option[String])](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(None).description("No response").and(header[Option[String]]("common-response-header"))){ case (None, _) => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum), _) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum2), _) => true }))
 
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =

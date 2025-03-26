@@ -100,13 +100,13 @@ object OpenapiModels {
       if (name == param.name) this else OpenapiHeaderDef(param.copy(name = name))
   }
   case class OpenapiHeaderRef($ref: OpenapiSchemaRef) extends OpenapiHeader {
-    def strippedRef: String = $ref.name.stripPrefix("#/components/parameters/")
-    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef =
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef = {
       doc.components
-        .flatMap(_.parameters.get(strippedRef))
+        .flatMap(_.parameters.get($ref.name))
         .map(b => if (b.in != "header") throw new IllegalStateException(s"Referenced parameter ${$ref.name} is not header") else b)
         .map(b => OpenapiHeaderDef(b.copy(name = name)))
         .getOrElse(throw new IllegalStateException(s"Response component ${$ref.name} is referenced but not found"))
+    }
   }
 
   sealed trait OpenapiResponse {
