@@ -157,6 +157,10 @@ object TapirGeneratedEndpoints {
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  case class PostInlineSimpleObjectResponse (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
 
 
 
@@ -293,12 +297,13 @@ object TapirGeneratedEndpoints {
         oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2"))))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
 
-  type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, Unit, Any]
+  type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, PostInlineSimpleObjectResponse, Any]
   lazy val postInlineSimpleObject: PostInlineSimpleObjectEndpoint =
     endpoint
       .post
       .in(("inline" / "simple" / "object"))
       .in(jsonBody[Option[PostInlineSimpleObjectRequest]])
+      .out(jsonBody[PostInlineSimpleObjectResponse].description("An object"))
 
   type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
   lazy val deleteInlineSimpleObject: DeleteInlineSimpleObjectEndpoint =

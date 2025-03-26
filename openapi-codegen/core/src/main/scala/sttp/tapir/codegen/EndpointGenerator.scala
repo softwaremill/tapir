@@ -341,6 +341,77 @@ class EndpointGenerator {
     }
   }
 
+  private def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
+    case (true, true)   => s"List[$baseType]"
+    case (true, false)  => s"Option[List[$baseType]]"
+    case (false, true)  => baseType
+    case (false, false) => s"Option[$baseType]"
+  }
+
+  private def getEnumParamDefn(
+      endpointName: String,
+      targetScala3: Boolean,
+      jsonSerdeLib: JsonSerdeLib,
+      param: OpenapiParameter,
+      e: OpenapiSchemaEnum,
+      isArray: Boolean
+  ) = {
+    val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
+    val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
+    val enumDefn = EnumGenerator.generateEnum(
+      enumName,
+      e,
+      targetScala3,
+      enumParamRefs,
+      jsonSerdeLib,
+      Set.empty
+    )
+
+    def arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
+
+    val tpe = if (isArray) s"$arrayType[$enumName]" else enumName
+    val required = param.required.getOrElse(true)
+    // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
+    val noOptionWrapper = required || (isArray && param.isExploded)
+    val req = if (noOptionWrapper) tpe else s"Option[$tpe]"
+    val outType = toOutType(enumName, isArray, noOptionWrapper)
+
+    def mapToList =
+      if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
+
+    val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
+    (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", Some(enumDefn), outType)
+  }
+
+  private def genParamDefn(endpointName: String, targetScala3: Boolean, jsonSerdeLib: JsonSerdeLib, param: OpenapiParameter)(implicit
+      location: Location
+  ): (String, Option[Seq[String]], String) =
+    param.schema match {
+      case st: OpenapiSchemaSimpleType =>
+        val (t, _) = mapSchemaSimpleTypeToType(st)
+        val req = if (param.required.getOrElse(true)) t else s"Option[$t]"
+        val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
+        (s"""${param.in}[$req]("${param.name}")$desc""", None, req)
+      case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
+        val (t, _) = mapSchemaSimpleTypeToType(st)
+        val arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
+        val arr = s"$arrayType[$t]"
+        val required = param.required.getOrElse(true)
+        // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
+        val noOptionWrapper = required || param.isExploded
+        val req = if (noOptionWrapper) arr else s"Option[$arr]"
+
+        def mapToList = if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
+
+        val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
+        val outType = toOutType(t, true, noOptionWrapper)
+        (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", None, outType)
+      case e @ OpenapiSchemaEnum(_, _, _) => getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = false)
+      case OpenapiSchemaArray(e: OpenapiSchemaEnum, _, _) =>
+        getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = true)
+      case x => bail(s"Can't create non-simple params - found $x")
+    }
+
   private def ins(
       parameters: Seq[OpenapiParameter],
       requestBody: Option[OpenapiRequestBodyDefn],
@@ -351,70 +422,15 @@ class EndpointGenerator {
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument
   )(implicit location: Location): (String, Option[String], Seq[String], Option[String]) = {
-    def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
-      case (true, true)   => s"List[$baseType]"
-      case (true, false)  => s"Option[List[$baseType]]"
-      case (false, true)  => baseType
-      case (false, false) => s"Option[$baseType]"
-    }
-    def getEnumParamDefn(param: OpenapiParameter, e: OpenapiSchemaEnum, isArray: Boolean) = {
-      val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
-      val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
-      val enumDefn = EnumGenerator.generateEnum(
-        enumName,
-        e,
-        targetScala3,
-        enumParamRefs,
-        jsonSerdeLib,
-        Set.empty
-      )
-
-      def arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
-
-      val tpe = if (isArray) s"$arrayType[$enumName]" else enumName
-      val required = param.required.getOrElse(true)
-      // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
-      val noOptionWrapper = required || (isArray && param.isExploded)
-      val req = if (noOptionWrapper) tpe else s"Option[$tpe]"
-      val outType = toOutType(enumName, isArray, noOptionWrapper)
-
-      def mapToList =
-        if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
-
-      val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-      (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", Some(enumDefn), outType)
-    }
 
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     // .in(header[AuthToken]("X-Auth-Token"))
     val (params, maybeEnumDefns, inTypes) = parameters
       .filter(_.in != "path")
       .map { param =>
-        param.schema match {
-          case st: OpenapiSchemaSimpleType =>
-            val (t, _) = mapSchemaSimpleTypeToType(st)
-            val req = if (param.required.getOrElse(true)) t else s"Option[$t]"
-            val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-            (s""".in(${param.in}[$req]("${param.name}")$desc)""", None, req)
-          case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
-            val (t, _) = mapSchemaSimpleTypeToType(st)
-            val arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
-            val arr = s"$arrayType[$t]"
-            val required = param.required.getOrElse(true)
-            // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
-            val noOptionWrapper = required || param.isExploded
-            val req = if (noOptionWrapper) arr else s"Option[$arr]"
-
-            def mapToList = if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
-
-            val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-            val outType = toOutType(t, true, noOptionWrapper)
-            (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", None, outType)
-          case e @ OpenapiSchemaEnum(_, _, _)                 => getEnumParamDefn(param, e, isArray = false)
-          case OpenapiSchemaArray(e: OpenapiSchemaEnum, _, _) => getEnumParamDefn(param, e, isArray = true)
-          case x                                              => bail(s"Can't create non-simple params to input - found $x")
-        }
+        genParamDefn(endpointName, targetScala3, jsonSerdeLib, param)
       }
+      .map { case (defn, enums, tpe) => (s".in($defn)", enums, tpe) }
       .unzip3
 
     val (rqBody, maybeReqType, maybeInlineDefns) = requestBody.flatMap { b =>
@@ -628,6 +644,12 @@ class EndpointGenerator {
     val mappedOuts = outDecls.map(s => s".out($s)")
     val (errDecls, errTypes, inlineErrDefns) = mappedGroup(errorOuts, true)
     val mappedErrorOuts = errDecls.map(s => s".errorOut($s)")
+//    val outHeaders = outs.map(_.headers.map { case (k, v) => k -> v.resolved(doc) })
+//    val requiredOutHeaders = outHeaders.map(_.keySet).reduceOption(_ intersect _)
+//    val optionalOutHeaders = outHeaders.map(_.keySet).reduceOption(_ union _).map(_ -- requiredOutHeaders.get)
+//    val errHeaders = errorOuts.map(_.headers.map { case (k, v) => k -> v.resolved(doc) })
+//    val requiredErrHeaders = errHeaders.map(_.keySet).reduceOption(_ intersect _)
+//    val optionalErrHeaders = errHeaders.map(_.keySet).reduceOption(_ union _).map(_ -- requiredErrHeaders.get)
 
     (Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n"), outTypes, errTypes, combine(inlineOutDefns, inlineErrDefns))
   }
