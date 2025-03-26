@@ -182,7 +182,7 @@ class EndpointGenerator {
               doc
             )
           val (outDecl, outTypes, errTypes, inlineDefns) =
-            outs(m.responses.map(_.resolve(doc)), streamingImplementation, doc, targetScala3, name, xmlSerdeLib)
+            outs(m.responses.map(_.resolve(doc)), streamingImplementation, doc, targetScala3, name, jsonSerdeLib, xmlSerdeLib)
           val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
           val inlineDefn = combine(inlineInDefns, inlineDefns)
           val definition =
@@ -496,6 +496,7 @@ class EndpointGenerator {
       doc: OpenapiDocument,
       targetScala3: Boolean,
       endpointName: String,
+      jsonSerdeLib: JsonSerdeLib,
       xmlSerdeLib: XmlSerdeLib
   )(implicit
       location: Location
@@ -542,28 +543,47 @@ class EndpointGenerator {
       group match {
         case Nil => (None, None, None)
         case resp +: Nil =>
+          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.headers.map { case (name, defn) =>
+            genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param)
+          }.unzip3
+          val hs = outHeaderDefns.map(d => s".and($d)").mkString
+          def ht(wrap: Boolean = true) =
+            if (outHeaderTypes.isEmpty) None
+            else if (outHeaderTypes.size == 1) Some(outHeaderTypes.head)
+            else if (!wrap) Some(outHeaderTypes.mkString(", "))
+            else Some(s"(${outHeaderTypes.mkString(", ")})")
+          def inlineHeaderEnumDefns = outHeaderInlineEnums.foldLeft(Seq.empty[String]) { (acc, next) => acc ++ next.toSeq.flatten } match {
+            case Nil => None
+            case s   => Some(s.mkString("\n"))
+          }
           resp.content match {
             case Nil =>
               val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
               (
                 resp.code match {
-                  case "200" | "default" => None
-                  case okStatus(s)       => Some(s"statusCode(sttp.model.StatusCode($s))$d")
-                  case errorStatus(s)    => Some(s"statusCode(sttp.model.StatusCode($s))$d")
+                  case "200" | "default" if outHeaderDefns.isEmpty => None
+                  case "200"                                       => Some(s"statusCode(sttp.model.StatusCode(200))$hs$d")
+                  case "default"                                   => Some(s"statusCode(sttp.model.StatusCode(400))$hs$d")
+                  case okStatus(s)                                 => Some(s"statusCode(sttp.model.StatusCode($s))$hs$d")
+                  case errorStatus(s)                              => Some(s"statusCode(sttp.model.StatusCode($s))$hs$d")
                 },
-                None,
-                None
+                ht(),
+                inlineHeaderEnumDefns
               )
             case _ =>
-              val (decl, tpe, inlineDefn) = bodyFmt(resp, isErrorPosition)
+              val (decl, maybeBodyType, inlineDefn) = bodyFmt(resp, isErrorPosition)
+              val tpe =
+                if (outHeaderTypes.isEmpty) maybeBodyType
+                else if (maybeBodyType.isEmpty) ht()
+                else maybeBodyType.map(t => s"($t, ${ht(false).get})")
               (
                 Some(resp.code match {
-                  case "200" | "default" => decl
-                  case okStatus(s)       => s"$decl.and(statusCode(sttp.model.StatusCode($s)))"
-                  case errorStatus(s)    => s"$decl.and(statusCode(sttp.model.StatusCode($s)))"
+                  case "200" | "default" => s"$decl$hs"
+                  case okStatus(s)       => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case errorStatus(s)    => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
                 }),
                 tpe,
-                inlineDefn
+                inlineDefn.map(_ ++ inlineHeaderEnumDefns.getOrElse("")).orElse(inlineHeaderEnumDefns)
               )
           }
         case many =>
@@ -647,6 +667,7 @@ class EndpointGenerator {
 //    val outHeaders = outs.map(_.headers.map { case (k, v) => k -> v.resolved(doc) })
 //    val requiredOutHeaders = outHeaders.map(_.keySet).reduceOption(_ intersect _)
 //    val optionalOutHeaders = outHeaders.map(_.keySet).reduceOption(_ union _).map(_ -- requiredOutHeaders.get)
+//    requiredOutHeaders.toSet.flatten.map{ headerName => outHeaders.map(_(headerName)).reduce((l, r) => if (l.param.))}
 //    val errHeaders = errorOuts.map(_.headers.map { case (k, v) => k -> v.resolved(doc) })
 //    val requiredErrHeaders = errHeaders.map(_.keySet).reduceOption(_ intersect _)
 //    val optionalErrHeaders = errHeaders.map(_.keySet).reduceOption(_ union _).map(_ -- requiredErrHeaders.get)

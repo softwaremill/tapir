@@ -13,7 +13,7 @@ object TapirGeneratedEndpoints {
   import TapirGeneratedEndpointsSchemas._
 
 
-
+  
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -297,13 +297,13 @@ object TapirGeneratedEndpoints {
         oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2"))))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
 
-  type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, PostInlineSimpleObjectResponse, Any]
+  type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, (PostInlineSimpleObjectResponse, String), Any]
   lazy val postInlineSimpleObject: PostInlineSimpleObjectEndpoint =
     endpoint
       .post
       .in(("inline" / "simple" / "object"))
       .in(jsonBody[Option[PostInlineSimpleObjectRequest]])
-      .out(jsonBody[PostInlineSimpleObjectResponse].description("An object"))
+      .out(jsonBody[PostInlineSimpleObjectResponse].description("An object").and(header[String]("x-combat-status").description("a response header")))
 
   type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
   lazy val deleteInlineSimpleObject: DeleteInlineSimpleObjectEndpoint =
