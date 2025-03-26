@@ -82,7 +82,7 @@ object OpenapiModels {
   }
 
   sealed trait OpenapiHeader {
-    def resolved(doc: OpenapiDocument): OpenapiHeaderDef
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef
   }
   object OpenapiHeader {
     import io.circe._
@@ -96,15 +96,16 @@ object OpenapiModels {
         })
   }
   case class OpenapiHeaderDef(param: OpenapiParameter) extends OpenapiHeader {
-    def resolved(doc: OpenapiDocument): OpenapiHeaderDef = this
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef =
+      if (name == param.name) this else OpenapiHeaderDef(param.copy(name = name))
   }
   case class OpenapiHeaderRef($ref: OpenapiSchemaRef) extends OpenapiHeader {
     def strippedRef: String = $ref.name.stripPrefix("#/components/parameters/")
-    def resolved(doc: OpenapiDocument): OpenapiHeaderDef =
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef =
       doc.components
         .flatMap(_.parameters.get(strippedRef))
         .map(b => if (b.in != "header") throw new IllegalStateException(s"Referenced parameter ${$ref.name} is not header") else b)
-        .map(b => OpenapiHeaderDef(b))
+        .map(b => OpenapiHeaderDef(b.copy(name = name)))
         .getOrElse(throw new IllegalStateException(s"Response component ${$ref.name} is referenced but not found"))
   }
 
