@@ -1,11 +1,11 @@
 package sttp.tapir.codegen.openapi.models
 
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiRequestBodyContent, OpenapiResponseContent}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaRef
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiHeader, OpenapiRequestBodyContent, OpenapiResponseContent}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaRef, OpenapiSchemaSimpleType}
 
 case class OpenapiResponseDefn(
     description: String,
-    headers: Map[String, OpenapiSchemaRef],
+    headers: Map[String, OpenapiHeader],
     content: Seq[OpenapiResponseContent]
 )
 
@@ -14,7 +14,7 @@ object OpenapiResponseDefn {
   implicit val OpenapiResponseDefnDecoder: Decoder[OpenapiResponseDefn] = { (c: HCursor) =>
     for {
       description <- c.downField("description").as[String]
-      headers <- c.getOrElse[Map[String, OpenapiSchemaRef]]("headers")(Map.empty)
+      headers <- c.getOrElse[Map[String, OpenapiHeader]]("headers")(Map.empty)
       content <- c.getOrElse[Seq[OpenapiResponseContent]]("content")(Nil)
     } yield OpenapiResponseDefn(description, headers, content)
   }

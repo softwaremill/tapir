@@ -215,18 +215,24 @@ paths:
       responses:
         "200":
           description: An object
+          headers:
+            x-combat-status:
+              description: "a response header"
+              required: true
+              schema:
+                type: string
           content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - foo
-              properties:
-                foo:
-                  type: string
-                bar:
-                  type: string
-                  format: uuid
+            application/json:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
     put:
       requestBody:
         content:
