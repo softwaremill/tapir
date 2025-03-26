@@ -664,13 +664,6 @@ class EndpointGenerator {
     val mappedOuts = outDecls.map(s => s".out($s)")
     val (errDecls, errTypes, inlineErrDefns) = mappedGroup(errorOuts, true)
     val mappedErrorOuts = errDecls.map(s => s".errorOut($s)")
-//    val outHeaders = outs.map(_.headers.map { case (k, v) => k -> v.resolved(doc) })
-//    val requiredOutHeaders = outHeaders.map(_.keySet).reduceOption(_ intersect _)
-//    val optionalOutHeaders = outHeaders.map(_.keySet).reduceOption(_ union _).map(_ -- requiredOutHeaders.get)
-//    requiredOutHeaders.toSet.flatten.map{ headerName => outHeaders.map(_(headerName)).reduce((l, r) => if (l.param.))}
-//    val errHeaders = errorOuts.map(_.headers.map { case (k, v) => k -> v.resolved(doc) })
-//    val requiredErrHeaders = errHeaders.map(_.keySet).reduceOption(_ intersect _)
-//    val optionalErrHeaders = errHeaders.map(_.keySet).reduceOption(_ union _).map(_ -- requiredErrHeaders.get)
 
     (Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n"), outTypes, errTypes, combine(inlineOutDefns, inlineErrDefns))
   }
