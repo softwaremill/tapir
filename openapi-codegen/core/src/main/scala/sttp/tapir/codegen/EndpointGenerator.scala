@@ -543,9 +543,13 @@ class EndpointGenerator {
       group match {
         case Nil => (None, None, None)
         case resp +: Nil =>
-          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.headers.map { case (name, defn) =>
-            genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param)
-          }.unzip3
+          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.headers
+            // according to api spec, content-type header should be ignored - cf https://swagger.io/specification/#response-object
+            .filterNot(_._1.toLowerCase == "content-type")
+            .map { case (name, defn) =>
+              genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param)
+            }
+            .unzip3
           val hs = outHeaderDefns.map(d => s".and($d)").mkString
           def ht(wrap: Boolean = true) =
             if (outHeaderTypes.isEmpty) None
@@ -593,7 +597,6 @@ class EndpointGenerator {
           val (oneOfs, types, inlineDefns) = many.map { m =>
             val (decl, tpe, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = canBeEmptyResponse)
             val code = if (m.code == "default") "400" else m.code
-            // Might be nice to have some signal values for the interpreter, but not doing that for now.
             if (decl == "" && allAreEmptyResponses)
               (
                 s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
