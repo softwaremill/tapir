@@ -1,11 +1,11 @@
-package sttp.tapir.client.sttp4.basic
+package sttp.tapir.client.sttp4
 
 import sttp.client4.{Backend, Request}
 import sttp.model.Uri
 import sttp.tapir.client.sttp4._
 import sttp.tapir.{DecodeResult, Endpoint, PublicEndpoint}
 
-trait BasicSttpClientInterpreter {
+trait SttpClientInterpreter {
   def sttpClientOptions: SttpClientOptions = SttpClientOptions.default
 
   // public
@@ -70,7 +70,7 @@ trait BasicSttpClientInterpreter {
       e: PublicEndpoint[I, E, O, Any],
       baseUri: Option[Uri]
   ): I => Request[DecodeResult[Either[E, O]]] = {
-    new BasicEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(())
+    new EndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(())
   }
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -82,7 +82,7 @@ trait BasicSttpClientInterpreter {
     * headers/status code), or will be a failed effect, when response parsing fails.
     */
   def toRequestThrowDecodeFailures[I, E, O](e: PublicEndpoint[I, E, O, Any], baseUri: Option[Uri]): I => Request[Either[E, O]] =
-    i => new BasicEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(()).apply(i).mapResponse(throwDecodeFailures)
+    i => new EndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(()).apply(i).mapResponse(throwDecodeFailures)
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -97,7 +97,7 @@ trait BasicSttpClientInterpreter {
     */
   def toRequestThrowErrors[I, E, O](e: PublicEndpoint[I, E, O, Any], baseUri: Option[Uri]): I => Request[O] =
     i =>
-      new BasicEndpointToSttpClient(sttpClientOptions)
+      new EndpointToSttpClient(sttpClientOptions)
         .toSttpRequest(e, baseUri)
         .apply(())
         .apply(i)
@@ -171,7 +171,7 @@ trait BasicSttpClientInterpreter {
       e: Endpoint[A, I, E, O, Any],
       baseUri: Option[Uri]
   ): A => I => Request[DecodeResult[Either[E, O]]] =
-    new BasicEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri)
+    new EndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri)
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -185,7 +185,7 @@ trait BasicSttpClientInterpreter {
       e: Endpoint[A, I, E, O, Any],
       baseUri: Option[Uri]
   ): A => I => Request[Either[E, O]] =
-    a => i => new BasicEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(a).apply(i).mapResponse(throwDecodeFailures)
+    a => i => new EndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(a).apply(i).mapResponse(throwDecodeFailures)
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -201,7 +201,7 @@ trait BasicSttpClientInterpreter {
   def toSecureRequestThrowErrors[A, I, E, O](e: Endpoint[A, I, E, O, Any], baseUri: Option[Uri]): A => I => Request[O] =
     a =>
       i =>
-        new BasicEndpointToSttpClient(sttpClientOptions)
+        new EndpointToSttpClient(sttpClientOptions)
           .toSttpRequest(e, baseUri)
           .apply(a)
           .apply(i)
@@ -214,9 +214,9 @@ trait BasicSttpClientInterpreter {
 
 }
 
-object BasicSttpClientInterpreter {
-  def apply(clientOptions: SttpClientOptions = SttpClientOptions.default): BasicSttpClientInterpreter = {
-    new BasicSttpClientInterpreter {
+object SttpClientInterpreter {
+  def apply(clientOptions: SttpClientOptions = SttpClientOptions.default): SttpClientInterpreter = {
+    new SttpClientInterpreter {
       override def sttpClientOptions: SttpClientOptions = clientOptions
     }
   }

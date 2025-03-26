@@ -7,7 +7,7 @@ import sttp.tapir.{DecodeResult, Endpoint}
 import sttp.tapir.client.tests.ClientTests
 import sttp.client4._
 
-abstract class BasicSttpClientTestsSender extends ClientTests[Any] {
+abstract class SttpClientTestsSender extends ClientTests[Any] {
 
   val backend: Backend[Try] = CurlTryBackend(verbose = false)
 
@@ -19,7 +19,7 @@ abstract class BasicSttpClientTestsSender extends ClientTests[Any] {
       scheme: String = "http"
   ): IO[Either[E, O]] = {
     val response: Try[Either[E, O]] =
-      BasicSttpClientInterpreter()
+      SttpClientInterpreter()
         .toSecureRequestThrowDecodeFailures[A, I, E, O](e, Some(uri"$scheme://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
@@ -35,7 +35,7 @@ abstract class BasicSttpClientTestsSender extends ClientTests[Any] {
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     def response: Try[DecodeResult[Either[E, O]]] =
-      BasicSttpClientInterpreter()
+      SttpClientInterpreter()
         .toSecureRequest[A, I, E, O](e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)

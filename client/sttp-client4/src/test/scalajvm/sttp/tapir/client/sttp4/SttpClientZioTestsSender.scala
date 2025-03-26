@@ -1,14 +1,15 @@
-package sttp.tapir.client.sttp4.basic
+package sttp.tapir.client.sttp4
 
 import cats.effect.IO
 import sttp.client4._
 import sttp.client4.httpclient.zio.HttpClientZioBackend
+import sttp.tapir.client.sttp4.SttpClientInterpreter
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 import zio.Runtime.default
 import zio.{CancelableFuture, Task, Unsafe}
 
-abstract class BasicSttpClientZioTestsSender extends ClientTests[Any] {
+abstract class SttpClientZioTestsSender extends ClientTests[Any] {
   private val runtime: default.UnsafeAPI = zio.Runtime.default.unsafe
   val backend: Backend[Task] = unsafeRun(HttpClientZioBackend())
 
@@ -20,7 +21,7 @@ abstract class BasicSttpClientZioTestsSender extends ClientTests[Any] {
       scheme: String = "http"
   ): IO[Either[E, O]] =
     IO.fromFuture(IO.delay {
-      val send = BasicSttpClientInterpreter()
+      val send = SttpClientInterpreter()
         .toSecureRequestThrowDecodeFailures[A, I, E, O](e, Some(uri"$scheme://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
@@ -37,7 +38,7 @@ abstract class BasicSttpClientZioTestsSender extends ClientTests[Any] {
       args: I
   ): IO[DecodeResult[Either[E, O]]] =
     IO.fromFuture(IO.delay {
-      val send = BasicSttpClientInterpreter()
+      val send = SttpClientInterpreter()
         .toSecureRequest[A, I, E, O](e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)

@@ -5,10 +5,10 @@ import sttp.client4._
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.client.ClientOutputParams
-import sttp.tapir.client.sttp4.EndpointToSttpClient
+import sttp.tapir.client.sttp4.EndpointToSttpClientBase
 import sttp.tapir.internal._
 
-private[sttp] class StreamingEndpointToSttpClient[S <: Streams[S]](implicit ev: StreamsNotWebSockets[S]) extends EndpointToSttpClient {
+private[sttp] class StreamingEndpointToSttpClient[S <: Streams[S]](implicit ev: StreamsNotWebSockets[S]) extends EndpointToSttpClientBase {
   def toSttpRequest[A, E, O, I](
       e: Endpoint[A, I, E, O, S],
       baseUri: Option[Uri]

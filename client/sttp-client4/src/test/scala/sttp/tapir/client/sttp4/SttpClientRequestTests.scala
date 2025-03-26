@@ -7,7 +7,6 @@ import sttp.model.{Header, HeaderNames, MediaType, Part}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Defaults.createTempFile
-import sttp.tapir.client.sttp4.basic.BasicSttpClientInterpreter
 import sttp.tapir.tests.Basic.in_flag_query_out_string
 import sttp.tapir.tests.data
 import sttp.tapir.tests.data.FruitData
@@ -19,7 +18,7 @@ class SttpClientRequestTests extends AnyFunSuite with Matchers {
     val testFile = createTempFile()
 
     // when
-    val sttpClientRequest = BasicSttpClientInterpreter()
+    val sttpClientRequest = SttpClientInterpreter()
       .toRequest(testEndpoint, Some(uri"http://localhost"))
       .apply(data.FruitData(Part("image", testFile, contentType = Some(MediaType.ImageJpeg))))
 
@@ -29,7 +28,7 @@ class SttpClientRequestTests extends AnyFunSuite with Matchers {
   }
 
   test("should properly encode a flag parameter") {
-    def uri(flagValue: Option[Boolean]) = BasicSttpClientInterpreter()
+    def uri(flagValue: Option[Boolean]) = SttpClientInterpreter()
       .toRequest(in_flag_query_out_string, Some(uri"http://localhost"))
       .apply(flagValue)
       .uri
@@ -48,7 +47,7 @@ class SttpClientRequestTests extends AnyFunSuite with Matchers {
       .in(byteArrayBody)
 
     // when
-    val sttpClientRequest = BasicSttpClientInterpreter()
+    val sttpClientRequest = SttpClientInterpreter()
       .toRequest(testEndpoint, None)
       .apply(("image/jpeg", Array.empty))
 
