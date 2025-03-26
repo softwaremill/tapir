@@ -78,12 +78,13 @@ case class EndpointDefs(
 class EndpointGenerator {
   private def bail(msg: String)(implicit location: Location): Nothing = throw new NotImplementedError(s"$msg at $location")
 
-  private def combine(inlineDefn1: Option[String], inlineDefn2: Option[String]) = (inlineDefn1, inlineDefn2) match {
-    case (None, None)               => None
-    case (Some(defn), None)         => Some(defn)
-    case (None, Some(defn))         => Some(defn)
-    case (Some(defn1), Some(defn2)) => Some(defn1 + "\n" + defn2)
-  }
+  private def combine(inlineDefn1: Option[String], inlineDefn2: Option[String], separator: String = "\n") =
+    (inlineDefn1, inlineDefn2) match {
+      case (None, None)               => None
+      case (Some(defn), None)         => Some(defn)
+      case (None, Some(defn))         => Some(defn)
+      case (Some(defn1), Some(defn2)) => Some(defn1 + separator + defn2)
+    }
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
   private def capabilityImpl(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
@@ -370,7 +371,7 @@ class EndpointGenerator {
     def arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
 
     val tpe = if (isArray) s"$arrayType[$enumName]" else enumName
-    val required = param.required.getOrElse(true)
+    val required = param.required.getOrElse(false)
     // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
     val noOptionWrapper = required || (isArray && param.isExploded)
     val req = if (noOptionWrapper) tpe else s"Option[$tpe]"
@@ -389,14 +390,14 @@ class EndpointGenerator {
     param.schema match {
       case st: OpenapiSchemaSimpleType =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
-        val req = if (param.required.getOrElse(true)) t else s"Option[$t]"
+        val req = if (param.required.getOrElse(false)) t else s"Option[$t]"
         val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
         (s"""${param.in}[$req]("${param.name}")$desc""", None, req)
       case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
         val arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
         val arr = s"$arrayType[$t]"
-        val required = param.required.getOrElse(true)
+        val required = param.required.getOrElse(false)
         // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
         val noOptionWrapper = required || param.isExploded
         val req = if (noOptionWrapper) arr else s"Option[$arr]"
@@ -465,7 +466,7 @@ class EndpointGenerator {
         case (Some(acc), Some(nxt)) => Some(acc + "\n" + nxt.mkString("\n"))
       },
       inTypes ++ maybeReqType,
-      maybeInlineDefns.foldLeft(Option.empty[String])(combine)
+      maybeInlineDefns.foldLeft(Option.empty[String])(combine(_, _))
     )
   }
 
@@ -592,31 +593,74 @@ class EndpointGenerator {
           }
         case many =>
           if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
-          val canBeEmptyResponse = many.exists(_.content.isEmpty)
-          val allAreEmptyResponses = many.forall(_.content.isEmpty)
+          val contentCanBeEmpty = many.exists(_.content.isEmpty)
+          val allResponsesAreEmpty = many.forall(o => o.content.isEmpty && o.headers.isEmpty)
+          val headerNamesAndTypes = many.map { m =>
+            m.headers
+              .filterNot(_._1.toLowerCase == "content-type")
+              .map { case (name, defn) =>
+                genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param)
+              }
+              .toSeq
+          }
+          val posn = if (isErrorPosition) "error" else "input"
+          // We can probably do better here, but it's very fiddly... For now, fail if we don't meet this condition
+          if (headerNamesAndTypes.map(_.map { case (name, _, defn) => name -> defn }.toSet).distinct.size != 1)
+            bail(s"Cannot generate code for differing response headers on $posn responses")
+          val commonResponseHeaders = headerNamesAndTypes.head
+          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = commonResponseHeaders.unzip3
+          val underscores = outHeaderDefns.map(_ => "_").mkString(", ")
+          val hs = outHeaderDefns.map(d => s".and($d)").mkString
+          def ht(wrap: Boolean = true) =
+            if (outHeaderTypes.isEmpty) None
+            else if (outHeaderTypes.size == 1) Some(outHeaderTypes.head)
+            else if (!wrap) Some(outHeaderTypes.mkString(", "))
+            else Some(s"(${outHeaderTypes.mkString(", ")})")
           val (oneOfs, types, inlineDefns) = many.map { m =>
-            val (decl, tpe, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = canBeEmptyResponse)
+            val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = contentCanBeEmpty)
             val code = if (m.code == "default") "400" else m.code
-            if (decl == "" && allAreEmptyResponses)
+            if (decl == "" && allResponsesAreEmpty && commonResponseHeaders.isEmpty)
               (
                 s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
                   s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(())""",
-                tpe,
+                maybeBodyType,
                 inlineDefn1
               )
-            else if (decl == "")
+            else if (decl == "" && commonResponseHeaders.isEmpty)
               (
                 s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
                   s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""",
-                tpe,
+                maybeBodyType,
                 inlineDefn1
               )
-            else if (canBeEmptyResponse) {
-              val (_, nonOptionalType, inlineDefn2) = bodyFmt(m, isErrorPosition)
-              val inlineDefns = combine(inlineDefn1, inlineDefn2)
-              val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
-              (s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_$someType) => true }", tpe, inlineDefns)
-            } else (s"oneOfVariant${tpe.map(s => s"[$s]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl)", tpe, inlineDefn1)
+            else if (decl == "") {
+              (
+                s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
+                  s"""emptyOutputAs(None).description("${JavaEscape.escapeString(
+                      m.description
+                    )}")$hs){ case (None, $underscores) => true}""",
+                maybeBodyType,
+                inlineDefn1
+              )
+            } else {
+              def withHeaderTypes(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, ${ht(false).get})"
+              def withUnderscores(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, $underscores)"
+              if (contentCanBeEmpty) {
+                val (_, nonOptionalType, inlineDefn2) = bodyFmt(m, isErrorPosition)
+                val inlineDefns = combine(inlineDefn1, inlineDefn2)
+                val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
+                (
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
+                  maybeBodyType,
+                  inlineDefns
+                )
+              } else
+                (
+                  s"oneOfVariant${maybeBodyType.map(s => s"[${withHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$hs)",
+                  maybeBodyType,
+                  inlineDefn1
+                )
+            }
           }.unzip3
           val parentMap = doc.components.toSeq
             .flatMap(_.schemas)
@@ -643,8 +687,8 @@ class EndpointGenerator {
             }
             .distinct
           val commmonType = {
-            if (allAreEmptyResponses) "Unit"
-            else if (canBeEmptyResponse && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
+            if (allResponsesAreEmpty) "Unit"
+            else if (contentCanBeEmpty && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
             else if (allElemTypes.size == 1) allElemTypes.head
             else {
               val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
@@ -653,13 +697,14 @@ class EndpointGenerator {
                 case s if targetScala3              => s.mkString(" & ")
                 case s                              => s.mkString(" with ")
               }
-              if (canBeEmptyResponse) s"Option[$baseType]" else baseType
+              if (contentCanBeEmpty) s"Option[$baseType]" else baseType
             }
           }
+          val oneOfType = if (commonResponseHeaders.isEmpty) commmonType else s"($commmonType, ${ht(false).get})"
           (
-            Some(s"oneOf[$commmonType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
-            Some(commmonType),
-            inlineDefns.foldLeft(Option.empty[String])(combine)
+            Some(s"oneOf[$oneOfType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
+            Some(oneOfType),
+            (inlineDefns ++ outHeaderInlineEnums.map(_.map(_.mkString("\n")))).foldLeft(Option.empty[String])(combine(_, _))
           )
       }
 
