@@ -132,7 +132,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .post
       .in(("store" / "order"))
-      .in(jsonBody[Option[Order]])
+      .in(oneOfBody(jsonBody[Option[Order]], xmlBody[Option[Order]]))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
@@ -166,7 +166,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(jsonBody[Pet].description("Successful operation"))
+      .out(oneOfBody(jsonBody[Pet].description("Successful operation"), xmlBody[Pet].description("Successful operation")))
       .tags(List("pet"))
 
   type AddPetEndpoint = Endpoint[String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, Pet, sttp.capabilities.pekko.PekkoStreams]
@@ -180,7 +180,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(jsonBody[Pet].description("Successful operation"))
+      .out(oneOfBody(jsonBody[Pet].description("Successful operation"), xmlBody[Pet].description("Successful operation")))
       .tags(List("pet"))
 
   type GetOrderByIdEndpoint = Endpoint[Unit, Long, Unit, Order, Any]
@@ -192,7 +192,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(jsonBody[Order].description("successful operation"))
+      .out(oneOfBody(jsonBody[Order].description("successful operation"), xmlBody[Order].description("successful operation")))
       .tags(List("store"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
 
@@ -231,7 +231,7 @@ object TapirGeneratedEndpoints {
       .post
       .in(("user" / "createWithList"))
       .in(jsonBody[Option[List[User]]])
-      .out(jsonBody[User].description("Successful operation"))
+      .out(oneOfBody(jsonBody[User].description("Successful operation"), xmlBody[User].description("Successful operation")))
       .tags(List("user"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
 
@@ -244,7 +244,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(jsonBody[User].description("successful operation"))
+      .out(oneOfBody(jsonBody[User].description("successful operation"), xmlBody[User].description("successful operation")))
       .tags(List("user"))
 
   type UpdateUserEndpoint = Endpoint[Unit, (String, Option[User]), Unit, Unit, Any]
@@ -252,7 +252,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .put
       .in(("user" / path[String]("username").description("name that need to be deleted")))
-      .in(jsonBody[Option[User]])
+      .in(oneOfBody(jsonBody[Option[User]], xmlBody[Option[User]]))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("bad request"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("user not found"))(()),
@@ -281,7 +281,7 @@ object TapirGeneratedEndpoints {
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username/password supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(jsonBody[String].description("successful operation").and(header[Option[Int]]("X-Rate-Limit").description("calls per hour allowed by the user")).and(header[Option[java.time.Instant]]("X-Expires-After").description("date in UTC when token expires")))
+      .out(oneOfBody(xmlBody[String].description("successful operation"), jsonBody[String].description("successful operation")).and(header[Option[Int]]("X-Rate-Limit").description("calls per hour allowed by the user")).and(header[Option[java.time.Instant]]("X-Expires-After").description("date in UTC when token expires")))
       .tags(List("user"))
 
   type CreateUserEndpoint = Endpoint[Unit, Option[User], Unit, User, Any]
@@ -289,8 +289,8 @@ object TapirGeneratedEndpoints {
     endpoint
       .post
       .in(("user"))
-      .in(jsonBody[Option[User]])
-      .out(jsonBody[User].description("successful operation"))
+      .in(oneOfBody(jsonBody[Option[User]], xmlBody[Option[User]]))
+      .out(oneOfBody(jsonBody[User].description("successful operation"), xmlBody[User].description("successful operation")))
       .tags(List("user"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
 
@@ -304,7 +304,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(xmlBody[Pet].description("successful operation"))
+      .out(oneOfBody(jsonBody[Pet].description("successful operation"), xmlBody[Pet].description("successful operation")))
       .tags(List("pet"))
 
   type UpdatePetWithFormEndpoint = Endpoint[String, (Long, Option[String], Option[String]), Unit, Pet, Any]
@@ -318,7 +318,7 @@ object TapirGeneratedEndpoints {
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(jsonBody[Pet].description("successful operation"))
+      .out(oneOfBody(jsonBody[Pet].description("successful operation"), xmlBody[Pet].description("successful operation")))
       .tags(List("pet"))
 
   type DeletePetEndpoint = Endpoint[String, (Long, Option[String]), Unit, Unit, Any]
