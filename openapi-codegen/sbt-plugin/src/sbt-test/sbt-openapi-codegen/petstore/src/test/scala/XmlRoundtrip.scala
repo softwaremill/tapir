@@ -1,12 +1,9 @@
-import io.circe.parser.parse
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.client3.UriContext
 import sttp.client3.testing.SttpBackendStub
-import sttp.tapir.DecodeResult
+import sttp.tapir.generated.TapirGeneratedEndpoints
 import sttp.tapir.generated.TapirGeneratedEndpoints._
-import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
-import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJsonSerdes, TapirGeneratedEndpointsXmlSerdes}
 import sttp.tapir.server.stub.TapirStubInterpreter
 
 import scala.concurrent.ExecutionContext.Implicits.global
