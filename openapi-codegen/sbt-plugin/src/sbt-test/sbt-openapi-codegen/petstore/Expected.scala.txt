@@ -122,7 +122,18 @@ object TapirGeneratedEndpoints {
     `type`: Option[String] = None,
     message: Option[String] = None
   )
-
+  type FindPetsByTagsResponse <: Seq[Pet]
+  implicit val FindPetsByTagsResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByTagsResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByTagsResponse])
+  implicit val FindPetsByTagsResponseSeqEncoder: cats.xml.codec.Encoder[FindPetsByTagsResponse] =
+    seqEncoder[Pet]("Pet", isWrapped = false, itemName = "Pet").contramap(_.asInstanceOf[Seq[Pet]])
+  implicit val FindPetsByTagsResponseSeqSchema: sttp.tapir.Schema[FindPetsByTagsResponse] =
+    implicitly[Schema[Seq[Pet]]].map(x => Some(x.asInstanceOf[FindPetsByTagsResponse]))(_.asInstanceOf[Seq[Pet]])
+  type FindPetsByStatusResponse <: Seq[Pet]
+  implicit val FindPetsByStatusResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByStatusResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByStatusResponse])
+  implicit val FindPetsByStatusResponseSeqEncoder: cats.xml.codec.Encoder[FindPetsByStatusResponse] =
+    seqEncoder[Pet]("Pet", isWrapped = false, itemName = "Pet").contramap(_.asInstanceOf[Seq[Pet]])
+  implicit val FindPetsByStatusResponseSeqSchema: sttp.tapir.Schema[FindPetsByStatusResponse] =
+    implicitly[Schema[Seq[Pet]]].map(x => Some(x.asInstanceOf[FindPetsByStatusResponse]))(_.asInstanceOf[Seq[Pet]])
 
   type SwaggerRouterControllerExtension = String
   val swaggerRouterControllerExtensionKey = new sttp.tapir.AttributeKey[SwaggerRouterControllerExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.SwaggerRouterControllerExtension")
@@ -151,7 +162,7 @@ object TapirGeneratedEndpoints {
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid tag value"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(jsonBody[List[Pet]].description("successful operation"))
+      .out(oneOfBody(jsonBody[List[Pet]].description("successful operation"), xmlBody[FindPetsByTagsResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByTagsResponse]).description("successful operation")))
       .tags(List("pet"))
 
   type UpdatePetEndpoint = Endpoint[String, Pet, Unit, Pet, Any]
@@ -358,7 +369,7 @@ object TapirGeneratedEndpoints {
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid status value"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(jsonBody[List[Pet]].description("successful operation"))
+      .out(oneOfBody(jsonBody[List[Pet]].description("successful operation"), xmlBody[FindPetsByStatusResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByStatusResponse]).description("successful operation")))
       .tags(List("pet"))
 
   sealed trait FindPetsByStatusStatus extends enumeratum.EnumEntry
