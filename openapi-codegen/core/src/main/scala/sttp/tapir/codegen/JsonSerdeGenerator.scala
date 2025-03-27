@@ -112,11 +112,11 @@ object JsonSerdeGenerator {
   private def inlineEndpointSchemas(doc: OpenapiDocument): Seq[(String, OpenapiSchemaType, Boolean)] =
     doc.paths.flatMap(p =>
       p.methods.flatMap(m =>
-        m.responses
+        m.responses.map(_.resolve(doc))
           .flatMap(_.content)
           .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
           .map(c => (m.name(p.url).capitalize + "Response", c.schema, true)) ++
-          m.requestBody.toSeq
+          m.requestBody.toSeq.map(_.resolve(doc))
             .flatMap(_.content)
             .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
             .map(c => (m.name(p.url).capitalize + "Request", c.schema, true))
