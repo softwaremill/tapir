@@ -201,6 +201,8 @@ object XmlSerdeGenerator {
        |  implicit val mkOptionXmlTypeInterpreter: XmlTypeInterpreter[Option[?]] = XmlTypeInterpreter.auto[Option[?]](
        |    (_, _) => false, (_, _) => false)
        |$enumDecoder
+       |  implicit val instantDecoder: Decoder[java.time.Instant] = Decoder.decodeString.map(java.time.Instant.parse)
+       |  implicit val instantEncoder: Encoder[java.time.Instant] = Encoder.encodeString.contramap(_.toString)
        |  implicit def optionDecoder[T: Decoder]: Decoder[Option[T]] = new Decoder[Option[T]] {
        |    private val delegate = implicitly[Decoder[T]]
        |

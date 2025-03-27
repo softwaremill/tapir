@@ -46,9 +46,9 @@ paths:
       requestBody:
         description: Update an existent pet in the store
         content:
-#          application/json:
-#            schema:
-#              $ref: '#/components/schemas/Pet'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
           application/xml:
             schema:
               $ref: '#/components/schemas/Pet'
@@ -813,9 +813,9 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Pet'
-#        application/xml:
-#          schema:
-#            $ref: '#/components/schemas/Pet'
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/Pet'
     UserArray:
       description: List of user object
       content:
