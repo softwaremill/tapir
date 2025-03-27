@@ -1,0 +1,14 @@
+package sttp.tapir.generated
+
+object TapirGeneratedEndpointsSchemas {
+  import sttp.tapir.generated.TapirGeneratedEndpoints._
+  import sttp.tapir.generic.auto._
+  implicit lazy val apiResponseTapirSchema: sttp.tapir.Schema[ApiResponse] = sttp.tapir.Schema.derived
+  implicit lazy val categoryTapirSchema: sttp.tapir.Schema[Category] = sttp.tapir.Schema.derived
+  implicit lazy val orderStatusTapirSchema: sttp.tapir.Schema[OrderStatus] = sttp.tapir.Schema.derived
+  implicit lazy val orderTapirSchema: sttp.tapir.Schema[Order] = sttp.tapir.Schema.derived
+  implicit lazy val tagTapirSchema: sttp.tapir.Schema[Tag] = sttp.tapir.Schema.derived
+  implicit lazy val userTapirSchema: sttp.tapir.Schema[User] = sttp.tapir.Schema.derived
+  implicit lazy val petStatusTapirSchema: sttp.tapir.Schema[PetStatus] = sttp.tapir.Schema.derived
+  implicit lazy val petTapirSchema: sttp.tapir.Schema[Pet] = sttp.tapir.Schema.derived
+}
