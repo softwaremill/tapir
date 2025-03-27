@@ -68,6 +68,6 @@ object Configuration {
   private val shortKebabCaseSubtypeTransformation: SName => String =
     shortIdentitySubtypeTransformation.andThen(kebabCaseTransformation)
 
-  implicit val default: Configuration = Configuration(Predef.identity, None, shortIdentitySubtypeTransformation)
+  implicit lazy val default: Configuration = Configuration(Predef.identity, None, shortIdentitySubtypeTransformation)
 
 }

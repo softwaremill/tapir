@@ -191,41 +191,41 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     }
   def idPlain[L](s: Schema[L] = Schema[L](SchemaType.SString())): Codec[L, L, CodecFormat.TextPlain] = id(CodecFormat.TextPlain(), s)
 
-  implicit val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Schema.schemaForString)
+  implicit lazy val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Schema.schemaForString)
 
-  implicit val byte: Codec[String, Byte, TextPlain] = parsedString[Byte](_.toByte).schema(Schema.schemaForByte)
-  implicit val short: Codec[String, Short, TextPlain] = parsedString[Short](_.toShort).schema(Schema.schemaForShort)
-  implicit val int: Codec[String, Int, TextPlain] = parsedString[Int](_.toInt).schema(Schema.schemaForInt)
-  implicit val long: Codec[String, Long, TextPlain] = parsedString[Long](_.toLong).schema(Schema.schemaForLong)
-  implicit val float: Codec[String, Float, TextPlain] = parsedString[Float](_.toFloat).schema(Schema.schemaForFloat)
-  implicit val double: Codec[String, Double, TextPlain] = parsedString[Double](_.toDouble).schema(Schema.schemaForDouble)
-  implicit val boolean: Codec[String, Boolean, TextPlain] = parsedString[Boolean](_.toBoolean).schema(Schema.schemaForBoolean)
-  implicit val uuid: Codec[String, UUID, TextPlain] = parsedString[UUID](UUID.fromString).schema(Schema.schemaForUUID)
-  implicit val bigDecimal: Codec[String, BigDecimal, TextPlain] = parsedString[BigDecimal](BigDecimal(_)).schema(Schema.schemaForBigDecimal)
-  implicit val javaBigDecimal: Codec[String, JBigDecimal, TextPlain] =
+  implicit lazy val byte: Codec[String, Byte, TextPlain] = parsedString[Byte](_.toByte).schema(Schema.schemaForByte)
+  implicit lazy val short: Codec[String, Short, TextPlain] = parsedString[Short](_.toShort).schema(Schema.schemaForShort)
+  implicit lazy val int: Codec[String, Int, TextPlain] = parsedString[Int](_.toInt).schema(Schema.schemaForInt)
+  implicit lazy val long: Codec[String, Long, TextPlain] = parsedString[Long](_.toLong).schema(Schema.schemaForLong)
+  implicit lazy val float: Codec[String, Float, TextPlain] = parsedString[Float](_.toFloat).schema(Schema.schemaForFloat)
+  implicit lazy val double: Codec[String, Double, TextPlain] = parsedString[Double](_.toDouble).schema(Schema.schemaForDouble)
+  implicit lazy val boolean: Codec[String, Boolean, TextPlain] = parsedString[Boolean](_.toBoolean).schema(Schema.schemaForBoolean)
+  implicit lazy val uuid: Codec[String, UUID, TextPlain] = parsedString[UUID](UUID.fromString).schema(Schema.schemaForUUID)
+  implicit lazy val bigDecimal: Codec[String, BigDecimal, TextPlain] = parsedString[BigDecimal](BigDecimal(_)).schema(Schema.schemaForBigDecimal)
+  implicit lazy val javaBigDecimal: Codec[String, JBigDecimal, TextPlain] =
     parsedString[JBigDecimal](new JBigDecimal(_)).schema(Schema.schemaForJBigDecimal)
-  implicit val bigInt: Codec[String, BigInt, TextPlain] = parsedString[BigInt](BigInt(_)).schema(Schema.schemaForBigInt)
-  implicit val javaBigInteger: Codec[String, JBigInteger, TextPlain] =
+  implicit lazy val bigInt: Codec[String, BigInt, TextPlain] = parsedString[BigInt](BigInt(_)).schema(Schema.schemaForBigInt)
+  implicit lazy val javaBigInteger: Codec[String, JBigInteger, TextPlain] =
     parsedString[JBigInteger](new JBigInteger(_)).schema(Schema.schemaForJBigInteger)
-  implicit val localTime: Codec[String, LocalTime, TextPlain] =
+  implicit lazy val localTime: Codec[String, LocalTime, TextPlain] =
     string.map(LocalTime.parse(_))(DateTimeFormatter.ISO_LOCAL_TIME.format).schema(Schema.schemaForLocalTime)
-  implicit val localDate: Codec[String, LocalDate, TextPlain] =
+  implicit lazy val localDate: Codec[String, LocalDate, TextPlain] =
     string.map(LocalDate.parse(_))(DateTimeFormatter.ISO_LOCAL_DATE.format).schema(Schema.schemaForLocalDate)
-  implicit val offsetDateTime: Codec[String, OffsetDateTime, TextPlain] =
+  implicit lazy val offsetDateTime: Codec[String, OffsetDateTime, TextPlain] =
     string.map(OffsetDateTime.parse(_))(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format).schema(Schema.schemaForOffsetDateTime)
-  implicit val zonedDateTime: Codec[String, ZonedDateTime, TextPlain] =
+  implicit lazy val zonedDateTime: Codec[String, ZonedDateTime, TextPlain] =
     string.map(ZonedDateTime.parse(_))(DateTimeFormatter.ISO_ZONED_DATE_TIME.format).schema(Schema.schemaForZonedDateTime)
-  implicit val instant: Codec[String, Instant, TextPlain] =
+  implicit lazy val instant: Codec[String, Instant, TextPlain] =
     string.map(Instant.parse(_))(DateTimeFormatter.ISO_INSTANT.format).schema(Schema.schemaForInstant)
-  implicit val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant).schema(Schema.schemaForDate)
-  implicit val zoneOffset: Codec[String, ZoneOffset, TextPlain] = parsedString[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
-  implicit val zoneId: Codec[String, ZoneId, TextPlain] = parsedString[ZoneId](ZoneId.of).schema(Schema.schemaForZoneId)
-  implicit val duration: Codec[String, Duration, TextPlain] = parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
-  implicit val offsetTime: Codec[String, OffsetTime, TextPlain] =
+  implicit lazy val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant).schema(Schema.schemaForDate)
+  implicit lazy val zoneOffset: Codec[String, ZoneOffset, TextPlain] = parsedString[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
+  implicit lazy val zoneId: Codec[String, ZoneId, TextPlain] = parsedString[ZoneId](ZoneId.of).schema(Schema.schemaForZoneId)
+  implicit lazy val duration: Codec[String, Duration, TextPlain] = parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
+  implicit lazy val offsetTime: Codec[String, OffsetTime, TextPlain] =
     string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format).schema(Schema.schemaForOffsetTime)
-  implicit val scalaDuration: Codec[String, SDuration, TextPlain] =
+  implicit lazy val scalaDuration: Codec[String, SDuration, TextPlain] =
     parsedString[SDuration](SDuration.apply).schema(Schema.schemaForScalaDuration)
-  implicit val localDateTime: Codec[String, LocalDateTime, TextPlain] = string
+  implicit lazy val localDateTime: Codec[String, LocalDateTime, TextPlain] = string
     .mapDecode { l =>
       try {
         try {
@@ -239,7 +239,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     }(h => OffsetDateTime.of(h, ZoneOffset.UTC).toString)
     .schema(Schema.schemaForLocalDateTime)
 
-  implicit val uri: PlainCodec[Uri] =
+  implicit lazy val uri: PlainCodec[Uri] =
     string
       .mapDecode(raw => Uri.parse(raw).fold(e => DecodeResult.Error(raw, new IllegalArgumentException(e)), DecodeResult.Value(_)))(
         _.toString()
@@ -249,20 +249,20 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
   def parsedString[T: Schema](parse: String => T): Codec[String, T, TextPlain] =
     string.map(parse)(_.toString).schema(implicitly[Schema[T]])
 
-  implicit val byteArray: Codec[Array[Byte], Array[Byte], OctetStream] =
+  implicit lazy val byteArray: Codec[Array[Byte], Array[Byte], OctetStream] =
     id[Array[Byte], OctetStream](OctetStream(), Schema.schemaForByteArray)
-  implicit val inputStream: Codec[InputStream, InputStream, OctetStream] =
+  implicit lazy val inputStream: Codec[InputStream, InputStream, OctetStream] =
     id[InputStream, OctetStream](OctetStream(), Schema.schemaForInputStream)
-  implicit val inputStreamRange: Codec[InputStreamRange, InputStreamRange, OctetStream] =
+  implicit lazy val inputStreamRange: Codec[InputStreamRange, InputStreamRange, OctetStream] =
     id[InputStreamRange, OctetStream](OctetStream(), Schema.schemaForInputStreamRange)
-  implicit val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
+  implicit lazy val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
     id[ByteBuffer, OctetStream](OctetStream(), Schema.schemaForByteBuffer)
-  implicit val fileRange: Codec[FileRange, FileRange, OctetStream] =
+  implicit lazy val fileRange: Codec[FileRange, FileRange, OctetStream] =
     id[FileRange, OctetStream](OctetStream(), Schema.schemaForFileRange)
-  implicit val file: Codec[FileRange, TapirFile, OctetStream] = fileRange.map(_.file)(f => FileRange(f))
+  implicit lazy val file: Codec[FileRange, TapirFile, OctetStream] = fileRange.map(_.file)(f => FileRange(f))
 
-  implicit val formSeqUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeq(StandardCharsets.UTF_8)
-  implicit val formMapUtf8: Codec[String, Map[String, String], XWwwFormUrlencoded] = formMap(StandardCharsets.UTF_8)
+  implicit lazy val formSeqUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeq(StandardCharsets.UTF_8)
+  implicit lazy val formMapUtf8: Codec[String, Map[String, String], XWwwFormUrlencoded] = formMap(StandardCharsets.UTF_8)
 
   def formSeq(charset: Charset): Codec[String, Seq[(String, String)], XWwwFormUrlencoded] =
     string.format(XWwwFormUrlencoded()).map(UrlencodedData.decode(_, charset))(UrlencodedData.encode(_, charset))
@@ -395,7 +395,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
 
   //
 
-  implicit val webSocketFrame: Codec[WebSocketFrame, WebSocketFrame, CodecFormat.TextPlain] = Codec.idPlain()
+  implicit lazy val webSocketFrame: Codec[WebSocketFrame, WebSocketFrame, CodecFormat.TextPlain] = Codec.idPlain()
 
   /** A codec which expects only text frames (all other frames cause a decoding error) and handles the text using the given `stringCodec`.
     */
@@ -593,15 +593,15 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
 
   // header values
 
-  implicit val mediaType: Codec[String, MediaType, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+  implicit lazy val mediaType: Codec[String, MediaType, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
     DecodeResult.fromEitherString(v, MediaType.parse(v))
   }(_.toString)
 
-  implicit val etag: Codec[String, ETag, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+  implicit lazy val etag: Codec[String, ETag, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
     DecodeResult.fromEitherString(v, ETag.parse(v))
   }(_.toString)
 
-  implicit val range: Codec[String, Range, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+  implicit lazy val range: Codec[String, Range, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
     DecodeResult.fromEitherString(v, Range.parse(v)).flatMap {
       case Nil     => DecodeResult.Missing
       case List(r) => DecodeResult.Value(r)
@@ -609,11 +609,11 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     }
   }(_.toString)
 
-  implicit val contentRange: Codec[String, ContentRange, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+  implicit lazy val contentRange: Codec[String, ContentRange, CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
     DecodeResult.fromEitherString(v, ContentRange.parse(v))
   }(_.toString)
 
-  implicit val cacheDirective: Codec[String, List[CacheDirective], CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
+  implicit lazy val cacheDirective: Codec[String, List[CacheDirective], CodecFormat.TextPlain] = Codec.string.mapDecode { v =>
     @tailrec
     def toEitherOrList[T, U](l: List[Either[T, U]], acc: List[U]): Either[T, List[U]] = l match {
       case Nil              => Right(acc.reverse)
@@ -629,8 +629,8 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
       case Right(r) => DecodeResult.Value(r)
     }
 
-  implicit val cookie: Codec[String, List[Cookie], TextPlain] = Codec.string.mapDecode(decodeCookie)(cs => Cookie.toString(cs))
-  implicit val cookies: Codec[List[String], List[Cookie], TextPlain] = Codec.list(cookie).map(_.flatten)(List(_))
+  implicit lazy val cookie: Codec[String, List[Cookie], TextPlain] = Codec.string.mapDecode(decodeCookie)(cs => Cookie.toString(cs))
+  implicit lazy val cookies: Codec[List[String], List[Cookie], TextPlain] = Codec.list(cookie).map(_.flatten)(List(_))
 
   private[tapir] def decodeCookieWithMeta(cookie: String): DecodeResult[CookieWithMeta] =
     CookieWithMeta.parse(cookie) match {
@@ -638,8 +638,8 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
       case Right(r) => DecodeResult.Value(r)
     }
 
-  implicit val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
-  implicit val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
+  implicit lazy val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
+  implicit lazy val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
 
   // raw tuples
 
@@ -737,9 +737,9 @@ case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Code
 }
 
 object MultipartCodec extends MultipartCodecMacros {
-  private val arrayBytePartListCodec = implicitly[Codec[List[Part[Array[Byte]]], List[Part[Array[Byte]]], OctetStream]]
+  private lazy val arrayBytePartListCodec = implicitly[Codec[List[Part[Array[Byte]]], List[Part[Array[Byte]]], OctetStream]]
 
-  val Default: MultipartCodec[Seq[Part[Array[Byte]]]] =
+  lazy val Default: MultipartCodec[Seq[Part[Array[Byte]]]] =
     Codec
       .multipart(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, arrayBytePartListCodec)))
       // we know that all parts will end up as byte arrays; also, removing/restoring the by-name grouping of parts

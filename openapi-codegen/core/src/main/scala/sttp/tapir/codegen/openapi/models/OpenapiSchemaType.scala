@@ -142,7 +142,7 @@ object OpenapiSchemaType {
   import io.circe._
   import cats.implicits._
 
-  implicit val OpenapiSchemaRefDecoder: Decoder[OpenapiSchemaRef] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaRefDecoder: Decoder[OpenapiSchemaRef] = { (c: HCursor) =>
     for {
       r <- c.downField("$ref").as[String]
     } yield {
@@ -163,7 +163,7 @@ object OpenapiSchemaType {
     } yield (t, nullableByType || nb.contains(true))
   }
 
-  implicit val OpenapiSchemaBooleanDecoder: Decoder[OpenapiSchemaBoolean] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaBooleanDecoder: Decoder[OpenapiSchemaBoolean] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not boolean!", c.history))(_._1 == "boolean")
     } yield {
@@ -171,7 +171,7 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val OpenapiSchemaStringTypeDecoder: Decoder[OpenapiSchemaStringType] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaStringTypeDecoder: Decoder[OpenapiSchemaStringType] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not string!", c.history))(_._1 == "string")
       f <- c.downField("format").as[Option[String]]
@@ -189,7 +189,7 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val OpenapiSchemaNumericTypeDecoder: Decoder[OpenapiSchemaNumericType] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaNumericTypeDecoder: Decoder[OpenapiSchemaNumericType] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c)
         .ensure(DecodingFailure("Given type is not number/integer!", c.history))(v => v._1 == "number" || v._1 == "integer")
@@ -218,7 +218,7 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val OpenapiSchemaSimpleTypeDecoder: Decoder[OpenapiSchemaSimpleType] =
+  implicit lazy val OpenapiSchemaSimpleTypeDecoder: Decoder[OpenapiSchemaSimpleType] =
     List[Decoder[OpenapiSchemaSimpleType]](
       Decoder[OpenapiSchemaRef].widen,
       Decoder[OpenapiSchemaBoolean].widen,
@@ -226,14 +226,14 @@ object OpenapiSchemaType {
       Decoder[OpenapiSchemaNumericType].widen
     ).reduceLeft(_ or _)
 
-  implicit val DiscriminatorDecoder: Decoder[Discriminator] = { (c: HCursor) =>
+  implicit lazy val DiscriminatorDecoder: Decoder[Discriminator] = { (c: HCursor) =>
     for {
       propertyName <- c.downField("propertyName").as[String]
       mapping <- c.downField("mapping").as[Option[Map[String, String]]]
     } yield Discriminator(propertyName, mapping)
   }
 
-  implicit val OpenapiSchemaOneOfDecoder: Decoder[OpenapiSchemaOneOf] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaOneOfDecoder: Decoder[OpenapiSchemaOneOf] = { (c: HCursor) =>
     for {
       variants <- c.downField("oneOf").as[Seq[OpenapiSchemaSimpleType]]
       discriminator <- c.downField("discriminator").as[Option[Discriminator]]
@@ -242,7 +242,7 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val OpenapiSchemaAllOfDecoder: Decoder[OpenapiSchemaAllOf] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaAllOfDecoder: Decoder[OpenapiSchemaAllOf] = { (c: HCursor) =>
     for {
       d <- c.downField("allOf").as[Seq[OpenapiSchemaSimpleType]]
     } yield {
@@ -250,7 +250,7 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val OpenapiSchemaAnyOfDecoder: Decoder[OpenapiSchemaAnyOf] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaAnyOfDecoder: Decoder[OpenapiSchemaAnyOf] = { (c: HCursor) =>
     for {
       d <- c.downField("anyOf").as[Seq[OpenapiSchemaSimpleType]]
     } yield {
@@ -258,7 +258,7 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val OpenapiSchemaMixedTypeDecoder: Decoder[OpenapiSchemaMixedType] = {
+  implicit lazy val OpenapiSchemaMixedTypeDecoder: Decoder[OpenapiSchemaMixedType] = {
     List[Decoder[OpenapiSchemaMixedType]](
       Decoder[OpenapiSchemaOneOf].widen,
       Decoder[OpenapiSchemaAnyOf].widen,
@@ -266,7 +266,7 @@ object OpenapiSchemaType {
     ).reduceLeft(_ or _)
   }
 
-  implicit val OpenapiSchemaNotDecoder: Decoder[OpenapiSchemaNot] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaNotDecoder: Decoder[OpenapiSchemaNot] = { (c: HCursor) =>
     for {
       d <- c.downField("not").as[OpenapiSchemaType]
     } yield {
@@ -274,10 +274,10 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val OpenapiSchemaConstantDecoder: Decoder[OpenapiSchemaConstantString] =
+  implicit lazy val OpenapiSchemaConstantDecoder: Decoder[OpenapiSchemaConstantString] =
     Decoder.decodeString.map(OpenapiSchemaConstantString.apply)
 
-  implicit val OpenapiSchemaEnumDecoder: Decoder[OpenapiSchemaEnum] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaEnumDecoder: Decoder[OpenapiSchemaEnum] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c)
       (tpe, nb) = p
@@ -286,13 +286,13 @@ object OpenapiSchemaType {
     } yield OpenapiSchemaEnum(tpe, items, nb)
   }
 
-  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json])] = { (c: HCursor) =>
+  implicit lazy val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json])] = { (c: HCursor) =>
     for {
       schemaType <- c.as[OpenapiSchemaType]
       maybeDefault <- c.downField("default").as[Option[Json]]
     } yield (schemaType, maybeDefault)
   }
-  implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
       fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json])]]]
@@ -304,7 +304,7 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val OpenapiSchemaMapDecoder: Decoder[OpenapiSchemaMap] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaMapDecoder: Decoder[OpenapiSchemaMap] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
       t <- c.downField("additionalProperties").as[OpenapiSchemaType]
@@ -314,14 +314,14 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val xmlArrayConfigurationDecoder: Decoder[OpenapiXml.XmlArrayConfiguration] = { (c: HCursor) =>
+  implicit lazy val xmlArrayConfigurationDecoder: Decoder[OpenapiXml.XmlArrayConfiguration] = { (c: HCursor) =>
     for {
       name <- c.downField("name").as[Option[String]]
       wrapped <- c.downField("wrapped").as[Option[Boolean]]
     } yield OpenapiXml.XmlArrayConfiguration(name, wrapped, None)
   }
 
-  implicit val OpenapiSchemaArrayDecoder: Decoder[OpenapiSchemaArray] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaArrayDecoder: Decoder[OpenapiSchemaArray] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not array!", c.history))(v => v._1 == "array" || v._1 == "object")
       f <- c.downField("items").as[OpenapiSchemaType]
@@ -337,7 +337,7 @@ object OpenapiSchemaType {
     }
   }
 
-  implicit val OpenapiSchemaAnyDecoder: Decoder[OpenapiSchemaAny] = { (c: HCursor) =>
+  implicit lazy val OpenapiSchemaAnyDecoder: Decoder[OpenapiSchemaAny] = { (c: HCursor) =>
     for {
       _ <- c.downField("type").as[Option[String]].ensure(DecodingFailure("Type must not be defined!", c.history))(_.isEmpty)
       nb <- c.downField("nullable").as[Option[Boolean]]
