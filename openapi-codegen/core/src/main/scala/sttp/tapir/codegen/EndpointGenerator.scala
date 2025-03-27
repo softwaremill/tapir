@@ -210,11 +210,7 @@ class EndpointGenerator {
           val xmlParamRefs: Seq[String] = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
             .collect { case (contentType, schema) if contentType == "application/xml" => schema }
-            .collect {
-              case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
-              case other if !other.isInstanceOf[OpenapiSchemaSimpleType] =>
-                bail(s"Can only generate xml schemas when req/resp body schema is a ref or primitive. Found $other")
-            }
+            .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
           val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
             .collect { case (contentType, schema) if contentType == "application/json" => schema }
@@ -780,14 +776,20 @@ class EndpointGenerator {
       case "text/html" =>
         MappedContentType("htmlBodyUtf8", "String")
       case "application/xml" if xmlSerdeLib != XmlSerdeLib.NoSupport =>
-        val (outT, maybeInline) = schema match {
+        val (outT, maybeInline, maybeAlias) = schema match {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            t -> None
-          case x => bail(s"Only ref and primitive schemas supported for xml body (found $x)")
+            (t, None, None)
+          case a @ OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
+            val (t, _) = mapSchemaSimpleTypeToType(st)
+            val xmlSeqConfig = XmlSerdeGenerator.genTopLevelSeqSerdes(xmlSerdeLib, a, endpointName, position)
+            (s"List[$t]", xmlSeqConfig, Some(endpointName.capitalize + position))
+          case x => bail(s"Only ref, primitive (and arrays of either) schemas supported for xml body (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
-        MappedContentType(s"xmlBody[$req]", req, maybeInline)
+        def toList = if (required) ".toList" else ".map(_.toList)"
+        val bodyType = maybeAlias.map(a => s"xmlBody[$a].map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(s"xmlBody[$req]")
+        MappedContentType(bodyType, req, maybeInline)
       case "application/json" =>
         val (outT, maybeInline) = schema match {
           case st: OpenapiSchemaSimpleType =>
