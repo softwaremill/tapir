@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.BasicGenerator.indent
+import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -12,6 +12,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaSimpleType
 }
 import sttp.tapir.codegen.openapi.models.OpenapiXml
+import sttp.tapir.codegen.openapi.models.OpenapiXml.XmlArrayConfiguration
 
 object SchemaTypeType extends Enumeration {
   val EnumType, ArrayType, OtherType = Value
@@ -27,6 +28,22 @@ case class ScopedAuxCodecParams(
 )
 
 object XmlSerdeGenerator {
+  def genTopLevelSeqSerdes(xmlSerdeLib: XmlSerdeLib, schema: OpenapiSchemaArray, endpointName: String, position: String): Option[String] =
+    schema match {
+      case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, c) if xmlSerdeLib == XmlSerdeLib.CatsXml =>
+        val (t, _) = mapSchemaSimpleTypeToType(st)
+        val seqSubtype = endpointName.capitalize + position
+        val name = c.flatMap(_.name).getOrElse(t)
+        val w = c.exists(_.isWrapped)
+        val in = c.flatMap(_.itemName).getOrElse(t)
+        Some(s"""type $seqSubtype <: Seq[$t]
+         |implicit val ${seqSubtype}SeqDecoder: cats.xml.codec.Decoder[$seqSubtype] = seqDecoder[$t]("$name", isWrapped = $w).map(_.asInstanceOf[$seqSubtype])
+         |implicit val ${seqSubtype}SeqEncoder: cats.xml.codec.Encoder[$seqSubtype] =
+         |  seqEncoder[$t]("$name", isWrapped = $w, itemName = "$in").contramap(_.asInstanceOf[Seq[$t]])
+         |implicit val ${seqSubtype}SeqSchema: sttp.tapir.Schema[${seqSubtype}] =
+         |  implicitly[Schema[Seq[$t]]].map(x => Some(x.asInstanceOf[${seqSubtype}]))(_.asInstanceOf[Seq[$t]])""".stripMargin)
+      case _ => None
+    }
 
   def generateSerdes(xmlSerdeLib: XmlSerdeLib, doc: OpenapiDocument, xmlParamRefs: Set[String], targetScala3: Boolean): Option[String] = {
     if (xmlParamRefs.isEmpty || xmlSerdeLib == XmlSerdeLib.NoSupport) None
