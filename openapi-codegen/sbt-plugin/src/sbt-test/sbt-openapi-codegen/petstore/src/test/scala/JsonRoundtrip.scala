@@ -1,20 +1,43 @@
-//import io.circe.parser.parse
-//import org.scalatest.freespec.AnyFreeSpec
-//import org.scalatest.matchers.should.Matchers
-//import sttp.client3.UriContext
-//import sttp.client3.testing.SttpBackendStub
-//import sttp.tapir.generated.TapirGeneratedEndpoints.ObjectWithInlineEnum2InlineEnum.bar2
-//import sttp.tapir.generated.TapirGeneratedEndpoints.ObjectWithInlineEnumInlineEnum.foo3
-//import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJsonSerdes}
-//import sttp.tapir.generated.TapirGeneratedEndpoints._
-//import sttp.tapir.server.stub.TapirStubInterpreter
-//
-//import java.util.UUID
-//import scala.concurrent.duration.DurationInt
-//import scala.concurrent.{Await, Future}
-//import scala.concurrent.ExecutionContext.Implicits.global
-//
-//class JsonRoundtrip extends AnyFreeSpec with Matchers {
+import cats.xml.codec.{Decoder, Encoder}
+import io.circe.parser.parse
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
+import sttp.client3.UriContext
+import sttp.client3.testing.SttpBackendStub
+import sttp.tapir.{oneOf => tOneOf, _}
+import sttp.tapir.generated.TapirGeneratedEndpoints._
+import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
+import sttp.tapir.generated.TapirGeneratedEndpointsSchemas._
+import sttp.tapir.generated.TapirGeneratedEndpointsXmlSerdes._
+import sttp.tapir.json.circe.jsonBody
+import sttp.tapir.server.stub.TapirStubInterpreter
+
+import java.util.UUID
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+
+class JsonRoundtrip extends AnyFreeSpec with Matchers {
+  val foo: Decoder[java.time.Instant] = Decoder.decodeString.map(java.time.Instant.parse)
+  val foo2: Encoder[java.time.Instant] = Encoder.encodeString.contramap(_.toString)
+  lazy val findPetsByTags2 = // : FindPetsByTagsEndpoint =
+    endpoint.get
+      .in(("pet" / "findByTags"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(query[ExplodedValues[String]]("tags").map(_.values)(ExplodedValues(_)).description("Tags to filter by"))
+      .errorOut(
+        tOneOf[Unit](
+          oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid tag value"))(()),
+          oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())
+        )
+      )
+      .out(
+        tOneOf(
+          oneOfVariant(jsonBody[Pet].description("successful operation")),
+          oneOfVariant(xmlBody[Pet].description("successful operation"))
+        )
+      )
+      .tags(List("pet"))
 //  "oneOf without discriminator can be round-tripped by generated serdes" in {
 //    val route = TapirGeneratedEndpoints.putAdtTest.serverLogic[Future]({
 //      case foo: SubtypeWithoutD1 =>
@@ -269,4 +292,4 @@
 //    )
 //
 //  }
-//}
+}

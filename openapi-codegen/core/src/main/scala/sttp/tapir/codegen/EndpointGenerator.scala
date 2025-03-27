@@ -8,6 +8,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
   OpenapiParameter,
   OpenapiPath,
+  OpenapiRequestBodyContent,
   OpenapiRequestBodyDefn,
   OpenapiResponseDef
 }
@@ -435,27 +436,42 @@ class EndpointGenerator {
       .map { case (defn, enums, tpe) => (s".in($defn)", enums, tpe) }
       .unzip3
 
+    def mapContent(content: OpenapiRequestBodyContent, required: Boolean) = {
+      val schemaIsNullable = content.schema.nullable || (content.schema match {
+        case ref: OpenapiSchemaRef =>
+          doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
+        case _ => false
+      })
+      val MappedContentType(decl, tpe, maybeInlineDefn) =
+        contentTypeMapper(
+          content.contentType,
+          content.schema,
+          streamingImplementation,
+          required && !schemaIsNullable,
+          endpointName,
+          "Request",
+          false,
+          xmlSerdeLib
+        )
+      (decl, tpe, maybeInlineDefn)
+    }
     val (rqBody, maybeReqType, maybeInlineDefns) = requestBody.flatMap { b =>
       if (b.content.isEmpty) None
-      else if (b.content.size != 1) bail(s"We can handle only one requestBody content! Saw ${b.content.map(_.contentType)}")
-      else {
-        val schemaIsNullable = b.content.head.schema.nullable || (b.content.head.schema match {
-          case ref: OpenapiSchemaRef =>
-            doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
-          case _ => false
-        })
-        val MappedContentType(decl, tpe, maybeInlineDefn) =
-          contentTypeMapper(
-            b.content.head.contentType,
-            b.content.head.schema,
-            streamingImplementation,
-            b.required && !schemaIsNullable,
-            endpointName,
-            "Request",
-            false,
-            xmlSerdeLib
-          )
+      else if (b.content.size == 1) {
+        val content: OpenapiModels.OpenapiRequestBodyContent = b.content.head
+        val (decl, tpe, maybeInlineDefn) = mapContent(content, b.required)
         Some((s".in($decl)", tpe, maybeInlineDefn))
+      } else {
+        val mapped = b.content.map(mapContent(_, b.required))
+        val (decls, tpes, maybeInlineDefns) = mapped.unzip3
+        val distinctTypes = tpes.distinct
+        if (distinctTypes.size != 1)
+          bail(s"Returning different contents for different content types is unsupported. Saw $distinctTypes")
+
+        val tpe = tpes.head
+        val distinctInlineDefns = maybeInlineDefns.flatten.distinct.mkString("\n")
+        val didO = if (distinctInlineDefns.isEmpty) None else Some(distinctInlineDefns)
+        Some((s".in(oneOfBody(${decls.mkString(", ")}))", tpe, didO))
       }
     }.unzip3
 

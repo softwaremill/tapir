@@ -160,7 +160,7 @@ object TapirGeneratedEndpoints {
       .put
       .in(("pet"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(xmlBody[Pet])
+      .in(oneOfBody(jsonBody[Pet], xmlBody[Pet]))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found"))(()),
