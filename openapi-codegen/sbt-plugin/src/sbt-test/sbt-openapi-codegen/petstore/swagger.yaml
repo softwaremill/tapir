@@ -63,9 +63,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Pet'
-#            application/xml:
-#              schema:
-#                $ref: '#/components/schemas/Pet'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Pet'
         '400':
           description: Invalid ID supplied
         '404':
@@ -104,9 +104,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Pet'
-#            application/xml:
-#              schema:
-#                $ref: '#/components/schemas/Pet'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Pet'
         '400':
           description: Invalid input
         '422':
@@ -217,9 +217,9 @@ paths:
         '200':
           description: successful operation
           content:
-#            application/json:
-#              schema:
-#                $ref: '#/components/schemas/Pet'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
             application/xml:
               schema:
                 $ref: '#/components/schemas/Pet'
@@ -265,9 +265,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Pet'
-#            application/xml:
-#              schema:
-#                $ref: '#/components/schemas/Pet'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Pet'
         '400':
           description: Invalid input
         default:
@@ -428,9 +428,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Order'
-#            application/xml:
-#              schema:
-#                $ref: '#/components/schemas/Order'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Order'
         '400':
           description: Invalid ID supplied
         '404':
@@ -475,9 +475,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/User'
-#          application/xml:
-#            schema:
-#              $ref: '#/components/schemas/User'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/User'
 #          application/x-www-form-urlencoded:
 #            schema:
 #              $ref: '#/components/schemas/User'
@@ -488,9 +488,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-#            application/xml:
-#              schema:
-#                $ref: '#/components/schemas/User'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/User'
         default:
           description: Unexpected error
   /user/createWithList:
@@ -515,9 +515,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-#            application/xml:
-#              schema:
-#                $ref: '#/components/schemas/User'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/User'
         default:
           description: Unexpected error
   /user/login:
@@ -555,9 +555,9 @@ paths:
                 type: string
                 format: date-time
           content:
-#            application/xml:
-#              schema:
-#                type: string
+            application/xml:
+              schema:
+                type: string
             application/json:
               schema:
                 type: string
@@ -599,9 +599,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-#            application/xml:
-#              schema:
-#                $ref: '#/components/schemas/User'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/User'
         '400':
           description: Invalid username supplied
         '404':
@@ -628,9 +628,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/User'
-#          application/xml:
-#            schema:
-#              $ref: '#/components/schemas/User'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/User'
 #          application/x-www-form-urlencoded:
 #            schema:
 #              $ref: '#/components/schemas/User'
