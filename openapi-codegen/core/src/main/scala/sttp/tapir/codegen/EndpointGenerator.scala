@@ -10,6 +10,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiPath,
   OpenapiRequestBodyContent,
   OpenapiRequestBodyDefn,
+  OpenapiResponseContent,
   OpenapiResponseDef
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -211,7 +212,8 @@ class EndpointGenerator {
             .collect { case (contentType, schema) if contentType == "application/xml" => schema }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
-              case other => bail(s"Can only generate xml schemas when req/resp body schema is a ref. Found $other")
+              case other if !other.isInstanceOf[OpenapiSchemaSimpleType] =>
+                bail(s"Can only generate xml schemas when req/resp body schema is a ref or primitive. Found $other")
             }
           val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
@@ -520,41 +522,51 @@ class EndpointGenerator {
       location: Location
   ) = {
     // .errorOut(stringBody)
-    // .out(jsonBody[List[Book]])
+    // .out(oneOfBody(jsonBody[List[Book]]))
 
     val (outs, errorOuts) = responses.partition { resp =>
-      resp.content match {
-        case Nil | _ +: Nil =>
-          resp.code match {
-            case okStatus(_)                => true
-            case "default" | errorStatus(_) => false
-            case x                          => bail(s"Statuscode mapping is incomplete! Cannot handle $x")
-          }
-        case _ => bail("We can handle only one return content!")
+      resp.code match {
+        case okStatus(_)                => true
+        case "default" | errorStatus(_) => false
+        case x                          => bail(s"Statuscode mapping is incomplete! Cannot handle $x")
       }
     }
+
     def bodyFmt(resp: OpenapiResponseDef, isErrorPosition: Boolean, optional: Boolean = false): (String, Option[String], Option[String]) = {
-      val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
+      def wrapContent(content: OpenapiResponseContent) = {
+        val schemaIsNullable = content.schema.nullable || (content.schema match {
+          case ref: OpenapiSchemaRef =>
+            doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
+          case _ => false
+        })
+        val MappedContentType(decl, tpe, maybeInlineDefn) =
+          contentTypeMapper(
+            content.contentType,
+            content.schema,
+            streamingImplementation,
+            !(optional || schemaIsNullable),
+            endpointName,
+            "Response",
+            isErrorPosition,
+            xmlSerdeLib
+          )
+        (decl, tpe, maybeInlineDefn)
+      }
       resp.content match {
         case Nil => ("", None, None)
         case content +: Nil =>
-          val schemaIsNullable = content.schema.nullable || (content.schema match {
-            case ref: OpenapiSchemaRef =>
-              doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
-            case _ => false
-          })
-          val MappedContentType(decl, tpe, maybeInlineDefn) =
-            contentTypeMapper(
-              content.contentType,
-              content.schema,
-              streamingImplementation,
-              !(optional || schemaIsNullable),
-              endpointName,
-              "Response",
-              isErrorPosition,
-              xmlSerdeLib
-            )
+          val (decl, tpe, maybeInlineDefn) = wrapContent(content)
+          val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
           (s"$decl$d", Some(tpe), maybeInlineDefn)
+        case seq =>
+          val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent).unzip3
+          val distinctTypes = tpes.distinct
+          if (distinctTypes.size != 1) bail(s"Expected different content types to resolve to the same type, found $distinctTypes")
+          val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
+          val bodies = s"oneOfBody(${decls.map(_ + d).mkString(", ")})"
+          val distinctInlineDefns = maybeInlineDefns.flatten.distinct.mkString("\n")
+          val didO = if (distinctInlineDefns.isEmpty) None else Some(distinctInlineDefns)
+          (bodies, Some(tpes.head), didO)
       }
     }
     def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) =
@@ -592,7 +604,8 @@ class EndpointGenerator {
                 ht(),
                 inlineHeaderEnumDefns
               )
-            case _ =>
+            case s =>
+              val wrapBodies = s.size > 1
               val (decl, maybeBodyType, inlineDefn) = bodyFmt(resp, isErrorPosition)
               val tpe =
                 if (outHeaderTypes.isEmpty) maybeBodyType
@@ -768,10 +781,10 @@ class EndpointGenerator {
         MappedContentType("htmlBodyUtf8", "String")
       case "application/xml" if xmlSerdeLib != XmlSerdeLib.NoSupport =>
         val (outT, maybeInline) = schema match {
-          case st: OpenapiSchemaRef =>
+          case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
             t -> None
-          case x => bail(s"Only ref schemas supported for xml body (found $x)")
+          case x => bail(s"Only ref and primitive schemas supported for xml body (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
         MappedContentType(s"xmlBody[$req]", req, maybeInline)

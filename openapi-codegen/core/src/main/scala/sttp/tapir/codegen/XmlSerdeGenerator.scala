@@ -138,9 +138,7 @@ object XmlSerdeGenerator {
             s"""
                |implicit lazy val ${ref}XmlTypeInterpreter: XmlTypeInterpreter[$ref] = $interpreter
                |implicit lazy val $decoderName: Decoder[$ref] = $decoderDefn
-               |implicit lazy val $encoderName: Encoder[$ref] = $encoderDefn
-               |implicit lazy val ${ref}XmlSerde: sttp.tapir.Codec.XmlCodec[${ref.capitalize}] =
-               |  sttp.tapir.Codec.xml(xmlToDecodeResult[$ref])(_.toXml.toString)""".stripMargin
+               |implicit lazy val $encoderName: Encoder[$ref] = $encoderDefn""".stripMargin
           }
           .mkString("\n")
       }
@@ -203,6 +201,8 @@ object XmlSerdeGenerator {
        |$enumDecoder
        |  implicit val instantDecoder: Decoder[java.time.Instant] = Decoder.decodeString.map(java.time.Instant.parse)
        |  implicit val instantEncoder: Encoder[java.time.Instant] = Encoder.encodeString.contramap(_.toString)
+       |  implicit def xmlSerdeFromCodecs[T: Decoder: Encoder: sttp.tapir.Schema]: sttp.tapir.Codec.XmlCodec[T] =
+       |    sttp.tapir.Codec.xml(xmlToDecodeResult[T])(_.toXml.toString)
        |  implicit def optionDecoder[T: Decoder]: Decoder[Option[T]] = new Decoder[Option[T]] {
        |    private val delegate = implicitly[Decoder[T]]
        |
