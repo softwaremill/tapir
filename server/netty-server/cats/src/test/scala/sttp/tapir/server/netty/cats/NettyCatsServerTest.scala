@@ -12,8 +12,9 @@ import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import org.scalatest.matchers.should.Matchers
 
-class NettyCatsServerTest extends TestSuite with EitherValues {
+class NettyCatsServerTest extends TestSuite with EitherValues with Matchers {
 
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
@@ -41,6 +42,12 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             new ServerCancellationTests(createServerTest)(m, IO.asyncForIO).tests() ++
             new NettyFs2StreamingCancellationTest(createServerTest).tests() ++
             new ServerGracefulShutdownTests(createServerTest, ioSleeper).tests() ++
+            new ServerMultipartTests(
+              createServerTest,
+              partContentTypeHeaderSupport = false,
+              partOtherHeaderSupport = false,
+              multipartResponsesSupport = false
+            ).tests() ++
             new ServerWebSocketTests(
               createServerTest,
               Fs2Streams[IO],
