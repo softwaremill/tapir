@@ -4,7 +4,13 @@ import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType, str
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.StreamingImplementation.StreamingImplementation
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
+  OpenapiDocument,
+  OpenapiParameter,
+  OpenapiPath,
+  OpenapiRequestBodyDefn,
+  OpenapiResponseDef
+}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaArray,
@@ -165,8 +171,18 @@ class EndpointGenerator {
           val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
           val (securityDecl, securityTypes) = security(securitySchemes, m.security)
           val (inParams, maybeLocalEnums, inTypes, inlineInDefns) =
-            ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, xmlSerdeLib, streamingImplementation, doc)
-          val (outDecl, outTypes, errTypes, inlineDefns) = outs(m.responses, streamingImplementation, doc, targetScala3, name, xmlSerdeLib)
+            ins(
+              m.resolvedParameters,
+              m.requestBody.map(_.resolve(doc)),
+              name,
+              targetScala3,
+              jsonSerdeLib,
+              xmlSerdeLib,
+              streamingImplementation,
+              doc
+            )
+          val (outDecl, outTypes, errTypes, inlineDefns) =
+            outs(m.responses.map(_.resolve(doc)), streamingImplementation, doc, targetScala3, name, xmlSerdeLib)
           val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
           val inlineDefn = combine(inlineInDefns, inlineDefns)
           val definition =
@@ -188,15 +204,15 @@ class EndpointGenerator {
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _) if ref.isSchema => ref.stripped
             }
             .toSet
-          val xmlParamRefs: Seq[String] = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
-            m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
+          val xmlParamRefs: Seq[String] = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
+            m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
             .collect { case (contentType, schema) if contentType == "application/xml" => schema }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
               case other => bail(s"Can only generate xml schemas when req/resp body schema is a ref. Found $other")
             }
-          val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
-            m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
+          val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
+            m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
             .collect { case (contentType, schema) if contentType == "application/json" => schema }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                           => ref.stripped
@@ -327,7 +343,7 @@ class EndpointGenerator {
 
   private def ins(
       parameters: Seq[OpenapiParameter],
-      requestBody: Option[OpenapiRequestBody],
+      requestBody: Option[OpenapiRequestBodyDefn],
       endpointName: String,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
@@ -459,7 +475,7 @@ class EndpointGenerator {
   private val okStatus = """([23]\d\d)""".r
   private val errorStatus = """([45]\d\d)""".r
   private def outs(
-      responses: Seq[OpenapiResponse],
+      responses: Seq[OpenapiResponseDef],
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument,
       targetScala3: Boolean,
@@ -482,7 +498,7 @@ class EndpointGenerator {
         case _ => bail("We can handle only one return content!")
       }
     }
-    def bodyFmt(resp: OpenapiResponse, isErrorPosition: Boolean, optional: Boolean = false): (String, Option[String], Option[String]) = {
+    def bodyFmt(resp: OpenapiResponseDef, isErrorPosition: Boolean, optional: Boolean = false): (String, Option[String], Option[String]) = {
       val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
       resp.content match {
         case Nil => ("", None, None)
@@ -506,106 +522,107 @@ class EndpointGenerator {
           (s"$decl$d", Some(tpe), maybeInlineDefn)
       }
     }
-    def mappedGroup(group: Seq[OpenapiResponse], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) = group match {
-      case Nil => (None, None, None)
-      case resp +: Nil =>
-        resp.content match {
-          case Nil =>
-            val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
-            (
-              resp.code match {
-                case "200" | "default" => None
-                case okStatus(s)       => Some(s"statusCode(sttp.model.StatusCode($s))$d")
-                case errorStatus(s)    => Some(s"statusCode(sttp.model.StatusCode($s))$d")
-              },
-              None,
-              None
-            )
-          case _ =>
-            val (decl, tpe, inlineDefn) = bodyFmt(resp, isErrorPosition)
-            (
-              Some(resp.code match {
-                case "200" | "default" => decl
-                case okStatus(s)       => s"$decl.and(statusCode(sttp.model.StatusCode($s)))"
-                case errorStatus(s)    => s"$decl.and(statusCode(sttp.model.StatusCode($s)))"
-              }),
-              tpe,
-              inlineDefn
-            )
-        }
-      case many =>
-        if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
-        val canBeEmptyResponse = many.exists(_.content.isEmpty)
-        val allAreEmptyResponses = many.forall(_.content.isEmpty)
-        val (oneOfs, types, inlineDefns) = many.map { m =>
-          val (decl, tpe, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = canBeEmptyResponse)
-          val code = if (m.code == "default") "400" else m.code
-          // Might be nice to have some signal values for the interpreter, but not doing that for now.
-          if (decl == "" && allAreEmptyResponses)
-            (
-              s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
-                s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(())""",
-              tpe,
-              inlineDefn1
-            )
-          else if (decl == "")
-            (
-              s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
-                s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""",
-              tpe,
-              inlineDefn1
-            )
-          else if (canBeEmptyResponse) {
-            val (_, nonOptionalType, inlineDefn2) = bodyFmt(m, isErrorPosition)
-            val inlineDefns = combine(inlineDefn1, inlineDefn2)
-            val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
-            (s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_$someType) => true }", tpe, inlineDefns)
-          } else (s"oneOfVariant${tpe.map(s => s"[$s]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl)", tpe, inlineDefn1)
-        }.unzip3
-        val parentMap = doc.components.toSeq
-          .flatMap(_.schemas)
-          .collect { case (k, v: OpenapiSchemaOneOf) =>
-            v.types.map {
-              case r: OpenapiSchemaRef        => r.stripped -> k
-              case x: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(x)._1 -> k
-              case x                          => bail(s"Unexpected oneOf child type $x")
+    def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) =
+      group match {
+        case Nil => (None, None, None)
+        case resp +: Nil =>
+          resp.content match {
+            case Nil =>
+              val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
+              (
+                resp.code match {
+                  case "200" | "default" => None
+                  case okStatus(s)       => Some(s"statusCode(sttp.model.StatusCode($s))$d")
+                  case errorStatus(s)    => Some(s"statusCode(sttp.model.StatusCode($s))$d")
+                },
+                None,
+                None
+              )
+            case _ =>
+              val (decl, tpe, inlineDefn) = bodyFmt(resp, isErrorPosition)
+              (
+                Some(resp.code match {
+                  case "200" | "default" => decl
+                  case okStatus(s)       => s"$decl.and(statusCode(sttp.model.StatusCode($s)))"
+                  case errorStatus(s)    => s"$decl.and(statusCode(sttp.model.StatusCode($s)))"
+                }),
+                tpe,
+                inlineDefn
+              )
+          }
+        case many =>
+          if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
+          val canBeEmptyResponse = many.exists(_.content.isEmpty)
+          val allAreEmptyResponses = many.forall(_.content.isEmpty)
+          val (oneOfs, types, inlineDefns) = many.map { m =>
+            val (decl, tpe, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = canBeEmptyResponse)
+            val code = if (m.code == "default") "400" else m.code
+            // Might be nice to have some signal values for the interpreter, but not doing that for now.
+            if (decl == "" && allAreEmptyResponses)
+              (
+                s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+                  s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(())""",
+                tpe,
+                inlineDefn1
+              )
+            else if (decl == "")
+              (
+                s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+                  s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""",
+                tpe,
+                inlineDefn1
+              )
+            else if (canBeEmptyResponse) {
+              val (_, nonOptionalType, inlineDefn2) = bodyFmt(m, isErrorPosition)
+              val inlineDefns = combine(inlineDefn1, inlineDefn2)
+              val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
+              (s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_$someType) => true }", tpe, inlineDefns)
+            } else (s"oneOfVariant${tpe.map(s => s"[$s]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl)", tpe, inlineDefn1)
+          }.unzip3
+          val parentMap = doc.components.toSeq
+            .flatMap(_.schemas)
+            .collect { case (k, v: OpenapiSchemaOneOf) =>
+              v.types.map {
+                case r: OpenapiSchemaRef        => r.stripped -> k
+                case x: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(x)._1 -> k
+                case x                          => bail(s"Unexpected oneOf child type $x")
+              }
+            }
+            .flatten
+            .groupBy(_._1)
+            .map { case (k, vs) => k -> vs.map(_._2) }
+            .toMap
+          val allElemTypes = many
+            .flatMap(_.content.map(x => x.contentType -> x.schema))
+            .map {
+              case (ct, _) if ct.startsWith("text/")                  => "String"
+              case ("application/octet-stream", _) if isErrorPosition => "Array[Byte]"
+              case ("application/octet-stream", _)                    => capabilityType(streamingImplementation)
+              case (_, r: OpenapiSchemaRef)                           => r.stripped
+              case (_, x: OpenapiSchemaSimpleType)                    => mapSchemaSimpleTypeToType(x)._1
+              case (ct, x)                                            => bail(s"Unexpected oneOf elem type $x with content type $ct")
+            }
+            .distinct
+          val commmonType = {
+            if (allAreEmptyResponses) "Unit"
+            else if (canBeEmptyResponse && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
+            else if (allElemTypes.size == 1) allElemTypes.head
+            else {
+              val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
+                case s if s.isEmpty && targetScala3 => types.flatten.mkString(" | ")
+                case s if s.isEmpty                 => "Any"
+                case s if targetScala3              => s.mkString(" & ")
+                case s                              => s.mkString(" with ")
+              }
+              if (canBeEmptyResponse) s"Option[$baseType]" else baseType
             }
           }
-          .flatten
-          .groupBy(_._1)
-          .map { case (k, vs) => k -> vs.map(_._2) }
-          .toMap
-        val allElemTypes = many
-          .flatMap(_.content.map(x => x.contentType -> x.schema))
-          .map {
-            case (ct, _) if ct.startsWith("text/")                  => "String"
-            case ("application/octet-stream", _) if isErrorPosition => "Array[Byte]"
-            case ("application/octet-stream", _)                    => capabilityType(streamingImplementation)
-            case (_, r: OpenapiSchemaRef)                           => r.stripped
-            case (_, x: OpenapiSchemaSimpleType)                    => mapSchemaSimpleTypeToType(x)._1
-            case (ct, x)                                            => bail(s"Unexpected oneOf elem type $x with content type $ct")
-          }
-          .distinct
-        val commmonType = {
-          if (allAreEmptyResponses) "Unit"
-          else if (canBeEmptyResponse && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
-          else if (allElemTypes.size == 1) allElemTypes.head
-          else {
-            val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
-              case s if s.isEmpty && targetScala3 => types.flatten.mkString(" | ")
-              case s if s.isEmpty                 => "Any"
-              case s if targetScala3              => s.mkString(" & ")
-              case s                              => s.mkString(" with ")
-            }
-            if (canBeEmptyResponse) s"Option[$baseType]" else baseType
-          }
-        }
-        (
-          Some(s"oneOf[$commmonType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
-          Some(commmonType),
-          inlineDefns.foldLeft(Option.empty[String])(combine)
-        )
-    }
+          (
+            Some(s"oneOf[$commmonType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
+            Some(commmonType),
+            inlineDefns.foldLeft(Option.empty[String])(combine)
+          )
+      }
 
     val (outDecls, outTypes, inlineOutDefns) = mappedGroup(outs, false)
     val mappedOuts = outDecls.map(s => s".out($s)")
