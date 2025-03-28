@@ -24,19 +24,21 @@ libraryDependencies ++= Seq(
 import sttp.tapir.sbt.OpenapiCodegenPlugin.autoImport.{openapiJsonSerdeLib, openapiUseHeadTagForObjectName}
 
 import scala.io.Source
+import scala.util.Using
 
 TaskKey[Unit]("check") := {
   val generatedCode =
-    Source.fromFile("target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala").getLines.mkString("\n")
-  val expected = Source.fromFile("Expected.scala.txt").getLines.mkString("\n")
+    Using(Source.fromFile("target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala"))(
+      _.getLines.mkString("\n")
+    ).get
+  val expected = Using(Source.fromFile("Expected.scala.txt"))(_.getLines.mkString("\n")).get
   val generatedTrimmed =
-    generatedCode.linesIterator.zipWithIndex.filterNot(_._1.forall(_.isWhitespace)).map { case (a, i) => a.trim -> i }.toSeq
-  val expectedTrimmed = expected.linesIterator.filterNot(_.forall(_.isWhitespace)).map(_.trim).toSeq
-  if (generatedTrimmed.size != expectedTrimmed.size)
-    sys.error(s"expected ${expectedTrimmed.size} non-empty lines, found ${generatedTrimmed.size}")
+    generatedCode.linesIterator.zipWithIndex.filterNot(_._1.isBlank).map { case (a, i) => a.trim -> i }.toSeq
+  val expectedTrimmed = expected.linesIterator.filterNot(_.isBlank).map(_.trim).toSeq
   generatedTrimmed.zip(expectedTrimmed).foreach { case ((a, i), b) =>
     if (a != b) sys.error(s"Generated code did not match (expected '$b' on line $i, found '$a')")
   }
-  println("Skipping swagger roundtrip for petstore")
+  if (generatedTrimmed.size != expectedTrimmed.size)
+    sys.error(s"expected ${expectedTrimmed.size} non-empty lines, found ${generatedTrimmed.size}")
   ()
 }

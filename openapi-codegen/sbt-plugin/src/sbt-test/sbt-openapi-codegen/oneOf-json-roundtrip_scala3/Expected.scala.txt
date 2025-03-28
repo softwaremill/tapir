@@ -1,3 +1,4 @@
+
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -10,6 +11,7 @@ object TapirGeneratedEndpoints {
 
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
+
 
 
   case class CommaSeparatedValues[T](values: List[T])
@@ -42,6 +44,12 @@ object TapirGeneratedEndpoints {
   }
   implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
+  }
+  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
+    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
   }
 
   def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
@@ -139,7 +147,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .put
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithoutDiscriminator])
+      .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
   type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
@@ -147,7 +155,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .post
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithDiscriminatorNoMapping])
+      .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], List[PostInlineEnumTestQueryOptSeqEnum], ObjectWithInlineEnum), Unit, Unit, Any]
@@ -159,7 +167,7 @@ object TapirGeneratedEndpoints {
       .in(query[Option[PostInlineEnumTestQueryOptEnum]]("query-opt-enum").description("An optional enum, inline, in a query string"))
       .in(query[ExplodedValues[PostInlineEnumTestQuerySeqEnum]]("query-seq-enum").map(_.values)(ExplodedValues(_)).description("A sequence of enums, inline, in a query string"))
       .in(query[ExplodedValues[PostInlineEnumTestQueryOptSeqEnum]]("query-opt-seq-enum").map(_.values)(ExplodedValues(_)).description("An optional sequence of enums, inline, in a query string"))
-      .in(jsonBody[ObjectWithInlineEnum])
+      .in(jsonBody[ObjectWithInlineEnum].description("Check inline enums"))
       .out(statusCode(sttp.model.StatusCode(204)).description("No Content"))
 
   object PostInlineEnumTestQueryEnum {
@@ -240,9 +248,10 @@ object TapirGeneratedEndpoints {
     endpoint
       .patch
       .in(("inline" / "simple" / "object"))
-      .in(jsonBody[Option[ListType]])
+      .in(jsonBody[Option[ListType]].description("list type in"))
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
+
 
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postInlineEnumTest, getOneofOptionTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 

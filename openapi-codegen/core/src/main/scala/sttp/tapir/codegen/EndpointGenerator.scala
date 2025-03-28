@@ -458,7 +458,8 @@ class EndpointGenerator {
       else if (b.content.size == 1) {
         val content: OpenapiModels.OpenapiRequestBodyContent = b.content.head
         val (decl, tpe, maybeInlineDefn) = mapContent(content, b.required)
-        Some((s".in($decl)", tpe, maybeInlineDefn))
+        val d = b.description.map(s => s""".description("${JavaEscape.escapeString(s)}")""").getOrElse("")
+        Some((s".in($decl$d)", tpe, maybeInlineDefn))
       } else {
         // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
         val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
@@ -466,26 +467,46 @@ class EndpointGenerator {
         val mapped = b.content.map(mapContent(_, b.required, forceEager))
         val (decls, tpes, maybeInlineDefns) = mapped.unzip3
         val distinctTypes = tpes.distinct
-        // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work
+        // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
+        // eager or lazy binary, wrappers make it easier to implement logic binding.
         val needsAliases = distinctTypes.size != 1 || tpes.head == "Array[Byte]" || tpes.head.contains("BinaryStream")
-        def caseClassNameForType(t: String) = s"${endpointName.capitalize}Body${t.split('.').last.replaceAll("[\\]\\[]", "_")}In"
+        val tpesAreBin = tpes.head.contains("BinaryStream")
+        def wrapBinType(s: String) = if (tpesAreBin) s"sttp.tapir.EndpointIO.StreamBodyWrapper($s)" else s
         val traitName = s"${endpointName.capitalize}BodyIn"
+        val declsByWrapperClassName = decls
+          .zip(tpes)
+          .zipWithIndex
+          .map { case ((decl, t), i) =>
+            val caseClassName =
+              if (t == "Array[Byte]" || t.contains("BinaryStream")) s"${endpointName.capitalize}Body${i}In"
+              else s"${endpointName.capitalize}Body${t.split('.').last.replaceAll("[\\]\\[]", "_")}In"
+            (caseClassName, t, decl)
+          }
+          .groupBy(_._1)
         val aliasDefns =
           if (needsAliases) {
-            val wrappers = distinctTypes.map(s => s"""case class ${caseClassNameForType(s)}(value: $s) extends $traitName""").mkString("\n")
+            val wrappers = declsByWrapperClassName
+              .map { case (name, seq) => s"""case class ${name}(value: ${seq.head._2}) extends $traitName""" }
+              .mkString("\n")
             Some(s"""
                |sealed trait $traitName extends Product with java.io.Serializable
                |$wrappers
                |""".stripMargin)
           } else None
+        val classNameByDecl = declsByWrapperClassName.flatMap { case (className, seq) =>
+          seq.map { case (_, _, decl) => decl -> className }
+        }
 
         val tpe = if (needsAliases) traitName else tpes.head
         val distinctInlineDefns = maybeInlineDefns.flatten.distinct.mkString("\n")
         val didO = if (distinctInlineDefns.isEmpty) None else Some(distinctInlineDefns)
+        val d = b.description.map(s => s""".description("${JavaEscape.escapeString(s)}")""").getOrElse("")
         val bodies =
           if (needsAliases)
-            decls.zip(tpes).map { case (decl, tpe) => s"$decl.map(${caseClassNameForType(tpe)}(_))(_.value).widenBody[$traitName]" }
-          else decls
+            decls.zip(tpes).map { case (decl, _) =>
+              wrapBinType(s"$decl.map(${classNameByDecl(decl)}(_))(_.value).widenBody[$traitName]$d")
+            }
+          else decls.map(_ + d)
         Some((s".in(oneOfBody[$tpe](${bodies.mkString(", ")}))", tpe, combine(didO, aliasDefns)))
       }
     }.unzip3
@@ -546,7 +567,7 @@ class EndpointGenerator {
     }
 
     def bodyFmt(resp: OpenapiResponseDef, isErrorPosition: Boolean, optional: Boolean = false): (String, Option[String], Option[String]) = {
-      def wrapContent(content: OpenapiResponseContent) = {
+      def wrapContent(content: OpenapiResponseContent, forceEager: Boolean = false) = {
         val schemaIsNullable = content.schema.nullable || (content.schema match {
           case ref: OpenapiSchemaRef =>
             doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
@@ -560,7 +581,7 @@ class EndpointGenerator {
             !(optional || schemaIsNullable),
             endpointName,
             "Response",
-            isErrorPosition,
+            isErrorPosition || forceEager,
             xmlSerdeLib
           )
         (decl, tpe, maybeInlineDefn)
@@ -572,14 +593,53 @@ class EndpointGenerator {
           val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
           (s"$decl$d", Some(tpe), maybeInlineDefn)
         case seq =>
-          val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent).unzip3
+          // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
+          val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
+          val forceEager = seq.exists(c => eagerTypes.contains(c.contentType))
+          val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent(_, forceEager)).unzip3
           val distinctTypes = tpes.distinct
-          if (distinctTypes.size != 1) bail(s"Expected different content types to resolve to the same type, found $distinctTypes")
+          // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
+          // eager or lazy binary, wrappers make it easier to implement logic binding.
+          val needsAliases = distinctTypes.size != 1 || tpes.head == "Array[Byte]" || tpes.head.contains("BinaryStream")
+          val tpesAreBin = tpes.head.contains("BinaryStream")
+          def wrapBinType(s: String) = if (tpesAreBin) s"sttp.tapir.EndpointIO.StreamBodyWrapper($s)" else s
+          val suff = if (isErrorPosition) "Err" else "Out"
+          val traitName = s"${endpointName.capitalize}Body$suff"
           val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
-          val bodies = s"oneOfBody(${decls.map(_ + d).mkString(", ")})"
+          val declsByWrapperClassName = decls
+            .zip(tpes)
+            .zipWithIndex
+            .map { case ((decl, t), i) =>
+              val caseClassName =
+                if (t == "Array[Byte]" || t.contains("BinaryStream")) s"${endpointName.capitalize}Body${i}$suff"
+                else s"${endpointName.capitalize}Body${t.split('.').last.replaceAll("[\\]\\[]", "_")}$suff"
+              (caseClassName, t, decl)
+            }
+            .groupBy(_._1)
+          val aliasDefns =
+            if (needsAliases) {
+              val wrappers = declsByWrapperClassName
+                .map { case (name, seq) => s"""case class ${name}(value: ${seq.head._2}) extends $traitName""" }
+                .mkString("\n")
+              Some(s"""
+                      |sealed trait $traitName extends Product with java.io.Serializable
+                      |$wrappers
+                      |""".stripMargin)
+            } else None
+          val classNameByDecl = declsByWrapperClassName.flatMap { case (className, seq) =>
+            seq.map { case (_, _, decl) => decl -> className }
+          }
+
+          val tpe = if (needsAliases) traitName else tpes.head
+          val bodies =
+            if (needsAliases)
+              decls.zip(tpes).map { case (decl, _) =>
+                wrapBinType(s"$decl.map(${classNameByDecl(decl)}(_))(_.value).widenBody[$traitName]$d")
+              }
+            else decls.map(_ + d)
           val distinctInlineDefns = maybeInlineDefns.flatten.distinct.mkString("\n")
           val didO = if (distinctInlineDefns.isEmpty) None else Some(distinctInlineDefns)
-          (bodies, Some(tpes.head), didO)
+          (s"oneOfBody[$tpe](${bodies.mkString(", ")})", Some(tpe), combine(didO, aliasDefns))
       }
     }
     def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) =
