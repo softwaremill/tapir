@@ -254,6 +254,9 @@ object BasicGenerator {
         |  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
         |    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
         |  }
+        |  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+        |    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+        |  }
         |
         |${indent(2)(classDefns)}
         |${indent(2)(inlineDefns.mkString("\n"))}

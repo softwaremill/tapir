@@ -51,6 +51,9 @@ object TapirGeneratedEndpoints {
   implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
     def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
   }
+  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
 
   case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
     // Case-insensitive mapping
@@ -128,7 +131,7 @@ object TapirGeneratedEndpoints {
 
   sealed trait PlaceOrderBodyIn extends Product with java.io.Serializable
   case class PlaceOrderBodyOption_Order_In(value: Option[Order]) extends PlaceOrderBodyIn
-  case class PlaceOrderBodyArray_Byte_In(value: Array[Byte]) extends PlaceOrderBodyIn
+  case class PlaceOrderBody2In(value: Array[Byte]) extends PlaceOrderBodyIn
 
   type FindPetsByTagsResponse <: Seq[Pet]
   implicit val FindPetsByTagsResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByTagsResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByTagsResponse])
@@ -139,22 +142,22 @@ object TapirGeneratedEndpoints {
 
   sealed trait UpdatePetBodyIn extends Product with java.io.Serializable
   case class UpdatePetBodyPetIn(value: Pet) extends UpdatePetBodyIn
-  case class UpdatePetBodyArray_Byte_In(value: Array[Byte]) extends UpdatePetBodyIn
+  case class UpdatePetBody2In(value: Array[Byte]) extends UpdatePetBodyIn
 
-  
+
   sealed trait AddPetBodyIn extends Product with java.io.Serializable
   case class AddPetBodyPetIn(value: Pet) extends AddPetBodyIn
-  case class AddPetBodyArray_Byte_In(value: Array[Byte]) extends AddPetBodyIn
+  case class AddPetBody2In(value: Array[Byte]) extends AddPetBodyIn
 
-  
+
   sealed trait UpdateUserBodyIn extends Product with java.io.Serializable
   case class UpdateUserBodyOption_User_In(value: Option[User]) extends UpdateUserBodyIn
-  case class UpdateUserBodyArray_Byte_In(value: Array[Byte]) extends UpdateUserBodyIn
+  case class UpdateUserBody2In(value: Array[Byte]) extends UpdateUserBodyIn
 
-  
+
   sealed trait CreateUserBodyIn extends Product with java.io.Serializable
   case class CreateUserBodyOption_User_In(value: Option[User]) extends CreateUserBodyIn
-  case class CreateUserBodyArray_Byte_In(value: Array[Byte]) extends CreateUserBodyIn
+  case class CreateUserBody2In(value: Array[Byte]) extends CreateUserBodyIn
 
   type FindPetsByStatusResponse <: Seq[Pet]
   implicit val FindPetsByStatusResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByStatusResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByStatusResponse])
@@ -171,7 +174,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .post
       .in(("store" / "order"))
-      .in(oneOfBody[PlaceOrderBodyIn](jsonBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn], xmlBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn], EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PlaceOrderBodyArray_Byte_In(_))(_.value).widenBody[PlaceOrderBodyIn]))
+      .in(oneOfBody[PlaceOrderBodyIn](jsonBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn], xmlBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn], EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PlaceOrderBody2In(_))(_.value).widenBody[PlaceOrderBodyIn]))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
@@ -190,7 +193,7 @@ object TapirGeneratedEndpoints {
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid tag value"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody(jsonBody[List[Pet]].description("successful operation"), xmlBody[FindPetsByTagsResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByTagsResponse]).description("successful operation")))
+      .out(oneOfBody[List[Pet]](jsonBody[List[Pet]].description("successful operation"), xmlBody[FindPetsByTagsResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByTagsResponse]).description("successful operation")))
       .tags(List("pet"))
 
   type UpdatePetEndpoint = Endpoint[String, UpdatePetBodyIn, Unit, Pet, Any]
@@ -199,13 +202,13 @@ object TapirGeneratedEndpoints {
       .put
       .in(("pet"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(oneOfBody[UpdatePetBodyIn](jsonBody[Pet].map(UpdatePetBodyPetIn(_))(_.value).widenBody[UpdatePetBodyIn], xmlBody[Pet].map(UpdatePetBodyPetIn(_))(_.value).widenBody[UpdatePetBodyIn], EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(UpdatePetBodyArray_Byte_In(_))(_.value).widenBody[UpdatePetBodyIn]))
+      .in(oneOfBody[UpdatePetBodyIn](jsonBody[Pet].map(UpdatePetBodyPetIn(_))(_.value).widenBody[UpdatePetBodyIn].description("Update an existent pet in the store"), xmlBody[Pet].map(UpdatePetBodyPetIn(_))(_.value).widenBody[UpdatePetBodyIn].description("Update an existent pet in the store"), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(UpdatePetBody2In(_))(_.value).widenBody[UpdatePetBodyIn].description("Update an existent pet in the store")))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody(jsonBody[Pet].description("Successful operation"), xmlBody[Pet].description("Successful operation")))
+      .out(oneOfBody[Pet](jsonBody[Pet].description("Successful operation"), xmlBody[Pet].description("Successful operation")))
       .tags(List("pet"))
 
   type AddPetEndpoint = Endpoint[String, AddPetBodyIn, Unit, Pet, Any]
@@ -214,12 +217,12 @@ object TapirGeneratedEndpoints {
       .post
       .in(("pet"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(oneOfBody[AddPetBodyIn](jsonBody[Pet].map(AddPetBodyPetIn(_))(_.value).widenBody[AddPetBodyIn], xmlBody[Pet].map(AddPetBodyPetIn(_))(_.value).widenBody[AddPetBodyIn], EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(AddPetBodyArray_Byte_In(_))(_.value).widenBody[AddPetBodyIn]))
+      .in(oneOfBody[AddPetBodyIn](jsonBody[Pet].map(AddPetBodyPetIn(_))(_.value).widenBody[AddPetBodyIn].description("Create a new pet in the store"), xmlBody[Pet].map(AddPetBodyPetIn(_))(_.value).widenBody[AddPetBodyIn].description("Create a new pet in the store"), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(AddPetBody2In(_))(_.value).widenBody[AddPetBodyIn].description("Create a new pet in the store")))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody(jsonBody[Pet].description("Successful operation"), xmlBody[Pet].description("Successful operation")))
+      .out(oneOfBody[Pet](jsonBody[Pet].description("Successful operation"), xmlBody[Pet].description("Successful operation")))
       .tags(List("pet"))
 
   type GetOrderByIdEndpoint = Endpoint[Unit, Long, Unit, Order, Any]
@@ -231,7 +234,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody(jsonBody[Order].description("successful operation"), xmlBody[Order].description("successful operation")))
+      .out(oneOfBody[Order](jsonBody[Order].description("successful operation"), xmlBody[Order].description("successful operation")))
       .tags(List("store"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
 
@@ -270,7 +273,7 @@ object TapirGeneratedEndpoints {
       .post
       .in(("user" / "createWithList"))
       .in(jsonBody[Option[List[User]]])
-      .out(oneOfBody(jsonBody[User].description("Successful operation"), xmlBody[User].description("Successful operation")))
+      .out(oneOfBody[User](jsonBody[User].description("Successful operation"), xmlBody[User].description("Successful operation")))
       .tags(List("user"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
 
@@ -283,7 +286,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody(jsonBody[User].description("successful operation"), xmlBody[User].description("successful operation")))
+      .out(oneOfBody[User](jsonBody[User].description("successful operation"), xmlBody[User].description("successful operation")))
       .tags(List("user"))
 
   type UpdateUserEndpoint = Endpoint[Unit, (String, UpdateUserBodyIn), Unit, Unit, Any]
@@ -291,7 +294,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .put
       .in(("user" / path[String]("username").description("name that need to be deleted")))
-      .in(oneOfBody[UpdateUserBodyIn](jsonBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn], xmlBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn], EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(UpdateUserBodyArray_Byte_In(_))(_.value).widenBody[UpdateUserBodyIn]))
+      .in(oneOfBody[UpdateUserBodyIn](jsonBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"), xmlBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(UpdateUserBody2In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store")))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("bad request"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("user not found"))(()),
@@ -320,7 +323,7 @@ object TapirGeneratedEndpoints {
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username/password supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody(xmlBody[String].description("successful operation"), jsonBody[String].description("successful operation")).and(header[Option[Int]]("X-Rate-Limit").description("calls per hour allowed by the user")).and(header[Option[java.time.Instant]]("X-Expires-After").description("date in UTC when token expires")))
+      .out(oneOfBody[String](xmlBody[String].description("successful operation"), jsonBody[String].description("successful operation")).and(header[Option[Int]]("X-Rate-Limit").description("calls per hour allowed by the user")).and(header[Option[java.time.Instant]]("X-Expires-After").description("date in UTC when token expires")))
       .tags(List("user"))
 
   type CreateUserEndpoint = Endpoint[Unit, CreateUserBodyIn, Unit, User, Any]
@@ -328,8 +331,8 @@ object TapirGeneratedEndpoints {
     endpoint
       .post
       .in(("user"))
-      .in(oneOfBody[CreateUserBodyIn](jsonBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn], xmlBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn], EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(CreateUserBodyArray_Byte_In(_))(_.value).widenBody[CreateUserBodyIn]))
-      .out(oneOfBody(jsonBody[User].description("successful operation"), xmlBody[User].description("successful operation")))
+      .in(oneOfBody[CreateUserBodyIn](jsonBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"), xmlBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(CreateUserBody2In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object")))
+      .out(oneOfBody[User](jsonBody[User].description("successful operation"), xmlBody[User].description("successful operation")))
       .tags(List("user"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
 
@@ -343,7 +346,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody(jsonBody[Pet].description("successful operation"), xmlBody[Pet].description("successful operation")))
+      .out(oneOfBody[Pet](jsonBody[Pet].description("successful operation"), xmlBody[Pet].description("successful operation")))
       .tags(List("pet"))
 
   type UpdatePetWithFormEndpoint = Endpoint[String, (Long, Option[String], Option[String]), Unit, Pet, Any]
@@ -357,7 +360,7 @@ object TapirGeneratedEndpoints {
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody(jsonBody[Pet].description("successful operation"), xmlBody[Pet].description("successful operation")))
+      .out(oneOfBody[Pet](jsonBody[Pet].description("successful operation"), xmlBody[Pet].description("successful operation")))
       .tags(List("pet"))
 
   type DeletePetEndpoint = Endpoint[String, (Long, Option[String]), Unit, Unit, Any]
@@ -397,7 +400,7 @@ object TapirGeneratedEndpoints {
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid status value"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody(jsonBody[List[Pet]].description("successful operation"), xmlBody[FindPetsByStatusResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByStatusResponse]).description("successful operation")))
+      .out(oneOfBody[List[Pet]](jsonBody[List[Pet]].description("successful operation"), xmlBody[FindPetsByStatusResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByStatusResponse]).description("successful operation")))
       .tags(List("pet"))
 
   sealed trait FindPetsByStatusStatus extends enumeratum.EnumEntry
@@ -410,7 +413,7 @@ object TapirGeneratedEndpoints {
       extraCodecSupport[FindPetsByStatusStatus]("FindPetsByStatusStatus", FindPetsByStatusStatus)
   }
 
-  
+
   lazy val generatedEndpoints = List(placeOrder, findPetsByTags, updatePet, addPet, getOrderById, deleteOrder, logoutUser, getInventory, createUsersWithListInput, getUserByName, updateUser, deleteUser, loginUser, createUser, getPetById, updatePetWithForm, deletePet, uploadFile, findPetsByStatus)
 
 }

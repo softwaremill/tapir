@@ -189,6 +189,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListType'
+  '/custom/content-negotiation':
+    post:
+      parameters:
+        - name: accept
+          in: header
+          required: true
+          description: Not in the original petstore yaml, but required to select correct stream response type in server logic
+          schema:
+            type: string
+      requestBody:
+        content:
+          text/csv:
+            schema:
+              $ref: '#/components/schemas/SomeBinaryType'
+          application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+            schema:
+              $ref: '#/components/schemas/SomeBinaryType'
+      responses:
+        "200":
+          description: text success
+          content:
+            text/csv:
+              schema:
+                $ref: '#/components/schemas/SomeBinaryType'
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                $ref: '#/components/schemas/SomeBinaryType'
+        "400":
+          description: binary error
+          content:
+            text/csv:
+              schema:
+                $ref: '#/components/schemas/SomeBinaryType'
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                $ref: '#/components/schemas/SomeBinaryType'
   '/custom/content-types':
     post:
       requestBody:
