@@ -507,7 +507,14 @@ class EndpointGenerator {
               wrapBinType(s"$decl.map(${classNameByDecl(decl)}(_))(_.value).widenBody[$traitName]$d")
             }
           else decls.map(_ + d)
-        Some((s".in(oneOfBody[$tpe](${bodies.mkString(", ")}))", tpe, combine(didO, aliasDefns)))
+        Some(
+          (
+            s""".in(oneOfBody[$tpe](
+             |${indent(2)(bodies.mkString(",\n"))}))""".stripMargin,
+            tpe,
+            combine(didO, aliasDefns)
+          )
+        )
       }
     }.unzip3
 
@@ -639,7 +646,12 @@ class EndpointGenerator {
             else decls.map(_ + d)
           val distinctInlineDefns = maybeInlineDefns.flatten.distinct.mkString("\n")
           val didO = if (distinctInlineDefns.isEmpty) None else Some(distinctInlineDefns)
-          (s"oneOfBody[$tpe](${bodies.mkString(", ")})", Some(tpe), combine(didO, aliasDefns))
+          (
+            s"""oneOfBody[$tpe](
+               |${indent(2)(bodies.mkString(",\n"))})""".stripMargin,
+            Some(tpe),
+            combine(didO, aliasDefns)
+          )
       }
     }
     def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) =
