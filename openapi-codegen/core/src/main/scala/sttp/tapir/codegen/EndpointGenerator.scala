@@ -434,7 +434,7 @@ class EndpointGenerator {
       .map { case (defn, enums, tpe) => (s".in($defn)", enums, tpe) }
       .unzip3
 
-    def mapContent(content: OpenapiRequestBodyContent, required: Boolean) = {
+    def mapContent(content: OpenapiRequestBodyContent, required: Boolean, forceEager: Boolean = false) = {
       val schemaIsNullable = content.schema.nullable || (content.schema match {
         case ref: OpenapiSchemaRef =>
           doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
@@ -448,7 +448,7 @@ class EndpointGenerator {
           required && !schemaIsNullable,
           endpointName,
           "Request",
-          false,
+          forceEager,
           xmlSerdeLib
         )
       (decl, tpe, maybeInlineDefn)
@@ -460,16 +460,33 @@ class EndpointGenerator {
         val (decl, tpe, maybeInlineDefn) = mapContent(content, b.required)
         Some((s".in($decl)", tpe, maybeInlineDefn))
       } else {
-        val mapped = b.content.map(mapContent(_, b.required))
+        // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
+        val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
+        val forceEager = b.content.exists(c => eagerTypes.contains(c.contentType))
+        val mapped = b.content.map(mapContent(_, b.required, forceEager))
         val (decls, tpes, maybeInlineDefns) = mapped.unzip3
         val distinctTypes = tpes.distinct
-        if (distinctTypes.size != 1)
-          bail(s"Returning different contents for different content types is unsupported. Saw $distinctTypes")
+        // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work
+        val needsAliases = distinctTypes.size != 1 || tpes.head == "Array[Byte]" || tpes.head.contains("BinaryStream")
+        def caseClassNameForType(t: String) = s"${endpointName.capitalize}Body${t.split('.').last.replaceAll("[\\]\\[]", "_")}In"
+        val traitName = s"${endpointName.capitalize}BodyIn"
+        val aliasDefns =
+          if (needsAliases) {
+            val wrappers = distinctTypes.map(s => s"""case class ${caseClassNameForType(s)}(value: $s) extends $traitName""").mkString("\n")
+            Some(s"""
+               |sealed trait $traitName extends Product with java.io.Serializable
+               |$wrappers
+               |""".stripMargin)
+          } else None
 
-        val tpe = tpes.head
+        val tpe = if (needsAliases) traitName else tpes.head
         val distinctInlineDefns = maybeInlineDefns.flatten.distinct.mkString("\n")
         val didO = if (distinctInlineDefns.isEmpty) None else Some(distinctInlineDefns)
-        Some((s".in(oneOfBody(${decls.mkString(", ")}))", tpe, didO))
+        val bodies =
+          if (needsAliases)
+            decls.zip(tpes).map { case (decl, tpe) => s"$decl.map(${caseClassNameForType(tpe)}(_))(_.value).widenBody[$traitName]" }
+          else decls
+        Some((s".in(oneOfBody[$tpe](${bodies.mkString(", ")}))", tpe, combine(didO, aliasDefns)))
       }
     }.unzip3
 
@@ -767,7 +784,7 @@ class EndpointGenerator {
       required: Boolean,
       endpointName: String,
       position: String,
-      isErrorPosition: Boolean, // no streaming support for errorOut
+      forceEager: Boolean, // no streaming support for errorOut
       xmlSerdeLib: XmlSerdeLib
   )(implicit location: Location): MappedContentType = {
     contentType match {
@@ -820,7 +837,7 @@ class EndpointGenerator {
             MappedContentType(s"multipartBody[$inlineClassName]", inlineClassName, inlineClassDefn)
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
-      case other => failoverBinaryCase(other, schema, isErrorPosition, streamingImplementation)
+      case other => failoverBinaryCase(other, schema, forceEager, streamingImplementation)
       case x     => bail(s"Not all content types supported! Found $x")
     }
   }
