@@ -615,33 +615,55 @@ class EndpointGenerator {
           val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
           val declsByWrapperClassName = decls
             .zip(tpes)
+            .zip(seq.map(_.contentType))
             .zipWithIndex
-            .map { case ((decl, t), i) =>
+            .map { case (((decl, t), ct), i) =>
               val caseClassName =
                 if (t == "Array[Byte]" || t.contains("BinaryStream")) s"${endpointName.capitalize}Body${i}$suff"
                 else s"${endpointName.capitalize}Body${t.split('.').last.replaceAll("[\\]\\[]", "_")}$suff"
-              (caseClassName, t, decl)
+              (caseClassName, t, decl, ct)
             }
             .groupBy(_._1)
           val aliasDefns =
             if (needsAliases) {
+              def callers(tpe: String, impl: Boolean) = declsByWrapperClassName
+                .flatMap { case (_, seq) =>
+                  seq.map { case (_, t, _, ct) =>
+                    s"""$tpe `$ct`: () => $t${if (impl) s""" = () => throw new RuntimeException("Body for content type $ct not provided")"""
+                      else ","}"""
+                  }
+                }
+                .mkString("\n")
               val wrappers = declsByWrapperClassName
-                .map { case (name, seq) => s"""case class ${name}(value: ${seq.head._2}) extends $traitName""" }
+                .map { case (name, seq) =>
+                  val defns = seq.map { case (_, t, _, ct) => s"""override def `$ct`: () => $t = () => value""" }.mkString("\n")
+                  s"""case class ${name}(value: ${seq.head._2}) extends $traitName{
+                     |${indent(2)(defns)}
+                     |}""".stripMargin
+                }
                 .mkString("\n")
               Some(s"""
-                      |sealed trait $traitName extends Product with java.io.Serializable
+                      |sealed trait $traitName extends Product with java.io.Serializable {
+                      |${indent(2)(callers("def", true))}
+                      |}
+                      |case class ${traitName}Full (
+                      |${indent(2)(callers("override val", false))}
+                      |) extends $traitName
                       |$wrappers
                       |""".stripMargin)
             } else None
           val classNameByDecl = declsByWrapperClassName.flatMap { case (className, seq) =>
-            seq.map { case (_, _, decl) => decl -> className }
+            seq.map { case (_, _, decl, _) => decl -> className }
           }
 
           val tpe = if (needsAliases) traitName else tpes.head
           val bodies =
             if (needsAliases)
-              decls.zip(tpes).map { case (decl, _) =>
-                wrapBinType(s"$decl.map(${classNameByDecl(decl)}(_))(_.value).widenBody[$traitName]$d")
+              decls.zip(tpes).zip(seq.map(_.contentType)).map { case ((decl, _), ct) =>
+                wrapBinType(
+                  s"$decl.map(${classNameByDecl(decl)}(_))(_.`$ct`())\n" +
+                    s".map(_.asInstanceOf[$traitName])(p => ${classNameByDecl(decl)}(p.`$ct`()))$d"
+                )
               }
             else decls.map(_ + d)
           val distinctInlineDefns = maybeInlineDefns.flatten.distinct.mkString("\n")

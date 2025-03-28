@@ -191,13 +191,6 @@ paths:
                 $ref: '#/components/schemas/ListType'
   '/custom/content-negotiation':
     post:
-      parameters:
-        - name: accept
-          in: header
-          required: true
-          description: Not in the original petstore yaml, but required to select correct stream response type in server logic
-          schema:
-            type: string
       requestBody:
         content:
           text/csv:

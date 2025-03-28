@@ -166,14 +166,36 @@ object TapirGeneratedEndpoints {
   case class PostCustomContentNegotiationBody1In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
 
 
-  sealed trait PostCustomContentNegotiationBodyOut extends Product with java.io.Serializable
-  case class PostCustomContentNegotiationBody0Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyOut
-  case class PostCustomContentNegotiationBody1Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyOut
+  sealed trait PostCustomContentNegotiationBodyOut extends Product with java.io.Serializable {
+    def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
+    def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
+  }
+  case class PostCustomContentNegotiationBodyOutFull (
+    override val `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+    override val `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+  ) extends PostCustomContentNegotiationBodyOut
+  case class PostCustomContentNegotiationBody0Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyOut{
+    override def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
+  }
+  case class PostCustomContentNegotiationBody1Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyOut{
+    override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
+  }
 
 
-  sealed trait PostCustomContentNegotiationBodyErr extends Product with java.io.Serializable
-  case class PostCustomContentNegotiationBodyStringErr(value: String) extends PostCustomContentNegotiationBodyErr
-  case class PostCustomContentNegotiationBody1Err(value: Array[Byte]) extends PostCustomContentNegotiationBodyErr
+  sealed trait PostCustomContentNegotiationBodyErr extends Product with java.io.Serializable {
+    def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
+    def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
+  }
+  case class PostCustomContentNegotiationBodyErrFull (
+    override val `text/csv`: () => String,
+    override val `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte],
+  ) extends PostCustomContentNegotiationBodyErr
+  case class PostCustomContentNegotiationBodyStringErr(value: String) extends PostCustomContentNegotiationBodyErr{
+    override def `text/csv`: () => String = () => value
+  }
+  case class PostCustomContentNegotiationBody1Err(value: Array[Byte]) extends PostCustomContentNegotiationBodyErr{
+    override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => value
+  }
 
   case class PutInlineSimpleObjectRequest (
     foo: String,
@@ -227,21 +249,24 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[io.circe.Json]].description("anything"))
       .out(jsonBody[io.circe.Json].description("anything back"))
 
-  type PostCustomContentNegotiationEndpoint = Endpoint[Unit, (String, PostCustomContentNegotiationBodyIn), PostCustomContentNegotiationBodyErr, PostCustomContentNegotiationBodyOut, sttp.capabilities.pekko.PekkoStreams]
+  type PostCustomContentNegotiationEndpoint = Endpoint[Unit, PostCustomContentNegotiationBodyIn, PostCustomContentNegotiationBodyErr, PostCustomContentNegotiationBodyOut, sttp.capabilities.pekko.PekkoStreams]
   lazy val postCustomContentNegotiation: PostCustomContentNegotiationEndpoint =
     endpoint
       .post
       .in(("custom" / "content-negotiation"))
-      .in(header[String]("accept").description("Not in the original petstore yaml, but required to select correct stream response type in server logic"))
       .in(oneOfBody[PostCustomContentNegotiationBodyIn](
         sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `text/csvCodecFormat`()).map(PostCustomContentNegotiationBody0In(_))(_.value).widenBody[PostCustomContentNegotiationBodyIn]),
         sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`()).map(PostCustomContentNegotiationBody1In(_))(_.value).widenBody[PostCustomContentNegotiationBodyIn])))
       .errorOut(oneOfBody[PostCustomContentNegotiationBodyErr](
-        stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)).map(PostCustomContentNegotiationBodyStringErr(_))(_.value).widenBody[PostCustomContentNegotiationBodyErr].description("binary error"),
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`](`application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostCustomContentNegotiationBody1Err(_))(_.value).widenBody[PostCustomContentNegotiationBodyErr].description("binary error")).and(statusCode(sttp.model.StatusCode(400))))
+        stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)).map(PostCustomContentNegotiationBodyStringErr(_))(_.`text/csv`())
+        .map(_.asInstanceOf[PostCustomContentNegotiationBodyErr])(p => PostCustomContentNegotiationBodyStringErr(p.`text/csv`())).description("binary error"),
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`](`application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostCustomContentNegotiationBody1Err(_))(_.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())
+        .map(_.asInstanceOf[PostCustomContentNegotiationBodyErr])(p => PostCustomContentNegotiationBody1Err(p.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())).description("binary error")).and(statusCode(sttp.model.StatusCode(400))))
       .out(oneOfBody[PostCustomContentNegotiationBodyOut](
-        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `text/csvCodecFormat`()).map(PostCustomContentNegotiationBody0Out(_))(_.value).widenBody[PostCustomContentNegotiationBodyOut].description("text success")),
-        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`()).map(PostCustomContentNegotiationBody1Out(_))(_.value).widenBody[PostCustomContentNegotiationBodyOut].description("text success"))))
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `text/csvCodecFormat`()).map(PostCustomContentNegotiationBody0Out(_))(_.`text/csv`())
+        .map(_.asInstanceOf[PostCustomContentNegotiationBodyOut])(p => PostCustomContentNegotiationBody0Out(p.`text/csv`())).description("text success")),
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`()).map(PostCustomContentNegotiationBody1Out(_))(_.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())
+        .map(_.asInstanceOf[PostCustomContentNegotiationBodyOut])(p => PostCustomContentNegotiationBody1Out(p.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())).description("text success"))))
 
   type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnEnum], Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
