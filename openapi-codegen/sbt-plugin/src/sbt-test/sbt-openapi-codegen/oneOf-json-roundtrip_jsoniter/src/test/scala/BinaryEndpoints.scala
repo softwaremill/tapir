@@ -39,8 +39,8 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
         ByteString.fromString(nxt, "utf-8")
       }
     }
-    def handleCsv(stream: ByteString): Unit = received = State(stream.utf8String.take(100).mkString)
-    def handleSpreadsheet(stream: ByteString): Unit = received = State(stream.utf8String.take(10).mkString)
+    def handleCsv(stream: ByteString): State = { received = State(stream.utf8String.take(100).mkString); received }
+    def handleSpreadsheet(stream: ByteString): State = { received = State(stream.utf8String.take(10).mkString); received }
     def produceCsv(): ByteString = ByteString("CSV")
     def produceSpreadsheet(): ByteString = ByteString("Spreadsheet")
     val route1 =
@@ -50,18 +50,16 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
             case PostCustomContentNegotiationBody0In(csv)         => csv.map(handleCsv)
             case PostCustomContentNegotiationBody1In(spreadsheet) => spreadsheet.map(handleSpreadsheet)
           }
-          val running = partial.run()
+          val running = partial.runFold(0 -> Option.empty[State]) { case ((i, _), ns) => i + 1 -> Some(ns) }
           def out: PostCustomContentNegotiationBodyOut =
             PostCustomContentNegotiationBodyOutFull(
               `text/csv` = () => {
-                org.apache.pekko.stream.scaladsl
-                  .Source[ByteString](immutable.Iterable.fill(100)(produceCsv()))
-                  .concat(Source.future(running).map(_ => ByteString("FIN")))
+                Source[ByteString](immutable.Iterable.fill(100)(produceCsv()))
+                  .concat(Source.future(running).map{ case (i, w) => ByteString(s"$i: ${w.map(_.s.size)}") })
               },
               `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` = () => {
-                org.apache.pekko.stream.scaladsl
-                  .Source[ByteString](immutable.Iterable.fill(100)(produceSpreadsheet()))
-                  .concat(Source.future(running).map(_ => ByteString("FIN")))
+                Source[ByteString](immutable.Iterable.fill(100)(produceSpreadsheet()))
+                  .concat(Source.future(running).map{ case (i, w) => ByteString(s"$i: ${w.map(_.s.size)}") })
               }
             )
 
@@ -102,7 +100,7 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
       .map { resp =>
         resp.code.code shouldEqual 200
         val b = Await.result(resp.body.runFold(Seq.empty[String])((l, a) => l :+ a.utf8String), 5.seconds)
-        b shouldEqual (immutable.Iterable.fill(100)(produceSpreadsheet().utf8String).toSeq :+ "FIN")
+        b shouldEqual (immutable.Iterable.fill(100)(produceSpreadsheet().utf8String).toSeq :+ "100: Some(100)")
         received.s.size shouldEqual 100 // csv handler stores state of 100
       }
     def doPost2 = sttp.client3.basicRequest
@@ -116,7 +114,7 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
       .map { resp =>
         resp.code.code shouldEqual 200
         val b = Await.result(resp.body.runFold(Seq.empty[String])((l, a) => l :+ a.utf8String), 5.seconds)
-        b shouldEqual (immutable.Iterable.fill(100)(produceCsv().utf8String).toSeq :+ "FIN")
+        b shouldEqual (immutable.Iterable.fill(100)(produceCsv().utf8String).toSeq :+ "100: Some(10)")
         received.s.size shouldEqual 10 // spreadsheet handler stores state of 10
       }
     def doPost3 = sttp.client3.basicRequest
