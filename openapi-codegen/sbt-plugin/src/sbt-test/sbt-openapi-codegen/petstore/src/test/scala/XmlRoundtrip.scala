@@ -3,9 +3,11 @@ import org.scalatest.matchers.should.Matchers
 import sttp.client3.UriContext
 import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.generated.TapirGeneratedEndpoints
+import sttp.tapir.generated.TapirGeneratedEndpoints.OrderStatus.placed
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
 
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -20,7 +22,7 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
     Some(Category(Some(4), Some("cat")))
   )
   val petWithTag = pet.copy(tags = pet.tags.map(ts => ts :+ Tag(name = Some("taggle"))))
-  "can roundtrip xml" in {
+  "can fetch xml and json" in {
     val route = TapirGeneratedEndpoints.findPetsByTags
       .serverSecurityLogic[Unit, Future](_ => Future.successful(Right(())))
       .serverLogic { _ => p =>
@@ -117,5 +119,156 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
         1.second
       )
     }
+  }
+
+  "can send xml, json, form" in {
+    val route = TapirGeneratedEndpoints.placeOrder
+      .serverSecurityLogic[Unit, Future](_ => Future.successful(Right(())))
+      .serverLogic { _ =>
+        {
+          case PlaceOrderBodyOption_Order_In(Some(o)) =>
+            Future successful Right(o)
+          case PlaceOrderBodyOption_Order_In(None)                 => Future.successful(Right(Order()))
+          case PlaceOrderBodyArray_Byte_In(bytes) if bytes.isEmpty => Future.successful(Right(Order()))
+          case PlaceOrderBodyArray_Byte_In(bytes) =>
+            val m = new String(bytes, "utf-8").split('&').map(_.split("=", 2)).map { case Array(k, v) => k -> v }.toMap
+            Future(
+              Order(
+                id = m.get("id").map(_.toLong),
+                status = m.get("status").map(TapirGeneratedEndpoints.OrderStatus.withName),
+                shipDate = m.get("shipDate").map(Instant.parse),
+                quantity = m.get("quantity").map(_.toInt),
+                complete = m.get("complete").map(_.toBoolean),
+                petId = m.get("petId").map(_.toLong)
+              )
+            ).map(Right(_))
+        }
+      }
+
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+    val ts = Instant.now
+
+    val order = Order(
+      id = Some(123),
+      status = Some(placed),
+      shipDate = Some(ts),
+      quantity = Some(123),
+      complete = Some(false),
+      petId = Some(98765)
+    )
+    val formOrder = s"id=123&status=placed&shipDate=${ts}&quantity=123&complete=false&petId=98765"
+    val jsonOrder = s"""{"id":123,"status":"placed","shipDate":"$ts","quantity":123,"complete":false,"petId":98765}"""
+    val xmlOrder =
+      s"""<Order>
+         | <id>123</id>
+         | <status>placed</status>
+         | <shipDate>${ts}</shipDate>
+         | <quantity>123</quantity>
+         | <complete>false</complete>
+         | <petId>98765</petId>
+         |</Order>""".stripMargin
+    val nullOrder = s"""{"id":null,"status":null,"shipDate":null,"quantity":null,"complete":null,"petId":null}"""
+    // ok bodies
+    Await.result(
+      sttp.client3.basicRequest
+        .post(uri"http://test.com/store/order")
+        .header("content-type", "application/xml")
+        .header("accept", "application/json")
+        .header("authorization", "Bearer 1234")
+        .body(xmlOrder)
+        .send(stub)
+        .map { resp =>
+          resp.body shouldEqual Right(jsonOrder)
+          resp.code.code shouldEqual 200
+        },
+      1.second
+    )
+    Await.result(
+      sttp.client3.basicRequest
+        .post(uri"http://test.com/store/order")
+        .header("content-type", "application/x-www-form-urlencoded")
+        .header("accept", "application/json")
+        .header("authorization", "Bearer 1234")
+        .body(formOrder)
+        .send(stub)
+        .map { resp =>
+          resp.body shouldEqual Right(jsonOrder)
+          resp.code.code shouldEqual 200
+        },
+      1.second
+    )
+    Await.result(
+      sttp.client3.basicRequest
+        .post(uri"http://test.com/store/order")
+        .header("content-type", "application/json")
+        .header("accept", "application/json")
+        .header("authorization", "Bearer 1234")
+        .body(jsonOrder)
+        .send(stub)
+        .map { resp =>
+          resp.body shouldEqual Right(jsonOrder)
+          resp.code.code shouldEqual 200
+        },
+      1.second
+    )
+    // no body
+    Await.result(
+      sttp.client3.basicRequest
+        .post(uri"http://test.com/store/order")
+        .header("content-type", "application/json")
+        .header("accept", "application/json")
+        .header("authorization", "Bearer 1234")
+        .send(stub)
+        .map { resp =>
+          resp.body shouldEqual Right(nullOrder)
+          resp.code.code shouldEqual 200
+        },
+      1.second
+    )
+    Await.result(
+      sttp.client3.basicRequest
+        .post(uri"http://test.com/store/order")
+        .header("content-type", "application/x-www-form-urlencoded")
+        .header("accept", "application/json")
+        .header("authorization", "Bearer 1234")
+        .send(stub)
+        .map { resp =>
+          resp.body shouldEqual Right(nullOrder)
+          resp.code.code shouldEqual 200
+        },
+      1.second
+    )
+    // Decoding empty xml is failing with 'Invalid value for: body'
+//    Await.result(
+//      sttp.client3.basicRequest
+//        .post(uri"http://test.com/store/order")
+//        .header("content-type", "application/xml")
+//        .header("accept", "application/json")
+//        .header("authorization", "Bearer 1234")
+//        .send(stub)
+//        .map { resp =>
+//          resp.body shouldEqual Right(nullOrder)
+//          resp.code.code shouldEqual 200
+//        },
+//      1.second
+//    )
+    // invalid bodies
+    Await.result(
+      sttp.client3.basicRequest
+        .post(uri"http://test.com/store/order")
+        .header("content-type", "application/xml")
+        .header("accept", "application/json")
+        .header("authorization", "Bearer 1234")
+        .body(jsonOrder)
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 400
+          resp.body shouldEqual Left("Invalid value for: body")
+        },
+      1.second
+    )
   }
 }

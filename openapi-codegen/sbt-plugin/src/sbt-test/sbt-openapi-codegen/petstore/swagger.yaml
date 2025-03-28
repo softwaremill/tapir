@@ -52,9 +52,9 @@ paths:
           application/xml:
             schema:
               $ref: '#/components/schemas/Pet'
-#          application/x-www-form-urlencoded:
-#            schema:
-#              $ref: '#/components/schemas/Pet'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Pet'
         required: true
       responses:
         '200':
@@ -87,12 +87,12 @@ paths:
       requestBody:
         description: Create a new pet in the store
         content:
-#          application/json:
-#            schema:
-#              $ref: '#/components/schemas/Pet'
-#          application/xml:
-#            schema:
-#              $ref: '#/components/schemas/Pet'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Pet'
           application/x-www-form-urlencoded:
             schema:
               $ref: '#/components/schemas/Pet'
@@ -389,9 +389,9 @@ paths:
           application/xml:
             schema:
               $ref: '#/components/schemas/Order'
-#          application/x-www-form-urlencoded:
-#            schema:
-#              $ref: '#/components/schemas/Order'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Order'
       responses:
         '200':
           description: successful operation
@@ -478,9 +478,9 @@ paths:
           application/xml:
             schema:
               $ref: '#/components/schemas/User'
-#          application/x-www-form-urlencoded:
-#            schema:
-#              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
       responses:
         '200':
           description: successful operation
@@ -631,9 +631,9 @@ paths:
           application/xml:
             schema:
               $ref: '#/components/schemas/User'
-#          application/x-www-form-urlencoded:
-#            schema:
-#              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
       responses:
         '200':
           description: successful operation
