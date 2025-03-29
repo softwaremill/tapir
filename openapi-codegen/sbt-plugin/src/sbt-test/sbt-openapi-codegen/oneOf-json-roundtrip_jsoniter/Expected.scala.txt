@@ -165,7 +165,7 @@ object TapirGeneratedEndpoints {
   case class PostCustomContentNegotiationBody0In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
   case class PostCustomContentNegotiationBody1In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
 
-
+  
   sealed trait PostCustomContentNegotiationBodyOut extends Product with java.io.Serializable {
     def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
@@ -181,7 +181,7 @@ object TapirGeneratedEndpoints {
     override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
   }
 
-
+  
   sealed trait PostCustomContentNegotiationBodyErr extends Product with java.io.Serializable {
     def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
@@ -249,7 +249,7 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[io.circe.Json]].description("anything"))
       .out(jsonBody[io.circe.Json].description("anything back"))
 
-  type PostCustomContentNegotiationEndpoint = Endpoint[Unit, PostCustomContentNegotiationBodyIn, PostCustomContentNegotiationBodyErr, PostCustomContentNegotiationBodyOut, sttp.capabilities.pekko.PekkoStreams]
+  type PostCustomContentNegotiationEndpoint = Endpoint[Unit, PostCustomContentNegotiationBodyIn, PostCustomContentNegotiationBodyErr, Option[Any], sttp.capabilities.pekko.PekkoStreams]
   lazy val postCustomContentNegotiation: PostCustomContentNegotiationEndpoint =
     endpoint
       .post
@@ -262,11 +262,13 @@ object TapirGeneratedEndpoints {
         .map(_.asInstanceOf[PostCustomContentNegotiationBodyErr])(p => PostCustomContentNegotiationBodyStringErr(p.`text/csv`())).description("binary error"),
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`](`application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostCustomContentNegotiationBody1Err(_))(_.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())
         .map(_.asInstanceOf[PostCustomContentNegotiationBodyErr])(p => PostCustomContentNegotiationBody1Err(p.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())).description("binary error")).and(statusCode(sttp.model.StatusCode(400))))
-      .out(oneOfBody[PostCustomContentNegotiationBodyOut](
+      .out(oneOf[Option[Any]](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("no content"))(None),
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), oneOfBody[PostCustomContentNegotiationBodyOut](
         sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `text/csvCodecFormat`()).map(PostCustomContentNegotiationBody0Out(_))(_.`text/csv`())
         .map(_.asInstanceOf[PostCustomContentNegotiationBodyOut])(p => PostCustomContentNegotiationBody0Out(p.`text/csv`())).description("text success")),
         sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`()).map(PostCustomContentNegotiationBody1Out(_))(_.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())
-        .map(_.asInstanceOf[PostCustomContentNegotiationBodyOut])(p => PostCustomContentNegotiationBody1Out(p.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())).description("text success"))))
+        .map(_.asInstanceOf[PostCustomContentNegotiationBodyOut])(p => PostCustomContentNegotiationBody1Out(p.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())).description("text success"))).map(Some(_))(_.orNull)){ case Some(_: PostCustomContentNegotiationBodyOut) => true }))
 
   type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnEnum], Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
@@ -335,7 +337,7 @@ object TapirGeneratedEndpoints {
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
 
-
+  
   lazy val generatedEndpoints = List(postXmlEndpoint, putAdtTest, postAdtTest, postGenericJson, postCustomContentNegotiation, getOneofOptionTest, putCustomContentTypes, postCustomContentTypes, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 }

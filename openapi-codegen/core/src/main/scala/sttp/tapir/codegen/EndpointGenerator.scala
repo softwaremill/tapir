@@ -712,7 +712,6 @@ class EndpointGenerator {
                 inlineHeaderEnumDefns
               )
             case s =>
-              val wrapBodies = s.size > 1
               val (decl, maybeBodyType, inlineDefn) = bodyFmt(resp, isErrorPosition)
               val tpe =
                 if (outHeaderTypes.isEmpty) maybeBodyType
@@ -783,13 +782,13 @@ class EndpointGenerator {
               def withHeaderTypes(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, ${ht(false).get})"
               def withUnderscores(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, $underscores)"
               if (contentCanBeEmpty) {
-                val (_, nonOptionalType, inlineDefn2) = bodyFmt(m, isErrorPosition)
-                val inlineDefns = combine(inlineDefn1, inlineDefn2)
+                val (_, nonOptionalType, _) = bodyFmt(m, isErrorPosition)
+                val maybeMap = if (m.content.size > 1) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
                 (
-                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeMap$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
                   maybeBodyType,
-                  inlineDefns
+                  inlineDefn1
                 )
               } else
                 (
