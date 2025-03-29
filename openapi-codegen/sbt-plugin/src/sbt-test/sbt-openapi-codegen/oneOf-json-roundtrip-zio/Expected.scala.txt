@@ -13,6 +13,7 @@ object TapirGeneratedEndpoints {
   import TapirGeneratedEndpointsSchemas._
 
 
+
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -43,6 +44,12 @@ object TapirGeneratedEndpoints {
   }
   implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
+  }
+  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
+    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
   }
 
   sealed trait ADTWithoutDiscriminator
@@ -105,7 +112,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .put
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithoutDiscriminator])
+      .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
   type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
@@ -113,7 +120,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .post
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithDiscriminatorNoMapping])
+      .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
   type PutInlineSimpleObjectEndpoint = Endpoint[Unit, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
@@ -151,9 +158,10 @@ object TapirGeneratedEndpoints {
     endpoint
       .patch
       .in(("inline" / "simple" / "object"))
-      .in(jsonBody[Option[ListType]])
+      .in(jsonBody[Option[ListType]].description("list type in"))
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
+
 
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 

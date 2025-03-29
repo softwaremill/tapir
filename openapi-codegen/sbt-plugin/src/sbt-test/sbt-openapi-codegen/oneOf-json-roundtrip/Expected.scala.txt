@@ -45,6 +45,12 @@ object TapirGeneratedEndpoints {
   implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
   }
+  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
+    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
 
   case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
     // Case-insensitive mapping
@@ -157,6 +163,10 @@ object TapirGeneratedEndpoints {
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  case class PostInlineSimpleObjectResponse (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
 
 
 
@@ -174,7 +184,7 @@ object TapirGeneratedEndpoints {
       .post
       .in(("binary" / "test"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()))
+      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()).description("Upload a csv"))
       .out(jsonBody[String].description("successful operation"))
 
   type PutOptionalTestEndpoint = Endpoint[Unit, Option[NotNullableThingy], Unit, NotNullableThingy, Any]
@@ -182,7 +192,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .put
       .in(("optional" / "test"))
-      .in(jsonBody[Option[NotNullableThingy]])
+      .in(jsonBody[Option[NotNullableThingy]].description("an optional request body (not required)"))
       .out(jsonBody[NotNullableThingy].description("a non-optional response body"))
 
   type PostOptionalTestEndpoint = Endpoint[Unit, Option[NullableThingy2], Unit, Option[NullableThingy], Any]
@@ -190,7 +200,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .post
       .in(("optional" / "test"))
-      .in(jsonBody[Option[NullableThingy2]])
+      .in(jsonBody[Option[NullableThingy2]].description("an optional request body (nullable)"))
       .out(jsonBody[Option[NullableThingy]].description("an optional response body"))
 
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
@@ -198,7 +208,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .put
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithoutDiscriminator])
+      .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
   type PostAdtTestEndpoint = Endpoint[String, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
@@ -207,7 +217,7 @@ object TapirGeneratedEndpoints {
       .post
       .in(("adt" / "test"))
       .securityIn(auth.apiKey(header[String]("api_key")))
-      .in(jsonBody[ADTWithDiscriminatorNoMapping])
+      .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
   type GetOneofErrorTestEndpoint = Endpoint[Unit, Unit, Error, Unit, Any]
@@ -220,15 +230,15 @@ object TapirGeneratedEndpoints {
         oneOfVariant[SimpleError](sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
       .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
 
-  type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnyObjectWithInlineEnum], Any]
+  type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, (Option[AnyObjectWithInlineEnum], Option[String]), Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
     endpoint
       .get
       .in(("oneof" / "option" / "test"))
-      .out(oneOf[Option[AnyObjectWithInlineEnum]](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_: ObjectWithInlineEnum) => true },
-        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object")){ case Some(_: ObjectWithInlineEnum2) => true }))
+      .out(oneOf[(Option[AnyObjectWithInlineEnum], Option[String])](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(None).description("No response").and(header[Option[String]]("common-response-header"))){ case (None, _) => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum), _) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum2), _) => true }))
 
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =
@@ -239,7 +249,7 @@ object TapirGeneratedEndpoints {
       .in(query[Option[PostInlineEnumTestQueryOptEnum]]("query-opt-enum").description("An optional enum, inline, in a query string"))
       .in(query[CommaSeparatedValues[PostInlineEnumTestQuerySeqEnum]]("query-seq-enum").map(_.values)(CommaSeparatedValues(_)).description("A sequence of enums, inline, in a query string"))
       .in(query[Option[CommaSeparatedValues[PostInlineEnumTestQueryOptSeqEnum]]]("query-opt-seq-enum").map(_.map(_.values))(_.map(CommaSeparatedValues(_))).description("An optional sequence of enums, inline, in a query string"))
-      .in(jsonBody[ObjectWithInlineEnum])
+      .in(jsonBody[ObjectWithInlineEnum].description("Check inline enums"))
       .out(statusCode(sttp.model.StatusCode(204)).description("No Content"))
 
   sealed trait PostInlineEnumTestQueryEnum extends enumeratum.EnumEntry
@@ -293,12 +303,13 @@ object TapirGeneratedEndpoints {
         oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2"))))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
 
-  type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, Unit, Any]
+  type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, (PostInlineSimpleObjectResponse, String), Any]
   lazy val postInlineSimpleObject: PostInlineSimpleObjectEndpoint =
     endpoint
       .post
       .in(("inline" / "simple" / "object"))
       .in(jsonBody[Option[PostInlineSimpleObjectRequest]])
+      .out(jsonBody[PostInlineSimpleObjectResponse].description("An object").and(header[String]("x-combat-status").description("a response header")))
 
   type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
   lazy val deleteInlineSimpleObject: DeleteInlineSimpleObjectEndpoint =
@@ -317,11 +328,11 @@ object TapirGeneratedEndpoints {
     endpoint
       .patch
       .in(("inline" / "simple" / "object"))
-      .in(jsonBody[Option[ListType]])
+      .in(jsonBody[Option[ListType]].description("list type in"))
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
 
-  
+
   lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, getOneofErrorTest, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 }

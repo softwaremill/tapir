@@ -33,10 +33,10 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
         "a name",
         Some(Category(Some(3L), Some("a category")))
       )
-      val reqXmlBody = TapirGeneratedEndpointsXmlSerdes.PetXmlSerde.encode(reqBody)
-      val decodedXmlBody = TapirGeneratedEndpointsXmlSerdes.PetXmlSerde.decode(reqXmlBody)
-      decodedXmlBody shouldEqual sttp.tapir.DecodeResult.Value(reqBody)
-      reqXmlBody shouldEqual
+      val reqXmlBody = TapirGeneratedEndpointsXmlSerdes.PetXmlEncoder.encode(reqBody)
+      val decodedXmlBody = TapirGeneratedEndpointsXmlSerdes.PetXmlDecoder.decode(reqXmlBody)
+      decodedXmlBody shouldEqual cats.data.Validated.Valid(reqBody)
+      reqXmlBody.toString() shouldEqual
         """<Pet>
           | <status>pending</status>
           | <tags>
@@ -69,11 +69,11 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
       Await.result(
         sttp.client3.basicRequest
           .post(uri"http://test.com/xml/endpoint")
-          .body(reqXmlBody)
+          .body(reqXmlBody.toString())
           .header("content-type", "application/xml")
           .send(stub)
           .map { resp =>
-            resp.body shouldEqual Right(reqXmlBody)
+            resp.body shouldEqual Right(reqXmlBody.toString())
             resp.code.code shouldEqual 200
           },
         1.second

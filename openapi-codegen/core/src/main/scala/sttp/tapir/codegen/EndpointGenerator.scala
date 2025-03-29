@@ -4,7 +4,15 @@ import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType, str
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.StreamingImplementation.StreamingImplementation
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiRequestBody, OpenapiResponse}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
+  OpenapiDocument,
+  OpenapiParameter,
+  OpenapiPath,
+  OpenapiRequestBodyContent,
+  OpenapiRequestBodyDefn,
+  OpenapiResponseContent,
+  OpenapiResponseDef
+}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaArray,
@@ -72,12 +80,13 @@ case class EndpointDefs(
 class EndpointGenerator {
   private def bail(msg: String)(implicit location: Location): Nothing = throw new NotImplementedError(s"$msg at $location")
 
-  private def combine(inlineDefn1: Option[String], inlineDefn2: Option[String]) = (inlineDefn1, inlineDefn2) match {
-    case (None, None)               => None
-    case (Some(defn), None)         => Some(defn)
-    case (None, Some(defn))         => Some(defn)
-    case (Some(defn1), Some(defn2)) => Some(defn1 + "\n" + defn2)
-  }
+  private def combine(inlineDefn1: Option[String], inlineDefn2: Option[String], separator: String = "\n") =
+    (inlineDefn1, inlineDefn2) match {
+      case (None, None)               => None
+      case (Some(defn), None)         => Some(defn)
+      case (None, Some(defn))         => Some(defn)
+      case (Some(defn1), Some(defn2)) => Some(defn1 + separator + defn2)
+    }
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
   private def capabilityImpl(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
@@ -165,8 +174,18 @@ class EndpointGenerator {
           val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
           val (securityDecl, securityTypes) = security(securitySchemes, m.security)
           val (inParams, maybeLocalEnums, inTypes, inlineInDefns) =
-            ins(m.resolvedParameters, m.requestBody, name, targetScala3, jsonSerdeLib, xmlSerdeLib, streamingImplementation, doc)
-          val (outDecl, outTypes, errTypes, inlineDefns) = outs(m.responses, streamingImplementation, doc, targetScala3, name, xmlSerdeLib)
+            ins(
+              m.resolvedParameters,
+              m.requestBody.map(_.resolve(doc)),
+              name,
+              targetScala3,
+              jsonSerdeLib,
+              xmlSerdeLib,
+              streamingImplementation,
+              doc
+            )
+          val (outDecl, outTypes, errTypes, inlineDefns) =
+            outs(m.responses.map(_.resolve(doc)), streamingImplementation, doc, targetScala3, name, jsonSerdeLib, xmlSerdeLib)
           val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
           val inlineDefn = combine(inlineInDefns, inlineDefns)
           val definition =
@@ -188,15 +207,12 @@ class EndpointGenerator {
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _) if ref.isSchema => ref.stripped
             }
             .toSet
-          val xmlParamRefs: Seq[String] = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
-            m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
+          val xmlParamRefs: Seq[String] = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
+            m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
             .collect { case (contentType, schema) if contentType == "application/xml" => schema }
-            .collect {
-              case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
-              case other => bail(s"Can only generate xml schemas when req/resp body schema is a ref. Found $other")
-            }
-          val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.content.map(c => (c.contentType, c.schema))) ++
-            m.responses.flatMap(_.content.map(c => (c.contentType, c.schema))))
+            .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
+          val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
+            m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
             .collect { case (contentType, schema) if contentType == "application/json" => schema }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                           => ref.stripped
@@ -325,9 +341,80 @@ class EndpointGenerator {
     }
   }
 
+  private def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
+    case (true, true)   => s"List[$baseType]"
+    case (true, false)  => s"Option[List[$baseType]]"
+    case (false, true)  => baseType
+    case (false, false) => s"Option[$baseType]"
+  }
+
+  private def getEnumParamDefn(
+      endpointName: String,
+      targetScala3: Boolean,
+      jsonSerdeLib: JsonSerdeLib,
+      param: OpenapiParameter,
+      e: OpenapiSchemaEnum,
+      isArray: Boolean
+  ) = {
+    val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
+    val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
+    val enumDefn = EnumGenerator.generateEnum(
+      enumName,
+      e,
+      targetScala3,
+      enumParamRefs,
+      jsonSerdeLib,
+      Set.empty
+    )
+
+    def arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
+
+    val tpe = if (isArray) s"$arrayType[$enumName]" else enumName
+    val required = param.required.getOrElse(false)
+    // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
+    val noOptionWrapper = required || (isArray && param.isExploded)
+    val req = if (noOptionWrapper) tpe else s"Option[$tpe]"
+    val outType = toOutType(enumName, isArray, noOptionWrapper)
+
+    def mapToList =
+      if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
+
+    val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
+    (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", Some(enumDefn), outType)
+  }
+
+  private def genParamDefn(endpointName: String, targetScala3: Boolean, jsonSerdeLib: JsonSerdeLib, param: OpenapiParameter)(implicit
+      location: Location
+  ): (String, Option[Seq[String]], String) =
+    param.schema match {
+      case st: OpenapiSchemaSimpleType =>
+        val (t, _) = mapSchemaSimpleTypeToType(st)
+        val req = if (param.required.getOrElse(false)) t else s"Option[$t]"
+        val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
+        (s"""${param.in}[$req]("${param.name}")$desc""", None, req)
+      case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
+        val (t, _) = mapSchemaSimpleTypeToType(st)
+        val arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
+        val arr = s"$arrayType[$t]"
+        val required = param.required.getOrElse(false)
+        // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
+        val noOptionWrapper = required || param.isExploded
+        val req = if (noOptionWrapper) arr else s"Option[$arr]"
+
+        def mapToList = if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
+
+        val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
+        val outType = toOutType(t, true, noOptionWrapper)
+        (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", None, outType)
+      case e @ OpenapiSchemaEnum(_, _, _) => getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = false)
+      case OpenapiSchemaArray(e: OpenapiSchemaEnum, _, _) =>
+        getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = true)
+      case x => bail(s"Can't create non-simple params - found $x")
+    }
+
   private def ins(
       parameters: Seq[OpenapiParameter],
-      requestBody: Option[OpenapiRequestBody],
+      requestBody: Option[OpenapiRequestBodyDefn],
       endpointName: String,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
@@ -335,93 +422,98 @@ class EndpointGenerator {
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument
   )(implicit location: Location): (String, Option[String], Seq[String], Option[String]) = {
-    def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
-      case (true, true)   => s"List[$baseType]"
-      case (true, false)  => s"Option[List[$baseType]]"
-      case (false, true)  => baseType
-      case (false, false) => s"Option[$baseType]"
-    }
-    def getEnumParamDefn(param: OpenapiParameter, e: OpenapiSchemaEnum, isArray: Boolean) = {
-      val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
-      val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
-      val enumDefn = EnumGenerator.generateEnum(
-        enumName,
-        e,
-        targetScala3,
-        enumParamRefs,
-        jsonSerdeLib,
-        Set.empty
-      )
-
-      def arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
-
-      val tpe = if (isArray) s"$arrayType[$enumName]" else enumName
-      val required = param.required.getOrElse(true)
-      // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
-      val noOptionWrapper = required || (isArray && param.isExploded)
-      val req = if (noOptionWrapper) tpe else s"Option[$tpe]"
-      val outType = toOutType(enumName, isArray, noOptionWrapper)
-
-      def mapToList =
-        if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
-
-      val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-      (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", Some(enumDefn), outType)
-    }
 
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     // .in(header[AuthToken]("X-Auth-Token"))
     val (params, maybeEnumDefns, inTypes) = parameters
       .filter(_.in != "path")
       .map { param =>
-        param.schema match {
-          case st: OpenapiSchemaSimpleType =>
-            val (t, _) = mapSchemaSimpleTypeToType(st)
-            val req = if (param.required.getOrElse(true)) t else s"Option[$t]"
-            val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-            (s""".in(${param.in}[$req]("${param.name}")$desc)""", None, req)
-          case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
-            val (t, _) = mapSchemaSimpleTypeToType(st)
-            val arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
-            val arr = s"$arrayType[$t]"
-            val required = param.required.getOrElse(true)
-            // 'exploded' params have no distinction between an empty list and an absent value, so don't wrap in 'Option' for them
-            val noOptionWrapper = required || param.isExploded
-            val req = if (noOptionWrapper) arr else s"Option[$arr]"
-
-            def mapToList = if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
-
-            val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-            val outType = toOutType(t, true, noOptionWrapper)
-            (s""".in(${param.in}[$req]("${param.name}")$mapToList$desc)""", None, outType)
-          case e @ OpenapiSchemaEnum(_, _, _)                 => getEnumParamDefn(param, e, isArray = false)
-          case OpenapiSchemaArray(e: OpenapiSchemaEnum, _, _) => getEnumParamDefn(param, e, isArray = true)
-          case x                                              => bail(s"Can't create non-simple params to input - found $x")
-        }
+        genParamDefn(endpointName, targetScala3, jsonSerdeLib, param)
       }
+      .map { case (defn, enums, tpe) => (s".in($defn)", enums, tpe) }
       .unzip3
 
+    def mapContent(content: OpenapiRequestBodyContent, required: Boolean, forceEager: Boolean = false) = {
+      val schemaIsNullable = content.schema.nullable || (content.schema match {
+        case ref: OpenapiSchemaRef =>
+          doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
+        case _ => false
+      })
+      val MappedContentType(decl, tpe, maybeInlineDefn) =
+        contentTypeMapper(
+          content.contentType,
+          content.schema,
+          streamingImplementation,
+          required && !schemaIsNullable,
+          endpointName,
+          "Request",
+          forceEager,
+          xmlSerdeLib
+        )
+      (decl, tpe, maybeInlineDefn)
+    }
     val (rqBody, maybeReqType, maybeInlineDefns) = requestBody.flatMap { b =>
       if (b.content.isEmpty) None
-      else if (b.content.size != 1) bail(s"We can handle only one requestBody content! Saw ${b.content.map(_.contentType)}")
-      else {
-        val schemaIsNullable = b.content.head.schema.nullable || (b.content.head.schema match {
-          case ref: OpenapiSchemaRef =>
-            doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
-          case _ => false
-        })
-        val MappedContentType(decl, tpe, maybeInlineDefn) =
-          contentTypeMapper(
-            b.content.head.contentType,
-            b.content.head.schema,
-            streamingImplementation,
-            b.required && !schemaIsNullable,
-            endpointName,
-            "Request",
-            false,
-            xmlSerdeLib
+      else if (b.content.size == 1) {
+        val content: OpenapiModels.OpenapiRequestBodyContent = b.content.head
+        val (decl, tpe, maybeInlineDefn) = mapContent(content, b.required)
+        val d = b.description.map(s => s""".description("${JavaEscape.escapeString(s)}")""").getOrElse("")
+        Some((s".in($decl$d)", tpe, maybeInlineDefn))
+      } else {
+        // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
+        val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
+        val forceEager = b.content.exists(c => eagerTypes.contains(c.contentType))
+        val mapped = b.content.map(mapContent(_, b.required, forceEager))
+        val (decls, tpes, maybeInlineDefns) = mapped.unzip3
+        val distinctTypes = tpes.distinct
+        // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
+        // eager or lazy binary, wrappers make it easier to implement logic binding.
+        val needsAliases = distinctTypes.size != 1 || tpes.head == "Array[Byte]" || tpes.head.contains("BinaryStream")
+        val tpesAreBin = tpes.head.contains("BinaryStream")
+        def wrapBinType(s: String) = if (tpesAreBin) s"sttp.tapir.EndpointIO.StreamBodyWrapper($s)" else s
+        val traitName = s"${endpointName.capitalize}BodyIn"
+        val declsByWrapperClassName = decls
+          .zip(tpes)
+          .zipWithIndex
+          .map { case ((decl, t), i) =>
+            val caseClassName =
+              if (t == "Array[Byte]" || t.contains("BinaryStream")) s"${endpointName.capitalize}Body${i}In"
+              else s"${endpointName.capitalize}Body${t.split('.').last.replaceAll("[\\]\\[]", "_")}In"
+            (caseClassName, t, decl)
+          }
+          .groupBy(_._1)
+        val aliasDefns =
+          if (needsAliases) {
+            val wrappers = declsByWrapperClassName
+              .map { case (name, seq) => s"""case class ${name}(value: ${seq.head._2}) extends $traitName""" }
+              .mkString("\n")
+            Some(s"""
+               |sealed trait $traitName extends Product with java.io.Serializable
+               |$wrappers
+               |""".stripMargin)
+          } else None
+        val classNameByDecl = declsByWrapperClassName.flatMap { case (className, seq) =>
+          seq.map { case (_, _, decl) => decl -> className }
+        }
+
+        val tpe = if (needsAliases) traitName else tpes.head
+        val distinctInlineDefns = maybeInlineDefns.flatten.distinct.mkString("\n")
+        val didO = if (distinctInlineDefns.isEmpty) None else Some(distinctInlineDefns)
+        val d = b.description.map(s => s""".description("${JavaEscape.escapeString(s)}")""").getOrElse("")
+        val bodies =
+          if (needsAliases)
+            decls.zip(tpes).map { case (decl, _) =>
+              wrapBinType(s"$decl.map(${classNameByDecl(decl)}(_))(_.value).widenBody[$traitName]$d")
+            }
+          else decls.map(_ + d)
+        Some(
+          (
+            s""".in(oneOfBody[$tpe](
+             |${indent(2)(bodies.mkString(",\n"))}))""".stripMargin,
+            tpe,
+            combine(didO, aliasDefns)
           )
-        Some((s".in($decl)", tpe, maybeInlineDefn))
+        )
       }
     }.unzip3
 
@@ -433,7 +525,7 @@ class EndpointGenerator {
         case (Some(acc), Some(nxt)) => Some(acc + "\n" + nxt.mkString("\n"))
       },
       inTypes ++ maybeReqType,
-      maybeInlineDefns.foldLeft(Option.empty[String])(combine)
+      maybeInlineDefns.foldLeft(Option.empty[String])(combine(_, _))
     )
   }
 
@@ -459,153 +551,297 @@ class EndpointGenerator {
   private val okStatus = """([23]\d\d)""".r
   private val errorStatus = """([45]\d\d)""".r
   private def outs(
-      responses: Seq[OpenapiResponse],
+      responses: Seq[OpenapiResponseDef],
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument,
       targetScala3: Boolean,
       endpointName: String,
+      jsonSerdeLib: JsonSerdeLib,
       xmlSerdeLib: XmlSerdeLib
   )(implicit
       location: Location
   ) = {
     // .errorOut(stringBody)
-    // .out(jsonBody[List[Book]])
+    // .out(oneOfBody(jsonBody[List[Book]]))
 
     val (outs, errorOuts) = responses.partition { resp =>
-      resp.content match {
-        case Nil | _ +: Nil =>
-          resp.code match {
-            case okStatus(_)                => true
-            case "default" | errorStatus(_) => false
-            case x                          => bail(s"Statuscode mapping is incomplete! Cannot handle $x")
-          }
-        case _ => bail("We can handle only one return content!")
+      resp.code match {
+        case okStatus(_)                => true
+        case "default" | errorStatus(_) => false
+        case x                          => bail(s"Statuscode mapping is incomplete! Cannot handle $x")
       }
     }
-    def bodyFmt(resp: OpenapiResponse, isErrorPosition: Boolean, optional: Boolean = false): (String, Option[String], Option[String]) = {
-      val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
+
+    def bodyFmt(resp: OpenapiResponseDef, isErrorPosition: Boolean, optional: Boolean = false): (String, Option[String], Option[String]) = {
+      def wrapContent(content: OpenapiResponseContent, forceEager: Boolean = false) = {
+        val schemaIsNullable = content.schema.nullable || (content.schema match {
+          case ref: OpenapiSchemaRef =>
+            doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
+          case _ => false
+        })
+        val MappedContentType(decl, tpe, maybeInlineDefn) =
+          contentTypeMapper(
+            content.contentType,
+            content.schema,
+            streamingImplementation,
+            !(optional || schemaIsNullable),
+            endpointName,
+            "Response",
+            isErrorPosition || forceEager,
+            xmlSerdeLib
+          )
+        (decl, tpe, maybeInlineDefn)
+      }
       resp.content match {
         case Nil => ("", None, None)
         case content +: Nil =>
-          val schemaIsNullable = content.schema.nullable || (content.schema match {
-            case ref: OpenapiSchemaRef =>
-              doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
-            case _ => false
-          })
-          val MappedContentType(decl, tpe, maybeInlineDefn) =
-            contentTypeMapper(
-              content.contentType,
-              content.schema,
-              streamingImplementation,
-              !(optional || schemaIsNullable),
-              endpointName,
-              "Response",
-              isErrorPosition,
-              xmlSerdeLib
-            )
+          val (decl, tpe, maybeInlineDefn) = wrapContent(content)
+          val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
           (s"$decl$d", Some(tpe), maybeInlineDefn)
+        case seq =>
+          // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
+          val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
+          val forceEager = seq.exists(c => eagerTypes.contains(c.contentType))
+          val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent(_, forceEager)).unzip3
+          val distinctTypes = tpes.distinct
+          // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
+          // eager or lazy binary, wrappers make it easier to implement logic binding.
+          val needsAliases = distinctTypes.size != 1 || tpes.head == "Array[Byte]" || tpes.head.contains("BinaryStream")
+          val tpesAreBin = tpes.head.contains("BinaryStream")
+          def wrapBinType(s: String) = if (tpesAreBin) s"sttp.tapir.EndpointIO.StreamBodyWrapper($s)" else s
+          val suff = if (isErrorPosition) "Err" else "Out"
+          val traitName = s"${endpointName.capitalize}Body$suff"
+          val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
+          val declsByWrapperClassName = decls
+            .zip(tpes)
+            .zip(seq.map(_.contentType))
+            .zipWithIndex
+            .map { case (((decl, t), ct), i) =>
+              val caseClassName =
+                if (t == "Array[Byte]" || t.contains("BinaryStream")) s"${endpointName.capitalize}Body${i}$suff"
+                else s"${endpointName.capitalize}Body${t.split('.').last.replaceAll("[\\]\\[]", "_")}$suff"
+              (caseClassName, t, decl, ct)
+            }
+            .groupBy(_._1)
+          val aliasDefns =
+            if (needsAliases) {
+              def callers(tpe: String, impl: Boolean) = declsByWrapperClassName
+                .flatMap { case (_, seq) =>
+                  seq.map { case (_, t, _, ct) =>
+                    s"""$tpe `$ct`: () => $t${if (impl) s""" = () => throw new RuntimeException("Body for content type $ct not provided")"""
+                      else ","}"""
+                  }
+                }
+                .mkString("\n")
+              val wrappers = declsByWrapperClassName
+                .map { case (name, seq) =>
+                  val defns = seq.map { case (_, t, _, ct) => s"""override def `$ct`: () => $t = () => value""" }.mkString("\n")
+                  s"""case class ${name}(value: ${seq.head._2}) extends $traitName{
+                     |${indent(2)(defns)}
+                     |}""".stripMargin
+                }
+                .mkString("\n")
+              Some(s"""
+                      |sealed trait $traitName extends Product with java.io.Serializable {
+                      |${indent(2)(callers("def", true))}
+                      |}
+                      |case class ${traitName}Full (
+                      |${indent(2)(callers("override val", false))}
+                      |) extends $traitName
+                      |$wrappers
+                      |""".stripMargin)
+            } else None
+          val classNameByDecl = declsByWrapperClassName.flatMap { case (className, seq) =>
+            seq.map { case (_, _, decl, _) => decl -> className }
+          }
+
+          val tpe = if (needsAliases) traitName else tpes.head
+          val bodies =
+            if (needsAliases)
+              decls.zip(tpes).zip(seq.map(_.contentType)).map { case ((decl, _), ct) =>
+                wrapBinType(
+                  s"$decl.map(${classNameByDecl(decl)}(_))(_.`$ct`())\n" +
+                    s".map(_.asInstanceOf[$traitName])(p => ${classNameByDecl(decl)}(p.`$ct`()))$d"
+                )
+              }
+            else decls.map(_ + d)
+          val distinctInlineDefns = maybeInlineDefns.flatten.distinct.mkString("\n")
+          val didO = if (distinctInlineDefns.isEmpty) None else Some(distinctInlineDefns)
+          (
+            s"""oneOfBody[$tpe](
+               |${indent(2)(bodies.mkString(",\n"))})""".stripMargin,
+            Some(tpe),
+            combine(didO, aliasDefns)
+          )
       }
     }
-    def mappedGroup(group: Seq[OpenapiResponse], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) = group match {
-      case Nil => (None, None, None)
-      case resp +: Nil =>
-        resp.content match {
-          case Nil =>
-            val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
-            (
-              resp.code match {
-                case "200" | "default" => None
-                case okStatus(s)       => Some(s"statusCode(sttp.model.StatusCode($s))$d")
-                case errorStatus(s)    => Some(s"statusCode(sttp.model.StatusCode($s))$d")
-              },
-              None,
-              None
-            )
-          case _ =>
-            val (decl, tpe, inlineDefn) = bodyFmt(resp, isErrorPosition)
-            (
-              Some(resp.code match {
-                case "200" | "default" => decl
-                case okStatus(s)       => s"$decl.and(statusCode(sttp.model.StatusCode($s)))"
-                case errorStatus(s)    => s"$decl.and(statusCode(sttp.model.StatusCode($s)))"
-              }),
-              tpe,
-              inlineDefn
-            )
-        }
-      case many =>
-        if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
-        val canBeEmptyResponse = many.exists(_.content.isEmpty)
-        val allAreEmptyResponses = many.forall(_.content.isEmpty)
-        val (oneOfs, types, inlineDefns) = many.map { m =>
-          val (decl, tpe, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = canBeEmptyResponse)
-          val code = if (m.code == "default") "400" else m.code
-          // Might be nice to have some signal values for the interpreter, but not doing that for now.
-          if (decl == "" && allAreEmptyResponses)
-            (
-              s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
-                s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(())""",
-              tpe,
-              inlineDefn1
-            )
-          else if (decl == "")
-            (
-              s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
-                s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""",
-              tpe,
-              inlineDefn1
-            )
-          else if (canBeEmptyResponse) {
-            val (_, nonOptionalType, inlineDefn2) = bodyFmt(m, isErrorPosition)
-            val inlineDefns = combine(inlineDefn1, inlineDefn2)
-            val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
-            (s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl){ case Some(_$someType) => true }", tpe, inlineDefns)
-          } else (s"oneOfVariant${tpe.map(s => s"[$s]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl)", tpe, inlineDefn1)
-        }.unzip3
-        val parentMap = doc.components.toSeq
-          .flatMap(_.schemas)
-          .collect { case (k, v: OpenapiSchemaOneOf) =>
-            v.types.map {
-              case r: OpenapiSchemaRef        => r.stripped -> k
-              case x: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(x)._1 -> k
-              case x                          => bail(s"Unexpected oneOf child type $x")
+    def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) =
+      group match {
+        case Nil => (None, None, None)
+        case resp +: Nil =>
+          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.headers
+            // according to api spec, content-type header should be ignored - cf https://swagger.io/specification/#response-object
+            .filterNot(_._1.toLowerCase == "content-type")
+            .map { case (name, defn) =>
+              genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param)
+            }
+            .unzip3
+          val hs = outHeaderDefns.map(d => s".and($d)").mkString
+          def ht(wrap: Boolean = true) =
+            if (outHeaderTypes.isEmpty) None
+            else if (outHeaderTypes.size == 1) Some(outHeaderTypes.head)
+            else if (!wrap) Some(outHeaderTypes.mkString(", "))
+            else Some(s"(${outHeaderTypes.mkString(", ")})")
+          def inlineHeaderEnumDefns = outHeaderInlineEnums.foldLeft(Seq.empty[String]) { (acc, next) => acc ++ next.toSeq.flatten } match {
+            case Nil => None
+            case s   => Some(s.mkString("\n"))
+          }
+          resp.content match {
+            case Nil =>
+              val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
+              (
+                resp.code match {
+                  case "200" | "default" if outHeaderDefns.isEmpty => None
+                  case "200"                                       => Some(s"statusCode(sttp.model.StatusCode(200))$hs$d")
+                  case "default"                                   => Some(s"statusCode(sttp.model.StatusCode(400))$hs$d")
+                  case okStatus(s)                                 => Some(s"statusCode(sttp.model.StatusCode($s))$hs$d")
+                  case errorStatus(s)                              => Some(s"statusCode(sttp.model.StatusCode($s))$hs$d")
+                },
+                ht(),
+                inlineHeaderEnumDefns
+              )
+            case s =>
+              val (decl, maybeBodyType, inlineDefn) = bodyFmt(resp, isErrorPosition)
+              val tpe =
+                if (outHeaderTypes.isEmpty) maybeBodyType
+                else if (maybeBodyType.isEmpty) ht()
+                else maybeBodyType.map(t => s"($t, ${ht(false).get})")
+              (
+                Some(resp.code match {
+                  case "200" | "default" => s"$decl$hs"
+                  case okStatus(s)       => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case errorStatus(s)    => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                }),
+                tpe,
+                inlineDefn.map(_ ++ inlineHeaderEnumDefns.getOrElse("")).orElse(inlineHeaderEnumDefns)
+              )
+          }
+        case many =>
+          if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
+          val contentCanBeEmpty = many.exists(_.content.isEmpty)
+          val allResponsesAreEmpty = many.forall(o => o.content.isEmpty && o.headers.isEmpty)
+          val headerNamesAndTypes = many.map { m =>
+            m.headers
+              .filterNot(_._1.toLowerCase == "content-type")
+              .map { case (name, defn) =>
+                genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param)
+              }
+              .toSeq
+          }
+          val posn = if (isErrorPosition) "error" else "input"
+          // We can probably do better here, but it's very fiddly... For now, fail if we don't meet this condition
+          if (headerNamesAndTypes.map(_.map { case (name, _, defn) => name -> defn }.toSet).distinct.size != 1)
+            bail(s"Cannot generate code for differing response headers on $posn responses")
+          val commonResponseHeaders = headerNamesAndTypes.head
+          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = commonResponseHeaders.unzip3
+          val underscores = outHeaderDefns.map(_ => "_").mkString(", ")
+          val hs = outHeaderDefns.map(d => s".and($d)").mkString
+          def ht(wrap: Boolean = true) =
+            if (outHeaderTypes.isEmpty) None
+            else if (outHeaderTypes.size == 1) Some(outHeaderTypes.head)
+            else if (!wrap) Some(outHeaderTypes.mkString(", "))
+            else Some(s"(${outHeaderTypes.mkString(", ")})")
+          val (oneOfs, types, inlineDefns) = many.map { m =>
+            val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = contentCanBeEmpty)
+            val code = if (m.code == "default") "400" else m.code
+            if (decl == "" && allResponsesAreEmpty && commonResponseHeaders.isEmpty)
+              (
+                s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+                  s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(())""",
+                maybeBodyType,
+                inlineDefn1
+              )
+            else if (decl == "" && commonResponseHeaders.isEmpty)
+              (
+                s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+                  s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""",
+                maybeBodyType,
+                inlineDefn1
+              )
+            else if (decl == "") {
+              (
+                s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
+                  s"""emptyOutputAs(None).description("${JavaEscape.escapeString(
+                      m.description
+                    )}")$hs){ case (None, $underscores) => true}""",
+                maybeBodyType,
+                inlineDefn1
+              )
+            } else {
+              def withHeaderTypes(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, ${ht(false).get})"
+              def withUnderscores(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, $underscores)"
+              if (contentCanBeEmpty) {
+                val (_, nonOptionalType, _) = bodyFmt(m, isErrorPosition)
+                val maybeMap = if (m.content.size > 1) ".map(Some(_))(_.orNull)" else ""
+                val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
+                (
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeMap$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
+                  maybeBodyType,
+                  inlineDefn1
+                )
+              } else
+                (
+                  s"oneOfVariant${maybeBodyType.map(s => s"[${withHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$hs)",
+                  maybeBodyType,
+                  inlineDefn1
+                )
+            }
+          }.unzip3
+          val parentMap = doc.components.toSeq
+            .flatMap(_.schemas)
+            .collect { case (k, v: OpenapiSchemaOneOf) =>
+              v.types.map {
+                case r: OpenapiSchemaRef        => r.stripped -> k
+                case x: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(x)._1 -> k
+                case x                          => bail(s"Unexpected oneOf child type $x")
+              }
+            }
+            .flatten
+            .groupBy(_._1)
+            .map { case (k, vs) => k -> vs.map(_._2) }
+            .toMap
+          val allElemTypes = many
+            .flatMap(_.content.map(x => x.contentType -> x.schema))
+            .map {
+              case (ct, _) if ct.startsWith("text/")                  => "String"
+              case ("application/octet-stream", _) if isErrorPosition => "Array[Byte]"
+              case ("application/octet-stream", _)                    => capabilityType(streamingImplementation)
+              case (_, r: OpenapiSchemaRef)                           => r.stripped
+              case (_, x: OpenapiSchemaSimpleType)                    => mapSchemaSimpleTypeToType(x)._1
+              case (ct, x)                                            => bail(s"Unexpected oneOf elem type $x with content type $ct")
+            }
+            .distinct
+          val commmonType = {
+            if (allResponsesAreEmpty) "Unit"
+            else if (contentCanBeEmpty && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
+            else if (allElemTypes.size == 1) allElemTypes.head
+            else {
+              val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
+                case s if s.isEmpty && targetScala3 => types.flatten.mkString(" | ")
+                case s if s.isEmpty                 => "Any"
+                case s if targetScala3              => s.mkString(" & ")
+                case s                              => s.mkString(" with ")
+              }
+              if (contentCanBeEmpty) s"Option[$baseType]" else baseType
             }
           }
-          .flatten
-          .groupBy(_._1)
-          .map { case (k, vs) => k -> vs.map(_._2) }
-          .toMap
-        val allElemTypes = many
-          .flatMap(_.content.map(x => x.contentType -> x.schema))
-          .map {
-            case (ct, _) if ct.startsWith("text/")                  => "String"
-            case ("application/octet-stream", _) if isErrorPosition => "Array[Byte]"
-            case ("application/octet-stream", _)                    => capabilityType(streamingImplementation)
-            case (_, r: OpenapiSchemaRef)                           => r.stripped
-            case (_, x: OpenapiSchemaSimpleType)                    => mapSchemaSimpleTypeToType(x)._1
-            case (ct, x)                                            => bail(s"Unexpected oneOf elem type $x with content type $ct")
-          }
-          .distinct
-        val commmonType = {
-          if (allAreEmptyResponses) "Unit"
-          else if (canBeEmptyResponse && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
-          else if (allElemTypes.size == 1) allElemTypes.head
-          else {
-            val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
-              case s if s.isEmpty && targetScala3 => types.flatten.mkString(" | ")
-              case s if s.isEmpty                 => "Any"
-              case s if targetScala3              => s.mkString(" & ")
-              case s                              => s.mkString(" with ")
-            }
-            if (canBeEmptyResponse) s"Option[$baseType]" else baseType
-          }
-        }
-        (
-          Some(s"oneOf[$commmonType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
-          Some(commmonType),
-          inlineDefns.foldLeft(Option.empty[String])(combine)
-        )
-    }
+          val oneOfType = if (commonResponseHeaders.isEmpty) commmonType else s"($commmonType, ${ht(false).get})"
+          (
+            Some(s"oneOf[$oneOfType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
+            Some(oneOfType),
+            (inlineDefns ++ outHeaderInlineEnums.map(_.map(_.mkString("\n")))).foldLeft(Option.empty[String])(combine(_, _))
+          )
+      }
 
     val (outDecls, outTypes, inlineOutDefns) = mappedGroup(outs, false)
     val mappedOuts = outDecls.map(s => s".out($s)")
@@ -640,7 +876,7 @@ class EndpointGenerator {
       required: Boolean,
       endpointName: String,
       position: String,
-      isErrorPosition: Boolean, // no streaming support for errorOut
+      forceEager: Boolean, // no streaming support for errorOut
       xmlSerdeLib: XmlSerdeLib
   )(implicit location: Location): MappedContentType = {
     contentType match {
@@ -649,14 +885,20 @@ class EndpointGenerator {
       case "text/html" =>
         MappedContentType("htmlBodyUtf8", "String")
       case "application/xml" if xmlSerdeLib != XmlSerdeLib.NoSupport =>
-        val (outT, maybeInline) = schema match {
-          case st: OpenapiSchemaRef =>
+        val (outT, maybeInline, maybeAlias) = schema match {
+          case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            t -> None
-          case x => bail(s"Only ref schemas supported for xml body (found $x)")
+            (t, None, None)
+          case a @ OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
+            val (t, _) = mapSchemaSimpleTypeToType(st)
+            val xmlSeqConfig = XmlSerdeGenerator.genTopLevelSeqSerdes(xmlSerdeLib, a, endpointName, position)
+            (s"List[$t]", xmlSeqConfig, Some(endpointName.capitalize + position))
+          case x => bail(s"Only ref, primitive (and arrays of either) schemas supported for xml body (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
-        MappedContentType(s"xmlBody[$req]", req, maybeInline)
+        def toList = if (required) ".toList" else ".map(_.toList)"
+        val bodyType = maybeAlias.map(a => s"xmlBody[$a].map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(s"xmlBody[$req]")
+        MappedContentType(bodyType, req, maybeInline)
       case "application/json" =>
         val (outT, maybeInline) = schema match {
           case st: OpenapiSchemaSimpleType =>
@@ -687,7 +929,7 @@ class EndpointGenerator {
             MappedContentType(s"multipartBody[$inlineClassName]", inlineClassName, inlineClassDefn)
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
-      case other => failoverBinaryCase(other, schema, isErrorPosition, streamingImplementation)
+      case other => failoverBinaryCase(other, schema, forceEager, streamingImplementation)
       case x     => bail(s"Not all content types supported! Found $x")
     }
   }

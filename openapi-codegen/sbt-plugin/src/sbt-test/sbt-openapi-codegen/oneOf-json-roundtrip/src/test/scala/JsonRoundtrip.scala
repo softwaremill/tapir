@@ -229,7 +229,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       case 2 => Some(someResponse2)
     }
     val route = TapirGeneratedEndpoints.getOneofOptionTest.serverLogic[Future]({ _: Unit =>
-      Future successful Right[Unit, Option[AnyObjectWithInlineEnum]](responseVariant)
+      Future successful Right[Unit, (Option[AnyObjectWithInlineEnum], Option[String])](responseVariant -> Some("ok"))
     })
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(route)

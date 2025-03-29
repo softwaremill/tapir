@@ -120,39 +120,39 @@ object TapirGeneratedEndpointsXmlSerdes {
   implicit lazy val TagXmlDecoder: Decoder[Tag] = deriveConfiguredDecoder[Tag]
   implicit lazy val TagXmlEncoder: Encoder[Tag] = deriveConfiguredEncoder[Tag]
 
-  implicit lazy val Tag2XmlTypeInterpreter: XmlTypeInterpreter[Tag2] = XmlTypeInterpreter.auto[Tag2]((_, _) => false, (_, _) => false)
-  implicit lazy val Tag2XmlDecoder: Decoder[Tag2] = deriveConfiguredDecoder[Tag2]
-  implicit lazy val Tag2XmlEncoder: Encoder[Tag2] = deriveConfiguredEncoder[Tag2]
-
-  implicit lazy val PetXmlTypeInterpreter: XmlTypeInterpreter[Pet] = XmlTypeInterpreter.fullOf[Pet]{
-      case (cats.xml.utils.generic.ParamName("tags2"), _) =>
-        (XmlElemType.Child, { case "tags2" => "extra-tags"; case "extra-tags" => "tags2"; case x => x})
-      case (_, _) => (XmlElemType.Child, identity)
-    }
+  implicit lazy val PetXmlTypeInterpreter: XmlTypeInterpreter[Pet] = XmlTypeInterpreter.auto[Pet]((_, _) => false, (_, _) => false)
   implicit lazy val PetXmlDecoder: Decoder[Pet] = {
     implicit val PetTagsSeqDecoder: Decoder[Seq[Tag]] = seqDecoder[Tag]("tags", isWrapped = true)
     implicit val PetPhotoUrlsSeqDecoder: Decoder[Seq[String]] = seqDecoder[String]("photoUrls", isWrapped = true)
-    implicit val PetTags2SeqDecoder: Decoder[Seq[Tag2]] = seqDecoder[Tag2]("extra-tags", isWrapped = false)
     implicit val PetStatusOptionDecoder: Decoder[Option[PetStatus]] = optionDecoder[PetStatus](enumDecoder[PetStatus](PetStatus))
     // implicit val PetCategoryDecoder: Decoder[Option[Category]] = deriveConfiguredDecoder[Option[Category]]
     deriveConfiguredDecoder[Pet]
   }
   implicit lazy val PetXmlEncoder: Encoder[Pet] = {
     implicit val PetTagsSeqEncoder: Encoder[Seq[Tag]] =
-      seqEncoder[Tag]("tags", isWrapped = true, itemName = "tag")
+      seqEncoder[Tag]("tags", isWrapped = true, itemName = "tags")
     implicit val PetPhotoUrlsSeqEncoder: Encoder[Seq[String]] =
       seqEncoder[String]("photoUrls", isWrapped = true, itemName = "photoUrl")
-    implicit val PetTags2SeqEncoder: Encoder[Seq[Tag2]] =
-      seqEncoder[Tag2]("extra-tags", isWrapped = false, itemName = "tags2")
     implicit val PetStatusEncoder: Encoder[PetStatus] = enumEncoder[PetStatus]("status")
     implicit val PetStatusOptionEncoder: Encoder[Option[PetStatus]] = optionEncoder[PetStatus](PetStatusEncoder)
     implicit val PetCategoryEncoder: Encoder[Option[Category]] = deriveConfiguredEncoder[Option[Category]]
     deriveConfiguredEncoder[Pet]
   }
 
-  implicit lazy val PetStatusXmlTypeInterpreter: XmlTypeInterpreter[PetStatus] = XmlTypeInterpreter.auto[PetStatus]((_, _) => false, (_, _) => false)
-  implicit lazy val PetStatusXmlDecoder: Decoder[PetStatus] = deriveConfiguredDecoder[PetStatus]
-  implicit lazy val PetStatusXmlEncoder: Encoder[PetStatus] = deriveConfiguredEncoder[PetStatus]
+  implicit lazy val OrderXmlTypeInterpreter: XmlTypeInterpreter[Order] = XmlTypeInterpreter.auto[Order]((_, _) => false, (_, _) => false)
+  implicit lazy val OrderXmlDecoder: Decoder[Order] = {
+    implicit val OrderStatusOptionDecoder: Decoder[Option[OrderStatus]] = optionDecoder[OrderStatus](enumDecoder[OrderStatus](OrderStatus))
+    deriveConfiguredDecoder[Order]
+  }
+  implicit lazy val OrderXmlEncoder: Encoder[Order] = {
+    implicit val OrderStatusEncoder: Encoder[OrderStatus] = enumEncoder[OrderStatus]("status")
+    implicit val OrderStatusOptionEncoder: Encoder[Option[OrderStatus]] = optionEncoder[OrderStatus](OrderStatusEncoder)
+    deriveConfiguredEncoder[Order]
+  }
+
+  implicit lazy val UserXmlTypeInterpreter: XmlTypeInterpreter[User] = XmlTypeInterpreter.auto[User]((_, _) => false, (_, _) => false)
+  implicit lazy val UserXmlDecoder: Decoder[User] = deriveConfiguredDecoder[User]
+  implicit lazy val UserXmlEncoder: Encoder[User] = deriveConfiguredEncoder[User]
 
   implicit lazy val CategoryXmlTypeInterpreter: XmlTypeInterpreter[Category] = XmlTypeInterpreter.auto[Category]((_, _) => false, (_, _) => false)
   implicit lazy val CategoryXmlDecoder: Decoder[Category] = deriveConfiguredDecoder[Category]
