@@ -811,15 +811,22 @@ class EndpointGenerator {
             .groupBy(_._1)
             .map { case (k, vs) => k -> vs.map(_._2) }
             .toMap
+          val traitName = s"${endpointName.capitalize}Body${if (isErrorPosition) "Err" else "Out"}"
+          val mappable = Set("application/json", "application/xml")
           val allElemTypes = many
-            .flatMap(_.content.map(x => x.contentType -> x.schema))
+            .flatMap(y =>
+              y.content.map(x =>
+                (x.contentType, x.schema, y.content.size > 1 && y.content.map(_.contentType).exists(!mappable.contains(_)))
+              )
+            )
             .map {
-              case (ct, _) if ct.startsWith("text/")                  => "String"
-              case ("application/octet-stream", _) if isErrorPosition => "Array[Byte]"
-              case ("application/octet-stream", _)                    => capabilityType(streamingImplementation)
-              case (_, r: OpenapiSchemaRef)                           => r.stripped
-              case (_, x: OpenapiSchemaSimpleType)                    => mapSchemaSimpleTypeToType(x)._1
-              case (ct, x)                                            => bail(s"Unexpected oneOf elem type $x with content type $ct")
+              case (_, _, true)                                          => traitName
+              case (ct, _, _) if ct.startsWith("text/")                  => "String"
+              case ("application/octet-stream", _, _) if isErrorPosition => "Array[Byte]"
+              case ("application/octet-stream", _, _)                    => capabilityType(streamingImplementation)
+              case (_, r: OpenapiSchemaRef, _)                           => r.stripped
+              case (_, x: OpenapiSchemaSimpleType, _)                    => mapSchemaSimpleTypeToType(x)._1
+              case (ct, x, _)                                            => bail(s"Unexpected oneOf elem type $x with content type $ct")
             }
             .distinct
           val commmonType = {

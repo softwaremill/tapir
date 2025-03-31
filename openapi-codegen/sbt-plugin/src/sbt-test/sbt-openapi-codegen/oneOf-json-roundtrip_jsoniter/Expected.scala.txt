@@ -249,7 +249,7 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[io.circe.Json]].description("anything"))
       .out(jsonBody[io.circe.Json].description("anything back"))
 
-  type PostCustomContentNegotiationEndpoint = Endpoint[Unit, PostCustomContentNegotiationBodyIn, PostCustomContentNegotiationBodyErr, Option[Any], sttp.capabilities.pekko.PekkoStreams]
+  type PostCustomContentNegotiationEndpoint = Endpoint[Unit, PostCustomContentNegotiationBodyIn, PostCustomContentNegotiationBodyErr, Option[PostCustomContentNegotiationBodyOut], sttp.capabilities.pekko.PekkoStreams]
   lazy val postCustomContentNegotiation: PostCustomContentNegotiationEndpoint =
     endpoint
       .post
@@ -262,7 +262,7 @@ object TapirGeneratedEndpoints {
         .map(_.asInstanceOf[PostCustomContentNegotiationBodyErr])(p => PostCustomContentNegotiationBodyStringErr(p.`text/csv`())).description("binary error"),
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`](`application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostCustomContentNegotiationBody1Err(_))(_.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())
         .map(_.asInstanceOf[PostCustomContentNegotiationBodyErr])(p => PostCustomContentNegotiationBody1Err(p.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())).description("binary error")).and(statusCode(sttp.model.StatusCode(400))))
-      .out(oneOf[Option[Any]](
+      .out(oneOf[Option[PostCustomContentNegotiationBodyOut]](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("no content"))(None),
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), oneOfBody[PostCustomContentNegotiationBodyOut](
         sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `text/csvCodecFormat`()).map(PostCustomContentNegotiationBody0Out(_))(_.`text/csv`())
