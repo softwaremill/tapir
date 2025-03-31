@@ -469,8 +469,9 @@ class EndpointGenerator {
         val distinctTypes = tpes.distinct
         // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
         // eager or lazy binary, wrappers make it easier to implement logic binding.
-        val needsAliases = distinctTypes.size != 1 || tpes.head == "Array[Byte]" || tpes.head.contains("BinaryStream")
-        val tpesAreBin = tpes.head.contains("BinaryStream")
+        val needsAliases =
+          distinctTypes.size != 1 || tpes.head == "Array[Byte]" || tpes.head.contains("BinaryStream") || tpes.head.contains("fs2.Stream")
+        val tpesAreBin = tpes.head.contains("BinaryStream") || tpes.head.contains("fs2.Stream")
         def wrapBinType(s: String) = if (tpesAreBin) s"sttp.tapir.EndpointIO.StreamBodyWrapper($s)" else s
         val traitName = s"${endpointName.capitalize}BodyIn"
         val declsByWrapperClassName = decls
@@ -478,7 +479,8 @@ class EndpointGenerator {
           .zipWithIndex
           .map { case ((decl, t), i) =>
             val caseClassName =
-              if (t == "Array[Byte]" || t.contains("BinaryStream")) s"${endpointName.capitalize}Body${i}In"
+              if (t == "Array[Byte]" || t.contains("BinaryStream") || tpes.head.contains("fs2.Stream"))
+                s"${endpointName.capitalize}Body${i}In"
               else s"${endpointName.capitalize}Body${t.split('.').last.replaceAll("[\\]\\[]", "_")}In"
             (caseClassName, t, decl)
           }
@@ -607,8 +609,9 @@ class EndpointGenerator {
           val distinctTypes = tpes.distinct
           // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
           // eager or lazy binary, wrappers make it easier to implement logic binding.
-          val needsAliases = distinctTypes.size != 1 || tpes.head == "Array[Byte]" || tpes.head.contains("BinaryStream")
-          val tpesAreBin = tpes.head.contains("BinaryStream")
+          val needsAliases =
+            distinctTypes.size != 1 || tpes.head == "Array[Byte]" || tpes.head.contains("BinaryStream") || tpes.head.contains("fs2.Stream")
+          val tpesAreBin = tpes.head.contains("BinaryStream") || tpes.head.contains("fs2.Stream")
           def wrapBinType(s: String) = if (tpesAreBin) s"sttp.tapir.EndpointIO.StreamBodyWrapper($s)" else s
           val suff = if (isErrorPosition) "Err" else "Out"
           val traitName = s"${endpointName.capitalize}Body$suff"
@@ -619,7 +622,8 @@ class EndpointGenerator {
             .zipWithIndex
             .map { case (((decl, t), ct), i) =>
               val caseClassName =
-                if (t == "Array[Byte]" || t.contains("BinaryStream")) s"${endpointName.capitalize}Body${i}$suff"
+                if (t == "Array[Byte]" || t.contains("BinaryStream") || tpes.head.contains("fs2.Stream"))
+                  s"${endpointName.capitalize}Body${i}$suff"
                 else s"${endpointName.capitalize}Body${t.split('.').last.replaceAll("[\\]\\[]", "_")}$suff"
               (caseClassName, t, decl, ct)
             }
@@ -739,7 +743,7 @@ class EndpointGenerator {
               }
               .toSeq
           }
-          val posn = if (isErrorPosition) "error" else "input"
+          val posn = if (isErrorPosition) "error" else "output"
           // We can probably do better here, but it's very fiddly... For now, fail if we don't meet this condition
           if (headerNamesAndTypes.map(_.map { case (name, _, defn) => name -> defn }.toSet).distinct.size != 1)
             bail(s"Cannot generate code for differing response headers on $posn responses")
