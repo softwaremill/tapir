@@ -12,7 +12,7 @@ import sttp.tapir.{
   EndpointOutput,
   EndpointOutputsOps
 }
-import zio.ZIO
+import zio.{RIO, ZIO}
 
 /** An endpoint with the security logic provided, and the main logic yet unspecified. See [[RichZEndpoint.zServerLogic]].
   *
@@ -73,7 +73,9 @@ case class ZPartialServerEndpoint[R, SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUT
 
   override protected def showType: String = "PartialServerEndpoint"
 
-  def serverLogic[R0](logic: PRINCIPAL => INPUT => ZIO[R0, ERROR_OUTPUT, OUTPUT]): ZServerEndpoint[R with R0, C] =
+  def serverLogic[R0](
+      logic: PRINCIPAL => INPUT => ZIO[R0, ERROR_OUTPUT, OUTPUT]
+  ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, C, RIO[R with R0, *]] =
     ServerEndpoint(
       endpoint,
       _ => securityLogic(_: SECURITY_INPUT).either.resurrect,
