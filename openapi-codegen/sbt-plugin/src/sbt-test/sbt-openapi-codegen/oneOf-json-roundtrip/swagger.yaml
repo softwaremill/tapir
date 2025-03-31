@@ -63,22 +63,13 @@ paths:
     put:
       responses:
         '200':
-          description: a non-optional response body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotNullableThingy'
+          $ref: '#/components/responses/optionalityTest'
       requestBody:
-        required: false
-        description: an optional request body (not required)
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotNullableThingy'
+        $ref: '#/components/requestBodies/optionalityTest'
   '/adt/test':
     post:
       security:
-        - api_key: []
+        - api_key: [ ]
       responses:
         '200':
           description: successful operation
@@ -310,6 +301,21 @@ paths:
 
 
 components:
+  responses:
+    optionalityTest:
+      description: a non-optional response body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotNullableThingy'
+  requestBodies:
+    optionalityTest:
+      required: false
+      description: an optional request body (not required)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotNullableThingy'
   securitySchemes:
     petstore_auth:
       type: oauth2
