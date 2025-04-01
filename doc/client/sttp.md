@@ -1,4 +1,4 @@
-# Using as an sttp client
+# Using as an sttp client (v3)
 
 Add the dependency:
 
@@ -12,7 +12,7 @@ To make requests using an endpoint definition using the [sttp client](https://gi
 import sttp.tapir.client.sttp.SttpClientInterpreter
 ```
 
-This objects contains a number of variants for creating a client call, where the first parameter is the endpoint description.
+This object contains a number of variants for creating a client call, where the first parameter is the endpoint description.
 The second is an optional URI - if this is `None`, the request will be relative.
 
 Here's a summary of the available method variants; `R` are the requirements of the endpoint, such as streaming or websockets:
