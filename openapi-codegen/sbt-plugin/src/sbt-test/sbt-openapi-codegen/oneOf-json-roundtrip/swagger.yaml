@@ -184,14 +184,23 @@ paths:
       responses:
         "204":
           description: "No response"
+          headers:
+            common-response-header:
+              $ref: '#/components/parameters/common-response-header'
         "200":
           description: An object
+          headers:
+            common-response-header:
+              $ref: '#/components/parameters/common-response-header'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ObjectWithInlineEnum'
         "201":
           description: Another object
+          headers:
+            common-response-header:
+              $ref: '#/components/parameters/common-response-header'
           content:
             application/json:
               schema:
@@ -215,18 +224,24 @@ paths:
       responses:
         "200":
           description: An object
+          headers:
+            x-combat-status:
+              description: "a response header"
+              required: true
+              schema:
+                type: string
           content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - foo
-              properties:
-                foo:
-                  type: string
-                bar:
-                  type: string
-                  format: uuid
+            application/json:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
     put:
       requestBody:
         content:
@@ -301,6 +316,12 @@ paths:
 
 
 components:
+  parameters:
+    common-response-header:
+      in: header
+      name: x-common
+      schema:
+        type: string
   responses:
     optionalityTest:
       description: a non-optional response body
