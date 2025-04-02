@@ -69,7 +69,7 @@ A => I => F[DecodeResult[Either[E, O]]]
 To interpret a streaming endpoint, you'll need to use a different import:
 
 ```scala mdoc:compile-only
-import sttp.tapir.client.sttp4.streaming.StreamSttpClientInterpreter
+import sttp.tapir.client.sttp4.stream.StreamSttpClientInterpreter
 ```
 
 The `StreamSttpClientInterpreter` contains method analogous to the ones in the "basic" `SttpClientInterpreter`.
