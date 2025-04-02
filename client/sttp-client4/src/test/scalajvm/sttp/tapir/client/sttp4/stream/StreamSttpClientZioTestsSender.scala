@@ -1,4 +1,4 @@
-package sttp.tapir.client.sttp4.streaming
+package sttp.tapir.client.sttp4.stream
 
 import cats.effect.IO
 import sttp.capabilities.zio.ZioStreams
@@ -9,7 +9,7 @@ import sttp.tapir.{DecodeResult, Endpoint}
 import zio.Runtime.default
 import zio.{CancelableFuture, Task, Unsafe}
 
-abstract class StreamingSttpClientZioTestsSender extends ClientTests[ZioStreams] {
+abstract class StreamSttpClientZioTestsSender extends ClientTests[ZioStreams] {
   private val runtime: default.UnsafeAPI = zio.Runtime.default.unsafe
   val backend: StreamBackend[Task, ZioStreams] = unsafeRun(HttpClientZioBackend())
 
@@ -21,7 +21,7 @@ abstract class StreamingSttpClientZioTestsSender extends ClientTests[ZioStreams]
       scheme: String = "http"
   ): IO[Either[E, O]] =
     IO.fromFuture(IO.delay {
-      val send = StreamingSttpClientInterpreter()
+      val send = StreamSttpClientInterpreter()
         .toSecureRequestThrowDecodeFailures[A, I, E, O, ZioStreams](e, Some(uri"$scheme://localhost:$port"))
         .apply(securityArgs)
         .apply(args)
@@ -38,7 +38,7 @@ abstract class StreamingSttpClientZioTestsSender extends ClientTests[ZioStreams]
       args: I
   ): IO[DecodeResult[Either[E, O]]] =
     IO.fromFuture(IO.delay {
-      val send = StreamingSttpClientInterpreter()
+      val send = StreamSttpClientInterpreter()
         .toSecureRequest[A, I, E, O, ZioStreams](e, Some(uri"http://localhost:$port"))
         .apply(securityArgs)
         .apply(args)

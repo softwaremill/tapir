@@ -69,10 +69,10 @@ A => I => F[DecodeResult[Either[E, O]]]
 To interpret a streaming endpoint, you'll need to use a different import:
 
 ```scala mdoc:compile-only
-import sttp.tapir.client.sttp4.streaming.StreamingSttpClientInterpreter
+import sttp.tapir.client.sttp4.streaming.StreamSttpClientInterpreter
 ```
 
-The `StreamingSttpClientInterpreter` contains method analogous to the ones in the "basic" `SttpClientInterpreter`.
+The `StreamSttpClientInterpreter` contains method analogous to the ones in the "basic" `SttpClientInterpreter`.
 The difference is that the streaming interpreter works only for endpoints, which require the streaming capability:
 that is, their `R` type parameter must be a subtype of `sttp.capabilities.Streams[_]`. Moreover, the result type
 the request-creating methods is a `StreamRequest`, instead of a `Request`.

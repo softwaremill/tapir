@@ -1,4 +1,4 @@
-package sttp.tapir.client.sttp4.streaming
+package sttp.tapir.client.sttp4.stream
 
 import sttp.capabilities.WebSockets
 
