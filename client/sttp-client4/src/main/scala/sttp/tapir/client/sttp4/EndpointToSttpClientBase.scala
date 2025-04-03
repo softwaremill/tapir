@@ -16,29 +16,34 @@ private[sttp4] trait EndpointToSttpClientBase {
 
   protected def isSuccess(meta: ResponseMetadata): Boolean = meta.isSuccess
 
+  /** Calculates the request using the given security/input parameters. The body set on the request unless it's a streaming body. In that
+    * case, the body is returned separately as the second parameters of the tuple.
+    */
   final protected def prepareRequestWithInput[A, E, O, I, R](
       e: Endpoint[A, I, E, O, R],
       baseUri: Option[Uri],
       aParams: A,
       iParams: I
-  ): Request[?] = {
-    val (uri1, req1) =
+  ): (Request[?], Option[RequestStreamBody]) = {
+    val (uri1, req1, streamBody1) =
       setInputParams(
         e.securityInput,
         ParamsAsAny(aParams),
         baseUri.getOrElse(Uri(None, None, Uri.EmptyPath, Nil, None)),
-        basicRequest.asInstanceOf[PartialAnyRequest]
+        basicRequest.asInstanceOf[PartialAnyRequest],
+        None
       )
 
-    val (uri2, req2) =
+    val (uri2, req2, streamBody2) =
       setInputParams(
         e.input,
         ParamsAsAny(iParams),
         uri1,
-        req1
+        req1,
+        streamBody1
       )
 
-    req2.method(sttp.model.Method(e.method.getOrElse(Method.GET).method), uri2)
+    (req2.method(sttp.model.Method(e.method.getOrElse(Method.GET).method), uri2), streamBody2)
   }
 
   final protected def mapReqOutputWithMetadata[A, I, E, O, R, T](
@@ -78,48 +83,49 @@ private[sttp4] trait EndpointToSttpClientBase {
       input: EndpointInput[I],
       params: Params,
       uri: Uri,
-      req: PartialAnyRequest
-  ): (Uri, PartialAnyRequest) = {
+      req: PartialAnyRequest,
+      streamBody: Option[RequestStreamBody]
+  ): (Uri, PartialAnyRequest, Option[RequestStreamBody]) = {
     def value: I = params.asAny.asInstanceOf[I]
     input match {
-      case EndpointInput.FixedMethod(_, _, _) => (uri, req)
-      case EndpointInput.FixedPath(p, _, _)   => (uri.addPath(p), req)
+      case EndpointInput.FixedMethod(_, _, _) => (uri, req, streamBody)
+      case EndpointInput.FixedPath(p, _, _)   => (uri.addPath(p), req, streamBody)
       case EndpointInput.PathCapture(_, codec, _) =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
-        (uri.addPath(v), req)
+        (uri.addPath(v), req, streamBody)
       case EndpointInput.PathsCapture(codec, _) =>
         val ps = codec.encode(value)
-        (uri.addPath(ps), req)
+        (uri.addPath(ps), req, streamBody)
       case EndpointInput.Query(name, Some(flagValue), _, _) if value == flagValue =>
-        (uri.withParams(uri.params.param(name, Nil)), req)
+        (uri.withParams(uri.params.param(name, Nil)), req, streamBody)
       case EndpointInput.Query(name, _, codec, _) =>
         val uri2 = codec.encode(value).foldLeft(uri) { case (u, v) => u.addParam(name, v) }
-        (uri2, req)
+        (uri2, req, streamBody)
       case EndpointInput.Cookie(name, codec, _) =>
         val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.cookie(name, v) }
-        (uri, req2)
+        (uri, req2, streamBody)
       case EndpointInput.QueryParams(codec, _) =>
         val mqp = codec.encode(value)
         val uri2 = uri.addParams(mqp.toSeq: _*)
-        (uri2, req)
-      case EndpointIO.Empty(_, _) => (uri, req)
+        (uri2, req, streamBody)
+      case EndpointIO.Empty(_, _) => (uri, req, streamBody)
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
-        (uri, req2)
-      case EndpointIO.OneOfBody(EndpointIO.OneOfBodyVariant(_, Left(body)) :: _, _) => setInputParams(body, params, uri, req)
+        (uri, req2, streamBody)
+      case EndpointIO.OneOfBody(EndpointIO.OneOfBodyVariant(_, Left(body)) :: _, _) => setInputParams(body, params, uri, req, streamBody)
       case EndpointIO.OneOfBody(
             EndpointIO.OneOfBodyVariant(_, Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)))) :: _,
             _
           ) =>
         val req2 = req.body(value.asInstanceOf[InputStream])
-        (uri, req2)
-      case EndpointIO.OneOfBody(Nil, _)                                    => throw new RuntimeException("One of body without variants")
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) => (uri, req)
+        (uri, req2, streamBody)
+      case EndpointIO.OneOfBody(Nil, _)                                        => throw new RuntimeException("One of body without variants")
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, codec, _, _, _)) => (uri, req, Some((streams, codec.encode(value))))
       case EndpointIO.Header(name, codec, _) =>
         val req2 = codec
           .encode(value)
           .foldLeft(req) { case (r, v) => r.header(name, v) }
-        (uri, req2)
+        (uri, req2, streamBody)
       case EndpointIO.Headers(codec, _) =>
         val headers = codec.encode(value)
         val req2 = headers.foldLeft(req) { case (r, h) =>
@@ -129,18 +135,18 @@ private[sttp4] trait EndpointToSttpClientBase {
             else DuplicateHeaderBehavior.Add
           r.header(h, onDuplicate)
         }
-        (uri, req2)
+        (uri, req2, streamBody)
       case EndpointIO.FixedHeader(h, _, _) =>
         val req2 = req.header(h)
-        (uri, req2)
+        (uri, req2, streamBody)
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
-        (uri, req)
-      case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, uri, req)
-      case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, uri, req)
-      case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, uri, req)
-      case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec, params, uri, req)
-      case EndpointIO.MappedPair(wrapped, codec)     => handleMapped(wrapped, codec, params, uri, req)
+        (uri, req, streamBody)
+      case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, uri, req, streamBody)
+      case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, uri, req, streamBody)
+      case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, uri, req, streamBody)
+      case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec, params, uri, req, streamBody)
+      case EndpointIO.MappedPair(wrapped, codec)     => handleMapped(wrapped, codec, params, uri, req, streamBody)
     }
   }
 
@@ -150,11 +156,12 @@ private[sttp4] trait EndpointToSttpClientBase {
       params: Params,
       split: SplitParams,
       uri: Uri,
-      req: PartialAnyRequest
-  ): (Uri, PartialAnyRequest) = {
+      req: PartialAnyRequest,
+      streamBody: Option[RequestStreamBody]
+  ): (Uri, PartialAnyRequest, Option[RequestStreamBody]) = {
     val (leftParams, rightParams) = split(params)
-    val (uri2, req2) = setInputParams(left.asInstanceOf[EndpointInput[Any]], leftParams, uri, req)
-    setInputParams(right.asInstanceOf[EndpointInput[Any]], rightParams, uri2, req2)
+    val (uri2, req2, streamBody2) = setInputParams(left.asInstanceOf[EndpointInput[Any]], leftParams, uri, req, streamBody)
+    setInputParams(right.asInstanceOf[EndpointInput[Any]], rightParams, uri2, req2, streamBody2)
   }
 
   private def handleMapped[II, T](
@@ -162,9 +169,10 @@ private[sttp4] trait EndpointToSttpClientBase {
       codec: Mapping[T, II],
       params: Params,
       uri: Uri,
-      req: PartialAnyRequest
-  ): (Uri, PartialAnyRequest) = {
-    setInputParams(tuple, ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), uri, req)
+      req: PartialAnyRequest,
+      streamBody: Option[RequestStreamBody]
+  ): (Uri, PartialAnyRequest, Option[RequestStreamBody]) = {
+    setInputParams(tuple, ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), uri, req, streamBody)
   }
 
   private def setBody[L, H, CF <: CodecFormat](

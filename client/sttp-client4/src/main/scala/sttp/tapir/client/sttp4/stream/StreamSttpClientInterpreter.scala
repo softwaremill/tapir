@@ -71,7 +71,7 @@ trait StreamSttpClientInterpreter {
       e: PublicEndpoint[I, E, O, S],
       baseUri: Option[Uri]
   )(implicit ev: StreamsNotWebSockets[S]): I => StreamRequest[DecodeResult[Either[E, O]], S] = {
-    new StreamEndpointToSttpClient().toSttpRequest(e, baseUri).apply(())
+    new StreamEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(())
   }
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -86,7 +86,7 @@ trait StreamSttpClientInterpreter {
       e: PublicEndpoint[I, E, O, S],
       baseUri: Option[Uri]
   )(implicit ev: StreamsNotWebSockets[S]): I => StreamRequest[Either[E, O], S] =
-    i => new StreamEndpointToSttpClient().toSttpRequest(e, baseUri).apply(()).apply(i).mapResponse(throwDecodeFailures)
+    i => new StreamEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(()).apply(i).mapResponse(throwDecodeFailures)
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -103,7 +103,7 @@ trait StreamSttpClientInterpreter {
       ev: StreamsNotWebSockets[S]
   ): I => StreamRequest[O, S] =
     i =>
-      new StreamEndpointToSttpClient()
+      new StreamEndpointToSttpClient(sttpClientOptions)
         .toSttpRequest(e, baseUri)
         .apply(())
         .apply(i)
@@ -177,7 +177,7 @@ trait StreamSttpClientInterpreter {
       e: Endpoint[A, I, E, O, S],
       baseUri: Option[Uri]
   )(implicit ev: StreamsNotWebSockets[S]): A => I => StreamRequest[DecodeResult[Either[E, O]], S] =
-    new StreamEndpointToSttpClient().toSttpRequest(e, baseUri)
+    new StreamEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri)
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -191,7 +191,7 @@ trait StreamSttpClientInterpreter {
       e: Endpoint[A, I, E, O, S],
       baseUri: Option[Uri]
   )(implicit ev: StreamsNotWebSockets[S]): A => I => StreamRequest[Either[E, O], S] =
-    a => i => new StreamEndpointToSttpClient().toSttpRequest(e, baseUri).apply(a).apply(i).mapResponse(throwDecodeFailures)
+    a => i => new StreamEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(a).apply(i).mapResponse(throwDecodeFailures)
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -210,7 +210,7 @@ trait StreamSttpClientInterpreter {
   )(implicit ev: StreamsNotWebSockets[S]): A => I => StreamRequest[O, S] =
     a =>
       i =>
-        new StreamEndpointToSttpClient()
+        new StreamEndpointToSttpClient(sttpClientOptions)
           .toSttpRequest(e, baseUri)
           .apply(a)
           .apply(i)

@@ -175,7 +175,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
     // when
     val response = StreamSttpClientInterpreter()
-      // for an unknown reason, explicit type parameters are required in Scala 3, otherwise there's a compiler error
+      // for an unknown reason, explicit type parameters are required in Scala3, otherwise there's a compiler error
       .toRequestThrowDecodeFailures[Vector[Int], Unit, String, TestStreams](endpoint, Some(uri"http://test.com"))
       .apply(Vector(1, 2, 3))
       .send(backend)

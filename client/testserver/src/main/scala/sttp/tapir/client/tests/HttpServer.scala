@@ -2,7 +2,6 @@ package sttp.tapir.client.tests
 
 import cats.effect._
 import cats.effect.std.Queue
-import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import fs2.{Pipe, Stream}
 import org.http4s.dsl.io._
@@ -40,6 +39,7 @@ class HttpServer(port: HttpServer.Port) {
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
   private object apiKeyOptParam extends OptionalQueryParamDecoderMatcher[String]("api-key")
   private object statusOutParam extends QueryParamDecoderMatcher[Int]("statusOut")
+  private object errorParam extends QueryParamDecoderMatcher[Boolean]("error")
 
   private def service(wsb: WebSocketBuilder2[IO]) = HttpRoutes.of[IO] {
     case GET -> Root :? fruitParam(f) +& amountOptParam(amount) =>
@@ -65,6 +65,12 @@ class HttpServer(port: HttpServer.Port) {
       okOnlyHeaders(List(filteredHeaders2))
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
       okOnlyHeaders(r.uri.multiParams.getOrElse("qq", Nil).reverse.map("hh" -> _: Header.ToRaw))
+    case r @ POST -> Root / "api" / "echo" / "param-to-header" =>
+      r.as[String].flatMap { body =>
+        val headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map("hh" -> _: Header.ToRaw)
+        Ok(body, headers = Headers(headers))
+      }
+
     case r @ GET -> Root / "api" / "echo" / "param-to-upper-header" =>
       okOnlyHeaders(r.uri.multiParams.map { case (k, v) =>
         k -> v.headOption.getOrElse("?"): Header.ToRaw
@@ -188,6 +194,15 @@ class HttpServer(port: HttpServer.Port) {
         fromAcceptHeader(r) {
           case "application/json" => Ok(s"""{"f": "$body (json)"}""", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
           case "application/xml"  => Ok(s"<f>$body (xml)</f>", `Content-Type`(MediaType.application.xml, Charset.`UTF-8`))
+        }
+      }
+
+    case r @ POST -> Root / "api" / "error_or_echo" :? errorParam(e) =>
+      r.as[String].flatMap { body =>
+        if (e) {
+          BadRequest("error as requested")
+        } else {
+          Ok(body)
         }
       }
   }

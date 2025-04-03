@@ -4,14 +4,14 @@ import sttp.client4._
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.client.ClientOutputParams
-import sttp.tapir.client.sttp4.{EndpointToSttpClientBase, SttpClientOptions}
 
 private[sttp] class EndpointToSttpClient(clientOptions: SttpClientOptions) extends EndpointToSttpClientBase {
   def toSttpRequest[F[_], A, E, O, I](
       e: Endpoint[A, I, E, O, Any],
       baseUri: Option[Uri]
   ): A => I => Request[DecodeResult[Either[E, O]]] = { aParams => iParams =>
-    val reqWithInput = prepareRequestWithInput(e, baseUri, aParams, iParams)
+    // there can't be a stream body here, as this is not a stream endpoint
+    val (reqWithInput, None) = prepareRequestWithInput(e, baseUri, aParams, iParams)
 
     val response = fromMetadata(
       outToResponseAs(e.errorOutput, clientOptions),
