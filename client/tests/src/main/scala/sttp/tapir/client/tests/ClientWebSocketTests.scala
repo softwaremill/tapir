@@ -77,10 +77,13 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
         .unsafeToFuture()
     }
 
-    test("web sockets, string client-terminated echo or error - error case") {
-      send(errorOrWsEndpoint, port, (), true, "ws")
-        .map(_ should matchPattern { case Left(_) => })
-        .unsafeToFuture()
+    // on JS, an erroring WS throws an exception
+    if (!platformIsScalaJS) {
+      test("web sockets, string client-terminated echo or error - error case") {
+        send(errorOrWsEndpoint, port, (), true, "ws")
+          .map(_ should matchPattern { case Left(_) => })
+          .unsafeToFuture()
+      }
     }
 
     // TODO: tests for ping/pong (control frames handling)
