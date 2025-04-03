@@ -1,4 +1,4 @@
-package sttp.tapir.client.sttp4.streaming
+package sttp.tapir.client.sttp4.stream
 
 import sttp.capabilities.Streams
 import sttp.client4.{StreamBackend, StreamRequest}
@@ -6,7 +6,7 @@ import sttp.model.Uri
 import sttp.tapir.client.sttp4._
 import sttp.tapir.{DecodeResult, Endpoint, PublicEndpoint}
 
-trait StreamingSttpClientInterpreter {
+trait StreamSttpClientInterpreter {
   def sttpClientOptions: SttpClientOptions = SttpClientOptions.default
 
   // public
@@ -71,7 +71,7 @@ trait StreamingSttpClientInterpreter {
       e: PublicEndpoint[I, E, O, S],
       baseUri: Option[Uri]
   )(implicit ev: StreamsNotWebSockets[S]): I => StreamRequest[DecodeResult[Either[E, O]], S] = {
-    new StreamingEndpointToSttpClient().toSttpRequest(e, baseUri).apply(())
+    new StreamEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(())
   }
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -86,7 +86,7 @@ trait StreamingSttpClientInterpreter {
       e: PublicEndpoint[I, E, O, S],
       baseUri: Option[Uri]
   )(implicit ev: StreamsNotWebSockets[S]): I => StreamRequest[Either[E, O], S] =
-    i => new StreamingEndpointToSttpClient().toSttpRequest(e, baseUri).apply(()).apply(i).mapResponse(throwDecodeFailures)
+    i => new StreamEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(()).apply(i).mapResponse(throwDecodeFailures)
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -103,7 +103,7 @@ trait StreamingSttpClientInterpreter {
       ev: StreamsNotWebSockets[S]
   ): I => StreamRequest[O, S] =
     i =>
-      new StreamingEndpointToSttpClient()
+      new StreamEndpointToSttpClient(sttpClientOptions)
         .toSttpRequest(e, baseUri)
         .apply(())
         .apply(i)
@@ -177,7 +177,7 @@ trait StreamingSttpClientInterpreter {
       e: Endpoint[A, I, E, O, S],
       baseUri: Option[Uri]
   )(implicit ev: StreamsNotWebSockets[S]): A => I => StreamRequest[DecodeResult[Either[E, O]], S] =
-    new StreamingEndpointToSttpClient().toSttpRequest(e, baseUri)
+    new StreamEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri)
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -191,7 +191,7 @@ trait StreamingSttpClientInterpreter {
       e: Endpoint[A, I, E, O, S],
       baseUri: Option[Uri]
   )(implicit ev: StreamsNotWebSockets[S]): A => I => StreamRequest[Either[E, O], S] =
-    a => i => new StreamingEndpointToSttpClient().toSttpRequest(e, baseUri).apply(a).apply(i).mapResponse(throwDecodeFailures)
+    a => i => new StreamEndpointToSttpClient(sttpClientOptions).toSttpRequest(e, baseUri).apply(a).apply(i).mapResponse(throwDecodeFailures)
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -210,7 +210,7 @@ trait StreamingSttpClientInterpreter {
   )(implicit ev: StreamsNotWebSockets[S]): A => I => StreamRequest[O, S] =
     a =>
       i =>
-        new StreamingEndpointToSttpClient()
+        new StreamEndpointToSttpClient(sttpClientOptions)
           .toSttpRequest(e, baseUri)
           .apply(a)
           .apply(i)
@@ -222,9 +222,9 @@ trait StreamingSttpClientInterpreter {
           }
 }
 
-object StreamingSttpClientInterpreter {
-  def apply(clientOptions: SttpClientOptions = SttpClientOptions.default): StreamingSttpClientInterpreter = {
-    new StreamingSttpClientInterpreter {
+object StreamSttpClientInterpreter {
+  def apply(clientOptions: SttpClientOptions = SttpClientOptions.default): StreamSttpClientInterpreter = {
+    new StreamSttpClientInterpreter {
       override def sttpClientOptions: SttpClientOptions = clientOptions
     }
   }

@@ -1,4 +1,4 @@
-package sttp.tapir.client.sttp4.streaming
+package sttp.tapir.client.sttp4.stream
 
 import sttp.capabilities.Streams
 import sttp.client4._
@@ -7,34 +7,48 @@ import sttp.tapir._
 import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.client.sttp4.EndpointToSttpClientBase
 import sttp.tapir.internal._
+import sttp.tapir.client.sttp4.SttpClientOptions
 
-private[sttp] class StreamingEndpointToSttpClient[S <: Streams[S]](implicit ev: StreamsNotWebSockets[S]) extends EndpointToSttpClientBase {
+private[sttp] class StreamEndpointToSttpClient[S <: Streams[S]: StreamsNotWebSockets](clientOptions: SttpClientOptions)
+    extends EndpointToSttpClientBase {
   def toSttpRequest[A, E, O, I](
       e: Endpoint[A, I, E, O, S],
       baseUri: Option[Uri]
   ): A => I => StreamRequest[DecodeResult[Either[E, O]], S] = { aParams => iParams =>
-    val reqWithInput = prepareRequestWithInput(e, baseUri, aParams, iParams)
+    // this will have the body set, if it's NOT a stream
+    val (reqWithInput, streamBody) = prepareRequestWithInput(e, baseUri, aParams, iParams)
 
-    (bodyIsStream(e.input), bodyIsStream(e.output)) match {
-      case (Some(streamsIn), None) => // request body is a stream
+    (streamBody, bodyIsStream(e.output)) match {
+      case (Some((streamsIn, stream)), None) => // only request body is a stream
         reqWithInput
-          .streamBody(streamsIn)(iParams.asInstanceOf[streamsIn.BinaryStream])
-          .asInstanceOf[StreamRequest[DecodeResult[Either[E, O]], S]]
-      case (None, Some(streamsOut)) => // response is a stream
-        reqWithInput
+          .streamBody(streamsIn)(stream.asInstanceOf[streamsIn.BinaryStream])
           .response(
-            asStreamAlwaysUnsafe(streamsOut)
-              .mapWithMetadata(mapReqOutputWithMetadata(e, _, _, clientOutputParams))
+            fromMetadata(
+              outToResponseAs(e.errorOutput, clientOptions),
+              ConditionalResponseAs(_.isSuccess, outToResponseAs(e.output, clientOptions))
+            ).mapWithMetadata(mapReqOutputWithMetadata(e, _, _, clientOutputParams))
               .map(mapDecodeError(_, reqWithInput))
           )
           .asInstanceOf[StreamRequest[DecodeResult[Either[E, O]], S]]
-      case (Some(streamsIn), Some(streamsOut)) => { // both request body and response are streams
+      case (None, Some(streamsOut)) => // only response is a stream
         reqWithInput
-          .streamBody(streamsIn)(iParams.asInstanceOf[streamsIn.BinaryStream])
+          .response(
+            fromMetadata(
+              outToResponseAs(e.errorOutput, clientOptions),
+              ConditionalResponseAs(_.isSuccess, asStreamAlwaysUnsafe(streamsOut))
+            ).mapWithMetadata(mapReqOutputWithMetadata(e, _, _, clientOutputParams))
+              .map(mapDecodeError(_, reqWithInput))
+          )
+          .asInstanceOf[StreamRequest[DecodeResult[Either[E, O]], S]]
+      case (Some((streamsIn, stream)), Some(streamsOut)) => { // both request body and response are streams
+        reqWithInput
+          .streamBody(streamsIn)(stream.asInstanceOf[streamsIn.BinaryStream])
           .asInstanceOf[StreamRequest[Any, Any]]
           .response(
-            asStreamAlwaysUnsafe(streamsOut)
-              .mapWithMetadata(mapReqOutputWithMetadata(e, _, _, clientOutputParams))
+            fromMetadata(
+              outToResponseAs(e.errorOutput, clientOptions),
+              ConditionalResponseAs(_.isSuccess, asStreamAlwaysUnsafe(streamsOut))
+            ).mapWithMetadata(mapReqOutputWithMetadata(e, _, _, clientOutputParams))
               .map(mapDecodeError(_, reqWithInput))
           )
           .asInstanceOf[StreamRequest[DecodeResult[Either[E, O]], S]]

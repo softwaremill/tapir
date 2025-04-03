@@ -71,7 +71,7 @@ trait WebSocketSttpClientInterpreter {
   def toRequest[F[_], I, E, O, R <: Streams[_] with WebSockets](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
   ): I => WebSocketRequest[F, DecodeResult[Either[E, O]]] = {
-    new WebSocketEndpointToSttpClient(wsToPipe).toSttpRequest(e, baseUri).apply(())
+    new WebSocketEndpointToSttpClient(wsToPipe, sttpClientOptions).toSttpRequest(e, baseUri).apply(())
   }
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
@@ -85,7 +85,12 @@ trait WebSocketSttpClientInterpreter {
   def toRequestThrowDecodeFailures[F[_], I, E, O, R <: Streams[_] with WebSockets](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(
       implicit wsToPipe: WebSocketToPipe[R]
   ): I => WebSocketRequest[F, Either[E, O]] =
-    i => new WebSocketEndpointToSttpClient(wsToPipe).toSttpRequest(e, baseUri).apply(()).apply(i).mapResponse(throwDecodeFailures)
+    i =>
+      new WebSocketEndpointToSttpClient(wsToPipe, sttpClientOptions)
+        .toSttpRequest(e, baseUri)
+        .apply(())
+        .apply(i)
+        .mapResponse(throwDecodeFailures)
 
   /** Interprets the public endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -102,7 +107,7 @@ trait WebSocketSttpClientInterpreter {
       wsToPipe: WebSocketToPipe[R]
   ): I => WebSocketRequest[F, O] =
     i =>
-      new WebSocketEndpointToSttpClient(wsToPipe)
+      new WebSocketEndpointToSttpClient(wsToPipe, sttpClientOptions)
         .toSttpRequest(e, baseUri)
         .apply(())
         .apply(i)
@@ -181,7 +186,7 @@ trait WebSocketSttpClientInterpreter {
   def toSecureRequest[F[_], A, I, E, O, R <: Streams[_] with WebSockets](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
   ): A => I => WebSocketRequest[F, DecodeResult[Either[E, O]]] =
-    new WebSocketEndpointToSttpClient(wsToPipe).toSttpRequest(e, baseUri)
+    new WebSocketEndpointToSttpClient(wsToPipe, sttpClientOptions).toSttpRequest(e, baseUri)
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -197,7 +202,13 @@ trait WebSocketSttpClientInterpreter {
   )(implicit
       wsToPipe: WebSocketToPipe[R]
   ): A => I => WebSocketRequest[F, Either[E, O]] =
-    a => i => new WebSocketEndpointToSttpClient(wsToPipe).toSttpRequest(e, baseUri).apply(a).apply(i).mapResponse(throwDecodeFailures)
+    a =>
+      i =>
+        new WebSocketEndpointToSttpClient(wsToPipe, sttpClientOptions)
+          .toSttpRequest(e, baseUri)
+          .apply(a)
+          .apply(i)
+          .mapResponse(throwDecodeFailures)
 
   /** Interprets the secure endpoint as a client call, using the given `baseUri` as the starting point to create the target uri. If
     * `baseUri` is not provided, the request will be a relative one.
@@ -215,7 +226,7 @@ trait WebSocketSttpClientInterpreter {
   ): A => I => WebSocketRequest[F, O] =
     a =>
       i =>
-        new WebSocketEndpointToSttpClient(wsToPipe)
+        new WebSocketEndpointToSttpClient(wsToPipe, sttpClientOptions)
           .toSttpRequest(e, baseUri)
           .apply(a)
           .apply(i)

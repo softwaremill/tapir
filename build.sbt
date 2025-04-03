@@ -220,6 +220,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   http4sServer.projectRefs ++
   http4sServerZio.projectRefs ++
   sttpStubServer.projectRefs ++
+  sttpStub4Server.projectRefs ++
   sttpMockServer.projectRefs ++
   finatraServer.projectRefs ++
   finatraServerCats.projectRefs ++
@@ -1392,6 +1393,14 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore, sttpClient, tests % Test)
 
+lazy val sttpStub4Server: ProjectMatrix = (projectMatrix in file("server/sttp-stub4-server"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-sttp-stub4-server"
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore, sttpClient4, tests % Test)
+
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
   .settings(commonSettings)
   .settings(
@@ -2270,7 +2279,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     sttpClient,
     sttpClient4,
     sttpMockServer,
-    sttpStubServer,
+    sttpStub4Server,
     swaggerUiBundle,
     testing,
     tethysJson,
