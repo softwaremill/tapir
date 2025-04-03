@@ -2279,7 +2279,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     sttpClient,
     sttpClient4,
     sttpMockServer,
-    sttpStubServer,
+    sttpStub4Server,
     swaggerUiBundle,
     testing,
     tethysJson,
