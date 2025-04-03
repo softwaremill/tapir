@@ -79,7 +79,7 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
 
     test("web sockets, string client-terminated echo or error - error case") {
       send(errorOrWsEndpoint, port, (), true, "ws")
-        .map(_ shouldBe 'left)
+        .map(_ should matchPattern { case Left(_) => })
         .unsafeToFuture()
     }
 
