@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.implicits._
 import org.scalatest
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir.tests.Basic.{in_byte_array_out_byte_array, in_root_path}

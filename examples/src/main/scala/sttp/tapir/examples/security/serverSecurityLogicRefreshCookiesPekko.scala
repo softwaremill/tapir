@@ -2,7 +2,7 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
 //> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.security
 
@@ -10,8 +10,8 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Directives.concat
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3.*
-import sttp.shared.Identity
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
 import sttp.model.headers.CookieValueWithMeta
 import sttp.tapir.*
@@ -61,7 +61,7 @@ import scala.concurrent.{Await, Future}
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route)).map { binding =>
     // testing
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
 
     val response = basicRequest
       .response(asStringAlways)

@@ -147,9 +147,10 @@ import scala.concurrent.duration.Duration
   end swaggerUIServerEndpoints
 
   def makeClientRequest(): Unit =
-    import sttp.client3.*
-    import sttp.tapir.client.sttp.SttpClientInterpreter
-    val client = SttpClientInterpreter().toQuickClient(booksListing, Some(uri"http://$declaredHost:$declaredPort"))
+    import sttp.client4.quick.*
+    import sttp.tapir.client.sttp4.SttpClientInterpreter
+
+    val client = SttpClientInterpreter().toClientThrowDecodeFailures(booksListing, Some(uri"http://$declaredHost:$declaredPort"), backend)
 
     val result: Either[String, Vector[Book]] = client(Some(3))
     logger.info("Result of listing request with limit 3: " + result)
@@ -171,8 +172,6 @@ import scala.concurrent.duration.Duration
     )
 
   // Bind and start to accept incoming connections.
-  val port = serverBinding.port
-  val host = serverBinding.hostName
   println(s"Server started at port = ${serverBinding.port}")
 
   logger.info("Making a request to the listing endpoint ...")
@@ -180,5 +179,5 @@ import scala.concurrent.duration.Duration
 
   logger.info(s"Try out the API by opening the Swagger UI: http://$declaredHost:$declaredPort/docs")
   logger.info("Press ENTER to stop the server...")
-  scala.io.StdIn.readLine
+  val _ = scala.io.StdIn.readLine
   Await.result(serverBinding.stop(), Duration.Inf)

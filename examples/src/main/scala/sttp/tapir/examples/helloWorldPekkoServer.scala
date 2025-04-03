@@ -2,20 +2,20 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
 //> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3.*
-import sttp.shared.Identity
+import sttp.client4.*
 import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
+import sttp.client4.httpclient.HttpClientSyncBackend
 
 @main def helloWorldPekkoServer(): Unit =
   implicit val actorSystem: ActorSystem = ActorSystem()
@@ -33,7 +33,7 @@ import scala.concurrent.{Await, Future}
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(helloWorldRoute).map { binding =>
     // testing
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
     val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send(backend).body
     println("Got result: " + result)
 
@@ -42,4 +42,4 @@ import scala.concurrent.{Await, Future}
     binding
   }
 
-  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
+  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)

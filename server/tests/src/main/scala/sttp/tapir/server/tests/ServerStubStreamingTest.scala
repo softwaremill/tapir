@@ -4,12 +4,13 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
-import sttp.client3._
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.tapir.server.stub.TapirStubInterpreter
+import sttp.client4._
+import sttp.client4.testing.StreamBackendStub
+import sttp.tapir.client.sttp4.stream.StreamSttpClientInterpreter
+import sttp.tapir.server.stub4.TapirStreamStubInterpreter
 import sttp.tapir.tests.Streaming.in_stream_out_stream
 
-abstract class ServerStubStreamingTest[F[_], S, OPTIONS](
+abstract class ServerStubStreamingTest[F[_], S <: Streams[S], OPTIONS](
     createStubServerTest: CreateServerStubTest[F, OPTIONS],
     streams: Streams[S]
 ) extends AsyncFlatSpec
@@ -22,12 +23,13 @@ abstract class ServerStubStreamingTest[F[_], S, OPTIONS](
   override protected def afterAll(): Unit = createStubServerTest.cleanUp()
 
   it should "accept stream input and stub stream output" in {
-    val server: SttpBackend[F, S] = TapirStubInterpreter(createStubServerTest.customiseInterceptors, createStubServerTest.stub)
-      .whenEndpoint(in_stream_out_stream(streams))
-      .thenRespond(sampleStream.asInstanceOf[streams.BinaryStream])
-      .backend()
+    val server: StreamBackend[F, S] =
+      TapirStreamStubInterpreter(createStubServerTest.customiseInterceptors, StreamBackendStub[F, S](createStubServerTest.stub.monad))
+        .whenEndpoint(in_stream_out_stream(streams))
+        .thenRespond(sampleStream.asInstanceOf[streams.BinaryStream])
+        .backend()
 
-    val response = SttpClientInterpreter()
+    val response = StreamSttpClientInterpreter()
       .toRequestThrowDecodeFailures(in_stream_out_stream(streams), Some(uri"http://test.com"))
       .apply(sampleStream.asInstanceOf[streams.BinaryStream])
       .send(server)

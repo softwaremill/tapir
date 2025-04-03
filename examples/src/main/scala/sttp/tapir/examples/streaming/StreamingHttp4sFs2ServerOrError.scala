@@ -16,7 +16,6 @@ import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.ExecutionContext
 
 object StreamingHttp4sFs2ServerOrError extends IOApp:
   case object UnknownUser extends Exception

@@ -5,7 +5,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.11.17
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
 //> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
-//> using dep com.softwaremill.sttp.client3::pekko-http-backend:3.9.8
+//> using dep com.softwaremill.sttp.client4::pekko-http-backend:4.0.0-RC3
 
 package sttp.tapir.examples.websocket
 
@@ -18,8 +18,9 @@ import sttp.apispec.asyncapi.Server
 import sttp.apispec.asyncapi.circe.yaml.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.client3.*
-import sttp.client3.pekkohttp.PekkoHttpBackend
+import sttp.client4.*
+import sttp.client4.pekkohttp.PekkoHttpBackend
+import sttp.client4.ws.async.*
 import sttp.tapir.*
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.generic.auto.*
@@ -58,9 +59,10 @@ import scala.concurrent.{Await, Future}
     .bindFlow(wsRoute)
     .flatMap { binding =>
       // We could have interpreted wsEndpoint as a client, but here we are using sttp client directly
-      val backend: SttpBackend[Future, WebSockets] = PekkoHttpBackend.usingActorSystem(actorSystem)
+      val backend: WebSocketBackend[Future] = PekkoHttpBackend.usingActorSystem(actorSystem)
       // Client which interacts with the web socket
       basicRequest
+        .get(uri"ws://localhost:8080/ping")
         .response(asWebSocket { (ws: WebSocket[Future]) =>
           for {
             _ <- ws.sendText("world")
@@ -74,7 +76,6 @@ import scala.concurrent.{Await, Future}
             _ = println(r3)
           } yield ()
         })
-        .get(uri"ws://localhost:8080/ping")
         .send(backend)
         .map(_ => binding)
     }

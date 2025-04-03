@@ -31,7 +31,6 @@ import io.opentelemetry.sdk.resources.Resource
 
 import scala.concurrent.duration.*
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.NettyConfig
 
 import scala.io.StdIn
 

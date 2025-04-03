@@ -3,7 +3,7 @@ package sttp.tapir.server.ziohttp
 import cats.data.NonEmptyList
 import org.scalactic.source.Position.here
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.model.StatusCode
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.ztapir._

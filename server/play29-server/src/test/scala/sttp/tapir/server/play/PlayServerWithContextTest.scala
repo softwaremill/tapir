@@ -8,17 +8,17 @@ import org.scalatest.matchers.should.Matchers._
 import play.api.Mode
 import play.api.routing.Router
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
-import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client4._
+import sttp.client4.ws.async._
 import sttp.tapir._
 import sttp.tapir.tests.Test
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.concurrent.Future
 
-class PlayServerWithContextTest(backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets])(implicit _actorSystem: ActorSystem) {
+class PlayServerWithContextTest(backend: WebSocketStreamBackend[IO, Fs2Streams[IO]])(implicit _actorSystem: ActorSystem) {
   import _actorSystem.dispatcher
 
   def tests(): List[Test] = List(
@@ -53,6 +53,7 @@ class PlayServerWithContextTest(backend: SttpBackend[IO, Fs2Streams[IO] with Web
       }
       val s = components.server
       val r = basicRequest
+        .get(uri"ws://localhost:${s.mainAddress.getPort}/test/hello")
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
@@ -61,7 +62,6 @@ class PlayServerWithContextTest(backend: SttpBackend[IO, Fs2Streams[IO] with Web
             m3 <- ws.eitherClose(ws.receiveText())
           } yield List(m1, m3)
         })
-        .get(uri"ws://localhost:${s.mainAddress.getPort}/test/hello")
         .send(backend)
         .map(_.body shouldBe Right(List("world", Left(WebSocketFrame.Close(1000, "normal closure")))))
         .unsafeToFuture()

@@ -7,7 +7,7 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
-import sttp.client3._
+import sttp.client4._
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.integ.cats.effect.CatsMonadError
@@ -24,7 +24,7 @@ object AwsLambdaRuntimeInvocation {
   def handleNext[F[_]: Sync](
       route: Route[F],
       awsRuntimeApiHost: String,
-      backend: Resource[F, SttpBackend[F, Any]]
+      backend: Resource[F, Backend[F]]
   ): F[Either[Throwable, Unit]] = {
     implicit val monad: MonadError[F] = new CatsMonadError[F]
 

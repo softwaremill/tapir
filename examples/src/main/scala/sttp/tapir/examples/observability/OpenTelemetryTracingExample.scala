@@ -93,7 +93,7 @@ object OpenTelemetryTracingExample extends OxApp:
 
     logger.info(s"""Server started. Try it with: curl -X POST http://localhost:8080/person -d '{"name": "Jane"}'""")
     logger.info("Press ENTER key to exit.")
-    StdIn.readLine()
+    val _ = StdIn.readLine()
 
     logger.info("Exiting...")
     ExitCode.Success

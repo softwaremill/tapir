@@ -152,16 +152,16 @@ import sttp.tapir.generic.auto.*
     implicit val actorSystem: ActorSystem = ActorSystem()
     import actorSystem.dispatcher
     val routes = PekkoHttpServerInterpreter().toRoute(serverEndpoints)
-    Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
+    val _ = Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 
     logger.info("Server started")
   end startServer
 
   def makeClientRequest(): Unit =
-    import sttp.client3.*
-    import sttp.tapir.client.sttp.SttpClientInterpreter
+    import sttp.client4.quick.*
+    import sttp.tapir.client.sttp4.SttpClientInterpreter
 
-    val client = SttpClientInterpreter().toQuickClient(booksListing, Some(uri"http://localhost:8080"))
+    val client = SttpClientInterpreter().toClientThrowDecodeFailures(booksListing, Some(uri"http://localhost:8080"), backend)
 
     val result: Either[String, Vector[Book]] = client(Some(3))
 

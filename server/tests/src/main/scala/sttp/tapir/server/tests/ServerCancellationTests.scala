@@ -5,7 +5,7 @@ import cats.effect.kernel.Async
 import cats.effect.syntax.all._
 import cats.syntax.all._
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.tests._

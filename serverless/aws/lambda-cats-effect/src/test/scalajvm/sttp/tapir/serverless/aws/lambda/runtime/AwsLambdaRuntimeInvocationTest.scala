@@ -5,8 +5,8 @@ import cats.syntax.all._
 import cats.effect.unsafe.implicits.global
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.client3._
-import sttp.client3.testing.SttpBackendStub
+import sttp.client4._
+import sttp.client4.testing.BackendStub
 import sttp.model.{Header, StatusCode}
 import sttp.tapir._
 import sttp.tapir.integ.cats.effect.CatsMonadError
@@ -14,6 +14,7 @@ import sttp.tapir.serverless.aws.lambda.runtime.AwsLambdaRuntimeInvocationTest._
 import sttp.tapir.serverless.aws.lambda.{AwsCatsEffectServerInterpreter, AwsCatsEffectServerOptions, AwsServerOptions}
 
 import scala.collection.immutable.Seq
+import sttp.client4.testing.ResponseStub
 
 class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
@@ -28,9 +29,9 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
       IO.pure(().asRight[Unit])
     })
 
-    val backend = SttpBackendStub(monadError)
+    val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
-      .thenRespond(Response(awsRequest, StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214"))))
+      .thenRespondAdjust(ResponseStub(awsRequest, StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondOk()
 
@@ -46,7 +47,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
     // given
     val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp.serverLogic(_ => IO(().asRight[Unit])))
 
-    val backend = SttpBackendStub(monadError)
+    val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
       .thenRespondF(_ => throw new RuntimeException)
 
@@ -61,9 +62,9 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
     // given
     val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp.serverLogic(_ => IO(().asRight[Unit])))
 
-    val backend = SttpBackendStub(monadError)
+    val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
-      .thenRespond(Response("???", StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214"))))
+      .thenRespondAdjust(ResponseStub("???", StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondOk()
 
@@ -78,9 +79,9 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
     // given
     val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp.serverLogic(_ => IO(().asRight[Unit])))
 
-    val backend = SttpBackendStub(monadError)
+    val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
-      .thenRespond(Response(awsRequest, StatusCode.Ok))
+      .thenRespondAdjust(ResponseStub(awsRequest, StatusCode.Ok))
 
     // when
     val result = AwsLambdaRuntimeInvocation.handleNext(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
@@ -94,9 +95,9 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
     val route =
       AwsCatsEffectServerInterpreter(options).toRoute(testEp.serverLogic(_ => (throw new RuntimeException): IO[Either[Unit, Unit]]))
 
-    val backend = SttpBackendStub(monadError)
+    val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
-      .thenRespond(Response(awsRequest, StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214"))))
+      .thenRespondAdjust(ResponseStub(awsRequest, StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondOk()
 
@@ -111,9 +112,9 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
     // given
     val route = AwsCatsEffectServerInterpreter(options).toRoute(testEp.serverLogic(_ => IO(().asRight[Unit])))
 
-    val backend = SttpBackendStub(monadError)
+    val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
-      .thenRespond(Response(awsRequest, StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214"))))
+      .thenRespondAdjust(ResponseStub(awsRequest, StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondF(_ => throw new RuntimeException)
 

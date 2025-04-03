@@ -11,8 +11,8 @@ import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.client3._
-import sttp.client3.pekkohttp.PekkoHttpBackend
+import sttp.client4._
+import sttp.client4.pekkohttp.PekkoHttpBackend
 import sttp.model.sse.ServerSentEvent
 import sttp.model.Header
 import sttp.model.MediaType
@@ -74,8 +74,10 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
                   basicRequest
                     .get(uri"http://localhost:$port/sse")
                     .response(
-                      asStreamUnsafe(PekkoStreams).mapRight(stream =>
-                        PekkoServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                      asStreamUnsafe(PekkoStreams).map(errorOrStream =>
+                        errorOrStream.map(stream =>
+                          PekkoServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                        )
                       )
                     )
                     .send(PekkoHttpBackend.usingActorSystem(actorSystem))

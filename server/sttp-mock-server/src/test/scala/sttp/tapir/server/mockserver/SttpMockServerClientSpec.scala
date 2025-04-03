@@ -4,12 +4,13 @@ import org.mockserver.integration.ClientAndServer.startClientAndServer
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import sttp.client3.TryHttpURLConnectionBackend
+import sttp.client4.httpclient.HttpClientSyncBackend
+import sttp.client4.wrappers.TryBackend
 import sttp.model.StatusCode
 import sttp.model.Uri.UriContext
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir._
-import sttp.tapir.client.sttp.SttpClientInterpreter
+import sttp.tapir.client.sttp4.SttpClientInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe
 import sttp.tapir.server.mockserver.fixture._
@@ -22,7 +23,7 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
 
   private val baseUri = uri"http://localhost:1080"
 
-  private val backend = TryHttpURLConnectionBackend()
+  private val backend = TryBackend(HttpClientSyncBackend())
 
   private val mockServer = startClientAndServer(1080)
 

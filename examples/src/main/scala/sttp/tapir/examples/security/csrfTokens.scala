@@ -2,12 +2,13 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.10.2
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.security
 
 import ox.{supervised, useInScope}
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.model.headers.{CookieValueWithMeta, WWWAuthenticateChallenge}
 import sttp.shared.Identity
@@ -107,7 +108,7 @@ object SessionManager:
     println(s"Server started on http://${binding.hostName}:${binding.port}/hello?name=...!")
 
     // testing
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
 
     // login to create session
     val loginResponse = basicRequest
