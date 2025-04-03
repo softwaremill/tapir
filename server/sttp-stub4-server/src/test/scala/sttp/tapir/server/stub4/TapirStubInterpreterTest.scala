@@ -248,7 +248,7 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
         .out(stringBody)
 
     val server = TapirSyncStubInterpreter()
-      .whenServerEndpointRunLogic(e.serverLogic((multipartData) => {
+      .whenServerEndpointRunLogic(e.serverLogic[Identity]((multipartData) => {
         val partOpt = multipartData.find(_.name == "name")
         val fileOpt = multipartData.find(_.name == "file")
 
