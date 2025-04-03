@@ -9,21 +9,29 @@ import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.client.sttp4.{EndpointToSttpClientBase, WebSocketEndpointToSttpClientExtensions, WebSocketToPipe}
 import sttp.tapir.internal._
 import sttp.ws.WebSocket
+import sttp.tapir.client.sttp4.SttpClientOptions
 
-private[sttp] class WebSocketEndpointToSttpClient[R <: Streams[_] with WebSockets](wsToPipe: WebSocketToPipe[R])
-    extends EndpointToSttpClientBase
+private[sttp] class WebSocketEndpointToSttpClient[R <: Streams[_] with WebSockets](
+    wsToPipe: WebSocketToPipe[R],
+    clientOptions: SttpClientOptions
+) extends EndpointToSttpClientBase
     with WebSocketEndpointToSttpClientExtensions {
   def toSttpRequest[F[_], A, E, O, I](
       e: Endpoint[A, I, E, O, R],
       baseUri: Option[Uri]
   ): A => I => WebSocketRequest[F, DecodeResult[Either[E, O]]] = { aParams => iParams =>
-    val reqWithInput = prepareRequestWithInput(e, baseUri, aParams, iParams)
+    // there can't be a stream body here, as this is not a stream endpoint
+    val (reqWithInput, _) = prepareRequestWithInput(e, baseUri, aParams, iParams)
 
     if (bodyIsWebSocket(e.output)) {
       reqWithInput
         .response(
           async
-            .asWebSocketUnsafe[F]
+            .asWebSocketEither(
+              outToResponseAs(e.errorOutput, clientOptions),
+              async.asWebSocketAlwaysUnsafe[F]
+            )
+            .map(_.merge)
             .mapWithMetadata(mapReqOutputWithMetadata(e, _, _, clientOutputParams))
             .map(mapDecodeError(_, reqWithInput))
         )
@@ -45,14 +53,12 @@ private[sttp] class WebSocketEndpointToSttpClient[R <: Streams[_] with WebSocket
     override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] = {
       val streams = o.streams.asInstanceOf[wsToPipe.S]
 
-      val bodyEitherUnsafe =
-        body.asInstanceOf[Either[Any, Any]].getOrElse(throw new RuntimeException(s"WebSocketBody is of a wrong type! Body: $body"))
       o.codec
         .asInstanceOf[Codec[Any, _, CodecFormat]]
         .decode(
           wsToPipe
             .apply(streams)(
-              bodyEitherUnsafe.asInstanceOf[WebSocket[wsToPipe.F]],
+              body.asInstanceOf[WebSocket[wsToPipe.F]],
               o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
             )
         )

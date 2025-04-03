@@ -114,23 +114,7 @@ class HttpServer(port: HttpServer.Port) {
         case _   => BadRequest()
       }
 
-    case GET -> Root / "ws" / "echo" =>
-      val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
-        _.collect { case WebSocketFrame.Text(msg, _) =>
-          if (msg.contains("\"f\"")) {
-            WebSocketFrame.Text(msg.replace("\"f\":\"", "\"f\":\"echo: ")) // json echo
-          } else {
-            WebSocketFrame.Text("echo: " + msg) // string echo
-          }
-        }
-
-      Queue
-        .unbounded[IO, WebSocketFrame]
-        .flatMap { q =>
-          val d = Stream.repeatEval(q.take).through(echoReply)
-          val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
-          wsb.build(d, e)
-        }
+    case GET -> Root / "ws" / "echo" => wsEcho(wsb)
 
     case GET -> Root / "ws" / "echo" / "fragmented" =>
       val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
@@ -165,6 +149,9 @@ class HttpServer(port: HttpServer.Port) {
             .withHeaders(Headers(Header.Raw(CIString("Correlation-id"), "ABC-DEF-123")))
             .build(d, e)
         }
+
+    case GET -> Root / "ws" / "error-or-echo" :? errorParam(e) =>
+      if (e) BadRequest("error as requested") else wsEcho(wsb)
 
     case GET -> Root / "entity" / entityType =>
       if (entityType == "person") Created("""{"name":"mary","age":20}""")
@@ -204,6 +191,25 @@ class HttpServer(port: HttpServer.Port) {
         } else {
           Ok(body)
         }
+      }
+  }
+
+  private def wsEcho(wsb: WebSocketBuilder2[IO]) = {
+    val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
+      _.collect { case WebSocketFrame.Text(msg, _) =>
+        if (msg.contains("\"f\"")) {
+          WebSocketFrame.Text(msg.replace("\"f\":\"", "\"f\":\"echo: ")) // json echo
+        } else {
+          WebSocketFrame.Text("echo: " + msg) // string echo
+        }
+      }
+
+    Queue
+      .unbounded[IO, WebSocketFrame]
+      .flatMap { q =>
+        val d = Stream.repeatEval(q.take).through(echoReply)
+        val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
+        wsb.build(d, e)
       }
   }
 
