@@ -17,6 +17,10 @@ object TapirGeneratedEndpoints {
   }
 
 
+  sealed trait Basic_or_Bearer_SecurityIn
+  case class BasicSecurityIn(value: UsernamePassword) extends Basic_or_Bearer_SecurityIn
+  case class BearerSecurityIn(value: String) extends Basic_or_Bearer_SecurityIn
+
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -227,12 +231,23 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2"))(())))
 
-  type PutInlineSimpleObjectEndpoint = Endpoint[UsernamePassword, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
+  type PutInlineSimpleObjectEndpoint = Endpoint[Basic_or_Bearer_SecurityIn, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
       .put
       .in(("inline" / "simple" / "object"))
-      .securityIn(auth.basic[UsernamePassword]())
+      .securityIn(auth.basic[Option[UsernamePassword]]())
+      .securityIn(auth.bearer[Option[String]]())
+      .mapSecurityInDecode[Basic_or_Bearer_SecurityIn]{
+        case (Some(x), None) => DecodeResult.Value(BasicSecurityIn(x))
+        case (None, Some(x)) => DecodeResult.Value(BearerSecurityIn(x))
+        case other =>
+          val count = other.productIterator.count(_.isInstanceOf[Some[?]])
+          DecodeResult.Error(s"2 security inputs", new RuntimeException(s"Expected a single security input, found 2"))
+      }{
+        case BasicSecurityIn(x) => (Some(x), None)
+        case BearerSecurityIn(x) => (None, Some(x))
+      }
       .in(multipartBody[PutInlineSimpleObjectRequest])
       .errorOut(oneOf[Array[Byte]](
         oneOfVariant[Array[Byte]](sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position")),

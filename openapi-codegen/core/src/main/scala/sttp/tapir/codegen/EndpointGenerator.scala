@@ -53,7 +53,8 @@ case class GeneratedEndpoints(
     jsonParamRefs: Set[String],
     definesEnumQueryParam: Boolean,
     inlineDefns: Seq[String],
-    xmlParamRefs: Set[String]
+    xmlParamRefs: Set[String],
+    securityWrappers: Set[SecurityWrapperDefn]
 ) {
   def merge(that: GeneratedEndpoints): GeneratedEndpoints =
     GeneratedEndpoints(
@@ -65,7 +66,8 @@ case class GeneratedEndpoints(
       jsonParamRefs ++ that.jsonParamRefs,
       definesEnumQueryParam || that.definesEnumQueryParam,
       inlineDefns ++ that.inlineDefns,
-      xmlParamRefs ++ that.xmlParamRefs
+      xmlParamRefs ++ that.xmlParamRefs,
+      securityWrappers ++ that.securityWrappers
     )
 }
 case class EndpointDefs(
@@ -74,7 +76,17 @@ case class EndpointDefs(
     jsonParamRefs: Set[String],
     enumsDefinedOnEndpointParams: Boolean,
     inlineDefns: Seq[String],
-    xmlParamRefs: Set[String]
+    xmlParamRefs: Set[String],
+    securityWrappers: Set[SecurityWrapperDefn]
+)
+
+case class SecurityWrapperDefn(schemas: Set[String]) {
+  lazy val traitName = schemas.toSeq.sorted.mkString("_or_") + "_SecurityIn"
+}
+case class SecurityDefn(
+    inDecl: Option[String],
+    tpe: Option[String],
+    wrapperDefinitions: Option[SecurityWrapperDefn]
 )
 
 class EndpointGenerator {
@@ -111,12 +123,20 @@ class EndpointGenerator {
   ): EndpointDefs = {
     val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
-    val GeneratedEndpoints(endpointsByFile, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns, xmlParamRefs) =
+    val GeneratedEndpoints(
+      endpointsByFile,
+      queryOrPathParamRefs,
+      jsonParamRefs,
+      definesEnumQueryParam,
+      inlineDefns,
+      xmlParamRefs,
+      securityWrappers
+    ) =
       doc.paths
         .map(
           generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, xmlSerdeLib, streamingImplementation, doc)
         )
-        .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false, Nil, Set.empty))(_ merge _)
+        .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false, Nil, Set.empty, Set.empty))(_ merge _)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
       val definitions = ge
         .map { case GeneratedEndpoint(name, definition, maybeInlineDefns, types) =>
@@ -139,7 +159,7 @@ class EndpointGenerator {
           |$allEP
           |""".stripMargin
     }.toMap
-    EndpointDefs(endpointDecls, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns, xmlParamRefs)
+    EndpointDefs(endpointDecls, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns, xmlParamRefs, securityWrappers)
   }
 
   private[codegen] def generatedEndpoints(
@@ -172,7 +192,7 @@ class EndpointGenerator {
 
           val name = m.name(p.url)
           val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
-          val (securityDecl, securityTypes) = security(securitySchemes, m.security)
+          val SecurityDefn(securityDecl, securityTypes, securityWrappers) = security(securitySchemes, m.security)
           val (inParams, maybeLocalEnums, inTypes, inlineInDefns) =
             ins(
               m.resolvedParameters,
@@ -188,16 +208,16 @@ class EndpointGenerator {
             outs(m.responses.map(_.resolve(doc)), streamingImplementation, doc, targetScala3, name, jsonSerdeLib, xmlSerdeLib)
           val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
           val inlineDefn = combine(inlineInDefns, inlineDefns)
+          val sec = securityDecl.map(indent(2)(_) + "\n").getOrElse("")
           val definition =
             s"""|endpoint
-              |  .${m.methodType}
-              |  $pathDecl
-              |${indent(2)(securityDecl)}
-              |${indent(2)(inParams)}
-              |${indent(2)(outDecl)}
-              |${indent(2)(tags(m.tags))}
-              |$attributeString
-              |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
+                |  .${m.methodType}
+                |  $pathDecl
+                |$sec${indent(2)(inParams)}
+                |${indent(2)(outDecl)}
+                |${indent(2)(tags(m.tags))}
+                |$attributeString
+                |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
 
           val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
           val queryOrPathParamRefs = m.resolvedParameters
@@ -232,7 +252,7 @@ class EndpointGenerator {
           (
             (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums, allTypes)),
             (queryOrPathParamRefs, jsonParamRefs, xmlParamRefs),
-            (maybeLocalEnums.isDefined, inlineDefn)
+            (maybeLocalEnums.isDefined, inlineDefn, securityWrappers)
           )
         } catch {
           case e: NotImplementedError => throw e
@@ -245,14 +265,15 @@ class EndpointGenerator {
       .groupBy(_._1)
       .toSeq
       .map { case (maybeTargetFileName, defns) => GeneratedEndpointsForFile(maybeTargetFileName, defns.map(_._2)) }
-    val (definesParams, inlineDefns) = inlineParamInfo.unzip
+    val (definesParams, inlineDefns, securityWrappers) = inlineParamInfo.unzip3
     GeneratedEndpoints(
       namesAndParamsByFile,
       unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _),
       unflattenedJsonParamRefs.foldLeft(Set.empty[String])(_ ++ _),
       definesParams.contains(true),
       inlineDefns.flatten,
-      xmlParamRefs.flatten.toSet
+      xmlParamRefs.flatten.toSet,
+      securityWrappers.flatten.toSet
     )
   }
 
@@ -284,60 +305,106 @@ class EndpointGenerator {
 
   private def security(securitySchemes: Map[String, OpenapiSecuritySchemeType], security: Map[String, Seq[String]])(implicit
       location: Location
-  ) = {
+  ): SecurityDefn = {
 
     // Would be nice to do something to respect scopes here
-    val inner = security.flatMap { case (schemeName, _ /*scopes*/ ) =>
+    def inner(multi: Boolean = false) = security.flatMap { case (schemeName, _ /*scopes*/ ) =>
+      def wrap(s: String): String = if (multi) s"Option[$s]" else s
       securitySchemes.get(schemeName) match {
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeBearerType) =>
-          Seq("auth.bearer[String]()" -> "Bearer")
+          Seq((s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName))
 
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeBasicType) =>
-          Seq("auth.basic[UsernamePassword]()" -> "Basic")
+          Seq(("auth.basic[UsernamePassword]()", "Basic", schemeName))
 
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeApiKeyType(in, name)) =>
-          Seq(s"""auth.apiKey($in[String]("$name"))""" -> "ApiKey")
+          Seq((s"""auth.apiKey($in[${wrap("String")}]("$name"))""", "ApiKey", schemeName))
 
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeOAuth2Type(flows)) if flows.isEmpty => Nil
         case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeOAuth2Type(flows)) =>
           flows.map {
-            case (OAuth2FlowType.password, _) =>
-              "auth.bearer[String]()" -> "Bearer"
+            case (_, _) if multi              => (s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName)
+            case (OAuth2FlowType.password, _) => (s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName)
             case (OAuth2FlowType.`implicit`, f) =>
               val authUrl = f.authorizationUrl.getOrElse(bail("authorizationUrl required for implicit flow"))
               val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
-              s"""auth.oauth2.implicitFlow("$authUrl", $refreshUrl)""" -> "Bearer"
+              (s"""auth.oauth2.implicitFlow("$authUrl", $refreshUrl)""", "Bearer", schemeName)
             case (OAuth2FlowType.clientCredentials, f) =>
               val tokenUrl = f.tokenUrl.getOrElse(bail("tokenUrl required for clientCredentials flow"))
               val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
-              s"""auth.oauth2.clientCredentialsFlow("$tokenUrl", $refreshUrl)""" -> "Bearer"
+              (s"""auth.oauth2.clientCredentialsFlow("$tokenUrl", $refreshUrl)""", "Bearer", schemeName)
             case (OAuth2FlowType.authorizationCode, f) =>
               val authUrl = f.authorizationUrl.getOrElse(bail("authorizationUrl required for authorizationCode flow"))
               val tokenUrl = f.tokenUrl.getOrElse(bail("tokenUrl required for authorizationCode flow"))
               val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
-              s"""auth.oauth2.authorizationCodeFlow("$authUrl", "$tokenUrl", $refreshUrl)""" -> "Bearer"
+              (s"""auth.oauth2.authorizationCodeFlow("$authUrl", "$tokenUrl", $refreshUrl)""", "Bearer", schemeName)
           }
 
         case None =>
           bail(s"Unknown security scheme $schemeName!")
       }
     }.toList
-    inner.distinct match {
-      case Nil                 => "" -> None
-      case (h, "Basic") +: Nil => s".securityIn($h)" -> Some("UsernamePassword")
-      case (h, _) +: Nil       => s".securityIn($h)" -> Some("String")
+    inner().distinct match {
+      case Nil                    => SecurityDefn(None, None, None)
+      case (h, "Basic", _) +: Nil => SecurityDefn(Some(s".securityIn($h)"), Some("UsernamePassword"), None)
+      case (h, _, _) +: Nil       => SecurityDefn(Some(s".securityIn($h)"), Some("String"), None)
       case s =>
+        def handleMultiple = {
+          val optionally = inner(true).distinct.groupBy(_._2)
+          val namesAndImpls = optionally.toList.sortBy(_._1).flatMap {
+            case ("Bearer", _)  => Seq("Bearer" -> s".securityIn(auth.bearer[Option[String]]())")
+            case ("Basic", _)   => Seq("Basic" -> s".securityIn(auth.basic[Option[UsernamePassword]]())")
+            case ("ApiKey", vs) => vs.map { case (impl, _, name) => name -> s".securityIn($impl)" }.sortBy(_._1)
+          }
+          /*
+          sealed trait Basic_or_Bearer_SecurityIn
+          case class BasicSecurityIn(up: UsernamePassword) extends Basic_or_Bearer_SecurityIn
+          case class BearerSecurityIn(t: String) extends Basic_or_Bearer_SecurityIn
+          ...
+          .securityIn(auth.basic[Option[UsernamePassword]]())
+          .securityIn(auth.bearer[Option[String]]())
+          .mapSecurityInDecode[Basic_or_Bearer_SecurityIn]{
+            case (Some(x), None) => DecodeResult.Value(BasicSecurityIn(x))
+            case (None, Some(x)) => DecodeResult.Value(BearerSecurityIn(x))
+            case other =>
+             val count = other.productIterator.count(_.isInstanceOf[Some[?]])
+             DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
+          }{
+            case BasicSecurityIn(x) => (Some(x), None)
+            case BearerSecurityIn(x) => (None, Some(x))
+          }
+           * */
+          val impls = namesAndImpls.map(_._2).mkString("\n")
+          val traitName = namesAndImpls.map(_._1).mkString("_or_") + "_SecurityIn"
+          val count = namesAndImpls.size
+          def someAt(idx: Int) = (0 to count - 1)
+            .map { case `idx` => "Some(x)"; case _ => "None" }
+            .mkString("(", ", ", ")")
+          val mapDecodes = namesAndImpls.zipWithIndex.map { case ((name, _), idx) =>
+            s"case ${someAt(idx)} => DecodeResult.Value(${name.capitalize}SecurityIn(x))"
+          }
+          val mapEncodes = namesAndImpls.zipWithIndex.map { case ((name, _), idx) =>
+            s"case ${name.capitalize}SecurityIn(x) => ${someAt(idx)}"
+          }
+          val mapImpl =
+            s""".mapSecurityInDecode[$traitName]{
+               |${indent(2)(mapDecodes.mkString("\n"))}
+               |  case other =>
+               |    val count = other.productIterator.count(_.isInstanceOf[Some[?]])
+               |    DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
+               |}{
+               |${indent(2)(mapEncodes.mkString("\n"))}
+               |}""".stripMargin
+          SecurityDefn(Some(s"$impls\n$mapImpl"), Some(traitName), Some(SecurityWrapperDefn(namesAndImpls.map(_._1).toSet)))
+        }
         s.map(_._2).distinct match {
           case h +: Nil =>
             h match {
-              case "Bearer" => ".securityIn(auth.bearer[String]())" -> Some("String")
-              case "Basic"  => ".securityIn(auth.basic[UsernamePassword]())" -> Some("UsernamePassword")
-              case "ApiKey" => bail("Cannot support multiple api key authentication declarations on same endpoint")
+              case "Bearer" => SecurityDefn(Some(".securityIn(auth.bearer[String]())"), Some("String"), None)
+              case "Basic"  => SecurityDefn(Some(".securityIn(auth.basic[UsernamePassword]())"), Some("UsernamePassword"), None)
+              case _        => handleMultiple
             }
-          case _ =>
-            bail(
-              "can only support multiple security declarations on the same endpoint when they resolve to the same input type (e.g. bearer auth header)"
-            )
+          case _ => handleMultiple
         }
     }
   }
