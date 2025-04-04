@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-client4" % "1.11.21"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-client4" % "1.11.22"
 ```
 
 To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
@@ -69,10 +69,10 @@ A => I => F[DecodeResult[Either[E, O]]]
 To interpret a streaming endpoint, you'll need to use a different import:
 
 ```scala
-import sttp.tapir.client.sttp4.streaming.StreamingSttpClientInterpreter
+import sttp.tapir.client.sttp4.stream.StreamSttpClientInterpreter
 ```
 
-The `StreamingSttpClientInterpreter` contains method analogous to the ones in the "basic" `SttpClientInterpreter`.
+The `StreamSttpClientInterpreter` contains method analogous to the ones in the "basic" `SttpClientInterpreter`.
 The difference is that the streaming interpreter works only for endpoints, which require the streaming capability:
 that is, their `R` type parameter must be a subtype of `sttp.capabilities.Streams[_]`. Moreover, the result type
 the request-creating methods is a `StreamRequest`, instead of a `Request`.
@@ -124,7 +124,7 @@ In this case add the following dependencies (note the [`%%%`](https://www.scala-
 instead of the usual `%%`):
 
 ```scala
-"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client4" % "1.11.21"
+"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client4" % "1.11.22"
 "io.github.cquiroz" %%% "scala-java-time" % "2.2.0" // implementations of java.time classes for Scala.JS
 ```
 

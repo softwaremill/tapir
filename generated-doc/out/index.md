@@ -106,10 +106,10 @@ val booksListingRoute: Route = PekkoHttpServerInterpreter()
 
 // Convert to sttp Request
 
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3.*
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] =
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]]] =
   SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
