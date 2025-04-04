@@ -1,7 +1,7 @@
 package sttp.tapir.server.finatra.cats
 
 import cats.effect.{IO, Resource}
-import sttp.client3.impl.cats.CatsMonadAsyncError
+import sttp.client4.impl.cats.CatsMonadAsyncError
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 

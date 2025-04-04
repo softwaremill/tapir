@@ -30,7 +30,11 @@ abstract class ServerStubStreamingTest[F[_], S <: Streams[S], OPTIONS](
         .backend()
 
     val response = StreamSttpClientInterpreter()
-      .toRequestThrowDecodeFailures(in_stream_out_stream(streams), Some(uri"http://test.com"))
+      // for an unknown reason, explicit type parameters are required in Scala3, otherwise there's a compiler error
+      .toRequestThrowDecodeFailures[streams.BinaryStream, Unit, streams.BinaryStream, S](
+        in_stream_out_stream(streams),
+        Some(uri"http://test.com")
+      )
       .apply(sampleStream.asInstanceOf[streams.BinaryStream])
       .send(server)
 
