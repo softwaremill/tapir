@@ -324,14 +324,15 @@ class EndpointGenerator {
       }
     }.toList
     inner.distinct match {
-      case Nil           => "" -> None
-      case (h, _) +: Nil => s".securityIn($h)" -> Some("String")
+      case Nil                                               => "" -> None
+      case (h, _) +: Nil if h.contains("[UsernamePassword]") => s".securityIn($h)" -> Some("UsernamePassword")
+      case (h, _) +: Nil                                     => s".securityIn($h)" -> Some("String")
       case s =>
         s.map(_._2).distinct match {
           case h +: Nil =>
             h match {
               case "Bearer" => ".securityIn(auth.bearer[String]())" -> Some("String")
-              case "Basic"  => ".securityIn(auth.basic[UsernamePassword]())" -> Some("String")
+              case "Basic"  => ".securityIn(auth.basic[UsernamePassword]())" -> Some("UsernamePassword")
               case "ApiKey" => bail("Cannot support multiple api key authentication declarations on same endpoint")
             }
           case _ =>
