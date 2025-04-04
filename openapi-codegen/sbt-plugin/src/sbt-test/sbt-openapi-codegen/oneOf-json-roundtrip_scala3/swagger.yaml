@@ -5,7 +5,7 @@ info:
   description: File for testing json roundtripping of oneOf defns in scala 3 with circe
   version: 1.0.20-SNAPSHOT
   title: OneOf Json test for scala 3
-tags: []
+tags: [ ]
 paths:
   '/adt/test':
     post:
@@ -146,6 +146,8 @@ paths:
                   type: string
                   format: uuid
     put:
+      security:
+        - basic: [ ]
       requestBody:
         content:
           multipart/form-data:
@@ -363,3 +365,7 @@ components:
       type: array
       items:
         type: string
+  securitySchemes:
+    basic:
+      type: http
+      scheme: basic
