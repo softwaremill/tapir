@@ -324,9 +324,9 @@ class EndpointGenerator {
       }
     }.toList
     inner.distinct match {
-      case Nil                                               => "" -> None
-      case (h, _) +: Nil if h.contains("[UsernamePassword]") => s".securityIn($h)" -> Some("UsernamePassword")
-      case (h, _) +: Nil                                     => s".securityIn($h)" -> Some("String")
+      case Nil                 => "" -> None
+      case (h, "Basic") +: Nil => s".securityIn($h)" -> Some("UsernamePassword")
+      case (h, _) +: Nil       => s".securityIn($h)" -> Some("String")
       case s =>
         s.map(_._2).distinct match {
           case h +: Nil =>
