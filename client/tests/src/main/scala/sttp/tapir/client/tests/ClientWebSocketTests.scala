@@ -62,6 +62,30 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
         .unsafeToFuture()
     }
 
+    val errorOrWsEndpoint = endpoint.get
+      .in(query[Boolean]("error"))
+      .in("ws" / "error-or-echo")
+      .errorOut(stringBody)
+      .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain].apply(streams))
+
+    test("web sockets, string client-terminated echo or error - success case") {
+      send(errorOrWsEndpoint, port, (), false, "ws")
+        .flatMap { r =>
+          sendAndReceiveLimited(r.toOption.get, 2, List("test1", "test2"))
+        }
+        .map(_ shouldBe List("echo: test1", "echo: test2"))
+        .unsafeToFuture()
+    }
+
+    // on JS, an erroring WS throws an exception
+    if (!platformIsScalaJS) {
+      test("web sockets, string client-terminated echo or error - error case") {
+        send(errorOrWsEndpoint, port, (), true, "ws")
+          .map(_ should matchPattern { case Left(_) => })
+          .unsafeToFuture()
+      }
+    }
+
     // TODO: tests for ping/pong (control frames handling)
   }
 }

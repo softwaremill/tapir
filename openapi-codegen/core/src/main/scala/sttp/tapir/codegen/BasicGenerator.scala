@@ -192,7 +192,8 @@ object BasicGenerator {
     val customTypes = doc.paths
       .flatMap(
         _.methods.flatMap(m =>
-          m.requestBody.toSeq.flatMap(_.content.map(_.contentType)) ++ m.responses.flatMap(_.content.map(_.contentType))
+          m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(_.contentType)) ++
+            m.responses.flatMap(_.resolve(doc).content.map(_.contentType))
         )
       )
       .distinct

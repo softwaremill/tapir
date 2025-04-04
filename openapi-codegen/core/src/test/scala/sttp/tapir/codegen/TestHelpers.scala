@@ -177,13 +177,13 @@ object TestHelpers {
               Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "",
                 Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
               ),
-              OpenapiResponse("401", "unauthorized", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))),
-              OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
+              OpenapiResponseDef("401", "unauthorized", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))),
+              OpenapiResponseDef("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
             ),
             requestBody = None,
             summary = None,
@@ -194,7 +194,7 @@ object TestHelpers {
             methodType = "put",
             parameters = Nil,
             responses = Seq(
-              OpenapiResponse("200", "returns some html", Seq(OpenapiResponseContent("text/html", OpenapiSchemaString(false))))
+              OpenapiResponseDef("200", "returns some html", Seq(OpenapiResponseContent("text/html", OpenapiSchemaString(false))))
             ),
             requestBody = None,
             summary = None,
@@ -211,14 +211,14 @@ object TestHelpers {
               Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "",
                 Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
               )
             ),
             requestBody = Option(
-              OpenapiRequestBody(
+              OpenapiRequestBodyDefn(
                 required = true,
                 content = Seq(
                   OpenapiRequestBodyContent(
@@ -237,8 +237,8 @@ object TestHelpers {
             methodType = "delete",
             parameters = Nil,
             responses = Seq(
-              OpenapiResponse("200", "deletion was successful", Nil),
-              OpenapiResponse("default", "deletion failed", Nil)
+              OpenapiResponseDef("200", "deletion was successful", Nil),
+              OpenapiResponseDef("default", "deletion failed", Nil)
             ),
             requestBody = None,
             summary = None,
@@ -346,12 +346,12 @@ object TestHelpers {
               Resolved(OpenapiParameter("name", "query", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "",
                 Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
               ),
-              OpenapiResponse(
+              OpenapiResponseDef(
                 code = "400",
                 description = "Invalid value for: query parameter name",
                 content = Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
@@ -371,7 +371,7 @@ object TestHelpers {
             methodType = "get",
             parameters = Seq(),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 code = "200",
                 description = "",
                 content =
@@ -447,12 +447,12 @@ object TestHelpers {
               Resolved(OpenapiParameter("name", "path", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "",
                 Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
               ),
-              OpenapiResponse(
+              OpenapiResponseDef(
                 code = "400",
                 description = "Invalid value for: query parameter name",
                 content = Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
@@ -741,7 +741,7 @@ object TestHelpers {
             "post",
             List(),
             List(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "Bar",
                 List(
@@ -753,7 +753,7 @@ object TestHelpers {
               )
             ),
             Some(
-              OpenapiRequestBody(
+              OpenapiRequestBodyDefn(
                 true,
                 Some("Foo"),
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithDefaults")))
@@ -1039,14 +1039,14 @@ object TestHelpers {
             "post",
             List(),
             List(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "Bar",
                 List(OpenapiResponseContent("application/json", OpenapiSchemaString(false)))
               )
             ),
             Some(
-              OpenapiRequestBody(
+              OpenapiRequestBodyDefn(
                 true,
                 Some("Foo"),
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithVariants")))

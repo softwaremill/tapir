@@ -220,6 +220,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   http4sServer.projectRefs ++
   http4sServerZio.projectRefs ++
   sttpStubServer.projectRefs ++
+  sttpStub4Server.projectRefs ++
   sttpMockServer.projectRefs ++
   finatraServer.projectRefs ++
   finatraServerCats.projectRefs ++
@@ -246,6 +247,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   clientCore.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
+  sttpClient4.projectRefs ++
   playClient.projectRefs ++
   play29Client.projectRefs ++
   tests.projectRefs ++
@@ -1391,6 +1393,14 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore, sttpClient, tests % Test)
 
+lazy val sttpStub4Server: ProjectMatrix = (projectMatrix in file("server/sttp-stub4-server"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-sttp-stub4-server"
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore, sttpClient4, tests % Test)
+
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
   .settings(commonSettings)
   .settings(
@@ -2001,6 +2011,54 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   )
   .dependsOn(clientCore, clientTests % Test)
 
+lazy val sttpClient4: ProjectMatrix = (projectMatrix in file("client/sttp-client4"))
+  .settings(commonSettings)
+  .settings(clientTestServerSettings)
+  .settings(
+    name := "tapir-sttp-client4",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client4" %%% "core" % Versions.sttp4
+    )
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "com.softwaremill.sttp.client4" %% "fs2" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.client4" %% "zio" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.client4" %% "pekko-http-backend" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared % Optional,
+        "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams % Optional
+      ),
+      libraryDependencies ++= {
+        CrossVersion.partialVersion(scalaVersion.value) match {
+          case Some((3, _)) => Nil
+          case _ =>
+            Seq(
+              "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
+              "com.softwaremill.sttp.client4" %% "akka-http-backend" % Versions.sttp4 % Test,
+              "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+            )
+        }
+      }
+    )
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
+        "com.softwaremill.sttp.client4" %%% "fs2" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.client4" %%% "zio" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %%% "zio" % Versions.sttpShared % Optional
+      )
+    )
+  )
+  .dependsOn(clientCore, clientTests % Test)
+
 lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"))
   .settings(clientTestServerSettings)
   .settings(commonSettings)
@@ -2046,7 +2104,7 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
-      "com.beachape" %% "enumeratum" % "1.7.5" % Test,
+      "com.beachape" %% "enumeratum" % "1.7.6" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.7.5" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.28.2" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.28.2" % Provided
@@ -2219,8 +2277,9 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     prometheusMetrics,
     sprayJson,
     sttpClient,
+    sttpClient4,
     sttpMockServer,
-    sttpStubServer,
+    sttpStub4Server,
     swaggerUiBundle,
     testing,
     tethysJson,

@@ -2,7 +2,7 @@ package sttp.tapir.codegen.openapi.models
 
 import cats.implicits.toTraverseOps
 import cats.syntax.either._
-import OpenapiSchemaType.OpenapiSchemaRef
+import OpenapiSchemaType.{OpenapiSchemaRef, OpenapiSchemaRefDecoder, OpenapiSchemaSimpleType}
 import io.circe.Json
 import sttp.tapir.codegen.BasicGenerator.strippedToCamelCase
 import sttp.tapir.codegen.util.MapUtils
@@ -81,17 +81,78 @@ object OpenapiModels {
     def isExploded: Boolean = in != "header" && !explode.contains(false)
   }
 
-  case class OpenapiResponse(
+  sealed trait OpenapiHeader {
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef
+  }
+  object OpenapiHeader {
+    import io.circe._
+    implicit val OpenapiHeaderDecoder: Decoder[OpenapiHeader] =
+      OpenapiSchemaRefDecoder
+        .map(OpenapiHeaderRef(_))
+        .or((c: HCursor) => {
+          OpenapiParameterDecoder
+            .tryDecode(c.withFocus(_.mapObject(("name" -> Json.fromString("inline")) +: ("in" -> Json.fromString("header")) +: _)))
+            .map(OpenapiHeaderDef(_))
+        })
+  }
+  case class OpenapiHeaderDef(param: OpenapiParameter) extends OpenapiHeader {
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef =
+      if (name == param.name) this else OpenapiHeaderDef(param.copy(name = name))
+  }
+  case class OpenapiHeaderRef($ref: OpenapiSchemaRef) extends OpenapiHeader {
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef = {
+      doc.components
+        .flatMap(_.parameters.get($ref.name))
+        .map(b => if (b.in != "header") throw new IllegalStateException(s"Referenced parameter ${$ref.name} is not header") else b)
+        .map(b => OpenapiHeaderDef(b.copy(name = name)))
+        .getOrElse(throw new IllegalStateException(s"Response component ${$ref.name} is referenced but not found"))
+    }
+  }
+
+  sealed trait OpenapiResponse {
+    def code: String
+    def resolve(doc: OpenapiDocument): OpenapiResponseDef
+  }
+  case class OpenapiResponseDef(
       code: String,
       description: String,
-      content: Seq[OpenapiResponseContent]
-  )
+      content: Seq[OpenapiResponseContent],
+      headers: Map[String, OpenapiHeader] = Map.empty
+  ) extends OpenapiResponse {
+    def resolve(doc: OpenapiDocument): OpenapiResponseDef = this
+  }
+  case class OpenapiResponseRef(
+      code: String,
+      $ref: OpenapiSchemaRef
+  ) extends OpenapiResponse {
+    def strippedRef: String = $ref.name.stripPrefix("#/components/responses/")
+    def resolve(doc: OpenapiDocument): OpenapiResponseDef =
+      doc.components
+        .flatMap(_.responses.get(strippedRef))
+        .map(b => OpenapiResponseDef(code, b.description, b.content, b.headers))
+        .getOrElse(throw new IllegalStateException(s"Response component ${$ref.name} is referenced but not found"))
+  }
 
-  case class OpenapiRequestBody(
+  sealed trait OpenapiRequestBody {
+    def resolve(doc: OpenapiDocument): OpenapiRequestBodyDefn
+  }
+  case class OpenapiRequestBodyDefn(
       required: Boolean,
       description: Option[String],
       content: Seq[OpenapiRequestBodyContent]
-  )
+  ) extends OpenapiRequestBody {
+    def resolve(doc: OpenapiDocument): OpenapiRequestBodyDefn = this
+  }
+  case class OpenapiRequestRef(
+      $ref: OpenapiSchemaRef
+  ) extends OpenapiRequestBody {
+    def strippedRef: String = $ref.name.stripPrefix("#/components/requestBodies/")
+    def resolve(doc: OpenapiDocument): OpenapiRequestBodyDefn =
+      doc.components
+        .flatMap(_.requestBodies.get(strippedRef))
+        .map(b => OpenapiRequestBodyDefn(b.required, Some(b.description), b.content))
+        .getOrElse(throw new IllegalStateException(s"requestBody component ${$ref.name} is referenced but not found"))
+  }
 
   case class OpenapiResponseContent(
       contentType: String,
@@ -127,19 +188,28 @@ object OpenapiModels {
   }
 
   implicit val OpenapiResponseDecoder: Decoder[Seq[OpenapiResponse]] = { (c: HCursor) =>
-    implicit val InnerDecoder: Decoder[(String, Option[Seq[OpenapiResponseContent]])] = { (c: HCursor) =>
+    implicit val InnerDecoder: Decoder[(String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])] = { (c: HCursor) =>
       for {
         description <- c.downField("description").as[String]
         content <- c.downField("content").as[Option[Seq[OpenapiResponseContent]]]
+        headers <- c.getOrElse[Map[String, OpenapiHeader]]("headers")(Map.empty)
       } yield {
-        (description, content)
+        (description, content, headers)
       }
     }
+    implicit val EitherDecoder
+        : Decoder[Either[OpenapiSchemaRef, (String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])]] =
+      InnerDecoder.map(Right(_)).or(OpenapiSchemaRefDecoder.map(Left(_)))
+
     for {
-      schema <- c.as[Map[String, (String, Option[Seq[OpenapiResponseContent]])]]
+      schema <- c
+        .as[Map[String, Either[OpenapiSchemaRef, (String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])]]]
     } yield {
-      schema.map { case (code, (desc, content)) =>
-        OpenapiResponse(code, desc, content.getOrElse(Nil))
+      schema.map {
+        case (code, Right((desc, content, headers))) =>
+          OpenapiResponseDef(code, desc, content.getOrElse(Nil), headers)
+        case (code, Left(ref)) =>
+          OpenapiResponseRef(code, ref)
       }.toSeq
     }
   }
@@ -154,21 +224,23 @@ object OpenapiModels {
       }
     }
     for {
-      responses <- c.as[Map[String, Holder]]
+      requestBodies <- c.as[Map[String, Holder]]
     } yield {
-      responses.map { case (ct, s) => OpenapiRequestBodyContent(ct, s.d) }.toSeq
+      requestBodies.map { case (ct, s) => OpenapiRequestBodyContent(ct, s.d) }.toSeq
     }
   }
 
-  implicit val OpenapiRequestBodyDecoder: Decoder[OpenapiRequestBody] = { (c: HCursor) =>
+  implicit val OpenapiRequestBodyDefnDecoder: Decoder[OpenapiRequestBodyDefn] = { (c: HCursor) =>
     for {
       requiredOpt <- c.downField("required").as[Option[Boolean]]
       description <- c.downField("description").as[Option[String]]
       content <- c.downField("content").as[Seq[OpenapiRequestBodyContent]]
     } yield {
-      OpenapiRequestBody(required = requiredOpt.getOrElse(false), description, content)
+      OpenapiRequestBodyDefn(required = requiredOpt.getOrElse(false), description, content)
     }
   }
+  implicit val OpenapiRequestBodyDecoder: Decoder[OpenapiRequestBody] =
+    OpenapiRequestBodyDefnDecoder.or(OpenapiSchemaRefDecoder.map(OpenapiRequestRef(_)))
 
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]

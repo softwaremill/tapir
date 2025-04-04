@@ -212,6 +212,7 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
    :caption: Client interpreters
 
    client/sttp
+   client/sttp4
    client/play
    client/http4s
 

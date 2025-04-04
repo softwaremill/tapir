@@ -48,6 +48,19 @@ object Streaming {
       )
   }
 
+  def in_string_stream_out_either_error_stream[S](
+      s: Streams[S]
+  ): PublicEndpoint[(Boolean, s.BinaryStream), String, s.BinaryStream, S] = {
+    val sb = streamTextBody(s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+
+    endpoint.post
+      .in("api" / "error_or_echo")
+      .in(query[Boolean]("error"))
+      .in(sb)
+      .errorOut(stringBody)
+      .out(sb)
+  }
+
   def in_stream_out_either_json_xml_stream[S](
       s: Streams[S]
   ): PublicEndpoint[s.BinaryStream, Unit, s.BinaryStream, S] = {
@@ -58,5 +71,18 @@ object Streaming {
       .out(
         oneOfBody(textStream(CodecFormat.Json()).toEndpointIO, textStream(CodecFormat.Xml()).toEndpointIO)
       )
+  }
+
+  def in_string_out_stream_and_header[S](
+      s: Streams[S]
+  ): PublicEndpoint[(String, String), Unit, (String, s.BinaryStream), S] = {
+    val sb = streamTextBody(s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+
+    endpoint.post
+      .in("api" / "echo" / "param-to-header")
+      .in(query[String]("qq"))
+      .in(stringBody)
+      .out(header[String]("hh"))
+      .out(sb)
   }
 }
