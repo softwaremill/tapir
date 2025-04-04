@@ -46,13 +46,13 @@ object AwsLambdaRuntimeInvocation {
               monad.error[RequestEvent](new RuntimeException(s"Missing lambda-runtime-aws-request-id header in request event $response"))
           }
         }
-        .handleError { case e => monad.error(new RuntimeException(s"Failed to fetch request event, ${e.getMessage}")) }
+        .handleError { case e => monad.error(new RuntimeException(s"Failed to fetch request event, ${e.getMessage}", e)) }
     }
 
     val decodeEvent: RequestEvent => F[AwsRequest] = event => {
       decode[AwsRequest](event.body) match {
         case Right(awsRequest) => awsRequest.unit
-        case Left(e)           => monad.error(new RuntimeException(s"Failed to decode request event ${event.requestId}, ${e.getMessage}"))
+        case Left(e) => monad.error(new RuntimeException(s"Failed to decode request event ${event.requestId}, ${e.getMessage}", e))
       }
     }
 

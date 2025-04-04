@@ -31,7 +31,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
     val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
-      .thenRespondAdjust(ResponseStub(awsRequest, StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
+      .thenRespond(ResponseStub.adjust(awsRequest, StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondOk()
 
@@ -64,7 +64,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
     val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
-      .thenRespondAdjust(ResponseStub("???", StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
+      .thenRespond(ResponseStub.adjust("???", StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondOk()
 
@@ -97,7 +97,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
     val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
-      .thenRespondAdjust(ResponseStub(awsRequest, StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
+      .thenRespond(ResponseStub.adjust(awsRequest, StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondOk()
 
@@ -114,7 +114,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 
     val backend = BackendStub(monadError)
       .whenRequestMatches(_.uri == nextInvocationUri)
-      .thenRespondAdjust(ResponseStub(awsRequest, StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
+      .thenRespond(ResponseStub.adjust(awsRequest, StatusCode.Ok, Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondF(_ => throw new RuntimeException)
 
