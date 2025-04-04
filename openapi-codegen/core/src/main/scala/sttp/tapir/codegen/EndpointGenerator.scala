@@ -816,7 +816,7 @@ class EndpointGenerator {
             .map { case (k, vs) => k -> vs.map(_._2) }
             .toMap
           val traitName = s"${endpointName.capitalize}Body${if (isErrorPosition) "Err" else "Out"}"
-          val mappable = Set("application/json", "application/xml")
+          val mappable = Set("application/json", "application/xml", "multipart/form-data")
           val allElemTypes = many
             .flatMap(y =>
               y.content.map(x =>
@@ -824,13 +824,14 @@ class EndpointGenerator {
               )
             )
             .map {
-              case (_, _, true)                                          => traitName
-              case (ct, _, _) if ct.startsWith("text/")                  => "String"
-              case ("application/octet-stream", _, _) if isErrorPosition => "Array[Byte]"
-              case ("application/octet-stream", _, _)                    => capabilityType(streamingImplementation)
-              case (_, r: OpenapiSchemaRef, _)                           => r.stripped
-              case (_, x: OpenapiSchemaSimpleType, _)                    => mapSchemaSimpleTypeToType(x)._1
-              case (ct, x, _)                                            => bail(s"Unexpected oneOf elem type $x with content type $ct")
+              case (_, _, true)                                                 => traitName
+              case (ct, _, _) if ct.startsWith("text/") && isErrorPosition      => "String"
+              case ("text/plain" | "text/html", _, _)                           => "String"
+              case (ct, r: OpenapiSchemaRef, _) if mappable.contains(ct)        => r.stripped
+              case (ct, x: OpenapiSchemaSimpleType, _) if mappable.contains(ct) => mapSchemaSimpleTypeToType(x)._1
+              case (ct, x, _) if mappable.contains(ct) => bail(s"Unexpected oneOf elem type $x with content type $ct")
+              case (_, _, _) if isErrorPosition        => "Array[Byte]"
+              case (_, _, _)                           => capabilityType(streamingImplementation)
             }
             .distinct
           val commmonType = {
