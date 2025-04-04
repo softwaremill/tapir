@@ -243,7 +243,7 @@ object TapirGeneratedEndpoints {
         case (None, Some(x)) => DecodeResult.Value(BearerSecurityIn(x))
         case other =>
           val count = other.productIterator.count(_.isInstanceOf[Some[?]])
-          DecodeResult.Error(s"2 security inputs", new RuntimeException(s"Expected a single security input, found 2"))
+          DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
       }{
         case BasicSecurityIn(x) => (Some(x), None)
         case BearerSecurityIn(x) => (None, Some(x))

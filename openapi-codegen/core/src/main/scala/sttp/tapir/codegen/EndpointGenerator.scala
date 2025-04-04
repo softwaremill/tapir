@@ -81,7 +81,7 @@ case class EndpointDefs(
 )
 
 case class SecurityWrapperDefn(schemas: Set[String]) {
-  lazy val traitName = schemas.toSeq.sorted.mkString("_or_") + "_SecurityIn"
+  lazy val traitName: String = schemas.toSeq.sorted.mkString("_or_") + "_SecurityIn"
 }
 case class SecurityDefn(
     inDecl: Option[String],
@@ -356,26 +356,8 @@ class EndpointGenerator {
             case ("Basic", _)   => Seq("Basic" -> s".securityIn(auth.basic[Option[UsernamePassword]]())")
             case ("ApiKey", vs) => vs.map { case (impl, _, name) => name -> s".securityIn($impl)" }.sortBy(_._1)
           }
-          /*
-          sealed trait Basic_or_Bearer_SecurityIn
-          case class BasicSecurityIn(up: UsernamePassword) extends Basic_or_Bearer_SecurityIn
-          case class BearerSecurityIn(t: String) extends Basic_or_Bearer_SecurityIn
-          ...
-          .securityIn(auth.basic[Option[UsernamePassword]]())
-          .securityIn(auth.bearer[Option[String]]())
-          .mapSecurityInDecode[Basic_or_Bearer_SecurityIn]{
-            case (Some(x), None) => DecodeResult.Value(BasicSecurityIn(x))
-            case (None, Some(x)) => DecodeResult.Value(BearerSecurityIn(x))
-            case other =>
-             val count = other.productIterator.count(_.isInstanceOf[Some[?]])
-             DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
-          }{
-            case BasicSecurityIn(x) => (Some(x), None)
-            case BearerSecurityIn(x) => (None, Some(x))
-          }
-           * */
           val impls = namesAndImpls.map(_._2).mkString("\n")
-          val traitName = namesAndImpls.map(_._1).mkString("_or_") + "_SecurityIn"
+          val traitName = SecurityWrapperDefn(namesAndImpls.map(_._1).toSet).traitName
           val count = namesAndImpls.size
           def someAt(idx: Int) = (0 to count - 1)
             .map { case `idx` => "Some(x)"; case _ => "None" }
@@ -391,7 +373,7 @@ class EndpointGenerator {
                |${indent(2)(mapDecodes.mkString("\n"))}
                |  case other =>
                |    val count = other.productIterator.count(_.isInstanceOf[Some[?]])
-               |    DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
+               |    DecodeResult.Error(s"$$count security inputs", new RuntimeException(s"Expected a single security input, found $$count"))
                |}{
                |${indent(2)(mapEncodes.mkString("\n"))}
                |}""".stripMargin

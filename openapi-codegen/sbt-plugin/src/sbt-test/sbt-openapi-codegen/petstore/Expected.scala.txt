@@ -16,6 +16,9 @@ object TapirGeneratedEndpoints {
   case class `application/x-www-form-urlencodedCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "x-www-form-urlencoded")
   }
+  sealed trait Bearer_or_api_key_SecurityIn
+  case class BearerSecurityIn(value: String) extends Bearer_or_api_key_SecurityIn
+  case class Api_keySecurityIn(value: String) extends Bearer_or_api_key_SecurityIn
 
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
@@ -367,12 +370,23 @@ object TapirGeneratedEndpoints {
       .tags(List("user"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
 
-  type GetPetByIdEndpoint = Endpoint[String, Long, Unit, Pet, Any]
+  type GetPetByIdEndpoint = Endpoint[Bearer_or_api_key_SecurityIn, Long, Unit, Pet, Any]
   lazy val getPetById: GetPetByIdEndpoint =
     endpoint
       .get
       .in(("pet" / path[Long]("petId").description("ID of pet to return")))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .securityIn(auth.apiKey(header[Option[String]]("api_key")))
+      .securityIn(auth.bearer[Option[String]]())
+      .mapSecurityInDecode[Bearer_or_api_key_SecurityIn]{
+        case (Some(x), None) => DecodeResult.Value(Api_keySecurityIn(x))
+        case (None, Some(x)) => DecodeResult.Value(BearerSecurityIn(x))
+        case other =>
+          val count = other.productIterator.count(_.isInstanceOf[Some[?]])
+          DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
+      }{
+        case Api_keySecurityIn(x) => (Some(x), None)
+        case BearerSecurityIn(x) => (None, Some(x))
+      }
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found"))(()),
