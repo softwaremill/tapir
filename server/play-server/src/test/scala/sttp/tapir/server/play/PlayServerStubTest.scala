@@ -5,7 +5,7 @@ import org.apache.pekko.stream.Materializer.matFromSystem
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.client3.testing.SttpBackendStub
+import sttp.client4.testing.BackendStub
 import sttp.monad.FutureMonad
 import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.server.tests.{CreateServerStubTest, ServerStubStreamingTest, ServerStubTest}
@@ -20,7 +20,7 @@ class PlayCreateServerStubTest extends CreateServerStubTest[Future, PlayServerOp
     import actorSystem.dispatcher
     PlayServerOptions.customiseInterceptors()
   }
-  override def stub[R]: SttpBackendStub[Future, R] = SttpBackendStub(new FutureMonad()(ExecutionContext.global))
+  override def stub: BackendStub[Future] = BackendStub(new FutureMonad()(ExecutionContext.global))
   override def asFuture[A]: Future[A] => Future[A] = identity
 
   override def cleanUp(): Unit = Await.ready(actorSystem.terminate(), 10.seconds)

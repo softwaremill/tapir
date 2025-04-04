@@ -157,7 +157,8 @@ object VertxRunner {
       .make(IO.delay(Vertx.vertx()))(vertx => IO.delay(vertx.close()).void)
       .flatMap { vertx =>
         val router = Router.router(vertx)
-        val server = vertx.createHttpServer(new HttpServerOptions().setPort(Port)).requestHandler(router)
+        // the maxFormAttributeSize must be higher than in ServerMultipartTests.maxContentLengthTests
+        val server = vertx.createHttpServer(new HttpServerOptions().setPort(Port).setMaxFormAttributeSize(100000)).requestHandler(router)
         val listenIO = vertxFutureToIo(server.listen(Port))
         wsRoute.foreach(r => r(vertx).apply(router))
         route(vertx).apply(router): Unit

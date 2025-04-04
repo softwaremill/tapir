@@ -12,14 +12,13 @@ import io.netty.channel.EventLoopGroup
 import cats.effect.IO
 import cats.effect.kernel.Resource
 import scala.concurrent.ExecutionContext
-import sttp.client3._
+import sttp.client4._
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.capabilities.WebSockets
 import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
 
-class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets])(implicit
+class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]])(implicit
     ec: ExecutionContext
 ) {
   def tests(): List[Test] = List(

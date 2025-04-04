@@ -73,7 +73,7 @@ import scala.concurrent.{Await, Future, Promise}
 
   val routes = countCharactersRoute ~ swaggerRoute
 
-  val binding: Future[Http.ServerBinding] = Http().newServerAt("localhost", 3333).bindFlow(routes)
+  val _: Future[Http.ServerBinding] = Http().newServerAt("localhost", 3333).bindFlow(routes)
 
   val promise = Promise[Unit]()
   Await.result(promise.future, 100.minutes)

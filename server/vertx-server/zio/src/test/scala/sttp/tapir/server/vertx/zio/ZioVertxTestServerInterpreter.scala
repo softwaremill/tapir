@@ -29,7 +29,8 @@ class ZioVertxTestServerInterpreter(vertx: Vertx)
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
     val router = Router.router(vertx)
-    val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
+    // the maxFormAttributeSize must be higher than in ServerMultipartTests.maxContentLengthTests
+    val server = vertx.createHttpServer(new HttpServerOptions().setPort(0).setMaxFormAttributeSize(100000)).requestHandler(router)
     routes.toList.foreach(_.apply(router))
 
     val listenIO = VertxTestServerInterpreter.vertxFutureToIo(server.listen(0))

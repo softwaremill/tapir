@@ -31,8 +31,8 @@ import scala.io.StdIn
 
   // starting the server
   val bind = Http().newServerAt("localhost", 8080).bindFlow(route)
-  Await.result(bind, 1.minute)
+  val _ = Await.result(bind, 1.minute)
   println("Open: http://localhost:8080 and experiment with various paths.")
   println("Press any key to exit ...")
-  StdIn.readLine()
-  Await.result(actorSystem.terminate(), 1.minute)
+  val _ = StdIn.readLine()
+  val _ = Await.result(actorSystem.terminate(), 1.minute)

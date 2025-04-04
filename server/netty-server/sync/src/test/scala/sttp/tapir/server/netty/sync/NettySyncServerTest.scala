@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 import ox.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3.*
+import sttp.client4.*
 import sttp.model.*
 import sttp.shared.Identity
 import sttp.tapir.*
@@ -63,7 +63,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 }
 
 class NettySyncCreateServerTest(
-    backend: SttpBackend[IO, Fs2Streams[IO] & WebSockets],
+    backend: WebSocketStreamBackend[IO, Fs2Streams[IO]],
     interpreter: NettySyncTestServerInterpreter
 ) extends CreateServerTest[Identity, OxStreams & WebSockets, NettySyncServerOptions, IdRoute] {
 
@@ -75,7 +75,7 @@ class NettySyncCreateServerTest(
       interceptors: Interceptors = identity
   )(
       fn: I => Identity[Either[E, O]]
-  )(runTest: (SttpBackend[IO, Fs2Streams[IO] & WebSockets], Uri) => IO[Assertion]): Test = {
+  )(runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]): Test = {
     testServerLogic(e.serverLogic(fn), testNameSuffix, interceptors)(runTest)
   }
 
@@ -84,7 +84,7 @@ class NettySyncCreateServerTest(
       testNameSuffix: String = "",
       interceptors: Interceptors = identity
   )(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] & WebSockets], Uri) => IO[Assertion]
+      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     testServerLogicWithStop(e, testNameSuffix, interceptors)((_: IO[Unit]) => runTest)
   }
@@ -95,7 +95,7 @@ class NettySyncCreateServerTest(
       interceptors: Interceptors = identity,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(
-      runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] & WebSockets], Uri) => IO[Assertion]
+      runTest: IO[Unit] => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     Test(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
@@ -112,11 +112,11 @@ class NettySyncCreateServerTest(
   }
 
   override def testServerWithStop(name: String, rs: => NonEmptyList[IdRoute], gracefulShutdownTimeout: Option[FiniteDuration])(
-      runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] & WebSockets], Uri) => IO[Assertion]
+      runTest: IO[Unit] => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = throw new UnsupportedOperationException
 
   override def testServer(name: String, rs: => NonEmptyList[IdRoute])(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] & WebSockets], Uri) => IO[Assertion]
+      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test =
     Test(name) {
       supervised {
@@ -130,7 +130,7 @@ class NettySyncCreateServerTest(
     }
 
   def testServer(name: String, es: NonEmptyList[ServerEndpoint[OxStreams & WebSockets, Identity]])(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] & WebSockets], Uri) => IO[Assertion]
+      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     Test(name) {
       supervised {

@@ -76,7 +76,7 @@ import scala.concurrent.{Await, Future}
     // testing
     println("Go to: http://localhost:8080/docs")
     println("Press any key to exit ...")
-    scala.io.StdIn.readLine()
+    val _ = scala.io.StdIn.readLine()
 
     binding
   }

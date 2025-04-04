@@ -240,9 +240,11 @@ and having any `SttpBackend` instance (for example, `TryHttpURLConnectionBackend
 `F[_]` type), convert any endpoint to a **mock-server** expectation:
 
 ```scala mdoc:compile-only
-import sttp.client3.{TryHttpURLConnectionBackend, UriContext}
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
+import sttp.client4.wrappers.TryBackend
 
-val testingBackend = TryHttpURLConnectionBackend()
+val testingBackend = TryBackend(HttpClientSyncBackend())
 val mockServerClient = SttpMockServerClient(baseUri = uri"http://localhost:1080", testingBackend)
 
 val in = "request-id-123" -> SampleIn("John", 23)
@@ -257,10 +259,12 @@ val expectation = mockServerClient
 Then you can try to send requests to the mock-server as you would do with live integration:
 
 ```scala mdoc:compile-only
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3.{TryHttpURLConnectionBackend, UriContext}
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
+import sttp.client4.wrappers.TryBackend
 
-val testingBackend = TryHttpURLConnectionBackend()
+val testingBackend = TryBackend(HttpClientSyncBackend())
 val in = "request-id-123" -> SampleIn("John", 23)
 val out = SampleOut("Hello, John!")
 

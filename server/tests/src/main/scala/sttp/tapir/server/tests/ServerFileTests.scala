@@ -2,7 +2,7 @@ package sttp.tapir.server.tests
 
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3.{basicRequest, _}
+import sttp.client4._
 import sttp.monad.MonadError
 import sttp.tapir.tests.Files.in_file_out_file
 import sttp.tapir.tests.Test

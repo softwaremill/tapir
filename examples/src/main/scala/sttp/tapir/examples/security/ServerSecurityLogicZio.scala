@@ -1,13 +1,13 @@
 // {cat=Security; effects=ZIO; server=ZIO HTTP}: Separating security and server logic, with a reusable base endpoint, accepting & refreshing credentials via cookies
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.21
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.21
-//> using dep com.softwaremill.sttp.client3::async-http-client-backend-zio:3.10.3
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.17
+//> using dep com.softwaremill.sttp.client4::zio:4.0.0-RC3
 
 package sttp.tapir.examples.security
 
-import sttp.client3._
-import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
+import sttp.client4.*
+import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.model.HeaderNames
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.ztapir._
@@ -64,7 +64,7 @@ object ServerSecurityLogicZio extends ZIOAppDefault:
   val routes: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter().toHttp(secureHelloWorldWithLogic)
 
   override def run: ZIO[Scope, Throwable, ExitCode] =
-    def testWith(backend: SttpBackend[Task, Any], port: Int, path: String, salutation: String, token: String): Task[String] =
+    def testWith(backend: Backend[Task], port: Int, path: String, salutation: String, token: String): Task[String] =
       basicRequest
         .response(asStringAlways)
         .get(uri"http://localhost:$port/$path?salutation=$salutation")
@@ -75,7 +75,7 @@ object ServerSecurityLogicZio extends ZIOAppDefault:
 
     (for {
       port <- Server.install(routes)
-      backend <- AsyncHttpClientZioBackend.scoped()
+      backend <- HttpClientZioBackend.scoped()
       _ <- testWith(backend, port, "hello", "Hello", "berries").map(r => assert(r == "Hello, Papa Smurf!"))
       _ <- testWith(backend, port, "hello", "Cześć", "berries").map(r => assert(r == "Cześć, Papa Smurf!"))
       _ <- testWith(backend, port, "hello", "Hello", "apple").map(r => assert(r == "1001"))

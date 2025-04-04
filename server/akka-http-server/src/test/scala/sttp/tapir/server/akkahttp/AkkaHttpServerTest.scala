@@ -11,8 +11,8 @@ import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.akka.AkkaStreams
-import sttp.client3._
-import sttp.client3.akkahttp.AkkaHttpBackend
+import sttp.client4._
+import sttp.client4.akkahttp.AkkaHttpBackend
 import sttp.model.sse.ServerSentEvent
 import sttp.model.Header
 import sttp.model.MediaType
@@ -73,8 +73,10 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
                   basicRequest
                     .get(uri"http://localhost:$port/sse")
                     .response(
-                      asStreamUnsafe(AkkaStreams).mapRight(stream =>
-                        AkkaServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                      asStreamUnsafe(AkkaStreams).map(errorOrStream =>
+                        errorOrStream.map(stream =>
+                          AkkaServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                        )
                       )
                     )
                     .send(AkkaHttpBackend.usingActorSystem(actorSystem))

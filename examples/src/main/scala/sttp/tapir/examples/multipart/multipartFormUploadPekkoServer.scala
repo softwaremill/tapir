@@ -4,7 +4,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.21
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.multipart
 
@@ -13,8 +13,7 @@ import java.io.PrintWriter
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3.*
-import sttp.shared.Identity
+import sttp.client4.*
 import sttp.tapir.generic.auto.*
 import sttp.model.Part
 import sttp.tapir.*
@@ -22,6 +21,7 @@ import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 
 @main def multipartFormUploadPekkoServer(): Unit =
   implicit val actorSystem: ActorSystem = ActorSystem()
@@ -55,7 +55,7 @@ import scala.concurrent.duration.*
     val pw = new PrintWriter(testFile); pw.write("This is not a photo"); pw.close()
 
     // testing
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
     val result: String = basicRequest
       .response(asStringAlways)
       .get(uri"http://localhost:8080/user/profile")

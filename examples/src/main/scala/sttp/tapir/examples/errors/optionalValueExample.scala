@@ -1,9 +1,9 @@
 // {cat=Error handling; effects=Future; server=Pekko HTTP; JSON=circe}: Optional returned from the server logic, resulting in 404 if None
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.21
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.21
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.21
-//> using dep com.softwaremill.sttp.client3::core:3.10.2
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.errors
 
@@ -11,7 +11,8 @@ import io.circe.generic.auto.*
 import io.circe.parser.parse
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
-import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, basicRequest}
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
@@ -49,7 +50,7 @@ import scala.concurrent.duration.*
   val routes = PekkoHttpServerInterpreter().toRoute(bartenderServerEndpoint)
 
   val serverBinding = Http().newServerAt("localhost", 8080).bindFlow(routes).map { binding =>
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
 
     val response1 = basicRequest.get(uri"http://localhost:8080/beer?age=15").send(backend)
     assert(response1.code == StatusCode.NotFound)
