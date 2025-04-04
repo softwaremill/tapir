@@ -86,8 +86,8 @@ description, for example:
 
 ```scala :compile-only
 import sttp.tapir.*
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3.*
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
 
 SttpClientInterpreter()
   .toRequest(endpoint.get.in("hello").in(query[String]("name")), Some(uri"http://localhost:8080"))
