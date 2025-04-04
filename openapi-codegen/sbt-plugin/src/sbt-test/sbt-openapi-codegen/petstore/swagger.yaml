@@ -230,7 +230,7 @@ paths:
         default:
           description: Unexpected error
       security:
-#        - api_key: []
+        - api_key: []
         - petstore_auth:
             - write:pets
             - read:pets
