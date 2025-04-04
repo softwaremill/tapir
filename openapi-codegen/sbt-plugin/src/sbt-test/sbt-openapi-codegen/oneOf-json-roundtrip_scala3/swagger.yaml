@@ -188,6 +188,24 @@ paths:
             application/octet-stream:
               schema:
                 $ref: '#/components/schemas/NotNullableThingy'
+    get:
+      responses:
+        "200":
+          description: empty response 1
+        "201":
+          description: empty response 2
+        "400":
+          description: application/something-unrecognised in error position
+          content:
+            application/something-unrecognised:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+        "401":
+          description: application/something-unrecognised in error position 2
+          content:
+            application/something-unrecognised:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
     delete:
       responses:
         "200":
