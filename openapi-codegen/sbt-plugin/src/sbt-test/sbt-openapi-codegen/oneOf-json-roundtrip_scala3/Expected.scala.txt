@@ -1,4 +1,4 @@
-openapi-codegen/sbt-plugin/src/sbt-test/sbt-openapi-codegen/oneOf-json-roundtrip_scala3/Expected.scala.txtpackage sttp.tapir.generated
+package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
 
