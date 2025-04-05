@@ -5,6 +5,6 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.client.sttp.WebSocketToPipe
 
 trait TapirSttpClientZioWebSockets {
-  implicit val webSocketsSupportedForZioStreams: WebSocketToPipe[ZioStreams with WebSockets] =
+  implicit lazy val webSocketsSupportedForZioStreams: WebSocketToPipe[ZioStreams with WebSockets] =
     new WebSocketToZioPipe[ZioStreams with WebSockets]
 }

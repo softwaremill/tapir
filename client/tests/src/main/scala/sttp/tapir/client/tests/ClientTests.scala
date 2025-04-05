@@ -13,7 +13,7 @@ import sttp.tapir.{DecodeResult, _}
 import scala.concurrent.ExecutionContext
 
 abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAndAfterAll {
-  implicit val ioRT: IORuntime = ClientTestsPlatform.ioRT
+  implicit lazy val ioRT: IORuntime = ClientTestsPlatform.ioRT
   implicit override val executionContext: ExecutionContext = ClientTestsPlatform.executionContext
 
   type Port = Int
