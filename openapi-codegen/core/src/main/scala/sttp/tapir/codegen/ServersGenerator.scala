@@ -36,17 +36,24 @@ object ServersGenerator {
     val enums = enumNames
       .map {
         case (e, elems, d) if elems.nonEmpty =>
-          val maybeDefault = d.map(s => s"\n  val default: $e = $s").getOrElse("")
-          if (isScala3)
+          if (isScala3) {
+            val maybeDefault = d
+              .map(s => s"""
+                           |object $e {
+                           |  val default: $e = $s
+                           |}""".stripMargin)
+              .getOrElse("")
             s"""enum $e {
-           |  case ${elems.mkString(", ")}$maybeDefault
-           |}""".stripMargin
-          else
+               |  case ${elems.mkString(", ")}
+               |}$maybeDefault""".stripMargin
+          } else {
+            val maybeDefault = d.map(s => s"\n  val default: $e = $s").getOrElse("")
             s"""sealed trait $e extends enumeratum.EnumEntry
-           |object $e extends enumeratum.Enum[$e] {
-           |  val values = findValues
-           |${indent(2)(elems.map(v => s"case object $v extends $e").mkString("\n"))}$maybeDefault
-           |}""".stripMargin
+               |object $e extends enumeratum.Enum[$e] {
+               |  val values = findValues
+               |${indent(2)(elems.map(v => s"case object $v extends $e").mkString("\n"))}$maybeDefault
+               |}""".stripMargin
+          }
         case (e, _, d) => d.map(v => s"""val ${safeVariableName(s"default${e.capitalize}")} = $v""").getOrElse("")
       }
       .mkString("\n")
@@ -64,13 +71,13 @@ object ServersGenerator {
       .foldLeft(server.url.replace("{", "${")) { case (acc, (next, v)) =>
         acc.replace(s"$${$next}", s"$${_$v}")
       }
-    s"""${genDescription(server.description)}\nobject `${server.url}` {
+    s"""${genDescription(server.description)}object `${server.url}` {
        |${indent(2)(enums)}
        |  def uri($enumParams): String =
        |    s"$urlStringFormat"
        |}""".stripMargin
   }
   private def genDescription(description: Option[String]): String =
-    description.map(d => s"/*\n${indent(2)(d)}\n*/").getOrElse("")
+    description.map(d => s"/*\n${indent(2)(d)}\n*/\n").getOrElse("")
 
 }

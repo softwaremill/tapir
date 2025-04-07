@@ -335,4 +335,40 @@ object TapirGeneratedEndpoints {
 
   lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, getOneofErrorTest, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
+  object Servers {
+    /*
+      These are the main endpoints.
+      The environments are self-documenting!
+    */
+    object `https://{environment}.my-co.org:{port}/api/{customer}/prefix` {
+      sealed trait environment extends enumeratum.EnumEntry
+      object environment extends enumeratum.Enum[environment] {
+        val values = findValues
+        case object dev extends environment
+        case object staging extends environment
+        case object prod extends environment
+        val default: environment = prod
+      }
+      val defaultPort = "1234"
+      val defaultCustomer = "big-dogs"
+      def uri(_environment: environment = environment.default, _port: String = defaultPort, _customer: String = defaultCustomer): String =
+        s"https://${_environment}.my-co.org:${_port}/api/${_customer}/prefix"
+    }
+
+    /*
+      Legacy endpoint that doesn't require TLS
+      Doesn't work, retained for completely mysterious reasons lost to the winds of time
+    */
+    object `http://testing.my-co.org:{port}/api/{scoped}/prefix` {
+      val defaultPort = "4321"
+      val defaultScoped = "false"
+      def uri(_port: String = defaultPort, _scoped: String = defaultScoped): String =
+        s"http://testing.my-co.org:${_port}/api/${_scoped}/prefix"
+    }
+
+    /*
+      Locally
+    */
+    val `/`: String = "/"
+  }
 }

@@ -165,4 +165,7 @@ object TapirGeneratedEndpoints {
 
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
+   object Servers {
+     val `/v3`: String = "/v3"
+   }
 }
