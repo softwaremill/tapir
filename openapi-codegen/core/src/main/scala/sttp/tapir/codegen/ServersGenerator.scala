@@ -30,7 +30,7 @@ object ServersGenerator {
       (
         safeVariableName(k),
         vs.`enum`.map(i => safeVariableName(i)),
-        vs.default.map(v => if (vs.`enum`.isEmpty) safeVariableName(s"default${k.capitalize}") else safeVariableName(v))
+        vs.default.map(v => if (vs.`enum`.isEmpty) '"' +: v :+ '"' else safeVariableName(v))
       )
     }
     val enums = enumNames
@@ -47,7 +47,7 @@ object ServersGenerator {
            |  val values = findValues
            |${indent(2)(elems.map(v => s"case object $v extends $e").mkString("\n"))}$maybeDefault
            |}""".stripMargin
-        case (e, _, d) => d.map(v => s"""val ${safeVariableName(s"default${e.capitalize}")} = "$v"""").getOrElse("")
+        case (e, _, d) => d.map(v => s"""val ${safeVariableName(s"default${e.capitalize}")} = $v""").getOrElse("")
       }
       .mkString("\n")
     // 'with default' should come after 'without'
