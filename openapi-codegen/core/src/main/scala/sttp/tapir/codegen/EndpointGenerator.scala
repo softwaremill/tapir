@@ -191,6 +191,7 @@ class EndpointGenerator {
           }
 
           val name = m.name(p.url)
+          val maybeName = m.operationId.map(n => s"""\n  .name("${JavaEscape.escapeString(n)}")""").getOrElse("")
           val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
           val SecurityDefn(securityDecl, securityTypes, securityWrappers) = security(securitySchemes, m.security)
           val (inParams, maybeLocalEnums, inTypes, inlineInDefns) =
@@ -210,7 +211,7 @@ class EndpointGenerator {
           val inlineDefn = combine(inlineInDefns, inlineDefns)
           val sec = securityDecl.map(indent(2)(_) + "\n").getOrElse("")
           val definition =
-            s"""|endpoint
+            s"""|endpoint$maybeName
                 |  .${m.methodType}
                 |  $pathDecl
                 |$sec${indent(2)(inParams)}

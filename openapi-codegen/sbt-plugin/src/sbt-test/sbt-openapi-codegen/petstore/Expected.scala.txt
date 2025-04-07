@@ -175,6 +175,7 @@ object TapirGeneratedEndpoints {
   type PlaceOrderEndpoint = Endpoint[Unit, PlaceOrderBodyIn, Unit, Order, Any]
   lazy val placeOrder: PlaceOrderEndpoint =
     endpoint
+      .name("placeOrder")
       .post
       .in(("store" / "order"))
       .in(oneOfBody[PlaceOrderBodyIn](
@@ -192,6 +193,7 @@ object TapirGeneratedEndpoints {
   type FindPetsByTagsEndpoint = Endpoint[String, List[String], Unit, List[Pet], Any]
   lazy val findPetsByTags: FindPetsByTagsEndpoint =
     endpoint
+      .name("findPetsByTags")
       .get
       .in(("pet" / "findByTags"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
@@ -207,6 +209,7 @@ object TapirGeneratedEndpoints {
   type UpdatePetEndpoint = Endpoint[String, UpdatePetBodyIn, Unit, Pet, Any]
   lazy val updatePet: UpdatePetEndpoint =
     endpoint
+      .name("updatePet")
       .put
       .in(("pet"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
@@ -227,6 +230,7 @@ object TapirGeneratedEndpoints {
   type AddPetEndpoint = Endpoint[String, AddPetBodyIn, Unit, Pet, Any]
   lazy val addPet: AddPetEndpoint =
     endpoint
+      .name("addPet")
       .post
       .in(("pet"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
@@ -246,6 +250,7 @@ object TapirGeneratedEndpoints {
   type GetOrderByIdEndpoint = Endpoint[Unit, Long, Unit, Order, Any]
   lazy val getOrderById: GetOrderByIdEndpoint =
     endpoint
+      .name("getOrderById")
       .get
       .in(("store" / "order" / path[Long]("orderId").description("ID of order that needs to be fetched")))
       .errorOut(oneOf[Unit](
@@ -261,6 +266,7 @@ object TapirGeneratedEndpoints {
   type DeleteOrderEndpoint = Endpoint[Unit, Long, Unit, Unit, Any]
   lazy val deleteOrder: DeleteOrderEndpoint =
     endpoint
+      .name("deleteOrder")
       .delete
       .in(("store" / "order" / path[Long]("orderId").description("ID of the order that needs to be deleted")))
       .errorOut(oneOf[Unit](
@@ -273,6 +279,7 @@ object TapirGeneratedEndpoints {
   type LogoutUserEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
   lazy val logoutUser: LogoutUserEndpoint =
     endpoint
+      .name("logoutUser")
       .get
       .in(("user" / "logout"))
       .tags(List("user"))
@@ -280,6 +287,7 @@ object TapirGeneratedEndpoints {
   type GetInventoryEndpoint = Endpoint[String, Unit, Unit, Map[String, Int], Any]
   lazy val getInventory: GetInventoryEndpoint =
     endpoint
+      .name("getInventory")
       .get
       .in(("store" / "inventory"))
       .securityIn(auth.apiKey(header[String]("api_key")))
@@ -290,6 +298,7 @@ object TapirGeneratedEndpoints {
   type CreateUsersWithListInputEndpoint = Endpoint[Unit, Option[List[User]], Unit, User, Any]
   lazy val createUsersWithListInput: CreateUsersWithListInputEndpoint =
     endpoint
+      .name("createUsersWithListInput")
       .post
       .in(("user" / "createWithList"))
       .in(jsonBody[Option[List[User]]])
@@ -302,6 +311,7 @@ object TapirGeneratedEndpoints {
   type GetUserByNameEndpoint = Endpoint[Unit, String, Unit, User, Any]
   lazy val getUserByName: GetUserByNameEndpoint =
     endpoint
+      .name("getUserByName")
       .get
       .in(("user" / path[String]("username").description("The name that needs to be fetched. Use user1 for testing")))
       .errorOut(oneOf[Unit](
@@ -316,6 +326,7 @@ object TapirGeneratedEndpoints {
   type UpdateUserEndpoint = Endpoint[Unit, (String, UpdateUserBodyIn), Unit, Unit, Any]
   lazy val updateUser: UpdateUserEndpoint =
     endpoint
+      .name("updateUser")
       .put
       .in(("user" / path[String]("username").description("name that need to be deleted")))
       .in(oneOfBody[UpdateUserBodyIn](
@@ -332,6 +343,7 @@ object TapirGeneratedEndpoints {
   type DeleteUserEndpoint = Endpoint[Unit, String, Unit, Unit, Any]
   lazy val deleteUser: DeleteUserEndpoint =
     endpoint
+      .name("deleteUser")
       .delete
       .in(("user" / path[String]("username").description("The name that needs to be deleted")))
       .errorOut(oneOf[Unit](
@@ -343,6 +355,7 @@ object TapirGeneratedEndpoints {
   type LoginUserEndpoint = Endpoint[Unit, (Option[String], Option[String]), Unit, (String, Option[Int], Option[java.time.Instant]), Any]
   lazy val loginUser: LoginUserEndpoint =
     endpoint
+      .name("loginUser")
       .get
       .in(("user" / "login"))
       .in(query[Option[String]]("username").description("The user name for login"))
@@ -358,6 +371,7 @@ object TapirGeneratedEndpoints {
   type CreateUserEndpoint = Endpoint[Unit, CreateUserBodyIn, Unit, User, Any]
   lazy val createUser: CreateUserEndpoint =
     endpoint
+      .name("createUser")
       .post
       .in(("user"))
       .in(oneOfBody[CreateUserBodyIn](
@@ -373,6 +387,7 @@ object TapirGeneratedEndpoints {
   type GetPetByIdEndpoint = Endpoint[Bearer_or_api_key_SecurityIn, Long, Unit, Pet, Any]
   lazy val getPetById: GetPetByIdEndpoint =
     endpoint
+      .name("getPetById")
       .get
       .in(("pet" / path[Long]("petId").description("ID of pet to return")))
       .securityIn(auth.apiKey(header[Option[String]]("api_key")))
@@ -399,6 +414,7 @@ object TapirGeneratedEndpoints {
   type UpdatePetWithFormEndpoint = Endpoint[String, (Long, Option[String], Option[String]), Unit, Pet, Any]
   lazy val updatePetWithForm: UpdatePetWithFormEndpoint =
     endpoint
+      .name("updatePetWithForm")
       .post
       .in(("pet" / path[Long]("petId").description("ID of pet that needs to be updated")))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
@@ -415,6 +431,7 @@ object TapirGeneratedEndpoints {
   type DeletePetEndpoint = Endpoint[String, (Long, Option[String]), Unit, Unit, Any]
   lazy val deletePet: DeletePetEndpoint =
     endpoint
+      .name("deletePet")
       .delete
       .in(("pet" / path[Long]("petId").description("Pet id to delete")))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
@@ -427,6 +444,7 @@ object TapirGeneratedEndpoints {
   type UploadFileEndpoint = Endpoint[String, (Long, Option[String], sttp.capabilities.pekko.PekkoStreams.BinaryStream), Unit, ApiResponse, sttp.capabilities.pekko.PekkoStreams]
   lazy val uploadFile: UploadFileEndpoint =
     endpoint
+      .name("uploadFile")
       .post
       .in(("pet" / path[Long]("petId").description("ID of pet to update") / "uploadImage"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
@@ -442,6 +460,7 @@ object TapirGeneratedEndpoints {
   type FindPetsByStatusEndpoint = Endpoint[String, Option[FindPetsByStatusStatus], Unit, List[Pet], Any]
   lazy val findPetsByStatus: FindPetsByStatusEndpoint =
     endpoint
+      .name("findPetsByStatus")
       .get
       .in(("pet" / "findByStatus"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
