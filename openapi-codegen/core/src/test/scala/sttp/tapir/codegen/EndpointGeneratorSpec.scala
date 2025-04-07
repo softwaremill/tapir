@@ -34,6 +34,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "generate the endpoint defs" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -84,6 +85,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "generete endpoints defs with security" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -167,6 +169,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "handle status codes" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -232,6 +235,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "support multipart body" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(

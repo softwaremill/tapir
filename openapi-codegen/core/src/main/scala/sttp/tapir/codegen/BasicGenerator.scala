@@ -288,7 +288,7 @@ object BasicGenerator {
         |${indent(2)(maybeSpecificationExtensionKeys)}
         |
         |${indent(2)(endpointsInMain)}
-        |
+        |${indent(2)(ServersGenerator.genServerDefinitions(doc.servers, targetScala3).getOrElse(""))}
         |}
         |""".stripMargin
     taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ xmlSerdeObj.map(s"${objName}XmlSerdes" -> _) ++
