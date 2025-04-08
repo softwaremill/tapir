@@ -44,7 +44,7 @@ object Versions {
   val zioJson = "0.7.39"
   val playClient = "3.0.6"
   val playServer = "3.0.6"
-  val play29Client = "2.2.11"
+  val play29Client = "3.0.7"
   val play29Server = "2.9.7"
   val tethys = "0.29.4"
   val vertx = "4.5.14"
