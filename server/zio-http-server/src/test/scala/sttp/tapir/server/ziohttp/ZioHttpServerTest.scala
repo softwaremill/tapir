@@ -10,12 +10,13 @@ import org.scalatest.Exceptional
 import org.scalatest.FutureOutcome
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
-import sttp.client3._
-import sttp.client3.testing.SttpBackendStub
+import sttp.client4._
+import sttp.client4.testing.{BackendStub, StreamBackendStub}
+import sttp.client4.ws.async._
 import sttp.model.MediaType
 import sttp.monad.MonadError
 import sttp.tapir._
-import sttp.tapir.server.stub.TapirStubInterpreter
+import sttp.tapir.server.stub4.TapirStreamStubInterpreter
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.Test
 import sttp.tapir.tests.TestSuite
@@ -197,8 +198,8 @@ class ZioHttpServerTest extends TestSuite {
               override def mediaType: MediaType = MediaType.TextCsv
             }
 
-            val backendStub: TapirStubInterpreter[Task, ZioStreams, Unit] =
-              TapirStubInterpreter[Task, ZioStreams](SttpBackendStub[Task, ZioStreams](new RIOMonadError[Any]))
+            val backendStub: TapirStreamStubInterpreter[Task, ZioStreams, Unit] =
+              TapirStreamStubInterpreter[Task, ZioStreams](StreamBackendStub[Task, ZioStreams](new RIOMonadError[Any]))
 
             val endpointModel: PublicEndpoint[ZStream[Any, Throwable, Byte], Unit, ZStream[Any, Throwable, Byte], ZioStreams] =
               endpoint.post
@@ -223,9 +224,9 @@ class ZioHttpServerTest extends TestSuite {
                 .via(ZPipeline.intersperse(java.lang.System.lineSeparator()))
                 .mapConcat(_.getBytes(Charset.forName("UTF-8")))
 
-            val makeRequest = sttp.client3.basicRequest
-              .streamBody(ZioStreams)(input)
+            val makeRequest = basicRequest
               .post(uri"/hello")
+              .streamBody(ZioStreams)(input)
               .response(asStreamAlwaysUnsafe(ZioStreams))
 
             val backend = backendStub.whenServerEndpointRunLogic(streamingEndpoint).backend()
@@ -251,8 +252,8 @@ class ZioHttpServerTest extends TestSuite {
           },
           Test("Streaming works through the stub backend, when decoded as an either") {
             // given
-            val backendStub: TapirStubInterpreter[Task, ZioStreams, Unit] =
-              TapirStubInterpreter[Task, ZioStreams](SttpBackendStub[Task, ZioStreams](new RIOMonadError[Any]))
+            val backendStub: TapirStreamStubInterpreter[Task, ZioStreams, Unit] =
+              TapirStreamStubInterpreter[Task, ZioStreams](StreamBackendStub[Task, ZioStreams](new RIOMonadError[Any]))
 
             val streamingEndpoint: sttp.tapir.ztapir.ZServerEndpoint[Any, ZioStreams] =
               endpoint.post
@@ -264,9 +265,9 @@ class ZioHttpServerTest extends TestSuite {
             val testString = "Hello, world!" * 100
             val input: ZStream[Any, Nothing, Byte] = ZStream(testString.getBytes(): _*)
 
-            val makeRequest = sttp.client3.basicRequest
-              .streamBody(ZioStreams)(input)
+            val makeRequest = basicRequest
               .post(uri"/hello")
+              .streamBody(ZioStreams)(input)
               .response(asStreamUnsafe(ZioStreams))
 
             val backend = backendStub.whenServerEndpointRunLogic(streamingEndpoint).backend()
@@ -296,10 +297,10 @@ class ZioHttpServerTest extends TestSuite {
             "auto pings"
           )((_: Unit) => ZIO.right((in: stream.Stream[Throwable, String]) => in.map(v => s"echo $v"))) { (backend, baseUri) =>
             basicRequest
+              .get(baseUri.scheme("ws"))
               .response(asWebSocket { (ws: WebSocket[IO]) =>
                 List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
               })
-              .get(baseUri.scheme("ws"))
               .send(backend)
               .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
           },
@@ -313,13 +314,13 @@ class ZioHttpServerTest extends TestSuite {
             "ping-pong echo"
           )((_: Unit) => ZIO.right((in: stream.Stream[Throwable, String]) => in.map(v => s"echo $v"))) { (backend, baseUri) =>
             basicRequest
+              .get(baseUri.scheme("ws"))
               .response(asWebSocket { (ws: WebSocket[IO]) =>
                 for {
                   _ <- ws.send(WebSocketFrame.ping)
                   m2 <- ws.receive()
                 } yield List(m2)
               })
-              .get(baseUri.scheme("ws"))
               .send(backend)
               .map { response =>
                 response.body should matchPattern { case Right(List(_: WebSocketFrame.Pong)) => }

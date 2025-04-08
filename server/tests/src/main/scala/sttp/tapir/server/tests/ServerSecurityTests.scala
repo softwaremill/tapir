@@ -2,7 +2,7 @@ package sttp.tapir.server.tests
 
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers
-import sttp.client3._
+import sttp.client4._
 import sttp.model.Uri.QuerySegment
 import sttp.model.headers.WWWAuthenticateChallenge
 import sttp.model.{StatusCode, _}
@@ -50,24 +50,20 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
 
   private val result = m.unit(().asRight[Unit])
 
-  private def validRequest(uri: Uri): Request[Either[String, String], Any] =
+  private def validRequest(uri: Uri): Request[Either[String, String]] =
     basicRequest.post(uri.addPath("secret", "1234").addQuerySegment(QuerySegment.KeyValue("q", "x")))
-  private def invalidRequest(uri: Uri): Request[Either[String, String], Any] = basicRequest.post(uri.addPath("secret", "1234"))
+  private def invalidRequest(uri: Uri): Request[Either[String, String]] = basicRequest.post(uri.addPath("secret", "1234"))
 
   private val endpoints = {
     def putSecretInQuery(uri: Uri): Identity[Uri] = uri.addQuerySegment(QuerySegment.KeyValue("token", "supersecret"))
     List(
-      ("basic", basic, (r: Request[_, Any]) => r.header("Authorization", "Basic dXNlcjpzZWNyZXQ=")),
-      ("bearer", bearer, (r: Request[_, Any]) => r.header("Authorization", "Bearer kajsdhf[")),
-      ("lower case bearer", bearer, (r: Request[_, Any]) => r.header("Authorization", "bearer kajsdhf[")),
-      (
-        "apiKey in query param",
-        apiKeyInQuery,
-        (r: RequestT[Identity, _, Any]) => r.copy(uri = putSecretInQuery(r.uri))
-      ),
-      ("apiKey in header", apiKeyInHeader, (r: Request[_, Any]) => r.header("x-api-key", "secret api key")),
-      ("old token in header", apiKeyAlternative, (r: Request[_, Any]) => r.header("token-old", "secret token")),
-      ("new token in header", apiKeyAlternative, (r: Request[_, Any]) => r.header("token-new", "secret token"))
+      ("basic", basic, (r: Request[_]) => r.header("Authorization", "Basic dXNlcjpzZWNyZXQ=")),
+      ("bearer", bearer, (r: Request[_]) => r.header("Authorization", "Bearer kajsdhf[")),
+      ("lower case bearer", bearer, (r: Request[_]) => r.header("Authorization", "bearer kajsdhf[")),
+      ("apiKey in query param", apiKeyInQuery, (r: Request[_]) => r.copy(uri = putSecretInQuery(r.uri))),
+      ("apiKey in header", apiKeyInHeader, (r: Request[_]) => r.header("x-api-key", "secret api key")),
+      ("old token in header", apiKeyAlternative, (r: Request[_]) => r.header("token-old", "secret token")),
+      ("new token in header", apiKeyAlternative, (r: Request[_]) => r.header("token-new", "secret token"))
     )
   }
 

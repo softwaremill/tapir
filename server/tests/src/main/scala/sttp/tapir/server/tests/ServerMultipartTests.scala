@@ -2,7 +2,7 @@ package sttp.tapir.server.tests
 
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3.{multipartFile, _}
+import sttp.client4.{multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir._
@@ -42,7 +42,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
         .out(stringBody)
         .maxRequestBodyLength(15000),
       "multipart with maxContentLength"
-    )((df: DoubleFruit) => pureResult(("ok").asRight[Unit])) { (backend, baseUri) =>
+    )((_: DoubleFruit) => pureResult(("ok").asRight[Unit])) { (backend, baseUri) =>
       basicStringRequest
         .post(uri"$baseUri/api/echo/multipart")
         .multipartBody(multipart("fruitA", "pineapple".repeat(1100)), multipart("fruitB", "maracuja".repeat(1200)))

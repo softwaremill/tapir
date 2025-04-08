@@ -5,7 +5,7 @@ info:
   description: File for testing json roundtripping of oneOf defns in scala 3 with circe
   version: 1.0.20-SNAPSHOT
   title: OneOf Json test for scala 3
-tags: []
+tags: [ ]
 paths:
   '/adt/test':
     post:
@@ -146,6 +146,9 @@ paths:
                   type: string
                   format: uuid
     put:
+      security:
+        - basic: [ ]
+        - bearer: [ ]
       requestBody:
         content:
           multipart/form-data:
@@ -184,6 +187,24 @@ paths:
           description: application/octet-stream in error position 2
           content:
             application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+    get:
+      responses:
+        "200":
+          description: empty response 1
+        "201":
+          description: empty response 2
+        "400":
+          description: application/something-unrecognised in error position
+          content:
+            application/something-unrecognised:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+        "401":
+          description: application/something-unrecognised in error position 2
+          content:
+            application/something-unrecognised:
               schema:
                 $ref: '#/components/schemas/NotNullableThingy'
     delete:
@@ -363,3 +384,10 @@ components:
       type: array
       items:
         type: string
+  securitySchemes:
+    basic:
+      type: http
+      scheme: basic
+    bearer:
+      type: http
+      scheme: bearer

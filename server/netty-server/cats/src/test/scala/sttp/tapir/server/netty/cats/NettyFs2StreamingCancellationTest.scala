@@ -8,7 +8,7 @@ import cats.syntax.all._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client4._
 import sttp.monad.MonadError
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.tests.{CreateServerTest, _}

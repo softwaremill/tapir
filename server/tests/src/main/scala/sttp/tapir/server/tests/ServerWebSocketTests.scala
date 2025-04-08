@@ -6,7 +6,8 @@ import io.circe.generic.auto._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.{Streams, WebSockets}
-import sttp.client3._
+import sttp.client4._
+import sttp.client4.ws.async._
 import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.tapir._
@@ -49,6 +50,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       "string client-terminated echo"
     )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
+        .get(baseUri.scheme("ws"))
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
@@ -59,7 +61,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             m3 <- if (expectCloseResponse) ws.eitherClose(ws.receiveText()).map(Some(_)) else IO.pure(None)
           } yield List(m1, m2, m3)
         })
-        .get(baseUri.scheme("ws"))
         .send(backend)
         .map { r =>
           r.body.map(_.take(2)) shouldBe Right(List("echo: test1", "echo: test2"))
@@ -77,13 +78,13 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       "WS handshake to a non-existing endpoint"
     )((_: Unit) => pureResult("hello".asRight[Unit])) { (backend, baseUri) =>
       basicRequest
+        .get(baseUri.scheme("ws"))
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test")
             m1 <- ws.receiveText()
           } yield m1
         })
-        .get(baseUri.scheme("ws"))
         .send(backend)
         .map(_.code shouldBe StatusCode.NotFound)
     }, {
@@ -97,13 +98,13 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
         interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
       )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
         basicRequest
+          .get(baseUri.scheme("ws"))
           .response(asWebSocket { (ws: WebSocket[IO]) =>
             for {
               _ <- ws.sendText("test1")
               m <- ws.receiveText()
             } yield List(m)
           })
-          .get(baseUri.scheme("ws"))
           .send(backend)
           .map { r =>
             r.body shouldBe Right(List("echo: test1"))
@@ -116,6 +117,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       (_: Unit) => pureResult(functionToPipe((f: Fruit) => Fruit(s"echo: ${f.f}")).asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
+        .get(baseUri.scheme("ws"))
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("""{"f":"apple"}""")
@@ -124,7 +126,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             m2 <- ws.receiveText()
           } yield List(m1, m2)
         })
-        .get(baseUri.scheme("ws"))
         .send(backend)
         .map(_.body shouldBe Right(List("""{"f":"echo: apple"}""", """{"f":"echo: orange"}""")))
     },
@@ -138,6 +139,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       }.asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
+        .get(baseUri.scheme("ws"))
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
@@ -148,7 +150,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             m3 <- ws.eitherClose(ws.receiveText())
           } yield List(m1, m2, m3)
         })
-        .get(baseUri.scheme("ws"))
         .send(backend)
         .map(
           _.body.map(_.map(_.left.map(_.statusCode))) shouldBe Right(
@@ -165,6 +166,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       "pong on ping"
     )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
+        .get(baseUri.scheme("ws"))
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
@@ -174,7 +176,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             m2 <- ws.receive()
           } yield List(m1, m2)
         })
-        .get(baseUri.scheme("ws"))
         .send(backend)
         .map((r: Response[Either[String, List[WebSocketFrame]]]) =>
           assert(
@@ -191,10 +192,10 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       "empty client stream"
     )((_: Unit) => pureResult(emptyPipe.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
+        .get(baseUri.scheme("ws"))
         .response(asWebSocketAlways { (ws: WebSocket[IO]) =>
           if (expectCloseResponse) ws.eitherClose(ws.receiveText()).map(Some(_)) else IO.pure(None)
         })
-        .get(baseUri.scheme("ws"))
         .send(backend)
         .map(r => assert(r.body.forall(_.left.map(_.statusCode) == Left(1000))))
     },
@@ -212,10 +213,10 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             .get(uri"$baseUri?securityToken=wrong".scheme("http"))
             .send(backend)
           response2 <- basicRequest
+            .get(uri"$baseUri?securityToken=correctToken".scheme("ws"))
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               ws.sendText("testOk") >> ws.receiveText()
             })
-            .get(uri"$baseUri?securityToken=correctToken".scheme("ws"))
             .send(backend)
         } yield {
           response1.body shouldBe Left("Incorrect token!")
@@ -232,16 +233,16 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       (backend, baseUri) =>
         for {
           response1 <- basicRequest
+            .get(uri"$baseUri?securityToken=wrong".scheme("ws"))
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               ws.sendText("testWrong") >> ws.receiveText()
             })
-            .get(uri"$baseUri?securityToken=wrong".scheme("ws"))
             .send(backend)
           response2 <- basicRequest
+            .get(uri"$baseUri?securityToken=correctToken".scheme("ws"))
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               ws.sendText("testOk") >> ws.receiveText()
             })
-            .get(uri"$baseUri?securityToken=correctToken".scheme("ws"))
             .send(backend)
         } yield {
           response1.code shouldBe StatusCode.BadRequest
@@ -261,6 +262,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           "auto ping"
         )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
           basicRequest
+            .get(baseUri.scheme("ws"))
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               for {
                 _ <- ws.sendText("test1")
@@ -272,7 +274,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
                 m3 <- ws.receive()
               } yield List(m1, m2, m3)
             })
-            .get(baseUri.scheme("ws"))
             .send(backend)
             .map((r: Response[Either[String, List[WebSocketFrame]]]) =>
               assert(r.body.value.exists(_.isInstanceOf[WebSocketFrame.Ping]), s"Missing Ping frame in WS responses: $r")
@@ -293,6 +294,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       }.asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
+        .get(baseUri.scheme("ws"))
         .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
@@ -303,7 +305,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             m3 <- ws.eitherClose(ws.receiveText())
           } yield List(m1, m2, m3)
         })
-        .get(baseUri.scheme("ws"))
         .send(backend)
         .map { r =>
           val results = r.body.map(_.map(_.left.map(_.statusCode))).value
@@ -330,6 +331,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           "concatenate fragmented text frames"
         )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
           basicRequest
+            .get(baseUri.scheme("ws"))
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               for {
                 _ <- ws.send(WebSocketFrame.Text("f1", finalFragment = false, None))
@@ -338,7 +340,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
                 _ <- ws.close()
               } yield r
             })
-            .get(baseUri.scheme("ws"))
             .send(backend)
             .map { _.body shouldBe (Right("echo: f1f2")) }
         },
@@ -352,6 +353,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           "concatenate fragmented binary frames"
         )((_: Unit) => pureResult(functionToPipe((bs: Array[Byte]) => s"echo: ${new String(bs)}").asRight[Unit])) { (backend, baseUri) =>
           basicRequest
+            .get(baseUri.scheme("ws"))
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               for {
                 _ <- ws.send(WebSocketFrame.Binary("frame1-bytes;".getBytes(), finalFragment = false, None))
@@ -360,7 +362,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
                 _ <- ws.close()
               } yield r
             })
-            .get(baseUri.scheme("ws"))
             .send(backend)
             .map { _.body shouldBe (Right("echo: frame1-bytes;frame2-bytes")) }
         }
@@ -385,6 +386,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           }.asRight[Unit])
         ) { (backend, baseUri) =>
           basicRequest
+            .get(baseUri.scheme("ws"))
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               for {
                 _ <- ws.sendText("test1")
@@ -395,7 +397,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
                 m3 <- ws.receiveText()
               } yield List(m1, m2, m3)
             })
-            .get(baseUri.scheme("ws"))
             .send(backend)
             .map(
               _.body shouldBe Right(List("text: test1", "ping: test-ping-text", "text: test2"))
@@ -425,6 +426,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           "not ignore pong"
         )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
           basicRequest
+            .get(baseUri.scheme("ws"))
             .response(asWebSocket { (ws: WebSocket[IO]) =>
               for {
                 _ <- ws.sendText("test1")
@@ -434,7 +436,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
                 m2 <- ws.receiveText()
               } yield List(m1, m2)
             })
-            .get(baseUri.scheme("ws"))
             .send(backend)
             .map(_.body shouldBe Right(List("echo: test1", "echo: test-pong-text")))
         }
@@ -457,6 +458,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             }.asRight[Unit])
           ) { (backend, baseUri) =>
             basicRequest
+              .get(baseUri.scheme("ws"))
               .response(asWebSocket { (ws: WebSocket[IO]) =>
                 for {
                   _ <- ws.sendText("test1")
@@ -465,7 +467,6 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
                   m2 <- ws.eitherClose(ws.receiveText())
                 } yield List(m1, m2)
               })
-              .get(baseUri.scheme("ws"))
               .send(backend)
               .map { response =>
                 response.body.map(_.map(_.toOption)) shouldBe Right(List(Some("test1"), None))

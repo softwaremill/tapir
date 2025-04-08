@@ -1,10 +1,10 @@
 // {cat=Error handling; effects=cats-effect; server=Netty; JSON=circe}: Error reporting provided by Iron type refinements
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.11.23
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.errors
 
@@ -16,8 +16,8 @@ import io.github.iltotore.iron.autoRefine
 import io.github.iltotore.iron.{Constraint, refineEither}
 import io.circe.generic.auto.*
 import io.circe.{Decoder, Encoder}
-import sttp.client3.*
-import sttp.shared.Identity
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.tapir.*
 import sttp.tapir.DecodeResult.Error
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
@@ -25,7 +25,6 @@ import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.FailureMessages
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 
-import sttp.client3.{HttpURLConnectionBackend, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
 import sttp.tapir.server.netty.cats.NettyCatsServer
 import sttp.tapir.json.circe.*
@@ -112,7 +111,7 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple:
             assert(port == declaredPort, "Ports don't match")
             assert(host == declaredHost, "Hosts don't match")
 
-            val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+            val backend: SyncBackend = HttpClientSyncBackend()
 
             println("Sending valid request")
 

@@ -79,7 +79,15 @@ object BasicGenerator {
         StreamingImplementation.FS2
     }
 
-    val EndpointDefs(endpointsByTag, queryOrPathParamRefs, jsonParamRefs, enumsDefinedOnEndpointParams, inlineDefns, xmlParamRefs) =
+    val EndpointDefs(
+      endpointsByTag,
+      queryOrPathParamRefs,
+      jsonParamRefs,
+      enumsDefinedOnEndpointParams,
+      inlineDefns,
+      xmlParamRefs,
+      securityWrappers
+    ) =
       endpointGenerator.endpointDefs(
         doc,
         useHeadTagForObjectNames,
@@ -192,7 +200,8 @@ object BasicGenerator {
     val customTypes = doc.paths
       .flatMap(
         _.methods.flatMap(m =>
-          m.requestBody.toSeq.flatMap(_.content.map(_.contentType)) ++ m.responses.flatMap(_.content.map(_.contentType))
+          m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(_.contentType)) ++
+            m.responses.flatMap(_.resolve(doc).content.map(_.contentType))
         )
       )
       .distinct
@@ -241,6 +250,21 @@ object BasicGenerator {
       |  support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
       |}
       |""".stripMargin
+
+    val securityTypes = {
+      val allTpes = securityWrappers.flatMap(_.schemas).toSeq.sorted
+      val tpesWithParents = allTpes.map { t =>
+        t -> securityWrappers.filter(_.schemas.contains(t)).map(_.traitName).toSeq.sorted.mkString(" with ")
+      }
+      val traits = securityWrappers.map(_.traitName).toSeq.sorted.map(tn => s"sealed trait $tn").mkString("\n")
+      val classes = tpesWithParents
+        .map {
+          case ("Basic", ps) => s"case class BasicSecurityIn(value: UsernamePassword) extends $ps"
+          case (n, ps)       => s"case class ${n.capitalize}SecurityIn(value: String) extends $ps"
+        }
+        .mkString("\n")
+      traits + "\n" + classes
+    }
     val mainObj = s"""
         |package $packagePath
         |
@@ -249,7 +273,14 @@ object BasicGenerator {
         |${indent(2)(imports(normalisedJsonLib) + extraImports)}
         |
         |${indent(2)(customTypes)}
+        |${indent(2)(securityTypes)}
         |${indent(2)(queryParamSupport)}
+        |  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
+        |    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+        |  }
+        |  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+        |    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+        |  }
         |
         |${indent(2)(classDefns)}
         |${indent(2)(inlineDefns.mkString("\n"))}

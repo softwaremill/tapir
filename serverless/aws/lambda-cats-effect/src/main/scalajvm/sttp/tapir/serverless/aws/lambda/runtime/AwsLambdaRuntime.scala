@@ -3,7 +3,7 @@ package sttp.tapir.serverless.aws.lambda.runtime
 import cats.effect.unsafe.implicits.global
 import cats.effect.{Async, IO}
 import cats.syntax.all._
-import sttp.client3.httpclient.fs2.HttpClientFs2Backend
+import sttp.client4.httpclient.fs2.HttpClientFs2Backend
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.serverless.aws.lambda._
 

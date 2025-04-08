@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.lambda.js
 
 import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
-import sttp.client3.impl.cats.CatsMonadAsyncError
+import sttp.client4.impl.cats.CatsMonadAsyncError
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.serverless.aws.lambda.Route
 

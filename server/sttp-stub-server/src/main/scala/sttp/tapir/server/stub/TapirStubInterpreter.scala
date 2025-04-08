@@ -63,7 +63,7 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
     def thenThrowException(ex: Throwable, runSecurityLogic: Boolean = true): TapirStubInterpreter[F, R, OPTIONS] = {
       if (runSecurityLogic)
         append(securedEndpoint(logic = _ => _ => _ => throw ex))
-      new TapirEndpointStub(sep.endpoint).thenThrowException(ex)
+      else new TapirEndpointStub(sep.endpoint).thenThrowException(ex)
     }
 
     def thenRunLogic(): TapirStubInterpreter[F, R, OPTIONS] = append(sep)

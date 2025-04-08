@@ -5,9 +5,8 @@ import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
 import org.scalatest.matchers.should.Matchers._
-import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client4._
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.files._
@@ -28,7 +27,7 @@ import java.io.ByteArrayInputStream
 
 class ServerFilesTests[F[_], OPTIONS, ROUTE](
     serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
-    backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
+    backend: WebSocketStreamBackend[IO, Fs2Streams[IO]],
     supportSettingContentLength: Boolean = true
 ) {
 
@@ -626,7 +625,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
           serverInterpreter
             .server(NonEmptyList.of(serverInterpreter.route(headAndGetEndpoint)))
             .use { port =>
-              def testHttpMethod(method: Request[Either[String, String], Any]) = {
+              def testHttpMethod(method: Request[Either[String, String]]) = {
                 def send(etag: Option[String]) =
                   method
                     .header(HeaderNames.IfNoneMatch, etag)

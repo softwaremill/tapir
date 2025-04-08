@@ -1,14 +1,14 @@
 // {cat=Hello, World!; effects=Direct; server=JDK Http}: Exposing an endpoint using the built-in JDK HTTP server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-jdkhttp-server:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-jdkhttp-server:1.11.23
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples
 
-import sttp.client3.{HttpURLConnectionBackend, Response, SttpBackend, UriContext, asStringAlways, basicRequest}
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
-import sttp.shared.Identity
 import sttp.tapir.server.jdkhttp.*
 import sttp.tapir.*
 
@@ -43,7 +43,7 @@ import sttp.tapir.*
   println(s"Server started at port = $port")
 
   try {
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
     val badUrl = uri"http://$host:$port/bad_url"
     assert(basicRequest.response(asStringAlways).get(badUrl).send(backend).code == StatusCode(404))
 

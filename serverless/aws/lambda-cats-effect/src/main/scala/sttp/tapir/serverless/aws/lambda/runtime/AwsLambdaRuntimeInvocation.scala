@@ -7,7 +7,7 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
-import sttp.client3._
+import sttp.client4._
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.integ.cats.effect.CatsMonadError
@@ -24,7 +24,7 @@ object AwsLambdaRuntimeInvocation {
   def handleNext[F[_]: Sync](
       route: Route[F],
       awsRuntimeApiHost: String,
-      backend: Resource[F, SttpBackend[F, Any]]
+      backend: Resource[F, Backend[F]]
   ): F[Either[Throwable, Unit]] = {
     implicit val monad: MonadError[F] = new CatsMonadError[F]
 
@@ -46,13 +46,13 @@ object AwsLambdaRuntimeInvocation {
               monad.error[RequestEvent](new RuntimeException(s"Missing lambda-runtime-aws-request-id header in request event $response"))
           }
         }
-        .handleError { case e => monad.error(new RuntimeException(s"Failed to fetch request event, ${e.getMessage}")) }
+        .handleError { case e => monad.error(new RuntimeException(s"Failed to fetch request event, ${e.getMessage}", e)) }
     }
 
     val decodeEvent: RequestEvent => F[AwsRequest] = event => {
       decode[AwsRequest](event.body) match {
         case Right(awsRequest) => awsRequest.unit
-        case Left(e)           => monad.error(new RuntimeException(s"Failed to decode request event ${event.requestId}, ${e.getMessage}"))
+        case Left(e) => monad.error(new RuntimeException(s"Failed to decode request event ${event.requestId}, ${e.getMessage}", e))
       }
     }
 
