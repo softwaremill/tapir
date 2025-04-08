@@ -13,6 +13,7 @@ object ServersGenerator {
       s"""
        |
        |object Servers {
+       |  import sttp.model.Uri.UriContext
        |
        |${indent(2)(defns)}
        |
@@ -23,7 +24,7 @@ object ServersGenerator {
     else genServerDefinitionWithVariables(server, isScala3)
   }
   private def genServerUrlVal(server: OpenapiServer) = {
-    s"""${genDescription(server.description)}val `${server.url}`: String = "${server.url}""""
+    s"""${genDescription(server.description)}val `${server.url}`: sttp.model.Uri = uri"${server.url}""""
   }
   private def genServerDefinitionWithVariables(server: OpenapiServer, isScala3: Boolean) = {
     val enumNames = server.variables.map { case (k, vs) =>
@@ -73,8 +74,8 @@ object ServersGenerator {
       }
     s"""${genDescription(server.description)}object `${server.url}` {
        |${indent(2)(enums)}
-       |  def uri($enumParams): String =
-       |    s"$urlStringFormat"
+       |  def uri($enumParams): sttp.model.Uri =
+       |    uri"$urlStringFormat"
        |}""".stripMargin
   }
   private def genDescription(description: Option[String]): String =

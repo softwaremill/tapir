@@ -487,6 +487,8 @@ object TapirGeneratedEndpoints {
   lazy val generatedEndpoints = List(placeOrder, findPetsByTags, updatePet, addPet, getOrderById, deleteOrder, logoutUser, getInventory, createUsersWithListInput, getUserByName, updateUser, deleteUser, loginUser, createUser, getPetById, updatePetWithForm, deletePet, uploadFile, findPetsByStatus)
 
   object Servers {
-    val `https://petstore3.swagger.io/api/v3`: String = "https://petstore3.swagger.io/api/v3"
+    import sttp.model.Uri.UriContext
+
+    val `https://petstore3.swagger.io/api/v3`: sttp.model.Uri = uri"https://petstore3.swagger.io/api/v3"
   }
 }

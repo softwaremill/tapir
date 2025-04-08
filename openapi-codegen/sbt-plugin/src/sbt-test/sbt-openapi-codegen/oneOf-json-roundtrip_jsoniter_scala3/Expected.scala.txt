@@ -139,6 +139,8 @@ object TapirGeneratedEndpoints {
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postXmlEndpoint)
 
    object Servers {
-     val `/v3`: String = "/v3"
+    import sttp.model.Uri.UriContext
+
+     val `/v3`: sttp.model.Uri = uri"/v3"
    }
 }

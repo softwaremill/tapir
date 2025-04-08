@@ -336,6 +336,8 @@ object TapirGeneratedEndpoints {
   lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, getOneofErrorTest, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
   object Servers {
+    import sttp.model.Uri.UriContext
+
     /*
       These are the main endpoints.
       The environments are self-documenting!
@@ -351,8 +353,8 @@ object TapirGeneratedEndpoints {
       }
       val defaultPort = "1234"
       val defaultCustomer = "big-dogs"
-      def uri(_environment: environment = environment.default, _port: String = defaultPort, _customer: String = defaultCustomer): String =
-        s"https://${_environment}.my-co.org:${_port}/api/${_customer}/prefix"
+      def uri(_environment: environment = environment.default, _port: String = defaultPort, _customer: String = defaultCustomer): sttp.model.Uri =
+        uri"https://${_environment}.my-co.org:${_port}/api/${_customer}/prefix"
     }
 
     /*
@@ -362,13 +364,13 @@ object TapirGeneratedEndpoints {
     object `http://testing.my-co.org:{port}/api/{scoped}/prefix` {
       val defaultPort = "4321"
       val defaultScoped = "false"
-      def uri(_port: String = defaultPort, _scoped: String = defaultScoped): String =
-        s"http://testing.my-co.org:${_port}/api/${_scoped}/prefix"
+      def uri(_port: String = defaultPort, _scoped: String = defaultScoped): sttp.model.Uri =
+        uri"http://testing.my-co.org:${_port}/api/${_scoped}/prefix"
     }
 
     /*
       Locally
     */
-    val `/`: String = "/"
+    val `/`: sttp.model.Uri = uri"/"
   }
 }
