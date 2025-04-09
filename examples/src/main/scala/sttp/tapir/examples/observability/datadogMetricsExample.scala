@@ -60,7 +60,7 @@ import org.slf4j.{Logger, LoggerFactory}
       .options
 
   val program = for {
-    binding <- NettyFutureServer().port(8080).addEndpoint(personEndpoint, serverOptions).start()
+    binding <- NettyFutureServer(serverOptions).port(8080).addEndpoint(personEndpoint).start()
     _ <- Future {
       logger.info(s"""Server started. Try it with: curl -X POST localhost:8080/person -d '{"name": "Jacob"}'""")
       logger.info(s"The metrics are sent to udp://$hostname:$port")
