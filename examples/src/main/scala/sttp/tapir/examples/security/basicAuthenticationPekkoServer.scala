@@ -1,18 +1,18 @@
 // {cat=Security; effects=Future; server=Pekko HTTP}: HTTP basic authentication
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.23
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.security
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
 import sttp.model.headers.WWWAuthenticateChallenge
-import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.model.*
 import sttp.tapir.server.pekkohttp.*
@@ -37,7 +37,7 @@ import scala.concurrent.{Await, Future}
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(secretRoute).map { binding =>
     // testing
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
     val unauthorized = basicRequest.get(uri"http://localhost:8080/secret").send(backend)
     println("Got result: " + unauthorized)
     assert(unauthorized.code == StatusCode.Unauthorized)

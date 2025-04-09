@@ -161,6 +161,7 @@ object TestHelpers {
 
   val myBookshopDoc = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("My Bookshop", "1.0"),
     Seq(
       OpenapiPath(
@@ -264,7 +265,8 @@ object TestHelpers {
           "#/components/parameters/year" -> OpenapiParameter("year", "path", Some(true), None, OpenapiSchemaInt(false))
         )
       )
-    )
+    ),
+    Nil
   )
 
   val generatedBookshopYaml =
@@ -335,6 +337,7 @@ object TestHelpers {
 
   val generatedBookshopDoc = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("Generated Bookshop", "1.0"),
     Seq(
       OpenapiPath(
@@ -401,7 +404,8 @@ object TestHelpers {
           )
         )
       )
-    )
+    ),
+    Nil
   )
 
   val helloYaml =
@@ -436,6 +440,7 @@ object TestHelpers {
 
   val helloDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello", "1.0.0"),
     Seq(
       OpenapiPath(
@@ -466,7 +471,8 @@ object TestHelpers {
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val simpleSecurityYaml =
@@ -485,6 +491,7 @@ object TestHelpers {
 
   val simpleSecurityDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello", "1.0"),
     Seq(
       OpenapiPath(
@@ -495,12 +502,13 @@ object TestHelpers {
             parameters = Seq(),
             responses = Seq(),
             requestBody = None,
-            security = Map("basicAuth" -> Nil)
+            security = Some(Seq(Map("basicAuth" -> Nil)))
           )
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val complexSecurityYaml =
@@ -521,6 +529,7 @@ object TestHelpers {
 
   val complexSecurityDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello", "1.0"),
     Seq(
       OpenapiPath(
@@ -531,12 +540,13 @@ object TestHelpers {
             parameters = Seq(),
             responses = Seq(),
             requestBody = None,
-            security = Map("bearerAuth" -> Nil, "basicAuth" -> Nil, "apiKeyAuth" -> Nil)
+            security = Some(Seq(Map("bearerAuth" -> Nil), Map("basicAuth" -> Nil, "apiKeyAuth" -> Nil)))
           )
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val enumQueryParamYaml =
@@ -583,6 +593,7 @@ object TestHelpers {
 
   val enumQueryParamDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("enum query test", "1.0"),
     Seq(
       OpenapiPath(
@@ -635,7 +646,8 @@ object TestHelpers {
           )
         )
       )
-    )
+    ),
+    Nil
   )
 
   val withDefaultsYaml =
@@ -732,6 +744,7 @@ object TestHelpers {
 
   val withDefaultsDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("default test", "1.0"),
     List(
       OpenapiPath(
@@ -759,7 +772,7 @@ object TestHelpers {
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithDefaults")))
               )
             ),
-            Map.empty,
+            None,
             None,
             None,
             None
@@ -829,7 +842,8 @@ object TestHelpers {
         Map(),
         Map()
       )
-    )
+    ),
+    Nil
   )
 
   val specificationExtensionYaml =
@@ -880,6 +894,7 @@ object TestHelpers {
 
   val specificationExtensionDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello goodbye", "1.0"),
     Seq(
       OpenapiPath(
@@ -942,7 +957,8 @@ object TestHelpers {
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val oneOfYaml =
@@ -1030,6 +1046,7 @@ object TestHelpers {
 
   def genOneOfDocs(withDiscriminator: Boolean, withMapping: Boolean) = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("oneOf test", "1.0"),
     List(
       OpenapiPath(
@@ -1052,7 +1069,7 @@ object TestHelpers {
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithVariants")))
               )
             ),
-            Map.empty,
+            None,
             None,
             None,
             None
@@ -1107,7 +1124,8 @@ object TestHelpers {
         Map(),
         Map()
       )
-    )
+    ),
+    Nil
   )
   val oneOfDocsWithMapping = genOneOfDocs(withDiscriminator = true, withMapping = true)
   val oneOfDocsWithDiscriminatorNoMapping = genOneOfDocs(withDiscriminator = true, withMapping = false)

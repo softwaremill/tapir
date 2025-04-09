@@ -318,6 +318,9 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit lazy val schemaForByteBuffer: Schema[ByteBuffer] = Schema(SBinary())
   implicit lazy val schemaForInputStream: Schema[InputStream] = Schema(SBinary())
   implicit lazy val schemaForInputStreamRange: Schema[InputStreamRange] = Schema(SchemaType.SBinary())
+
+  // These are marked as lazy as they involve scala-java-time constructs, which massively inflate the bundle size for scala.js applications, even if
+  // they are unused within the program. By marking them lazy, it allows them to be *tree shaken* and removed by the optimiser.
   implicit lazy val schemaForInstant: Schema[Instant] = Schema(SDateTime())
   implicit lazy val schemaForZonedDateTime: Schema[ZonedDateTime] = Schema(SDateTime())
   implicit lazy val schemaForOffsetDateTime: Schema[OffsetDateTime] = Schema(SDateTime())
@@ -329,14 +332,15 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit lazy val schemaForJavaDuration: Schema[Duration] = Schema(SString())
   implicit lazy val schemaForLocalTime: Schema[LocalTime] = Schema(SString())
   implicit lazy val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString())
-  implicit lazy val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString())
-  implicit lazy val schemaForUUID: Schema[UUID] = Schema(SString[UUID]()).format("uuid")
-  implicit lazy val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
-  implicit lazy val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SNumber())
-  implicit lazy val schemaForBigInt: Schema[BigInt] = Schema(SInteger())
-  implicit lazy val schemaForJBigInteger: Schema[JBigInteger] = Schema(SInteger())
-  implicit lazy val schemaForFile: Schema[TapirFile] = Schema(SBinary())
-  implicit lazy val schemaForUri: Schema[Uri] = Schema(SString())
+
+  implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString())
+  implicit val schemaForUUID: Schema[UUID] = Schema(SString[UUID]()).format("uuid")
+  implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
+  implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SNumber())
+  implicit val schemaForBigInt: Schema[BigInt] = Schema(SInteger())
+  implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SInteger())
+  implicit val schemaForFile: Schema[TapirFile] = Schema(SBinary())
+  implicit val schemaForUri: Schema[Uri] = Schema(SString())
     .encodedExample(Uri("https", "example.com"))
 
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption

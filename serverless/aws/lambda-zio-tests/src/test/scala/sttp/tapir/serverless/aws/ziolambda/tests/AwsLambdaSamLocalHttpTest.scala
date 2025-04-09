@@ -6,9 +6,8 @@ import org.scalatest.Assertions
 import org.scalatest.compatible.Assertion
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers._
-import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client4._
 import sttp.model.{Header, Uri}
 import sttp.tapir.Endpoint
 import sttp.tapir.server.tests.backendResource
@@ -66,6 +65,6 @@ class AwsLambdaSamLocalHttpTest extends AnyFunSuite {
   }
 
   private def testServer(t: Endpoint[?, ?, ?, ?, ?], suffix: String = "")(
-      f: SttpBackend[IO, Fs2Streams[IO] with WebSockets] => IO[Assertion]
+      f: WebSocketStreamBackend[IO, Fs2Streams[IO]] => IO[Assertion]
   ): Unit = test(s"${t.showDetail} $suffix")(backendResource.use(f(_)).unsafeRunSync())
 }

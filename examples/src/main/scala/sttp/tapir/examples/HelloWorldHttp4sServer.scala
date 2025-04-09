@@ -1,8 +1,8 @@
 // {cat=Hello, World!; effects=cats-effect; server=http4s}: Exposing an endpoint using the http4s server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.23
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 
 package sttp.tapir.examples
@@ -12,8 +12,8 @@ import cats.syntax.all.*
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
-import sttp.client3.*
-import sttp.shared.Identity
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
@@ -40,7 +40,7 @@ object HelloWorldHttp4sServer extends IOApp:
       .resource
       .use { _ =>
         IO {
-          val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+          val backend: SyncBackend = HttpClientSyncBackend()
           val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send(backend).body
           println("Got result: " + result)
           assert(result == "Hello, Frodo!")

@@ -5,22 +5,22 @@ import cats.effect.unsafe.implicits.global
 import io.netty.channel.EventLoopGroup
 import org.scalatest.matchers.should.Matchers.*
 import ox.*
-import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3.*
+import sttp.client4.*
 import sttp.model.StatusCode
 import sttp.tapir.*
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.{EndpointMetric, Metric}
 import sttp.tapir.server.netty.sync.{NettySyncServer, NettySyncServerOptions}
 import sttp.tapir.tests.Test
+import sttp.shared.Identity
 
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import org.slf4j.LoggerFactory
 
-class NettySyncRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets]):
+class NettySyncRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]]):
   val logger = LoggerFactory.getLogger(getClass.getName)
 
   def tests(): List[Test] = List(
@@ -64,7 +64,7 @@ class NettySyncRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: Sttp
           .noGracefulShutdown
           .requestTimeout(1.second)
       val options = NettySyncServerOptions.customiseInterceptors
-        .metricsInterceptor(new MetricsRequestInterceptor[Identity](customMetrics, Seq.empty))
+        .metricsInterceptor(new MetricsRequestInterceptor(customMetrics, Seq.empty))
         .options
 
       Future.successful:

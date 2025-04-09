@@ -207,6 +207,9 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
   implicit lazy val bigInt: Codec[String, BigInt, TextPlain] = parsedString[BigInt](BigInt(_)).schema(Schema.schemaForBigInt)
   implicit lazy val javaBigInteger: Codec[String, JBigInteger, TextPlain] =
     parsedString[JBigInteger](new JBigInteger(_)).schema(Schema.schemaForJBigInteger)
+
+  // These are marked as lazy as they involve scala-java-time constructs, which massively inflate the bundle size for scala.js applications, even if
+  // they are unused within the program. By marking them lazy, it allows them to be *tree shaken* and removed by the optimiser.
   implicit lazy val localTime: Codec[String, LocalTime, TextPlain] =
     string.map(LocalTime.parse(_))(DateTimeFormatter.ISO_LOCAL_TIME.format).schema(Schema.schemaForLocalTime)
   implicit lazy val localDate: Codec[String, LocalDate, TextPlain] =
@@ -223,8 +226,6 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
   implicit lazy val duration: Codec[String, Duration, TextPlain] = parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
   implicit lazy val offsetTime: Codec[String, OffsetTime, TextPlain] =
     string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format).schema(Schema.schemaForOffsetTime)
-  implicit lazy val scalaDuration: Codec[String, SDuration, TextPlain] =
-    parsedString[SDuration](SDuration.apply).schema(Schema.schemaForScalaDuration)
   implicit lazy val localDateTime: Codec[String, LocalDateTime, TextPlain] = string
     .mapDecode { l =>
       try {
@@ -239,7 +240,9 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     }(h => OffsetDateTime.of(h, ZoneOffset.UTC).toString)
     .schema(Schema.schemaForLocalDateTime)
 
-  implicit lazy val uri: PlainCodec[Uri] =
+  implicit val scalaDuration: Codec[String, SDuration, TextPlain] =
+    parsedString[SDuration](SDuration.apply).schema(Schema.schemaForScalaDuration)
+  implicit val uri: PlainCodec[Uri] =
     string
       .mapDecode(raw => Uri.parse(raw).fold(e => DecodeResult.Error(raw, new IllegalArgumentException(e)), DecodeResult.Value(_)))(
         _.toString()

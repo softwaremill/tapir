@@ -9,7 +9,7 @@ This is a really early alpha implementation.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.20")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.23")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -41,6 +41,7 @@ openapiPackage                        sttp.tapir.generated                 The n
 openapiObject                         TapirGeneratedEndpoints              The name for the generated object.
 openapiUseHeadTagForObjectName        false                                If true, put endpoints in separate files based on first declared tag.
 openapiJsonSerdeLib                   circe                                The json serde library to use.
+openapiXmlSerdeLib                    cats-xml                             The xml serde library to use.
 openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
 openapiMaxSchemasPerFile              400                                  Maximum number of schemas to generate in a single file (tweak if hitting javac class size limits).
 openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
@@ -95,12 +96,12 @@ Files can be generated from multiple openapi schemas if `openapiAdditionalPackag
 
 ```scala
 openapiAdditionalPackages := List(
-      "sttp.tapir.generated.v1" -> baseDirectory.value / "src" / "main" / "resources" / "openapi_v1.yml")
+  "sttp.tapir.generated.v1" -> baseDirectory.value / "src" / "main" / "resources" / "openapi_v1.yml")
 ```
+
 would generate files in the package `sttp.tapir.generated.v1` based on the `openapi_v1.yml` schema at the provided
 location. This would be in addition to files generated in `openapiPackage` from the specs configured by
 `openapiSwaggerFile`
-
 
 ### Json Support
 
@@ -113,6 +114,22 @@ circe                 "io.circe" %% "circe-core"                                
 jsoniter              "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-circe" (free-form json support)
                       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros"
 ===================== ================================================================== ===================================================================
+```
+
+### XML Support
+
+Xml support is still fairly experimental. Available options are 'cats-xml' and 'none'. 'none' will fallback to a
+streaming binary 'non-implementation'. The minimal supported version of cats-xml is 0.0.20 for scala 2 and TBD for
+scala 3.
+
+```{eval-rst}
+===================== ========================================================================================
+ openapiXmlSerdeLib          required dependencies
+===================== ========================================================================================
+cats-xml              "com.github.geirolz" %% "cats-xml"
+                      "com.github.geirolz" %% "cats-xml-generic"
+none
+===================== ========================================================================================
 ```
 
 ### Limitations

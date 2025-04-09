@@ -2,7 +2,7 @@ package sttp.tapir.codegen.openapi.models
 
 import cats.implicits.toTraverseOps
 import cats.syntax.either._
-import OpenapiSchemaType.{OpenapiSchemaRef, OpenapiSchemaRefDecoder}
+import OpenapiSchemaType.{OpenapiSchemaRef, OpenapiSchemaRefDecoder, OpenapiSchemaSimpleType}
 import io.circe.Json
 import sttp.tapir.codegen.BasicGenerator.strippedToCamelCase
 import sttp.tapir.codegen.util.MapUtils
@@ -22,10 +22,12 @@ object OpenapiModels {
 
   case class OpenapiDocument(
       openapi: String,
-      // not used so not parsed; servers, contact, license, termsOfService
+      servers: Seq[OpenapiServer],
+      // not used so not parsed; contact, license, termsOfService
       info: OpenapiInfo,
       paths: Seq[OpenapiPath],
-      components: Option[OpenapiComponent]
+      components: Option[OpenapiComponent],
+      security: Seq[Map[String, Seq[String]]]
   )
 
   case class OpenapiInfo(
@@ -46,7 +48,7 @@ object OpenapiModels {
       parameters: Seq[Resolvable[OpenapiParameter]],
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
-      security: Map[String, Seq[String]] = Map.empty,
+      security: Option[Seq[Map[String, Seq[String]]]] = None,
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
       operationId: Option[String] = None,
@@ -67,6 +69,12 @@ object OpenapiModels {
       if (parentDuplicates.nonEmpty) throw new IllegalArgumentException(s"Duplicate parameters ${parentDuplicates.mkString(", ")}")
       this.copy(parameters = filteredParents ++ resolved)
     }
+    val tapirCodegenDirectives: Set[String] = {
+      specificationExtensions
+        .collect { case (GenerationDirectives.extensionKey, json) => json.asArray.toSeq.flatMap(_.flatMap(_.asString)) }
+        .flatten
+        .toSet
+    }
   }
 
   case class OpenapiParameter(
@@ -81,6 +89,34 @@ object OpenapiModels {
     def isExploded: Boolean = in != "header" && !explode.contains(false)
   }
 
+  sealed trait OpenapiHeader {
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef
+  }
+  object OpenapiHeader {
+    import io.circe._
+    implicit val OpenapiHeaderDecoder: Decoder[OpenapiHeader] =
+      OpenapiSchemaRefDecoder
+        .map(OpenapiHeaderRef(_))
+        .or((c: HCursor) => {
+          OpenapiParameterDecoder
+            .tryDecode(c.withFocus(_.mapObject(("name" -> Json.fromString("inline")) +: ("in" -> Json.fromString("header")) +: _)))
+            .map(OpenapiHeaderDef(_))
+        })
+  }
+  case class OpenapiHeaderDef(param: OpenapiParameter) extends OpenapiHeader {
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef =
+      if (name == param.name) this else OpenapiHeaderDef(param.copy(name = name))
+  }
+  case class OpenapiHeaderRef($ref: OpenapiSchemaRef) extends OpenapiHeader {
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef = {
+      doc.components
+        .flatMap(_.parameters.get($ref.name))
+        .map(b => if (b.in != "header") throw new IllegalStateException(s"Referenced parameter ${$ref.name} is not header") else b)
+        .map(b => OpenapiHeaderDef(b.copy(name = name)))
+        .getOrElse(throw new IllegalStateException(s"Response component ${$ref.name} is referenced but not found"))
+    }
+  }
+
   sealed trait OpenapiResponse {
     def code: String
     def resolve(doc: OpenapiDocument): OpenapiResponseDef
@@ -88,7 +124,8 @@ object OpenapiModels {
   case class OpenapiResponseDef(
       code: String,
       description: String,
-      content: Seq[OpenapiResponseContent]
+      content: Seq[OpenapiResponseContent],
+      headers: Map[String, OpenapiHeader] = Map.empty
   ) extends OpenapiResponse {
     def resolve(doc: OpenapiDocument): OpenapiResponseDef = this
   }
@@ -100,7 +137,7 @@ object OpenapiModels {
     def resolve(doc: OpenapiDocument): OpenapiResponseDef =
       doc.components
         .flatMap(_.responses.get(strippedRef))
-        .map(b => OpenapiResponseDef(code, b.description, b.content))
+        .map(b => OpenapiResponseDef(code, b.description, b.content, b.headers))
         .getOrElse(throw new IllegalStateException(s"Response component ${$ref.name} is referenced but not found"))
   }
 
@@ -159,23 +196,26 @@ object OpenapiModels {
   }
 
   implicit val OpenapiResponseDecoder: Decoder[Seq[OpenapiResponse]] = { (c: HCursor) =>
-    implicit val InnerDecoder: Decoder[(String, Option[Seq[OpenapiResponseContent]])] = { (c: HCursor) =>
+    implicit val InnerDecoder: Decoder[(String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])] = { (c: HCursor) =>
       for {
         description <- c.downField("description").as[String]
         content <- c.downField("content").as[Option[Seq[OpenapiResponseContent]]]
+        headers <- c.getOrElse[Map[String, OpenapiHeader]]("headers")(Map.empty)
       } yield {
-        (description, content)
+        (description, content, headers)
       }
     }
-    implicit val EitherDecoder: Decoder[Either[OpenapiSchemaRef, (String, Option[Seq[OpenapiResponseContent]])]] =
+    implicit val EitherDecoder
+        : Decoder[Either[OpenapiSchemaRef, (String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])]] =
       InnerDecoder.map(Right(_)).or(OpenapiSchemaRefDecoder.map(Left(_)))
 
     for {
-      schema <- c.as[Map[String, Either[OpenapiSchemaRef, (String, Option[Seq[OpenapiResponseContent]])]]]
+      schema <- c
+        .as[Map[String, Either[OpenapiSchemaRef, (String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])]]]
     } yield {
       schema.map {
-        case (code, Right((desc, content))) =>
-          OpenapiResponseDef(code, desc, content.getOrElse(Nil))
+        case (code, Right((desc, content, headers))) =>
+          OpenapiResponseDef(code, desc, content.getOrElse(Nil), headers)
         case (code, Left(ref)) =>
           OpenapiResponseRef(code, ref)
       }.toSeq
@@ -221,7 +261,7 @@ object OpenapiModels {
       parameters <- c.getOrElse[Seq[Resolvable[OpenapiParameter]]]("parameters")(Nil)
       responses <- c.get[Seq[OpenapiResponse]]("responses")
       requestBody <- c.get[Option[OpenapiRequestBody]]("requestBody")
-      security <- c.getOrElse[Seq[Map[String, Seq[String]]]]("security")(Nil)
+      security <- c.get[Option[Seq[Map[String, Seq[String]]]]]("security")
       summary <- c.get[Option[String]]("summary")
       tags <- c.get[Option[Seq[String]]]("tags")
       operationId <- c.get[Option[String]]("operationId")
@@ -235,9 +275,7 @@ object OpenapiModels {
         parameters,
         responses,
         requestBody,
-        // This probably isn't the right semantics -- since it's a list of name-array pairs rather than a map, I assume
-        // that the intended semantics are DNF. But we don't do anything with the scopes anyway for now.
-        security.foldLeft(Map.empty[String, Seq[String]])(MapUtils.merge),
+        security,
         summary,
         tags,
         operationId,
@@ -272,10 +310,12 @@ object OpenapiModels {
   implicit val OpenapiDocumentDecoder: Decoder[OpenapiDocument] = { (c: HCursor) =>
     for {
       openapi <- c.downField("openapi").as[String]
+      servers <- c.downField("servers").as[Option[Seq[OpenapiServer]]].map(_.getOrElse(Nil))
       info <- c.downField("info").as[OpenapiInfo]
       paths <- c.downField("paths").as[Seq[OpenapiPath]]
       components <- c.downField("components").as[Option[OpenapiComponent]]
-    } yield OpenapiDocument(openapi, info, paths, components)
+      security <- c.getOrElse[Seq[Map[String, Seq[String]]]]("security")(Nil)
+    } yield OpenapiDocument(openapi, servers, info, paths, components, security)
   }
 
 }

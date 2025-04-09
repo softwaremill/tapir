@@ -6,7 +6,7 @@ import cats.implicits._
 import enumeratum._
 import io.circe.generic.auto._
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.model._
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
 import sttp.monad.MonadError
@@ -421,7 +421,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     {
       val largePayloadSize = 1024 * 1024 * 5
       testServer(
-        endpoint.post.in("api" / "echo").in(stringBody).out(stringBody).maxRequestBodyLength(largePayloadSize + 100),
+        endpoint.post.in("api" / "echo").in(stringBody).out(stringBody).maxRequestBodyLength(largePayloadSize + 100L),
         "multiple large requests parsing & serialising JSON"
       )((s: String) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
         val largePayload = Iterator.continually('A' to 'Z').flatten.take(largePayloadSize).mkString

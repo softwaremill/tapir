@@ -1,9 +1,9 @@
 // {cat=Schemas; effects=Future; server=Netty; json=circe; docs=Swagger UI}: Customising a derived schema, using annotations, and using implicits
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.23
 
 package sttp.tapir.examples.schema
 
@@ -63,6 +63,6 @@ import scala.concurrent.{Await, Future}
 
   println("Go to: http://localhost:8080/docs")
   println("Press any key to exit ...")
-  scala.io.StdIn.readLine()
+  val _ = scala.io.StdIn.readLine()
 
   Await.result(serverBinding.stop(), Duration.Inf)

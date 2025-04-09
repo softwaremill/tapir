@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s.ztapir
 
 import sttp.capabilities.zio.ZioStreams
-import sttp.client3.testing.SttpBackendStub
+import sttp.client4.testing.BackendStub
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.http4s.Http4sServerOptions
 import sttp.tapir.server.interceptor.CustomiseInterceptors
@@ -15,7 +15,7 @@ import scala.concurrent.Future
 object ZHttp4sCreateServerStubTest extends CreateServerStubTest[Task, Http4sServerOptions[Task]] {
   override def customiseInterceptors: CustomiseInterceptors[Task, Http4sServerOptions[Task]] =
     Http4sServerOptions.customiseInterceptors
-  override def stub[R]: SttpBackendStub[Task, R] = SttpBackendStub(new CatsMonadError[Task])
+  override def stub: BackendStub[Task] = BackendStub(new CatsMonadError[Task])
   override def asFuture[A]: Task[A] => Future[A] = rio => Unsafe.unsafe(implicit u => Runtime.default.unsafe.runToFuture(rio))
 }
 

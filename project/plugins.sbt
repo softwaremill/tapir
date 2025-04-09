@@ -14,12 +14,12 @@ addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.2")
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.18.2")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.10.0")
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.3.1")
-addSbtPlugin("io.gatling" % "gatling-sbt" % "4.13.2")
+addSbtPlugin("io.gatling" % "gatling-sbt" % "4.13.3")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.5.7")
 addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "2.1.4")
 addSbtPlugin("org.apache.pekko" % "pekko-grpc-sbt-plugin" % "1.1.1")
 // needed to override the Android flavor of Guava coming from pekko-grpc-sbt-plugin, which causes failures in Scala.JS builds
-dependencyOverrides += "com.google.guava" % "guava" % "33.4.6-jre"
+dependencyOverrides += "com.google.guava" % "guava" % "33.4.7-jre"
 
 addDependencyTreePlugin

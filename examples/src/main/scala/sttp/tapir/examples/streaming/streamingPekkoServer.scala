@@ -1,8 +1,8 @@
 // {cat=Streaming; effects=Future; server=Pekko HTTP}: Stream response as a Pekko stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.23
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.streaming
 
@@ -12,8 +12,8 @@ import org.apache.pekko.http.scaladsl.server.Route
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.client3.*
-import sttp.shared.Identity
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import sttp.tapir.*
 
@@ -37,7 +37,7 @@ import scala.concurrent.duration.*
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(streamingRoute).map { binding =>
     // testing
-    val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
     val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/receive").send(backend).body
     println("Got result: " + result)
 
@@ -46,4 +46,4 @@ import scala.concurrent.duration.*
     binding
   }
 
-  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
+  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)

@@ -46,6 +46,12 @@ object TapirGeneratedEndpoints {
   implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
   }
+  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
+    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
 
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
@@ -112,14 +118,14 @@ object TapirGeneratedEndpoints {
     endpoint
       .put
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithoutDiscriminator])
+      .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
   lazy val postAdtTest =
     endpoint
       .post
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithDiscriminatorNoMapping])
+      .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
   lazy val postXmlEndpoint =
@@ -132,4 +138,9 @@ object TapirGeneratedEndpoints {
 
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postXmlEndpoint)
 
+   object Servers {
+    import sttp.model.Uri.UriContext
+
+     val `/v3`: sttp.model.Uri = uri"/v3"
+   }
 }
