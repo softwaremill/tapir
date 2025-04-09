@@ -246,22 +246,22 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[NotNullableThingy]].description("an optional request body (not required)"))
       .out(jsonBody[NotNullableThingy].description("a non-optional response body"))
 
-  type PostOptionalTestEndpoint = Endpoint[(String, String), Option[NullableThingy2], Unit, Option[NullableThingy], Any]
+  type PostOptionalTestEndpoint = Endpoint[Option[(String, String)], Option[NullableThingy2], Unit, Option[NullableThingy], Any]
   lazy val postOptionalTest: PostOptionalTestEndpoint =
     endpoint
       .post
       .in(("optional" / "test"))
-      .securityIn(auth.apiKey(header[String]("api_key"))
-        .and(auth.bearer[String]()))
+      .securityIn(auth.apiKey(header[Option[String]]("api_key"))
+        .and(auth.bearer[Option[String]]()).map(Api_key_and_BearerSecurityInMapping))
       .in(jsonBody[Option[NullableThingy2]].description("an optional request body (nullable)"))
       .out(jsonBody[Option[NullableThingy]].description("an optional response body"))
 
-  type PostJsonStringJsonBodyEndpoint = Endpoint[String, PostJsonStringJsonBodyBodyIn, Unit, Option[PostJsonStringJsonBodyBodyOut], Any]
+  type PostJsonStringJsonBodyEndpoint = Endpoint[Option[String], PostJsonStringJsonBodyBodyIn, Unit, Option[PostJsonStringJsonBodyBodyOut], Any]
   lazy val postJsonStringJsonBody: PostJsonStringJsonBodyEndpoint =
     endpoint
       .post
       .in(("json" / "stringJsonBody"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .securityIn(auth.bearer[Option[String]]())
       .in(oneOfBody[PostJsonStringJsonBodyBodyIn](
         stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn],
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn]))

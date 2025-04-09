@@ -81,6 +81,7 @@ paths:
             - write:pets
             - read:pets
           api_key: [ ]
+        - {}
       responses:
         '200':
           description: an optional response body
@@ -228,6 +229,11 @@ paths:
   '/json/stringJsonBody':
     post:
       x-tapir-codegen-directives: [ 'json-body-as-string' ]
+      security:
+        - {}
+        - petstore_auth:
+            - write:pets
+            - read:pets
       requestBody:
         content:
           application/json:

@@ -9,11 +9,13 @@ import sttp.tapir.codegen.util.Location
 import scala.collection.immutable
 
 case class SecurityInnerDefn(schemas: Seq[String]) {
+  lazy val isEmpty: Boolean = schemas.isEmpty
   lazy val isSingleton: Boolean = schemas.size == 1
-  lazy val partialTypeName: String = if (isSingleton) schemas.head else schemas.mkString("_and_")
+  lazy val partialTypeName: String = if (isEmpty) "Empty" else if (isSingleton) schemas.head else schemas.mkString("_and_")
   lazy val typeName: String = s"${partialTypeName.capitalize}SecurityIn"
   lazy val argType: String =
-    if (isSingleton) schemas.head match { case "Basic" => "UsernamePassword"; case _ => "String" }
+    if (isEmpty) "Unit"
+    else if (isSingleton) schemas.head match { case "Basic" => "UsernamePassword"; case _ => "String" }
     else schemas.map { case "Basic" => "UsernamePassword"; case _ => "String" }.mkString("(", ", ", ")")
   lazy val unzippedArgTypes: String =
     schemas.map { case "Basic" => "Option[UsernamePassword]"; case _ => "Option[String]" }.mkString("(", ", ", ")")
@@ -51,8 +53,9 @@ object SecurityGenerator {
     }
     val traits = securityWrappers.map(_.traitName).toSeq.sorted.map(tn => s"sealed trait $tn").mkString("\n")
     val classes = tpesWithParents
-      .map { case (d, ps) =>
-        s"case class ${d.typeName}(value: ${d.argType}) extends $ps"
+      .map {
+        case (d, ps) if d.argType == "Unit" => s"case object EmptySecurityIn extends $ps"
+        case (d, ps)                        => s"case class ${d.typeName}(value: ${d.argType}) extends $ps"
       }
       .mkString("\n")
 
@@ -70,13 +73,12 @@ object SecurityGenerator {
       location: Location
   ): SecurityDefn = {
     if (security.forall(_.isEmpty)) return SecurityDefn(None, None, None)
-    if (security.exists(_.nonEmpty) && security.exists(_.isEmpty))
-      bail("Anonymous access not supported on endpoints with other security requirement declarations")
+    val securityIsOptional = security.exists(_.nonEmpty) && security.exists(_.isEmpty)
 
     // Would be nice to do something to respect scopes here
     def inner(multi: Boolean = false): immutable.Seq[Seq[(String, String, String)]] = security
       .map(_.flatMap { case (schemeName, _ /*scopes*/ ) =>
-        def wrap(s: String): String = if (multi) s"Option[$s]" else s
+        def wrap(s: String): String = if (multi || securityIsOptional) s"Option[$s]" else s
         securitySchemes.get(schemeName) match {
           case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeBearerType) =>
             Seq((s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName))
@@ -118,54 +120,61 @@ object SecurityGenerator {
       case Seq((h, authType, _)) +: Nil => SecurityDefn(Some(s".securityIn($h)"), Some(typeFromAuthType(authType)), None)
       case s =>
         def handleMultiple = {
-          val isMultiOr: Boolean = s.size > 1
-          def wrapT(s: String): String = if (isMultiOr) s"Option[$s]" else s
+          val isMultiOr: Boolean = s.count(_.nonEmpty) > 1
+          def wrapT(s: String): String = if (isMultiOr || securityIsOptional) s"Option[$s]" else s
           val optionally = inner(isMultiOr).groupBy(_.map(_._2).sorted.distinct).values.map(_.head).toSeq
           val namesImplsAndTypes = optionally.map(_.sortBy(_._1)).toList.sortBy(_.map(_._1).mkString(",")).map { x =>
             val y = x.map {
-              case (_, authType @ ("Basic" | "Bearer"), _) =>
-                val tpe = typeFromAuthType(authType)
-                (authType, s"auth.bearer[${wrapT(tpe)}]()", tpe)
+              case (_, "Basic", _) =>
+                ("UsernamePassword", s"auth.basic[${wrapT("UsernamePassword")}]()", "UsernamePassword")
+              case (_, "Bearer", _) =>
+                ("String", s"auth.bearer[${wrapT("String")}]()", "String")
               case (impl, _, name) => (name, impl, "String")
             }
-            if (y.size == 1) {
+            if (y.isEmpty) {
+              (SecurityInnerDefn(Nil), "", "None")
+            } else if (y.size == 1) {
               val (a, b, c) = y.head
               (SecurityInnerDefn(Seq(a)), s".securityIn($b)", wrapT(c))
             } else {
               val (as, bs, _) = y.unzip3
               val innerDefn = SecurityInnerDefn(as)
               val unmappedImpl = bs.reduceLeft((a, n) => s"$a\n  .and($n)")
-              val mapImpl = if (isMultiOr) s".map(${innerDefn.typeName}Mapping)" else ""
+              val mapImpl = if (isMultiOr || securityIsOptional) s".map(${innerDefn.typeName}Mapping)" else ""
               val impl = s"$unmappedImpl$mapImpl"
               (innerDefn, s".securityIn($impl)", wrapT(innerDefn.argType))
             }
           }
-          val impls = namesImplsAndTypes.map(_._2).mkString("\n")
+          val nonEmptyDeclarations = namesImplsAndTypes.filterNot(_._3 == "None")
+          val impls = nonEmptyDeclarations.map(_._2).mkString("\n")
           val traitName = SecurityWrapperDefn(namesImplsAndTypes.map(_._1).toSet).traitName
-          val count = namesImplsAndTypes.size
-          def someAt(idx: Int, othersAreNone: Boolean) = (0 to count - 1)
-            .map { case `idx` => "Some(x)"; case _ => if (othersAreNone) "None" else "_" }
-            .mkString("(", ", ", ")")
-          val mapDecodes = namesImplsAndTypes.zipWithIndex.map { case ((name, _, _), idx) =>
-            s"case ${someAt(idx, name.isSingleton)} => DecodeResult.Value(${name.typeName.capitalize}(x))"
-          }
-          val mapEncodes = namesImplsAndTypes.zipWithIndex.map { case ((name, _, _), idx) =>
-            s"case ${name.typeName}(x) => ${someAt(idx, true)}"
-          }
           val mapImpl =
-            if (isMultiOr)
+            if (isMultiOr) {
+              val count = nonEmptyDeclarations.size
+              def someAt(idx: Int, othersAreNone: Boolean) = (0 until count)
+                .map { case `idx` => "Some(x)"; case _ => if (othersAreNone) "None" else "_" }
+                .mkString("(", ", ", ")")
+              def allNones = (0 until count).map(_ => "None").mkString("(", ", ", ")")
+              val mapDecodes = nonEmptyDeclarations.zipWithIndex.map { case ((name, _, _), idx) =>
+                s"case ${someAt(idx, name.isSingleton)} => DecodeResult.Value(${name.typeName.capitalize}(x))"
+              }
+              val decodeNone = if (securityIsOptional) s"\ncase $allNones => DecodeResult.Value(EmptySecurityIn)" else ""
+              val mapEncodes = nonEmptyDeclarations.zipWithIndex.map { case ((name, _, _), idx) =>
+                s"case ${name.typeName}(x) => ${someAt(idx, true)}"
+              }
+              val encodeNone = if (securityIsOptional) s"\ncase EmptySecurityIn => DecodeResult.Value($allNones)" else ""
               s"""
-               |.mapSecurityInDecode[$traitName]{
-               |${indent(2)(mapDecodes.mkString("\n"))}
-               |  case other =>
-               |    val count = other.productIterator.count(_.isInstanceOf[Some[?]])
-               |    DecodeResult.Error(s"$$count security inputs", new RuntimeException(s"Expected a single security input, found $$count"))
-               |}{
-               |${indent(2)(mapEncodes.mkString("\n"))}
-               |}""".stripMargin
-            else ""
+                 |.mapSecurityInDecode[$traitName]{
+                 |${indent(2)(mapDecodes.mkString("\n") + decodeNone)}
+                 |  case other =>
+                 |    val count = other.productIterator.count(_.isInstanceOf[Some[?]])
+                 |    DecodeResult.Error(s"$$count security inputs", new RuntimeException(s"Expected a single security input, found $$count"))
+                 |}{
+                 |${indent(2)(mapEncodes.mkString("\n") + encodeNone)}
+                 |}""".stripMargin
+            } else ""
           val securityWrappers = if (isMultiOr) Some(SecurityWrapperDefn(namesImplsAndTypes.map(_._1).toSet)) else None
-          val tpe = if (isMultiOr) Some(traitName) else namesImplsAndTypes.map(_._1.argType).headOption
+          val tpe = if (isMultiOr) Some(traitName) else nonEmptyDeclarations.map(_._1.argType).headOption.map(wrapT)
           SecurityDefn(Some(s"$impls$mapImpl"), tpe, securityWrappers)
         }
         s.map(_.map(_._2).distinct).distinct match {
