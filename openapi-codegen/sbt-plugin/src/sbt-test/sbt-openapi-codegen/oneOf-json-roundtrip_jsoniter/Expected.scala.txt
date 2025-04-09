@@ -1,3 +1,4 @@
+
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -50,6 +51,12 @@ object TapirGeneratedEndpoints {
   }
   implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
+  }
+  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
+    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
   }
 
   case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
@@ -153,6 +160,43 @@ object TapirGeneratedEndpoints {
   case class SomeBinaryType (
 
   )
+
+  sealed trait PostCustomContentNegotiationBodyIn extends Product with java.io.Serializable
+  case class PostCustomContentNegotiationBody0In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
+  case class PostCustomContentNegotiationBody1In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
+
+  
+  sealed trait PostCustomContentNegotiationBodyOut extends Product with java.io.Serializable {
+    def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
+    def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
+  }
+  case class PostCustomContentNegotiationBodyOutFull (
+    override val `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+    override val `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+  ) extends PostCustomContentNegotiationBodyOut
+  case class PostCustomContentNegotiationBody0Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyOut{
+    override def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
+  }
+  case class PostCustomContentNegotiationBody1Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyOut{
+    override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
+  }
+
+  
+  sealed trait PostCustomContentNegotiationBodyErr extends Product with java.io.Serializable {
+    def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
+    def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
+  }
+  case class PostCustomContentNegotiationBodyErrFull (
+    override val `text/csv`: () => String,
+    override val `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte],
+  ) extends PostCustomContentNegotiationBodyErr
+  case class PostCustomContentNegotiationBodyStringErr(value: String) extends PostCustomContentNegotiationBodyErr{
+    override def `text/csv`: () => String = () => value
+  }
+  case class PostCustomContentNegotiationBody1Err(value: Array[Byte]) extends PostCustomContentNegotiationBodyErr{
+    override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => value
+  }
+
   case class PutInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -170,6 +214,8 @@ object TapirGeneratedEndpoints {
     bar: Option[java.util.UUID] = None
   )
 
+
+
   type PostXmlEndpointEndpoint = Endpoint[Unit, Pet, Unit, Pet, Any]
   lazy val postXmlEndpoint: PostXmlEndpointEndpoint =
     endpoint
@@ -183,7 +229,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .put
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithoutDiscriminator])
+      .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
   type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
@@ -191,7 +237,7 @@ object TapirGeneratedEndpoints {
     endpoint
       .post
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithDiscriminatorNoMapping])
+      .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
   type PostGenericJsonEndpoint = Endpoint[Unit, (Option[List[AnEnum]], Option[io.circe.Json]), Unit, io.circe.Json, Any]
@@ -200,8 +246,29 @@ object TapirGeneratedEndpoints {
       .post
       .in(("generic" / "json"))
       .in(query[Option[CommaSeparatedValues[AnEnum]]]("aTrickyParam").map(_.map(_.values))(_.map(CommaSeparatedValues(_))).description("A very thorough description"))
-      .in(jsonBody[Option[io.circe.Json]])
+      .in(jsonBody[Option[io.circe.Json]].description("anything"))
       .out(jsonBody[io.circe.Json].description("anything back"))
+
+  type PostCustomContentNegotiationEndpoint = Endpoint[Unit, PostCustomContentNegotiationBodyIn, PostCustomContentNegotiationBodyErr, Option[PostCustomContentNegotiationBodyOut], sttp.capabilities.pekko.PekkoStreams]
+  lazy val postCustomContentNegotiation: PostCustomContentNegotiationEndpoint =
+    endpoint
+      .post
+      .in(("custom" / "content-negotiation"))
+      .in(oneOfBody[PostCustomContentNegotiationBodyIn](
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `text/csvCodecFormat`()).map(PostCustomContentNegotiationBody0In(_))(_.value).widenBody[PostCustomContentNegotiationBodyIn]),
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`()).map(PostCustomContentNegotiationBody1In(_))(_.value).widenBody[PostCustomContentNegotiationBodyIn])))
+      .errorOut(oneOfBody[PostCustomContentNegotiationBodyErr](
+        stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)).map(PostCustomContentNegotiationBodyStringErr(_))(_.`text/csv`())
+        .map(_.asInstanceOf[PostCustomContentNegotiationBodyErr])(p => PostCustomContentNegotiationBodyStringErr(p.`text/csv`())).description("binary error"),
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`](`application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostCustomContentNegotiationBody1Err(_))(_.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())
+        .map(_.asInstanceOf[PostCustomContentNegotiationBodyErr])(p => PostCustomContentNegotiationBody1Err(p.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())).description("binary error")).and(statusCode(sttp.model.StatusCode(400))))
+      .out(oneOf[Option[PostCustomContentNegotiationBodyOut]](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("no content"))(None),
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), oneOfBody[PostCustomContentNegotiationBodyOut](
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `text/csvCodecFormat`()).map(PostCustomContentNegotiationBody0Out(_))(_.`text/csv`())
+        .map(_.asInstanceOf[PostCustomContentNegotiationBodyOut])(p => PostCustomContentNegotiationBody0Out(p.`text/csv`())).description("text success")),
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[SomeBinaryType], `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`()).map(PostCustomContentNegotiationBody1Out(_))(_.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())
+        .map(_.asInstanceOf[PostCustomContentNegotiationBodyOut])(p => PostCustomContentNegotiationBody1Out(p.`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`())).description("text success"))).map(Some(_))(_.orNull)){ case Some(_: PostCustomContentNegotiationBodyOut) => true }))
 
   type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnEnum], Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
@@ -266,10 +333,16 @@ object TapirGeneratedEndpoints {
     endpoint
       .patch
       .in(("inline" / "simple" / "object"))
-      .in(jsonBody[Option[ListType]])
+      .in(jsonBody[Option[ListType]].description("list type in"))
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
 
-  lazy val generatedEndpoints = List(postXmlEndpoint, putAdtTest, postAdtTest, postGenericJson, getOneofOptionTest, putCustomContentTypes, postCustomContentTypes, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  
+  lazy val generatedEndpoints = List(postXmlEndpoint, putAdtTest, postAdtTest, postGenericJson, postCustomContentNegotiation, getOneofOptionTest, putCustomContentTypes, postCustomContentTypes, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
+   object Servers {
+    import sttp.model.Uri.UriContext
+
+     val `/v3`: sttp.model.Uri = uri"/v3"
+   }
 }

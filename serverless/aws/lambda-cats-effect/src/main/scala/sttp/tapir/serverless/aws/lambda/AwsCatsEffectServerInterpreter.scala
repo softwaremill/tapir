@@ -1,7 +1,7 @@
 package sttp.tapir.serverless.aws.lambda
 
 import cats.effect.Sync
-import sttp.client3.impl.cats.implicits._
+import sttp.client4.impl.cats.implicits._
 
 abstract class AwsCatsEffectServerInterpreter[F[_]](implicit fa: Sync[F]) extends AwsServerInterpreter[F]
 

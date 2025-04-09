@@ -207,25 +207,26 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
   implicit val bigInt: Codec[String, BigInt, TextPlain] = parsedString[BigInt](BigInt(_)).schema(Schema.schemaForBigInt)
   implicit val javaBigInteger: Codec[String, JBigInteger, TextPlain] =
     parsedString[JBigInteger](new JBigInteger(_)).schema(Schema.schemaForJBigInteger)
-  implicit val localTime: Codec[String, LocalTime, TextPlain] =
+
+  // These are marked as lazy as they involve scala-java-time constructs, which massively inflate the bundle size for scala.js applications, even if
+  // they are unused within the program. By marking them lazy, it allows them to be *tree shaken* and removed by the optimiser.
+  implicit lazy val localTime: Codec[String, LocalTime, TextPlain] =
     string.map(LocalTime.parse(_))(DateTimeFormatter.ISO_LOCAL_TIME.format).schema(Schema.schemaForLocalTime)
-  implicit val localDate: Codec[String, LocalDate, TextPlain] =
+  implicit lazy val localDate: Codec[String, LocalDate, TextPlain] =
     string.map(LocalDate.parse(_))(DateTimeFormatter.ISO_LOCAL_DATE.format).schema(Schema.schemaForLocalDate)
-  implicit val offsetDateTime: Codec[String, OffsetDateTime, TextPlain] =
+  implicit lazy val offsetDateTime: Codec[String, OffsetDateTime, TextPlain] =
     string.map(OffsetDateTime.parse(_))(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format).schema(Schema.schemaForOffsetDateTime)
-  implicit val zonedDateTime: Codec[String, ZonedDateTime, TextPlain] =
+  implicit lazy val zonedDateTime: Codec[String, ZonedDateTime, TextPlain] =
     string.map(ZonedDateTime.parse(_))(DateTimeFormatter.ISO_ZONED_DATE_TIME.format).schema(Schema.schemaForZonedDateTime)
-  implicit val instant: Codec[String, Instant, TextPlain] =
+  implicit lazy val instant: Codec[String, Instant, TextPlain] =
     string.map(Instant.parse(_))(DateTimeFormatter.ISO_INSTANT.format).schema(Schema.schemaForInstant)
-  implicit val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant).schema(Schema.schemaForDate)
-  implicit val zoneOffset: Codec[String, ZoneOffset, TextPlain] = parsedString[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
-  implicit val zoneId: Codec[String, ZoneId, TextPlain] = parsedString[ZoneId](ZoneId.of).schema(Schema.schemaForZoneId)
-  implicit val duration: Codec[String, Duration, TextPlain] = parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
-  implicit val offsetTime: Codec[String, OffsetTime, TextPlain] =
+  implicit lazy val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant).schema(Schema.schemaForDate)
+  implicit lazy val zoneOffset: Codec[String, ZoneOffset, TextPlain] = parsedString[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
+  implicit lazy val zoneId: Codec[String, ZoneId, TextPlain] = parsedString[ZoneId](ZoneId.of).schema(Schema.schemaForZoneId)
+  implicit lazy val duration: Codec[String, Duration, TextPlain] = parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
+  implicit lazy val offsetTime: Codec[String, OffsetTime, TextPlain] =
     string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format).schema(Schema.schemaForOffsetTime)
-  implicit val scalaDuration: Codec[String, SDuration, TextPlain] =
-    parsedString[SDuration](SDuration.apply).schema(Schema.schemaForScalaDuration)
-  implicit val localDateTime: Codec[String, LocalDateTime, TextPlain] = string
+  implicit lazy val localDateTime: Codec[String, LocalDateTime, TextPlain] = string
     .mapDecode { l =>
       try {
         try {
@@ -239,6 +240,8 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     }(h => OffsetDateTime.of(h, ZoneOffset.UTC).toString)
     .schema(Schema.schemaForLocalDateTime)
 
+  implicit val scalaDuration: Codec[String, SDuration, TextPlain] =
+    parsedString[SDuration](SDuration.apply).schema(Schema.schemaForScalaDuration)
   implicit val uri: PlainCodec[Uri] =
     string
       .mapDecode(raw => Uri.parse(raw).fold(e => DecodeResult.Error(raw, new IllegalArgumentException(e)), DecodeResult.Value(_)))(

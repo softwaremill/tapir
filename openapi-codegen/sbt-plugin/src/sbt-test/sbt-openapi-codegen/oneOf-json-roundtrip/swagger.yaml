@@ -1,6 +1,31 @@
 openapi: 3.0.3
 servers:
-  - url: /v3
+  - url: 'https://{environment}.my-co.org:{port}/api/{customer}/prefix'
+    description: |
+      These are the main endpoints.
+      The environments are self-documenting!
+    variables:
+      environment:
+        enum:
+          - dev
+          - staging
+          - prod
+        default: prod
+      port:
+        default: 1234
+      customer:
+        default: big-dogs
+  - url: 'http://testing.my-co.org:{port}/api/{scoped}/prefix'
+    description: |
+      Legacy endpoint that doesn't require TLS
+      Doesn't work, retained for completely mysterious reasons lost to the winds of time
+    variables:
+      port:
+        default: 4321
+      scoped:
+        default: false
+  - description: Locally
+    url: /
 info:
   description: File for testing json roundtripping of oneOf defns in scala 2.x with circe
   version: 1.0.20-SNAPSHOT
@@ -63,22 +88,13 @@ paths:
     put:
       responses:
         '200':
-          description: a non-optional response body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotNullableThingy'
+          $ref: '#/components/responses/optionalityTest'
       requestBody:
-        required: false
-        description: an optional request body (not required)
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotNullableThingy'
+        $ref: '#/components/requestBodies/optionalityTest'
   '/adt/test':
     post:
       security:
-        - api_key: []
+        - api_key: [ ]
       responses:
         '200':
           description: successful operation
@@ -187,20 +203,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SimpleError'
-
+  '/json/stringJsonBody':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+          application/zip:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+      responses:
+        "200":
+          description: "Possibly-invalid json"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+        "204":
+          description: "No response"
+  '/json/stringJsonBody/simple':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+      responses:
+        "200":
+          description: "Possibly-invalid json"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
   '/oneof/option/test':
     get:
       responses:
         "204":
           description: "No response"
+          headers:
+            common-response-header:
+              $ref: '#/components/parameters/common-response-header'
         "200":
           description: An object
+          headers:
+            common-response-header:
+              $ref: '#/components/parameters/common-response-header'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ObjectWithInlineEnum'
         "201":
           description: Another object
+          headers:
+            common-response-header:
+              $ref: '#/components/parameters/common-response-header'
           content:
             application/json:
               schema:
@@ -224,18 +287,24 @@ paths:
       responses:
         "200":
           description: An object
+          headers:
+            x-combat-status:
+              description: "a response header"
+              required: true
+              schema:
+                type: string
           content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - foo
-              properties:
-                foo:
-                  type: string
-                bar:
-                  type: string
-                  format: uuid
+            application/json:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
     put:
       requestBody:
         content:
@@ -310,6 +379,27 @@ paths:
 
 
 components:
+  parameters:
+    common-response-header:
+      in: header
+      name: x-common
+      schema:
+        type: string
+  responses:
+    optionalityTest:
+      description: a non-optional response body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotNullableThingy'
+  requestBodies:
+    optionalityTest:
+      required: false
+      description: an optional request body (not required)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotNullableThingy'
   securitySchemes:
     petstore_auth:
       type: oauth2

@@ -2,9 +2,9 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.18
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.18
-//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-tracing:1.11.20
-//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.48.0
-//> using dep io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.48.0
+//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-tracing:1.11.23
+//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.49.0
+//> using dep io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.49.0
 //> using dep ch.qos.logback:logback-classic:1.5.17
 
 package sttp.tapir.examples.observability
@@ -93,7 +93,7 @@ object OpenTelemetryTracingExample extends OxApp:
 
     logger.info(s"""Server started. Try it with: curl -X POST http://localhost:8080/person -d '{"name": "Jane"}'""")
     logger.info("Press ENTER key to exit.")
-    StdIn.readLine()
+    val _ = StdIn.readLine()
 
     logger.info("Exiting...")
     ExitCode.Success

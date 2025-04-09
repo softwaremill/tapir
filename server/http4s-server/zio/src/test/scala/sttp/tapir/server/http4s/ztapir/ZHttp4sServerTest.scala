@@ -5,7 +5,7 @@ import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.capabilities.zio.ZioStreams
-import sttp.client3._
+import sttp.client4._
 import sttp.model.sse.ServerSentEvent
 import sttp.monad.MonadError
 import sttp.tapir._
@@ -38,6 +38,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
         "Send and receive SSE"
       )((_: Unit) => ZIO.right(ZStream(sse1, sse2))) { (backend, baseUri) =>
         basicRequest
+          .get(baseUri)
           .response(asStream[IO, List[ServerSentEvent], Fs2Streams[IO]](Fs2Streams[IO]) { stream =>
             Http4sServerSentEvents
               .parseBytesToSSE[IO]
@@ -45,7 +46,6 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
               .compile
               .toList
           })
-          .get(baseUri)
           .send(backend)
           .map(_.body.toOption.value shouldBe List(sse1, sse2))
       }

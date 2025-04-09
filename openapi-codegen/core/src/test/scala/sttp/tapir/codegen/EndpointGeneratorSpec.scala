@@ -8,14 +8,16 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiPathMethod,
   OpenapiRequestBody,
   OpenapiRequestBodyContent,
+  OpenapiRequestBodyDefn,
   OpenapiResponse,
   OpenapiResponseContent,
+  OpenapiResponseDef,
   Resolved
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
-  OpenapiSecuritySchemeBearerType,
+  OpenapiSecuritySchemeApiKeyType,
   OpenapiSecuritySchemeBasicType,
-  OpenapiSecuritySchemeApiKeyType
+  OpenapiSecuritySchemeBearerType
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
@@ -32,6 +34,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "generate the endpoint defs" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -45,12 +48,12 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
                 Resolved(OpenapiParameter("jkl-id", "header", Some(false), None, OpenapiSchemaString(false)))
               ),
               responses = Seq(
-                OpenapiResponse(
+                OpenapiResponseDef(
                   "200",
                   "",
                   Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaString(false), false)))
                 ),
-                OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
+                OpenapiResponseDef("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
               ),
               requestBody = None,
               summary = None,
@@ -82,6 +85,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "generete endpoints defs with security" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -165,6 +169,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "handle status codes" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -174,8 +179,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               methodType = "get",
               parameters = Seq(Resolved(OpenapiParameter("id", "path", Some(true), None, OpenapiSchemaString(true)))),
               responses = Seq(
-                OpenapiResponse("202", "Processing", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))),
-                OpenapiResponse("404", "couldn't find thing", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
+                OpenapiResponseDef("202", "Processing", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))),
+                OpenapiResponseDef("404", "couldn't find thing", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
               ),
               requestBody = None,
               summary = None,
@@ -190,8 +195,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               methodType = "get",
               parameters = Seq(Resolved(OpenapiParameter("id", "path", Some(true), None, OpenapiSchemaString(true)))),
               responses = Seq(
-                OpenapiResponse("204", "No body", Nil),
-                OpenapiResponse("403", "Not authorised", Nil)
+                OpenapiResponseDef("204", "No body", Nil),
+                OpenapiResponseDef("403", "Not authorised", Nil)
               ),
               requestBody = None,
               summary = None,
@@ -230,6 +235,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "support multipart body" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -238,9 +244,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
             OpenapiPathMethod(
               methodType = "post",
               parameters = Seq(),
-              responses = Seq(OpenapiResponse("204", "No body", Nil)),
+              responses = Seq(OpenapiResponseDef("204", "No body", Nil)),
               requestBody = Some(
-                OpenapiRequestBody(
+                OpenapiRequestBodyDefn(
                   required = true,
                   description = None,
                   content = Seq(

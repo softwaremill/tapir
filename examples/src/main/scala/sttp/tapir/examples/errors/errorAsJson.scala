@@ -1,12 +1,12 @@
 // {cat=Error handling; effects=Future; server=Pekko HTTP; json=circe}: Default error handler returning errors as JSON
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.23
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
-//> using dep com.softwaremill.sttp.client3::core:3.10.2
-//> using dep com.softwaremill.sttp.client3::circe:3.10.3
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
+//> using dep com.softwaremill.sttp.client4::circe:4.0.0
 
 package sttp.tapir.examples.errors
 
@@ -15,10 +15,10 @@ import io.circe.parser
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3.*
-import sttp.client3.circe.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
+import sttp.client4.circe.*
 import sttp.model.StatusCode
-import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
@@ -59,11 +59,15 @@ import scala.concurrent.{Await, Future}
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(errorOrJsonRoute).map { binding =>
     // testing
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
 
     // This causes internal exception, resulting in response status code 500
     val response1 =
-      basicRequest.post(uri"http://localhost:8080/person").body(Person("Pawel", "Stawicki", 4)).response(asStringAlways).send(backend)
+      basicRequest
+        .post(uri"http://localhost:8080/person")
+        .body(asJson(Person("Pawel", "Stawicki", 4)))
+        .response(asStringAlways)
+        .send(backend)
     assert(response1.code == StatusCode.InternalServerError)
     println("Got result (1): " + response1.body)
     // Response body contains Error case class serialized to JSON
@@ -78,7 +82,11 @@ import scala.concurrent.{Await, Future}
     assert(error2 == Right(Error(Severity.Error, "Invalid value for: body (expected json value got 'invali...' (line 1, column 1))")))
 
     val response3 =
-      basicRequest.post(uri"http://localhost:8080/person").body(Person("Pawel", "Stawicki", 46)).response(asStringAlways).send(backend)
+      basicRequest
+        .post(uri"http://localhost:8080/person")
+        .body(asJson(Person("Pawel", "Stawicki", 46)))
+        .response(asStringAlways)
+        .send(backend)
     println("Got result (3): " + response3.body)
     assert(response3.body == "Operation successful")
 

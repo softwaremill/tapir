@@ -1,11 +1,36 @@
 openapi: 3.0.3
 servers:
-  - url: /v3
+  - url: 'https://{environment}.my-co.org:{port}/api/{customer}/prefix'
+    description: |
+      These are the main endpoints.
+      The environments are self-documenting!
+    variables:
+      environment:
+        enum:
+          - dev
+          - staging
+          - prod
+        default: prod
+      port:
+        default: 1234
+      customer:
+        default: big-dogs
+  - url: 'http://testing.my-co.org:{port}/api/{scoped}/prefix'
+    description: |
+      Legacy endpoint that doesn't require TLS
+      Doesn't work, retained for completely mysterious reasons lost to the winds of time
+    variables:
+      port:
+        default: 4321
+      scoped:
+        default: false
+  - description: Locally
+    url: /
 info:
   description: File for testing json roundtripping of oneOf defns in scala 3 with circe
   version: 1.0.20-SNAPSHOT
   title: OneOf Json test for scala 3
-tags: []
+tags: [ ]
 paths:
   '/adt/test':
     post:
@@ -146,6 +171,9 @@ paths:
                   type: string
                   format: uuid
     put:
+      security:
+        - basic: [ ]
+        - bearer: [ ]
       requestBody:
         content:
           multipart/form-data:
@@ -184,6 +212,24 @@ paths:
           description: application/octet-stream in error position 2
           content:
             application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+    get:
+      responses:
+        "200":
+          description: empty response 1
+        "201":
+          description: empty response 2
+        "400":
+          description: application/something-unrecognised in error position
+          content:
+            application/something-unrecognised:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+        "401":
+          description: application/something-unrecognised in error position 2
+          content:
+            application/something-unrecognised:
               schema:
                 $ref: '#/components/schemas/NotNullableThingy'
     delete:
@@ -363,3 +409,10 @@ components:
       type: array
       items:
         type: string
+  securitySchemes:
+    basic:
+      type: http
+      scheme: basic
+    bearer:
+      type: http
+      scheme: bearer

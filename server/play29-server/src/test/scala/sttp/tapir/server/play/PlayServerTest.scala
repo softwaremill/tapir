@@ -8,7 +8,7 @@ import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers._
 import play.api.http.ParserConfiguration
 import sttp.capabilities.akka.AkkaStreams
-import sttp.client3._
+import sttp.client4._
 import sttp.model.{MediaType, Part, StatusCode}
 import sttp.monad.FutureMonad
 import sttp.tapir._

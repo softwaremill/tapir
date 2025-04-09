@@ -30,7 +30,8 @@ class VertxTestServerInterpreter(vertx: Vertx)
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
     val router = Router.router(vertx)
-    val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
+    // the maxFormAttributeSize must be higher than in ServerMultipartTests.maxContentLengthTests
+    val server = vertx.createHttpServer(new HttpServerOptions().setPort(0).setMaxFormAttributeSize(100000)).requestHandler(router)
     val listenIO = vertxFutureToIo(server.listen(0))
     routes.toList.foreach(_.apply(router))
     // Vertx doesn't offer graceful shutdown with timeout OOTB

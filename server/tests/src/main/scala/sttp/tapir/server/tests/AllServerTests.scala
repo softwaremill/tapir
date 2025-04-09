@@ -1,9 +1,8 @@
 package sttp.tapir.server.tests
 
 import cats.effect.IO
-import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3.SttpBackend
+import sttp.client4.WebSocketStreamBackend
 import sttp.monad.MonadError
 import sttp.tapir.tests.Test
 
@@ -13,7 +12,7 @@ import sttp.tapir.tests.Test
 class AllServerTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
     serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
-    backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
+    backend: WebSocketStreamBackend[IO, Fs2Streams[IO]],
     security: Boolean = true,
     basic: Boolean = true,
     contentNegotiation: Boolean = true,

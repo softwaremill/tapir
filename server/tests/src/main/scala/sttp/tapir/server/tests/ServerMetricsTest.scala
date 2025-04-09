@@ -4,7 +4,7 @@ import cats.implicits._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.interceptor.CustomiseInterceptors
