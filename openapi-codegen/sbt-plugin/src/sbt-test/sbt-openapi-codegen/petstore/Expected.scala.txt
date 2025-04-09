@@ -17,8 +17,8 @@ object TapirGeneratedEndpoints {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "x-www-form-urlencoded")
   }
   sealed trait Bearer_or_api_key_SecurityIn
-  case class BearerSecurityIn(value: String) extends Bearer_or_api_key_SecurityIn
   case class Api_keySecurityIn(value: String) extends Bearer_or_api_key_SecurityIn
+  case class BearerSecurityIn(value: String) extends Bearer_or_api_key_SecurityIn
 
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
