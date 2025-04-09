@@ -17,6 +17,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate simple class" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -34,6 +35,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate simple enum" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -55,6 +57,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate simple class with reserved propName" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -72,6 +75,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with array" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -93,6 +97,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with map" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -114,6 +119,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with any type" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -131,6 +137,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with inner class" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -154,6 +161,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with array with inner class" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -183,6 +191,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with map with inner class" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -212,6 +221,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "nonrequired and required are not the same" in {
     val doc1 = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -224,6 +234,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
     val doc2 = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -244,6 +255,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "nonrequired and nullable are the same" in {
     val doc1 = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -256,6 +268,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
     val doc2 = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -275,6 +288,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate legal scala 3 enums when instructed to" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -335,6 +349,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate named maps" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -490,7 +505,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       .toTry
       .get
     val gen = new ClassDefinitionGenerator()
-    val res1 = Try(gen.classDefs(OpenapiDocument("", null, Nil, Some(doc)))).toEither
+    val res1 = Try(gen.classDefs(OpenapiDocument("", Nil, null, Nil, Some(doc)))).toEither
 
     res1.left.get.getMessage shouldEqual "Generating class for ReqWithDefaults: Cannot render a number as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString."
 

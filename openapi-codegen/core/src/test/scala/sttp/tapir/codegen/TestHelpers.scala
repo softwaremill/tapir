@@ -161,6 +161,7 @@ object TestHelpers {
 
   val myBookshopDoc = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("My Bookshop", "1.0"),
     Seq(
       OpenapiPath(
@@ -335,6 +336,7 @@ object TestHelpers {
 
   val generatedBookshopDoc = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("Generated Bookshop", "1.0"),
     Seq(
       OpenapiPath(
@@ -436,6 +438,7 @@ object TestHelpers {
 
   val helloDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello", "1.0.0"),
     Seq(
       OpenapiPath(
@@ -485,6 +488,7 @@ object TestHelpers {
 
   val simpleSecurityDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello", "1.0"),
     Seq(
       OpenapiPath(
@@ -521,6 +525,7 @@ object TestHelpers {
 
   val complexSecurityDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello", "1.0"),
     Seq(
       OpenapiPath(
@@ -583,6 +588,7 @@ object TestHelpers {
 
   val enumQueryParamDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("enum query test", "1.0"),
     Seq(
       OpenapiPath(
@@ -732,6 +738,7 @@ object TestHelpers {
 
   val withDefaultsDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("default test", "1.0"),
     List(
       OpenapiPath(
@@ -880,6 +887,7 @@ object TestHelpers {
 
   val specificationExtensionDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello goodbye", "1.0"),
     Seq(
       OpenapiPath(
@@ -1030,6 +1038,7 @@ object TestHelpers {
 
   def genOneOfDocs(withDiscriminator: Boolean, withMapping: Boolean) = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("oneOf test", "1.0"),
     List(
       OpenapiPath(

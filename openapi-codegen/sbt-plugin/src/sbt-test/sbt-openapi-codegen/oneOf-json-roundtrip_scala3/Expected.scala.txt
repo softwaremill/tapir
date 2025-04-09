@@ -285,4 +285,41 @@ object TapirGeneratedEndpoints {
 
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postInlineEnumTest, getOneofOptionTest, getInlineSimpleObject, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
+  object Servers {
+    import sttp.model.Uri.UriContext
+
+
+    /*
+      These are the main endpoints.
+      The environments are self-documenting!
+    */
+    object `https://{environment}.my-co.org:{port}/api/{customer}/prefix` {
+      enum environment {
+        case dev, staging, prod
+      }
+      object environment {
+        val default: environment = prod
+      }
+      val defaultPort = "1234"
+      val defaultCustomer = "big-dogs"
+      def uri(_environment: environment = environment.default, _port: String = defaultPort, _customer: String = defaultCustomer): sttp.model.Uri =
+        uri"https://${_environment}.my-co.org:${_port}/api/${_customer}/prefix"
+    }
+
+    /*
+      Legacy endpoint that doesn't require TLS
+      Doesn't work, retained for completely mysterious reasons lost to the winds of time
+    */
+    object `http://testing.my-co.org:{port}/api/{scoped}/prefix` {
+      val defaultPort = "4321"
+      val defaultScoped = "false"
+      def uri(_port: String = defaultPort, _scoped: String = defaultScoped): sttp.model.Uri =
+        uri"http://testing.my-co.org:${_port}/api/${_scoped}/prefix"
+    }
+
+    /*
+      Locally
+    */
+    val `/`: sttp.model.Uri = uri"/"
+  }
 }

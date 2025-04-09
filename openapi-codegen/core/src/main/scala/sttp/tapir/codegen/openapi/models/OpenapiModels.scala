@@ -22,6 +22,7 @@ object OpenapiModels {
 
   case class OpenapiDocument(
       openapi: String,
+      servers: Seq[OpenapiServer],
       // not used so not parsed; servers, contact, license, termsOfService
       info: OpenapiInfo,
       paths: Seq[OpenapiPath],
@@ -310,10 +311,11 @@ object OpenapiModels {
   implicit val OpenapiDocumentDecoder: Decoder[OpenapiDocument] = { (c: HCursor) =>
     for {
       openapi <- c.downField("openapi").as[String]
+      servers <- c.downField("servers").as[Option[Seq[OpenapiServer]]].map(_.getOrElse(Nil))
       info <- c.downField("info").as[OpenapiInfo]
       paths <- c.downField("paths").as[Seq[OpenapiPath]]
       components <- c.downField("components").as[Option[OpenapiComponent]]
-    } yield OpenapiDocument(openapi, info, paths, components)
+    } yield OpenapiDocument(openapi, servers, info, paths, components)
   }
 
 }
