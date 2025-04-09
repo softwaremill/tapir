@@ -21,7 +21,9 @@ case class SwaggerUIOptions(
     yamlName: String,
     contextPath: List[String],
     useRelativePaths: Boolean,
-    showExtensions: Boolean
+    showExtensions: Boolean,
+    initializerOptions: Option[Map[String, String]],
+    oAuthInitOptions: Option[Map[String, String]]
 ) {
   def pathPrefix(pathPrefix: List[String]): SwaggerUIOptions = copy(pathPrefix = pathPrefix)
   def yamlName(yamlName: String): SwaggerUIOptions = copy(yamlName = yamlName)
@@ -33,5 +35,5 @@ case class SwaggerUIOptions(
 }
 
 object SwaggerUIOptions {
-  val default: SwaggerUIOptions = SwaggerUIOptions(List("docs"), "docs.yaml", Nil, useRelativePaths = true, showExtensions = false)
+  val default: SwaggerUIOptions = SwaggerUIOptions(List("docs"), "docs.yaml", Nil, useRelativePaths = true, showExtensions = false, None, None)
 }
