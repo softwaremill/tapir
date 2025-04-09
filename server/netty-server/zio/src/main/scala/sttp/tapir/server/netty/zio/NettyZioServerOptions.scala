@@ -2,8 +2,8 @@ package sttp.tapir.server.netty.zio
 
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
+import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
-import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.{Defaults, TapirFile}
 import zio.{Cause, RIO, ZIO}
 
@@ -37,7 +37,7 @@ object NettyZioServerOptions {
   def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], NettyZioServerOptions[R]] =
     CustomiseInterceptors(
       createOptions = (ci: CustomiseInterceptors[RIO[R, *], NettyZioServerOptions[R]]) => default(ci.interceptors)
-    ).serverLog(defaultServerLog[R])
+    ).serverLog(defaultServerLog[R]).rejectHandler(DefaultRejectHandler.orNotFound[RIO[R, *]])
 
   def defaultServerLog[R]: DefaultServerLog[RIO[R, *]] = DefaultServerLog(
     doLogWhenReceived = debugLog(_, None),

@@ -52,7 +52,7 @@ import scala.io.StdIn
     )
 
   val program = for {
-    binding <- NettyFutureServer().port(8080).addEndpoints(endpoints, serverOptions).start()
+    binding <- NettyFutureServer(serverOptions).port(8080).addEndpoints(endpoints).start()
     _ <- Future {
       logger.info(s"""Server started. Try it with: curl -X POST localhost:8080/person -d '{"name": "Jacob"}'""")
       logger.info("The metrics are available at http://localhost:8080/metrics")

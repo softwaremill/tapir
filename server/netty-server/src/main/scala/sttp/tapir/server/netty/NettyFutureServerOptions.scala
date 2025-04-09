@@ -3,6 +3,7 @@ package sttp.tapir.server.netty
 import org.slf4j.LoggerFactory
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
+import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.{Defaults, TapirFile}
@@ -43,7 +44,7 @@ object NettyFutureServerOptions {
   def customiseInterceptors: CustomiseInterceptors[Future, NettyFutureServerOptions] = {
     CustomiseInterceptors(
       createOptions = (ci: CustomiseInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
-    ).serverLog(defaultServerLog)
+    ).serverLog(defaultServerLog).rejectHandler(DefaultRejectHandler.orNotFound[Future])
   }
 
   private val log = LoggerFactory.getLogger(getClass.getName)
