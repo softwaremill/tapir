@@ -228,9 +228,11 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       case 1 => Some(someResponse1)
       case 2 => Some(someResponse2)
     }
-    val route = TapirGeneratedEndpoints.getOneofOptionTest.serverLogic[Future]({ _: Unit =>
-      Future successful Right[Unit, (Option[AnyObjectWithInlineEnum], Option[String])](responseVariant -> Some("ok"))
-    })
+    val route = TapirGeneratedEndpoints.getOneofOptionTest
+      .serverSecurityLogicSuccess[Unit, Future](_ => Future.successful(()))
+      .serverLogic({ _ => _: Unit =>
+        Future successful Right[Unit, (Option[AnyObjectWithInlineEnum], Option[String])](responseVariant -> Some("ok"))
+      })
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(route)
       .thenRunLogic()
@@ -238,6 +240,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     Await.result(
       sttp.client3.basicRequest
         .get(uri"http://test.com/oneof/option/test")
+        .header("Authorization", "Bearer some.jwt.probably")
         .send(stub)
         .map { resp =>
           resp.code.code shouldEqual 204
@@ -249,6 +252,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     Await.result(
       sttp.client3.basicRequest
         .get(uri"http://test.com/oneof/option/test")
+        .header("Authorization", "Bearer some.jwt.probably")
         .send(stub)
         .map { resp =>
           resp.code.code shouldEqual 200
@@ -260,6 +264,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     Await.result(
       sttp.client3.basicRequest
         .get(uri"http://test.com/oneof/option/test")
+        .header("Authorization", "Bearer some.jwt.probably")
         .send(stub)
         .map { resp =>
           resp.code.code shouldEqual 201
