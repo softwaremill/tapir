@@ -15,10 +15,10 @@ case class SecurityInnerDefn(schemas: Seq[String]) {
   lazy val typeName: String = s"${partialTypeName.capitalize}SecurityIn"
   lazy val argType: String =
     if (isEmpty) "Unit"
-    else if (isSingleton) schemas.head match { case "Basic" => "UsernamePassword"; case _ => "String" }
-    else schemas.map { case "Basic" => "UsernamePassword"; case _ => "String" }.mkString("(", ", ", ")")
+    else if (isSingleton) SecurityGenerator.typeFromAuthType(schemas.head)
+    else schemas.map(SecurityGenerator.typeFromAuthType).mkString("(", ", ", ")")
   lazy val unzippedArgTypes: String =
-    schemas.map { case "Basic" => "Option[UsernamePassword]"; case _ => "Option[String]" }.mkString("(", ", ", ")")
+    schemas.map { s => s"Option[${SecurityGenerator.typeFromAuthType(s)}]" }.mkString("(", ", ", ")")
 }
 case class SecurityWrapperDefn(schemas: Set[SecurityInnerDefn]) {
   lazy val traitName: String = schemas.map(_.partialTypeName).toSeq.sorted.mkString("_or_") + "_SecurityIn"
@@ -30,7 +30,7 @@ case class SecurityDefn(
 )
 
 object SecurityGenerator {
-  def typeFromAuthType(s: String) = if (s == "Basic") "UsernamePassword" else "String"
+  def typeFromAuthType(s: String) = if (s.equalsIgnoreCase("Basic")) "UsernamePassword" else "String"
   def mkMapImpl(as: Seq[String]) = {
     val innerDefn = SecurityInnerDefn(as)
     val unzippedSomes = innerDefn.schemas.zipWithIndex.map { case (x, i) => s"Some(v$i: ${typeFromAuthType(x)})" }.mkString(", ")
@@ -126,9 +126,9 @@ object SecurityGenerator {
           val namesImplsAndTypes = optionally.map(_.sortBy(_._1)).toList.sortBy(_.map(_._1).mkString(",")).map { x =>
             val y = x.map {
               case (_, "Basic", _) =>
-                ("UsernamePassword", s"auth.basic[${wrapT("UsernamePassword")}]()", "UsernamePassword")
+                ("Basic", s"auth.basic[${wrapT("UsernamePassword")}]()", "UsernamePassword")
               case (_, "Bearer", _) =>
-                ("String", s"auth.bearer[${wrapT("String")}]()", "String")
+                ("Bearer", s"auth.bearer[${wrapT("String")}]()", "String")
               case (impl, _, name) => (name, impl, "String")
             }
             if (y.isEmpty) {
