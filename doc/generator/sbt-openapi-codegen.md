@@ -60,6 +60,36 @@ import sttp.tapir.docs.openapi.*
 val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
 ```
 
+### Support specification extensions
+
+Generator behaviour can be further configured by specifications on the input openapi spec. Example:
+```yaml
+  '/my-endpoint':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ] # This will customise what the codegen generates for this endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MyModel'
+      responses:
+        "204":
+          description: "No response"
+```
+
+Supported specifications are:
+
+- x-tapir-codegen-directives: supported on openapi operations. This is an array of string flags. Supported values are:
+```{eval-rst}
+==================== ===================================================================================================================================
+name                 description
+==================== ===================================================================================================================================
+json-body-as-string  If present on an operation, all application/json requests and responses will be interpreted mapped to a string with stringJsonBody
+==================== ===================================================================================================================================
+```
+
+
 ### Output files
 
 To expand on the `openapiUseHeadTagForObjectName` setting a little more, suppose we have the following endpoints:

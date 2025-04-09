@@ -178,7 +178,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SimpleError'
-
+  '/json/stringJsonBody':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+          application/zip:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+      responses:
+        "200":
+          description: "Possibly-invalid json"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+        "204":
+          description: "No response"
+  '/json/stringJsonBody/simple':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+      responses:
+        "200":
+          description: "Possibly-invalid json"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
   '/oneof/option/test':
     get:
       responses:

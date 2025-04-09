@@ -67,6 +67,12 @@ object OpenapiModels {
       if (parentDuplicates.nonEmpty) throw new IllegalArgumentException(s"Duplicate parameters ${parentDuplicates.mkString(", ")}")
       this.copy(parameters = filteredParents ++ resolved)
     }
+    val tapirCodegenDirectives: Set[String] = {
+      specificationExtensions
+        .collect { case (GenerationDirectives.extensionKey, json) => json.asArray.toSeq.flatMap(_.flatMap(_.asString)) }
+        .flatten
+        .toSet
+    }
   }
 
   case class OpenapiParameter(

@@ -26,6 +26,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaString
 }
 import sttp.tapir.codegen.openapi.models._
+import sttp.tapir.codegen.openapi.models.GenerationDirectives.jsonBodyAsString
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.OAuth2FlowType
 import sttp.tapir.codegen.util.JavaEscape
 
@@ -202,10 +203,20 @@ class EndpointGenerator {
               jsonSerdeLib,
               xmlSerdeLib,
               streamingImplementation,
-              doc
+              doc,
+              m.tapirCodegenDirectives
             )
           val (outDecl, outTypes, errTypes, inlineDefns) =
-            outs(m.responses.map(_.resolve(doc)), streamingImplementation, doc, targetScala3, name, jsonSerdeLib, xmlSerdeLib)
+            outs(
+              m.responses.map(_.resolve(doc)),
+              streamingImplementation,
+              doc,
+              targetScala3,
+              name,
+              jsonSerdeLib,
+              xmlSerdeLib,
+              m.tapirCodegenDirectives
+            )
           val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
           val inlineDefn = combine(inlineInDefns, inlineDefns)
           val sec = securityDecl.map(indent(2)(_) + "\n").getOrElse("")
@@ -470,7 +481,8 @@ class EndpointGenerator {
       jsonSerdeLib: JsonSerdeLib,
       xmlSerdeLib: XmlSerdeLib,
       streamingImplementation: StreamingImplementation,
-      doc: OpenapiDocument
+      doc: OpenapiDocument,
+      tapirCodegenDirectives: Set[String]
   )(implicit location: Location): (String, Option[String], Seq[String], Option[String]) = {
 
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
@@ -498,7 +510,8 @@ class EndpointGenerator {
           endpointName,
           "Request",
           forceEager,
-          xmlSerdeLib
+          xmlSerdeLib,
+          tapirCodegenDirectives
         )
       (decl, tpe, maybeInlineDefn)
     }
@@ -609,7 +622,8 @@ class EndpointGenerator {
       targetScala3: Boolean,
       endpointName: String,
       jsonSerdeLib: JsonSerdeLib,
-      xmlSerdeLib: XmlSerdeLib
+      xmlSerdeLib: XmlSerdeLib,
+      tapirCodegenDirectives: Set[String]
   )(implicit
       location: Location
   ) = {
@@ -640,7 +654,8 @@ class EndpointGenerator {
             endpointName,
             "Response",
             isErrorPosition || forceEager,
-            xmlSerdeLib
+            xmlSerdeLib,
+            tapirCodegenDirectives
           )
         (decl, tpe, maybeInlineDefn)
       }
@@ -873,11 +888,12 @@ class EndpointGenerator {
               )
             )
             .map {
-              case (_, _, true)                                                 => traitName
-              case (ct, _, _) if ct.startsWith("text/") && isErrorPosition      => "String"
-              case ("text/plain" | "text/html", _, _)                           => "String"
-              case (ct, r: OpenapiSchemaRef, _) if mappable.contains(ct)        => r.stripped
-              case (ct, x: OpenapiSchemaSimpleType, _) if mappable.contains(ct) => mapSchemaSimpleTypeToType(x)._1
+              case (_, _, true)                                                                    => traitName
+              case (ct, _, _) if ct.startsWith("text/") && isErrorPosition                         => "String"
+              case ("text/plain" | "text/html", _, _)                                              => "String"
+              case ("application/json", _, _) if tapirCodegenDirectives.contains(jsonBodyAsString) => "String"
+              case (ct, r: OpenapiSchemaRef, _) if mappable.contains(ct)                           => r.stripped
+              case (ct, x: OpenapiSchemaSimpleType, _) if mappable.contains(ct)                    => mapSchemaSimpleTypeToType(x)._1
               case (ct, x, _) if mappable.contains(ct) => bail(s"Unexpected oneOf elem type $x with content type $ct")
               case (_, _, _) if isErrorPosition        => "Array[Byte]"
               case (_, _, _)                           => capabilityType(streamingImplementation)
@@ -939,7 +955,8 @@ class EndpointGenerator {
       endpointName: String,
       position: String,
       forceEager: Boolean, // no streaming support for errorOut
-      xmlSerdeLib: XmlSerdeLib
+      xmlSerdeLib: XmlSerdeLib,
+      tapirCodegenDirectives: Set[String]
   )(implicit location: Location): MappedContentType = {
     contentType match {
       case "text/plain" =>
@@ -961,6 +978,9 @@ class EndpointGenerator {
         def toList = if (required) ".toList" else ".map(_.toList)"
         val bodyType = maybeAlias.map(a => s"xmlBody[$a].map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(s"xmlBody[$req]")
         MappedContentType(bodyType, req, maybeInline)
+      case "application/json" if tapirCodegenDirectives.contains(jsonBodyAsString) =>
+        if (required) MappedContentType("stringJsonBody", "String", None)
+        else MappedContentType("stringJsonBody.map(Option(_))(_.orNull)", "Option[String]", None)
       case "application/json" =>
         val (outT, maybeInline) = schema match {
           case st: OpenapiSchemaSimpleType =>

@@ -13,6 +13,9 @@ object TapirGeneratedEndpoints {
   import TapirGeneratedEndpointsSchemas._
 
 
+  case class `application/zipCodecFormat`() extends CodecFormat {
+    override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "zip")
+  }
 
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
@@ -151,6 +154,23 @@ object TapirGeneratedEndpoints {
   case class NullableThingy (
     uuid: java.util.UUID
   )
+  sealed trait PostJsonStringJsonBodyBodyIn extends Product with java.io.Serializable
+  case class PostJsonStringJsonBodyBodyOption_String_In(value: Option[String]) extends PostJsonStringJsonBodyBodyIn
+  case class PostJsonStringJsonBodyBody1In(value: Array[Byte]) extends PostJsonStringJsonBodyBodyIn
+  sealed trait PostJsonStringJsonBodyBodyOut extends Product with java.io.Serializable {
+    def `application/json`: () => Option[String] = () => throw new RuntimeException("Body for content type application/json not provided")
+    def `application/zip`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/zip not provided")
+  }
+  case class PostJsonStringJsonBodyBodyOutFull (
+    override val `application/json`: () => Option[String],
+    override val `application/zip`: () => Array[Byte],
+  ) extends PostJsonStringJsonBodyBodyOut
+  case class PostJsonStringJsonBodyBodyOption_String_Out(value: Option[String]) extends PostJsonStringJsonBodyBodyOut{
+    override def `application/json`: () => Option[String] = () => value
+  }
+  case class PostJsonStringJsonBodyBody1Out(value: Array[Byte]) extends PostJsonStringJsonBodyBodyOut{
+    override def `application/zip`: () => Array[Byte] = () => value
+  }
   case class PutInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -168,7 +188,8 @@ object TapirGeneratedEndpoints {
     bar: Option[java.util.UUID] = None
   )
 
-
+  type TapirCodegenDirectivesExtension = Seq[String]
+  val tapirCodegenDirectivesExtensionKey = new sttp.tapir.AttributeKey[TapirCodegenDirectivesExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.TapirCodegenDirectivesExtension")
 
   type GetBinaryTestEndpoint = Endpoint[String, Unit, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
   lazy val getBinaryTest: GetBinaryTestEndpoint =
@@ -202,6 +223,32 @@ object TapirGeneratedEndpoints {
       .in(("optional" / "test"))
       .in(jsonBody[Option[NullableThingy2]].description("an optional request body (nullable)"))
       .out(jsonBody[Option[NullableThingy]].description("an optional response body"))
+
+  type PostJsonStringJsonBodyEndpoint = Endpoint[Unit, PostJsonStringJsonBodyBodyIn, Unit, Option[PostJsonStringJsonBodyBodyOut], Any]
+  lazy val postJsonStringJsonBody: PostJsonStringJsonBodyEndpoint =
+    endpoint
+      .post
+      .in(("json" / "stringJsonBody"))
+      .in(oneOfBody[PostJsonStringJsonBodyBodyIn](
+        stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn],
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn]))
+      .out(oneOf[Option[PostJsonStringJsonBodyBodyOut]](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), oneOfBody[PostJsonStringJsonBodyBodyOut](
+        stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_Out(_))(_.`application/json`())
+        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBodyOption_String_Out(p.`application/json`())).description("Possibly-invalid json"),
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1Out(_))(_.`application/zip`())
+        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBody1Out(p.`application/zip`())).description("Possibly-invalid json")).map(Some(_))(_.orNull)){ case Some(_: PostJsonStringJsonBodyBodyOut) => true },
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None)))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("json-body-as-string"))
+
+  type PostJsonStringJsonBodySimpleEndpoint = Endpoint[Unit, String, Unit, String, Any]
+  lazy val postJsonStringJsonBodySimple: PostJsonStringJsonBodySimpleEndpoint =
+    endpoint
+      .post
+      .in(("json" / "stringJsonBody" / "simple"))
+      .in(stringJsonBody)
+      .out(stringJsonBody.description("Possibly-invalid json"))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("json-body-as-string"))
 
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
@@ -333,6 +380,6 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[ListType].description("list type out"))
 
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, getOneofErrorTest, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, putAdtTest, postAdtTest, getOneofErrorTest, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 }
