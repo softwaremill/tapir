@@ -320,8 +320,6 @@ val serverOptions: NettySyncServerOptions =
 NettySyncServer().options(serverOptions).addEndpoint(???).startAndWait()
 ```
 
-// TODO
-
 ## otel4s OpenTelemetry tracing
 
 Add the following dependency:
@@ -363,3 +361,12 @@ OtelJava
   }
 ```
 
+## Tracing when no endpoints match a request
+
+When no endpoints match a request, the interceptor will still create a span for the request. However, if no response is
+returned, no response-related attributes will be added to the span. This is because other routes in the host server
+might still serve the request.
+
+If a default response (e.g. a `404 Not Found`) should be produced, this should be enabled using the 
+[reject interceptor](errors.md). Such a setup assumes that there are no other routes in the server, after the Tapir
+server interpreter is invoked.
