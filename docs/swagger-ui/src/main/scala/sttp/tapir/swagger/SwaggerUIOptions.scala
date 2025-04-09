@@ -15,6 +15,15 @@ package sttp.tapir.swagger
   * @param showExtensions
   *   Should display the content of vendor extensions (x-) fields and values for Operations, Parameters, Responses, and Schema. Defaults to
   *   `false`.
+ * @param initializerOptions
+ *    Optional Map[String,String], which allows the addition of custom options to the `SwaggerUIBundle({...})` call in `swagger-initializer.js`. E.g.
+ *    `Map("oauth2RedirectUrl"->"\"http://localhost/customCallback\"")` injects the key value pair `oauth2RedirectUrl: "http://localhost/customCallback"`
+ *    into the `SwaggerUIBundle({...})` call in that `swagger-initializer.js` file.
+ * @param oAuthInitOptions
+ *    Optional Map[String,String], which allows the injection of `window.ui.initOAuth({...});` with specified options as for `initializerOptions`. The main
+ *    difference being that `SwaggerUIBundle({...})` will always be called, whereas `window.ui.initOAuth({...});` is called if and only if `oAuthInitOptions`
+ *    is not None.
+ * @see <a href="https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/">Swagger UI configuration</a>
   */
 case class SwaggerUIOptions(
     pathPrefix: List[String],

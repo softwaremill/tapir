@@ -30,6 +30,47 @@ object SwaggerUI {
     s.close()
     r
   }
+  
+  private def optionsInjection(swaggerInitializerJs: String, options: SwaggerUIOptions) : String = {
+    val swaggerInitializerJsWithExtensions = swaggerInitializerJs.replace(
+      "window.ui = SwaggerUIBundle({",
+      s"""window.ui = SwaggerUIBundle({
+         |    showExtensions: ${options.showExtensions},""".stripMargin
+    )
+
+    val swaggerInitializerJsWithOptions = options.initializerOptions
+      .map(_.foldRight(swaggerInitializerJsWithExtensions)({ (option, accumulator) =>
+        accumulator.replace(
+          "window.ui = SwaggerUIBundle({",
+          s"""window.ui = SwaggerUIBundle({
+             |    ${option._1}: ${option._2},""".stripMargin
+        )
+      }))
+      .getOrElse(swaggerInitializerJsWithExtensions)
+
+    val swaggerInitializerJsWithOAuthInit = options.oAuthInitOptions
+      .map(
+        _.foldRight(
+          // injecting initOAuth call
+          swaggerInitializerJsWithOptions.replace(
+            "});",
+            s"""});
+               |window.ui.initOAuth({
+               |});
+               |""".stripMargin
+          )
+        )({ (option, accumulator) =>
+          accumulator.replace(
+            // injecting options for initOAuth call
+            "window.ui.initOAuth({",
+            s"""window.ui.initOAuth({
+               |${option._1}: ${option._2},""".stripMargin
+          )
+        })
+      )
+      .getOrElse(swaggerInitializerJsWithOptions)
+    swaggerInitializerJsWithOAuthInit
+  }
 
   /** Usage: pass `SwaggerUI[F](yaml)` endpoints to your server interpreter. Docs will be available using the `/docs` path.
     *
@@ -60,47 +101,11 @@ object SwaggerUI {
     val swaggerInitializerJsWithReplacedUrl =
       swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"${concat(fullPathPrefix, options.yamlName)}")
 
-    val swaggerInitializerJsWithExtensions = swaggerInitializerJsWithReplacedUrl.replace(
-      "window.ui = SwaggerUIBundle({",
-      s"""window.ui = SwaggerUIBundle({
-         |    showExtensions: ${options.showExtensions},""".stripMargin
-    )
-
-    val swaggerInitializerJsWithOptions = options.initializerOptions
-      .map(_.foldRight(swaggerInitializerJsWithExtensions)({ (option, accumulator) =>
-        accumulator.replace(
-          "window.ui = SwaggerUIBundle({",
-          s"""window.ui = SwaggerUIBundle({
-           |    ${option._1}: ${option._2},""".stripMargin
-        )
-      }))
-      .getOrElse(swaggerInitializerJsWithExtensions)
-
-    val swaggerInitializerJsWithOAuthInit = options.oAuthInitOptions
-      .map(
-        _.foldRight(
-          // injecting initOAuth call
-          swaggerInitializerJsWithOptions.replace(
-            "});",
-            s"""});
-         |window.ui.initOAuth({
-         |});
-         |""".stripMargin
-          )
-        )({ (option, accumulator) =>
-          accumulator.replace(
-            // injecting options for initOAuth call
-            "window.ui.initOAuth({",
-            s"""window.ui.initOAuth({
-           |${option._1}: ${option._2},""".stripMargin
-          )
-        })
-      )
-      .getOrElse(swaggerInitializerJsWithOptions)
+   val swaggerInitializerJsWithOptions = optionsInjection(swaggerInitializerJsWithReplacedUrl, options)
 
     val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =
-      baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicSuccessPure[F](_ => swaggerInitializerJsWithOAuthInit)
+      baseEndpoint.in("swagger-initializer.js").out(textJavascriptUtf8).serverLogicSuccessPure[F](_ => swaggerInitializerJsWithOptions)
 
     val resourcesEndpoint = staticResourcesGetServerEndpoint[F](prefixInput)(
       SwaggerUI.getClass.getClassLoader,
