@@ -265,7 +265,8 @@ object TestHelpers {
           "#/components/parameters/year" -> OpenapiParameter("year", "path", Some(true), None, OpenapiSchemaInt(false))
         )
       )
-    )
+    ),
+    Nil
   )
 
   val generatedBookshopYaml =
@@ -403,7 +404,8 @@ object TestHelpers {
           )
         )
       )
-    )
+    ),
+    Nil
   )
 
   val helloYaml =
@@ -469,7 +471,8 @@ object TestHelpers {
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val simpleSecurityYaml =
@@ -499,12 +502,13 @@ object TestHelpers {
             parameters = Seq(),
             responses = Seq(),
             requestBody = None,
-            security = Map("basicAuth" -> Nil)
+            security = Some(Seq(Map("basicAuth" -> Nil)))
           )
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val complexSecurityYaml =
@@ -536,12 +540,13 @@ object TestHelpers {
             parameters = Seq(),
             responses = Seq(),
             requestBody = None,
-            security = Map("bearerAuth" -> Nil, "basicAuth" -> Nil, "apiKeyAuth" -> Nil)
+            security = Some(Seq(Map("bearerAuth" -> Nil), Map("basicAuth" -> Nil, "apiKeyAuth" -> Nil)))
           )
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val enumQueryParamYaml =
@@ -641,7 +646,8 @@ object TestHelpers {
           )
         )
       )
-    )
+    ),
+    Nil
   )
 
   val withDefaultsYaml =
@@ -766,7 +772,7 @@ object TestHelpers {
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithDefaults")))
               )
             ),
-            Map.empty,
+            None,
             None,
             None,
             None
@@ -836,7 +842,8 @@ object TestHelpers {
         Map(),
         Map()
       )
-    )
+    ),
+    Nil
   )
 
   val specificationExtensionYaml =
@@ -950,7 +957,8 @@ object TestHelpers {
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val oneOfYaml =
@@ -1061,7 +1069,7 @@ object TestHelpers {
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithVariants")))
               )
             ),
-            Map.empty,
+            None,
             None,
             None,
             None
@@ -1116,7 +1124,8 @@ object TestHelpers {
         Map(),
         Map()
       )
-    )
+    ),
+    Nil
   )
   val oneOfDocsWithMapping = genOneOfDocs(withDiscriminator = true, withMapping = true)
   val oneOfDocsWithDiscriminatorNoMapping = genOneOfDocs(withDiscriminator = true, withMapping = false)

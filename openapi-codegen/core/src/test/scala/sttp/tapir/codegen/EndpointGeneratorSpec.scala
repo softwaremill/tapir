@@ -62,7 +62,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           )
         )
       ),
-      null
+      null,
+      Nil
     )
     val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
@@ -96,7 +97,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("httpBearer" -> Seq()),
+              security = Some(Seq(Map("httpBearer" -> Seq()))),
               summary = None,
               tags = None
             ),
@@ -105,7 +106,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("httpBasic" -> Seq()),
+              security = Some(Seq(Map("httpBasic" -> Seq()))),
               summary = None,
               tags = None
             ),
@@ -114,7 +115,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("httpBearer" -> Seq()),
+              security = Some(Seq(Map("httpBearer" -> Seq()))),
               summary = None,
               tags = None
             ),
@@ -123,7 +124,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("apiKeyCookie" -> Seq()),
+              security = Some(Seq(Map("apiKeyCookie" -> Seq()))),
               summary = None,
               tags = None
             ),
@@ -132,7 +133,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("apiKeyQuery" -> Seq()),
+              security = Some(Seq(Map("apiKeyQuery" -> Seq()))),
               summary = None,
               tags = None
             )
@@ -150,7 +151,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
             "apiKeyQuery" -> OpenapiSecuritySchemeApiKeyType("query", "api-key")
           )
         )
-      )
+      ),
+      Nil
     )
     BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
@@ -205,7 +207,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           )
         )
       ),
-      null
+      null,
+      Nil
     )
     val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
@@ -273,7 +276,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
     val generatedCode = BasicGenerator.generateObjects(
       doc,

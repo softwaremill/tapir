@@ -26,7 +26,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -48,7 +49,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
     // the enumeratum import should be included by the BasicGenerator iff we generated enums
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -66,7 +68,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("type" -> noDefault(OpenapiSchemaString(false))), Seq("type"), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -88,7 +91,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -110,7 +114,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -128,7 +133,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("anyType" -> noDefault(OpenapiSchemaAny(false))), Seq("anyType"), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -152,7 +158,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -182,7 +189,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
               )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -212,7 +220,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
               )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -230,7 +239,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
           )
         )
-      )
+      ),
+      Nil
     )
     val doc2 = OpenapiDocument(
       "",
@@ -243,7 +253,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
           )
         )
-      )
+      ),
+      Nil
     )
     val gen = new ClassDefinitionGenerator()
     val res1 = gen.classDefs(doc1).map(_.classRepr)
@@ -264,7 +275,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
           )
         )
-      )
+      ),
+      Nil
     )
     val doc2 = OpenapiDocument(
       "",
@@ -277,7 +289,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false)
           )
         )
-      )
+      ),
+      Nil
     )
     val gen = new ClassDefinitionGenerator()
     val res1 = gen.classDefs(doc1).map(_.classRepr)
@@ -297,7 +310,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     val gen = new ClassDefinitionGenerator()
@@ -362,7 +376,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "MyMapEnum" -> OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MyEnum"), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     val gen = new ClassDefinitionGenerator()
@@ -505,7 +520,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       .toTry
       .get
     val gen = new ClassDefinitionGenerator()
-    val res1 = Try(gen.classDefs(OpenapiDocument("", Nil, null, Nil, Some(doc)))).toEither
+    val res1 = Try(gen.classDefs(OpenapiDocument("", Nil, null, Nil, Some(doc), Nil))).toEither
 
     res1.left.get.getMessage shouldEqual "Generating class for ReqWithDefaults: Cannot render a number as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString."
 

@@ -23,10 +23,11 @@ object OpenapiModels {
   case class OpenapiDocument(
       openapi: String,
       servers: Seq[OpenapiServer],
-      // not used so not parsed; servers, contact, license, termsOfService
+      // not used so not parsed; contact, license, termsOfService
       info: OpenapiInfo,
       paths: Seq[OpenapiPath],
-      components: Option[OpenapiComponent]
+      components: Option[OpenapiComponent],
+      security: Seq[Map[String, Seq[String]]]
   )
 
   case class OpenapiInfo(
@@ -47,7 +48,7 @@ object OpenapiModels {
       parameters: Seq[Resolvable[OpenapiParameter]],
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
-      security: Map[String, Seq[String]] = Map.empty,
+      security: Option[Seq[Map[String, Seq[String]]]] = None,
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
       operationId: Option[String] = None,
@@ -260,7 +261,7 @@ object OpenapiModels {
       parameters <- c.getOrElse[Seq[Resolvable[OpenapiParameter]]]("parameters")(Nil)
       responses <- c.get[Seq[OpenapiResponse]]("responses")
       requestBody <- c.get[Option[OpenapiRequestBody]]("requestBody")
-      security <- c.getOrElse[Seq[Map[String, Seq[String]]]]("security")(Nil)
+      security <- c.get[Option[Seq[Map[String, Seq[String]]]]]("security")
       summary <- c.get[Option[String]]("summary")
       tags <- c.get[Option[Seq[String]]]("tags")
       operationId <- c.get[Option[String]]("operationId")
@@ -274,9 +275,7 @@ object OpenapiModels {
         parameters,
         responses,
         requestBody,
-        // This probably isn't the right semantics -- since it's a list of name-array pairs rather than a map, I assume
-        // that the intended semantics are DNF. But we don't do anything with the scopes anyway for now.
-        security.foldLeft(Map.empty[String, Seq[String]])(MapUtils.merge),
+        security,
         summary,
         tags,
         operationId,
@@ -315,7 +314,8 @@ object OpenapiModels {
       info <- c.downField("info").as[OpenapiInfo]
       paths <- c.downField("paths").as[Seq[OpenapiPath]]
       components <- c.downField("components").as[Option[OpenapiComponent]]
-    } yield OpenapiDocument(openapi, servers, info, paths, components)
+      security <- c.getOrElse[Seq[Map[String, Seq[String]]]]("security")(Nil)
+    } yield OpenapiDocument(openapi, servers, info, paths, components, security)
   }
 
 }
