@@ -60,7 +60,7 @@ object SecurityGenerator {
       .mkString("\n")
 
     val mappings = allSchemes
-      .filterNot(_.isSingleton)
+      .filterNot(s => s.isSingleton || s.isEmpty)
       .map { t =>
         val mapImpl = mkMapImpl(t.schemas)
         s"""val ${t.typeName}Mapping = $mapImpl"""
@@ -162,7 +162,7 @@ object SecurityGenerator {
               val mapEncodes = nonEmptyDeclarations.zipWithIndex.map { case ((name, _, _), idx) =>
                 s"case ${name.typeName}(x) => ${someAt(idx, true)}"
               }
-              val encodeNone = if (securityIsOptional) s"\ncase EmptySecurityIn => DecodeResult.Value($allNones)" else ""
+              val encodeNone = if (securityIsOptional) s"\ncase EmptySecurityIn => $allNones" else ""
               s"""
                  |.mapSecurityInDecode[$traitName]{
                  |${indent(2)(mapDecodes.mkString("\n") + decodeNone)}

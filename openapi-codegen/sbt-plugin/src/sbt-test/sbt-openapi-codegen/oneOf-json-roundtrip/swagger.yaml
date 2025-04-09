@@ -81,7 +81,7 @@ paths:
             - write:pets
             - read:pets
           api_key: [ ]
-        - {}
+        - { }
       responses:
         '200':
           description: an optional response body
@@ -211,6 +211,15 @@ paths:
               $ref: '#/components/schemas/ObjectWithInlineEnum'
   '/oneof/error/test':
     get:
+      security: # Requires two or one or none
+        - { }
+        - petstore_auth: [ ]
+        - api_key: [ ]
+        - BearerAuth: [ ]
+        - petstore_auth:
+            - write:pets
+            - read:pets
+          api_key: [ ]
       responses:
         "204":
           description: "No response"
@@ -230,7 +239,7 @@ paths:
     post:
       x-tapir-codegen-directives: [ 'json-body-as-string' ]
       security:
-        - {}
+        - { }
         - petstore_auth:
             - write:pets
             - read:pets

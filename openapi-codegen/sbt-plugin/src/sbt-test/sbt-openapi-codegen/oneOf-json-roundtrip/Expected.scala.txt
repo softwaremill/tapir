@@ -1,4 +1,4 @@
-
+openapi-codegen/sbt-plugin/src/sbt-test/sbt-openapi-codegen/oneOf-json-roundtrip/Expected.scala.txt
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -15,10 +15,12 @@ object TapirGeneratedEndpoints {
   case class `application/zipCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "zip")
   }
+  sealed trait Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn
   sealed trait Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
-  case class Api_keySecurityIn(value: String) extends Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
-  case class Api_key_and_BearerSecurityIn(value: (String, String)) extends Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
-  case class BearerSecurityIn(value: String) extends Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
+  case class Api_keySecurityIn(value: String) extends Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn with Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
+  case class Api_key_and_BearerSecurityIn(value: (String, String)) extends Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn with Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
+  case class BearerSecurityIn(value: String) extends Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn with Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
+  case object EmptySecurityIn extends Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn
   val Api_key_and_BearerSecurityInMapping = sttp.tapir.Mapping.from[(Option[String], Option[String]), Option[(String, String)]] {
       case (Some(v0: String), Some(v1: String)) => Some((v0: String, v1: String))
       case _ => None
@@ -301,12 +303,29 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
-  type GetOneofErrorTestEndpoint = Endpoint[String, Unit, Error, Unit, Any]
+  type GetOneofErrorTestEndpoint = Endpoint[Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn, Unit, Error, Unit, Any]
   lazy val getOneofErrorTest: GetOneofErrorTestEndpoint =
     endpoint
       .get
       .in(("oneof" / "error" / "test"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .securityIn(auth.apiKey(header[Option[String]]("api_key")))
+      .securityIn(auth.apiKey(header[Option[String]]("api_key"))
+        .and(auth.bearer[Option[String]]()).map(Api_key_and_BearerSecurityInMapping))
+      .securityIn(auth.bearer[Option[String]]())
+      .mapSecurityInDecode[Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn]{
+        case (Some(x), None, None) => DecodeResult.Value(Api_keySecurityIn(x))
+        case (_, Some(x), _) => DecodeResult.Value(Api_key_and_BearerSecurityIn(x))
+        case (None, None, Some(x)) => DecodeResult.Value(BearerSecurityIn(x))
+        case (None, None, None) => DecodeResult.Value(EmptySecurityIn)
+        case other =>
+          val count = other.productIterator.count(_.isInstanceOf[Some[?]])
+          DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
+      }{
+        case Api_keySecurityIn(x) => (Some(x), None, None)
+        case Api_key_and_BearerSecurityIn(x) => (None, Some(x), None)
+        case BearerSecurityIn(x) => (None, None, Some(x))
+        case EmptySecurityIn => (None, None, None)
+      }
       .errorOut(oneOf[Error](
         oneOfVariant[NotFoundError](sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")),
         oneOfVariant[SimpleError](sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
