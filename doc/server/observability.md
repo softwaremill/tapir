@@ -320,6 +320,8 @@ val serverOptions: NettySyncServerOptions =
 NettySyncServer().options(serverOptions).addEndpoint(???).startAndWait()
 ```
 
+// TODO
+
 ## otel4s OpenTelemetry tracing
 
 Add the following dependency:
