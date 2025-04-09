@@ -17,7 +17,6 @@ import sttp.tapir.docs.apispec.DocsExtension
 import sttp.tapir.tests.data.{Fruit, FruitAmount}
 
 import scala.io.Source
-import scala.util.chaining.scalaUtilChainingOps
 
 class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
@@ -130,15 +129,12 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
   test("should include example name and summary") {
     val e = endpoint
       .in("fruit")
-      .out(
-        webSocketBody[Fruit, CodecFormat.Json, Int, CodecFormat.Json](AkkaStreams)
-          // TODO: missing `RequestInfo.example(example: EndpointIO.Example)` and friends
-          .pipe(e =>
-            e.copy(requestsInfo =
-              e.requestsInfo.example(Example.of(Fruit("apple")).name("Apple").summary("Sample representation of apple"))
-            )
-          )
-      )
+      .out {
+        val wsb = webSocketBody[Fruit, CodecFormat.Json, Int, CodecFormat.Json](AkkaStreams)
+        // TODO: missing `RequestInfo.example(example: EndpointIO.Example)` and friends
+        wsb
+          .copy(requestsInfo = wsb.requestsInfo.example(Example.of(Fruit("apple")).name("Apple").summary("Sample representation of apple")))
+      }
 
     val expectedYaml = loadYaml("expected_json_example_name_summary.yml")
 
