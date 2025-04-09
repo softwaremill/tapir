@@ -75,6 +75,12 @@ paths:
             - read:pets
   '/optional/test':
     post:
+      security:
+        # Requires _both_
+        - petstore_auth:
+            - write:pets
+            - read:pets
+          api_key: [ ]
       responses:
         '200':
           description: an optional response body
@@ -90,6 +96,15 @@ paths:
             schema:
               $ref: '#/components/schemas/NullableThingy2'
     put:
+      security:
+        # Requires two or one
+        - petstore_auth: [ ]
+        - api_key: [ ]
+        - BearerAuth: [ ]
+        - petstore_auth:
+            - write:pets
+            - read:pets
+          api_key: [ ]
       responses:
         '200':
           $ref: '#/components/responses/optionalityTest'

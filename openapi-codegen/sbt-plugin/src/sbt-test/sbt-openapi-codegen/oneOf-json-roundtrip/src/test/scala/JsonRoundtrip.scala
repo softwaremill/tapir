@@ -274,4 +274,55 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     )
 
   }
+  "multiple security declarations" in {
+    val uuids = (1 to 3).map(_ => UUID.randomUUID())
+    val route = TapirGeneratedEndpoints.putOptionalTest
+      .serverSecurityLogicSuccess[Int, Future] {
+        case _: Api_keySecurityIn            => Future.successful(0)
+        case _: Api_key_and_BearerSecurityIn => Future.successful(1)
+        case _: BearerSecurityIn             => Future.successful(2)
+      }
+      .serverLogic({ i => _ =>
+        Future successful Right(NotNullableThingy(uuids(i)))
+      })
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+
+    Await.result(
+      sttp.client3.basicRequest
+        .put(uri"http://test.com/optional/test")
+        .header("api_key", "an api key!!")
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 200
+          resp.body shouldEqual Right(s"""{"uuid":"${uuids(0)}"}""")
+        },
+      1.second
+    )
+    Await.result(
+      sttp.client3.basicRequest
+        .put(uri"http://test.com/optional/test")
+        .header("Authorization", "Bearer some.jwt.probably")
+        .header("api_key", "an api key!!")
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 200
+          resp.body shouldEqual Right(s"""{"uuid":"${uuids(1)}"}""")
+        },
+      1.second
+    )
+    Await.result(
+      sttp.client3.basicRequest
+        .put(uri"http://test.com/optional/test")
+        .header("Authorization", "Bearer some.jwt.probably")
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 200
+          resp.body shouldEqual Right(s"""{"uuid":"${uuids(2)}"}""")
+        },
+      1.second
+    )
+  }
 }

@@ -77,15 +77,6 @@ case class EndpointDefs(
     securityWrappers: Set[SecurityWrapperDefn]
 )
 
-case class SecurityWrapperDefn(schemas: Set[String]) {
-  lazy val traitName: String = schemas.toSeq.sorted.mkString("_or_") + "_SecurityIn"
-}
-case class SecurityDefn(
-    inDecl: Option[String],
-    tpe: Option[String],
-    wrapperDefinitions: Option[SecurityWrapperDefn]
-)
-
 class EndpointGenerator {
   private def combine(inlineDefn1: Option[String], inlineDefn2: Option[String], separator: String = "\n") =
     (inlineDefn1, inlineDefn2) match {

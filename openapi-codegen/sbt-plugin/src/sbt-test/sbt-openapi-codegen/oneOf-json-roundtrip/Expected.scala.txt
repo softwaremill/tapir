@@ -15,7 +15,17 @@ object TapirGeneratedEndpoints {
   case class `application/zipCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "zip")
   }
-
+  sealed trait Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
+  case class Api_keySecurityIn(value: String) extends Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
+  case class Api_key_and_BearerSecurityIn(value: (String, String)) extends Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
+  case class BearerSecurityIn(value: String) extends Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
+  val Api_key_and_BearerSecurityInMapping = sttp.tapir.Mapping.from[(Option[String], Option[String]), Option[(String, String)]] {
+      case (Some(v0: String), Some(v1: String)) => Some((v0: String, v1: String))
+      case _ => None
+    } {
+      case Some((v0: String, v1: String)) => (Some(v0: String), Some(v1: String))
+      case None => (None, None)
+    }
 
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
@@ -212,21 +222,37 @@ object TapirGeneratedEndpoints {
       .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()).description("Upload a csv"))
       .out(jsonBody[String].description("successful operation"))
 
-  type PutOptionalTestEndpoint = Endpoint[String, Option[NotNullableThingy], Unit, NotNullableThingy, Any]
+  type PutOptionalTestEndpoint = Endpoint[Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn, Option[NotNullableThingy], Unit, NotNullableThingy, Any]
   lazy val putOptionalTest: PutOptionalTestEndpoint =
     endpoint
       .put
       .in(("optional" / "test"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .securityIn(auth.apiKey(header[Option[String]]("api_key")))
+      .securityIn(auth.apiKey(header[Option[String]]("api_key"))
+        .and(auth.bearer[Option[String]]()).map(Api_key_and_BearerSecurityInMapping))
+      .securityIn(auth.bearer[Option[String]]())
+      .mapSecurityInDecode[Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn]{
+        case (Some(x), None, None) => DecodeResult.Value(Api_keySecurityIn(x))
+        case (_, Some(x), _) => DecodeResult.Value(Api_key_and_BearerSecurityIn(x))
+        case (None, None, Some(x)) => DecodeResult.Value(BearerSecurityIn(x))
+        case other =>
+          val count = other.productIterator.count(_.isInstanceOf[Some[?]])
+          DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
+      }{
+        case Api_keySecurityIn(x) => (Some(x), None, None)
+        case Api_key_and_BearerSecurityIn(x) => (None, Some(x), None)
+        case BearerSecurityIn(x) => (None, None, Some(x))
+      }
       .in(jsonBody[Option[NotNullableThingy]].description("an optional request body (not required)"))
       .out(jsonBody[NotNullableThingy].description("a non-optional response body"))
 
-  type PostOptionalTestEndpoint = Endpoint[String, Option[NullableThingy2], Unit, Option[NullableThingy], Any]
+  type PostOptionalTestEndpoint = Endpoint[(String, String), Option[NullableThingy2], Unit, Option[NullableThingy], Any]
   lazy val postOptionalTest: PostOptionalTestEndpoint =
     endpoint
       .post
       .in(("optional" / "test"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .securityIn(auth.apiKey(header[String]("api_key"))
+        .and(auth.bearer[String]()))
       .in(jsonBody[Option[NullableThingy2]].description("an optional request body (nullable)"))
       .out(jsonBody[Option[NullableThingy]].description("an optional response body"))
 
@@ -434,5 +460,6 @@ object TapirGeneratedEndpoints {
       Locally
     */
     val `/`: sttp.model.Uri = uri"/"
+
   }
 }
