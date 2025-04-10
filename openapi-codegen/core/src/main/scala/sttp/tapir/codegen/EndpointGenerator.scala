@@ -225,8 +225,8 @@ class EndpointGenerator {
           val definition =
             s"""|endpoint$maybeName
                 |  .${m.methodType}
-                |  $pathDecl$securityPathDecl
-                |$sec${indent(2)(inParams)}
+                |  $pathDecl
+                |$sec${indent(2)(inParams)}$securityPathDecl
                 |${indent(2)(outDecl)}
                 |${indent(2)(tags(m.tags))}
                 |$attributeString
@@ -323,7 +323,7 @@ class EndpointGenerator {
     val (inPath, tpes) = toPathDecl(inUrl)
     val inPathDecl = if (inPath.nonEmpty) ".in((" + inPath.mkString(" / ") + "))" else ""
     val secPathDecl =
-      maxSecurityPrefix.map(toPathDecl).map { case (ds, ts) => ".securityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten }
+      maxSecurityPrefix.map(toPathDecl).map { case (ds, ts) => ".prependSecurityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten }
     (inPathDecl, tpes.toSeq.flatten, secPathDecl)
   }
 
