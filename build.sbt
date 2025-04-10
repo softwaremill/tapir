@@ -1191,7 +1191,9 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
   .settings(commonSettings)
   .settings(
     name := "tapir-swagger-ui",
-    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi)
+    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi,
+      scalaTest.value % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(core, files)

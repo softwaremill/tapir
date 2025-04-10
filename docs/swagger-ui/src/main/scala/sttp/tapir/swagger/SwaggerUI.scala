@@ -31,7 +31,7 @@ object SwaggerUI {
     r
   }
   
-  private def optionsInjection(swaggerInitializerJs: String, options: SwaggerUIOptions) : String = {
+  private[swagger] def optionsInjection(swaggerInitializerJs: String, options: SwaggerUIOptions) : String = {
     val swaggerInitializerJsWithExtensions = swaggerInitializerJs.replace(
       "window.ui = SwaggerUIBundle({",
       s"""window.ui = SwaggerUIBundle({
