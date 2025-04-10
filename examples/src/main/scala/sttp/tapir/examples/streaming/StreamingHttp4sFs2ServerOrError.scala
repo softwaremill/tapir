@@ -1,7 +1,7 @@
 // {cat=Streaming; effects=cats-effect; server=http4s}: Respond with an fs2 stream, or with an error, represented as a failed effect in the business logic
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.23
 //> using dep org.http4s::http4s-ember-server:0.23.30
 
 package sttp.tapir.examples.streaming
@@ -16,7 +16,6 @@ import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.ExecutionContext
 
 object StreamingHttp4sFs2ServerOrError extends IOApp:
   case object UnknownUser extends Exception

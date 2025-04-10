@@ -9,7 +9,8 @@ import org.http4s.server.Router
 import org.scalatest.Assertion
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.client3._
+import sttp.client4._
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.redoc.RedocUIOptions
@@ -75,7 +76,7 @@ class RedocInterpreterTest extends AsyncFunSuite with Matchers {
       .use { server =>
         IO {
           val port = server.address.getPort
-          val client: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+          val client: SyncBackend = HttpClientSyncBackend()
 
           // test no-trailing-slash redirect to index.html
           val resp: Response[String] = basicRequest

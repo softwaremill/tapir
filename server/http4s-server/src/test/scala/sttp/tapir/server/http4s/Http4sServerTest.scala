@@ -1,6 +1,5 @@
 package sttp.tapir.server.http4s
 
-import cats.data._
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
@@ -13,7 +12,8 @@ import org.scalatest.{Assertion, OptionValues}
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client4._
+import sttp.client4.ws.async._
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.integ.cats.effect.CatsMonadError
@@ -92,10 +92,10 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         "automatic pings"
       )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { (backend, baseUri) =>
         basicRequest
+          .get(baseUri.scheme("ws"))
           .response(asWebSocket { (ws: WebSocket[IO]) =>
             List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
           })
-          .get(baseUri.scheme("ws"))
           .send(backend)
           .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
       },
@@ -106,12 +106,12 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8.encode).interruptAfter(10.seconds)))
       ) { (backend, baseUri) =>
         basicRequest
+          .get(baseUri)
           .response(
             asStream(Fs2Streams[IO])(bs => {
               bs.through(fs2.text.utf8.decode).mapAccumulate(0)((pings, currentTime) => (pings + 1, currentTime)).compile.last
             })
           )
-          .get(baseUri)
           .send(backend)
           .map(_.body match {
             case Right(Some((pings, _))) => pings should be >= 2
@@ -123,6 +123,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         "Send and receive SSE"
       )((_: Unit) => IO(Right(fs2.Stream(sse1, sse2)))) { (backend, baseUri) =>
         basicRequest
+          .get(baseUri)
           .response(asStream[IO, List[ServerSentEvent], Fs2Streams[IO]](Fs2Streams[IO]) { stream =>
             Http4sServerSentEvents
               .parseBytesToSSE[IO]
@@ -130,7 +131,6 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
               .compile
               .toList
           })
-          .get(baseUri)
           .send(backend)
           .map(_.body.right.toOption.value shouldBe List(sse1, sse2))
       }

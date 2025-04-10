@@ -9,7 +9,8 @@ import org.http4s.server.Router
 import org.scalatest.Assertion
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.client3._
+import sttp.client4._
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.{Header, MediaType, StatusCode}
 import sttp.tapir._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
@@ -42,7 +43,7 @@ class SwaggerInterpreterTest extends AsyncFunSuite with Matchers {
       .use { server =>
         IO {
           val port = server.address.getPort
-          val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+          val backend: SyncBackend = HttpClientSyncBackend()
 
           // test redirect from no-trailing-slash, which should return index.html in the end
           val resp: Response[String] = basicRequest

@@ -8,6 +8,7 @@ case class OpenApiConfiguration(
     objectName: String,
     useHeadTagForObjectName: Boolean,
     jsonSerdeLib: String,
+    xmlSerdeLib: String,
     streamingImplementation: String,
     validateNonDiscriminatedOneOfs: Boolean,
     maxSchemasPerFile: Int,
@@ -23,6 +24,7 @@ trait OpenapiCodegenKeys {
     "If true, any tagged endpoints will be defined in an object with a name based on the first tag, instead of on the default generated object."
   )
   lazy val openapiJsonSerdeLib = settingKey[String]("The lib to use for json serdes. Supports 'circe' and 'jsoniter'.")
+  lazy val openapiXmlSerdeLib = settingKey[String]("The lib to use for json serdes. Supports 'cats-xml' and 'none'.")
   lazy val openapiValidateNonDiscriminatedOneOfs =
     settingKey[Boolean]("Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated..")
   lazy val openapiMaxSchemasPerFile = settingKey[Int]("Maximum number of schemas to generate for a single file")

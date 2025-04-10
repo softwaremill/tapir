@@ -1,11 +1,11 @@
 // {cat=WebSocket; effects=cats-effect; server=http4s; json=circe; docs=AsyncAPI}: Describe and implement a WebSocket endpoint
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.23
 //> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
-//> using dep com.softwaremill.sttp.client3::async-http-client-backend-fs2:3.10.2
+//> using dep com.softwaremill.sttp.client4::fs2:4.0.0-RC3
 //> using dep org.http4s::http4s-ember-server:0.23.30
 
 package sttp.tapir.examples.websocket
@@ -21,8 +21,9 @@ import sttp.apispec.asyncapi.Server
 import sttp.apispec.asyncapi.circe.yaml.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3.*
-import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
+import sttp.client4.*
+import sttp.client4.httpclient.fs2.HttpClientFs2Backend
+import sttp.client4.ws.async.*
 import sttp.tapir.*
 import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.generic.auto.*
@@ -85,10 +86,11 @@ object WebSocketHttp4sServer extends IOApp:
       .default[IO]
       .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
       .build
-      .flatMap(_ => AsyncHttpClientFs2Backend.resource[IO]())
+      .flatMap(_ => HttpClientFs2Backend.resource[IO]())
       .use { backend =>
         // Client which interacts with the web socket
         basicRequest
+          .get(uri"ws://localhost:8080/count")
           .response(asWebSocket { (ws: WebSocket[IO]) =>
             for {
               _ <- ws.sendText("7 bytes")
@@ -111,7 +113,6 @@ object WebSocketHttp4sServer extends IOApp:
               _ = println(r6)
             } yield ()
           })
-          .get(uri"ws://localhost:8080/count")
           .send(backend)
           .map(_ => println("Counting complete, bye!"))
       }

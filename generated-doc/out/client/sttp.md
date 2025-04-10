@@ -1,9 +1,9 @@
-# Using as an sttp client
+# Using as an sttp client (v3)
 
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "1.11.19"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "1.11.24"
 ```
 
 To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
@@ -12,7 +12,7 @@ To make requests using an endpoint definition using the [sttp client](https://gi
 import sttp.tapir.client.sttp.SttpClientInterpreter
 ```
 
-This objects contains a number of variants for creating a client call, where the first parameter is the endpoint description.
+This object contains a number of variants for creating a client call, where the first parameter is the endpoint description.
 The second is an optional URI - if this is `None`, the request will be relative.
 
 Here's a summary of the available method variants; `R` are the requirements of the endpoint, such as streaming or websockets:
@@ -86,8 +86,8 @@ description, for example:
 
 ```scala :compile-only
 import sttp.tapir.*
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3.*
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
 
 SttpClientInterpreter()
   .toRequest(endpoint.get.in("hello").in(query[String]("name")), Some(uri"http://localhost:8080"))
@@ -101,7 +101,7 @@ In this case add the following dependencies (note the [`%%%`](https://www.scala-
 instead of the usual `%%`):
 
 ```scala
-"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client" % "1.11.19"
+"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client" % "1.11.24"
 "io.github.cquiroz" %%% "scala-java-time" % "2.2.0" // implementations of java.time classes for Scala.JS
 ```
 

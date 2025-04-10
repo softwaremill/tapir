@@ -9,7 +9,7 @@ This is a really early alpha implementation.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.19")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.24")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -41,6 +41,7 @@ openapiPackage                        sttp.tapir.generated                 The n
 openapiObject                         TapirGeneratedEndpoints              The name for the generated object.
 openapiUseHeadTagForObjectName        false                                If true, put endpoints in separate files based on first declared tag.
 openapiJsonSerdeLib                   circe                                The json serde library to use.
+openapiXmlSerdeLib                    cats-xml                             The xml serde library to use.
 openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
 openapiMaxSchemasPerFile              400                                  Maximum number of schemas to generate in a single file (tweak if hitting javac class size limits).
 openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
@@ -57,6 +58,43 @@ import sttp.tapir.generated.*
 import sttp.tapir.docs.openapi.*
 
 val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
+```
+
+### Support specification extensions
+
+Generator behaviour can be further configured by specifications on the input openapi spec. Example:
+
+```yaml
+paths:
+  x-tapir-codegen-security-path-prefixes:
+    - '/security-group/{securityGroupName}' # any path prefixes matching this pattern will be considered 'securityIn' 
+  '/my-endpoint':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ] # This will customise what the codegen generates for this endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MyModel'
+      responses:
+        "204":
+          description: "No response"
+```
+
+Supported specifications are:
+
+- x-tapir-codegen-security-path-prefixes: supported on the paths object. This is an array of strings representing path
+  prefixes. The longest matching prefix of each path will be treated as a security input, rather than as a standard 'in'
+  value.
+- x-tapir-codegen-directives: supported on openapi operations. This is an array of string flags. Supported values are:
+
+```{eval-rst}
+==================== ===================================================================================================================================
+name                 description
+==================== ===================================================================================================================================
+json-body-as-string  If present on an operation, all application/json requests and responses will be interpreted mapped to a string with stringJsonBody
+==================== ===================================================================================================================================
 ```
 
 ### Output files
@@ -95,12 +133,12 @@ Files can be generated from multiple openapi schemas if `openapiAdditionalPackag
 
 ```scala
 openapiAdditionalPackages := List(
-      "sttp.tapir.generated.v1" -> baseDirectory.value / "src" / "main" / "resources" / "openapi_v1.yml")
+  "sttp.tapir.generated.v1" -> baseDirectory.value / "src" / "main" / "resources" / "openapi_v1.yml")
 ```
+
 would generate files in the package `sttp.tapir.generated.v1` based on the `openapi_v1.yml` schema at the provided
 location. This would be in addition to files generated in `openapiPackage` from the specs configured by
 `openapiSwaggerFile`
-
 
 ### Json Support
 
@@ -113,6 +151,22 @@ circe                 "io.circe" %% "circe-core"                                
 jsoniter              "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-circe" (free-form json support)
                       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros"
 ===================== ================================================================== ===================================================================
+```
+
+### XML Support
+
+Xml support is still fairly experimental. Available options are 'cats-xml' and 'none'. 'none' will fallback to a
+streaming binary 'non-implementation'. The minimal supported version of cats-xml is 0.0.20 for scala 2 and TBD for
+scala 3.
+
+```{eval-rst}
+===================== ========================================================================================
+ openapiXmlSerdeLib          required dependencies
+===================== ========================================================================================
+cats-xml              "com.github.geirolz" %% "cats-xml"
+                      "com.github.geirolz" %% "cats-xml-generic"
+none
+===================== ========================================================================================
 ```
 
 ### Limitations

@@ -7,6 +7,11 @@ import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
 import sttp.tapir.model.Delimited
+import sttp.tapir.Schema.Explode
+import sttp.tapir.Schema.Nullable
+import sttp.tapir.Schema.Delimiter
+import sttp.tapir.Schema.UniqueItems
+import sttp.tapir.Schema.EncodedDiscriminatorValue
 
 import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
@@ -122,7 +127,41 @@ case class Schema[T](
 
   def hidden(h: Boolean): Schema[T] = copy(hidden = h)
 
+  /** Corresponds to JsonSchema's `title` parameter which should be used for defining title of the object. */
   def title(t: String): Schema[T] = attribute(Title.Attribute, Title(t))
+
+  /** Corresponds to OpenAPI's `explode` parameter which should be used for delimited values.
+    *
+    * @see
+    *   #delimiter
+    */
+  def explode(b: Boolean): Schema[T] = attribute(Explode.Attribute, Explode(b))
+
+  /** Will override a schema's typing to include a `null` type, overriding the default behavior. */
+  def nullable: Schema[T] = attribute(Nullable.Attribute, Nullable)
+
+  /** Used in combination with `explode`, to properly represent delimited values in examples and default values. (#3581)
+    *
+    * @see
+    *   #explode
+    */
+  def delimiter(delimiter: String): Schema[T] = attribute(Delimiter.Attribute, Delimiter(delimiter))
+
+  def uniqueItems(uniqueItems: Boolean): Schema[T] = attribute(UniqueItems.Attribute, UniqueItems(uniqueItems))
+
+  /** Specifies that the given schema is for a tuple. Tuples are products with no meaningful property names - attributes are identified by
+    * their position.
+    *
+    * When converting a tuple schema of type [[SchemaType.SProduct]] to JSON schema, renders as an `array` schema, with type constraints for
+    * each index (#3941).
+    */
+  def tuple: Schema[T] = attribute(Schema.Tuple.Attribute, Schema.Tuple(true))
+
+  /** For coproduct schemas, when there's a discriminator field, used to attach the encoded value of the discriminator field. Such value is
+    * added to the discriminator field schemas in each of the coproduct's subtypes. When rendering OpenAPI/JSON schema, these values are
+    * converted to `const` constraints on fields.
+    */
+  def encodedDiscriminatorValue(v: String): Schema[T] = attribute(EncodedDiscriminatorValue.Attribute, EncodedDiscriminatorValue(v))
 
   def show: String = s"schema is $schemaType"
 
@@ -279,17 +318,21 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit val schemaForByteBuffer: Schema[ByteBuffer] = Schema(SBinary())
   implicit val schemaForInputStream: Schema[InputStream] = Schema(SBinary())
   implicit val schemaForInputStreamRange: Schema[InputStreamRange] = Schema(SchemaType.SBinary())
-  implicit val schemaForInstant: Schema[Instant] = Schema(SDateTime())
-  implicit val schemaForZonedDateTime: Schema[ZonedDateTime] = Schema(SDateTime())
-  implicit val schemaForOffsetDateTime: Schema[OffsetDateTime] = Schema(SDateTime())
-  implicit val schemaForDate: Schema[Date] = Schema(SDateTime())
-  implicit val schemaForLocalDateTime: Schema[LocalDateTime] = Schema(SString())
-  implicit val schemaForLocalDate: Schema[LocalDate] = Schema(SDate())
-  implicit val schemaForZoneOffset: Schema[ZoneOffset] = Schema(SString())
-  implicit val schemaForZoneId: Schema[ZoneId] = Schema(SString())
-  implicit val schemaForJavaDuration: Schema[Duration] = Schema(SString())
-  implicit val schemaForLocalTime: Schema[LocalTime] = Schema(SString())
-  implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString())
+
+  // These are marked as lazy as they involve scala-java-time constructs, which massively inflate the bundle size for scala.js applications, even if
+  // they are unused within the program. By marking them lazy, it allows them to be *tree shaken* and removed by the optimiser.
+  implicit lazy val schemaForInstant: Schema[Instant] = Schema(SDateTime())
+  implicit lazy val schemaForZonedDateTime: Schema[ZonedDateTime] = Schema(SDateTime())
+  implicit lazy val schemaForOffsetDateTime: Schema[OffsetDateTime] = Schema(SDateTime())
+  implicit lazy val schemaForDate: Schema[Date] = Schema(SDateTime())
+  implicit lazy val schemaForLocalDateTime: Schema[LocalDateTime] = Schema(SString())
+  implicit lazy val schemaForLocalDate: Schema[LocalDate] = Schema(SDate())
+  implicit lazy val schemaForZoneOffset: Schema[ZoneOffset] = Schema(SString())
+  implicit lazy val schemaForZoneId: Schema[ZoneId] = Schema(SString())
+  implicit lazy val schemaForJavaDuration: Schema[Duration] = Schema(SString())
+  implicit lazy val schemaForLocalTime: Schema[LocalTime] = Schema(SString())
+  implicit lazy val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString())
+
   implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString())
   implicit val schemaForUUID: Schema[UUID] = Schema(SString[UUID]()).format("uuid")
   implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
@@ -326,45 +369,42 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit def schemaForDelimited[D <: String, T](implicit tSchema: Schema[T]): Schema[Delimited[D, T]] =
     tSchema.asIterable[List].map(l => Some(Delimited[D, T](l)))(_.values).attribute(Explode.Attribute, Explode(false))
 
-  /** Corresponds to OpenAPI's `explode` parameter which should be used for delimited values. */
+  /** @see Schema#explode */
   case class Explode(explode: Boolean)
   object Explode {
     val Attribute: AttributeKey[Explode] = new AttributeKey[Explode]("sttp.tapir.Schema.Explode")
   }
 
-  /** Used in combination with explode, to properly represent delimited values in examples and default values (#3581) */
+  /** @see Schema#nullable */
+  object Nullable {
+    val Attribute: AttributeKey[Nullable.type] = new AttributeKey[Nullable.type]("sttp.tapir.Schema.Nullable")
+  }
+
+  /** @see Schema#delimiter */
   case class Delimiter(delimiter: String)
   object Delimiter {
     val Attribute: AttributeKey[Delimiter] = new AttributeKey[Delimiter]("sttp.tapir.Schema.Delimiter")
   }
 
-  /** Corresponds to JsonSchema's `title` parameter which should be used for defining title of the object. */
+  /** @see Schema#title */
   case class Title(value: String)
-
   object Title {
     val Attribute: AttributeKey[Title] = new AttributeKey[Title]("sttp.tapir.Schema.Title")
   }
 
+  /** @see Schema#uniqueItems */
   case class UniqueItems(uniqueItems: Boolean)
   object UniqueItems {
     val Attribute: AttributeKey[UniqueItems] = new AttributeKey[UniqueItems]("sttp.tapir.Schema.UniqueItems")
   }
 
-  /** Specifies that the given schema is for a tuple. Tuples are products with no meaningful property names - attributes are identified by
-    * their position.
-    *
-    * When converting a tuple schema of type [[SchemaType.SProduct]] to JSON schema, renders as an `array` schema, with type constraints for
-    * each index (#3941).
-    */
+  /** @see Schema#tuple */
   case class Tuple(isTuple: Boolean)
   object Tuple {
     val Attribute: AttributeKey[Tuple] = new AttributeKey[Tuple]("sttp.tapir.Schema.Tuple")
   }
 
-  /** For coproduct schemas, when there's a discriminator field, used to attach the encoded value of the discriminator field. Such value is
-    * added to the discriminator field schemas in each of the coproduct's subtypes. When rendering OpenAPI/JSON schema, these values are
-    * converted to `const` constraints on fields.
-    */
+  /** @see Schema#encodedDiscriminatorValue */
   case class EncodedDiscriminatorValue(v: String)
   object EncodedDiscriminatorValue {
     /*

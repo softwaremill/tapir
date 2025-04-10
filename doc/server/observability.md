@@ -319,3 +319,54 @@ val serverOptions: NettySyncServerOptions =
 
 NettySyncServer().options(serverOptions).addEndpoint(???).startAndWait()
 ```
+
+## otel4s OpenTelemetry tracing
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-otel4s-tracing" % "@VERSION@"
+```
+
+The `Otel4sTracing` interceptor provides integration with the [otel4s](https://typelevel.org/otel4s/) library for OpenTelemetry tracing.
+This allows you to create traces for your tapir endpoints using a purely functional API.
+
+`Otel4sTracing` creates a span for each request, extracts context from request headers, and populates spans with relevant metadata (request method, path, status code).
+All spans created as part of the request processing will be properly correlated into a single trace.
+
+For details on context propagation with otel4s, see the [official documentation](https://typelevel.org/otel4s/oteljava/tracing-context-propagation.html).
+
+The interceptor should be added before any others to ensure it handles the request early:
+
+Example using Http4s:
+```scala mdoc:compile-only
+import cats.effect.IO
+import org.typelevel.otel4s.oteljava.OtelJava
+import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerOptions
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.tracing.otel4s.Otel4sTracing
+
+OtelJava
+  .autoConfigured[IO]()
+  .use { otel4s =>
+    otel4s.tracerProvider.get("tracer-name").flatMap { tracer =>
+      val endpoints: List[ServerEndpoint[Any, IO]] = ???
+      val routes =
+        Http4sServerInterpreter[IO](Http4sServerOptions.default[IO].prependInterceptor(Otel4sTracing(tracer)))
+          .toRoutes(endpoints)
+      // start your server
+      ???
+    }
+  }
+```
+
+## Tracing when no endpoints match a request
+
+When no endpoints match a request, the interceptor will still create a span for the request. However, if no response is
+returned, no response-related attributes will be added to the span. This is because other routes in the host server
+might still serve the request.
+
+If a default response (e.g. a `404 Not Found`) should be produced, this should be enabled using the 
+[reject interceptor](errors.md). Such a setup assumes that there are no other routes in the server, after the Tapir
+server interpreter is invoked.

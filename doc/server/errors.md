@@ -103,10 +103,10 @@ The default reject interceptor can be customised by providing your own reject ha
 
 Two default implementations of the reject handler are provided by the `DefaultRejectHandler`:
 
-- `default` - which returns a `405 Method Not Allowed` when the HTTP method was rejected, and otherwise propagates
-  the rejection to the server interpreter library,
-- `defaultOrNotFound` - similar, but returns a `404 Not Found` instead of propagating when the rejected input
-  was not the HTTP method.
+- `DefaultRejectHandler` - which returns a `405 Method Not Allowed` when the HTTP method was rejected, and otherwise 
+  propagates the rejection to the server interpreter library,
+- `DefaultRejectHandler.orNotFound` - similar, but returns a `404 Not Found` instead of propagating when the rejected 
+  input was not the HTTP method.
 
 ### Default failure handler
 

@@ -1,8 +1,8 @@
 // {cat=Streaming; effects=cats-effect; server=http4s}: Stream response as an fs2 stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.23
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 //> using dep org.http4s::http4s-ember-server:0.23.30
 
 package sttp.tapir.examples.streaming
@@ -14,9 +14,9 @@ import org.http4s.HttpRoutes
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.HeaderNames
-import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
@@ -58,7 +58,7 @@ object StreamingHttp4sFs2Server extends IOApp:
       .build
       .use { _ =>
         IO {
-          val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
+          val backend: SyncBackend = HttpClientSyncBackend()
           val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/receive").send(backend).body
           println("Got result: " + result)
 

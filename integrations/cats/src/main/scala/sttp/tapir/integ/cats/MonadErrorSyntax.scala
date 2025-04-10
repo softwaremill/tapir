@@ -20,7 +20,9 @@ trait MonadErrorSyntax {
             case t if h.isDefinedAt(t) => gK(h(t))
           })
 
-        override def ensure[T](f: G[T], e: => G[Unit]): G[T] = fk(mef.ensure(gK(f), gK(e)))
+        override def ensure[T](f: G[T], e: => G[Unit]): G[T] = ensure(f, e)
+
+        override def ensure2[T](f: => G[T], e: => G[Unit]): G[T] = fk(mef.ensure2(gK(f), gK(e)))
 
         override def blocking[T](t: => T): G[T] = fk(mef.blocking(t))
       }

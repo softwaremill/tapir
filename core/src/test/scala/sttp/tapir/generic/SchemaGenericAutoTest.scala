@@ -249,7 +249,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
             field(FieldName("name"), Schema(SString())),
             field(
               FieldName("who_am_i"),
-              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Organization"))
+              Schema(SString()).encodedDiscriminatorValue("Organization")
             )
           )
         ),
@@ -262,7 +262,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
             field(FieldName("age"), Schema(SInteger(), format = Some("int32"))),
             field(
               FieldName("who_am_i"),
-              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Person"))
+              Schema(SString()).encodedDiscriminatorValue("Person")
             )
           )
         ),
@@ -273,7 +273,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           List(
             field(
               FieldName("who_am_i"),
-              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("UnknownEntity"))
+              Schema(SString()).encodedDiscriminatorValue("UnknownEntity")
             )
           )
         ),

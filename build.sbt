@@ -187,6 +187,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   datadogMetrics.projectRefs ++
   zioMetrics.projectRefs ++
   opentelemetryTracing.projectRefs ++
+  otel4sTracing.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   play29Json.projectRefs ++
@@ -219,6 +220,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   http4sServer.projectRefs ++
   http4sServerZio.projectRefs ++
   sttpStubServer.projectRefs ++
+  sttpStub4Server.projectRefs ++
   sttpMockServer.projectRefs ++
   finatraServer.projectRefs ++
   finatraServerCats.projectRefs ++
@@ -245,6 +247,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   clientCore.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
+  sttpClient4.projectRefs ++
   playClient.projectRefs ++
   play29Client.projectRefs ++
   tests.projectRefs ++
@@ -1089,6 +1092,20 @@ lazy val opentelemetryTracing: ProjectMatrix = (projectMatrix in file("tracing/o
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore % CompileAndTest)
 
+lazy val otel4sTracing: ProjectMatrix = (projectMatrix in file("tracing/otel4s-tracing"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-otel4s-tracing",
+    libraryDependencies ++= Seq(
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
+      "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
+      "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
+
 // docs
 
 lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"))
@@ -1174,7 +1191,9 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
   .settings(commonSettings)
   .settings(
     name := "tapir-swagger-ui",
-    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi)
+    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi,
+      scalaTest.value % Test
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(core, files)
@@ -1190,7 +1209,7 @@ lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-u
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
-  .dependsOn(swaggerUi, openapiDocs, sttpClient % Test, http4sServer % Test)
+  .dependsOn(swaggerUi, openapiDocs, sttpClient4 % Test, http4sServer % Test)
 
 lazy val redoc: ProjectMatrix = (projectMatrix in file("docs/redoc"))
   .settings(commonSettings)
@@ -1216,7 +1235,7 @@ lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
-  .dependsOn(redoc, openapiDocs, sttpClient % Test, http4sServer % Test)
+  .dependsOn(redoc, openapiDocs, sttpClient4 % Test, http4sServer % Test)
 
 // server
 
@@ -1237,10 +1256,10 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp
+      "com.softwaremill.sttp.client4" %% "fs2" % Versions.sttp4
     )
   )
-  .dependsOn(tests, sttpStubServer, enumeratum)
+  .dependsOn(tests, sttpStub4Server, enumeratum)
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
 
 lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-http-server"))
@@ -1252,7 +1271,7 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "com.typesafe.akka" %% "akka-slf4j" % Versions.akkaStreams,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
-      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test
+      "com.softwaremill.sttp.client4" %% "akka-http-backend" % Versions.sttp4 % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions, settings = commonJvmSettings)
@@ -1267,7 +1286,7 @@ lazy val pekkoHttpServer: ProjectMatrix = (projectMatrix in file("server/pekko-h
       "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams,
       "org.apache.pekko" %% "pekko-slf4j" % Versions.pekkoStreams,
       "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared,
-      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp % Test
+      "com.softwaremill.sttp.client4" %% "pekko-http-backend" % Versions.sttp4 % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
@@ -1376,12 +1395,20 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore, sttpClient, tests % Test)
 
+lazy val sttpStub4Server: ProjectMatrix = (projectMatrix in file("server/sttp-stub4-server"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-sttp-stub4-server"
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore, sttpClient4, tests % Test)
+
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
   .settings(commonSettings)
   .settings(
     name := "sttp-mock-server",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client4" %%% "core" % Versions.sttp4,
       "io.circe" %% "circe-core" % Versions.circe,
       "io.circe" %% "circe-parser" % Versions.circe,
       "io.circe" %% "circe-generic" % Versions.circe,
@@ -1391,7 +1418,7 @@ lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-moc
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
-  .dependsOn(serverCore, serverTests % "test", sttpClient)
+  .dependsOn(serverCore, serverTests % "test", sttpClient4)
 
 lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-server"))
   .settings(commonSettings)
@@ -1676,7 +1703,7 @@ lazy val awsLambdaZioTests: ProjectMatrix = (projectMatrix in file("serverless/a
     Test / parallelExecution := false
   )
   .jvmPlatform(scalaVersions = scala2Versions, settings = commonJvmSettings)
-  .dependsOn(core, zio, circeJson, awsLambdaZio, awsSam, sttpStubServer, serverTests)
+  .dependsOn(core, zio, circeJson, awsLambdaZio, awsSam, sttpStub4Server, serverTests)
   .settings(
     libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats)
   )
@@ -1686,7 +1713,7 @@ lazy val awsLambdaCatsEffect: ProjectMatrix = (projectMatrix in file("serverless
   .settings(
     name := "tapir-aws-lambda",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "fs2" % Versions.sttp,
+      "com.softwaremill.sttp.client4" %% "fs2" % Versions.sttp4,
       "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface,
       slf4j
     )
@@ -1749,7 +1776,7 @@ lazy val awsLambdaCatsEffectTests: ProjectMatrix = (projectMatrix in file("serve
     Test / parallelExecution := false
   )
   .jvmPlatform(scalaVersions = scala2Versions, settings = commonJvmSettings)
-  .dependsOn(core, awsLambdaCatsEffect, cats, circeJson, awsSam, sttpStubServer, serverTests)
+  .dependsOn(core, awsLambdaCatsEffect, cats, circeJson, awsSam, sttpStub4Server, serverTests)
 
 // integration tests for aws cdk interpreter
 // it's a separate project since it needs a fat jar with lambda code which cannot be build from tests sources
@@ -1870,7 +1897,7 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
   .settings(
     name := "tapir-aws-examples",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %%% "cats" % Versions.sttp
+      "com.softwaremill.sttp.client4" %%% "cats" % Versions.sttp4
     ),
     publishArtifact := false
   )
@@ -1986,6 +2013,54 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   )
   .dependsOn(clientCore, clientTests % Test)
 
+lazy val sttpClient4: ProjectMatrix = (projectMatrix in file("client/sttp-client4"))
+  .settings(commonSettings)
+  .settings(clientTestServerSettings)
+  .settings(
+    name := "tapir-sttp-client4",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client4" %%% "core" % Versions.sttp4
+    )
+  )
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "com.softwaremill.sttp.client4" %% "fs2" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.client4" %% "zio" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.client4" %% "pekko-http-backend" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared % Optional,
+        "org.apache.pekko" %% "pekko-stream" % Versions.pekkoStreams % Optional
+      ),
+      libraryDependencies ++= {
+        CrossVersion.partialVersion(scalaVersion.value) match {
+          case Some((3, _)) => Nil
+          case _ =>
+            Seq(
+              "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
+              "com.softwaremill.sttp.client4" %% "akka-http-backend" % Versions.sttp4 % Test,
+              "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+            )
+        }
+      }
+    )
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
+        "com.softwaremill.sttp.client4" %%% "fs2" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.client4" %%% "zio" % Versions.sttp4 % Test,
+        "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %%% "zio" % Versions.sttpShared % Optional
+      )
+    )
+  )
+  .dependsOn(clientCore, clientTests % Test)
+
 lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"))
   .settings(clientTestServerSettings)
   .settings(commonSettings)
@@ -2031,13 +2106,13 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
-      "com.beachape" %% "enumeratum" % "1.7.5" % Test,
+      "com.beachape" %% "enumeratum" % "1.7.6" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.7.5" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.28.2" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.28.2" % Provided
     )
   )
-  .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test)
+  .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
 
 lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
   .enablePlugins(SbtPlugin)
@@ -2059,7 +2134,7 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     )
   )
-  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 
 lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
   .enablePlugins(BuildInfoPlugin)
@@ -2074,7 +2149,7 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     )
   )
-  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test)
+  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 
 // other
 
@@ -2084,12 +2159,12 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     name := "tapir-examples",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec,
-      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "circe" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "pekko-http-backend" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
+      "com.softwaremill.sttp.client4" %% "cats" % Versions.sttp4,
+      "com.softwaremill.sttp.client4" %% "core" % Versions.sttp4,
+      "com.softwaremill.sttp.client4" %% "circe" % Versions.sttp4,
+      "com.softwaremill.sttp.client4" %% "fs2" % Versions.sttp4,
+      "com.softwaremill.sttp.client4" %% "pekko-http-backend" % Versions.sttp4,
+      "com.softwaremill.sttp.client4" %% "zio" % Versions.sttp4,
       "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
@@ -2126,12 +2201,13 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     nettyServerZio,
     opentelemetryMetrics,
     opentelemetryTracing,
+    otel4sTracing,
     pekkoHttpServer,
     picklerJson,
     prometheusMetrics,
-    sttpClient,
+    sttpClient4,
     sttpMockServer,
-    sttpStubServer,
+    sttpStub4Server,
     swaggerUiBundle,
     redocBundle,
     vertxServer,
@@ -2194,6 +2270,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     openapiVerifier,
     opentelemetryMetrics,
     opentelemetryTracing,
+    otel4sTracing,
     pekkoHttpServer,
     picklerJson,
     playClient,
@@ -2202,8 +2279,9 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     prometheusMetrics,
     sprayJson,
     sttpClient,
+    sttpClient4,
     sttpMockServer,
-    sttpStubServer,
+    sttpStub4Server,
     swaggerUiBundle,
     testing,
     tethysJson,

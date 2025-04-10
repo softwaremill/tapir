@@ -36,8 +36,12 @@ case class PrometheusMetrics[F[_]](
     copy(metrics = metrics :+ requestTotal(registry, namespace, labels))
 
   /** Registers a `$namespace_request_duration_seconds{path, method, status, phase}` histogram (assuming default labels). */
-  def addRequestsDuration(labels: MetricLabels = MetricLabels.Default, clock: Clock = Clock.systemUTC()): PrometheusMetrics[F] =
-    copy(metrics = metrics :+ requestDuration(registry, namespace, labels, clock))
+  def addRequestsDuration(
+      labels: MetricLabels = MetricLabels.Default,
+      clock: Clock = Clock.systemUTC(),
+      bucketsOverride: List[Double] = List.empty,
+  ): PrometheusMetrics[F] =
+    copy(metrics = metrics :+ requestDuration(registry, namespace, labels, clock, bucketsOverride))
 
   /** Registers a custom metric. */
   def addCustom(m: Metric[F, _]): PrometheusMetrics[F] = copy(metrics = metrics :+ m)
@@ -130,11 +134,11 @@ object PrometheusMetrics {
       registry: PrometheusRegistry,
       namespace: String,
       labels: MetricLabels,
-      clock: Clock = Clock.systemUTC()
+      clock: Clock = Clock.systemUTC(),
+      bucketsOverride: List[Double] = List.empty,
   ): Metric[F, Histogram] =
     Metric[F, Histogram](
-      Histogram
-        .builder()
+      (if (bucketsOverride.nonEmpty) Histogram.builder().classicUpperBounds(bucketsOverride: _*) else Histogram.builder())
         .name(metricNameWithNamespace(namespace, "request_duration_seconds"))
         .help("Duration of HTTP requests")
         .labelNames(labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name): _*)

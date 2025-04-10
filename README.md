@@ -75,10 +75,10 @@ Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from 
 ## Teaser
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 type Limit = Int
 type AuthToken = String
@@ -100,7 +100,7 @@ val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Bo
 
 // Generate OpenAPI documentation
 
-import sttp.apispec.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
@@ -125,10 +125,10 @@ val booksListingRoute: Route = AkkaHttpServerInterpreter()
 
 // Convert to sttp Request
 
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3._
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]]] = 
   SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
@@ -139,7 +139,7 @@ val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] 
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.11.19"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.11.24"
 ```
 
 Then, import:

@@ -1,3 +1,4 @@
+
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -11,6 +12,7 @@ object TapirGeneratedEndpoints {
 
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
+
 
 
   case class CommaSeparatedValues[T](values: List[T])
@@ -44,11 +46,33 @@ object TapirGeneratedEndpoints {
   implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
   }
-
+  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
+    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
 
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
+
+  enum PetStatus {
+    case available, pending, sold
+  }
+  case class Pet (
+    status: Option[PetStatus] = None,
+    tags: Option[Seq[Tag]] = None,
+    id: Option[Long] = None,
+    tags2: Option[Seq[Tag2]] = None,
+    photoUrls: Seq[String],
+    name: String,
+    category: Option[Category] = None
+  )
+  case class Category (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
@@ -74,10 +98,19 @@ object TapirGeneratedEndpoints {
     s: String,
     a: Option[Seq[String]] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class Tag (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
 
   enum AnEnum {
     case Foo, Bar, Baz
   }
+  case class Tag2 (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
+
 
 
 
@@ -85,17 +118,29 @@ object TapirGeneratedEndpoints {
     endpoint
       .put
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithoutDiscriminator])
+      .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
   lazy val postAdtTest =
     endpoint
       .post
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithDiscriminatorNoMapping])
+      .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
+  lazy val postXmlEndpoint =
+    endpoint
+      .post
+      .in(("xml" / "endpoint"))
+      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Pet], CodecFormat.Xml()))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Pet], CodecFormat.Xml()).description("An object"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest)
 
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postXmlEndpoint)
+
+   object Servers {
+    import sttp.model.Uri.UriContext
+
+     val `/v3`: sttp.model.Uri = uri"/v3"
+   }
 }

@@ -7,7 +7,7 @@ import io.vertx.core.Vertx
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
-import sttp.client3.basicRequest
+import sttp.client4.basicRequest
 import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.server.tests._

@@ -91,10 +91,13 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     }
   }
   "oneOf with discriminator can be round-tripped by generated serdes" in {
-    val route = TapirGeneratedEndpoints.postAdtTest.serverLogic[Future]({
-      case foo: SubtypeWithD1 => Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD1(foo.s + "+SubtypeWithD1", foo.i, foo.d))
-      case foo: SubtypeWithD2 => Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD2(foo.s + "+SubtypeWithD2", foo.a))
-    })
+    val route = TapirGeneratedEndpoints.postAdtTest
+      .serverSecurityLogicSuccess(_ => Future.successful(()))
+      .serverLogic(_ => {
+        case foo: SubtypeWithD1 =>
+          Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD1(foo.s + "+SubtypeWithD1", foo.i, foo.d))
+        case foo: SubtypeWithD2 => Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD2(foo.s + "+SubtypeWithD2", foo.a))
+      })
 
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(route)
@@ -113,6 +116,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       Await.result(
         sttp.client3.basicRequest
           .post(uri"http://test.com/adt/test")
+          .header("api_key", "the key")
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
@@ -133,6 +137,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       Await.result(
         sttp.client3.basicRequest
           .post(uri"http://test.com/adt/test")
+          .header("api_key", "the key")
           .body(reqJsonBody)
           .send(stub)
           .map { resp =>
@@ -223,9 +228,11 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       case 1 => Some(someResponse1)
       case 2 => Some(someResponse2)
     }
-    val route = TapirGeneratedEndpoints.getOneofOptionTest.serverLogic[Future]({ _: Unit =>
-      Future successful Right[Unit, Option[AnyObjectWithInlineEnum]](responseVariant)
-    })
+    val route = TapirGeneratedEndpoints.getOneofOptionTest
+      .serverSecurityLogicSuccess[Unit, Future](_ => Future.successful(()))
+      .serverLogic({ _ => _: Unit =>
+        Future successful Right[Unit, (Option[AnyObjectWithInlineEnum], Option[String])](responseVariant -> Some("ok"))
+      })
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(route)
       .thenRunLogic()
@@ -233,6 +240,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     Await.result(
       sttp.client3.basicRequest
         .get(uri"http://test.com/oneof/option/test")
+        .header("Authorization", "Bearer some.jwt.probably")
         .send(stub)
         .map { resp =>
           resp.code.code shouldEqual 204
@@ -244,6 +252,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     Await.result(
       sttp.client3.basicRequest
         .get(uri"http://test.com/oneof/option/test")
+        .header("Authorization", "Bearer some.jwt.probably")
         .send(stub)
         .map { resp =>
           resp.code.code shouldEqual 200
@@ -255,6 +264,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     Await.result(
       sttp.client3.basicRequest
         .get(uri"http://test.com/oneof/option/test")
+        .header("Authorization", "Bearer some.jwt.probably")
         .send(stub)
         .map { resp =>
           resp.code.code shouldEqual 201
@@ -263,5 +273,124 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       1.second
     )
 
+  }
+  "multiple security declarations" in {
+    val uuids = (1 to 3).map(_ => UUID.randomUUID())
+    val route = TapirGeneratedEndpoints.putOptionalTest
+      .serverSecurityLogicSuccess[Int, Future] {
+        case _: Api_keySecurityIn            => Future.successful(0)
+        case _: Api_key_and_BearerSecurityIn => Future.successful(1)
+        case _: BearerSecurityIn             => Future.successful(2)
+      }
+      .serverLogic({ i => _ =>
+        Future successful Right(NotNullableThingy(uuids(i)))
+      })
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+
+    Await.result(
+      sttp.client3.basicRequest
+        .put(uri"http://test.com/optional/test")
+        .header("api_key", "an api key!!")
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 200
+          resp.body shouldEqual Right(s"""{"uuid":"${uuids(0)}"}""")
+        },
+      1.second
+    )
+    Await.result(
+      sttp.client3.basicRequest
+        .put(uri"http://test.com/optional/test")
+        .header("Authorization", "Bearer some.jwt.probably")
+        .header("api_key", "an api key!!")
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 200
+          resp.body shouldEqual Right(s"""{"uuid":"${uuids(1)}"}""")
+        },
+      1.second
+    )
+    Await.result(
+      sttp.client3.basicRequest
+        .put(uri"http://test.com/optional/test")
+        .header("Authorization", "Bearer some.jwt.probably")
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 200
+          resp.body shouldEqual Right(s"""{"uuid":"${uuids(2)}"}""")
+        },
+      1.second
+    )
+  }
+  "security prefix" in {
+    locally {
+      val route = TapirGeneratedEndpoints.getSecurityGroupSecurityGroupName
+        .serverSecurityLogic[Unit, Future] { case (pathPrefix, bearerToken) =>
+          if (bearerToken.startsWith(pathPrefix)) Future.successful(Right())
+          else Future.successful(Left(()))
+        }
+        .serverLogic({ _ => _ => Future successful Right(()) })
+      val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+        .whenServerEndpoint(route)
+        .thenRunLogic()
+        .backend()
+
+      Await.result(
+        sttp.client3.basicRequest
+          .get(uri"http://test.com/security-group/foo")
+          .header("Authorization", "Bearer foot")
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual 204
+          },
+        1.second
+      )
+      Await.result(
+        sttp.client3.basicRequest
+          .get(uri"http://test.com/security-group/foot")
+          .header("Authorization", "Bearer foo")
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual 400
+          },
+        1.second
+      )
+    }
+    locally {
+      val route = TapirGeneratedEndpoints.getSecurityGroupSecurityGroupNameMorePath
+        .serverSecurityLogic[Unit, Future] { case (pathPrefix, bearerToken) =>
+          if (bearerToken.startsWith(pathPrefix)) Future.successful(Right())
+          else Future.successful(Left(()))
+        }
+        .serverLogic({ _ => _ => Future successful Right(()) })
+      val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+        .whenServerEndpoint(route)
+        .thenRunLogic()
+        .backend()
+
+      Await.result(
+        sttp.client3.basicRequest
+          .get(uri"http://test.com/security-group/foo/more-path")
+          .header("Authorization", "Bearer foot")
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual 204
+          },
+        1.second
+      )
+      Await.result(
+        sttp.client3.basicRequest
+          .get(uri"http://test.com/security-group/foot/more-path")
+          .header("Authorization", "Bearer foo")
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual 400
+          },
+        1.second
+      )
+    }
   }
 }

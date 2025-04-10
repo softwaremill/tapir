@@ -46,7 +46,7 @@ val binding: Future[NettyFutureServerBinding] =
 
 ## Direct-style
 
-The `tapir-netty-server-sync` server uses `Identity[T]` as its wrapper effect for compatibility, while `Id[A]` means in 
+The `tapir-netty-server-sync` server uses `Identity[T]` as its wrapper effect for compatibility; `Identity[A]` means in 
 fact just `A`, representing direct style. It is available only for Scala 3.
 
 See [examples/HelloWorldNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldNettySyncServer.scala) for a full example.
@@ -79,8 +79,14 @@ NettyFutureServer(NettyFutureServerOptions.customiseInterceptors.serverLog(None)
 NettyFutureServer(NettyConfig.default.socketBacklog(256))
 ```
 
-## Web sockets
+```note
+Unlike other server interpreters, the Netty-based servers are by default configured to return a 404, in case none of
+the given endpoints match a request. This can be changed by using a different `RejectHandler`.
 
+This is due to the fact that usually no other routes (not generated from endpoints) are added to a Netty server.
+```
+
+## Web sockets
 
 ### tapir-netty-server-cats
 

@@ -39,6 +39,7 @@ class HttpServer(port: Port) {
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
   private object apiKeyOptParam extends OptionalQueryParamDecoderMatcher[String]("api-key")
   private object statusOutParam extends QueryParamDecoderMatcher[Int]("statusOut")
+  private object errorParam extends QueryParamDecoderMatcher[Boolean]("error")
 
   private def service(wsb: WebSocketBuilder2[IO]) = HttpRoutes.of[IO] {
     case GET -> Root :? fruitParam(f) +& amountOptParam(amount) =>
@@ -64,6 +65,12 @@ class HttpServer(port: Port) {
       okOnlyHeaders(List(filteredHeaders2))
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
       okOnlyHeaders(r.uri.multiParams.getOrElse("qq", Nil).reverse.map("hh" -> _: Header.ToRaw))
+    case r @ POST -> Root / "api" / "echo" / "param-to-header" =>
+      r.as[String].flatMap { body =>
+        val headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map("hh" -> _: Header.ToRaw)
+        Ok(body, headers = Headers(headers))
+      }
+
     case r @ GET -> Root / "api" / "echo" / "param-to-upper-header" =>
       okOnlyHeaders(r.uri.multiParams.map { case (k, v) =>
         k -> v.headOption.getOrElse("?"): Header.ToRaw
@@ -107,23 +114,7 @@ class HttpServer(port: Port) {
         case _   => BadRequest()
       }
 
-    case GET -> Root / "ws" / "echo" =>
-      val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
-        _.collect { case WebSocketFrame.Text(msg, _) =>
-          if (msg.contains("\"f\"")) {
-            WebSocketFrame.Text(msg.replace("\"f\":\"", "\"f\":\"echo: ")) // json echo
-          } else {
-            WebSocketFrame.Text("echo: " + msg) // string echo
-          }
-        }
-
-      Queue
-        .unbounded[IO, WebSocketFrame]
-        .flatMap { q =>
-          val d = Stream.repeatEval(q.take).through(echoReply)
-          val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
-          wsb.build(d, e)
-        }
+    case GET -> Root / "ws" / "echo" => wsEcho(wsb)
 
     case GET -> Root / "ws" / "echo" / "fragmented" =>
       val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
@@ -159,6 +150,9 @@ class HttpServer(port: Port) {
             .build(d, e)
         }
 
+    case GET -> Root / "ws" / "error-or-echo" :? errorParam(e) =>
+      if (e) BadRequest("error as requested") else wsEcho(wsb)
+
     case GET -> Root / "entity" / entityType =>
       if (entityType == "person") Created("""{"name":"mary","age":20}""")
       else Ok("""{"name":"work"}""")
@@ -188,6 +182,34 @@ class HttpServer(port: Port) {
           case "application/json" => Ok(s"""{"f": "$body (json)"}""", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
           case "application/xml"  => Ok(s"<f>$body (xml)</f>", `Content-Type`(MediaType.application.xml, Charset.`UTF-8`))
         }
+      }
+
+    case r @ POST -> Root / "api" / "error_or_echo" :? errorParam(e) =>
+      r.as[String].flatMap { body =>
+        if (e) {
+          BadRequest("error as requested")
+        } else {
+          Ok(body)
+        }
+      }
+  }
+
+  private def wsEcho(wsb: WebSocketBuilder2[IO]) = {
+    val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
+      _.collect { case WebSocketFrame.Text(msg, _) =>
+        if (msg.contains("\"f\"")) {
+          WebSocketFrame.Text(msg.replace("\"f\":\"", "\"f\":\"echo: ")) // json echo
+        } else {
+          WebSocketFrame.Text("echo: " + msg) // string echo
+        }
+      }
+
+    Queue
+      .unbounded[IO, WebSocketFrame]
+      .flatMap { q =>
+        val d = Stream.repeatEval(q.take).through(echoReply)
+        val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
+        wsb.build(d, e)
       }
   }
 

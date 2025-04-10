@@ -17,6 +17,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate simple class" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -25,7 +26,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -34,6 +36,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate simple enum" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -46,7 +49,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
     // the enumeratum import should be included by the BasicGenerator iff we generated enums
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -55,6 +59,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate simple class with reserved propName" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -63,7 +68,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("type" -> noDefault(OpenapiSchemaString(false))), Seq("type"), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -72,6 +78,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with array" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -84,7 +91,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -93,6 +101,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with map" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -105,7 +114,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -114,6 +124,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with any type" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -122,7 +133,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("anyType" -> noDefault(OpenapiSchemaAny(false))), Seq("anyType"), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -131,6 +143,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with inner class" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -145,7 +158,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -154,6 +168,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with array with inner class" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -174,7 +189,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
               )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -183,6 +199,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate class with map with inner class" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -203,7 +220,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
               )
           )
         )
-      )
+      ),
+      Nil
     )
 
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
@@ -212,6 +230,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "nonrequired and required are not the same" in {
     val doc1 = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -220,10 +239,12 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
           )
         )
-      )
+      ),
+      Nil
     )
     val doc2 = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -232,7 +253,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
           )
         )
-      )
+      ),
+      Nil
     )
     val gen = new ClassDefinitionGenerator()
     val res1 = gen.classDefs(doc1).map(_.classRepr)
@@ -244,6 +266,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "nonrequired and nullable are the same" in {
     val doc1 = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -252,10 +275,12 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
           )
         )
-      )
+      ),
+      Nil
     )
     val doc2 = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -264,7 +289,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false)
           )
         )
-      )
+      ),
+      Nil
     )
     val gen = new ClassDefinitionGenerator()
     val res1 = gen.classDefs(doc1).map(_.classRepr)
@@ -275,6 +301,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate legal scala 3 enums when instructed to" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -283,12 +310,13 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "Test" -> OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     val gen = new ClassDefinitionGenerator()
     def concatted(res: GeneratedClassDefinitions): String = {
-      (res.classRepr + res.serdeRepr.fold("")("\n" + _)).linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
+      (res.classRepr + res.jsonSerdeRepr.fold("")("\n" + _)).linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
     }
     val res = gen
       .classDefs(doc, true, jsonParamRefs = Set("Test"))
@@ -335,6 +363,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate named maps" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Nil,
       Some(
@@ -347,7 +376,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             "MyMapEnum" -> OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MyEnum"), false)
           )
         )
-      )
+      ),
+      Nil
     )
 
     val gen = new ClassDefinitionGenerator()
@@ -396,6 +426,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             useHeadTagForObjectNames = false,
             targetScala3 = false,
             jsonSerdeLib = JsonSerdeLib.Circe,
+            xmlSerdeLib = XmlSerdeLib.CatsXml,
             streamingImplementation = StreamingImplementation.FS2,
             generateEndpointTypes = false
           )
@@ -489,7 +520,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       .toTry
       .get
     val gen = new ClassDefinitionGenerator()
-    val res1 = Try(gen.classDefs(OpenapiDocument("", null, Nil, Some(doc)))).toEither
+    val res1 = Try(gen.classDefs(OpenapiDocument("", Nil, null, Nil, Some(doc), Nil))).toEither
 
     res1.left.get.getMessage shouldEqual "Generating class for ReqWithDefaults: Cannot render a number as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString."
 
@@ -501,7 +532,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _, _) =
         gen
           .classDefs(
             doc,
@@ -534,7 +565,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _, _) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
       val fullRes = (res + "\n" + jsonSerdes.get)

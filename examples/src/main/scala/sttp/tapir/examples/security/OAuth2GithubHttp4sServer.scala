@@ -1,9 +1,9 @@
 // {cat=Security; effects=cats-effect; server=http4s; json=circe}: Login using OAuth2, authorization code flow
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.17
-//> using dep com.softwaremill.sttp.client3::async-http-client-backend-cats:3.10.3
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.23
+//> using dep com.softwaremill.sttp.client4::cats:4.0.0
 //> using dep org.http4s::http4s-ember-server:0.23.30
 //> using dep com.github.jwt-scala::jwt-circe:10.0.1
 
@@ -16,8 +16,8 @@ import org.http4s.HttpRoutes
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim}
-import sttp.client3.*
-import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
+import sttp.client4.*
+import sttp.client4.httpclient.cats.HttpClientCatsBackend
 import sttp.model.StatusCode
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
@@ -78,7 +78,7 @@ object OAuth2GithubHttp4sServer extends IOApp:
     Http4sServerInterpreter[IO]().toRoutes(login.serverLogic(_ => IO(s"$authorizationUrl?client_id=$clientId".asRight[Unit])))
 
   // after successful authorization github redirects you here
-  def loginGithubRoute(backend: SttpBackend[IO, Any]): HttpRoutes[IO] =
+  def loginGithubRoute(backend: Backend[IO]): HttpRoutes[IO] =
     Http4sServerInterpreter[IO]().toRoutes(
       loginGithub.serverLogic(code =>
         basicRequest
@@ -112,7 +112,7 @@ object OAuth2GithubHttp4sServer extends IOApp:
       .serverLogic(authDetails => _ => IO(("Your details: " + authDetails).asRight[String]))
   )
 
-  val httpClient = AsyncHttpClientCatsBackend.resource[IO]()
+  val httpClient = HttpClientCatsBackend.resource[IO]()
 
   override def run(args: List[String]): IO[ExitCode] =
     // starting the server

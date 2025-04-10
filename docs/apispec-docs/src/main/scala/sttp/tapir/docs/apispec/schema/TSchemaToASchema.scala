@@ -23,7 +23,8 @@ private[docs] class TSchemaToASchema(
     *   the definitions are infinitely recursive)
     */
   def apply[T](schema: TSchema[T], allowReference: Boolean, isOptionElement: Boolean = false): ASchema = {
-    val nullable = markOptionsAsNullable && isOptionElement
+    val nullableAttribute = schema.attribute(TSchema.Nullable.Attribute).isDefined
+    val nullable = (markOptionsAsNullable && isOptionElement) || nullableAttribute
 
     val result = schema.name match {
       case Some(name) if allowReference => toSchemaReference.map(schema, name)

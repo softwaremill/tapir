@@ -1,18 +1,18 @@
 // {cat=Static content; effects=Future; server=Pekko HTTP}: Serving static files secured with a bearer token
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-files:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-files:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.23
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.static_content
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
-import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.files.*
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
@@ -41,7 +41,7 @@ import scala.concurrent.{Await, Future}
 
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(route).map { binding =>
     // testing
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
     val response1 = basicRequest
       .get(uri"http://localhost:8080/secure/f1")
       .auth
@@ -64,4 +64,4 @@ import scala.concurrent.{Await, Future}
     binding
   }
 
-  Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)
+  val _ = Await.result(bindAndCheck.flatMap(_.terminate(1.minute)), 1.minute)

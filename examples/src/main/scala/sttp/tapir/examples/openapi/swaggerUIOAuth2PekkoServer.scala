@@ -1,8 +1,8 @@
 // {cat=OpenAPI documentation; effects=Future; server=Pekko HTTP; docs=Swagger UI}: Securing Swagger UI using OAuth 2
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.23
 
 package sttp.tapir.examples.openapi
 
@@ -73,7 +73,7 @@ import scala.concurrent.{Await, Future, Promise}
 
   val routes = countCharactersRoute ~ swaggerRoute
 
-  val binding: Future[Http.ServerBinding] = Http().newServerAt("localhost", 3333).bindFlow(routes)
+  val _: Future[Http.ServerBinding] = Http().newServerAt("localhost", 3333).bindFlow(routes)
 
   val promise = Promise[Unit]()
   Await.result(promise.future, 100.minutes)

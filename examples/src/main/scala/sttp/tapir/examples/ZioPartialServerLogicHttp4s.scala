@@ -1,19 +1,19 @@
 // {cat=Hello, World!; effects=ZIO; server=http4s}: Extending a base endpoint (which has the security logic provided), with server logic
 
 //> using option -Ykind-projector
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.11.17
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.17
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.23
 //> using dep org.http4s::http4s-ember-server:0.23.30
-//> using dep com.softwaremill.sttp.client3::async-http-client-backend-zio:3.10.3
+//> using dep com.softwaremill.sttp.client4::zio:4.0.0-RC3
 
 package sttp.tapir.examples
 
 import org.http4s.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
-import sttp.client3.*
-import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
+import sttp.client4.*
+import sttp.client4.httpclient.zio.HttpClientZioBackend
 import sttp.tapir.examples.UserAuthenticationLayer.*
 import sttp.tapir.server.http4s.ztapir.*
 import sttp.tapir.ztapir.*
@@ -49,7 +49,7 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault:
 
   // testing
   val test: Task[Unit] = ZIO.scoped {
-    AsyncHttpClientZioBackend.scoped().flatMap { backend =>
+    HttpClientZioBackend.scoped().flatMap { backend =>
       def testWith(path: String, salutation: String, token: String): Task[String] =
         backend
           .send(

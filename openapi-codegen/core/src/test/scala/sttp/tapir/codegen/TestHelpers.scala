@@ -161,6 +161,7 @@ object TestHelpers {
 
   val myBookshopDoc = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("My Bookshop", "1.0"),
     Seq(
       OpenapiPath(
@@ -177,13 +178,13 @@ object TestHelpers {
               Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "",
                 Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
               ),
-              OpenapiResponse("401", "unauthorized", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))),
-              OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
+              OpenapiResponseDef("401", "unauthorized", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))),
+              OpenapiResponseDef("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
             ),
             requestBody = None,
             summary = None,
@@ -194,7 +195,7 @@ object TestHelpers {
             methodType = "put",
             parameters = Nil,
             responses = Seq(
-              OpenapiResponse("200", "returns some html", Seq(OpenapiResponseContent("text/html", OpenapiSchemaString(false))))
+              OpenapiResponseDef("200", "returns some html", Seq(OpenapiResponseContent("text/html", OpenapiSchemaString(false))))
             ),
             requestBody = None,
             summary = None,
@@ -211,14 +212,14 @@ object TestHelpers {
               Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "",
                 Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
               )
             ),
             requestBody = Option(
-              OpenapiRequestBody(
+              OpenapiRequestBodyDefn(
                 required = true,
                 content = Seq(
                   OpenapiRequestBodyContent(
@@ -237,8 +238,8 @@ object TestHelpers {
             methodType = "delete",
             parameters = Nil,
             responses = Seq(
-              OpenapiResponse("200", "deletion was successful", Nil),
-              OpenapiResponse("default", "deletion failed", Nil)
+              OpenapiResponseDef("200", "deletion was successful", Nil),
+              OpenapiResponseDef("default", "deletion failed", Nil)
             ),
             requestBody = None,
             summary = None,
@@ -264,7 +265,8 @@ object TestHelpers {
           "#/components/parameters/year" -> OpenapiParameter("year", "path", Some(true), None, OpenapiSchemaInt(false))
         )
       )
-    )
+    ),
+    Nil
   )
 
   val generatedBookshopYaml =
@@ -335,6 +337,7 @@ object TestHelpers {
 
   val generatedBookshopDoc = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("Generated Bookshop", "1.0"),
     Seq(
       OpenapiPath(
@@ -346,12 +349,12 @@ object TestHelpers {
               Resolved(OpenapiParameter("name", "query", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "",
                 Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
               ),
-              OpenapiResponse(
+              OpenapiResponseDef(
                 code = "400",
                 description = "Invalid value for: query parameter name",
                 content = Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
@@ -371,7 +374,7 @@ object TestHelpers {
             methodType = "get",
             parameters = Seq(),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 code = "200",
                 description = "",
                 content =
@@ -401,7 +404,8 @@ object TestHelpers {
           )
         )
       )
-    )
+    ),
+    Nil
   )
 
   val helloYaml =
@@ -436,6 +440,7 @@ object TestHelpers {
 
   val helloDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello", "1.0.0"),
     Seq(
       OpenapiPath(
@@ -447,12 +452,12 @@ object TestHelpers {
               Resolved(OpenapiParameter("name", "path", Some(true), None, OpenapiSchemaString(false)))
             ),
             responses = Seq(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "",
                 Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
               ),
-              OpenapiResponse(
+              OpenapiResponseDef(
                 code = "400",
                 description = "Invalid value for: query parameter name",
                 content = Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))
@@ -466,7 +471,8 @@ object TestHelpers {
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val simpleSecurityYaml =
@@ -485,6 +491,7 @@ object TestHelpers {
 
   val simpleSecurityDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello", "1.0"),
     Seq(
       OpenapiPath(
@@ -495,12 +502,13 @@ object TestHelpers {
             parameters = Seq(),
             responses = Seq(),
             requestBody = None,
-            security = Seq(Seq("basicAuth"))
+            security = Some(Seq(Map("basicAuth" -> Nil)))
           )
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val complexSecurityYaml =
@@ -521,6 +529,7 @@ object TestHelpers {
 
   val complexSecurityDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello", "1.0"),
     Seq(
       OpenapiPath(
@@ -531,12 +540,13 @@ object TestHelpers {
             parameters = Seq(),
             responses = Seq(),
             requestBody = None,
-            security = Seq(Seq("bearerAuth"), Seq("basicAuth", "apiKeyAuth"))
+            security = Some(Seq(Map("bearerAuth" -> Nil), Map("basicAuth" -> Nil, "apiKeyAuth" -> Nil)))
           )
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val enumQueryParamYaml =
@@ -583,6 +593,7 @@ object TestHelpers {
 
   val enumQueryParamDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("enum query test", "1.0"),
     Seq(
       OpenapiPath(
@@ -635,7 +646,8 @@ object TestHelpers {
           )
         )
       )
-    )
+    ),
+    Nil
   )
 
   val withDefaultsYaml =
@@ -732,6 +744,7 @@ object TestHelpers {
 
   val withDefaultsDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("default test", "1.0"),
     List(
       OpenapiPath(
@@ -741,7 +754,7 @@ object TestHelpers {
             "post",
             List(),
             List(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "Bar",
                 List(
@@ -753,13 +766,13 @@ object TestHelpers {
               )
             ),
             Some(
-              OpenapiRequestBody(
+              OpenapiRequestBodyDefn(
                 true,
                 Some("Foo"),
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithDefaults")))
               )
             ),
-            List(),
+            None,
             None,
             None,
             None
@@ -829,7 +842,8 @@ object TestHelpers {
         Map(),
         Map()
       )
-    )
+    ),
+    Nil
   )
 
   val specificationExtensionYaml =
@@ -880,6 +894,7 @@ object TestHelpers {
 
   val specificationExtensionDocs = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("hello goodbye", "1.0"),
     Seq(
       OpenapiPath(
@@ -942,7 +957,8 @@ object TestHelpers {
         )
       )
     ),
-    None
+    None,
+    Nil
   )
 
   val oneOfYaml =
@@ -1030,6 +1046,7 @@ object TestHelpers {
 
   def genOneOfDocs(withDiscriminator: Boolean, withMapping: Boolean) = OpenapiDocument(
     "3.1.0",
+    Nil,
     OpenapiInfo("oneOf test", "1.0"),
     List(
       OpenapiPath(
@@ -1039,20 +1056,20 @@ object TestHelpers {
             "post",
             List(),
             List(
-              OpenapiResponse(
+              OpenapiResponseDef(
                 "200",
                 "Bar",
                 List(OpenapiResponseContent("application/json", OpenapiSchemaString(false)))
               )
             ),
             Some(
-              OpenapiRequestBody(
+              OpenapiRequestBodyDefn(
                 true,
                 Some("Foo"),
                 List(OpenapiRequestBodyContent("application/json", OpenapiSchemaRef("#/components/schemas/ReqWithVariants")))
               )
             ),
-            List(),
+            None,
             None,
             None,
             None
@@ -1107,7 +1124,8 @@ object TestHelpers {
         Map(),
         Map()
       )
-    )
+    ),
+    Nil
   )
   val oneOfDocsWithMapping = genOneOfDocs(withDiscriminator = true, withMapping = true)
   val oneOfDocsWithDiscriminatorNoMapping = genOneOfDocs(withDiscriminator = true, withMapping = false)

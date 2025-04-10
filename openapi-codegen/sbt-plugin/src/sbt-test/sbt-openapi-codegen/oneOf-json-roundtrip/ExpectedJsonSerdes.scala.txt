@@ -64,6 +64,8 @@ object TapirGeneratedEndpointsJsonSerdes {
     ).reduceLeft(_ or _)
   implicit lazy val nullableThingyJsonDecoder: io.circe.Decoder[NullableThingy] = io.circe.generic.semiauto.deriveDecoder[NullableThingy]
   implicit lazy val nullableThingyJsonEncoder: io.circe.Encoder[NullableThingy] = io.circe.generic.semiauto.deriveEncoder[NullableThingy]
+  implicit lazy val postInlineSimpleObjectResponseJsonDecoder: io.circe.Decoder[PostInlineSimpleObjectResponse] = io.circe.generic.semiauto.deriveDecoder[PostInlineSimpleObjectResponse]
+  implicit lazy val postInlineSimpleObjectResponseJsonEncoder: io.circe.Encoder[PostInlineSimpleObjectResponse] = io.circe.generic.semiauto.deriveEncoder[PostInlineSimpleObjectResponse]
   implicit lazy val postInlineSimpleObjectRequestJsonDecoder: io.circe.Decoder[PostInlineSimpleObjectRequest] = io.circe.generic.semiauto.deriveDecoder[PostInlineSimpleObjectRequest]
   implicit lazy val postInlineSimpleObjectRequestJsonEncoder: io.circe.Encoder[PostInlineSimpleObjectRequest] = io.circe.generic.semiauto.deriveEncoder[PostInlineSimpleObjectRequest]
 }
