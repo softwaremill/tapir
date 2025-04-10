@@ -63,7 +63,11 @@ val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "
 ### Support specification extensions
 
 Generator behaviour can be further configured by specifications on the input openapi spec. Example:
+
 ```yaml
+paths:
+  x-tapir-codegen-security-path-prefixes:
+    - '/security-group/{securityGroupName}' # any path prefixes matching this pattern will be considered 'securityIn' 
   '/my-endpoint':
     post:
       x-tapir-codegen-directives: [ 'json-body-as-string' ] # This will customise what the codegen generates for this endpoint
@@ -80,7 +84,11 @@ Generator behaviour can be further configured by specifications on the input ope
 
 Supported specifications are:
 
+- x-tapir-codegen-security-path-prefixes: supported on the paths object. This is an array of strings representing path
+  prefixes. The longest matching prefix of each path will be treated as a security input, rather than as a standard 'in'
+  value.
 - x-tapir-codegen-directives: supported on openapi operations. This is an array of string flags. Supported values are:
+
 ```{eval-rst}
 ==================== ===================================================================================================================================
 name                 description
@@ -88,7 +96,6 @@ name                 description
 json-body-as-string  If present on an operation, all application/json requests and responses will be interpreted mapped to a string with stringJsonBody
 ==================== ===================================================================================================================================
 ```
-
 
 ### Output files
 
