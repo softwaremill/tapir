@@ -9,7 +9,7 @@ object Versions {
   val circeGenericExtras = "0.14.3"
   val circeYaml = "0.15.2"
   val helidon = "4.0.10"
-  val sttp = "3.10.3"
+  val sttp = "3.11.0"
   val sttp4 = "4.0.0"
   val sttpModel = "1.7.13"
   val sttpShared = "1.5.0"
