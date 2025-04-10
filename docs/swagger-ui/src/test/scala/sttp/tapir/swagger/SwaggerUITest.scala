@@ -39,16 +39,16 @@ class SwaggerUITest extends AsyncFunSuite {
   private val injection2 = injection1 + s"$key2: $value2,"
   private val injection3 = injection2 + s"$key3: $value3,"
   private val initOptions1 = List((key1, value1))
-  private val initOptions2 = initOptions1 :+ (key2, value2)
-  private val initOptions3 = initOptions2 :+ (key3, value3)
+  private val initOptions2 = initOptions1.:+((key2, value2))
+  private val initOptions3 = initOptions2.:+((key3, value3))
 
   private val (oKey1, oValue1, oKey2, oValue2, oKey3, oValue3) = ("Ice", "Coffee", "Mexican", "\"Burrito\"", "\"French\"", "Fries")
   private val oInjection1 = s"$oKey1: $oValue1,"
   private val oInjection2 = oInjection1 + s"$oKey2: $oValue2,"
   private val oInjection3 = oInjection2 + s"$oKey3: $oValue3,"
   private val oAuthInitOptions1 = List((oKey1, oValue1))
-  private val oAuthInitOptions2 = oAuthInitOptions1 :+ (oKey2, oValue2)
-  private val oAuthInitOptions3 = oAuthInitOptions2 :+ (oKey3, oValue3)
+  private val oAuthInitOptions2 = oAuthInitOptions1.:+((oKey2, oValue2))
+  private val oAuthInitOptions3 = oAuthInitOptions2.:+((oKey3, oValue3))
   private val initOptionsList =
     List((None, ""), (Some(initOptions1.toMap), injection1), (Some(initOptions2.toMap), injection2), (Some(initOptions3.toMap), injection3))
   private val oAuthInitOptionsList = List(
@@ -67,8 +67,8 @@ class SwaggerUITest extends AsyncFunSuite {
     val injection2 = injection1 + s"$key2: $value2,"
     val injection3 = injection2 + s"$key3: $value3,"
     val initOptions1 = List((key1, value1))
-    val initOptions2 = initOptions1 :+ (key2, value2)
-    val initOptions3 = initOptions2 :+ (key3, value3)
+    val initOptions2 = initOptions1.:+((key2, value2))
+    val initOptions3 = initOptions2.:+((key3, value3))
     for ((injection, initOptions) <- Seq((injection1, initOptions1), (injection2, initOptions2), (injection3, initOptions3))) {
       val options = SwaggerUIOptions.default.copy(initializerOptions = Some(initOptions.toMap[String, String]))
       val result = SwaggerUI.optionsInjection(swaggerInitializerJs = swaggerInitializerJs, options = options)
