@@ -24,7 +24,8 @@ package sttp.tapir.swagger
  *    difference being that `SwaggerUIBundle({...})` will always be called, whereas `window.ui.initOAuth({...});` is called if and only if `oAuthInitOptions`
  *    is not None.
  * @see <a href="https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/">Swagger UI configuration</a>
-  */
+ * @see <a href="https://swagger.io/docs/open-source-tools/swagger-ui/usage/oauth2/">Swagger UI OAuth2.0 configuration</a>
+ */
 case class SwaggerUIOptions(
     pathPrefix: List[String],
     yamlName: String,
