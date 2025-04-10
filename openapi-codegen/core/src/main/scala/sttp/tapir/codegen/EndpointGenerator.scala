@@ -44,14 +44,28 @@ case class EndpointTypes(security: Seq[String], in: Seq[String], err: Seq[String
 case class GeneratedEndpoint(name: String, definition: String, maybeInlineDefns: Option[String], types: EndpointTypes)
 case class GeneratedEndpointsForFile(maybeFileName: Option[String], generatedEndpoints: Seq[GeneratedEndpoint])
 
-case class GeneratedEndpoints(
-    namesAndParamsByFile: Seq[GeneratedEndpointsForFile],
-    queryParamRefs: Set[String],
+case class EndpointDetails(
     jsonParamRefs: Set[String],
-    definesEnumQueryParam: Boolean,
     inlineDefns: Seq[String],
     xmlParamRefs: Set[String],
     securityWrappers: Set[SecurityWrapperDefn]
+) {
+  def merge(that: EndpointDetails) = EndpointDetails(
+    jsonParamRefs ++ that.jsonParamRefs,
+    inlineDefns ++ that.inlineDefns,
+    xmlParamRefs ++ that.xmlParamRefs,
+    securityWrappers ++ that.securityWrappers
+  )
+}
+object EndpointDetails {
+  val empty = EndpointDetails(Set.empty, Nil, Set.empty, Set.empty)
+}
+
+case class GeneratedEndpoints(
+    namesAndParamsByFile: Seq[GeneratedEndpointsForFile],
+    queryParamRefs: Set[String],
+    definesEnumQueryParam: Boolean,
+    details: EndpointDetails
 ) {
   def merge(that: GeneratedEndpoints): GeneratedEndpoints =
     GeneratedEndpoints(
@@ -60,21 +74,15 @@ case class GeneratedEndpoints(
         .map { case (fileName, endpoints) => GeneratedEndpointsForFile(fileName, endpoints.map(_.generatedEndpoints).reduce(_ ++ _)) }
         .toSeq,
       queryParamRefs ++ that.queryParamRefs,
-      jsonParamRefs ++ that.jsonParamRefs,
       definesEnumQueryParam || that.definesEnumQueryParam,
-      inlineDefns ++ that.inlineDefns,
-      xmlParamRefs ++ that.xmlParamRefs,
-      securityWrappers ++ that.securityWrappers
+      details.merge(that.details)
     )
 }
 case class EndpointDefs(
     endpointDecls: Map[Option[String], String],
     queryOrPathParamRefs: Set[String],
-    jsonParamRefs: Set[String],
     enumsDefinedOnEndpointParams: Boolean,
-    inlineDefns: Seq[String],
-    xmlParamRefs: Set[String],
-    securityWrappers: Set[SecurityWrapperDefn]
+    details: EndpointDetails
 )
 
 class EndpointGenerator {
@@ -112,17 +120,14 @@ class EndpointGenerator {
     val GeneratedEndpoints(
       endpointsByFile,
       queryOrPathParamRefs,
-      jsonParamRefs,
       definesEnumQueryParam,
-      inlineDefns,
-      xmlParamRefs,
-      securityWrappers
+      details
     ) =
       doc.paths
         .map(
           generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, xmlSerdeLib, streamingImplementation, doc)
         )
-        .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false, Nil, Set.empty, Set.empty))(_ merge _)
+        .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
       val definitions = ge
         .map { case GeneratedEndpoint(name, definition, maybeInlineDefns, types) =>
@@ -145,7 +150,7 @@ class EndpointGenerator {
           |$allEP
           |""".stripMargin
     }.toMap
-    EndpointDefs(endpointDecls, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns, xmlParamRefs, securityWrappers)
+    EndpointDefs(endpointDecls, queryOrPathParamRefs, definesEnumQueryParam, details)
   }
 
   private[codegen] def generatedEndpoints(
@@ -267,11 +272,13 @@ class EndpointGenerator {
     GeneratedEndpoints(
       namesAndParamsByFile,
       unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _),
-      unflattenedJsonParamRefs.foldLeft(Set.empty[String])(_ ++ _),
       definesParams.contains(true),
-      inlineDefns.flatten,
-      xmlParamRefs.flatten.toSet,
-      securityWrappers.flatten.toSet
+      EndpointDetails(
+        unflattenedJsonParamRefs.foldLeft(Set.empty[String])(_ ++ _),
+        inlineDefns.flatten,
+        xmlParamRefs.flatten.toSet,
+        securityWrappers.flatten.toSet
+      )
     )
   }
 
