@@ -26,7 +26,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaString
 }
 import sttp.tapir.codegen.openapi.models._
-import sttp.tapir.codegen.openapi.models.GenerationDirectives.jsonBodyAsString
+import sttp.tapir.codegen.openapi.models.GenerationDirectives.{jsonBodyAsString, securityPrefixKey}
 import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.{JavaEscape, Location}
 
@@ -44,14 +44,28 @@ case class EndpointTypes(security: Seq[String], in: Seq[String], err: Seq[String
 case class GeneratedEndpoint(name: String, definition: String, maybeInlineDefns: Option[String], types: EndpointTypes)
 case class GeneratedEndpointsForFile(maybeFileName: Option[String], generatedEndpoints: Seq[GeneratedEndpoint])
 
-case class GeneratedEndpoints(
-    namesAndParamsByFile: Seq[GeneratedEndpointsForFile],
-    queryParamRefs: Set[String],
+case class EndpointDetails(
     jsonParamRefs: Set[String],
-    definesEnumQueryParam: Boolean,
     inlineDefns: Seq[String],
     xmlParamRefs: Set[String],
     securityWrappers: Set[SecurityWrapperDefn]
+) {
+  def merge(that: EndpointDetails) = EndpointDetails(
+    jsonParamRefs ++ that.jsonParamRefs,
+    inlineDefns ++ that.inlineDefns,
+    xmlParamRefs ++ that.xmlParamRefs,
+    securityWrappers ++ that.securityWrappers
+  )
+}
+object EndpointDetails {
+  val empty = EndpointDetails(Set.empty, Nil, Set.empty, Set.empty)
+}
+
+case class GeneratedEndpoints(
+    namesAndParamsByFile: Seq[GeneratedEndpointsForFile],
+    queryParamRefs: Set[String],
+    definesEnumQueryParam: Boolean,
+    details: EndpointDetails
 ) {
   def merge(that: GeneratedEndpoints): GeneratedEndpoints =
     GeneratedEndpoints(
@@ -60,21 +74,15 @@ case class GeneratedEndpoints(
         .map { case (fileName, endpoints) => GeneratedEndpointsForFile(fileName, endpoints.map(_.generatedEndpoints).reduce(_ ++ _)) }
         .toSeq,
       queryParamRefs ++ that.queryParamRefs,
-      jsonParamRefs ++ that.jsonParamRefs,
       definesEnumQueryParam || that.definesEnumQueryParam,
-      inlineDefns ++ that.inlineDefns,
-      xmlParamRefs ++ that.xmlParamRefs,
-      securityWrappers ++ that.securityWrappers
+      details.merge(that.details)
     )
 }
 case class EndpointDefs(
     endpointDecls: Map[Option[String], String],
     queryOrPathParamRefs: Set[String],
-    jsonParamRefs: Set[String],
     enumsDefinedOnEndpointParams: Boolean,
-    inlineDefns: Seq[String],
-    xmlParamRefs: Set[String],
-    securityWrappers: Set[SecurityWrapperDefn]
+    details: EndpointDetails
 )
 
 class EndpointGenerator {
@@ -112,17 +120,14 @@ class EndpointGenerator {
     val GeneratedEndpoints(
       endpointsByFile,
       queryOrPathParamRefs,
-      jsonParamRefs,
       definesEnumQueryParam,
-      inlineDefns,
-      xmlParamRefs,
-      securityWrappers
+      details
     ) =
       doc.paths
         .map(
           generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, xmlSerdeLib, streamingImplementation, doc)
         )
-        .foldLeft(GeneratedEndpoints(Nil, Set.empty, Set.empty, false, Nil, Set.empty, Set.empty))(_ merge _)
+        .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
       val definitions = ge
         .map { case GeneratedEndpoint(name, definition, maybeInlineDefns, types) =>
@@ -145,7 +150,7 @@ class EndpointGenerator {
           |$allEP
           |""".stripMargin
     }.toMap
-    EndpointDefs(endpointDecls, queryOrPathParamRefs, jsonParamRefs, definesEnumQueryParam, inlineDefns, xmlParamRefs, securityWrappers)
+    EndpointDefs(endpointDecls, queryOrPathParamRefs, definesEnumQueryParam, details)
   }
 
   private[codegen] def generatedEndpoints(
@@ -178,7 +183,11 @@ class EndpointGenerator {
 
           val name = m.name(p.url)
           val maybeName = m.operationId.map(n => s"""\n  .name("${JavaEscape.escapeString(n)}")""").getOrElse("")
-          val (pathDecl, pathTypes) = urlMapper(p.url, m.resolvedParameters)
+          val (pathDecl, pathTypes, maybeSecurityPath) = urlMapper(
+            p.url,
+            m.resolvedParameters,
+            doc.pathsExtensions.get(securityPrefixKey).flatMap(_.asArray).toSeq.flatMap(_.flatMap(_.asString))
+          )
           val SecurityDefn(securityDecl, securityTypes, securityWrappers) =
             SecurityGenerator.security(securitySchemes, m.security.getOrElse(doc.security))
           val (inParams, maybeLocalEnums, inTypes, inlineInDefns) =
@@ -204,14 +213,20 @@ class EndpointGenerator {
               xmlSerdeLib,
               m.tapirCodegenDirectives
             )
-          val allTypes = EndpointTypes(securityTypes.toSeq, pathTypes ++ inTypes, errTypes.toSeq, outTypes.toSeq)
+          val allTypes = EndpointTypes(
+            maybeSecurityPath.toSeq.flatMap(_._2) ++ securityTypes.toSeq,
+            pathTypes ++ inTypes,
+            errTypes.toSeq,
+            outTypes.toSeq
+          )
           val inlineDefn = combine(inlineInDefns, inlineDefns)
           val sec = securityDecl.map(indent(2)(_) + "\n").getOrElse("")
+          val securityPathDecl = maybeSecurityPath.map("\n  " + _._1).getOrElse("")
           val definition =
             s"""|endpoint$maybeName
                 |  .${m.methodType}
                 |  $pathDecl
-                |$sec${indent(2)(inParams)}
+                |$sec${indent(2)(inParams)}$securityPathDecl
                 |${indent(2)(outDecl)}
                 |${indent(2)(tags(m.tags))}
                 |$attributeString
@@ -267,17 +282,24 @@ class EndpointGenerator {
     GeneratedEndpoints(
       namesAndParamsByFile,
       unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _),
-      unflattenedJsonParamRefs.foldLeft(Set.empty[String])(_ ++ _),
       definesParams.contains(true),
-      inlineDefns.flatten,
-      xmlParamRefs.flatten.toSet,
-      securityWrappers.flatten.toSet
+      EndpointDetails(
+        unflattenedJsonParamRefs.foldLeft(Set.empty[String])(_ ++ _),
+        inlineDefns.flatten,
+        xmlParamRefs.flatten.toSet,
+        securityWrappers.flatten.toSet
+      )
     )
   }
 
-  private def urlMapper(url: String, parameters: Seq[OpenapiParameter])(implicit location: Location): (String, Seq[String]) = {
+  private def urlMapper(url: String, parameters: Seq[OpenapiParameter], securityPathPrefixes: Seq[String])(implicit
+      location: Location
+  ): (String, Seq[String], Option[(String, Seq[String])]) = {
+    val securityPrefixes = securityPathPrefixes.filter(url.startsWith)
     // .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
-    val (inPath, tpes) = url
+    val maxSecurityPrefix = if (securityPrefixes.nonEmpty) Some(securityPrefixes.maxBy(_.length)) else None
+    val inUrl = maxSecurityPrefix.fold(url)(url.stripPrefix)
+    def toPathDecl(url: String) = url
       .split('/')
       .filter(_.nonEmpty)
       .map { segment =>
@@ -298,7 +320,11 @@ class EndpointGenerator {
         }
       }
       .unzip
-    ".in((" + inPath.mkString(" / ") + "))" -> tpes.toSeq.flatten
+    val (inPath, tpes) = toPathDecl(inUrl)
+    val inPathDecl = if (inPath.nonEmpty) ".in((" + inPath.mkString(" / ") + "))" else ""
+    val secPathDecl =
+      maxSecurityPrefix.map(toPathDecl).map { case (ds, ts) => ".prependSecurityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten }
+    (inPathDecl, tpes.toSeq.flatten, secPathDecl)
   }
 
   private def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {

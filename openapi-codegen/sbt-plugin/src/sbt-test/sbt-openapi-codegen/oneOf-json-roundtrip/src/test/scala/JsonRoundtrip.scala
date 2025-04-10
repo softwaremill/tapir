@@ -325,4 +325,72 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       1.second
     )
   }
+  "security prefix" in {
+    locally {
+      val route = TapirGeneratedEndpoints.getSecurityGroupSecurityGroupName
+        .serverSecurityLogic[Unit, Future] { case (pathPrefix, bearerToken) =>
+          if (bearerToken.startsWith(pathPrefix)) Future.successful(Right())
+          else Future.successful(Left(()))
+        }
+        .serverLogic({ _ => _ => Future successful Right(()) })
+      val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+        .whenServerEndpoint(route)
+        .thenRunLogic()
+        .backend()
+
+      Await.result(
+        sttp.client3.basicRequest
+          .get(uri"http://test.com/security-group/foo")
+          .header("Authorization", "Bearer foot")
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual 204
+          },
+        1.second
+      )
+      Await.result(
+        sttp.client3.basicRequest
+          .get(uri"http://test.com/security-group/foot")
+          .header("Authorization", "Bearer foo")
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual 400
+          },
+        1.second
+      )
+    }
+    locally {
+      val route = TapirGeneratedEndpoints.getSecurityGroupSecurityGroupNameMorePath
+        .serverSecurityLogic[Unit, Future] { case (pathPrefix, bearerToken) =>
+          if (bearerToken.startsWith(pathPrefix)) Future.successful(Right())
+          else Future.successful(Left(()))
+        }
+        .serverLogic({ _ => _ => Future successful Right(()) })
+      val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+        .whenServerEndpoint(route)
+        .thenRunLogic()
+        .backend()
+
+      Await.result(
+        sttp.client3.basicRequest
+          .get(uri"http://test.com/security-group/foo/more-path")
+          .header("Authorization", "Bearer foot")
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual 204
+          },
+        1.second
+      )
+      Await.result(
+        sttp.client3.basicRequest
+          .get(uri"http://test.com/security-group/foot/more-path")
+          .header("Authorization", "Bearer foo")
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual 400
+          },
+        1.second
+      )
+    }
+  }
 }

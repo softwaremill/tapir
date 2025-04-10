@@ -1,3 +1,4 @@
+
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -285,6 +286,14 @@ object TapirGeneratedEndpoints {
       .out(stringJsonBody.description("Possibly-invalid json"))
       .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("json-body-as-string"))
 
+  type GetSecurityGroupSecurityGroupNameEndpoint = Endpoint[(String, String), Unit, Unit, Unit, Any]
+  lazy val getSecurityGroupSecurityGroupName: GetSecurityGroupSecurityGroupNameEndpoint =
+    endpoint
+      .get
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .prependSecurityIn("security-group" / path[String]("securityGroupName").description("used by security logic"))
+      .out(statusCode(sttp.model.StatusCode(204)).description("OK"))
+
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
@@ -302,11 +311,11 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
-  type GetOneofErrorTestEndpoint = Endpoint[Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn, Unit, Error, Unit, Any]
-  lazy val getOneofErrorTest: GetOneofErrorTestEndpoint =
+  type GetOneofErrorSecParamTestEndpoint = Endpoint[(String, Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn), Unit, Error, Unit, Any]
+  lazy val getOneofErrorSecParamTest: GetOneofErrorSecParamTestEndpoint =
     endpoint
       .get
-      .in(("oneof" / "error" / "test"))
+      .in(("test"))
       .securityIn(auth.apiKey(header[Option[String]]("api_key")))
       .securityIn(auth.apiKey(header[Option[String]]("api_key"))
         .and(auth.bearer[Option[String]]()).map(Api_key_and_BearerSecurityInMapping))
@@ -325,10 +334,20 @@ object TapirGeneratedEndpoints {
         case BearerSecurityIn(x) => (None, None, Some(x))
         case EmptySecurityIn => (None, None, None)
       }
+      .prependSecurityIn("oneof" / "error" / path[String]("secParam"))
       .errorOut(oneOf[Error](
         oneOfVariant[NotFoundError](sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")),
         oneOfVariant[SimpleError](sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
       .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
+
+  type GetSecurityGroupSecurityGroupNameMorePathEndpoint = Endpoint[(String, String), Unit, Unit, Unit, Any]
+  lazy val getSecurityGroupSecurityGroupNameMorePath: GetSecurityGroupSecurityGroupNameMorePathEndpoint =
+    endpoint
+      .get
+      .in(("more-path"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .prependSecurityIn("security-group" / path[String]("securityGroupName").description("used by security logic"))
+      .out(statusCode(sttp.model.StatusCode(204)).description("OK"))
 
   type GetOneofOptionTestEndpoint = Endpoint[String, Unit, Unit, (Option[AnyObjectWithInlineEnum], Option[String]), Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
@@ -438,7 +457,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[ListType].description("list type out"))
 
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, putAdtTest, postAdtTest, getOneofErrorTest, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getOneofErrorSecParamTest, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 
   object Servers {
@@ -462,7 +481,7 @@ object TapirGeneratedEndpoints {
       def uri(_environment: environment = environment.default, _port: String = defaultPort, _customer: String = defaultCustomer): sttp.model.Uri =
         uri"https://${_environment}.my-co.org:${_port}/api/${_customer}/prefix"
     }
-
+    
     /*
       Legacy endpoint that doesn't require TLS
       Doesn't work, retained for completely mysterious reasons lost to the winds of time
@@ -473,7 +492,7 @@ object TapirGeneratedEndpoints {
       def uri(_port: String = defaultPort, _scoped: String = defaultScoped): sttp.model.Uri =
         uri"http://testing.my-co.org:${_port}/api/${_scoped}/prefix"
     }
-
+    
     /*
       Locally
     */

@@ -36,6 +36,23 @@ security: # Default security on all endpoints without explicit declarations
       - write:pets
       - read:pets
 paths:
+  x-tapir-codegen-security-path-prefixes:
+    - /security-group/{securityGroupName}
+    - /oneof/error/{secParam}
+  '/security-group/{securityGroupName}':
+    parameters:
+      - $ref: '#/components/parameters/securityGroupName'
+    get:
+      responses:
+        204:
+          description: OK
+  '/security-group/{securityGroupName}/more-path':
+    parameters:
+      - $ref: '#/components/parameters/securityGroupName'
+    get:
+      responses:
+        204:
+          description: OK
   '/binary/test':
     get:
       security:
@@ -209,7 +226,13 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ObjectWithInlineEnum'
-  '/oneof/error/test':
+  '/oneof/error/{secParam}/test':
+    parameters:
+      - name: secParam
+        in: path
+        required: true
+        schema:
+          type: string
     get:
       security: # Requires two or one or none
         - { }
@@ -420,6 +443,13 @@ components:
     common-response-header:
       in: header
       name: x-common
+      schema:
+        type: string
+    securityGroupName:
+      name: securityGroupName
+      in: path
+      description: used by security logic
+      required: true
       schema:
         type: string
   responses:

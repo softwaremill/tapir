@@ -82,11 +82,8 @@ object BasicGenerator {
     val EndpointDefs(
       endpointsByTag,
       queryOrPathParamRefs,
-      jsonParamRefs,
       enumsDefinedOnEndpointParams,
-      inlineDefns,
-      xmlParamRefs,
-      securityWrappers
+      EndpointDetails(jsonParamRefs, inlineDefns, xmlParamRefs, securityWrappers)
     ) =
       endpointGenerator.endpointDefs(
         doc,
