@@ -17,7 +17,7 @@ object OpenapiSecuritySchemeType {
   import io.circe._
   import cats.implicits._
 
-  private implicit val BearerTypeDecoder: Decoder[OpenapiSecuritySchemeBearerType.type] = { (c: HCursor) =>
+  private implicit lazy val BearerTypeDecoder: Decoder[OpenapiSecuritySchemeBearerType.type] = { (c: HCursor) =>
     for {
       _ <- c.get[String]("type").ensure(DecodingFailure("Given type is not http!", c.history))(_ == "http")
       _ <- c.get[String]("scheme").ensure(DecodingFailure("Given scheme is not bearer!", c.history))(_ == "bearer")
@@ -26,7 +26,7 @@ object OpenapiSecuritySchemeType {
     }
   }
 
-  private implicit val BasicTypeDecoder: Decoder[OpenapiSecuritySchemeBasicType.type] = { (c: HCursor) =>
+  private implicit lazy val BasicTypeDecoder: Decoder[OpenapiSecuritySchemeBasicType.type] = { (c: HCursor) =>
     for {
       _ <- c.get[String]("type").ensure(DecodingFailure("Given type is not http!", c.history))(_ == "http")
       _ <- c.get[String]("scheme").ensure(DecodingFailure("Given scheme is not basic!", c.history))(_ == "basic")
@@ -37,7 +37,7 @@ object OpenapiSecuritySchemeType {
 
   private val ApiKeyInOptions = List("header", "query", "cookie")
 
-  private implicit val ApiKeyDecoder: Decoder[OpenapiSecuritySchemeApiKeyType] = { (c: HCursor) =>
+  private implicit lazy val ApiKeyDecoder: Decoder[OpenapiSecuritySchemeApiKeyType] = { (c: HCursor) =>
     for {
       _ <- c.get[String]("type").ensure(DecodingFailure("Given type is not apiKey!", c.history))(_ == "apiKey")
       in <- c.get[String]("in").ensure(DecodingFailure("Invalid apiKey in value!", c.history))(ApiKeyInOptions.contains)
@@ -47,7 +47,7 @@ object OpenapiSecuritySchemeType {
     }
   }
 
-  private implicit val OAuth2FlowDecoder: Decoder[OAuth2Flow] = { (c: HCursor) =>
+  private implicit lazy val OAuth2FlowDecoder: Decoder[OAuth2Flow] = { (c: HCursor) =>
     for {
       a <- c.get[Option[String]]("authorizationUrl")
       t <- c.get[Option[String]]("tokenUrl")
@@ -58,7 +58,7 @@ object OpenapiSecuritySchemeType {
     }
   }
 
-  private implicit val OpenapiSecuritySchemeOAuth2TypeDecoder: Decoder[OpenapiSecuritySchemeOAuth2Type] = { (c: HCursor) =>
+  private implicit lazy val OpenapiSecuritySchemeOAuth2TypeDecoder: Decoder[OpenapiSecuritySchemeOAuth2Type] = { (c: HCursor) =>
     for {
       fs <- c
         .get[JsonObject]("flows")
@@ -78,7 +78,7 @@ object OpenapiSecuritySchemeType {
     }
   }
 
-  implicit val OpenapiSecuritySchemeTypeDecoder: Decoder[OpenapiSecuritySchemeType] =
+  implicit lazy val OpenapiSecuritySchemeTypeDecoder: Decoder[OpenapiSecuritySchemeType] =
     List[Decoder[OpenapiSecuritySchemeType]](
       Decoder[OpenapiSecuritySchemeBearerType.type].widen,
       Decoder[OpenapiSecuritySchemeBasicType.type].widen,
