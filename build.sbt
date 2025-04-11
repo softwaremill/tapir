@@ -1191,9 +1191,7 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
   .settings(commonSettings)
   .settings(
     name := "tapir-swagger-ui",
-    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi,
-      scalaTest.value % Test
-    )
+    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi, scalaTest.value % Test)
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(core, files)
@@ -1482,9 +1480,9 @@ lazy val play29Server: ProjectMatrix = (projectMatrix in file("server/play29-ser
          Seq.empty
        }),
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-server" % Versions.play29Server,
-      "com.typesafe.play" %% "play" % Versions.play29Server,
-      "com.typesafe.play" %% "play-akka-http-server" % Versions.play29Server,
+      "org.playframework" %% "play-server" % Versions.play29Server,
+      "org.playframework" %% "play" % Versions.play29Server,
+      "org.playframework" %% "play-pekko-http-server" % Versions.play29Server,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
       "org.scala-lang.modules" %% "scala-collection-compat" % Versions.scalaCollectionCompat
     ) ++
