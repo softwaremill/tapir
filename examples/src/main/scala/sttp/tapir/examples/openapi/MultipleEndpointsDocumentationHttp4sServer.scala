@@ -1,9 +1,9 @@
 // {cat=OpenAPI documentation; effects=cats-effect; server=http4s; docs=Swagger UI; json=circe}: Documenting multiple endpoints
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.23
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.23
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.23
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.23
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.24
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.24
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.24
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.24
 //> using dep org.http4s::http4s-ember-server:0.23.30
 
 package sttp.tapir.examples.openapi
