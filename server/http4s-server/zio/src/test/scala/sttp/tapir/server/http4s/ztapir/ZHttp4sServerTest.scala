@@ -59,6 +59,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
         createServerTest,
         ZioStreams,
         autoPing = true,
+        autoPongAtEndpoint = false,
         handlePong = false,
         decodeCloseRequests =
           false // when a close frame is received, http4s cancels the stream, so sometimes the close frames are never processed
