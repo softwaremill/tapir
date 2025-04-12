@@ -5,4 +5,6 @@ object GenerationDirectives {
   val jsonBodyAsString = "json-body-as-string"
   val securityPrefixKey = "tapir-codegen-security-path-prefixes"
   val importedModels = "tapir-codegen-imported-models"
+  val importedSerdes = "tapir-codegen-imported-serdes"
+  val importedSchemas = "tapir-codegen-imported-schemas"
 }

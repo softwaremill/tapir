@@ -45,7 +45,13 @@ object XmlSerdeGenerator {
       case _ => None
     }
 
-  def generateSerdes(xmlSerdeLib: XmlSerdeLib, doc: OpenapiDocument, xmlParamRefs: Set[String], targetScala3: Boolean): Option[String] = {
+  def generateSerdes(
+      xmlSerdeLib: XmlSerdeLib,
+      doc: OpenapiDocument,
+      xmlParamRefs: Set[String],
+      targetScala3: Boolean,
+      importedModels: Set[String]
+  ): Option[String] = {
     if (xmlParamRefs.isEmpty || xmlSerdeLib == XmlSerdeLib.NoSupport) None
     else
       Some {
@@ -56,7 +62,10 @@ object XmlSerdeGenerator {
             val mappedArraysOfSimpleSchemas: Seq[ScopedAuxCodecParams] =
               doc.components.toSeq
                 .flatMap(_.schemas.get(ref).map(ref -> _))
-                .collect { case (ref, OpenapiSchemaObject(props, required, _, _)) => props.map(p => (ref, p, required.contains(p._1))) }
+                .collect {
+                  case (ref, OpenapiSchemaObject(props, required, _, _)) if !importedModels.contains(ref) =>
+                    props.map(p => (ref, p, required.contains(p._1)))
+                }
                 .flatMap {
                   _.collect {
                     case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _)), r)
@@ -161,7 +170,14 @@ object XmlSerdeGenerator {
       }
   }
 
-  def wrapBody(xmlSerdeLib: XmlSerdeLib, packagePath: String, objName: String, targetScala3: Boolean, body: String): String =
+  def wrapBody(
+      xmlSerdeLib: XmlSerdeLib,
+      packagePath: String,
+      objName: String,
+      targetScala3: Boolean,
+      body: String,
+      maybeImportedSerdes: String
+  ): String =
     xmlSerdeLib match {
       case XmlSerdeLib.NoSupport =>
         throw new IllegalStateException("Codegen should not be attempting to generate serdes when specified xml lib is 'none'")
@@ -200,7 +216,7 @@ object XmlSerdeGenerator {
         s"""package $packagePath
        |
        |object ${objName}XmlSerdes {
-       |  import $packagePath.$objName._
+       |  import $packagePath.$objName._$maybeImportedSerdes
        |  import sttp.tapir.generic.auto._
        |  import cats.data.NonEmptyList
        |  import cats.xml.{NodeContent, Xml, XmlData, XmlNode}

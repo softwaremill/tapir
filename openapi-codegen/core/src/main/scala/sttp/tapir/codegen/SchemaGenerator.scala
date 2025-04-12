@@ -31,7 +31,8 @@ object SchemaGenerator {
       fullModelPath: String,
       jsonSerdeLib: JsonSerdeLib,
       maxSchemasPerFile: Int,
-      schemasContainAny: Boolean
+      schemasContainAny: Boolean,
+      importedModels: Set[String]
   ): Seq[String] = {
     val maybeAnySchema: Option[(String, String)] =
       if (!schemasContainAny) None
@@ -66,15 +67,19 @@ object SchemaGenerator {
     // 2) Order the definitions, such that objects appear before any places they're referenced
     val orderedLayers = orderLayers(groupedByRing)
     // 3) Group the definitions into at most `maxSchemasPerFile`, whilst avoiding splitting groups across files
-    val foldedLayers = foldLayers(maxSchemasPerFile)(maybeAnySchemaSchema ++ orderedLayers)
+    val foldedLayers = foldLayers(maxSchemasPerFile, importedModels)(maybeAnySchemaSchema ++ orderedLayers)
     // Our output will now only need to imports the 'earlier' files into the 'later' files, and _not_ vice verse
     foldedLayers.map(ring => ring.map(openApiSchemasWithTapirSchemas apply _._1).mkString("\n"))
   }
   // Group files into chunks of size < maxLayerSize
-  private def foldLayers(maxSchemasPerFile: Int)(layers: Seq[Seq[(String, OpenapiSchemaType)]]): Seq[Seq[(String, OpenapiSchemaType)]] = {
+  private def foldLayers(maxSchemasPerFile: Int, importedModels: Set[String])(
+      layers: Seq[Seq[(String, OpenapiSchemaType)]]
+  ): Seq[Seq[(String, OpenapiSchemaType)]] = {
     val maxLayerSize = maxSchemasPerFile
-    layers.foldLeft(Seq.empty[Seq[(String, OpenapiSchemaType)]]) { (acc, next) =>
-      if (acc.isEmpty) Seq(next)
+    layers.foldLeft(Seq.empty[Seq[(String, OpenapiSchemaType)]]) { (acc, maybeNext) =>
+      val next = maybeNext.filterNot(importedModels contains _._1)
+      if (next.isEmpty) acc
+      else if (acc.isEmpty) Seq(next)
       else if (acc.last.size + next.size >= maxLayerSize) acc :+ next
       else {
         val first :+ last = acc

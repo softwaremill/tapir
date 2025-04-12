@@ -51,7 +51,15 @@ class ClassDefinitionGenerator {
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
 
-    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
+    val allImportedModelNames = importedModels.flatMap(_._2).toSet
+    val adtTypes = adtInheritanceMap
+      .flatMap(_._2)
+      .toSeq
+      .map(_._1)
+      .distinct
+      .filterNot(allImportedModelNames.contains)
+      .map(name => s"sealed trait $name")
+      .mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
     val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
@@ -59,7 +67,15 @@ class ClassDefinitionGenerator {
       throw new NotImplementedError(
         s"any not implemented for json libs other than circe and jsoniter (problematic models: ${schemasWithAny.keys})"
       )
-    val schemas = SchemaGenerator.generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile, schemasContainAny)
+    val schemas = SchemaGenerator.generateSchemas(
+      doc,
+      allSchemas,
+      fullModelPath,
+      jsonSerdeLib,
+      maxSchemasPerFile,
+      schemasContainAny,
+      allImportedModelNames
+    )
     val jsonSerdes = JsonSerdeGenerator.serdeDefs(
       doc,
       jsonSerdeLib,
@@ -68,14 +84,14 @@ class ClassDefinitionGenerator {
       validateNonDiscriminatedOneOfs,
       adtInheritanceMap.mapValues(_.map(_._1)),
       targetScala3,
-      schemasContainAny
+      schemasContainAny,
+      allImportedModelNames
     )
     val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
       xmlParamRefs,
       xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
-    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3)
-    val allImportedModelNames = importedModels.flatMap(_._2).toSet
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3, allImportedModelNames)
     val defns = doc.components
       .map(_.schemas.flatMap {
         case (name, _) if allImportedModelNames.contains(name) => Nil // don't generate models for anything imported
