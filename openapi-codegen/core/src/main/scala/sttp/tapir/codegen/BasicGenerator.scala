@@ -94,6 +94,7 @@ object BasicGenerator {
         normalisedStreamingImplementation,
         generateEndpointTypes
       )
+    val importedModels = doc.components.map(_.importedModels).getOrElse(Map.empty)
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas, xmlSerdes) =
       classGenerator
         .classDefs(
@@ -107,19 +108,24 @@ object BasicGenerator {
           validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs,
           maxSchemasPerFile = maxSchemasPerFile,
           enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams,
-          xmlParamRefs = xmlParamRefs
+          xmlParamRefs = xmlParamRefs,
+          importedModels = importedModels
         )
         .getOrElse(GeneratedClassDefinitions("", None, Nil, None))
     val hasJsonSerdes = jsonSerdes.nonEmpty
     val hasXmlSerdes = xmlSerdes.nonEmpty
 
+    val maybeExternalModelImports = if (importedModels.nonEmpty) importedModels.map { case (pkg, models) =>
+      models.mkString(s"\nimport $pkg.{", ", ", "}")
+    }.mkString("")
+    else ""
     val maybeJsonImport = if (hasJsonSerdes) s"\nimport $packagePath.${objName}JsonSerdes._" else ""
     val maybeXmlImport = if (hasXmlSerdes) s"\nimport $packagePath.${objName}XmlSerdes._" else ""
     val maybeSchemaImport =
       if (schemas.size > 1) (1 to schemas.size).map(i => s"import ${objName}Schemas$i._").mkString("\n", "\n", "")
       else if (schemas.size == 1) s"\nimport ${objName}Schemas._"
       else ""
-    val internalImports = s"import $packagePath.$objName._$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
+    val internalImports = s"import $packagePath.$objName._$maybeExternalModelImports$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
 
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
@@ -140,7 +146,7 @@ object BasicGenerator {
 
     val jsonSerdeObj = jsonSerdes.map { body =>
       s"""package $packagePath
-         |
+         |$maybeExternalModelImports
          |object ${objName}JsonSerdes {
          |  import $packagePath.$objName._
          |  import sttp.tapir.generic.auto._
@@ -154,7 +160,7 @@ object BasicGenerator {
       val priorImports = (0 until idx).map { i => s"import $packagePath.${objName}Schemas${i + 1}._" }.mkString("\n")
       val name = s"${objName}Schemas${idx + 1}"
       name -> s"""package $packagePath
-         |
+         |$maybeExternalModelImports
          |object $name {
          |  import $packagePath.$objName._
          |  import sttp.tapir.generic.auto._
@@ -164,7 +170,7 @@ object BasicGenerator {
     }
     else if (schemas.size == 1)
       Seq(s"${objName}Schemas" -> s"""package $packagePath
-         |
+         |$maybeExternalModelImports
          |object ${objName}Schemas {
          |  import $packagePath.$objName._
          |  import sttp.tapir.generic.auto._
@@ -254,7 +260,7 @@ object BasicGenerator {
         |
         |object $objName {
         |
-        |${indent(2)(imports(normalisedJsonLib) + extraImports)}
+        |${indent(2)(imports(normalisedJsonLib) + extraImports + maybeExternalModelImports)}
         |
         |${indent(2)(customTypes)}
         |${indent(2)(securityTypes)}

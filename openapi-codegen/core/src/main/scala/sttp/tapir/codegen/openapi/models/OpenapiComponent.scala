@@ -7,7 +7,8 @@ case class OpenapiComponent(
     securitySchemes: Map[String, OpenapiSecuritySchemeType] = Map.empty,
     parameters: Map[String, OpenapiParameter] = Map.empty,
     responses: Map[String, OpenapiResponseDefn] = Map.empty,
-    requestBodies: Map[String, OpenapiRequestBody] = Map.empty
+    requestBodies: Map[String, OpenapiRequestBody] = Map.empty,
+    importedModels: Map[String, Seq[String]] = Map.empty
 )
 
 object OpenapiComponent {
@@ -20,13 +21,15 @@ object OpenapiComponent {
       parameters <- c.getOrElse[Map[String, OpenapiParameter]]("parameters")(Map.empty)
       responses <- c.getOrElse[Map[String, OpenapiResponseDefn]]("responses")(Map.empty)
       requestBodies <- c.getOrElse[Map[String, OpenapiRequestBody]]("requestBodies")(Map.empty)
+      importedModels <- c.getOrElse[Map[String, Seq[String]]]("x-" + GenerationDirectives.importedModels)(Map.empty)
     } yield {
       OpenapiComponent(
         schemas,
         securitySchemes,
         parameters.map { case (k, v) => s"#/components/parameters/$k" -> v },
         responses,
-        requestBodies
+        requestBodies,
+        importedModels
       )
     }
   }

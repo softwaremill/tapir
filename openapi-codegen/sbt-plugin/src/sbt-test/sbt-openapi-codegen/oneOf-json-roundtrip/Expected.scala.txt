@@ -11,6 +11,7 @@ object TapirGeneratedEndpoints {
 
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
+  import to.inject.MyModels.{StringWrapper, IntWrapper}
 
   case class `application/zipCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "zip")
@@ -206,6 +207,15 @@ object TapirGeneratedEndpoints {
 
   type TapirCodegenDirectivesExtension = Seq[String]
   val tapirCodegenDirectivesExtensionKey = new sttp.tapir.AttributeKey[TapirCodegenDirectivesExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.TapirCodegenDirectivesExtension")
+
+  type PostImportedModelsEndpoint = Endpoint[String, Option[StringWrapper], Unit, IntWrapper, Any]
+  lazy val postImportedModels: PostImportedModelsEndpoint =
+    endpoint
+      .post
+      .in(("imported" / "models"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(jsonBody[Option[StringWrapper]])
+      .out(jsonBody[IntWrapper].description("An object"))
 
   type GetBinaryTestEndpoint = Endpoint[String, Unit, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
   lazy val getBinaryTest: GetBinaryTestEndpoint =
@@ -457,7 +467,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[ListType].description("list type out"))
 
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getOneofErrorSecParamTest, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(postImportedModels, getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getOneofErrorSecParamTest, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 
   object Servers {
@@ -481,7 +491,7 @@ object TapirGeneratedEndpoints {
       def uri(_environment: environment = environment.default, _port: String = defaultPort, _customer: String = defaultCustomer): sttp.model.Uri =
         uri"https://${_environment}.my-co.org:${_port}/api/${_customer}/prefix"
     }
-    
+
     /*
       Legacy endpoint that doesn't require TLS
       Doesn't work, retained for completely mysterious reasons lost to the winds of time
@@ -492,7 +502,7 @@ object TapirGeneratedEndpoints {
       def uri(_port: String = defaultPort, _scoped: String = defaultScoped): sttp.model.Uri =
         uri"http://testing.my-co.org:${_port}/api/${_scoped}/prefix"
     }
-    
+
     /*
       Locally
     */

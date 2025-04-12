@@ -30,7 +30,8 @@ class ClassDefinitionGenerator {
       validateNonDiscriminatedOneOfs: Boolean = true,
       maxSchemasPerFile: Int = 400,
       enumsDefinedOnEndpointParams: Boolean = false,
-      xmlParamRefs: Set[String] = Set.empty
+      xmlParamRefs: Set[String] = Set.empty,
+      importedModels: Map[String, Seq[String]]
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -74,8 +75,10 @@ class ClassDefinitionGenerator {
       xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
     val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3)
+    val allImportedModelNames = importedModels.flatMap(_._2).toSet
     val defns = doc.components
       .map(_.schemas.flatMap {
+        case (name, _) if allImportedModelNames.contains(name) => Nil // don't generate models for anything imported
         case (name, obj: OpenapiSchemaObject) =>
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
         case (name, obj: OpenapiSchemaEnum) =>

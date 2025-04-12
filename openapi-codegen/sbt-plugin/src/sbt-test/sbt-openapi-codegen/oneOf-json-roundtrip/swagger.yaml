@@ -436,9 +436,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListType'
-
+  '/imported/models':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StringWrapper'
+      responses:
+        "200":
+          description: An object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntWrapper'
 
 components:
+  x-tapir-codegen-imported-models:
+    to.inject.MyModels:
+      - StringWrapper
+      - IntWrapper
   parameters:
     common-response-header:
       in: header
@@ -678,3 +695,19 @@ components:
       type: array
       items:
         type: string
+    IntWrapper:
+      title: IntWrapper
+      type: object
+      required:
+        - s
+      properties:
+        s:
+          type: string
+    StringWrapper:
+      title: StringWrapper
+      type: object
+      required:
+        - s
+      properties:
+        s:
+          type: integer
