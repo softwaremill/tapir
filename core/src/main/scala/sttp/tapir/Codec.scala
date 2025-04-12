@@ -641,8 +641,10 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
       case Right(r) => DecodeResult.Value(r)
     }
 
-  implicit val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
-  implicit val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
+  // These are marked as lazy as they involve scala-java-time constructs, which massively inflate the bundle size for scala.js applications, even if
+  // they are unused within the program. By marking them lazy, it allows them to be *tree shaken* and removed by the optimiser.
+  implicit lazy val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
+  implicit lazy val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
 
   // raw tuples
 
