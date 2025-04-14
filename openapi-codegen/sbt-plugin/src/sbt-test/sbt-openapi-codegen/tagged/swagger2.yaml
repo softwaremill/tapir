@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: My Bookshop
+  version: '1.0'
+paths:
+  /books:
+    put:
+      operationId: putBooksGenreYear
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+      responses:
+        '204':
+          description: OK
+components:
+  schemas:
+    Book:
+      title: Book
+      required:
+      - title
+      type: object
+      properties:
+        title:
+          type: string

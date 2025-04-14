@@ -84,7 +84,20 @@ object OpenapiCodegenPlugin extends AutoPlugin {
               sv.startsWith("3"),
               directoryName
             )
-          (genTask(c.swaggerFile, c.packageName).file +: c.additionalPackages.map { case (pkg, defns) =>
+
+          val overriddenDefaultLocation = c.additionalPackages.find(_._2 == c.swaggerFile)
+          val defaultIsRedeclared = overriddenDefaultLocation.isDefined
+          val maybeDefaultFileTask = {
+            if (defaultIsRedeclared) {
+              System.err.println(s"WARN: Default swagger file is redeclared. Writing to ${overriddenDefaultLocation.get._1}")
+              Nil
+            } else if (c.swaggerFile.exists()) Seq(genTask(c.swaggerFile, c.packageName).file)
+            else {
+              System.err.println(s"WARN: File not found: ${c.swaggerFile.toPath}. Skipping default.")
+              Nil
+            }
+          }
+          (maybeDefaultFileTask ++ c.additionalPackages.map { case (pkg, defns) =>
             genTask(defns, pkg, Some(pkg.replace('.', '/'))).file
           })
             .reduceLeft((l, r) => l.flatMap(_l => r.map(_l ++ _)))
