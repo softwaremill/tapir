@@ -91,11 +91,10 @@ object OpenapiCodegenPlugin extends AutoPlugin {
             if (defaultIsRedeclared) {
               System.err.println(s"WARN: Default swagger file is redeclared. Writing to ${overriddenDefaultLocation.get._1}")
               Nil
-            } else if (c.swaggerFile.exists()) Seq(genTask(c.swaggerFile, c.packageName).file)
-            else {
-              System.err.println(s"WARN: File not found: ${c.swaggerFile.toPath}. Skipping default.")
+            } else if (!c.swaggerFile.exists() && c.additionalPackages.nonEmpty) {
+              System.err.println(s"WARN: File not found: ${c.swaggerFile.toPath}. Skipping default, only writing additional packages.")
               Nil
-            }
+            } else Seq(genTask(c.swaggerFile, c.packageName).file)
           }
           (maybeDefaultFileTask ++ c.additionalPackages.map { case (pkg, defns) =>
             genTask(defns, pkg, Some(pkg.replace('.', '/'))).file
