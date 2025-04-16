@@ -392,6 +392,18 @@ object TapirGeneratedEndpoints {
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum), _) => true },
         oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum2), _) => true }))
 
+  type GetPatternRestrictedObjectEndpoint = Endpoint[String, (String, Option[String], String, Option[String], String), Unit, String, Any]
+  lazy val getPatternRestrictedObject: GetPatternRestrictedObjectEndpoint =
+    endpoint
+      .get
+      .in(("pattern" / path[String]("restricted").validate(Validator.all(Validator.pattern("[a-z]+"), Validator.minLength(3), Validator.maxLength(10))).description("used by security logic") / "object"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(query[Option[String]]("q1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.pattern("[a-z_].+")(_)).map{ case Nil => ValidationResult.Valid ; case l => ValidationResult.Invalid()}.getOrElse(ValidationResult.Valid))))
+      .in(query[String]("q2").validate(Validator.minLength(3)))
+      .in(header[Option[String]]("h1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.all(Validator.pattern("[a-z_].+"), Validator.minLength(3))(_)).map{ case Nil => ValidationResult.Valid ; case l => ValidationResult.Invalid()}.getOrElse(ValidationResult.Valid))))
+      .in(header[String]("h2").validate(Validator.minLength(3)))
+      .out(jsonBody[String].description("ok"))
+
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =
     endpoint
@@ -489,7 +501,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[ListType].description("list type out"))
 
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getHeadersTests, getOneofErrorSecParamTest, postAllOf, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getHeadersTests, getOneofErrorSecParamTest, postAllOf, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, getPatternRestrictedObject, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 
   object Servers {

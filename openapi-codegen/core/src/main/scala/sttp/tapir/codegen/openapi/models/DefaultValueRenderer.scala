@@ -31,12 +31,12 @@ object DefaultValueRenderer {
     thisType match {
       case ref: OpenapiSchemaRef =>
         renderStringWithName(value)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
-      case OpenapiSchemaString(_)     => '"' +: value :+ '"'
-      case OpenapiSchemaEnum(_, _, _) => s"$name.$value"
-      case OpenapiSchemaDateTime(_)   => s"""java.time.Instant.parse("$value")"""
-      case OpenapiSchemaBinary(_)     => s""""$value".getBytes("utf-8")"""
-      case OpenapiSchemaUUID(_)       => s"""java.util.UUID.fromString("$value")"""
-      case other                      => throw new IllegalArgumentException(s"Cannot render ${value} as type ${other.getClass.getName}")
+      case OpenapiSchemaString(_, _, _, _) => '"' +: value :+ '"'
+      case OpenapiSchemaEnum(_, _, _)      => s"$name.$value"
+      case OpenapiSchemaDateTime(_)        => s"""java.time.Instant.parse("$value")"""
+      case OpenapiSchemaBinary(_)          => s""""$value".getBytes("utf-8")"""
+      case OpenapiSchemaUUID(_)            => s"""java.util.UUID.fromString("$value")"""
+      case other => throw new IllegalArgumentException(s"Cannot render ${value} as type ${other.getClass.getName}")
     }
   private def renderMapWithName(
       kvs: Map[String, Json]
@@ -90,10 +90,10 @@ object DefaultValueRenderer {
           thisType match {
             case ref: OpenapiSchemaRef =>
               renderStringWithName(jsonString)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
-            case OpenapiSchemaString(_)   => '"' +: jsonString :+ '"'
-            case OpenapiSchemaDateTime(_) => s"""java.time.Instant.parse("$jsonString")"""
-            case OpenapiSchemaBinary(_)   => s""""$jsonString".getBytes("utf-8")"""
-            case OpenapiSchemaUUID(_)     => s"""java.util.UUID.fromString("$jsonString")"""
+            case OpenapiSchemaString(_, _, _, _) => '"' +: jsonString :+ '"'
+            case OpenapiSchemaDateTime(_)        => s"""java.time.Instant.parse("$jsonString")"""
+            case OpenapiSchemaBinary(_)          => s""""$jsonString".getBytes("utf-8")"""
+            case OpenapiSchemaUUID(_)            => s"""java.util.UUID.fromString("$jsonString")"""
             case OpenapiSchemaEnum(_, _, _) if config.maybeEnumName.isDefined =>
               s"${config.maybeEnumName.get}.$jsonString"
             //      case OpenapiSchemaEnum(_, _, _) => // inline enum definitions are not currently supported, so let it throw

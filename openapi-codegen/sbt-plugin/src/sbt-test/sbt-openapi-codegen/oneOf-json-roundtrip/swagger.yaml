@@ -340,6 +340,50 @@ paths:
               schema:
                 type: string
 
+  '/pattern/{restricted}/object':
+    parameters:
+      - name: restricted
+        in: path
+        description: used by security logic
+        required: true
+        schema:
+          type: string
+          minLength: 3
+          maxLength: 10
+          pattern: "[a-z]+"
+      - name: q1
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: "[a-z_].+"
+      - name: q2
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 3
+      - name: h1
+        in: header
+        required: false
+        schema:
+          type: string
+          pattern: "[a-z_].+"
+          minLength: 3
+      - name: h2
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 3
+    get:
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: string
   '/inline/simple/object':
     post:
       requestBody:

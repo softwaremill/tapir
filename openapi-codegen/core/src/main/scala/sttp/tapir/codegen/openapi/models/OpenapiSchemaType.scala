@@ -63,7 +63,10 @@ object OpenapiSchemaType {
   sealed trait OpenapiSchemaStringType extends OpenapiSchemaSimpleType
 
   case class OpenapiSchemaString(
-      nullable: Boolean
+      nullable: Boolean,
+      pattern: Option[String] = None,
+      minLength: Option[Int] = None,
+      maxLength: Option[Int] = None
   ) extends OpenapiSchemaStringType
   case class OpenapiSchemaDate(
       nullable: Boolean
@@ -175,16 +178,19 @@ object OpenapiSchemaType {
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not string!", c.history))(_._1 == "string")
       f <- c.downField("format").as[Option[String]]
+      pattern <- c.downField("pattern").as[Option[String]]
+      min <- c.downField("minLength").as[Option[Int]]
+      max <- c.downField("maxLength").as[Option[Int]]
     } yield {
       f.fold[OpenapiSchemaStringType](
-        OpenapiSchemaString(p._2)
+        OpenapiSchemaString(p._2, pattern, min, max)
       ) {
         case "date"      => OpenapiSchemaDate(p._2)
         case "date-time" => OpenapiSchemaDateTime(p._2)
         case "byte"      => OpenapiSchemaByte(p._2)
         case "binary"    => OpenapiSchemaBinary(p._2)
         case "uuid"      => OpenapiSchemaUUID(p._2)
-        case _           => OpenapiSchemaString(p._2)
+        case _           => OpenapiSchemaString(p._2, pattern, min, max)
       }
     }
   }

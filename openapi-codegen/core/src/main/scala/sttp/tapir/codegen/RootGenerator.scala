@@ -318,7 +318,7 @@ object RootGenerator {
         ("java.time.Instant", nb)
       case OpenapiSchemaUUID(nb) =>
         ("java.util.UUID", nb)
-      case OpenapiSchemaString(nb) =>
+      case OpenapiSchemaString(nb, _, _, _) =>
         ("String", nb)
       case OpenapiSchemaBoolean(nb) =>
         ("Boolean", nb)
