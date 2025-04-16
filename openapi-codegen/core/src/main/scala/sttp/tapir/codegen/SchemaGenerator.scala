@@ -87,7 +87,7 @@ object SchemaGenerator {
     def getDirectChildren(schema: OpenapiSchemaType): Set[String] = schema match {
       case r: OpenapiSchemaRef                                                                => Set(r.stripped)
       case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString => Set.empty[String]
-      case OpenapiSchemaArray(items, _, _)                                                    => getDirectChildren(items)
+      case OpenapiSchemaArray(items, _, _, _)                                                 => getDirectChildren(items)
       case OpenapiSchemaNot(items)                                                            => getDirectChildren(items)
       case OpenapiSchemaMap(items, _)                                                         => getDirectChildren(items)
       case OpenapiSchemaOneOf(items, _)                                                       => items.flatMap(getDirectChildren).toSet
@@ -169,9 +169,9 @@ object SchemaGenerator {
     // these types cannot contain a reference
     case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString => Set.empty
     // descend into the sole child type
-    case OpenapiSchemaArray(items, _, _) => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
-    case OpenapiSchemaNot(items)         => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
-    case OpenapiSchemaMap(items, _)      => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
+    case OpenapiSchemaArray(items, _, _, _) => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
+    case OpenapiSchemaNot(items)            => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
+    case OpenapiSchemaMap(items, _)         => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
     // descend into all child types
     case OpenapiSchemaOneOf(items, _) => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
     case OpenapiSchemaAllOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
@@ -183,12 +183,12 @@ object SchemaGenerator {
   private def schemaForObject(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
       case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => schemaForObject(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _)) =>
         schemaForObject(s"$name${k.capitalize}Item", `type`)
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
         schemaForObject(s"$name${k.capitalize}Item", `type`)
       case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _)) => schemaForEnum(s"$name${k.capitalize}")
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _, _), _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
       case (k, OpenapiSchemaField(OpenapiSchemaMap(_: OpenapiSchemaEnum, _), _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")

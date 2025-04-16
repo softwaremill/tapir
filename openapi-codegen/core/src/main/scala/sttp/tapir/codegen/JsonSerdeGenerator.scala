@@ -112,11 +112,13 @@ object JsonSerdeGenerator {
   private def inlineEndpointSchemas(doc: OpenapiDocument): Seq[(String, OpenapiSchemaType, Boolean)] =
     doc.paths.flatMap(p =>
       p.methods.flatMap(m =>
-        m.responses.map(_.resolve(doc))
+        m.responses
+          .map(_.resolve(doc))
           .flatMap(_.content)
           .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
           .map(c => (m.name(p.url).capitalize + "Response", c.schema, true)) ++
-          m.requestBody.toSeq.map(_.resolve(doc))
+          m.requestBody.toSeq
+            .map(_.resolve(doc))
             .flatMap(_.content)
             .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
             .map(c => (m.name(p.url).capitalize + "Request", c.schema, true))
@@ -159,7 +161,7 @@ object JsonSerdeGenerator {
   private def genCirceObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
       case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => genCirceObjectSerde(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
@@ -291,8 +293,8 @@ object JsonSerdeGenerator {
       // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
       case (name, o: OpenapiSchemaObject, isJson) =>
         val inlinedEnumDefns = if (allTransitiveJsonParamRefs.contains(name)) {
-          o.properties.collect {
-            case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _)) => genJsoniterEnumSerde(name + en.capitalize)
+          o.properties.collect { case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _)) =>
+            genJsoniterEnumSerde(name + en.capitalize)
           }
         } else Nil
         val supertypes =
@@ -461,7 +463,7 @@ object JsonSerdeGenerator {
   private def genZioObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
       case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => genZioObjectSerde(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)

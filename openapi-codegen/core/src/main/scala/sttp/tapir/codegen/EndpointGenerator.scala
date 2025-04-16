@@ -237,8 +237,8 @@ class EndpointGenerator {
           val queryOrPathParamRefs = m.resolvedParameters
             .collect { case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" => queryParam.schema }
             .collect {
-              case ref: OpenapiSchemaRef if ref.isSchema                           => ref.stripped
-              case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _) if ref.isSchema => ref.stripped
+              case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
+              case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
             }
             .toSet
           val xmlParamRefs: Seq[String] = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
@@ -249,11 +249,11 @@ class EndpointGenerator {
             m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
             .collect { case (contentType, schema) if contentType == "application/json" => schema }
             .collect {
-              case ref: OpenapiSchemaRef if ref.isSchema                           => ref.stripped
-              case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _) if ref.isSchema => ref.stripped
-              case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _) =>
+              case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
+              case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
+              case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _, _) =>
                 bail("Cannot generate schema for 'Any' with jsoniter library")
-              case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _) =>
+              case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _) =>
                 val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
                 s"List[$name]"
               case simple: OpenapiSchemaSimpleType =>
@@ -292,7 +292,6 @@ class EndpointGenerator {
       )
     )
   }
-
 
   private def urlMapper(url: String, parameters: Seq[OpenapiParameter], securityPathPrefixes: Seq[String], doc: OpenapiDocument)(implicit
       location: Location
@@ -389,7 +388,7 @@ class EndpointGenerator {
         val desc = param.description.map(JavaEscape.escapeString).fold("")(d => s""".description("$d")""")
         val validation = ValidationGenerator.mkValidations(doc, st, required)
         (s"""${param.in}[$req]("${param.name}")$validation$desc""", None, req)
-      case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
+      case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
         val arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
         val arr = s"$arrayType[$t]"
@@ -404,7 +403,7 @@ class EndpointGenerator {
         val outType = toOutType(t, true, noOptionWrapper)
         (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", None, outType)
       case e @ OpenapiSchemaEnum(_, _, _) => getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = false)
-      case OpenapiSchemaArray(e: OpenapiSchemaEnum, _, _) =>
+      case OpenapiSchemaArray(e: OpenapiSchemaEnum, _, _, _) =>
         getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = true)
       case x => bail(s"Can't create non-simple params - found $x")
     }
@@ -904,7 +903,7 @@ class EndpointGenerator {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
             (t, None, None)
-          case a @ OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
+          case a @ OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
             val xmlSeqConfig = XmlSerdeGenerator.genTopLevelSeqSerdes(xmlSerdeLib, a, endpointName, position)
             (s"List[$t]", xmlSeqConfig, Some(endpointName.capitalize + position))
@@ -922,7 +921,7 @@ class EndpointGenerator {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
             t -> None
-          case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
+          case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
             s"List[$t]" -> None
           case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _) =>
@@ -987,7 +986,7 @@ class EndpointGenerator {
             case st: OpenapiSchemaSimpleType =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
               t
-            case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _) =>
+            case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
               s"List[$t]"
             case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _) =>

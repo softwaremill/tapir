@@ -51,24 +51,25 @@ object OpenapiSchemaType {
   )
   sealed trait OpenapiSchemaNumericType extends OpenapiSchemaSimpleType {
     def restrictions: NumericRestrictions
+    def scalaType: String
   }
 
   case class OpenapiSchemaDouble(
       nullable: Boolean,
       restrictions: NumericRestrictions
-  ) extends OpenapiSchemaNumericType
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Double" }
   case class OpenapiSchemaFloat(
       nullable: Boolean,
       restrictions: NumericRestrictions
-  ) extends OpenapiSchemaNumericType
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Float" }
   case class OpenapiSchemaLong(
       nullable: Boolean,
       restrictions: NumericRestrictions
-  ) extends OpenapiSchemaNumericType
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Long" }
   case class OpenapiSchemaInt(
       nullable: Boolean,
       restrictions: NumericRestrictions
-  ) extends OpenapiSchemaNumericType
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Int" }
 
   // https://swagger.io/docs/specification/data-models/data-types/#string
   // no minLength/maxLength, pattern support on 'formatted' subtypes.
@@ -125,16 +126,26 @@ object OpenapiSchemaType {
       nullable: Boolean
   ) extends OpenapiSchemaType
 
-  // no minItems/maxItems, uniqueItems support
+  // no uniqueItems support
+  case class ArrayRestrictions(minItems: Option[Int] = None, maxItems: Option[Int] = None, uniqueItems: Option[Boolean] = None)
   case class OpenapiSchemaArray(
       items: OpenapiSchemaType,
       nullable: Boolean,
-      xml: Option[OpenapiXml.XmlArrayConfiguration] = None
+      xml: Option[OpenapiXml.XmlArrayConfiguration] = None,
+      restrictions: ArrayRestrictions = ArrayRestrictions()
   ) extends OpenapiSchemaType
 
+  case class ObjectFieldRestrictions(
+      readOnly: Option[Boolean] = None,
+      writeOnly: Option[Boolean] = None
+  )
   case class OpenapiSchemaField(
       `type`: OpenapiSchemaType,
       default: Option[Json]
+  )
+  case class ObjectRestrictions(
+      minProperties: Option[Int] = None,
+      maxProperties: Option[Int] = None
   )
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaObject(
@@ -356,8 +367,11 @@ object OpenapiSchemaType {
         case Some(some) => Some(some.copy(itemName = xmlItemName))
         case None       => xmlItemName.map(n => OpenapiXml.XmlArrayConfiguration(itemName = Some(n)))
       }
+      minItems <- c.downField("minItems").as[Option[Int]]
+      maxItems <- c.downField("maxItems").as[Option[Int]]
+      restrictions = ArrayRestrictions(minItems, maxItems)
     } yield {
-      OpenapiSchemaArray(f, nb, xml)
+      OpenapiSchemaArray(f, nb, xml, restrictions)
     }
   }
 

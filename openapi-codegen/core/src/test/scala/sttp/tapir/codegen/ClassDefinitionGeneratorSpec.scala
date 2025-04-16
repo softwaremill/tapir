@@ -52,7 +52,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    // the enumeratum import should be included by the BasicGenerator iff we generated enums
+    // the enumeratum import should be included by the RootGenerator iff we generated enums
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
