@@ -141,7 +141,8 @@ object OpenapiSchemaType {
   )
   case class OpenapiSchemaField(
       `type`: OpenapiSchemaType,
-      default: Option[Json]
+      default: Option[Json],
+      restrictions: ObjectFieldRestrictions = ObjectFieldRestrictions()
   )
   case class ObjectRestrictions(
       minProperties: Option[Int] = None,
@@ -158,7 +159,8 @@ object OpenapiSchemaType {
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaMap(
       items: OpenapiSchemaType,
-      nullable: Boolean
+      nullable: Boolean,
+      restrictions: ObjectRestrictions = ObjectRestrictions()
   ) extends OpenapiSchemaType
 
   // ///////////////////////////////////////////////////////
@@ -321,19 +323,21 @@ object OpenapiSchemaType {
     } yield OpenapiSchemaEnum(tpe, items, nb)
   }
 
-  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json])] = { (c: HCursor) =>
+  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)] = { (c: HCursor) =>
     for {
       schemaType <- c.as[OpenapiSchemaType]
       maybeDefault <- c.downField("default").as[Option[Json]]
-    } yield (schemaType, maybeDefault)
+      readOnly <- c.downField("readOnly").as[Option[Boolean]]
+      writeOnly <- c.downField("writeOnly").as[Option[Boolean]]
+    } yield (schemaType, maybeDefault, ObjectFieldRestrictions(readOnly, writeOnly))
   }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
-      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json])]]]
+      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)]]]
       r <- c.downField("required").as[Option[Seq[String]]]
       (_, nb) = p
-      fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d)) => k -> OpenapiSchemaField(f, d) }
+      fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d, r)) => k -> OpenapiSchemaField(f, d, r) }
     } yield {
       OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb)
     }
@@ -343,9 +347,11 @@ object OpenapiSchemaType {
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
       t <- c.downField("additionalProperties").as[OpenapiSchemaType]
+      mi <- c.downField("minProperties").as[Option[Int]]
+      ma <- c.downField("maxProperties").as[Option[Int]]
       (_, nb) = p
     } yield {
-      OpenapiSchemaMap(t, nb)
+      OpenapiSchemaMap(t, nb, ObjectRestrictions(mi, ma))
     }
   }
 

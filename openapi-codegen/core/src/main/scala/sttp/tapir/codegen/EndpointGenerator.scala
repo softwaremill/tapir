@@ -258,7 +258,7 @@ class EndpointGenerator {
                 s"List[$name]"
               case simple: OpenapiSchemaSimpleType =>
                 RootGenerator.mapSchemaSimpleTypeToType(simple)._1
-              case OpenapiSchemaMap(simple: OpenapiSchemaSimpleType, _) =>
+              case OpenapiSchemaMap(simple: OpenapiSchemaSimpleType, _, _) =>
                 val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
                 s"Map[String, $name]"
             }
@@ -924,7 +924,7 @@ class EndpointGenerator {
           case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
             s"List[$t]" -> None
-          case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _) =>
+          case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
             s"Map[String, $t]" -> None
           case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]) =>
@@ -989,7 +989,7 @@ class EndpointGenerator {
             case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
               s"List[$t]"
-            case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _) =>
+            case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _, _) =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
               s"Map[String, $t]"
             case x => bail(s"Can't create this param as output (found $x)")

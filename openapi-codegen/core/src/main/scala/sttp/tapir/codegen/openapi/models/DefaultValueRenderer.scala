@@ -46,7 +46,7 @@ object DefaultValueRenderer {
     )
     thisType match {
       case ref: OpenapiSchemaRef => renderMapWithName(kvs)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
-      case OpenapiSchemaMap(types, _) =>
+      case OpenapiSchemaMap(types, _, _) =>
         s"Map(${kvs.map { case (k, v) => s""""$k" -> ${render(allModels, types, isOptional = false, RenderConfig())(v)}""" }.mkString(", ")})"
       case OpenapiSchemaObject(properties, required, _, _) =>
         val kvsWithProps = kvs.map { case (k, v) => (k, (v, properties.get(k).getOrElse(errorForKey(k)))) }
@@ -110,7 +110,7 @@ object DefaultValueRenderer {
           thisType match {
             case ref: OpenapiSchemaRef =>
               renderMapWithName(jsonObject.toMap)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
-            case OpenapiSchemaMap(types, _) =>
+            case OpenapiSchemaMap(types, _, _) =>
               s"Map(${jsonObject.toMap.map { case (k, v) => s""""$k" -> ${render(allModels, types, isOptional = false, config)(v)}""" }.mkString(", ")})"
             case other => fail("map", other)
           }
