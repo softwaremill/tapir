@@ -79,12 +79,12 @@ object DefaultValueRenderer {
           },
         jsonNumber =>
           thisType match {
-            case ref: OpenapiSchemaRef    => render(allModels, lookup(allModels, ref), isOptional = false, config)(json)
-            case l @ OpenapiSchemaLong(_) => s"${jsonNumber.toLong.getOrElse(fail("number", l, Some(s"$jsonNumber is not a long")))}L"
-            case i @ OpenapiSchemaInt(_)  => jsonNumber.toInt.getOrElse(fail("number", i, Some(s"$jsonNumber is not an int"))).toString
-            case OpenapiSchemaFloat(_)    => s"${jsonNumber.toFloat}f"
-            case OpenapiSchemaDouble(_)   => s"${jsonNumber.toDouble}d"
-            case other                    => fail("number", other)
+            case ref: OpenapiSchemaRef       => render(allModels, lookup(allModels, ref), isOptional = false, config)(json)
+            case l @ OpenapiSchemaLong(_, _) => s"${jsonNumber.toLong.getOrElse(fail("number", l, Some(s"$jsonNumber is not a long")))}L"
+            case i @ OpenapiSchemaInt(_, _)  => jsonNumber.toInt.getOrElse(fail("number", i, Some(s"$jsonNumber is not an int"))).toString
+            case OpenapiSchemaFloat(_, _)    => s"${jsonNumber.toFloat}f"
+            case OpenapiSchemaDouble(_, _)   => s"${jsonNumber.toDouble}d"
+            case other                       => fail("number", other)
           },
         jsonString =>
           thisType match {

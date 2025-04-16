@@ -306,13 +306,13 @@ object RootGenerator {
 
   def mapSchemaSimpleTypeToType(osst: OpenapiSchemaSimpleType, multipartForm: Boolean = false): (String, Boolean) = {
     osst match {
-      case OpenapiSchemaDouble(nb) =>
+      case OpenapiSchemaDouble(nb, _) =>
         ("Double", nb)
-      case OpenapiSchemaFloat(nb) =>
+      case OpenapiSchemaFloat(nb, _) =>
         ("Float", nb)
-      case OpenapiSchemaInt(nb) =>
+      case OpenapiSchemaInt(nb, _) =>
         ("Int", nb)
-      case OpenapiSchemaLong(nb) =>
+      case OpenapiSchemaLong(nb, _) =>
         ("Long", nb)
       case OpenapiSchemaDateTime(nb) =>
         ("java.time.Instant", nb)

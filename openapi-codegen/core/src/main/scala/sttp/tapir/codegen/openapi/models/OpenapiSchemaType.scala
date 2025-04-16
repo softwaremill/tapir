@@ -1,6 +1,6 @@
 package sttp.tapir.codegen.openapi.models
 
-import io.circe.Json
+import io.circe.{Json, JsonNumber}
 
 sealed trait OpenapiSchemaType {
   def nullable: Boolean
@@ -42,24 +42,36 @@ object OpenapiSchemaType {
   }
 
   // https://swagger.io/docs/specification/data-models/data-types/#numbers
-  // no min/max, exclusiveMin/exclusiveMax, multipleOf support
-  sealed trait OpenapiSchemaNumericType extends OpenapiSchemaSimpleType
+  case class NumericRestrictions(
+      min: Option[JsonNumber] = None,
+      max: Option[JsonNumber] = None,
+      exclusiveMinimum: Option[Boolean] = None,
+      exclusiveMaximum: Option[Boolean] = None,
+      multipleOf: Option[JsonNumber] = None
+  )
+  sealed trait OpenapiSchemaNumericType extends OpenapiSchemaSimpleType {
+    def restrictions: NumericRestrictions
+  }
 
   case class OpenapiSchemaDouble(
-      nullable: Boolean
+      nullable: Boolean,
+      restrictions: NumericRestrictions
   ) extends OpenapiSchemaNumericType
   case class OpenapiSchemaFloat(
-      nullable: Boolean
+      nullable: Boolean,
+      restrictions: NumericRestrictions
   ) extends OpenapiSchemaNumericType
   case class OpenapiSchemaLong(
-      nullable: Boolean
+      nullable: Boolean,
+      restrictions: NumericRestrictions
   ) extends OpenapiSchemaNumericType
   case class OpenapiSchemaInt(
-      nullable: Boolean
+      nullable: Boolean,
+      restrictions: NumericRestrictions
   ) extends OpenapiSchemaNumericType
 
   // https://swagger.io/docs/specification/data-models/data-types/#string
-  // no minLength/maxLength, pattern support
+  // no minLength/maxLength, pattern support on 'formatted' subtypes.
   sealed trait OpenapiSchemaStringType extends OpenapiSchemaSimpleType
 
   case class OpenapiSchemaString(
@@ -201,24 +213,30 @@ object OpenapiSchemaType {
         .ensure(DecodingFailure("Given type is not number/integer!", c.history))(v => v._1 == "number" || v._1 == "integer")
       (t, nb) = p
       f <- c.downField("format").as[Option[String]]
+      min <- c.downField("min").as[Option[JsonNumber]]
+      max <- c.downField("max").as[Option[JsonNumber]]
+      exclusiveMinimum <- c.downField("exclusiveMinimum").as[Option[Boolean]]
+      exclusiveMaximum <- c.downField("exclusiveMaximum").as[Option[Boolean]]
+      multipleOf <- c.downField("multipleOf").as[Option[JsonNumber]]
+      restrictions = NumericRestrictions(min, max, exclusiveMinimum, exclusiveMaximum, multipleOf)
     } yield {
       if (t == "number") {
         f.fold[OpenapiSchemaNumericType](
-          OpenapiSchemaDouble(nb)
+          OpenapiSchemaDouble(nb, restrictions)
         ) {
-          case "int64"  => OpenapiSchemaLong(nb)
-          case "int32"  => OpenapiSchemaInt(nb)
-          case "float"  => OpenapiSchemaFloat(nb)
-          case "double" => OpenapiSchemaDouble(nb)
-          case _        => OpenapiSchemaDouble(nb)
+          case "int64"  => OpenapiSchemaLong(nb, restrictions)
+          case "int32"  => OpenapiSchemaInt(nb, restrictions)
+          case "float"  => OpenapiSchemaFloat(nb, restrictions)
+          case "double" => OpenapiSchemaDouble(nb, restrictions)
+          case _        => OpenapiSchemaDouble(nb, restrictions)
         }
       } else {
         f.fold[OpenapiSchemaNumericType](
-          OpenapiSchemaInt(nb)
+          OpenapiSchemaInt(nb, restrictions)
         ) {
-          case "int64" => OpenapiSchemaLong(nb)
-          case "int32" => OpenapiSchemaInt(nb)
-          case _       => OpenapiSchemaInt(nb)
+          case "int64" => OpenapiSchemaLong(nb, restrictions)
+          case "int32" => OpenapiSchemaInt(nb, restrictions)
+          case _       => OpenapiSchemaInt(nb, restrictions)
         }
       }
     }
