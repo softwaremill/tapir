@@ -1,9 +1,9 @@
 // {cat=Error handling; effects=cats-effect; server=Netty; JSON=circe}: Error reporting provided by Iron type refinements
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.24
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.24
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.24
-//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.11.24
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.25
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.25
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.25
+//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.11.25
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.errors
