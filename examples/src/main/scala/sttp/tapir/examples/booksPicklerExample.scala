@@ -1,10 +1,10 @@
 // {cat=Hello, World!; effects=Future; server=Netty; client=sttp3; JSON=Pickler; docs=Swagger UI}: A demo of Tapir's capabilities
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.22
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.24
-//> using dep com.softwaremill.sttp.tapir::tapir-json-pickler:1.11.24
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.25
+//> using dep com.softwaremill.sttp.tapir::tapir-json-pickler:1.11.25
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.22
-//> using dep com.softwaremill.sttp.tapir::tapir-sttp-client4:1.11.24
+//> using dep com.softwaremill.sttp.tapir::tapir-sttp-client4:1.11.25
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
 //> using dep ch.qos.logback:logback-classic:1.5.6
