@@ -118,6 +118,10 @@ class ServerInterpreter[R, F[_], B, S](
         se.securityLogic(monad)(a).map(Right(_): Either[RequestResult[B], Either[E, U]]).handleError { case t: Throwable =>
           endpointHandler(monad.error(t), endpointInterceptors)
             .onSecurityFailure(SecurityFailureContext(se, a, request))
+            // discard request body
+            .flatMap { response =>
+              decodeBody(request, inputValues, se.endpoint.info).map(_ => response)
+            }
             .map(r => Left(RequestResult.Response(r)): Either[RequestResult[B], Either[E, U]])
         }
       )
@@ -129,6 +133,10 @@ class ServerInterpreter[R, F[_], B, S](
               endpointInterceptors
             )
               .onSecurityFailure(SecurityFailureContext(se, a, request))
+              // discard request body
+              .flatMap { response =>
+                decodeBody(request, inputValues, se.endpoint.info).map(_ => response)
+              }
               .map(r => RequestResult.Response(r): RequestResult[B])
           )
 
