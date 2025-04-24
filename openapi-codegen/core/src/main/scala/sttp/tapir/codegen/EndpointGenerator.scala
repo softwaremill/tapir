@@ -696,10 +696,10 @@ class EndpointGenerator {
               (
                 resp.code match {
                   case "200" | "default" if outHeaderDefns.isEmpty => None
-                  case "200"                                       => Some(s"statusCode(sttp.model.StatusCode(200))$hs$d")
-                  case "default"                                   => Some(s"statusCode(sttp.model.StatusCode(400))$hs$d")
-                  case okStatus(s)                                 => Some(s"statusCode(sttp.model.StatusCode($s))$hs$d")
-                  case errorStatus(s)                              => Some(s"statusCode(sttp.model.StatusCode($s))$hs$d")
+                  case "200"                                       => Some(s"statusCode(sttp.model.StatusCode(200))$d$hs")
+                  case "default"                                   => Some(s"statusCode(sttp.model.StatusCode(400))$d$hs")
+                  case okStatus(s)                                 => Some(s"statusCode(sttp.model.StatusCode($s))$d$hs")
+                  case errorStatus(s)                              => Some(s"statusCode(sttp.model.StatusCode($s))$d$hs")
                 },
                 ht(),
                 inlineHeaderEnumDefns
