@@ -87,7 +87,14 @@ jobs:
       with:
         timeout_minutes: 8
         max_attempts: 4
-        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
+        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}" 2>&1 >output.log
+    - name: Check for leaks
+      if: matrix.target-platform != 'JS'
+      run: |
+          if grep -q "LEAK" output.log; then
+            echo "Netty leak detected!"
+            exit 1
+          fi
     - name: Test OpenAPI codegen
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
       run: sbt $SBT_JAVA_OPTS -v "openapiCodegenSbt2_12/scripted"                

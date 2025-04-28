@@ -198,9 +198,9 @@ class NettyServerHandler[F[_]](
                   responseCompletedPromise match {
                     case Some(p) =>
                       val _ = p.addListener({ (_: ChannelFuture) =>
-                        if (!r.wasSubscribed) r.subscribe(new CancellingSubscriber)
+                        // if (!r.wasSubscribed) r.subscribe(new CancellingSubscriber)
                       })
-                    case None => if (!r.wasSubscribed) r.subscribe(new CancellingSubscriber)
+                    case None => // if (!r.wasSubscribed) r.subscribe(new CancellingSubscriber)
                   }
                 case _ => // non-streaming type of request - do nothing - request body is already read in full
               }
