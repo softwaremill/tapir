@@ -4,7 +4,9 @@ import cats.effect.{IO, Resource}
 import cats.syntax.all._
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
+import org.scalatest.matchers.should.Matchers._
 import sttp.monad.FutureMonad
+import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.netty.internal.FutureUtil.nettyFutureToScala
 import sttp.tapir.server.tests._
@@ -39,6 +41,9 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
     }
 
   def additionalTests(backend: Backend[IO])(implicit ec: ExecutionContext): List[Test] = List(
+    // Netty samples the requests by default, hence leaks are only detected if the number of requests is large enough.
+    // There are no assertions in this test, as if there are leaks, they are reported in the test output;
+    // the verification is done as part of CI.
     Test("a large number of requests ignoring the request body shouldn't cause leaks") {
       import cats.effect.unsafe.implicits.global
 
@@ -52,7 +57,11 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
         .use { port =>
           (0 until 10000).toList
             .traverse_ { i =>
-              basicRequest.response(asStringAlways).body("abcde").post(uri"http://localhost:$port?x=abc").send(backend)
+              // the query is causing a decode failure, which in turn returns a 400 bad request
+              // the request body is never read and should be ignored
+              basicRequest.response(asStringAlways).body("abcde").post(uri"http://localhost:$port?x=abc").send(backend).map { response =>
+                response.code shouldBe StatusCode.BadRequest
+              }
             }
             .map(_ => succeed)
         }
