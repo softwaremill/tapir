@@ -17,11 +17,14 @@ import scala.sys.process.Process
 val scala2_12 = "2.12.20"
 val scala2_13 = "2.13.16"
 val scala3 = "3.3.5"
+val scala3Latest = "3.6.4"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
 val codegenScalaVersions = List(scala2_12)
+val ironScalaVersions = List(scala3Latest)
+
 val examplesScalaVersion = scala3
 val documentationScalaVersion = scala3
 val ideScalaVersion = scala3
@@ -175,6 +178,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
   iron.projectRefs ++
+  ironExamples.projectRefs ++
   zio.projectRefs ++
   newtype.projectRefs ++
   monixNewtype.projectRefs ++
@@ -669,19 +673,20 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
   .dependsOn(core, circeJson % Test)
 
 lazy val iron: ProjectMatrix = (projectMatrix in file("integrations/iron"))
-  .settings(commonSettings)
   .settings(
     name := "tapir-iron",
+    commonSettings,
     libraryDependencies ++= Seq(
-      "io.github.iltotore" %% "iron" % Versions.iron,
+      "io.github.iltotore" %%% "iron" % Versions.iron,
       scalaTest.value % Test
-    )
+    ),
+    scalaVersion := scala3Latest,
+    crossScalaVersions := ironScalaVersions
   )
-  .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
-  .jsPlatform(
-    scalaVersions = List(scala3)
-  )
-  .dependsOn(core)
+  .jvmPlatform(scalaVersions = ironScalaVersions, settings = commonJvmSettings)
+  .jsPlatform(scalaVersions = ironScalaVersions)
+  .nativePlatform(scalaVersions = ironScalaVersions)
+  .dependsOn(core.jvm(scala3), core.js(scala3), core.native(scala3))
 
 lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
   .settings(commonSettings)
@@ -2149,7 +2154,21 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 
-// other
+lazy val ironExamples = (projectMatrix in file("integrations/iron/examples"))
+  .settings(
+    name := "iron-examples",
+    publishArtifact := false,
+    Compile / run / fork := true,
+    commonSettings,
+    verifyExamplesCompileUsingScalaCli := VerifyExamplesCompileUsingScalaCli(sLog.value, sourceDirectory.value)
+  )
+  .jvmPlatform(scalaVersions = ironScalaVersions, settings = commonJvmSettings)
+  .dependsOn(iron)
+  .dependsOn(
+    nettyServerCats.jvm(scala3),
+    circeJson.jvm(scala3),
+    sttpClient4.jvm(scala3)
+  )
 
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonSettings)
@@ -2190,7 +2209,6 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     http4sClient,
     http4sServer,
     http4sServerZio,
-    iron,
     jdkhttpServer,
     jsoniterScala,
     nettyServer,
