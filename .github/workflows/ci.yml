@@ -172,7 +172,8 @@ jobs:
       - name: Compile
         run: sbt $SBT_JAVA_OPTS compile
       - name: Publish artifacts
-        run: sbt $SBT_JAVA_OPTS ci-release
+        # Timeout needed until https://github.com/xerial/sbt-sonatype/issues/597 is fixed
+        run: sbt -Dsun.net.client.defaultReadTimeout=60000 -Djdk.httpclient.keepalive.timeout=300 $SBT_JAVA_OPTS ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
