@@ -311,6 +311,14 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
+  type GetHeadersTestsEndpoint = Endpoint[String, Unit, Unit, Option[String], Any]
+  lazy val getHeadersTests: GetHeadersTestsEndpoint =
+    endpoint
+      .get
+      .in(("headers" / "tests"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .out(statusCode(sttp.model.StatusCode(302)).description("response").and(header[Option[String]]("foo").description("a description")))
+
   type GetOneofErrorSecParamTestEndpoint = Endpoint[(String, Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn), Unit, Error, Unit, Any]
   lazy val getOneofErrorSecParamTest: GetOneofErrorSecParamTestEndpoint =
     endpoint
@@ -457,7 +465,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[ListType].description("list type out"))
 
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getOneofErrorSecParamTest, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getHeadersTests, getOneofErrorSecParamTest, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 
   object Servers {

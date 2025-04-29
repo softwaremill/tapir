@@ -329,6 +329,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/ObjectWithInlineEnum2'
 
+  '/headers/tests':
+    get:
+      responses:
+        "302":
+          description: response
+          headers:
+            foo:
+              description: a description
+              schema:
+                type: string
+
   '/inline/simple/object':
     post:
       requestBody:
