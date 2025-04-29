@@ -11,7 +11,7 @@ object RefinedStringConstraint {
 
   given Constraint[String, RefinedStringConstraint] with {
 
-    override inline def test(value: String): Boolean = value.nonEmpty
+    override inline def test(inline value: String): Boolean = value.nonEmpty
 
     override inline def message: String = "Should not be empty"
   }
@@ -20,6 +20,5 @@ object RefinedStringConstraint {
     ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern[String]("^.+"))
 }
 
-opaque type RefinedString = String :| RefinedStringConstraint
-
-object RefinedString extends RefinedTypeOps[String, RefinedStringConstraint, RefinedString]
+object RefinedString extends RefinedType[String, RefinedStringConstraint]
+type RefinedString = RefinedString.T
