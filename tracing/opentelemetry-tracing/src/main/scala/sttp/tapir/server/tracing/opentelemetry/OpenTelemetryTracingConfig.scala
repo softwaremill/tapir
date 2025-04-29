@@ -30,10 +30,6 @@ import sttp.tapir.server.model.ServerResponse
   *   default, the span name includes the request's method and the route, which is created by rendering the endpoint's path template.
   * @param responseAttributes
   *   Calculates additional attributes of the span, given a response that will be sent back.
-  * @param noEndpointsMatchAttributes
-  *   Calculates additional attributes of the span if no endpoints match the incoming request. By default, this sets the response status to
-  *   404, which mirrors the behavior of most servers. If there are other routes matched by the server after Tapir determines that the
-  *   request matched to any endpoint, this should be set to an empty set of attributes.
   * @param errorAttributes
   *   Calculates additional attributes of the span, given an error that occurred while processing the request (an exception); although
   *   usually, exceptions are translated into 5xx responses earlier in the interceptor chain.
@@ -45,7 +41,6 @@ case class OpenTelemetryTracingConfig(
     requestAttributes: ServerRequest => Attributes,
     spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes),
     responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes,
-    noEndpointsMatchAttributes: Attributes,
     errorAttributes: Either[StatusCode, Throwable] => Attributes
 )
 
@@ -57,7 +52,6 @@ object OpenTelemetryTracingConfig {
       spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes) =
         Defaults.spanNameFromEndpointAndAttributes _,
       responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes = Defaults.responseAttributes _,
-      noEndpointsMatchAttributes: Attributes = Defaults.noEndpointsMatchAttributes,
       errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes _
   ): OpenTelemetryTracingConfig = usingTracer(
     openTelemetry.tracerBuilder(Defaults.instrumentationScopeName).setInstrumentationVersion(Defaults.instrumentationScopeVersion).build(),
@@ -66,7 +60,6 @@ object OpenTelemetryTracingConfig {
     requestAttributes = requestAttributes,
     spanNameFromEndpointAndAttributes = spanNameFromEndpointAndAttributes,
     responseAttributes = responseAttributes,
-    noEndpointsMatchAttributes = noEndpointsMatchAttributes,
     errorAttributes = errorAttributes
   )
 
@@ -78,7 +71,6 @@ object OpenTelemetryTracingConfig {
       spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes) =
         Defaults.spanNameFromEndpointAndAttributes _,
       responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes = Defaults.responseAttributes _,
-      noEndpointsMatchAttributes: Attributes = Defaults.noEndpointsMatchAttributes,
       errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes _
   ): OpenTelemetryTracingConfig =
     new OpenTelemetryTracingConfig(
@@ -88,7 +80,6 @@ object OpenTelemetryTracingConfig {
       requestAttributes,
       spanNameFromEndpointAndAttributes,
       responseAttributes,
-      noEndpointsMatchAttributes,
       errorAttributes
     )
 
@@ -135,11 +126,6 @@ object OpenTelemetryTracingConfig {
     def responseAttributes(request: ServerRequest, response: ServerResponse[_]): Attributes =
       Attributes.builder
         .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, response.code.code.toLong: java.lang.Long)
-        .build()
-
-    val noEndpointsMatchAttributes: Attributes =
-      Attributes.builder
-        .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, StatusCode.NotFound.code.toLong: java.lang.Long)
         .build()
 
     def errorAttributes(e: Either[StatusCode, Throwable]): Attributes = {

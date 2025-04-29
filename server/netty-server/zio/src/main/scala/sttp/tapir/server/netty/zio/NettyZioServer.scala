@@ -21,24 +21,47 @@ import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
-case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: NettyZioServerOptions[R], config: NettyConfig) {
+case class NettyZioServer[R](
+    serverEndpoints: Vector[ServerEndpoint[ZioStreams, RIO[R, *]]],
+    otherRoutes: Vector[RIO[R, Route[RIO[R, *]]]],
+    options: NettyZioServerOptions[R],
+    config: NettyConfig
+) {
   def addEndpoint(se: ZServerEndpoint[R, ZioStreams]): NettyZioServer[R] = addEndpoints(List(se))
-  def addEndpoint(se: ZServerEndpoint[R, ZioStreams], overrideOptions: NettyZioServerOptions[R]): NettyZioServer[R] =
-    addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[ZioStreams, RIO[R, *]]]): NettyZioServer[R] = addRoute(
-    NettyZioServerInterpreter[R](options).toRoute(ses)
-  )
-  def addEndpoints(
-      ses: List[ZServerEndpoint[R, ZioStreams]],
-      overrideOptions: NettyZioServerOptions[R]
-  ): NettyZioServer[R] = addRoute(
-    NettyZioServerInterpreter[R](overrideOptions).toRoute(ses)
-  )
+  def addEndpoints(ses: List[ServerEndpoint[ZioStreams, RIO[R, *]]]): NettyZioServer[R] = copy(serverEndpoints = serverEndpoints ++ ses)
 
+  /** Adds a custom route to the server. When a request is received, it is first processed by routes generated from the defined endpoints
+    * (see [[addEndpoint]] and [[addEndpoints]] for the primary methods of defining server behavior). If none of these endpoints match the
+    * request, and the [[RejectHandler]] is configured to allow fallback handling (see below), the request will then be processed by the
+    * custom routes added using this method, in the order they were added.
+    *
+    * By default, the [[NettyZioServerOptions]] are configured to return a `404` response when no endpoints match a request. This behavior
+    * is controlled by the [[RejectHandler]]. If you intend to handle unmatched requests using custom routes, ensure that the
+    * [[RejectHandler]] is configured appropriately to allow such fallback handling.
+    */
   def addRoute(r: Route[RIO[R, *]]): NettyZioServer[R] = addRoute(ZIO.succeed(r))
 
-  def addRoute(r: RIO[R, Route[RIO[R, *]]]): NettyZioServer[R] = copy(routes = routes :+ r)
-  def addRoutes(r: Iterable[RIO[R, Route[RIO[R, *]]]]): NettyZioServer[R] = copy(routes = routes ++ r)
+  /** Adds custom routes to the server. When a request is received, it is first processed by routes generated from the defined endpoints
+    * (see [[addEndpoint]] and [[addEndpoints]] for the primary methods of defining server behavior). If none of these endpoints match the
+    * request, and the [[RejectHandler]] is configured to allow fallback handling (see below), the request will then be processed by the
+    * custom routes added using this method, in the order they were added.
+    *
+    * By default, the [[NettyZioServerOptions]] are configured to return a `404` response when no endpoints match a request. This behavior
+    * is controlled by the [[RejectHandler]]. If you intend to handle unmatched requests using custom routes, ensure that the
+    * [[RejectHandler]] is configured appropriately to allow such fallback handling.
+    */
+  def addRoute(r: RIO[R, Route[RIO[R, *]]]): NettyZioServer[R] = copy(otherRoutes = otherRoutes :+ r)
+
+  /** Adds custom routes to the server. When a request is received, it is first processed by routes generated from the defined endpoints
+    * (see [[addEndpoint]] and [[addEndpoints]] for the primary methods of defining server behavior). If none of these endpoints match the
+    * request, and the [[RejectHandler]] is configured to allow fallback handling (see below), the request will then be processed by the
+    * custom routes added using this method, in the order they were added.
+    *
+    * By default, the [[NettyZioServerOptions]] are configured to return a `404` response when no endpoints match a request. This behavior
+    * is controlled by the [[RejectHandler]]. If you intend to handle unmatched requests using custom routes, ensure that the
+    * [[RejectHandler]] is configured appropriately to allow such fallback handling.
+    */
+  def addRoutes(r: Iterable[RIO[R, Route[RIO[R, *]]]]): NettyZioServer[R] = copy(otherRoutes = otherRoutes ++ r)
 
   def options(o: NettyZioServerOptions[R]): NettyZioServer[R] = copy(options = o)
 
@@ -75,14 +98,16 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
 
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): RIO[R, (SA, () => RIO[R, Unit])] = for {
     runtime <- ZIO.runtime[R]
-    routes <- ZIO.foreach(routes)(identity)
+    endpointRoute <- NettyZioServerInterpreter(options).toRoute(serverEndpoints.toList)
+    routes <- ZIO.foreach(otherRoutes)(identity)
     eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     eventExecutor = new DefaultEventExecutor()
     channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     isShuttingDown = new AtomicBoolean(false)
     channelFuture = {
       implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
-      val route: Route[RIO[R, *]] = Route.combine(routes)
+
+      val route: Route[RIO[R, *]] = Route.combine(endpointRoute +: routes)
 
       NettyBootstrap[RIO[R, *]](
         config,
@@ -171,11 +196,13 @@ case class NettyZioServer[R](routes: Vector[RIO[R, Route[RIO[R, *]]]], options: 
 }
 
 object NettyZioServer {
-  def apply[R](): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], NettyConfig.default)
+  def apply[R](): NettyZioServer[R] = NettyZioServer(Vector.empty, Vector.empty, NettyZioServerOptions.default[R], NettyConfig.default)
   def apply[R](options: NettyZioServerOptions[R]): NettyZioServer[R] =
-    NettyZioServer(Vector.empty, options, NettyConfig.default)
-  def apply[R](config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, NettyZioServerOptions.default[R], config)
-  def apply[R](options: NettyZioServerOptions[R], config: NettyConfig): NettyZioServer[R] = NettyZioServer(Vector.empty, options, config)
+    NettyZioServer(Vector.empty, Vector.empty, options, NettyConfig.default)
+  def apply[R](config: NettyConfig): NettyZioServer[R] =
+    NettyZioServer(Vector.empty, Vector.empty, NettyZioServerOptions.default[R], config)
+  def apply[R](options: NettyZioServerOptions[R], config: NettyConfig): NettyZioServer[R] =
+    NettyZioServer(Vector.empty, Vector.empty, options, config)
 }
 
 case class NettyZioServerBinding[R](localSocket: InetSocketAddress, stop: () => RIO[R, Unit]) {

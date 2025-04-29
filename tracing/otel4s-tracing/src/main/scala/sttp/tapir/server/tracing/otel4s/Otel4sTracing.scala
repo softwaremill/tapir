@@ -66,7 +66,9 @@ class Otel4sTracing[F[_]](config: Otel4sTracingConfig[F]) extends RequestInterce
                         span.setStatus(trace.StatusCode.Error).flatMap(_ => span.addAttributes(errorAttributes(Left(response.code))))
                       else monad.unit(())
                     )
-                case Failure(_) => span.addAttributes(noEndpointsMatchAttributes)
+                case Failure(_) =>
+                  // ignore, request not handled
+                  monad.unit(())
               }
             } yield requestResult)
               .handleError { case e: Exception =>

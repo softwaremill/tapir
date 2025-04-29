@@ -22,10 +22,13 @@ object OpenapiModels {
 
   case class OpenapiDocument(
       openapi: String,
-      // not used so not parsed; servers, contact, license, termsOfService
+      servers: Seq[OpenapiServer],
+      // not used so not parsed; contact, license, termsOfService
       info: OpenapiInfo,
       paths: Seq[OpenapiPath],
-      components: Option[OpenapiComponent]
+      components: Option[OpenapiComponent],
+      security: Seq[Map[String, Seq[String]]],
+      pathsExtensions: Map[String, Json] = Map.empty
   )
 
   case class OpenapiInfo(
@@ -46,7 +49,7 @@ object OpenapiModels {
       parameters: Seq[Resolvable[OpenapiParameter]],
       responses: Seq[OpenapiResponse],
       requestBody: Option[OpenapiRequestBody],
-      security: Map[String, Seq[String]] = Map.empty,
+      security: Option[Seq[Map[String, Seq[String]]]] = None,
       summary: Option[String] = None,
       tags: Option[Seq[String]] = None,
       operationId: Option[String] = None,
@@ -66,6 +69,12 @@ object OpenapiModels {
       val parentDuplicates = filteredParents.groupBy(_.t.name).filter(_._2.size > 1).keys
       if (parentDuplicates.nonEmpty) throw new IllegalArgumentException(s"Duplicate parameters ${parentDuplicates.mkString(", ")}")
       this.copy(parameters = filteredParents ++ resolved)
+    }
+    val tapirCodegenDirectives: Set[String] = {
+      specificationExtensions
+        .collect { case (GenerationDirectives.extensionKey, json) => json.asArray.toSeq.flatMap(_.flatMap(_.asString)) }
+        .flatten
+        .toSet
     }
   }
 
@@ -248,28 +257,29 @@ object OpenapiModels {
     c.as[T].map(Resolved(_)).orElse(c.as[OpenapiSchemaRef].map(r => Ref(r.name)))
   }
 
+  private def extensionsFrom(c: HCursor, keys: Seq[String]): Map[String, Json] =
+    keys
+      .flatMap(key => c.downField(key).as[Option[Json]].toOption.flatten.map(key.stripPrefix("x-") -> _))
+      .toMap
+
   implicit val PartialOpenapiPathMethodDecoder: Decoder[OpenapiPathMethod] = { (c: HCursor) =>
     for {
       parameters <- c.getOrElse[Seq[Resolvable[OpenapiParameter]]]("parameters")(Nil)
       responses <- c.get[Seq[OpenapiResponse]]("responses")
       requestBody <- c.get[Option[OpenapiRequestBody]]("requestBody")
-      security <- c.getOrElse[Seq[Map[String, Seq[String]]]]("security")(Nil)
+      security <- c.get[Option[Seq[Map[String, Seq[String]]]]]("security")
       summary <- c.get[Option[String]]("summary")
       tags <- c.get[Option[Seq[String]]]("tags")
       operationId <- c.get[Option[String]]("operationId")
       specificationExtensionKeys = c.keys.toSeq.flatMap(_.filter(_.startsWith("x-")))
-      specificationExtensions = specificationExtensionKeys
-        .flatMap(key => c.downField(key).as[Option[Json]].toOption.flatten.map(key.stripPrefix("x-") -> _))
-        .toMap
+      specificationExtensions = extensionsFrom(c, specificationExtensionKeys)
     } yield {
       OpenapiPathMethod(
         "--partial--",
         parameters,
         responses,
         requestBody,
-        // This probably isn't the right semantics -- since it's a list of name-array pairs rather than a map, I assume
-        // that the intended semantics are DNF. But we don't do anything with the scopes anyway for now.
-        security.foldLeft(Map.empty[String, Seq[String]])(MapUtils.merge),
+        security,
         summary,
         tags,
         operationId,
@@ -287,27 +297,30 @@ object OpenapiModels {
       methods <- List("get", "put", "post", "delete", "options", "head", "patch", "connect", "trace")
         .traverse(method => c.downField(method).as[Option[OpenapiPathMethod]].map(_.map(_.copy(methodType = method))))
       specificationExtensionKeys = c.keys.toSeq.flatMap(_.filter(_.startsWith("x-")))
-      specificationExtensions = specificationExtensionKeys
-        .flatMap(key => c.downField(key).as[Option[Json]].toOption.flatten.map(key.stripPrefix("x-") -> _))
-        .toMap
+      specificationExtensions = extensionsFrom(c, specificationExtensionKeys)
     } yield OpenapiPath("--partial--", methods.flatten, parameters, specificationExtensions)
   }
 
-  implicit val OpenapiPathsDecoder: Decoder[Seq[OpenapiPath]] = { (c: HCursor) =>
+  implicit val OpenapiPathsDecoder: Decoder[(Seq[OpenapiPath], Map[String, Json])] = { (c: HCursor) =>
+    val specificationExtensionKeys = c.keys.toSeq.flatten.filter(_.startsWith("x-")).toList
     for {
-      paths <- c.as[Map[String, OpenapiPath]]
-    } yield {
-      paths.map { case (url, path) => path.copy(url = url) }.toSeq
-    }
+      paths <- c
+        .withFocusM[Decoder.Result](j => Right(j.mapObject(_.filterKeys(!specificationExtensionKeys.contains(_)))))
+        .flatMap(_.as[Map[String, OpenapiPath]])
+      extensions = extensionsFrom(c, specificationExtensionKeys)
+    } yield paths.map { case (url, path) => path.copy(url = url) }.toSeq -> extensions
   }
 
   implicit val OpenapiDocumentDecoder: Decoder[OpenapiDocument] = { (c: HCursor) =>
     for {
       openapi <- c.downField("openapi").as[String]
+      servers <- c.downField("servers").as[Option[Seq[OpenapiServer]]].map(_.getOrElse(Nil))
       info <- c.downField("info").as[OpenapiInfo]
-      paths <- c.downField("paths").as[Seq[OpenapiPath]]
+      pathsAndPathsExtensions <- c.downField("paths").as[(Seq[OpenapiPath], Map[String, Json])]
+      (paths, extensions) = pathsAndPathsExtensions
       components <- c.downField("components").as[Option[OpenapiComponent]]
-    } yield OpenapiDocument(openapi, info, paths, components)
+      security <- c.getOrElse[Seq[Map[String, Seq[String]]]]("security")(Nil)
+    } yield OpenapiDocument(openapi, servers, info, paths, components, security, extensions)
   }
 
 }

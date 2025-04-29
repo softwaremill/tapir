@@ -26,10 +26,6 @@ import sttp.tapir.server.model.ServerResponse
   *   default, the span name includes the request's method and the route, which is created by rendering the endpoint's path template.
   * @param responseAttributes
   *   Calculates additional attributes of the span, given a response that will be sent back.
-  * @param noEndpointsMatchAttributes
-  *   Calculates additional attributes of the span if no endpoints match the incoming request. By default, this sets the response status to
-  *   404, which mirrors the behavior of most servers. If there are other routes matched by the server after Tapir determines that the
-  *   request matched to any endpoint, this should be set to an empty set of attributes.
   * @param errorAttributes
   *   Calculates additional attributes of the span, given an error that occurred while processing the request (an exception); although
   *   usually, exceptions are translated into 5xx responses earlier in the interceptor chain.
@@ -40,7 +36,6 @@ case class Otel4sTracingConfig[F[_]](
     requestAttributes: ServerRequest => Attributes,
     spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes),
     responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes,
-    noEndpointsMatchAttributes: Attributes,
     errorAttributes: Either[StatusCode, Throwable] => Attributes
 )
 
@@ -51,7 +46,6 @@ object Otel4sTracingConfig {
       requestAttributes: ServerRequest => Attributes = Defaults.requestAttributes,
       spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes) = Defaults.spanNameFromEndpointAndAttributes,
       responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes = Defaults.responseAttributes,
-      noEndpointsMatchAttributes: Attributes = Defaults.noEndpointsMatchAttributes,
       errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes
   ): Otel4sTracingConfig[F] =
     new Otel4sTracingConfig(
@@ -60,7 +54,6 @@ object Otel4sTracingConfig {
       requestAttributes,
       spanNameFromEndpointAndAttributes,
       responseAttributes,
-      noEndpointsMatchAttributes,
       errorAttributes
     )
 
@@ -99,9 +92,6 @@ object Otel4sTracingConfig {
 
     def responseAttributes(request: ServerRequest, response: ServerResponse[_]): Attributes =
       Attributes(Attribute(HttpAttributes.HTTP_RESPONSE_STATUS_CODE.getKey, response.code.code.toLong))
-
-    val noEndpointsMatchAttributes: Attributes =
-      Attributes(Attribute(HttpAttributes.HTTP_RESPONSE_STATUS_CODE.getKey, StatusCode.NotFound.code.toLong))
 
     def errorAttributes(e: Either[StatusCode, Throwable]): Attributes = Attributes(e match {
       case Left(statusCode) =>

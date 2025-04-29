@@ -7,7 +7,7 @@ import internal.ox.OxDispatcher
 import ox.*
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.NettyConfig
+import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -38,7 +38,7 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettySyncServerOptions.default
-    val bind = IO.blocking(NettySyncServer(options, customizedConfig).start(routes.toList))
+    val bind = IO.blocking(NettySyncServer(options, customizedConfig).start(Route.combine(routes.toList)))
 
     Resource.make(bind)(server => IO.blocking(server.stop())).map(_.port)
   }
@@ -51,7 +51,7 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettySyncServerOptions.default
-    useInScope(NettySyncServer(options, customizedConfig).start(routes.toList))(_.stop())
+    useInScope(NettySyncServer(options, customizedConfig).start(Route.combine(routes.toList)))(_.stop())
 
   def scopedServerWithInterceptorsStop(
       endpoint: ServerEndpoint[OxStreams with WebSockets, Identity],
@@ -62,7 +62,8 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = interceptors(NettySyncServerOptions.customiseInterceptors).options
-    useInScope(NettySyncServer(customizedConfig).addEndpoint(endpoint, options).start())(_.stop())
+    val route = NettySyncServerInterpreter(options).toRoute(List(endpoint), OxDispatcher.create)
+    useInScope(NettySyncServer(customizedConfig).addRoute(route).start())(_.stop())
 
   def scopedServerWithStop(
       endpoints: NonEmptyList[ServerEndpoint[OxStreams with WebSockets, Identity]],

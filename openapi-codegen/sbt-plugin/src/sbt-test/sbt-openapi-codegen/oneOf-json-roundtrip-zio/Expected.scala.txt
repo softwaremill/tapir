@@ -165,4 +165,9 @@ object TapirGeneratedEndpoints {
 
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
+   object Servers {
+    import sttp.model.Uri.UriContext
+
+     val `/v3`: sttp.model.Uri = uri"/v3"
+   }
 }

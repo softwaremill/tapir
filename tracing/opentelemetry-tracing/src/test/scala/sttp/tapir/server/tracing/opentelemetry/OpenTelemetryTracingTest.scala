@@ -72,21 +72,6 @@ class OpenTelemetrySyncTracingTest extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "report a 404 span when the endpoint is not found" in {
-    testEndpointWithSpan(
-      endpoint
-        .in("person")
-        .out(stringBody)
-        .errorOut(stringBody)
-        .handle(_ => Right("hello")),
-      serverRequestFromUri(uri"http://example.com/other")
-    ) { span =>
-      span.getName() shouldBe "GET"
-      span.getAttributes().get(HttpAttributes.HTTP_RESPONSE_STATUS_CODE) shouldBe 404L
-      span.getAttributes().get(UrlAttributes.URL_PATH) shouldBe "/other"
-    }
-  }
-
   it should "use the rendered path template as the span name" in {
     testEndpointWithSpan(
       endpoint

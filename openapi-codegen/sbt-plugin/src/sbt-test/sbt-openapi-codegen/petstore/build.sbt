@@ -13,8 +13,8 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
-  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.7",
-  "io.circe" %% "circe-generic" % "0.14.12",
+  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
+  "io.circe" %% "circe-generic" % "0.14.13",
   "com.beachape" %% "enumeratum" % "1.7.5",
   "com.beachape" %% "enumeratum-circe" % "1.7.5",
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
@@ -22,14 +22,16 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
 )
- 
+
 import scala.io.Source
 import scala.util.Using
 
 TaskKey[Unit]("check") := {
   def check(generatedFileName: String, expectedFileName: String) = {
     val generatedCode =
-      Using(Source.fromFile(s"target/scala-2.13/src_managed/main/sbt-openapi-codegen/$generatedFileName"))(_.getLines.filterNot(_.isBlank).mkString("\n")).get
+      Using(Source.fromFile(s"target/scala-2.13/src_managed/main/sbt-openapi-codegen/$generatedFileName"))(
+        _.getLines.filterNot(_.isBlank).mkString("\n")
+      ).get
     val expectedCode = Using(Source.fromFile(expectedFileName))(_.getLines.mkString("\n")).get
     val generatedTrimmed =
       generatedCode.linesIterator.zipWithIndex.filterNot(_._1.isBlank).map { case (a, i) => a.trim -> i }.toSeq

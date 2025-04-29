@@ -82,11 +82,8 @@ object BasicGenerator {
     val EndpointDefs(
       endpointsByTag,
       queryOrPathParamRefs,
-      jsonParamRefs,
       enumsDefinedOnEndpointParams,
-      inlineDefns,
-      xmlParamRefs,
-      securityWrappers
+      EndpointDetails(jsonParamRefs, inlineDefns, xmlParamRefs, securityWrappers)
     ) =
       endpointGenerator.endpointDefs(
         doc,
@@ -251,20 +248,7 @@ object BasicGenerator {
       |}
       |""".stripMargin
 
-    val securityTypes = {
-      val allTpes = securityWrappers.flatMap(_.schemas).toSeq.sorted
-      val tpesWithParents = allTpes.map { t =>
-        t -> securityWrappers.filter(_.schemas.contains(t)).map(_.traitName).toSeq.sorted.mkString(" with ")
-      }
-      val traits = securityWrappers.map(_.traitName).toSeq.sorted.map(tn => s"sealed trait $tn").mkString("\n")
-      val classes = tpesWithParents
-        .map {
-          case ("Basic", ps) => s"case class BasicSecurityIn(value: UsernamePassword) extends $ps"
-          case (n, ps)       => s"case class ${n.capitalize}SecurityIn(value: String) extends $ps"
-        }
-        .mkString("\n")
-      traits + "\n" + classes
-    }
+    val securityTypes = SecurityGenerator.genSecurityTypes(securityWrappers)
     val mainObj = s"""
         |package $packagePath
         |
@@ -288,7 +272,7 @@ object BasicGenerator {
         |${indent(2)(maybeSpecificationExtensionKeys)}
         |
         |${indent(2)(endpointsInMain)}
-        |
+        |${indent(2)(ServersGenerator.genServerDefinitions(doc.servers, targetScala3).getOrElse(""))}
         |}
         |""".stripMargin
     taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ xmlSerdeObj.map(s"${objName}XmlSerdes" -> _) ++

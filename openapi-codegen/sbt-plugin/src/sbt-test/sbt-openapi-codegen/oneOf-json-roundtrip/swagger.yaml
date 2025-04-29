@@ -1,12 +1,58 @@
 openapi: 3.0.3
 servers:
-  - url: /v3
+  - url: 'https://{environment}.my-co.org:{port}/api/{customer}/prefix'
+    description: |
+      These are the main endpoints.
+      The environments are self-documenting!
+    variables:
+      environment:
+        enum:
+          - dev
+          - staging
+          - prod
+        default: prod
+      port:
+        default: 1234
+      customer:
+        default: big-dogs
+  - url: 'http://testing.my-co.org:{port}/api/{scoped}/prefix'
+    description: |
+      Legacy endpoint that doesn't require TLS
+      Doesn't work, retained for completely mysterious reasons lost to the winds of time
+    variables:
+      port:
+        default: 4321
+      scoped:
+        default: false
+  - description: Locally
+    url: /
 info:
   description: File for testing json roundtripping of oneOf defns in scala 2.x with circe
   version: 1.0.20-SNAPSHOT
   title: OneOf Json test for scala 2
 tags: [ ]
+security: # Default security on all endpoints without explicit declarations
+  - petstore_auth:
+      - write:pets
+      - read:pets
 paths:
+  x-tapir-codegen-security-path-prefixes:
+    - /security-group/{securityGroupName}
+    - /oneof/error/{secParam}
+  '/security-group/{securityGroupName}':
+    parameters:
+      - $ref: '#/components/parameters/securityGroupName'
+    get:
+      responses:
+        204:
+          description: OK
+  '/security-group/{securityGroupName}/more-path':
+    parameters:
+      - $ref: '#/components/parameters/securityGroupName'
+    get:
+      responses:
+        204:
+          description: OK
   '/binary/test':
     get:
       security:
@@ -46,6 +92,13 @@ paths:
             - read:pets
   '/optional/test':
     post:
+      security:
+        # Requires _both_
+        - petstore_auth:
+            - write:pets
+            - read:pets
+          api_key: [ ]
+        - { }
       responses:
         '200':
           description: an optional response body
@@ -61,6 +114,15 @@ paths:
             schema:
               $ref: '#/components/schemas/NullableThingy2'
     put:
+      security:
+        # Requires two or one
+        - petstore_auth: [ ]
+        - api_key: [ ]
+        - BearerAuth: [ ]
+        - petstore_auth:
+            - write:pets
+            - read:pets
+          api_key: [ ]
       responses:
         '200':
           $ref: '#/components/responses/optionalityTest'
@@ -85,6 +147,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ADTWithDiscriminatorNoMapping'
     put:
+      security: # overriding default security on this endpoint to permit anonymous access via list containing empty map
+        - { }
       responses:
         '200':
           description: successful operation
@@ -101,6 +165,7 @@ paths:
               $ref: '#/components/schemas/ADTWithoutDiscriminator'
   '/inline/enum/test':
     post:
+      security: [ ] # overriding default security on this endpoint to permit anonymous access via empty list
       parameters:
         - name: query-enum
           in: query
@@ -161,8 +226,23 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ObjectWithInlineEnum'
-  '/oneof/error/test':
+  '/oneof/error/{secParam}/test':
+    parameters:
+      - name: secParam
+        in: path
+        required: true
+        schema:
+          type: string
     get:
+      security: # Requires two or one or none
+        - { }
+        - petstore_auth: [ ]
+        - api_key: [ ]
+        - BearerAuth: [ ]
+        - petstore_auth:
+            - write:pets
+            - read:pets
+          api_key: [ ]
       responses:
         "204":
           description: "No response"
@@ -178,7 +258,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SimpleError'
-
+  '/json/stringJsonBody':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+      security:
+        - { }
+        - petstore_auth:
+            - write:pets
+            - read:pets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+          application/zip:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+      responses:
+        "200":
+          description: "Possibly-invalid json"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+        "204":
+          description: "No response"
+  '/json/stringJsonBody/simple':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+      responses:
+        "200":
+          description: "Possibly-invalid json"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
   '/oneof/option/test':
     get:
       responses:
@@ -205,6 +328,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ObjectWithInlineEnum2'
+
+  '/headers/tests':
+    get:
+      responses:
+        "302":
+          description: response
+          headers:
+            foo:
+              description: a description
+              schema:
+                type: string
 
   '/inline/simple/object':
     post:
@@ -320,6 +454,13 @@ components:
     common-response-header:
       in: header
       name: x-common
+      schema:
+        type: string
+    securityGroupName:
+      name: securityGroupName
+      in: path
+      description: used by security logic
+      required: true
       schema:
         type: string
   responses:

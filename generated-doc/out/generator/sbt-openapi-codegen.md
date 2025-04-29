@@ -9,7 +9,7 @@ This is a really early alpha implementation.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.23")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.25")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -58,6 +58,43 @@ import sttp.tapir.generated.*
 import sttp.tapir.docs.openapi.*
 
 val docs = TapirGeneratedEndpoints.generatedEndpoints.toOpenAPI("My Bookshop", "1.0")
+```
+
+### Support specification extensions
+
+Generator behaviour can be further configured by specifications on the input openapi spec. Example:
+
+```yaml
+paths:
+  x-tapir-codegen-security-path-prefixes:
+    - '/security-group/{securityGroupName}' # any path prefixes matching this pattern will be considered 'securityIn' 
+  '/my-endpoint':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ] # This will customise what the codegen generates for this endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MyModel'
+      responses:
+        "204":
+          description: "No response"
+```
+
+Supported specifications are:
+
+- x-tapir-codegen-security-path-prefixes: supported on the paths object. This is an array of strings representing path
+  prefixes. The longest matching prefix of each path will be treated as a security input, rather than as a standard 'in'
+  value.
+- x-tapir-codegen-directives: supported on openapi operations. This is an array of string flags. Supported values are:
+
+```{eval-rst}
+==================== ===================================================================================================================================
+name                 description
+==================== ===================================================================================================================================
+json-body-as-string  If present on an operation, all application/json requests and responses will be interpreted mapped to a string with stringJsonBody
+==================== ===================================================================================================================================
 ```
 
 ### Output files

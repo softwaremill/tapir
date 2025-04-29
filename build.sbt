@@ -532,7 +532,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.18.3",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.19.0",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.179",
@@ -1191,7 +1191,7 @@ lazy val swaggerUi: ProjectMatrix = (projectMatrix in file("docs/swagger-ui"))
   .settings(commonSettings)
   .settings(
     name := "tapir-swagger-ui",
-    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi)
+    libraryDependencies ++= Seq("org.webjars" % "swagger-ui" % Versions.swaggerUi, scalaTest.value % Test)
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(core, files)

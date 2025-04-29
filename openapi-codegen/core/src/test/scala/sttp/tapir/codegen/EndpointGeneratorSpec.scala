@@ -34,6 +34,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "generate the endpoint defs" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -61,7 +62,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           )
         )
       ),
-      null
+      null,
+      Nil
     )
     val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
@@ -84,6 +86,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "generete endpoints defs with security" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -94,7 +97,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("httpBearer" -> Seq()),
+              security = Some(Seq(Map("httpBearer" -> Seq()))),
               summary = None,
               tags = None
             ),
@@ -103,7 +106,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("httpBasic" -> Seq()),
+              security = Some(Seq(Map("httpBasic" -> Seq()))),
               summary = None,
               tags = None
             ),
@@ -112,7 +115,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("httpBearer" -> Seq()),
+              security = Some(Seq(Map("httpBearer" -> Seq()))),
               summary = None,
               tags = None
             ),
@@ -121,7 +124,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("apiKeyCookie" -> Seq()),
+              security = Some(Seq(Map("apiKeyCookie" -> Seq()))),
               summary = None,
               tags = None
             ),
@@ -130,7 +133,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
               parameters = Seq(),
               responses = Seq(),
               requestBody = None,
-              security = Map("apiKeyQuery" -> Seq()),
+              security = Some(Seq(Map("apiKeyQuery" -> Seq()))),
               summary = None,
               tags = None
             )
@@ -148,7 +151,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
             "apiKeyQuery" -> OpenapiSecuritySchemeApiKeyType("query", "api-key")
           )
         )
-      )
+      ),
+      Nil
     )
     BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
@@ -167,6 +171,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "handle status codes" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -202,7 +207,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           )
         )
       ),
-      null
+      null,
+      Nil
     )
     val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
@@ -232,6 +238,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
   it should "support multipart body" in {
     val doc = OpenapiDocument(
       "",
+      Nil,
       null,
       Seq(
         OpenapiPath(
@@ -269,7 +276,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
             )
           )
         )
-      )
+      ),
+      Nil
     )
     val generatedCode = BasicGenerator.generateObjects(
       doc,
