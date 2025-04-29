@@ -9,7 +9,7 @@ This is a really early alpha implementation.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.24")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.25")
 ```
 
 Enable the plugin for your project in the `build.sbt`:

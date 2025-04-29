@@ -9,7 +9,7 @@ lazy val root = (project in file("."))
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "1.11.16",
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.11.16",
-  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.8",
+  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
 )
