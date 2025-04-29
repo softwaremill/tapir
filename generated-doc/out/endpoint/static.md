@@ -35,7 +35,7 @@ NettySyncServer()
 Using the above endpoint, a request to `/site/static/css/styles.css` will try to read the
 `/home/static/data/css/styles.css` file.
 
-To expose files without a prefix, use `emptyInput`. For example, below exposes the content of `/var/www` at 
+To expose files without a prefix, use `emptyInput`. For example, below exposes the content of `/var/www` at
 `http://localhost:8080`:
 
 ```scala
