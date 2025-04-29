@@ -16,7 +16,8 @@ object GenerateListOfExamples {
     log.info(s"[GenerateListOfExamples] Base path: $rootBasePath")
 
     // from each of those examples, we need to extract the metadata
-    val examples = FileUtils.listScalaFiles(rootBasePath.toPath.resolve("examples/src/main").toFile)
+    val examples = FileUtils.listScalaFiles(rootBasePath.toPath.resolve("examples/src/main").toFile) ++
+      FileUtils.listScalaFiles(rootBasePath.toPath.resolve("integrations/iron/examples/src/main").toFile)
 
     val parsedExamples: Seq[Option[Example]] = for (example <- examples) yield {
       val first = firstLine(example)
