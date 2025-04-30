@@ -1,7 +1,7 @@
 // {cat=Custom types; effects=Direct; server=Netty; JSON=circe; docs=Swagger UI}: Mapping a sealed trait hierarchy to JSON using a discriminator
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.25
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.25
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.26
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.25
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.25
 
