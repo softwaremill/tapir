@@ -2,7 +2,7 @@ package sttp.tapir.server.tracing.otel4s
 
 import org.typelevel.otel4s.context.propagation.TextMapGetter
 import org.typelevel.otel4s.trace
-import org.typelevel.otel4s.trace.{Span, Tracer}
+import org.typelevel.otel4s.trace.{Span, SpanKind, Tracer}
 import sttp.monad.MonadError
 import sttp.monad.syntax.MonadErrorOps
 import sttp.tapir.AnyEndpoint
@@ -53,7 +53,10 @@ class Otel4sTracing[F[_]](config: Otel4sTracingConfig[F]) extends RequestInterce
     ): F[RequestResult[B]] = {
       tracer.joinOrRoot(request)(
         tracer
-          .span(spanName(request), requestAttributes(request))
+          .spanBuilder(spanName(request))
+          .addAttributes(requestAttributes(request))
+          .withSpanKind(SpanKind.Server)
+          .build
           .use(span =>
             (for {
               requestResult <- requestHandler(knownEndpointInterceptor(request, span))(request, endpoints)

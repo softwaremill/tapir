@@ -9,6 +9,7 @@ import io.opentelemetry.semconv.{HttpAttributes, ServerAttributes, UrlAttributes
 import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.typelevel.otel4s.trace.SpanKind
 import org.typelevel.otel4s.oteljava.testkit.OtelJavaTestkit
 import sttp.capabilities.Streams
 import sttp.model._
@@ -65,6 +66,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         .serverLogic[IO](_ => IO(Right("hello"))),
       serverRequestFromUri(uri"http://example.com/person?name=Adam")
     ) { span =>
+      span.getKind shouldBe SpanKind.Server
       span.getName shouldBe "GET /person"
       span.getAttributes.get(HttpAttributes.HTTP_RESPONSE_STATUS_CODE) shouldBe 200L
       span.getAttributes.get(UrlAttributes.URL_PATH) shouldBe "/person"
@@ -80,6 +82,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         .serverLogic[IO](_ => IO(Right("hello"))),
       serverRequestFromUri(uri"http://example.com/person/Adam/Smith/info")
     ) { span =>
+      span.getKind shouldBe SpanKind.Server
       span.getName shouldBe "GET /person/{name}/{surname}/info"
       span.getAttributes.get(HttpAttributes.HTTP_RESPONSE_STATUS_CODE) shouldBe 200L
       span.getAttributes.get(UrlAttributes.URL_PATH) shouldBe "/person/Adam/Smith/info"
@@ -99,6 +102,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         _headers = List(Header(HeaderNames.Forwarded, Forwarded(None, None, Some("softwaremill.com"), None).toString))
       )
     ) { span =>
+      span.getKind shouldBe SpanKind.Server
       span.getAttributes.get(ServerAttributes.SERVER_ADDRESS) shouldBe "softwaremill.com"
     }.unsafeToFuture()
   }
@@ -115,6 +119,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         _headers = List(Header("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"))
       )
     ) { span =>
+      span.getKind shouldBe SpanKind.Server
       span.getTraceId shouldBe "4bf92f3577b34da6a3ce929d0e0e4736"
     }.unsafeToFuture()
   }
