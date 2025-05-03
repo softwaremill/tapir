@@ -49,8 +49,11 @@ object TapirGeneratedEndpointsJsonSerdes {
   implicit lazy val objectWithInlineEnumJsonEncoder: io.circe.Encoder[ObjectWithInlineEnum] = io.circe.generic.semiauto.deriveEncoder[ObjectWithInlineEnum]
   implicit lazy val subtypeWithoutD2JsonDecoder: io.circe.Decoder[SubtypeWithoutD2] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithoutD2]
   implicit lazy val subtypeWithoutD2JsonEncoder: io.circe.Encoder[SubtypeWithoutD2] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithoutD2]
+  implicit lazy val hasFooBarBazQuuxJsonDecoder: io.circe.Decoder[HasFooBarBazQuux] = io.circe.generic.semiauto.deriveDecoder[HasFooBarBazQuux]
+  implicit lazy val hasFooBarBazQuuxJsonEncoder: io.circe.Encoder[HasFooBarBazQuux] = io.circe.generic.semiauto.deriveEncoder[HasFooBarBazQuux]
   implicit lazy val subtypeWithD2JsonDecoder: io.circe.Decoder[SubtypeWithD2] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithD2]
   implicit lazy val subtypeWithD2JsonEncoder: io.circe.Encoder[SubtypeWithD2] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithD2]
+
   implicit lazy val aDTWithoutDiscriminatorJsonEncoder: io.circe.Encoder[ADTWithoutDiscriminator] = io.circe.Encoder.instance {
     case x: SubtypeWithoutD1 => io.circe.Encoder[SubtypeWithoutD1].apply(x)
     case x: SubtypeWithoutD2 => io.circe.Encoder[SubtypeWithoutD2].apply(x)

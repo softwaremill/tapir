@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.BasicGenerator.indent
+import sttp.tapir.codegen.RootGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -167,7 +167,7 @@ object JsonSerdeGenerator {
       case Nil => ""
       case s   => s.mkString("", "\n", "\n")
     }
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.generic.semiauto.deriveDecoder[$name]
        |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.generic.semiauto.deriveEncoder[$name]""".stripMargin
   }
@@ -185,7 +185,7 @@ object JsonSerdeGenerator {
       name: String,
       validateNonDiscriminatedOneOfs: Boolean
   ): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
 
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
@@ -332,7 +332,7 @@ object JsonSerdeGenerator {
   }
 
   private def genJsoniterClassSerde(supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     if (supertypes.exists(_.discriminator.isDefined))
       throw new NotImplementedError(
         s"A class cannot be used both in a oneOf with discriminator and at the top level when using jsoniter serdes at $name"
@@ -342,13 +342,13 @@ object JsonSerdeGenerator {
   }
 
   private def genJsoniterEnumSerde(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""
        |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[${name}] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniteEnumConfig.withDiscriminatorFieldName(scala.None))""".stripMargin
   }
 
   private def genJsoniterNamedSerde(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""
        |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniterBaseConfig)""".stripMargin
   }
@@ -359,7 +359,7 @@ object JsonSerdeGenerator {
       schema: OpenapiSchemaOneOf,
       validateNonDiscriminatedOneOfs: Boolean
   ): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
         def subtypeNames = schema.types.map {
@@ -395,7 +395,7 @@ object JsonSerdeGenerator {
         if (validateNonDiscriminatedOneOfs) checkForSoundness(allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
         val childNameAndSerde = schemas.collect { case ref: OpenapiSchemaRef =>
           val name = ref.stripped
-          name -> s"${BasicGenerator.uncapitalise(name)}JsonCodec"
+          name -> s"${RootGenerator.uncapitalise(name)}JsonCodec"
         }
         val childSerdes = childNameAndSerde.map(_._2)
         val doDecode = childSerdes.mkString("List(\n  ", ",\n  ", ")\n") +
@@ -469,7 +469,7 @@ object JsonSerdeGenerator {
       case Nil => ""
       case s   => s.mkString("", "\n", "\n")
     }
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: zio.json.JsonDecoder[$name] = zio.json.DeriveJsonDecoder.gen[$name]
        |implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = zio.json.DeriveJsonEncoder.gen[$name]""".stripMargin
   }
@@ -483,7 +483,7 @@ object JsonSerdeGenerator {
   }
 
   private def genZioEnumSerde(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""
        |implicit lazy val ${uncapitalisedName}JsonCodec: zio.json.JsonCodec[$name] = zio.json.JsonCodec[$name](
        |  zio.json.JsonEncoder[String].contramap[$name](_.entryName),
@@ -497,7 +497,7 @@ object JsonSerdeGenerator {
       name: String,
       validateNonDiscriminatedOneOfs: Boolean
   ): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
 
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>

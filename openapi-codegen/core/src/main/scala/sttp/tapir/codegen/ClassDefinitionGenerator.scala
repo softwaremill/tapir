@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
+import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
@@ -214,7 +214,7 @@ class ClassDefinitionGenerator {
       valueSchema: OpenapiSchemaType
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
-      case simpleType: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(simpleType)._1
+      case simpleType: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(simpleType)._1
       case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named maps (found $otherType)")
     }
     Seq(s"""type $name = Map[String, $valueSchemaName]""")
@@ -225,7 +225,7 @@ class ClassDefinitionGenerator {
       valueSchema: OpenapiSchemaType
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
-      case simpleType: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(simpleType)._1
+      case simpleType: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(simpleType)._1
       case otherType =>
         throw new NotImplementedError(s"Only simple value types and refs are implemented for named arrays (found $otherType)")
     }

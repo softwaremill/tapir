@@ -2,9 +2,16 @@ package sttp.tapir.codegen.openapi.models
 
 import cats.implicits.toTraverseOps
 import cats.syntax.either._
-import OpenapiSchemaType.{OpenapiSchemaRef, OpenapiSchemaRefDecoder, OpenapiSchemaSimpleType}
+import OpenapiSchemaType.{
+  OpenapiSchemaAllOf,
+  OpenapiSchemaField,
+  OpenapiSchemaObject,
+  OpenapiSchemaRef,
+  OpenapiSchemaRefDecoder,
+  OpenapiSchemaSimpleType
+}
 import io.circe.Json
-import sttp.tapir.codegen.BasicGenerator.strippedToCamelCase
+import sttp.tapir.codegen.RootGenerator.strippedToCamelCase
 import sttp.tapir.codegen.util.MapUtils
 // https://swagger.io/specification/
 object OpenapiModels {
@@ -29,7 +36,54 @@ object OpenapiModels {
       components: Option[OpenapiComponent],
       security: Seq[Map[String, Seq[String]]],
       pathsExtensions: Map[String, Json] = Map.empty
-  )
+  ) {
+    def resolveAllOfSchemas: OpenapiDocument = {
+      val resolvedComponents = components.map { cs =>
+        val schemas = cs.schemas
+        val resolvedSchemas = schemas.map {
+          case (n, a @ OpenapiSchemaAllOf(s)) =>
+            if (s.size == 1) n -> s.head
+            else if (s.exists(!_.isInstanceOf[OpenapiSchemaRef]))
+              throw new NotImplementedError(
+                s"Only refs are currently supported in allOf schemas.For $n found ${s.map(_.getClass.getSimpleName)}"
+              )
+            else {
+              val resolved = s.map { case ref: OpenapiSchemaRef =>
+                schemas(ref.stripped) match {
+                  case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
+                  case other =>
+                    throw new NotImplementedError(
+                      s"Only object type refs are supported for allOf schemas. For $n found ${other.getClass.getName} under ${ref.stripped}"
+                    )
+                }
+              }
+              val merged = resolved.foldLeft((Set.empty[String], Map.empty[String, OpenapiSchemaField])) {
+                case ((_, accProp), next) if accProp.isEmpty => next
+                case ((accReq, accProp), (nextReq, nextProp)) =>
+                  val dupDecls = accProp.keySet.intersect(nextProp.keySet)
+                  dupDecls.foreach { fieldName =>
+                    val lhs = accProp(fieldName)
+                    val rhs = nextProp(fieldName)
+                    if (lhs.default.zip(rhs.default).exists { case (a, b) => a != b })
+                      throw new IllegalStateException(s"Defaults for allOf do not match (${lhs.default.get} != ${rhs.default.get})")
+                    (lhs.`type`, rhs.`type`) match {
+                      case (l, r) if l != r =>
+                        throw new IllegalStateException(
+                          s"Non-matching conflicting fields found on allOf declaration. For $n.$fieldName found both $l and $r"
+                        )
+                    }
+                  }
+                  (accReq ++ nextReq, accProp ++ nextProp)
+              }
+              n -> OpenapiSchemaObject(merged._2, merged._1.toSeq.sorted, nullable = s.forall(_.nullable))
+            }
+          case x => x
+        }
+        cs.copy(schemas = resolvedSchemas)
+      }
+      this.copy(components = resolvedComponents)
+    }
+  }
 
   case class OpenapiInfo(
       // not used so not parsed; description
