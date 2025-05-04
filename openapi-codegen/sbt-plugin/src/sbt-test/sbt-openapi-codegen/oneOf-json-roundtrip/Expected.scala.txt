@@ -181,9 +181,6 @@ object TapirGeneratedEndpoints {
   case class NullableThingy (
     uuid: java.util.UUID
   )
-  case class HasQuux (
-    quux: Option[Int] = None
-  )
 
   sealed trait PostJsonStringJsonBodyBodyIn extends Product with java.io.Serializable
   case class PostJsonStringJsonBodyBodyOption_String_In(value: Option[String]) extends PostJsonStringJsonBodyBodyIn

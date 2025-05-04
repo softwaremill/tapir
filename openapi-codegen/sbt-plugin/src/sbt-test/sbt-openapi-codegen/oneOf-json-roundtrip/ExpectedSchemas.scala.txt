@@ -8,7 +8,6 @@ object TapirGeneratedEndpointsSchemas {
   implicit lazy val hasBazTapirSchema: sttp.tapir.Schema[HasBaz] = sttp.tapir.Schema.derived
   implicit lazy val hasFooTapirSchema: sttp.tapir.Schema[HasFoo] = sttp.tapir.Schema.derived
   implicit lazy val hasFooBarBazQuuxTapirSchema: sttp.tapir.Schema[HasFooBarBazQuux] = sttp.tapir.Schema.derived
-  implicit lazy val hasQuuxTapirSchema: sttp.tapir.Schema[HasQuux] = sttp.tapir.Schema.derived
 
   implicit lazy val notFoundErrorTapirSchema: sttp.tapir.Schema[NotFoundError] = sttp.tapir.Schema.derived
   implicit lazy val notNullableThingyTapirSchema: sttp.tapir.Schema[NotNullableThingy] = sttp.tapir.Schema.derived

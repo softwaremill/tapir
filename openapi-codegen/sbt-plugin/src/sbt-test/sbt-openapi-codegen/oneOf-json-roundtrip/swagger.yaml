@@ -722,16 +722,14 @@ components:
       properties:
         baz:
           type: integer
-    HasQuux:
-      title: HasQuux
-      type: object
-      properties:
-        quux:
-          type: integer
     HasFooBarBazQuux:
       title: HasFooBarBazQuux
       allOf:
         - $ref: '#/components/schemas/HasFoo'
         - $ref: '#/components/schemas/HasBar'
         - $ref: '#/components/schemas/HasBaz'
-        - $ref: '#/components/schemas/HasQuux'
+        - title: HasQuux
+          type: object
+          properties:
+            quux:
+              type: integer

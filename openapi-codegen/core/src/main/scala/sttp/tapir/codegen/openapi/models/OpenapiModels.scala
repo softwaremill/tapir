@@ -41,21 +41,23 @@ object OpenapiModels {
       val resolvedComponents = components.map { cs =>
         val schemas = cs.schemas
         val resolvedSchemas = schemas.map {
-          case (n, a @ OpenapiSchemaAllOf(s)) =>
+          case (n, OpenapiSchemaAllOf(s)) =>
             if (s.size == 1) n -> s.head
-            else if (s.exists(!_.isInstanceOf[OpenapiSchemaRef]))
-              throw new NotImplementedError(
-                s"Only refs are currently supported in allOf schemas.For $n found ${s.map(_.getClass.getSimpleName)}"
-              )
             else {
-              val resolved = s.map { case ref: OpenapiSchemaRef =>
-                schemas(ref.stripped) match {
-                  case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
-                  case other =>
-                    throw new NotImplementedError(
-                      s"Only object type refs are supported for allOf schemas. For $n found ${other.getClass.getName} under ${ref.stripped}"
-                    )
-                }
+              val resolved = s.map {
+                case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
+                case ref: OpenapiSchemaRef =>
+                  schemas(ref.stripped) match {
+                    case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
+                    case other =>
+                      throw new NotImplementedError(
+                        s"Only object type refs are supported for allOf schemas. For $n found ${other.getClass.getName} under ${ref.stripped}"
+                      )
+                  }
+                case _ =>
+                  throw new NotImplementedError(
+                    s"Only objects and object refs are currently supported in allOf schemas.For $n found ${s.map(_.getClass.getSimpleName)}"
+                  )
               }
               val merged = resolved.foldLeft((Set.empty[String], Map.empty[String, OpenapiSchemaField])) {
                 case ((_, accProp), next) if accProp.isEmpty => next
