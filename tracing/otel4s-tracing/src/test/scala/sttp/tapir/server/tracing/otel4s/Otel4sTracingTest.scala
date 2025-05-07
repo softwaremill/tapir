@@ -3,27 +3,27 @@ package sttp.tapir.server.tracing.otel4s
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator
+import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
 import io.opentelemetry.sdk.trace.data.SpanData
 import io.opentelemetry.semconv.{HttpAttributes, ServerAttributes, UrlAttributes}
 import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.typelevel.otel4s.trace.SpanKind
 import org.typelevel.otel4s.oteljava.testkit.OtelJavaTestkit
 import sttp.capabilities.Streams
-import sttp.model._
-import sttp.model.Uri._
+import sttp.model.*
+import sttp.model.Uri.*
 import sttp.model.headers.Forwarded
 import sttp.monad.MonadError
-import sttp.tapir._
+import sttp.tapir.*
 import sttp.tapir.TestUtil.serverRequestFromUri
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.TestUtil.StringToResponseBody
-import sttp.tapir.server.interpreter._
+import sttp.tapir.server.interpreter.*
 
 import scala.util.{Success, Try}
 
@@ -66,7 +66,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         .serverLogic[IO](_ => IO(Right("hello"))),
       serverRequestFromUri(uri"http://example.com/person?name=Adam")
     ) { span =>
-      span.getKind shouldBe SpanKind.Server
+      span.getKind shouldBe SpanKind.SERVER
       span.getName shouldBe "GET /person"
       span.getAttributes.get(HttpAttributes.HTTP_RESPONSE_STATUS_CODE) shouldBe 200L
       span.getAttributes.get(UrlAttributes.URL_PATH) shouldBe "/person"
@@ -82,7 +82,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         .serverLogic[IO](_ => IO(Right("hello"))),
       serverRequestFromUri(uri"http://example.com/person/Adam/Smith/info")
     ) { span =>
-      span.getKind shouldBe SpanKind.Server
+      span.getKind shouldBe SpanKind.SERVER
       span.getName shouldBe "GET /person/{name}/{surname}/info"
       span.getAttributes.get(HttpAttributes.HTTP_RESPONSE_STATUS_CODE) shouldBe 200L
       span.getAttributes.get(UrlAttributes.URL_PATH) shouldBe "/person/Adam/Smith/info"
@@ -102,7 +102,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         _headers = List(Header(HeaderNames.Forwarded, Forwarded(None, None, Some("softwaremill.com"), None).toString))
       )
     ) { span =>
-      span.getKind shouldBe SpanKind.Server
+      span.getKind shouldBe SpanKind.SERVER
       span.getAttributes.get(ServerAttributes.SERVER_ADDRESS) shouldBe "softwaremill.com"
     }.unsafeToFuture()
   }
@@ -119,7 +119,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         _headers = List(Header("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"))
       )
     ) { span =>
-      span.getKind shouldBe SpanKind.Server
+      span.getKind shouldBe SpanKind.SERVER
       span.getTraceId shouldBe "4bf92f3577b34da6a3ce929d0e0e4736"
     }.unsafeToFuture()
   }
