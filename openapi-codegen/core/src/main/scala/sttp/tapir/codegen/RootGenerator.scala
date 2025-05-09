@@ -117,13 +117,14 @@ object RootGenerator {
     val hasJsonSerdes = jsonSerdes.nonEmpty
     val hasXmlSerdes = xmlSerdes.nonEmpty
 
+    val maybeValidatorImport = if (validators.defns.nonEmpty) s"\nimport $packagePath.${objName}Validators._" else ""
     val maybeJsonImport = if (hasJsonSerdes) s"\nimport $packagePath.${objName}JsonSerdes._" else ""
     val maybeXmlImport = if (hasXmlSerdes) s"\nimport $packagePath.${objName}XmlSerdes._" else ""
     val maybeSchemaImport =
       if (schemas.size > 1) (1 to schemas.size).map(i => s"import ${objName}Schemas$i._").mkString("\n", "\n", "")
       else if (schemas.size == 1) s"\nimport ${objName}Schemas._"
       else ""
-    val internalImports = s"import $packagePath.$objName._$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
+    val internalImports = s"import $packagePath.$objName._$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
 
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
@@ -230,7 +231,7 @@ object RootGenerator {
         case ct => throw new NotImplementedError(s"Cannot handle content type '$ct'")
       }
       .mkString("\n")
-    val extraImports = if (endpointsInMain.nonEmpty) s"$maybeJsonImport$maybeXmlImport$maybeSchemaImport" else ""
+    val extraImports = if (endpointsInMain.nonEmpty) s"$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport" else ""
     val queryParamSupport =
       """
       |case class CommaSeparatedValues[T](values: List[T])

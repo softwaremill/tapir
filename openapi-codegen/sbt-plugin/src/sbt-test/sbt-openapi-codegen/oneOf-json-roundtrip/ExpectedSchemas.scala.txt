@@ -22,6 +22,7 @@ object TapirGeneratedEndpointsSchemas {
   implicit lazy val subtypeWithD2TapirSchema: sttp.tapir.Schema[SubtypeWithD2] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD1TapirSchema: sttp.tapir.Schema[SubtypeWithoutD1] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD2TapirSchema: sttp.tapir.Schema[SubtypeWithoutD2] = sttp.tapir.Schema.derived
+  implicit lazy val validatedSubObjTapirSchema: sttp.tapir.Schema[ValidatedSubObj] = sttp.tapir.Schema.derived
   implicit lazy val aDTWithDiscriminatorTapirSchema: sttp.tapir.Schema[ADTWithDiscriminator] = {
     val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[ADTWithDiscriminator]]].value
     derived.schemaType match {
@@ -53,5 +54,6 @@ object TapirGeneratedEndpointsSchemas {
   implicit lazy val anyObjectWithInlineEnumTapirSchema: sttp.tapir.Schema[AnyObjectWithInlineEnum] = sttp.tapir.Schema.derived
   implicit lazy val errorTapirSchema: sttp.tapir.Schema[Error] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD3TapirSchema: sttp.tapir.Schema[SubtypeWithoutD3] = sttp.tapir.Schema.derived
+  implicit lazy val validatedObjTapirSchema: sttp.tapir.Schema[ValidatedObj] = sttp.tapir.Schema.derived
   implicit lazy val aDTWithoutDiscriminatorTapirSchema: sttp.tapir.Schema[ADTWithoutDiscriminator] = sttp.tapir.Schema.derived
 }

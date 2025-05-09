@@ -127,7 +127,9 @@ object OpenapiSchemaType {
   ) extends OpenapiSchemaType
 
   // no uniqueItems support
-  case class ArrayRestrictions(minItems: Option[Int] = None, maxItems: Option[Int] = None, uniqueItems: Option[Boolean] = None)
+  case class ArrayRestrictions(minItems: Option[Int] = None, maxItems: Option[Int] = None, uniqueItems: Option[Boolean] = None) {
+    def hasRestriction: Boolean = minItems.isDefined || maxItems.isDefined || uniqueItems.isDefined
+  }
   case class OpenapiSchemaArray(
       items: OpenapiSchemaType,
       nullable: Boolean,
@@ -147,7 +149,9 @@ object OpenapiSchemaType {
   case class ObjectRestrictions(
       minProperties: Option[Int] = None,
       maxProperties: Option[Int] = None
-  )
+  ) {
+    def hasRestriction: Boolean = minProperties.isDefined || maxProperties.isDefined
+  }
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaObject(
       properties: Map[String, OpenapiSchemaField],

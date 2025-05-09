@@ -1,0 +1,52 @@
+package sttp.tapir.generated
+
+object TapirGeneratedEndpointsValidators {
+  import sttp.tapir.generated.TapirGeneratedEndpoints._
+  import sttp.tapir.{ValidationResult, Validator}
+
+  lazy val ValidatedObjValidator: Validator[ValidatedObj] = Validator.all(Validator.custom(
+    (obj: ValidatedObj) => ValidatedObjFooValidator.apply(obj.foo) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.foo" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  ), Validator.custom(
+    (obj: ValidatedObj) => ValidatedSubObjValidator.apply(obj.bar) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.bar" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  ), Validator.custom(
+    (obj: ValidatedObj) => obj.baz.toSeq.flatMap(ValidatedSubObjValidator.apply) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.baz" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  ), Validator.custom(
+    (obj: ValidatedObj) => obj.quux.toSeq.flatMap(ValidatedObjQuuxValidator.apply) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.quux" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  ))
+  lazy val ValidatedObjFooValidator: Validator[String] = Validator.maxLength(128)
+  lazy val ValidatedSubObjValidator: Validator[ValidatedSubObj] = Validator.custom(
+    (obj: ValidatedSubObj) => ValidatedSubObjIValidator.apply(obj.i) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedSubObj.i" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  )
+  lazy val ValidatedObjQuuxValidator: Validator[String] = Validator.maxLength(128)
+  lazy val ValidatedSubObjIValidator: Validator[String] = Validator.pattern("i+.+")
+}

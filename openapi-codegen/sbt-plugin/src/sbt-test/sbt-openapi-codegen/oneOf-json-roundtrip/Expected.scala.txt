@@ -9,6 +9,7 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.json.circe._
   import io.circe.generic.semiauto._
 
+  import sttp.tapir.generated.TapirGeneratedEndpointsValidators._
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
 
@@ -90,6 +91,12 @@ object TapirGeneratedEndpoints {
   sealed trait Error
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
+  case class ValidatedObj (
+    foo: String,
+    bar: ValidatedSubObj,
+    baz: Option[ValidatedSubObj] = None,
+    quux: Option[String] = None
+  )
   case class NotNullableThingy (
     uuid: java.util.UUID
   )
@@ -120,6 +127,9 @@ object TapirGeneratedEndpoints {
   ) extends ADTWithoutDiscriminator
   case class HasBaz (
     baz: Int
+  )
+  case class ValidatedSubObj (
+    i: String
   )
   case class SubtypeWithD1 (
     s: String,
@@ -398,9 +408,15 @@ object TapirGeneratedEndpoints {
       .get
       .in(("pattern" / path[String]("restricted").validate(Validator.all(Validator.pattern("[a-z]+"), Validator.minLength(3), Validator.maxLength(10))).description("used by security logic") / "object"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(query[Option[String]]("q1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.pattern("[a-z_].+")(_)).map{ case Nil => ValidationResult.Valid ; case l => ValidationResult.Invalid()}.getOrElse(ValidationResult.Valid))))
+      .in(query[Option[String]]("q1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.pattern("[a-z_].+")(_)).map{
+        case Nil => ValidationResult.Valid
+        case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
+      }.getOrElse(ValidationResult.Valid))))
       .in(query[String]("q2").validate(Validator.minLength(3)))
-      .in(header[Option[String]]("h1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.all(Validator.pattern("[a-z_].+"), Validator.minLength(3))(_)).map{ case Nil => ValidationResult.Valid ; case l => ValidationResult.Invalid()}.getOrElse(ValidationResult.Valid))))
+      .in(header[Option[String]]("h1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.all(Validator.pattern("[a-z_].+"), Validator.minLength(3))(_)).map{
+        case Nil => ValidationResult.Valid
+        case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
+      }.getOrElse(ValidationResult.Valid))))
       .in(header[String]("h2").validate(Validator.minLength(3)))
       .out(jsonBody[String].description("ok"))
 

@@ -777,3 +777,29 @@ components:
           properties:
             quux:
               type: integer
+    ValidatedSubObj:
+      title: ValidatedSubObj
+      type: object
+      required:
+        - i
+      properties:
+        i:
+          type: string
+          pattern: 'i+.+'
+    ValidatedObj:
+      title: ValidatedObj
+      type: object
+      required:
+        - foo
+        - bar
+      properties:
+        foo:
+          type: string
+          maxLength: 128
+        bar:
+          $ref: '#/components/schemas/ValidatedSubObj'
+        baz:
+          $ref: '#/components/schemas/ValidatedSubObj'
+        quux:
+          type: string
+          maxLength: 128
