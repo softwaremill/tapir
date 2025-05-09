@@ -113,7 +113,8 @@ class EndpointGenerator {
       jsonSerdeLib: JsonSerdeLib,
       xmlSerdeLib: XmlSerdeLib,
       streamingImplementation: StreamingImplementation,
-      generateEndpointTypes: Boolean
+      generateEndpointTypes: Boolean,
+      validators: ValidationDefns
   ): EndpointDefs = {
     val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
@@ -125,7 +126,16 @@ class EndpointGenerator {
     ) =
       doc.paths
         .map(
-          generatedEndpoints(components, useHeadTagForObjectNames, targetScala3, jsonSerdeLib, xmlSerdeLib, streamingImplementation, doc)
+          generatedEndpoints(
+            components,
+            useHeadTagForObjectNames,
+            targetScala3,
+            jsonSerdeLib,
+            xmlSerdeLib,
+            streamingImplementation,
+            doc,
+            validators
+          )
         )
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
@@ -160,7 +170,8 @@ class EndpointGenerator {
       jsonSerdeLib: JsonSerdeLib,
       xmlSerdeLib: XmlSerdeLib,
       streamingImplementation: StreamingImplementation,
-      doc: OpenapiDocument
+      doc: OpenapiDocument,
+      validators: ValidationDefns
   )(p: OpenapiPath): GeneratedEndpoints = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
@@ -201,7 +212,8 @@ class EndpointGenerator {
               xmlSerdeLib,
               streamingImplementation,
               doc,
-              m.tapirCodegenDirectives
+              m.tapirCodegenDirectives,
+              validators
             )
           val (outDecl, outTypes, errTypes, inlineDefns) =
             outs(
@@ -212,7 +224,8 @@ class EndpointGenerator {
               name,
               jsonSerdeLib,
               xmlSerdeLib,
-              m.tapirCodegenDirectives
+              m.tapirCodegenDirectives,
+              validators
             )
           val allTypes = EndpointTypes(
             maybeSecurityPath.toSeq.flatMap(_._2) ++ securityTypes.toSeq,
@@ -417,7 +430,8 @@ class EndpointGenerator {
       xmlSerdeLib: XmlSerdeLib,
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument,
-      tapirCodegenDirectives: Set[String]
+      tapirCodegenDirectives: Set[String],
+      validators: ValidationDefns
   )(implicit location: Location): (String, Option[String], Seq[String], Option[String]) = {
 
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
@@ -430,7 +444,7 @@ class EndpointGenerator {
       .map { case (defn, enums, tpe) => (s".in($defn)", enums, tpe) }
       .unzip3
 
-    def mapContent(content: OpenapiRequestBodyContent, required: Boolean, forceEager: Boolean = false) = {
+    def mapContent(content: OpenapiRequestBodyContent, required: Boolean, forceEager: Boolean = false): (String, String, Option[String]) = {
       val schemaIsNullable = content.schema.nullable || (content.schema match {
         case ref: OpenapiSchemaRef =>
           doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
@@ -446,7 +460,8 @@ class EndpointGenerator {
           "Request",
           forceEager,
           xmlSerdeLib,
-          tapirCodegenDirectives
+          tapirCodegenDirectives,
+          validators
         )
       (decl, tpe, maybeInlineDefn)
     }
@@ -558,7 +573,8 @@ class EndpointGenerator {
       endpointName: String,
       jsonSerdeLib: JsonSerdeLib,
       xmlSerdeLib: XmlSerdeLib,
-      tapirCodegenDirectives: Set[String]
+      tapirCodegenDirectives: Set[String],
+      validators: ValidationDefns
   )(implicit
       location: Location
   ) = {
@@ -590,7 +606,8 @@ class EndpointGenerator {
             "Response",
             isErrorPosition || forceEager,
             xmlSerdeLib,
-            tapirCodegenDirectives
+            tapirCodegenDirectives,
+            validators
           )
         (decl, tpe, maybeInlineDefn)
       }
@@ -891,8 +908,25 @@ class EndpointGenerator {
       position: String,
       forceEager: Boolean, // no streaming support for errorOut
       xmlSerdeLib: XmlSerdeLib,
-      tapirCodegenDirectives: Set[String]
+      tapirCodegenDirectives: Set[String],
+      validators: ValidationDefns
   )(implicit location: Location): MappedContentType = {
+    def vRef(t: OpenapiSchemaType, r: Boolean) = {
+      val maybeValidatorRef = t match {
+        case r: OpenapiSchemaRef => Some(r.stripped)
+        // TODO: Validation on inline defns
+        case _ => None
+      }
+      maybeValidatorRef
+        .flatMap(validators.defns.get)
+        .map(_.name)
+        .map {
+          case n if !r => s".validateOption(${n}Validator)"
+          case n       => s".validate(${n}Validator)"
+        }
+        .getOrElse("")
+    }
+    def v(tpe: String, r: Boolean) = vRef(schema, r)
     contentType match {
       case "text/plain" =>
         MappedContentType("stringBody", "String")
@@ -912,7 +946,7 @@ class EndpointGenerator {
         val req = if (required) outT else s"Option[$outT]"
         def toList = if (required) ".toList" else ".map(_.toList)"
         val bodyType = maybeAlias.map(a => s"xmlBody[$a].map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(s"xmlBody[$req]")
-        MappedContentType(bodyType, req, maybeInline)
+        MappedContentType(bodyType + v(req, required), req, maybeInline)
       case "application/json" if tapirCodegenDirectives.contains(jsonBodyAsString) =>
         if (required) MappedContentType("stringJsonBody", "String", None)
         else MappedContentType("stringJsonBody.map(Option(_))(_.orNull)", "Option[String]", None)
@@ -932,7 +966,7 @@ class EndpointGenerator {
           case x => bail(s"Can't create non-simple or array params as output (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
-        MappedContentType(s"jsonBody[$req]", req, maybeInline)
+        MappedContentType(s"jsonBody[$req]" + v(req, required), req, maybeInline)
 
       case "multipart/form-data" =>
         schema match {
@@ -940,10 +974,10 @@ class EndpointGenerator {
             MappedContentType("multipartBody", "Seq[Part[Array[Byte]]]")
           case schemaRef: OpenapiSchemaRef =>
             val (t, _) = mapSchemaSimpleTypeToType(schemaRef, multipartForm = true)
-            MappedContentType(s"multipartBody[$t]", t)
+            MappedContentType(s"multipartBody[$t]" + v(t, required), t)
           case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]) =>
             val (inlineClassName, inlineClassDefn) = inlineDefn(endpointName, position, schemaRef)
-            MappedContentType(s"multipartBody[$inlineClassName]", inlineClassName, inlineClassDefn)
+            MappedContentType(s"multipartBody[$inlineClassName]" + v(inlineClassName, required), inlineClassName, inlineClassDefn)
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
       case other => failoverBinaryCase(other, schema, forceEager, streamingImplementation)

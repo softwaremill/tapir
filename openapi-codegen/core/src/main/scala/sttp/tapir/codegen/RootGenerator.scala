@@ -80,6 +80,8 @@ object RootGenerator {
         StreamingImplementation.FS2
     }
 
+    val validators = ValidationGenerator.mkValidators(doc)
+
     val EndpointDefs(
       endpointsByTag,
       queryOrPathParamRefs,
@@ -93,7 +95,8 @@ object RootGenerator {
         normalisedJsonLib,
         normalisedXmlLib,
         normalisedStreamingImplementation,
-        generateEndpointTypes
+        generateEndpointTypes,
+        validators
       )
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas, xmlSerdes) =
       classGenerator
@@ -138,6 +141,20 @@ object RootGenerator {
            |}""".stripMargin
         headTag -> taggedObj
     }
+    val validationObj =
+      if (validators.defns.isEmpty) None
+      else {
+        val body =
+          s"""package $packagePath
+             |
+             |object ${objName}Validators {
+             |  import $packagePath.$objName._
+             |  import sttp.tapir.{ValidationResult, Validator}
+             |
+             |${indent(2)(validators.render)}
+             |}""".stripMargin
+        Some(s"${objName}Validators" -> body)
+      }
 
     val jsonSerdeObj = jsonSerdes.map { body =>
       s"""package $packagePath
@@ -277,7 +294,7 @@ object RootGenerator {
         |}
         |""".stripMargin
     taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ xmlSerdeObj.map(s"${objName}XmlSerdes" -> _) ++
-      schemaObjs + (objName -> mainObj)
+      validationObj ++ schemaObjs + (objName -> mainObj)
   }
 
   private[codegen] def imports(jsonSerdeLib: JsonSerdeLib.JsonSerdeLib): String = {

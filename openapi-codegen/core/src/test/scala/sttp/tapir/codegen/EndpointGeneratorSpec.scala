@@ -74,7 +74,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -163,7 +164,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty
         )
         .endpointDecls(None) shouldCompile ()
   }
@@ -219,7 +221,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty
         )
         .endpointDecls(None)
     generatedCode should include(
