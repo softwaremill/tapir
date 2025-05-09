@@ -5,8 +5,7 @@ import sttp.tapir.codegen.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-
-import scala.annotation.tailrec
+import sttp.tapir.codegen.util.DocUtils
 
 case class GeneratedClassDefinitions(
     classRepr: String,
@@ -42,7 +41,7 @@ class ClassDefinitionGenerator {
 
     def fetchTransitiveParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
-      case head +: tail => recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
+      case head +: tail => DocUtils.recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
     }
 
     val allTransitiveJsonParamRefs = fetchTransitiveParamRefs(
@@ -167,46 +166,6 @@ class ClassDefinitionGenerator {
         |def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
         |  EnumExtraParamSupport(enumName, T)
         |""".stripMargin
-  }
-
-  @tailrec
-  final def recursiveFindAllReferencedSchemaTypes(
-      allSchemas: Map[String, OpenapiSchemaType]
-  )(toCheck: OpenapiSchemaType, checked: Set[String], tail: Seq[OpenapiSchemaType]): Set[String] = {
-    def nextParamsFromTypeSeq(types: Seq[OpenapiSchemaType]) = types match {
-      case Nil          => None
-      case next +: rest => Some((next, checked, rest ++ tail))
-    }
-    val maybeNextParams = toCheck match {
-      case ref: OpenapiSchemaRef if ref.isSchema =>
-        val name = ref.stripped
-        val maybeAppended = if (checked contains name) None else allSchemas.get(name)
-        (tail ++ maybeAppended) match {
-          case Nil          => None
-          case next +: rest => Some((next, checked + name, rest))
-        }
-      case OpenapiSchemaArray(items, _, _, _)                             => Some((items, checked, tail))
-      case OpenapiSchemaNot(items)                                        => Some((items, checked, tail))
-      case OpenapiSchemaMap(items, _, _)                                  => Some((items, checked, tail))
-      case OpenapiSchemaOneOf(types, _)                                   => nextParamsFromTypeSeq(types)
-      case OpenapiSchemaAnyOf(types)                                      => nextParamsFromTypeSeq(types)
-      case OpenapiSchemaAllOf(types)                                      => nextParamsFromTypeSeq(types)
-      case OpenapiSchemaObject(properties, _, _, _) if properties.isEmpty => None
-      case OpenapiSchemaObject(properties, required, nullable, _) =>
-        val propToCheck = properties.head
-        val (propToCheckName, OpenapiSchemaField(propToCheckType, _, _)) = propToCheck
-        val objectWithoutHeadField = OpenapiSchemaObject(properties - propToCheckName, required, nullable)
-        Some((propToCheckType, checked, objectWithoutHeadField +: tail))
-      case _ => None
-    }
-    maybeNextParams match {
-      case None =>
-        tail match {
-          case Nil          => checked
-          case next +: rest => recursiveFindAllReferencedSchemaTypes(allSchemas)(next, checked, rest)
-        }
-      case Some((next, checked, rest)) => recursiveFindAllReferencedSchemaTypes(allSchemas)(next, checked, rest)
-    }
   }
 
   private[codegen] def generateMap(

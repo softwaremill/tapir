@@ -4,6 +4,7 @@ import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
+import sttp.tapir.codegen.util.DocUtils
 
 import scala.util.Try
 
@@ -477,7 +478,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
     def fetchJsonParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
-      case head +: tail => new ClassDefinitionGenerator().recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
+      case head +: tail => DocUtils.recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
     }
     fetchJsonParamRefs(Set("MapType"), Seq(allSchemas("MapType"))) shouldEqual Set("MapType", "MapValue")
     fetchJsonParamRefs(Set("TopMap"), Seq(allSchemas("TopMap"))) shouldEqual Set("TopMap", "MapType", "MapValue")
