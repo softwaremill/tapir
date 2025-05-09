@@ -114,7 +114,8 @@ class EndpointGenerator {
       xmlSerdeLib: XmlSerdeLib,
       streamingImplementation: StreamingImplementation,
       generateEndpointTypes: Boolean,
-      validators: ValidationDefns
+      validators: ValidationDefns,
+      generateValidators: Boolean
   ): EndpointDefs = {
     val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
@@ -134,7 +135,8 @@ class EndpointGenerator {
             xmlSerdeLib,
             streamingImplementation,
             doc,
-            validators
+            validators,
+            generateValidators
           )
         )
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
@@ -171,7 +173,8 @@ class EndpointGenerator {
       xmlSerdeLib: XmlSerdeLib,
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument,
-      validators: ValidationDefns
+      validators: ValidationDefns,
+      generateValidators: Boolean
   )(p: OpenapiPath): GeneratedEndpoints = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
@@ -198,7 +201,8 @@ class EndpointGenerator {
             p.url,
             m.resolvedParameters,
             doc.pathsExtensions.get(securityPrefixKey).flatMap(_.asArray).toSeq.flatMap(_.flatMap(_.asString)),
-            doc
+            doc,
+            generateValidators
           )
           val SecurityDefn(securityDecl, securityTypes, securityWrappers) =
             SecurityGenerator.security(securitySchemes, m.security.getOrElse(doc.security))
@@ -213,7 +217,8 @@ class EndpointGenerator {
               streamingImplementation,
               doc,
               m.tapirCodegenDirectives,
-              validators
+              validators,
+              generateValidators
             )
           val (outDecl, outTypes, errTypes, inlineDefns) =
             outs(
@@ -225,7 +230,8 @@ class EndpointGenerator {
               jsonSerdeLib,
               xmlSerdeLib,
               m.tapirCodegenDirectives,
-              validators
+              validators,
+              generateValidators
             )
           val allTypes = EndpointTypes(
             maybeSecurityPath.toSeq.flatMap(_._2) ++ securityTypes.toSeq,
@@ -306,7 +312,13 @@ class EndpointGenerator {
     )
   }
 
-  private def urlMapper(url: String, parameters: Seq[OpenapiParameter], securityPathPrefixes: Seq[String], doc: OpenapiDocument)(implicit
+  private def urlMapper(
+      url: String,
+      parameters: Seq[OpenapiParameter],
+      securityPathPrefixes: Seq[String],
+      doc: OpenapiDocument,
+      generateValidators: Boolean
+  )(implicit
       location: Location
   ): (String, Seq[String], Option[(String, Seq[String])]) = {
     val securityPrefixes = securityPathPrefixes.filter(url.startsWith)
@@ -325,7 +337,7 @@ class EndpointGenerator {
               case st: OpenapiSchemaSimpleType =>
                 val (t, _) = mapSchemaSimpleTypeToType(st)
                 val desc = p.description.fold("")(d => s""".description("$d")""")
-                val validations = ValidationGenerator.mkValidations(doc, st, true)
+                val validations = if (generateValidators) ValidationGenerator.mkValidations(doc, st, true) else ""
                 s"""path[$t]("$name")$validations$desc""" -> Some(t)
               case _ => bail("Can't create non-simple params to url yet")
             }
@@ -389,7 +401,8 @@ class EndpointGenerator {
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
       param: OpenapiParameter,
-      doc: OpenapiDocument
+      doc: OpenapiDocument,
+      generateValidators: Boolean
   )(implicit
       location: Location
   ): (String, Option[Seq[String]], String) =
@@ -399,7 +412,7 @@ class EndpointGenerator {
         val required = param.required.getOrElse(false)
         val req = if (required) t else s"Option[$t]"
         val desc = param.description.map(JavaEscape.escapeString).fold("")(d => s""".description("$d")""")
-        val validation = ValidationGenerator.mkValidations(doc, st, required)
+        val validation = if (generateValidators) ValidationGenerator.mkValidations(doc, st, required) else ""
         (s"""${param.in}[$req]("${param.name}")$validation$desc""", None, req)
       case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
@@ -431,7 +444,8 @@ class EndpointGenerator {
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument,
       tapirCodegenDirectives: Set[String],
-      validators: ValidationDefns
+      validators: ValidationDefns,
+      generateValidators: Boolean
   )(implicit location: Location): (String, Option[String], Seq[String], Option[String]) = {
 
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
@@ -439,7 +453,7 @@ class EndpointGenerator {
     val (params, maybeEnumDefns, inTypes) = parameters
       .filter(_.in != "path")
       .map { param =>
-        genParamDefn(endpointName, targetScala3, jsonSerdeLib, param, doc)
+        genParamDefn(endpointName, targetScala3, jsonSerdeLib, param, doc, generateValidators)
       }
       .map { case (defn, enums, tpe) => (s".in($defn)", enums, tpe) }
       .unzip3
@@ -574,7 +588,8 @@ class EndpointGenerator {
       jsonSerdeLib: JsonSerdeLib,
       xmlSerdeLib: XmlSerdeLib,
       tapirCodegenDirectives: Set[String],
-      validators: ValidationDefns
+      validators: ValidationDefns,
+      generateValidators: Boolean
   )(implicit
       location: Location
   ) = {
@@ -704,7 +719,7 @@ class EndpointGenerator {
             // according to api spec, content-type header should be ignored - cf https://swagger.io/specification/#response-object
             .filterNot(_._1.toLowerCase == "content-type")
             .map { case (name, defn) =>
-              genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc)
+              genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc, generateValidators)
             }
             .unzip3
           val hs = outHeaderDefns.map(d => s".and($d)").mkString
@@ -755,7 +770,7 @@ class EndpointGenerator {
             m.headers
               .filterNot(_._1.toLowerCase == "content-type")
               .map { case (name, defn) =>
-                genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc)
+                genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc, generateValidators)
               }
               .toSeq
           }

@@ -46,7 +46,8 @@ object RootGenerator {
       streamingImplementation: String,
       validateNonDiscriminatedOneOfs: Boolean,
       maxSchemasPerFile: Int,
-      generateEndpointTypes: Boolean
+      generateEndpointTypes: Boolean,
+      generateValidators: Boolean
   ): Map[String, String] = {
     val doc = unNormalisedDoc.resolveAllOfSchemas
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
@@ -80,7 +81,7 @@ object RootGenerator {
         StreamingImplementation.FS2
     }
 
-    val validators = ValidationGenerator.mkValidators(doc)
+    val validators = if (generateValidators) ValidationGenerator.mkValidators(doc) else ValidationDefns.empty
 
     val EndpointDefs(
       endpointsByTag,
@@ -96,7 +97,8 @@ object RootGenerator {
         normalisedXmlLib,
         normalisedStreamingImplementation,
         generateEndpointTypes,
-        validators
+        validators,
+        generateValidators
       )
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas, xmlSerdes) =
       classGenerator

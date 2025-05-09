@@ -430,7 +430,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             xmlSerdeLib = XmlSerdeLib.CatsXml,
             streamingImplementation = StreamingImplementation.FS2,
             generateEndpointTypes = false,
-            validators = ValidationDefns.empty
+            validators = ValidationDefns.empty,
+            generateValidators = true
           )
           .endpointDecls(None)
     }
