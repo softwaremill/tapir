@@ -30,7 +30,7 @@ case class ScopedAuxCodecParams(
 object XmlSerdeGenerator {
   def genTopLevelSeqSerdes(xmlSerdeLib: XmlSerdeLib, schema: OpenapiSchemaArray, endpointName: String, position: String): Option[String] =
     schema match {
-      case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, c) if xmlSerdeLib == XmlSerdeLib.CatsXml =>
+      case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, c, _) if xmlSerdeLib == XmlSerdeLib.CatsXml =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
         val seqSubtype = endpointName.capitalize + position
         val name = c.flatMap(_.name).getOrElse(t)
@@ -59,19 +59,19 @@ object XmlSerdeGenerator {
                 .collect { case (ref, OpenapiSchemaObject(props, required, _, _)) => props.map(p => (ref, p, required.contains(p._1))) }
                 .flatMap {
                   _.collect {
-                    case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _)), r)
+                    case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _, _)), r)
                         if doc.components.exists(_.schemas.get(t.stripped).exists(_.isInstanceOf[OpenapiSchemaEnum])) =>
                       val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
                       val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                       ScopedAuxCodecParams(n, d, tpe, EnumType, None)
-                    case (ref, (n, OpenapiSchemaField(t: OpenapiSchemaEnum, _)), r) =>
+                    case (ref, (n, OpenapiSchemaField(t: OpenapiSchemaEnum, _, _)), r) =>
                       val tpe = s"${ref.capitalize}${n.capitalize}"
                       val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                       ScopedAuxCodecParams(n, d, tpe, EnumType, None)
-                    case (_, (n, OpenapiSchemaField(OpenapiSchemaArray(t: OpenapiSchemaSimpleType, _, maybeXml), _)), _) =>
+                    case (_, (n, OpenapiSchemaField(OpenapiSchemaArray(t: OpenapiSchemaSimpleType, _, maybeXml, _), _, _)), _) =>
                       val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
                       ScopedAuxCodecParams(n, tpe, tpe, ArrayType, maybeXml)
-                    case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _)), r) =>
+                    case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _, _)), r) =>
                       val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
                       val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                       ScopedAuxCodecParams(n, d, tpe, OtherType, None)

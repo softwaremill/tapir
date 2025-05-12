@@ -16,6 +16,7 @@ case class OpenapiCodegenTask(
     validateNonDiscriminatedOneOfs: Boolean,
     maxSchemasPerFile: Int,
     generateEndpointTypes: Boolean,
+    disableValidatorGeneration: Boolean,
     dir: File,
     cacheDir: File,
     targetScala3: Boolean,
@@ -63,7 +64,8 @@ case class OpenapiCodegenTask(
           streamingImplementation,
           validateNonDiscriminatedOneOfs,
           maxSchemasPerFile,
-          generateEndpointTypes
+          generateEndpointTypes,
+          !disableValidatorGeneration
         )
         .map { case (objectName, fileBody) =>
           val file = directory / s"$objectName.scala"

@@ -20,7 +20,8 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      generateEndpointTypes = false
+      generateEndpointTypes = false,
+      generateValidators = true
     )
   }
   def gen(

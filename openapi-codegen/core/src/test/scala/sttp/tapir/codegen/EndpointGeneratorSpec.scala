@@ -74,7 +74,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -163,7 +165,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true
         )
         .endpointDecls(None) shouldCompile ()
   }
@@ -219,7 +223,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true
         )
         .endpointDecls(None)
     generatedCode should include(
@@ -290,7 +296,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      generateEndpointTypes = false
+      generateEndpointTypes = false,
+      generateValidators = true
     )("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
@@ -314,7 +321,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      generateEndpointTypes = false
+      generateEndpointTypes = false,
+      generateValidators = true
     )("TapirGeneratedEndpoints")
     generatedCode shouldCompile ()
     val expectedAttrDecls = Seq(

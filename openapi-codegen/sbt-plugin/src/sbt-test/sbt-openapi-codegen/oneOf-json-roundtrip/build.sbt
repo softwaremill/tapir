@@ -12,7 +12,9 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
+  "com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % tapirVersion,
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
+  "com.softwaremill.sttp.client3" %% "http4s-backend" % "3.11.0",
   "io.circe" %% "circe-generic" % "0.14.13",
   "com.beachape" %% "enumeratum" % "1.7.6",
   "com.beachape" %% "enumeratum-circe" % "1.7.5",
@@ -40,7 +42,8 @@ TaskKey[Unit]("check") := {
   Seq(
     "TapirGeneratedEndpoints.scala" -> "Expected.scala.txt",
     "TapirGeneratedEndpointsJsonSerdes.scala" -> "ExpectedJsonSerdes.scala.txt",
-    "TapirGeneratedEndpointsSchemas.scala" -> "ExpectedSchemas.scala.txt"
+    "TapirGeneratedEndpointsSchemas.scala" -> "ExpectedSchemas.scala.txt",
+    "TapirGeneratedEndpointsValidators.scala" -> "ExpectedValidators.scala.txt"
   ).foreach { case (generated, expected) => check(generated, expected) }
   ()
 }
