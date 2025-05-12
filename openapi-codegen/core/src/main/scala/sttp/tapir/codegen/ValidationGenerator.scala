@@ -4,6 +4,8 @@ import io.circe.JsonNumber
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  ArrayRestrictions,
+  ObjectRestrictions,
   OpenapiSchemaArray,
   OpenapiSchemaMap,
   OpenapiSchemaNumericType,
@@ -66,14 +68,15 @@ object ValidationGenerator {
     // We terminate when there are no more keys to add.
     @tailrec def filtered(defns: ValidationDefns): ValidationDefns = {
       val next = ValidationDefns(unfiltered.defns.filter(_._2.construct(defns.defns.keySet).isDefined))
-      if (next.defns.keySet == defns.defns.keySet) defns
+      if (next.defns.keySet == defns.defns.keySet) next
       else filtered(next)
     }
 
     filtered(noRefs)
   }
 
-  // the 'ignore refs'
+  // The `ignoreRefs` boolean is a hack to avoid generating trivial validators for recursive schemas without genuine validation.
+  // See comments on `mkValidators`.
   private def validationExists(defns: Set[String])(schema: OpenapiSchemaType, ignoreRefs: Boolean = false): Boolean =
     schema match {
       case ref: OpenapiSchemaRef             => !ignoreRefs && defns.contains(ref.stripped)
@@ -81,59 +84,112 @@ object ValidationGenerator {
       case OpenapiSchemaMap(t, _, r)         => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
       case OpenapiSchemaObject(t, _, _, _)   => t.exists { case (_, f) => validationExists(defns)(f.`type`, ignoreRefs) }
       case OpenapiSchemaString(_, p, mi, ma) => p.isDefined || mi.isDefined || ma.isDefined
-      case _                                 => false
+      case o                                 => false
     }
-  private def genValidationDefn(
+
+  private def genRefDef(name: String, r: OpenapiSchemaRef): Seq[ValidationDefn] = {
+    Seq(
+      ValidationDefn(
+        name,
+        r.stripped.capitalize,
+        (defns: Set[String]) => if (defns.contains(r.stripped)) Some(s"${r.stripped}Validator") else None,
+        refOnly = true
+      )
+    )
+  }
+
+  private def genStrDef(name: String, r: OpenapiSchemaString): Seq[ValidationDefn] = r match {
+    case OpenapiSchemaString(nullable, p, mi, ma) =>
+      val validations: Seq[String] =
+        p.map(s => s"""Validator.pattern("${JavaEscape.escapeString(s)}")""").toSeq ++
+          mi.map(s => s"""Validator.minLength($s)""") ++
+          ma.map(s => s"""Validator.maxLength($s)""")
+      validations match {
+        case Nil                => Nil
+        case (h: String) +: Nil => singleton(name, opt("String", nullable), allowNull("String", !nullable)(h))
+        case seq => singleton(name, opt("String", nullable), allowNull("String", !nullable)(s"""Validator.all(${seq.mkString(", ")})"""))
+      }
+  }
+
+  private def genNumDef(name: String, numeric: OpenapiSchemaNumericType): Seq[ValidationDefn] = {
+    val restrictions = numeric.restrictions
+    val validations: Seq[String] =
+      restrictions.min
+        .map(s => s"""Validator.min(${render(s)}, exclusive = ${restrictions.exclusiveMinimum.getOrElse(false)})""")
+        .toSeq ++
+        restrictions.max.map(s => s"""Validator.max(${render(s)}, exclusive = ${restrictions.exclusiveMaximum.getOrElse(false)})""") ++
+        restrictions.multipleOf
+          .flatMap(_.toLong)
+          .map(v => s"Validator.custom(v => if (v % $v == 0) ValidationResult.Valid else ValidationResult.Invalid)")
+    val nullable = numeric.nullable
+    val scalaType = numeric.scalaType
+    validations match {
+      case Nil                => Nil
+      case (h: String) +: Nil => singleton(name, opt(scalaType, nullable), allowNull(scalaType, !nullable)(h))
+      case seq =>
+        singleton(name, opt(scalaType, nullable), allowNull(scalaType, !nullable)(s"""Validator.all(${seq.mkString(", ")})"""))
+    }
+  }
+
+  private def genValidationForTypeContainer[Restrictions](
       schemas: Map[String, OpenapiSchemaType],
-      ignoreRefs: Boolean
-  )(name: String, schema: OpenapiSchemaType): Seq[ValidationDefn] =
-    schema match {
-      case r: OpenapiSchemaRef =>
+      ignoreRefs: Boolean,
+      elemType: OpenapiSchemaType,
+      nb: Boolean,
+      restrictions: Restrictions
+  )(name: String)(restrictionsToString: Restrictions => Seq[String], mkValidation: (String, String) => String) = {
+    val rawTpeName = name.capitalize
+    val tpeName = opt(rawTpeName, nb)
+    val elemValidators = genValidationDefn(schemas, ignoreRefs)(s"${name}Item", elemType)
+    val validations: Seq[String] = restrictionsToString(restrictions)
+
+    def mkItemValidation(validatorName: String) = mkValidation(rawTpeName, validatorName)
+
+    val maybeItemValidation: Option[Set[String] => Option[String]] = elemValidators match {
+      case Nil                                                        => None
+      case _ if elemType.isInstanceOf[OpenapiSchemaRef] && ignoreRefs => None
+      case h +: _ =>
+        Some(defns => if (validationExists(defns)(elemType, ignoreRefs)) Some(mkItemValidation(h.name + "Validator")) else None)
+    }
+    ((validations, maybeItemValidation) match {
+      case (Nil, None) => Nil
+      case (Nil, Some(maybeDefn)) =>
+        Seq(ValidationDefn(name, tpeName, maybeDefn(_).map(v => allowNull(rawTpeName, !nb)(v))))
+      case ((h: String) +: Nil, None) => singleton(name, tpeName, allowNull(rawTpeName, !nb)(h))
+      case ((h: String) +: Nil, Some(maybeItem)) =>
         Seq(
           ValidationDefn(
             name,
-            r.stripped.capitalize,
-            (defns: Set[String]) => if (defns.contains(r.stripped)) Some(s"${r.stripped}Validator") else None,
-            refOnly = true
+            tpeName,
+            defn =>
+              maybeItem(defn) match {
+                case Some(v) => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(Seq(h, v)).mkString(", ")})"""))
+                case None    => Some(allowNull(rawTpeName, !nb)(h))
+              }
           )
         )
-      case OpenapiSchemaString(nullable, p, mi, ma) =>
-        val validations: Seq[String] =
-          p.map(s => s"""Validator.pattern("${JavaEscape.escapeString(s)}")""").toSeq ++
-            mi.map(s => s"""Validator.minLength($s)""") ++
-            ma.map(s => s"""Validator.maxLength($s)""")
-        validations match {
-          case Nil                => Nil
-          case (h: String) +: Nil => singleton(name, opt("String", nullable), allowNull("String", !nullable)(h))
-          case seq => singleton(name, opt("String", nullable), allowNull("String", !nullable)(s"""Validator.all(${seq.mkString(", ")})"""))
-        }
-      case numeric: OpenapiSchemaNumericType =>
-        val restrictions = numeric.restrictions
-        val validations: Seq[String] =
-          restrictions.min
-            .map(s => s"""Validator.min(${render(s)}, exclusive = ${restrictions.exclusiveMinimum.getOrElse(false)})""")
-            .toSeq ++
-            restrictions.max.map(s => s"""Validator.max(${render(s)}, exclusive = ${restrictions.exclusiveMaximum.getOrElse(false)})""") ++
-            restrictions.multipleOf
-              .flatMap(_.toLong)
-              .map(v => s"Validator.custom(v => if (v % $v == 0) ValidationResult.Valid else ValidationResult.Invalid)")
-        val nullable = numeric.nullable
-        val scalaType = numeric.scalaType
-        validations match {
-          case Nil                => Nil
-          case (h: String) +: Nil => singleton(name, opt(scalaType, nullable), allowNull(scalaType, !nullable)(h))
-          case seq =>
-            singleton(name, opt(scalaType, nullable), allowNull(scalaType, !nullable)(s"""Validator.all(${seq.mkString(", ")})"""))
-        }
-      case OpenapiSchemaArray(t, nb, _, restrictions) =>
-        val rawTpeName = name.capitalize
-        val tpeName = opt(rawTpeName, nb)
-        val elemValidators = genValidationDefn(schemas, ignoreRefs)(s"${name}Item", t)
-        val validations: Seq[String] =
-          restrictions.minItems.map(s => s"""Validator.minSize($s)""").toSeq ++
-            restrictions.maxItems.map(s => s"""Validator.maxSize($s)""").toSeq
-        def mkItemValidation(validatorName: String) =
-          s"""Validator.custom(
+      case (seq, maybeItem) =>
+        Seq(
+          ValidationDefn(
+            name,
+            tpeName,
+            defn => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(seq ++ maybeItem.flatMap(_(defn))).mkString(", ")})"""))
+          )
+        )
+    }) ++ elemValidators.filterNot(_.refOnly)
+
+  }
+
+  private def genArrDef(
+      schemas: Map[String, OpenapiSchemaType],
+      ignoreRefs: Boolean
+  )(name: String, arr: OpenapiSchemaArray): Seq[ValidationDefn] = arr match {
+    case OpenapiSchemaArray(t, nb, _, restrictions) =>
+      genValidationForTypeContainer[ArrayRestrictions](schemas, ignoreRefs, t, nb, restrictions)(name)(
+        (r: ArrayRestrictions) =>
+          r.minItems.map(s => s"""Validator.minSize($s)""").toSeq ++
+            r.maxItems.map(s => s"""Validator.maxSize($s)""").toSeq,
+        (rawTpeName: String, validatorName: String) => s"""Validator.custom(
              |  (_: $rawTpeName).map($validatorName.apply).zipWithIndex.flatMap { case (l, i) => l.map(_ -> i) } match {
              |    case Nil => ValidationResult.Valid
              |    case errs =>
@@ -143,47 +199,19 @@ object ValidationGenerator {
              |      ValidationResult.Invalid(msgs)
              |  }
              |)""".stripMargin
-        val maybeItemValidation: Option[Set[String] => Option[String]] = elemValidators match {
-          case Nil                                                 => None
-          case _ if t.isInstanceOf[OpenapiSchemaRef] && ignoreRefs => None
-          case h +: _ =>
-            Some(defns => if (validationExists(defns)(t, ignoreRefs)) Some(mkItemValidation(h.name + "Validator")) else None)
-        }
-        ((validations, maybeItemValidation) match {
-          case (Nil, None) => Nil
-          case (Nil, Some(maybeDefn)) =>
-            Seq(ValidationDefn(name, tpeName, maybeDefn(_).map(v => allowNull(rawTpeName, !nb)(v))))
-          case ((h: String) +: Nil, None) => singleton(name, tpeName, allowNull(rawTpeName, !nb)(h))
-          case ((h: String) +: Nil, Some(maybeItem)) =>
-            Seq(
-              ValidationDefn(
-                name,
-                tpeName,
-                defn =>
-                  maybeItem(defn) match {
-                    case Some(v) => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(Seq(h, v)).mkString(", ")})"""))
-                    case None    => Some(allowNull(rawTpeName, !nb)(h))
-                  }
-              )
-            )
-          case (seq, maybeItem) =>
-            Seq(
-              ValidationDefn(
-                name,
-                tpeName,
-                defn => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(seq ++ maybeItem.flatMap(_(defn))).mkString(", ")})"""))
-              )
-            )
-        }) ++ elemValidators.filterNot(_.refOnly)
-      case OpenapiSchemaMap(t, nb, restrictions) =>
-        val rawTpeName = name.capitalize
-        val tpeName = opt(rawTpeName, nb)
-        val elemValidators = genValidationDefn(schemas, ignoreRefs)(s"${name}Item", t)
-        val validations: Seq[String] =
-          restrictions.minProperties.map(s => s"""Validator.minSize($s)""").toSeq ++
-            restrictions.maxProperties.map(s => s"""Validator.maxSize($s)""").toSeq
-        def mkElemValidation(validatorName: String) =
-          s"""Validator.custom(
+      )
+  }
+
+  private def genMapDef(
+      schemas: Map[String, OpenapiSchemaType],
+      ignoreRefs: Boolean
+  )(name: String, m: OpenapiSchemaMap): Seq[ValidationDefn] = m match {
+    case OpenapiSchemaMap(t, nb, restrictions) =>
+      genValidationForTypeContainer[ObjectRestrictions](schemas, ignoreRefs, t, nb, restrictions)(name)(
+        (r: ObjectRestrictions) =>
+          r.minProperties.map(s => s"""Validator.minSize($s)""").toSeq ++
+            r.maxProperties.map(s => s"""Validator.maxSize($s)""").toSeq,
+        (rawTpeName, validatorName) => s"""Validator.custom(
              |  (_: $rawTpeName).map{ case (k, v) => k -> $validatorName.apply(v) }.flatMap { case (k, l) => l.map(k -> _) } match {
              |    case Nil => ValidationResult.Valid
              |    case errs =>
@@ -193,109 +221,94 @@ object ValidationGenerator {
              |      ValidationResult.Invalid(msgs)
              |  }
              |)""".stripMargin
-        val maybeItemValidation: Option[Set[String] => Option[String]] = elemValidators match {
-          case Nil                                                 => None
-          case _ if t.isInstanceOf[OpenapiSchemaRef] && ignoreRefs => None
-          case h +: _ =>
-            Some(defns => if (validationExists(defns)(t, ignoreRefs)) Some(mkElemValidation(h.name + "Validator")) else None)
-        }
-        ((validations, maybeItemValidation) match {
-          case (Nil, None)                => Nil
-          case ((h: String) +: Nil, None) => singleton(name, tpeName, allowNull(rawTpeName, !nb)(h))
-          case (Nil, Some(maybeDefn)) =>
-            Seq(ValidationDefn(name, tpeName, maybeDefn(_).map(v => allowNull(rawTpeName, !nb)(v))))
-          case ((h: String) +: Nil, Some(maybeItem)) =>
-            Seq(
-              ValidationDefn(
-                name,
-                tpeName,
-                defn =>
-                  maybeItem(defn) match {
-                    case Some(v) => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(Seq(h, v)).mkString(", ")})"""))
-                    case None    => Some(allowNull(rawTpeName, !nb)(h))
-                  }
-              )
-            )
-          case (seq, maybeItem) =>
-            Seq(
-              ValidationDefn(
-                name,
-                tpeName,
-                defn => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(seq ++ maybeItem.flatMap(_(defn))).mkString(", ")})"""))
-              )
-            )
-        }) ++ elemValidators.filterNot(_.refOnly)
-      case OpenapiSchemaObject(ts, rs, nb, _) =>
-        val rawTpeName = name.capitalize
-        val tpeName = opt(rawTpeName, nb)
-        val elemValidators = ts.map { case (fn, f) =>
-          genValidationDefn(schemas, ignoreRefs)(s"${name}${fn.capitalize}", f.`type`)
-            .filterNot { case x => ignoreRefs && x.refOnly }
-            .map(defn =>
+      )
+  }
+
+  private def genObjDef(schemas: Map[String, OpenapiSchemaType], ignoreRefs: Boolean)(name: String, o: OpenapiSchemaObject) = o match {
+    case OpenapiSchemaObject(ts, rs, nb, _) =>
+      val rawTpeName = name.capitalize
+      val tpeName = opt(rawTpeName, nb)
+      val elemValidators = ts.map { case (fn, f) =>
+        val defns = genValidationDefn(schemas, ignoreRefs)(s"${name}${fn.capitalize}", f.`type`)
+        defns
+          .filterNot(ignoreRefs && _.refOnly)
+          .map(defn =>
+            (
+              fn,
               (
-                fn,
-                (
-                  defn,
-                  f.`type`.nullable || !rs.contains(fn),
-                  f.`type`
-                )
+                defn,
+                f.`type`.nullable || !rs.contains(fn),
+                f.`type`
               )
             )
-        }
-        val validatedElemRefs: Map[String, (String, Boolean, OpenapiSchemaType)] = elemValidators
-          .flatMap(_.map { case (fn, (defn, nb, tpe)) => (fn, (defn.name, nb, tpe)) }.headOption)
-          .toMap
-        def mkElemValidation(fname: String, validatorName: String, nullable: Boolean) = {
-          val applied = if (nullable) s"obj.$fname.toSeq.flatMap($validatorName.apply)" else s"$validatorName.apply(obj.$fname)"
-          s"""Validator.custom(
-             |  (obj: $rawTpeName) => $applied match {
-             |    case Nil => ValidationResult.Valid
-             |    case errs =>
-             |      val msgs: List[String] = "Object element validation failed for $rawTpeName.$fname" +:
-             |        errs.flatMap(_.customMessage).toList
-             |      ValidationResult.Invalid(msgs)
-             |  }
-             |)""".stripMargin
-        }
-        // TODO: Handle top-level object validations
-        val validations: Seq[String] = Nil
-        val elemValidations: Seq[(String, Set[String] => Boolean)] = validatedElemRefs.map { case (fn, (vn, nb, tpe)) =>
-          (
-            mkElemValidation(fn, (tpe match { case r: OpenapiSchemaRef => r.stripped; case _ => vn }) + "Validator", nb),
-            validationExists(_: Set[String])(tpe, ignoreRefs)
           )
-        }.toSeq
-        val x = ((validations, elemValidations) match {
-          case (Nil, Nil)                => Nil
-          case ((h: String) +: Nil, Nil) => singleton(name, tpeName, allowNull(rawTpeName, !nb)(h))
-          case (Nil, (h, hasValidation) +: Nil) =>
-            Seq(
-              ValidationDefn(
-                name,
-                tpeName,
-                (defns: Set[String]) => if (!hasValidation(defns)) None else Some(allowNull(rawTpeName, !nb)(h))
-              )
+      }
+      val validatedElemRefs: Map[String, (String, Boolean, OpenapiSchemaType)] = elemValidators
+        .flatMap(_.map { case (fn, (defn, nb, tpe)) => (fn, (defn.name, nb, tpe)) }.headOption)
+        .toMap
+      def mkElemValidation(fname: String, validatorName: String, nullable: Boolean) = {
+        val applied = if (nullable) s"obj.$fname.toSeq.flatMap($validatorName.apply)" else s"$validatorName.apply(obj.$fname)"
+        s"""Validator.custom(
+         |  (obj: $rawTpeName) => $applied match {
+         |    case Nil => ValidationResult.Valid
+         |    case errs =>
+         |      val msgs: List[String] = "Object element validation failed for $rawTpeName.$fname" +:
+         |        errs.flatMap(_.customMessage).toList
+         |      ValidationResult.Invalid(msgs)
+         |  }
+         |)""".stripMargin
+      }
+      // TODO: Handle top-level object validations
+      val elemValidations: Seq[(String, Set[String] => Boolean)] = validatedElemRefs.map { case (fn, (vn, nb, tpe)) =>
+        (
+          mkElemValidation(fn, (tpe match { case r: OpenapiSchemaRef => r.stripped; case _ => vn }) + "Validator", nb),
+          validationExists(_: Set[String])(tpe, ignoreRefs)
+        )
+      }.toSeq
+      val x = elemValidations match {
+        case Nil => Nil
+        case (h, hasValidation) +: Nil =>
+          Seq(
+            ValidationDefn(
+              name,
+              tpeName,
+              (defns: Set[String]) => if (!hasValidation(defns)) None else Some(allowNull(rawTpeName, !nb)(h))
             )
-          case (seq, vs) =>
-            Seq(
-              ValidationDefn(
-                name,
-                tpeName,
-                (defns: Set[String]) => {
-                  val filtered = vs.filterNot { case (_, hasValidation) => !hasValidation(defns) }
-                  (seq ++ filtered.map(_._1)).toSeq match {
-                    case Nil                => None
-                    case (h: String) +: Nil => Some(h)
-                    case seq                => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(seq).mkString(", ")})"""))
-                  }
+          )
+        case vs =>
+          Seq(
+            ValidationDefn(
+              name,
+              tpeName,
+              (defns: Set[String]) => {
+                val filtered = vs.filter { case (_, hasValidation) => hasValidation(defns) }
+                filtered.map(_._1).toSeq match {
+                  case Nil                => None
+                  case (h: String) +: Nil => Some(h)
+                  case seq                => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(seq).mkString(", ")})"""))
                 }
-              )
+              }
             )
-        })
-        x ++ elemValidators.flatMap(_.map(_._2._1)).filterNot(_.refOnly)
-      case _ => Nil
+          )
+      }
+      x ++ elemValidators.flatMap(_.map(_._2._1)).filterNot(_.refOnly)
+
+  }
+  private def genValidationDefn(
+      schemas: Map[String, OpenapiSchemaType],
+      ignoreRefs: Boolean
+  )(name: String, schema: OpenapiSchemaType): Seq[ValidationDefn] =
+    schema match {
+      case r: OpenapiSchemaRef               => genRefDef(name, r)
+      case s: OpenapiSchemaString            => genStrDef(name, s)
+      case numeric: OpenapiSchemaNumericType => genNumDef(name, numeric)
+      case a: OpenapiSchemaArray             => genArrDef(schemas, ignoreRefs)(name, a)
+      case m: OpenapiSchemaMap               => genMapDef(schemas, ignoreRefs)(name, m)
+      case o: OpenapiSchemaObject            => genObjDef(schemas, ignoreRefs)(name, o)
+      case _                                 => Nil
     }
 
+  // for non-object validations
   def mkValidations(doc: OpenapiDocument, t: OpenapiSchemaType, required: Boolean): String = t match {
     case r: OpenapiSchemaRef =>
       doc.components
