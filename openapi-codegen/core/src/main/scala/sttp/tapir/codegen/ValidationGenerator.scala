@@ -1,7 +1,7 @@
 package sttp.tapir.codegen
 
 import io.circe.JsonNumber
-import sttp.tapir.codegen.BasicGenerator.indent
+import sttp.tapir.codegen.RootGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -151,7 +151,7 @@ object ValidationGenerator {
       name: String
   )(restrictionsToString: Restrictions => Seq[String], mkValidation: (String, String) => String, iTypeToCType: String => String) = {
     def genTypeName(t: OpenapiSchemaType): String = t match {
-      case s: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(s)._1
+      case s: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(s)._1
       case e: OpenapiSchemaEnum       => e.`type`
       case a: OpenapiSchemaArray      => s"Seq[${genTypeName(a.items)}]"
       case a: OpenapiSchemaMap        => s"Map[String, ${genTypeName(a.items)}]"
