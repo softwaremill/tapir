@@ -70,6 +70,8 @@ object TapirGeneratedEndpointsJsonSerdes {
   implicit lazy val nullableThingy2JsonEncoder: io.circe.Encoder[NullableThingy2] = io.circe.generic.semiauto.deriveEncoder[NullableThingy2]
   implicit lazy val objectWithInlineEnumJsonDecoder: io.circe.Decoder[ObjectWithInlineEnum] = io.circe.generic.semiauto.deriveDecoder[ObjectWithInlineEnum]
   implicit lazy val objectWithInlineEnumJsonEncoder: io.circe.Encoder[ObjectWithInlineEnum] = io.circe.generic.semiauto.deriveEncoder[ObjectWithInlineEnum]
+  implicit lazy val validatedRecursiveJsonDecoder: io.circe.Decoder[ValidatedRecursive] = io.circe.generic.semiauto.deriveDecoder[ValidatedRecursive]
+  implicit lazy val validatedRecursiveJsonEncoder: io.circe.Encoder[ValidatedRecursive] = io.circe.generic.semiauto.deriveEncoder[ValidatedRecursive]
   implicit lazy val subtypeWithoutD2JsonDecoder: io.circe.Decoder[SubtypeWithoutD2] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithoutD2]
   implicit lazy val subtypeWithoutD2JsonEncoder: io.circe.Encoder[SubtypeWithoutD2] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithoutD2]
   implicit lazy val hasFooBarBazQuuxJsonDecoder: io.circe.Decoder[HasFooBarBazQuux] = io.circe.generic.semiauto.deriveDecoder[HasFooBarBazQuux]

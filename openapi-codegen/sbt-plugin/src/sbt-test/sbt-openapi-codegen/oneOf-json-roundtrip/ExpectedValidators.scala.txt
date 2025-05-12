@@ -60,6 +60,14 @@ object TapirGeneratedEndpointsValidators {
           errs.flatMap(_.customMessage).toList
         ValidationResult.Invalid(msgs)
     }
+  ), Validator.custom(
+    (obj: ValidatedObj) => obj.rec.toSeq.flatMap(ValidatedRecursiveValidator.apply) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.rec" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
   ))
   lazy val ValidatedObjArrValidator: Validator[Seq[Int]] = Validator.all(Validator.custom(
     (_: Seq[Int]).map(ValidatedObjArrItemValidator.apply).zipWithIndex.flatMap { case (l, i) => l.map(_ -> i) } match {
@@ -118,6 +126,25 @@ object TapirGeneratedEndpointsValidators {
     }
   )
   lazy val ValidatedOneOfBIValidator: Validator[Int] = Validator.min(0, exclusive = false)
+  lazy val ValidatedRecursiveValidator: Validator[ValidatedRecursive] = Validator.custom(
+    (obj: ValidatedRecursive) => obj.self.toSeq.flatMap(ValidatedRecursiveSelfValidator.apply) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedRecursive.self" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  )
+  lazy val ValidatedRecursiveSelfValidator: Validator[Seq[ValidatedRecursive]] = Validator.all(Validator.custom(
+    (_: Seq[ValidatedRecursive]).map(ValidatedRecursiveValidator.apply).zipWithIndex.flatMap { case (l, i) => l.map(_ -> i) } match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Array item validation failed for Seq[ValidatedRecursive]" +: errs.map { case (err, idx) =>
+          s"Element $idx is invalid${err.customMessage.map(" because: " + _).getOrElse("")}"
+        }.toList
+        ValidationResult.Invalid(msgs)
+    }
+  ), Validator.maxSize(3))
   lazy val ValidatedSubObjValidator: Validator[ValidatedSubObj] = Validator.custom(
     (obj: ValidatedSubObj) => ValidatedSubObjIValidator.apply(obj.i) match {
       case Nil => ValidationResult.Valid

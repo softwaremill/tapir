@@ -97,6 +97,7 @@ object TapirGeneratedEndpoints {
     bar: ValidatedSubObj,
     foo: String,
     map: Option[Map[String, Int]] = None,
+    rec: Option[ValidatedRecursive] = None,
     arr: Option[Seq[Int]] = None,
     quux: Option[String] = None,
     baz: Option[ValidatedSubObj] = None
@@ -170,6 +171,9 @@ object TapirGeneratedEndpoints {
     case object foo3 extends ObjectWithInlineEnumInlineEnum
     case object foo4 extends ObjectWithInlineEnumInlineEnum
   }
+  case class ValidatedRecursive (
+    self: Option[Seq[ValidatedRecursive]] = None
+  )
   case class SubtypeWithoutD2 (
     a: Seq[String],
     absent: Option[String] = None

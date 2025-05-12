@@ -818,6 +818,15 @@ components:
         - $ref: '#/components/schemas/ValidatedOneOfC'
       discriminator:
         propertyName: type
+    ValidatedRecursive:
+      title: ValidatedRecursive
+      type: object
+      properties:
+        self:
+          type: array
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/ValidatedRecursive'
     ValidatedSubObj:
       title: ValidatedSubObj
       type: object
@@ -864,3 +873,5 @@ components:
           maxItems: 9
         oneOf:
           $ref: '#/components/schemas/ValidatedOneOf'
+        rec:
+          $ref: '#/components/schemas/ValidatedRecursive'

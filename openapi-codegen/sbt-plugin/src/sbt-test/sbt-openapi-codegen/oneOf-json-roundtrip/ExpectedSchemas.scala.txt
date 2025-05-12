@@ -25,6 +25,7 @@ object TapirGeneratedEndpointsSchemas {
   implicit lazy val validatedOneOfATapirSchema: sttp.tapir.Schema[ValidatedOneOfA] = sttp.tapir.Schema.derived
   implicit lazy val validatedOneOfBTapirSchema: sttp.tapir.Schema[ValidatedOneOfB] = sttp.tapir.Schema.derived
   implicit lazy val validatedOneOfCTapirSchema: sttp.tapir.Schema[ValidatedOneOfC] = sttp.tapir.Schema.derived
+  implicit lazy val validatedRecursiveTapirSchema: sttp.tapir.Schema[ValidatedRecursive] = sttp.tapir.Schema.derived
   implicit lazy val validatedSubObjTapirSchema: sttp.tapir.Schema[ValidatedSubObj] = sttp.tapir.Schema.derived
   implicit lazy val aDTWithDiscriminatorTapirSchema: sttp.tapir.Schema[ADTWithDiscriminator] = {
     val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[ADTWithDiscriminator]]].value
