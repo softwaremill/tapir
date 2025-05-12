@@ -153,18 +153,9 @@ If using `inline given` is not possible, the name of the `Schema` can be adjuste
 ```scala mdoc
 final case class Paginated2[T](data: List[T], nextPage: Option[Int])
 object Paginated2:
-  given [T](using st: Schema[T]): Schema[Paginated2[T]] =
-    val s = Schema.derived[Paginated2[T]]
-    s.name match
-      case None => throw new IllegalArgumentException("Generic case class is nameless")
-      case Some(name) =>
-        st.name match
-          case None =>
-            throw new IllegalArgumentException("Type parameter of generic class is nameless")
-          case Some(stName) =>
-            s.name(name.copy(
-              typeParameterShortNames = stName.fullName :: stName.typeParameterShortNames
-            ))
+  given [T: Schema]: Schema[Paginated2[T]] = Schema.derivedWithTypeParameter
+    // Or Schema.derivedWithTypeParameter[Paginated2, T]
+    // Or Schema.derived[Paginated2[T]].renameWithTypeParameter[T]
 
 val name2 = summon[Schema[Paginated2[SomeInt]]].name
 ```

@@ -1,5 +1,6 @@
 package sttp.tapir.macros
 
+import scala.deriving.Mirror
 import sttp.tapir.{Schema, SchemaAnnotations, SchemaType, Validator}
 import sttp.tapir.generic.Configuration
 import sttp.tapir.Schema.SName
@@ -175,6 +176,10 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
       .string[S]
       .name(SName(validator.possibleValues.toList.mkString("_or_")))
       .validate(validator)
+
+  /** Creates a schema for a generic class `G[T]`. Include the name of `T` in the schema name.
+    */
+  inline def derivedWithTypeParameter[G[T], T: Schema](using m: Mirror.Of[G[T]]): Schema[G[T]] = derived[G[T]].renameWithTypeParameter[T]
 }
 
 private[tapir] object SchemaCompanionMacros {

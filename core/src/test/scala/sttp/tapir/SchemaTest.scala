@@ -207,6 +207,26 @@ class SchemaTest extends AnyFlatSpec with Matchers {
   final case class SomeValueInt(value: Int)
   final case class Node[A](values: List[A])
 
+  it should "generate correct names for generic classes with semi-automatic derivation and parameterized types" in {
+    implicit def schemaSomeValueString[A](implicit a: Schema[A]): Schema[SomeValueString[A]] =
+      Schema.derived[SomeValueString[A]].renameWithTypeParameter[A]
+    implicit def SomeValueInt: Schema[SomeValueInt] = Schema.derived[SomeValueInt]
+    implicit def schemaNode[A](implicit a: Schema[A]): Schema[Node[A]] = Schema.derived[Node[A]].renameWithTypeParameter[A]
+
+    implicitly[Schema[Node[SomeValueInt]]].name shouldBe Some(
+      SName(
+        "sttp.tapir.SchemaTest.Node",
+        List("sttp.tapir.SchemaTest.SomeValueInt")
+      )
+    )
+    implicitly[Schema[Node[SomeValueString[SomeValueInt]]]].name shouldBe Some(
+      SName(
+        "sttp.tapir.SchemaTest.Node",
+        List("sttp.tapir.SchemaTest.SomeValueString", "sttp.tapir.SchemaTest.SomeValueInt")
+      )
+    )
+  }
+
   it should "generate correct names for Eithers with parameterized types" in {
     import sttp.tapir.generic.auto._
     implicitly[Schema[Either[Int, Int]]].name shouldBe None
