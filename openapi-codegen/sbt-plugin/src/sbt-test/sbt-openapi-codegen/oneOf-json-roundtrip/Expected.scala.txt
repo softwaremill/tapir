@@ -92,10 +92,12 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
   case class ValidatedObj (
-    foo: String,
     bar: ValidatedSubObj,
-    baz: Option[ValidatedSubObj] = None,
-    quux: Option[String] = None
+    foo: String,
+    map: Option[Map[String, Int]] = None,
+    arr: Option[Seq[Int]] = None,
+    quux: Option[String] = None,
+    baz: Option[ValidatedSubObj] = None
   )
   case class NotNullableThingy (
     uuid: java.util.UUID
@@ -319,6 +321,15 @@ object TapirGeneratedEndpoints {
       .prependSecurityIn("security-group" / path[String]("securityGroupName").description("used by security logic"))
       .out(statusCode(sttp.model.StatusCode(204)).description("OK"))
 
+  type PostValidationTestEndpoint = Endpoint[String, Option[ValidatedObj], Unit, Unit, Any]
+  lazy val postValidationTest: PostValidationTestEndpoint =
+    endpoint
+      .post
+      .in(("validation" / "test"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(jsonBody[Option[ValidatedObj]].validateOption(ValidatedObjValidator))
+      .out(statusCode(sttp.model.StatusCode(204)).description("ok"))
+
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
@@ -517,7 +528,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[ListType].description("list type out"))
 
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getHeadersTests, getOneofErrorSecParamTest, postAllOf, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, getPatternRestrictedObject, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, postValidationTest, putAdtTest, postAdtTest, getHeadersTests, getOneofErrorSecParamTest, postAllOf, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, getPatternRestrictedObject, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 
   object Servers {

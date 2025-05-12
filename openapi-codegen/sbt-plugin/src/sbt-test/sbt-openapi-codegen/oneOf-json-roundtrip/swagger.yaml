@@ -503,6 +503,16 @@ paths:
         "204":
           description: fine
 
+  '/validation/test':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidatedObj'
+      responses:
+        "204":
+          description: ok
 
 components:
   parameters:
@@ -803,3 +813,21 @@ components:
         quux:
           type: string
           maxLength: 128
+        map:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+            maximum: 900
+            exclusiveMaximum: true
+          minProperties: 3
+          maxProperties: 12
+        arr:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 12
+            exclusiveMinimum: true
+            multipleOf: 3
+          maxItems: 9

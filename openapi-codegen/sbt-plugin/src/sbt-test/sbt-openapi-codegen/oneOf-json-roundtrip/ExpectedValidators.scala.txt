@@ -5,10 +5,18 @@ object TapirGeneratedEndpointsValidators {
   import sttp.tapir.{ValidationResult, Validator}
 
   lazy val ValidatedObjValidator: Validator[ValidatedObj] = Validator.all(Validator.custom(
-    (obj: ValidatedObj) => ValidatedObjFooValidator.apply(obj.foo) match {
+    (obj: ValidatedObj) => obj.quux.toSeq.flatMap(ValidatedObjQuuxValidator.apply) match {
       case Nil => ValidationResult.Valid
       case errs =>
-        val msgs: List[String] = "Object element validation failed for ValidatedObj.foo" +:
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.quux" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  ), Validator.custom(
+    (obj: ValidatedObj) => obj.arr.toSeq.flatMap(ValidatedObjArrValidator.apply) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.arr" +:
           errs.flatMap(_.customMessage).toList
         ValidationResult.Invalid(msgs)
     }
@@ -21,6 +29,22 @@ object TapirGeneratedEndpointsValidators {
         ValidationResult.Invalid(msgs)
     }
   ), Validator.custom(
+    (obj: ValidatedObj) => obj.map.toSeq.flatMap(ValidatedObjMapValidator.apply) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.map" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  ), Validator.custom(
+    (obj: ValidatedObj) => ValidatedObjFooValidator.apply(obj.foo) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.foo" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  ), Validator.custom(
     (obj: ValidatedObj) => obj.baz.toSeq.flatMap(ValidatedSubObjValidator.apply) match {
       case Nil => ValidationResult.Valid
       case errs =>
@@ -28,16 +52,9 @@ object TapirGeneratedEndpointsValidators {
           errs.flatMap(_.customMessage).toList
         ValidationResult.Invalid(msgs)
     }
-  ), Validator.custom(
-    (obj: ValidatedObj) => obj.quux.toSeq.flatMap(ValidatedObjQuuxValidator.apply) match {
-      case Nil => ValidationResult.Valid
-      case errs =>
-        val msgs: List[String] = "Object element validation failed for ValidatedObj.quux" +:
-          errs.flatMap(_.customMessage).toList
-        ValidationResult.Invalid(msgs)
-    }
   ))
   lazy val ValidatedObjFooValidator: Validator[String] = Validator.maxLength(128)
+  lazy val ValidatedObjArrItemValidator: Validator[Int] = Validator.all(Validator.min(0, exclusive = true), Validator.max(12, exclusive = false), Validator.custom(v => if (v % 3 == 0) ValidationResult.Valid else ValidationResult.Invalid(s"$v is not a multiple of 3")))
   lazy val ValidatedSubObjValidator: Validator[ValidatedSubObj] = Validator.custom(
     (obj: ValidatedSubObj) => ValidatedSubObjIValidator.apply(obj.i) match {
       case Nil => ValidationResult.Valid
@@ -47,6 +64,27 @@ object TapirGeneratedEndpointsValidators {
         ValidationResult.Invalid(msgs)
     }
   )
+  lazy val ValidatedObjArrValidator: Validator[Seq[Int]] = Validator.all(Validator.maxSize(9), Validator.custom(
+    (_: Seq[Int]).map(ValidatedObjArrItemValidator.apply).zipWithIndex.flatMap { case (l, i) => l.map(_ -> i) } match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Array item validation failed for Seq[Int]" +: errs.map { case (err, idx) =>
+          s"Element $idx is invalid${err.customMessage.map(" because: " + _).getOrElse("")}"
+        }.toList
+        ValidationResult.Invalid(msgs)
+    }
+  ))
   lazy val ValidatedObjQuuxValidator: Validator[String] = Validator.maxLength(128)
+  lazy val ValidatedObjMapValidator: Validator[Map[String, Int]] = Validator.all(Validator.minSize(3), Validator.maxSize(12), Validator.custom(
+    (_: Map[String, Int]).map{ case (k, v) => k -> ValidatedObjMapItemValidator.apply(v) }.flatMap { case (k, l) => l.map(k -> _) } match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Map element validation failed for Map[String, Int]" +: errs.map { case (k, err) =>
+          s"Entry $k is invalid${err.customMessage.map(" because: " + _).getOrElse("")}"
+        }.toList
+        ValidationResult.Invalid(msgs)
+    }
+  ))
+  lazy val ValidatedObjMapItemValidator: Validator[Int] = Validator.all(Validator.min(0, exclusive = false), Validator.max(900, exclusive = true))
   lazy val ValidatedSubObjIValidator: Validator[String] = Validator.pattern("i+.+")
 }

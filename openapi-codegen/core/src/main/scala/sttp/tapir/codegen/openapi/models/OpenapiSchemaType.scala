@@ -48,7 +48,9 @@ object OpenapiSchemaType {
       exclusiveMinimum: Option[Boolean] = None,
       exclusiveMaximum: Option[Boolean] = None,
       multipleOf: Option[JsonNumber] = None
-  )
+  ) {
+    def hasRestriction: Boolean = min.isDefined || max.isDefined || multipleOf.isDefined
+  }
   sealed trait OpenapiSchemaNumericType extends OpenapiSchemaSimpleType {
     def restrictions: NumericRestrictions
     def scalaType: String
@@ -80,7 +82,9 @@ object OpenapiSchemaType {
       pattern: Option[String] = None,
       minLength: Option[Int] = None,
       maxLength: Option[Int] = None
-  ) extends OpenapiSchemaStringType
+  ) extends OpenapiSchemaStringType {
+    def hasRestriction: Boolean = pattern.isDefined || minLength.isDefined || maxLength.isDefined
+  }
   case class OpenapiSchemaDate(
       nullable: Boolean
   ) extends OpenapiSchemaStringType
@@ -230,8 +234,8 @@ object OpenapiSchemaType {
         .ensure(DecodingFailure("Given type is not number/integer!", c.history))(v => v._1 == "number" || v._1 == "integer")
       (t, nb) = p
       f <- c.downField("format").as[Option[String]]
-      min <- c.downField("min").as[Option[JsonNumber]]
-      max <- c.downField("max").as[Option[JsonNumber]]
+      min <- c.downField("minimum").as[Option[JsonNumber]]
+      max <- c.downField("maximum").as[Option[JsonNumber]]
       exclusiveMinimum <- c.downField("exclusiveMinimum").as[Option[Boolean]]
       exclusiveMaximum <- c.downField("exclusiveMaximum").as[Option[Boolean]]
       multipleOf <- c.downField("multipleOf").as[Option[JsonNumber]]

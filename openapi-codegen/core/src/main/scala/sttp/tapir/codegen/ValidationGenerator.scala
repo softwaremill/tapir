@@ -7,10 +7,12 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   ArrayRestrictions,
   ObjectRestrictions,
   OpenapiSchemaArray,
+  OpenapiSchemaEnum,
   OpenapiSchemaMap,
   OpenapiSchemaNumericType,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
+  OpenapiSchemaSimpleType,
   OpenapiSchemaString
 }
 import sttp.tapir.codegen.util.{DocUtils, JavaEscape}
@@ -79,12 +81,13 @@ object ValidationGenerator {
   // See comments on `mkValidators`.
   private def validationExists(defns: Set[String])(schema: OpenapiSchemaType, ignoreRefs: Boolean = false): Boolean =
     schema match {
-      case ref: OpenapiSchemaRef             => !ignoreRefs && defns.contains(ref.stripped)
-      case OpenapiSchemaArray(t, _, _, r)    => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
-      case OpenapiSchemaMap(t, _, r)         => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
-      case OpenapiSchemaObject(t, _, _, _)   => t.exists { case (_, f) => validationExists(defns)(f.`type`, ignoreRefs) }
-      case OpenapiSchemaString(_, p, mi, ma) => p.isDefined || mi.isDefined || ma.isDefined
-      case o                                 => false
+      case ref: OpenapiSchemaRef           => !ignoreRefs && defns.contains(ref.stripped)
+      case OpenapiSchemaArray(t, _, _, r)  => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
+      case OpenapiSchemaMap(t, _, r)       => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
+      case OpenapiSchemaObject(t, _, _, _) => t.exists { case (_, f) => validationExists(defns)(f.`type`, ignoreRefs) }
+      case s: OpenapiSchemaString          => s.hasRestriction
+      case n: OpenapiSchemaNumericType     => n.restrictions.hasRestriction
+      case o                               => false
     }
 
   private def genRefDef(name: String, r: OpenapiSchemaRef): Seq[ValidationDefn] = {
@@ -120,7 +123,9 @@ object ValidationGenerator {
         restrictions.max.map(s => s"""Validator.max(${render(s)}, exclusive = ${restrictions.exclusiveMaximum.getOrElse(false)})""") ++
         restrictions.multipleOf
           .flatMap(_.toLong)
-          .map(v => s"Validator.custom(v => if (v % $v == 0) ValidationResult.Valid else ValidationResult.Invalid)")
+          .map(v =>
+            s"""Validator.custom(v => if (v % $v == 0) ValidationResult.Valid else ValidationResult.Invalid(s"$$v is not a multiple of $v"))"""
+          )
     val nullable = numeric.nullable
     val scalaType = numeric.scalaType
     validations match {
@@ -137,8 +142,17 @@ object ValidationGenerator {
       elemType: OpenapiSchemaType,
       nb: Boolean,
       restrictions: Restrictions
-  )(name: String)(restrictionsToString: Restrictions => Seq[String], mkValidation: (String, String) => String) = {
-    val rawTpeName = name.capitalize
+  )(
+      name: String
+  )(restrictionsToString: Restrictions => Seq[String], mkValidation: (String, String) => String, iTypeToCType: String => String) = {
+    def genTypeName(t: OpenapiSchemaType): String = iTypeToCType(t match {
+      case s: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(s)._1
+      case e: OpenapiSchemaEnum       => e.`type`
+      case a: OpenapiSchemaArray      => s"Seq[${genTypeName(a.items)}]"
+      case a: OpenapiSchemaMap        => s"Map[String, ${genTypeName(a.items)}]"
+      case x => throw new NotImplementedError(s"Validation is not supported on arrays or maps containing elements like ${x}")
+    })
+    val rawTpeName = genTypeName(elemType)
     val tpeName = opt(rawTpeName, nb)
     val elemValidators = genValidationDefn(schemas, ignoreRefs)(s"${name}Item", elemType)
     val validations: Seq[String] = restrictionsToString(restrictions)
@@ -198,7 +212,8 @@ object ValidationGenerator {
              |      }.toList
              |      ValidationResult.Invalid(msgs)
              |  }
-             |)""".stripMargin
+             |)""".stripMargin,
+        s => s"Seq[$s]"
       )
   }
 
@@ -220,7 +235,8 @@ object ValidationGenerator {
              |      }.toList
              |      ValidationResult.Invalid(msgs)
              |  }
-             |)""".stripMargin
+             |)""".stripMargin,
+        s => s"Map[String, $s]"
       )
   }
 
