@@ -180,9 +180,10 @@ param serdes.
 Models containing binary data cannot be re-used between json and multi-part form endpoints, due to having different
 representation types for the binary data
 
-We currently miss a few OpenApi features. Notably are:
+We currently miss a few OpenApi features. Notable are:
 
 - anyOf
-- validation (minLength, pattern, etc)
+- not all validation is supported (readOnly/writeOnly, uniqueItems on arrays, and minProperties/maxProperties on
+  heterogeneous object schemas, are currently unsupported)
 - missing model types (date, duration, etc)
 
