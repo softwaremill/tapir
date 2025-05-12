@@ -6,6 +6,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.client.sttp.{SttpClientInterpreter, WebSocketToPipe}
 import sttp.tapir.generated.TapirGeneratedEndpoints
 import sttp.tapir.generated.TapirGeneratedEndpoints.{ValidatedObj, ValidatedOneOfA, ValidatedOneOfB, ValidatedOneOfC, ValidatedSubObj}
+import sttp.tapir.generated.TapirGeneratedEndpointsValidators.ValidatedObjMapValidator
 import sttp.tapir.server.stub.TapirStubInterpreter
 
 import scala.concurrent.duration.DurationInt
@@ -75,8 +76,7 @@ class ValidationSpec extends AnyFreeSpec with Matchers {
     checkSuccess(Some(minimalValidObj.copy(oneOf = Some(ValidatedOneOfA("i1")))))
     checkSuccess(Some(minimalValidObj.copy(oneOf = Some(ValidatedOneOfB(Some(0))))))
     checkSuccess(Some(minimalValidObj.copy(oneOf = Some(ValidatedOneOfC(None)))))
-    // Currently failing because of bug where both ValidatedObjArrValidator and ValidatedObjMapValidator try to call same IntValidator
-//    checkSuccess(Some(minimalValidObj.copy(map = Some(Map("a" -> 1, "b" -> 2, "c" -> 2)))))
+    checkSuccess(Some(minimalValidObj.copy(map = Some(Map("a" -> 1, "b" -> 2, "c" -> 2)))))
     checkSuccess(Some(minimalValidObj.copy(arr = Some(Seq(3, 6, 9)))))
     checkSuccess(Some(minimalValidObj.copy(baz = Some(ValidatedSubObj("i1")))))
     /// FAILURES

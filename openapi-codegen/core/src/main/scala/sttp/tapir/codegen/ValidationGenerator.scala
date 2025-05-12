@@ -97,7 +97,7 @@ object ValidationGenerator {
   private def genRefDef(name: String, r: OpenapiSchemaRef): Seq[ValidationDefn] = {
     Seq(
       ValidationDefn(
-        name,
+        r.stripped.capitalize,
         r.stripped.capitalize,
         (defns: Set[String]) => if (defns.contains(r.stripped)) Some(s"${r.stripped}Validator") else None,
         refOnly = true
@@ -150,12 +150,14 @@ object ValidationGenerator {
   )(
       name: String
   )(restrictionsToString: Restrictions => Seq[String], mkValidation: (String, String) => String, iTypeToCType: String => String) = {
+    val itemName = s"${name.capitalize}Item"
+
     def genTypeName(t: OpenapiSchemaType): String = t match {
       case s: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(s)._1
       case e: OpenapiSchemaEnum       => e.`type`
       case a: OpenapiSchemaArray      => s"Seq[${genTypeName(a.items)}]"
       case a: OpenapiSchemaMap        => s"Map[String, ${genTypeName(a.items)}]"
-      case _: OpenapiSchemaObject     => s"${name.capitalize}Item"
+      case _: OpenapiSchemaObject     => itemName
       case x =>
         throw new NotImplementedError(
           s"Error at $name definition. Validation is not supported on arrays or maps containing elements like ${x}. Try extracting the element definition into its own schema."
@@ -164,7 +166,7 @@ object ValidationGenerator {
     val elemTpeName = genTypeName(elemType)
     val rawTpeName = iTypeToCType(elemTpeName)
     val tpeName = opt(rawTpeName, nb)
-    val elemValidators = genValidationDefn(schemas, ignoreRefs)(elemTpeName, elemType)
+    val elemValidators = genValidationDefn(schemas, ignoreRefs)(itemName, elemType)
     val validations: Seq[String] = restrictionsToString(restrictions)
 
     def mkItemValidation(validatorName: String) = mkValidation(rawTpeName, validatorName)
@@ -238,7 +240,7 @@ object ValidationGenerator {
             r.maxProperties.map(s => s"""Validator.maxSize($s)""").toSeq,
         (rawTpeName, validatorName) => s"""Validator.custom(
              |  (_: $rawTpeName).map{ case (k, v) => k -> $validatorName.apply(v) }.flatMap { case (k, l) => l.map(k -> _) } match {
-             |    case Nil => ValidationResult.Valid
+             |    case m if m.isEmpty => ValidationResult.Valid
              |    case errs =>
              |      val msgs: List[String] = "Map element validation failed for $rawTpeName" +: errs.map { case (k, err) =>
              |        s"Entry $$k is invalid$${err.customMessage.map(" because: " + _).getOrElse("")}"

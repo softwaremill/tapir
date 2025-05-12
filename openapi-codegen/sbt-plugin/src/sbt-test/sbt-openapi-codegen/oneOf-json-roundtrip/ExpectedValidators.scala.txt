@@ -4,7 +4,6 @@ object TapirGeneratedEndpointsValidators {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.{ValidationResult, Validator}
 
-  lazy val IntValidator: Validator[Int] = Validator.all(Validator.custom(v => if (v % 3 == 0) ValidationResult.Valid else ValidationResult.Invalid(s"$v is not a multiple of 3")), Validator.max(12, exclusive = false), Validator.min(0, exclusive = true))
   lazy val ValidatedObjValidator: Validator[ValidatedObj] = Validator.all(Validator.custom(
     (obj: ValidatedObj) => ValidatedObjFooValidator.apply(obj.foo) match {
       case Nil => ValidationResult.Valid
@@ -63,7 +62,7 @@ object TapirGeneratedEndpointsValidators {
     }
   ))
   lazy val ValidatedObjArrValidator: Validator[Seq[Int]] = Validator.all(Validator.custom(
-    (_: Seq[Int]).map(IntValidator.apply).zipWithIndex.flatMap { case (l, i) => l.map(_ -> i) } match {
+    (_: Seq[Int]).map(ValidatedObjArrItemValidator.apply).zipWithIndex.flatMap { case (l, i) => l.map(_ -> i) } match {
       case Nil => ValidationResult.Valid
       case errs =>
         val msgs: List[String] = "Array item validation failed for Seq[Int]" +: errs.map { case (err, idx) =>
@@ -72,10 +71,11 @@ object TapirGeneratedEndpointsValidators {
         ValidationResult.Invalid(msgs)
     }
   ), Validator.maxSize(9))
+  lazy val ValidatedObjArrItemValidator: Validator[Int] = Validator.all(Validator.custom(v => if (v % 3 == 0) ValidationResult.Valid else ValidationResult.Invalid(s"$v is not a multiple of 3")), Validator.max(12, exclusive = false), Validator.min(0, exclusive = true))
   lazy val ValidatedObjFooValidator: Validator[String] = Validator.maxLength(128)
   lazy val ValidatedObjMapValidator: Validator[Map[String, Int]] = Validator.all(Validator.custom(
-    (_: Map[String, Int]).map{ case (k, v) => k -> IntValidator.apply(v) }.flatMap { case (k, l) => l.map(k -> _) } match {
-      case Nil => ValidationResult.Valid
+    (_: Map[String, Int]).map{ case (k, v) => k -> ValidatedObjMapItemValidator.apply(v) }.flatMap { case (k, l) => l.map(k -> _) } match {
+      case m if m.isEmpty => ValidationResult.Valid
       case errs =>
         val msgs: List[String] = "Map element validation failed for Map[String, Int]" +: errs.map { case (k, err) =>
           s"Entry $k is invalid${err.customMessage.map(" because: " + _).getOrElse("")}"
@@ -83,6 +83,7 @@ object TapirGeneratedEndpointsValidators {
         ValidationResult.Invalid(msgs)
     }
   ), Validator.maxSize(12), Validator.minSize(3))
+  lazy val ValidatedObjMapItemValidator: Validator[Int] = Validator.all(Validator.max(900, exclusive = true), Validator.min(0, exclusive = false))
   lazy val ValidatedObjQuuxValidator: Validator[String] = Validator.maxLength(128)
   lazy val ValidatedOneOfValidator: Validator[ValidatedOneOf] = Validator.custom(
     (obj: ValidatedOneOf) => (obj match {
