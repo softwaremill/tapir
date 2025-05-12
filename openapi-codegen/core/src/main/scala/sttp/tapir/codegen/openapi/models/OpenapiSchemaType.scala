@@ -30,7 +30,7 @@ object OpenapiSchemaType {
   }
 
   case class OpenapiSchemaAllOf(
-      types: Seq[OpenapiSchemaSimpleType]
+      types: Seq[OpenapiSchemaType]
   ) extends OpenapiSchemaMixedType {
     val nullable: Boolean = false
   }
@@ -244,7 +244,7 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaAllOfDecoder: Decoder[OpenapiSchemaAllOf] = { (c: HCursor) =>
     for {
-      d <- c.downField("allOf").as[Seq[OpenapiSchemaSimpleType]]
+      d <- c.downField("allOf").as[Seq[OpenapiSchemaType]]
     } yield {
       OpenapiSchemaAllOf(d)
     }

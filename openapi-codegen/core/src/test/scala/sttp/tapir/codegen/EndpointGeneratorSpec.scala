@@ -65,7 +65,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null,
       Nil
     )
-    val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
+    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
         .endpointDefs(
           doc,
@@ -154,7 +154,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    BasicGenerator.imports(JsonSerdeLib.Circe) ++
+    RootGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
         .endpointDefs(
           doc,
@@ -210,7 +210,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null,
       Nil
     )
-    val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
+    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
         .endpointDefs(
           doc,
@@ -279,7 +279,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    val generatedCode = BasicGenerator.generateObjects(
+    val generatedCode = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
@@ -303,7 +303,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
 
   it should "generate attributes for specification extensions on path and operation objects" in {
     val doc = TestHelpers.specificationExtensionDocs
-    val generatedCode = BasicGenerator.generateObjects(
+    val generatedCode = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",

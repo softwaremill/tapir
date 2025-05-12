@@ -7,7 +7,7 @@ import cats.implicits._
 import com.monovore.decline._
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.{BasicGenerator, YamlParser}
+import sttp.tapir.codegen.{RootGenerator, YamlParser}
 
 import java.io.File
 import java.nio.charset.StandardCharsets
@@ -117,7 +117,7 @@ object GenScala {
 
           def generateCode(doc: OpenapiDocument): IO[Unit] = for {
             contents <- IO.pure(
-              BasicGenerator.generateObjects(
+              RootGenerator.generateObjects(
                 doc,
                 packageName,
                 objectName,

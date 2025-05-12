@@ -109,12 +109,18 @@ object TapirGeneratedEndpoints {
   case class NotFoundError (
     reason: String
   ) extends Error
+  case class HasBar (
+    bar: String
+  )
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  case class HasBaz (
+    baz: Int
+  )
   case class SubtypeWithD1 (
     s: String,
     i: Option[Int] = None,
@@ -148,6 +154,12 @@ object TapirGeneratedEndpoints {
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  case class HasFooBarBazQuux (
+    foo: Option[String] = None,
+    bar: String,
+    baz: Int,
+    quux: Option[Int] = None
+  )
   case class SubtypeWithD2 (
     s: String,
     a: Option[Seq[String]] = None
@@ -162,6 +174,9 @@ object TapirGeneratedEndpoints {
     case object Bar extends AnEnum
     case object Baz extends AnEnum
   }
+  case class HasFoo (
+    foo: Option[String] = None
+  )
   type ListType = List[String]
   case class NullableThingy (
     uuid: java.util.UUID
@@ -348,6 +363,15 @@ object TapirGeneratedEndpoints {
         oneOfVariant[SimpleError](sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
       .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
 
+  type PostAllOfEndpoint = Endpoint[String, Option[HasFooBarBazQuux], Unit, Unit, Any]
+  lazy val postAllOf: PostAllOfEndpoint =
+    endpoint
+      .post
+      .in(("allOf"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(jsonBody[Option[HasFooBarBazQuux]].description("list type in"))
+      .out(statusCode(sttp.model.StatusCode(204)).description("fine"))
+
   type GetSecurityGroupSecurityGroupNameMorePathEndpoint = Endpoint[(String, String), Unit, Unit, Unit, Any]
   lazy val getSecurityGroupSecurityGroupNameMorePath: GetSecurityGroupSecurityGroupNameMorePathEndpoint =
     endpoint
@@ -465,7 +489,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[ListType].description("list type out"))
 
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getHeadersTests, getOneofErrorSecParamTest, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getHeadersTests, getOneofErrorSecParamTest, postAllOf, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 
   object Servers {

@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType}
+import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -61,7 +61,7 @@ object XmlSerdeGenerator {
                   _.collect {
                     case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _)), r)
                         if doc.components.exists(_.schemas.get(t.stripped).exists(_.isInstanceOf[OpenapiSchemaEnum])) =>
-                      val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
+                      val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
                       val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                       ScopedAuxCodecParams(n, d, tpe, EnumType, None)
                     case (ref, (n, OpenapiSchemaField(t: OpenapiSchemaEnum, _)), r) =>
@@ -69,10 +69,10 @@ object XmlSerdeGenerator {
                       val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                       ScopedAuxCodecParams(n, d, tpe, EnumType, None)
                     case (_, (n, OpenapiSchemaField(OpenapiSchemaArray(t: OpenapiSchemaSimpleType, _, maybeXml), _)), _) =>
-                      val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
+                      val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
                       ScopedAuxCodecParams(n, tpe, tpe, ArrayType, maybeXml)
                     case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _)), r) =>
-                      val tpe = BasicGenerator.mapSchemaSimpleTypeToType(t)._1
+                      val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
                       val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                       ScopedAuxCodecParams(n, d, tpe, OtherType, None)
                   }

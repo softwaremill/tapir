@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.BasicGenerator.indent
+import sttp.tapir.codegen.RootGenerator.indent
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
@@ -45,7 +45,7 @@ object SchemaGenerator {
       .map(_.schemas.flatMap {
         case (name, _: OpenapiSchemaEnum) =>
           Some(
-            name -> s"implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
+            name -> s"implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
           )
         case (name, obj: OpenapiSchemaObject)   => Some(name -> schemaForObject(name, obj))
         case (name, schema: OpenapiSchemaMap)   => Some(name -> schemaForMapOrArray(name, schema.items))
@@ -196,7 +196,7 @@ object SchemaGenerator {
       case Nil => ""
       case s   => s.mkString("", "\n", "\n")
     }
-    s"${subs}implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
+    s"${subs}implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
   }
   private def schemaForMapOrArray(name: String, schema: OpenapiSchemaType): String = {
     val subs = schema match {
@@ -206,7 +206,7 @@ object SchemaGenerator {
     subs.fold("")("\n" + _)
   }
   private def schemaForEnum(name: String): String =
-    s"""implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"""
+    s"""implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"""
 
   private def genADTSchema(name: String, schema: OpenapiSchemaOneOf, fullModelPath: Option[String]): String = {
     val schemaImpl = schema match {
@@ -242,6 +242,6 @@ object SchemaGenerator {
            |}""".stripMargin
     }
 
-    s"implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = ${schemaImpl}"
+    s"implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = ${schemaImpl}"
   }
 }

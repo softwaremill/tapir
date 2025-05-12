@@ -3,7 +3,7 @@ package sttp.tapir.sbt
 import sbt._
 import sbt.util.FileInfo.hash
 import sbt.util.Tracked.inputChanged
-import sttp.tapir.codegen.{BasicGenerator, YamlParser}
+import sttp.tapir.codegen.{RootGenerator, YamlParser}
 
 case class OpenapiCodegenTask(
     inputYaml: File,
@@ -51,7 +51,7 @@ case class OpenapiCodegenTask(
         .parseFile(IO.readLines(inputYaml).mkString("\n"))
         .left
         .map(d => new RuntimeException(_root_.io.circe.Error.showError.show(d)))
-      BasicGenerator
+      RootGenerator
         .generateObjects(
           parsed.toTry.get,
           packageName,

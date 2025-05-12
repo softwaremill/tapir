@@ -30,13 +30,13 @@ object StreamingImplementation extends Enumeration {
   type StreamingImplementation = Value
 }
 
-object BasicGenerator {
+object RootGenerator {
 
   val classGenerator = new ClassDefinitionGenerator()
   val endpointGenerator = new EndpointGenerator()
 
   def generateObjects(
-      doc: OpenapiDocument,
+      unNormalisedDoc: OpenapiDocument,
       packagePath: String,
       objName: String,
       targetScala3: Boolean,
@@ -48,6 +48,7 @@ object BasicGenerator {
       maxSchemasPerFile: Int,
       generateEndpointTypes: Boolean
   ): Map[String, String] = {
+    val doc = unNormalisedDoc.resolveAllOfSchemas
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
       case "jsoniter" => JsonSerdeLib.Jsoniter

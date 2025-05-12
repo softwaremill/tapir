@@ -447,6 +447,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListType'
+  '/allOf':
+    post:
+      requestBody:
+        description: list type in
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HasFooBarBazQuux'
+      responses:
+        "204":
+          description: fine
 
 
 components:
@@ -689,3 +700,36 @@ components:
       type: array
       items:
         type: string
+    HasFoo:
+      title: HasFoo
+      type: object
+      properties:
+        foo:
+          type: string
+    HasBar:
+      title: HasBar
+      type: object
+      required:
+        - bar
+      properties:
+        bar:
+          type: string
+    HasBaz:
+      title: HasBaz
+      type: object
+      required:
+        - baz
+      properties:
+        baz:
+          type: integer
+    HasFooBarBazQuux:
+      title: HasFooBarBazQuux
+      allOf:
+        - $ref: '#/components/schemas/HasFoo'
+        - $ref: '#/components/schemas/HasBar'
+        - $ref: '#/components/schemas/HasBaz'
+        - title: HasQuux
+          type: object
+          properties:
+            quux:
+              type: integer

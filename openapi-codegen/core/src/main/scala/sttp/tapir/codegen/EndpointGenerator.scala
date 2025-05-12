@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 import io.circe.Json
-import sttp.tapir.codegen.BasicGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
+import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.StreamingImplementation.StreamingImplementation
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
@@ -253,12 +253,12 @@ class EndpointGenerator {
               case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _) =>
                 bail("Cannot generate schema for 'Any' with jsoniter library")
               case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _) =>
-                val name = BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
+                val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
                 s"List[$name]"
               case simple: OpenapiSchemaSimpleType =>
-                BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
+                RootGenerator.mapSchemaSimpleTypeToType(simple)._1
               case OpenapiSchemaMap(simple: OpenapiSchemaSimpleType, _) =>
-                val name = BasicGenerator.mapSchemaSimpleTypeToType(simple)._1
+                val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
                 s"Map[String, $name]"
             }
             .toSet

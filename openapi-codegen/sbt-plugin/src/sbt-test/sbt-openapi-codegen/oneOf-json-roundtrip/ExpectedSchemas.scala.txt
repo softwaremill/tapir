@@ -4,6 +4,11 @@ object TapirGeneratedEndpointsSchemas {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
   implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derived
+  implicit lazy val hasBarTapirSchema: sttp.tapir.Schema[HasBar] = sttp.tapir.Schema.derived
+  implicit lazy val hasBazTapirSchema: sttp.tapir.Schema[HasBaz] = sttp.tapir.Schema.derived
+  implicit lazy val hasFooTapirSchema: sttp.tapir.Schema[HasFoo] = sttp.tapir.Schema.derived
+  implicit lazy val hasFooBarBazQuuxTapirSchema: sttp.tapir.Schema[HasFooBarBazQuux] = sttp.tapir.Schema.derived
+
   implicit lazy val notFoundErrorTapirSchema: sttp.tapir.Schema[NotFoundError] = sttp.tapir.Schema.derived
   implicit lazy val notNullableThingyTapirSchema: sttp.tapir.Schema[NotNullableThingy] = sttp.tapir.Schema.derived
   implicit lazy val nullableThingyTapirSchema: sttp.tapir.Schema[NullableThingy] = sttp.tapir.Schema.derived

@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.BasicGenerator.indent
+import sttp.tapir.codegen.RootGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.OAuth2FlowType
 import sttp.tapir.codegen.util.ErrUtils.bail
