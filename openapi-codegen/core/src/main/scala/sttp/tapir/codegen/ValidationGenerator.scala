@@ -21,7 +21,8 @@ import scala.annotation.tailrec
 
 case class ValidationDefn(name: String, tpe: String, construct: Set[String] => Option[String], refOnly: Boolean = false)
 case class ValidationDefns(defns: Map[String, ValidationDefn]) {
-  def render: String = defns.values
+  def render: String = defns.values.toSeq
+    .sortBy(_.name)
     .flatMap { d => d.construct(defns.keySet).map(impl => s"lazy val ${d.name}Validator: Validator[${d.tpe}] = $impl") }
     .mkString("\n")
 }
@@ -110,7 +111,8 @@ object ValidationGenerator {
       validations match {
         case Nil                => Nil
         case (h: String) +: Nil => singleton(name, opt("String", nullable), allowNull("String", !nullable)(h))
-        case seq => singleton(name, opt("String", nullable), allowNull("String", !nullable)(s"""Validator.all(${seq.mkString(", ")})"""))
+        case seq =>
+          singleton(name, opt("String", nullable), allowNull("String", !nullable)(s"""Validator.all(${seq.sorted.mkString(", ")})"""))
       }
   }
 
@@ -132,7 +134,7 @@ object ValidationGenerator {
       case Nil                => Nil
       case (h: String) +: Nil => singleton(name, opt(scalaType, nullable), allowNull(scalaType, !nullable)(h))
       case seq =>
-        singleton(name, opt(scalaType, nullable), allowNull(scalaType, !nullable)(s"""Validator.all(${seq.mkString(", ")})"""))
+        singleton(name, opt(scalaType, nullable), allowNull(scalaType, !nullable)(s"""Validator.all(${seq.sorted.mkString(", ")})"""))
     }
   }
 
@@ -145,16 +147,21 @@ object ValidationGenerator {
   )(
       name: String
   )(restrictionsToString: Restrictions => Seq[String], mkValidation: (String, String) => String, iTypeToCType: String => String) = {
-    def genTypeName(t: OpenapiSchemaType): String = iTypeToCType(t match {
+    def genTypeName(t: OpenapiSchemaType): String = t match {
       case s: OpenapiSchemaSimpleType => BasicGenerator.mapSchemaSimpleTypeToType(s)._1
       case e: OpenapiSchemaEnum       => e.`type`
       case a: OpenapiSchemaArray      => s"Seq[${genTypeName(a.items)}]"
       case a: OpenapiSchemaMap        => s"Map[String, ${genTypeName(a.items)}]"
-      case x => throw new NotImplementedError(s"Validation is not supported on arrays or maps containing elements like ${x}")
-    })
-    val rawTpeName = genTypeName(elemType)
+      case _: OpenapiSchemaObject     => s"${name.capitalize}Item"
+      case x =>
+        throw new NotImplementedError(
+          s"Error at $name definition. Validation is not supported on arrays or maps containing elements like ${x}. Try extracting the element definition into its own schema."
+        )
+    }
+    val elemTpeName = genTypeName(elemType)
+    val rawTpeName = iTypeToCType(elemTpeName)
     val tpeName = opt(rawTpeName, nb)
-    val elemValidators = genValidationDefn(schemas, ignoreRefs)(s"${name}Item", elemType)
+    val elemValidators = genValidationDefn(schemas, ignoreRefs)(elemTpeName, elemType)
     val validations: Seq[String] = restrictionsToString(restrictions)
 
     def mkItemValidation(validatorName: String) = mkValidation(rawTpeName, validatorName)
@@ -177,7 +184,7 @@ object ValidationGenerator {
             tpeName,
             defn =>
               maybeItem(defn) match {
-                case Some(v) => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(Seq(h, v)).mkString(", ")})"""))
+                case Some(v) => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${Seq(h, v).sorted.mkString(", ")})"""))
                 case None    => Some(allowNull(rawTpeName, !nb)(h))
               }
           )
@@ -187,7 +194,7 @@ object ValidationGenerator {
           ValidationDefn(
             name,
             tpeName,
-            defn => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(seq ++ maybeItem.flatMap(_(defn))).mkString(", ")})"""))
+            defn => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(seq ++ maybeItem.flatMap(_(defn))).sorted.mkString(", ")})"""))
           )
         )
     }) ++ elemValidators.filterNot(_.refOnly)
@@ -301,7 +308,7 @@ object ValidationGenerator {
                 filtered.map(_._1).toSeq match {
                   case Nil                => None
                   case (h: String) +: Nil => Some(h)
-                  case seq                => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${(seq).mkString(", ")})"""))
+                  case seq                => Some(allowNull(rawTpeName, !nb)(s"""Validator.all(${seq.sorted.mkString(", ")})"""))
                 }
               }
             )
@@ -338,7 +345,7 @@ object ValidationGenerator {
       validations match {
         case Nil      => ""
         case h +: Nil => s".validate(${allowNull("String", required)(h)})"
-        case seq      => s""".validate(${allowNull("String", required)(s"""Validator.all(${seq.mkString(", ")})""")})"""
+        case seq      => s""".validate(${allowNull("String", required)(s"""Validator.all(${seq.sorted.mkString(", ")})""")})"""
       }
     case numeric: OpenapiSchemaNumericType =>
       val restrictions = numeric.restrictions
@@ -353,7 +360,7 @@ object ValidationGenerator {
       validations match {
         case Nil      => ""
         case h +: Nil => s".validate(${allowNull(numeric.scalaType, required)(h)})"
-        case seq      => s""".validate(${allowNull(numeric.scalaType, required)(s"""Validator.all(${seq.mkString(", ")})""")})"""
+        case seq      => s""".validate(${allowNull(numeric.scalaType, required)(s"""Validator.all(${seq.sorted.mkString(", ")})""")})"""
       }
     case OpenapiSchemaArray(_, _, _, restrictions) =>
       val validations =
@@ -362,7 +369,7 @@ object ValidationGenerator {
       validations match {
         case Nil      => ""
         case h +: Nil => s".validate(${allowNull("Iterable[?]", required)(h)})"
-        case seq      => s""".validate(${allowNull("Iterable[?]", required)(s"""Validator.all(${seq.mkString(", ")})""")})"""
+        case seq      => s""".validate(${allowNull("Iterable[?]", required)(s"""Validator.all(${seq.sorted.mkString(", ")})""")})"""
       }
     case OpenapiSchemaMap(_, _, restrictions) =>
       val validations =
@@ -371,7 +378,7 @@ object ValidationGenerator {
       validations match {
         case Nil      => ""
         case h +: Nil => s".validate(${allowNull("Iterable[?]", required)(h)})"
-        case seq      => s""".validate(${allowNull("Iterable[?]", required)(s"""Validator.all(${seq.mkString(", ")})""")})"""
+        case seq      => s""".validate(${allowNull("Iterable[?]", required)(s"""Validator.all(${seq.sorted.mkString(", ")})""")})"""
       }
     case _ => ""
   }

@@ -417,14 +417,14 @@ object TapirGeneratedEndpoints {
   lazy val getPatternRestrictedObject: GetPatternRestrictedObjectEndpoint =
     endpoint
       .get
-      .in(("pattern" / path[String]("restricted").validate(Validator.all(Validator.pattern("[a-z]+"), Validator.minLength(3), Validator.maxLength(10))).description("used by security logic") / "object"))
+      .in(("pattern" / path[String]("restricted").validate(Validator.all(Validator.maxLength(10), Validator.minLength(3), Validator.pattern("[a-z]+"))).description("used by security logic") / "object"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(query[Option[String]]("q1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.pattern("[a-z_].+")(_)).map{
         case Nil => ValidationResult.Valid
         case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
       }.getOrElse(ValidationResult.Valid))))
       .in(query[String]("q2").validate(Validator.minLength(3)))
-      .in(header[Option[String]]("h1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.all(Validator.pattern("[a-z_].+"), Validator.minLength(3))(_)).map{
+      .in(header[Option[String]]("h1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.all(Validator.minLength(3), Validator.pattern("[a-z_].+"))(_)).map{
         case Nil => ValidationResult.Valid
         case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
       }.getOrElse(ValidationResult.Valid))))
