@@ -1,7 +1,7 @@
 package sttp.tapir.server.tracing.opentelemetry
 
 import io.opentelemetry.api.OpenTelemetry
-import io.opentelemetry.api.trace.{Span, Tracer}
+import io.opentelemetry.api.trace.{Span, SpanKind, Tracer}
 import io.opentelemetry.context.Context
 import io.opentelemetry.context.propagation.{ContextPropagators, TextMapGetter}
 import sttp.monad.MonadError
@@ -63,6 +63,7 @@ class OpenTelemetryTracing[F[_]](config: OpenTelemetryTracingConfig) extends Req
       val span = config.tracer
         .spanBuilder(config.spanName(request))
         .setAllAttributes(config.requestAttributes(request))
+        .setSpanKind(SpanKind.SERVER)
         .startSpan()
 
       withSpan(span) {
