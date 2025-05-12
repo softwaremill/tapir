@@ -787,6 +787,37 @@ components:
           properties:
             quux:
               type: integer
+    ValidatedOneOfA:
+      title: ValidatedOneOfA
+      type: object
+      required:
+        - s
+      properties:
+        s:
+          type: string
+          pattern: 'i+.+'
+    ValidatedOneOfB:
+      title: ValidatedOneOfB
+      type: object
+      properties:
+        i:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: false
+    ValidatedOneOfC:
+      title: ValidatedOneOfC
+      type: object
+      properties:
+        j:
+          type: integer
+    ValidatedOneOf:
+      title: ValidatedOneOf
+      oneOf:
+        - $ref: '#/components/schemas/ValidatedOneOfA'
+        - $ref: '#/components/schemas/ValidatedOneOfB'
+        - $ref: '#/components/schemas/ValidatedOneOfC'
+      discriminator:
+        propertyName: type
     ValidatedSubObj:
       title: ValidatedSubObj
       type: object
@@ -831,3 +862,5 @@ components:
             exclusiveMinimum: true
             multipleOf: 3
           maxItems: 9
+        oneOf:
+          $ref: '#/components/schemas/ValidatedOneOf'

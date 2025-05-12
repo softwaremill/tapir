@@ -86,12 +86,14 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
+  sealed trait ValidatedOneOf
   sealed trait ADTWithDiscriminator
   sealed trait AnyObjectWithInlineEnum
   sealed trait Error
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
   case class ValidatedObj (
+    oneOf: Option[ValidatedOneOf] = None,
     bar: ValidatedSubObj,
     foo: String,
     map: Option[Map[String, Int]] = None,
@@ -99,6 +101,9 @@ object TapirGeneratedEndpoints {
     quux: Option[String] = None,
     baz: Option[ValidatedSubObj] = None
   )
+  case class ValidatedOneOfA (
+    s: String
+  ) extends ValidatedOneOf
   case class NotNullableThingy (
     uuid: java.util.UUID
   )
@@ -140,6 +145,9 @@ object TapirGeneratedEndpoints {
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
     def `type`: String = "SubA"
   }
+  case class ValidatedOneOfB (
+    i: Option[Int] = None
+  ) extends ValidatedOneOf
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
@@ -189,6 +197,9 @@ object TapirGeneratedEndpoints {
   case class HasFoo (
     foo: Option[String] = None
   )
+  case class ValidatedOneOfC (
+    j: Option[Int] = None
+  ) extends ValidatedOneOf
   type ListType = List[String]
   case class NullableThingy (
     uuid: java.util.UUID

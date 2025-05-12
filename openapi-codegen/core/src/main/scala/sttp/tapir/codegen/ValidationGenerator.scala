@@ -1,6 +1,7 @@
 package sttp.tapir.codegen
 
 import io.circe.JsonNumber
+import sttp.tapir.codegen.BasicGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -11,6 +12,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaMap,
   OpenapiSchemaNumericType,
   OpenapiSchemaObject,
+  OpenapiSchemaOneOf,
   OpenapiSchemaRef,
   OpenapiSchemaSimpleType,
   OpenapiSchemaString
@@ -86,9 +88,10 @@ object ValidationGenerator {
       case OpenapiSchemaArray(t, _, _, r)  => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
       case OpenapiSchemaMap(t, _, r)       => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
       case OpenapiSchemaObject(t, _, _, _) => t.exists { case (_, f) => validationExists(defns)(f.`type`, ignoreRefs) }
+      case OpenapiSchemaOneOf(ts, _)       => ts.exists { s => validationExists(defns)(s, ignoreRefs) }
       case s: OpenapiSchemaString          => s.hasRestriction
       case n: OpenapiSchemaNumericType     => n.restrictions.hasRestriction
-      case o                               => false
+      case _                               => false
     }
 
   private def genRefDef(name: String, r: OpenapiSchemaRef): Seq[ValidationDefn] = {
@@ -317,6 +320,36 @@ object ValidationGenerator {
       x ++ elemValidators.flatMap(_.map(_._2._1)).filterNot(_.refOnly)
 
   }
+  private def genOneOfDef(ignoreRefs: Boolean)(name: String, m: OpenapiSchemaOneOf): Seq[ValidationDefn] = m match {
+    case OpenapiSchemaOneOf(t, _) if ignoreRefs || !t.forall(_.isInstanceOf[OpenapiSchemaRef]) => Nil
+    case OpenapiSchemaOneOf(ts: Seq[OpenapiSchemaRef @unchecked], _) =>
+      Seq(
+        ValidationDefn(
+          name,
+          name,
+          (defns: Set[String]) => {
+            val (filtered, rest) = ts.partition(t => defns.contains(t.stripped))
+            if (filtered.isEmpty) None
+            else {
+              val cases = (filtered.map { case r =>
+                s"case o: ${r.stripped} => ${r.stripped}Validator.apply(o)"
+              } ++ (if (rest.nonEmpty) Seq("case _ => Nil") else Nil)).mkString("\n")
+              Some(s"""Validator.custom(
+                   |  (obj: $name) => (obj match {
+                   |${indent(4)(cases)}
+                   |  }) match {
+                   |    case Nil => ValidationResult.Valid
+                   |    case errs =>
+                   |      val msgs: List[String] = s"OneOf variant validation failed for $name (type $${obj.getClass.getSimpleName})" +:
+                   |        errs.flatMap(_.customMessage).toList
+                   |      ValidationResult.Invalid(msgs)
+                   |  }
+                   |)""".stripMargin)
+            }
+          }
+        )
+      )
+  }
   private def genValidationDefn(
       schemas: Map[String, OpenapiSchemaType],
       ignoreRefs: Boolean
@@ -328,6 +361,7 @@ object ValidationGenerator {
       case a: OpenapiSchemaArray             => genArrDef(schemas, ignoreRefs)(name, a)
       case m: OpenapiSchemaMap               => genMapDef(schemas, ignoreRefs)(name, m)
       case o: OpenapiSchemaObject            => genObjDef(schemas, ignoreRefs)(name, o)
+      case o: OpenapiSchemaOneOf             => genOneOfDef(ignoreRefs)(name, o)
       case _                                 => Nil
     }
 
