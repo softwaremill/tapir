@@ -41,9 +41,6 @@ object SchemaGenerator {
           "anyTapirSchema" -> "implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]"
         )
       else throw new NotImplementedError("any not implemented for json libs other than circe and jsoniter")
-    val extraSchemas = maybeAnySchema.toSeq ++ Seq(
-      "byteStringSchema" -> "implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)"
-    )
     val extraSchemaRefs: Seq[Seq[(String, OpenapiSchemaType)]] = Seq(
       Seq("byteStringSchema" -> OpenapiSchemaByte(false)),
       maybeAnySchema.map { case (_, _) => "anyTapirSchema" -> OpenapiSchemaAny(false) }.toSeq
@@ -63,8 +60,8 @@ object SchemaGenerator {
         case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       })
       .toSeq
-      .flatMap(extraSchemas ++ _)
-      .toMap
+      .flatMap(maybeAnySchema.toSeq ++ _)
+      .toMap + ("byteStringSchema" -> "implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)")
 
     // The algorithm here is to aviod mutually references between objects. It goes like this:
     // 1) Find all 'rings' -- that is, sets of mutually-recursive object references that will need to be defined in the same object
