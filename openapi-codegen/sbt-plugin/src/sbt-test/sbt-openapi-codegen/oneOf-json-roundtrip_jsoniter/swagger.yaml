@@ -378,6 +378,7 @@ components:
       type: array
       items:
         type: string
+        format: byte
     SomeBinaryType:
       title: SomeBinaryType
       type: object

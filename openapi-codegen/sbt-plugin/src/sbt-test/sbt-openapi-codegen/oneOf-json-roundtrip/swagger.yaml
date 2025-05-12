@@ -589,6 +589,7 @@ components:
           type: string
         s:
           type: string
+          format: byte
         i:
           type: integer
         d:

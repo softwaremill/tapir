@@ -9,7 +9,7 @@ import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJso
 import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
 
-import java.util.UUID
+import java.util.{Base64, UUID}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -95,7 +95,8 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
       .serverSecurityLogicSuccess(_ => Future.successful(()))
       .serverLogic(_ => {
         case foo: SubtypeWithD1 =>
-          Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD1(foo.s + "+SubtypeWithD1", foo.i, foo.d))
+          val encoded = (new String(foo.s, "utf-8") ++ "+SubtypeWithD1").getBytes("utf-8")
+          Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD1(encoded, foo.i, foo.d))
         case foo: SubtypeWithD2 => Future successful Right[Unit, ADTWithDiscriminator](SubtypeWithD2(foo.s + "+SubtypeWithD2", foo.a))
       })
 
@@ -107,12 +108,14 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     def normalise(json: String): String = parse(json).toTry.get.noSpacesSortKeys
 
     locally {
-      val reqBody = SubtypeWithD1("a string", Some(123), Some(23.4))
+      val stringBytes = "a string".getBytes("utf-8")
+      val reqBody = SubtypeWithD1(stringBytes, Some(123), Some(23.4))
       val reqJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorNoMappingJsonEncoder(reqBody).noSpacesSortKeys
-      val respBody = SubtypeWithD1("a string+SubtypeWithD1", Some(123), Some(23.4))
+      val stringBytes2 = "a string+SubtypeWithD1".getBytes("utf-8")
+      val respBody = SubtypeWithD1(stringBytes2, Some(123), Some(23.4))
       val respJsonBody = TapirGeneratedEndpointsJsonSerdes.aDTWithDiscriminatorJsonEncoder(respBody).noSpacesSortKeys
-      reqJsonBody shouldEqual """{"d":23.4,"i":123,"noMapType":"SubtypeWithD1","s":"a string"}"""
-      respJsonBody shouldEqual """{"d":23.4,"i":123,"s":"a string+SubtypeWithD1","type":"SubA"}"""
+      reqJsonBody shouldEqual """{"d":23.4,"i":123,"noMapType":"SubtypeWithD1","s":"YSBzdHJpbmc="}"""
+      respJsonBody shouldEqual """{"d":23.4,"i":123,"s":"YSBzdHJpbmcrU3VidHlwZVdpdGhEMQ==","type":"SubA"}"""
       Await.result(
         sttp.client3.basicRequest
           .post(uri"http://test.com/adt/test")
