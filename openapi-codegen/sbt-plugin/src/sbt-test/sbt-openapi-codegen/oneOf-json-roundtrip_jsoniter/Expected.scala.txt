@@ -110,6 +110,10 @@ object TapirGeneratedEndpoints {
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  case class HasASet (
+    setA: Set[String],
+    setB: Option[Set[Int]] = None
+  )
   case class SubtypeWithD1 (
     s: String,
     i: Option[Int] = None,
@@ -165,7 +169,6 @@ object TapirGeneratedEndpoints {
   case class PostCustomContentNegotiationBody0In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
   case class PostCustomContentNegotiationBody1In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
 
-  
   sealed trait PostCustomContentNegotiationBodyOut extends Product with java.io.Serializable {
     def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
@@ -181,7 +184,6 @@ object TapirGeneratedEndpoints {
     override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
   }
 
-  
   sealed trait PostCustomContentNegotiationBodyErr extends Product with java.io.Serializable {
     def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
@@ -279,6 +281,14 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[AnEnum]].description("An enum")){ case Some(_: AnEnum) => true }))
 
+  type PostUniqueItemsEndpoint = Endpoint[Unit, Option[HasASet], Unit, HasASet, Any]
+  lazy val postUniqueItems: PostUniqueItemsEndpoint =
+    endpoint
+      .post
+      .in(("unique-items"))
+      .in(jsonBody[Option[HasASet]])
+      .out(jsonBody[HasASet].description("OK"))
+
   type PutCustomContentTypesEndpoint = Endpoint[Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
   lazy val putCustomContentTypes: PutCustomContentTypesEndpoint =
     endpoint
@@ -337,12 +347,11 @@ object TapirGeneratedEndpoints {
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
 
-  
-  lazy val generatedEndpoints = List(postXmlEndpoint, putAdtTest, postAdtTest, postGenericJson, postCustomContentNegotiation, getOneofOptionTest, putCustomContentTypes, postCustomContentTypes, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(postXmlEndpoint, putAdtTest, postAdtTest, postGenericJson, postCustomContentNegotiation, getOneofOptionTest, postUniqueItems, putCustomContentTypes, postCustomContentTypes, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
-   object Servers {
+  object Servers {
     import sttp.model.Uri.UriContext
 
-     val `/v3`: sttp.model.Uri = uri"/v3"
-   }
+    val `/v3`: sttp.model.Uri = uri"/v3"
+  }
 }

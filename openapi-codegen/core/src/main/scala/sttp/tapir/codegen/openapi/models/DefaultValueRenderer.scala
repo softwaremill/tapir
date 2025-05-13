@@ -102,8 +102,9 @@ object DefaultValueRenderer {
         jsonArray =>
           thisType match {
             case ref: OpenapiSchemaRef => render(allModels, lookup(allModels, ref), isOptional = false, config)(json)
-            case OpenapiSchemaArray(items, _, _, _) =>
-              s"Vector(${jsonArray.map(render(allModels, items, isOptional = false, config)).mkString(", ")})"
+            case OpenapiSchemaArray(items, _, _, rs) =>
+              val container = if (rs.uniqueItems.contains(true)) "Set" else "Vector"
+              s"$container(${jsonArray.map(render(allModels, items, isOptional = false, config)).mkString(", ")})"
             case other => fail("list", other)
           },
         jsonObject =>

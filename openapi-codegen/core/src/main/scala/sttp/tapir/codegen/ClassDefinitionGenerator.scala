@@ -79,9 +79,9 @@ class ClassDefinitionGenerator {
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
         case (name, obj: OpenapiSchemaEnum) =>
           EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
-        case (name, OpenapiSchemaMap(valueSchema, _, _))      => generateMap(name, valueSchema)
-        case (name, OpenapiSchemaArray(valueSchema, _, _, _)) => generateArray(name, valueSchema)
-        case (_, _: OpenapiSchemaOneOf)                       => Nil
+        case (name, OpenapiSchemaMap(valueSchema, _, _))       => generateMap(name, valueSchema)
+        case (name, OpenapiSchemaArray(valueSchema, _, _, rs)) => generateArray(name, valueSchema, rs)
+        case (_, _: OpenapiSchemaOneOf)                        => Nil
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
@@ -181,14 +181,16 @@ class ClassDefinitionGenerator {
 
   private[codegen] def generateArray(
       name: String,
-      valueSchema: OpenapiSchemaType
+      valueSchema: OpenapiSchemaType,
+      rs: ArrayRestrictions
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
       case simpleType: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(simpleType)._1
       case otherType =>
         throw new NotImplementedError(s"Only simple value types and refs are implemented for named arrays (found $otherType)")
     }
-    Seq(s"""type $name = List[$valueSchemaName]""")
+    if (rs.uniqueItems.contains(true)) Seq(s"""type $name = Set[$valueSchemaName]""")
+    else Seq(s"""type $name = List[$valueSchemaName]""")
   }
 
   private[codegen] def generateClass(
@@ -300,7 +302,8 @@ class ClassDefinitionGenerator {
             jsonSerdeLib,
             targetScala3
           )
-        (s"Seq[$innerType]" -> arrayType.nullable, maybeEnum)
+        val container = if (arrayType.restrictions.uniqueItems.contains(true)) "Set" else "Seq"
+        (s"$container[$innerType]" -> arrayType.nullable, maybeEnum)
 
       case e: OpenapiSchemaEnum =>
         val enumName = addName(parentName.capitalize, key)

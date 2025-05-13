@@ -97,6 +97,7 @@ object TapirGeneratedEndpoints {
     bar: ValidatedSubObj,
     foo: String,
     map: Option[Map[String, Int]] = None,
+    set: Option[Set[String]] = None,
     rec: Option[ValidatedRecursive] = None,
     arr: Option[Seq[Int]] = None,
     quux: Option[String] = None,
