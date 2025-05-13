@@ -34,6 +34,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiValidateNonDiscriminatedOneOfs.value,
       openapiMaxSchemasPerFile.value,
       openapiGenerateEndpointTypes.value,
+      openapiDisableValidatorGeneration.value,
       openapiAdditionalPackages.value
     )
   def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
@@ -48,6 +49,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiAdditionalPackages := Nil,
     openapiStreamingImplementation := "fs2",
     openapiGenerateEndpointTypes := false,
+    openapiDisableValidatorGeneration := false,
     standardParamSetting
   )
 
@@ -79,6 +81,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
               c.validateNonDiscriminatedOneOfs,
               c.maxSchemasPerFile,
               c.generateEndpointTypes,
+              c.disableValidatorGeneration,
               srcDir,
               taskStreams.cacheDirectory,
               sv.startsWith("3"),
