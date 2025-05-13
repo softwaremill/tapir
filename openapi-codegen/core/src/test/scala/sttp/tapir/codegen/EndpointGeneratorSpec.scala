@@ -65,7 +65,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null,
       Nil
     )
-    val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
+    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
         .endpointDefs(
           doc,
@@ -74,7 +74,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -154,7 +156,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    BasicGenerator.imports(JsonSerdeLib.Circe) ++
+    RootGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
         .endpointDefs(
           doc,
@@ -163,7 +165,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true
         )
         .endpointDecls(None) shouldCompile ()
   }
@@ -210,7 +214,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null,
       Nil
     )
-    val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
+    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
         .endpointDefs(
           doc,
@@ -219,7 +223,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true
         )
         .endpointDecls(None)
     generatedCode should include(
@@ -279,7 +285,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    val generatedCode = BasicGenerator.generateObjects(
+    val generatedCode = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
@@ -290,7 +296,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      generateEndpointTypes = false
+      generateEndpointTypes = false,
+      generateValidators = true
     )("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
@@ -303,7 +310,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
 
   it should "generate attributes for specification extensions on path and operation objects" in {
     val doc = TestHelpers.specificationExtensionDocs
-    val generatedCode = BasicGenerator.generateObjects(
+    val generatedCode = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
@@ -314,7 +321,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      generateEndpointTypes = false
+      generateEndpointTypes = false,
+      generateValidators = true
     )("TapirGeneratedEndpoints")
     generatedCode shouldCompile ()
     val expectedAttrDecls = Seq(

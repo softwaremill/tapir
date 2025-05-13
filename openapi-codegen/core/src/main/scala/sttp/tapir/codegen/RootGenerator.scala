@@ -30,13 +30,13 @@ object StreamingImplementation extends Enumeration {
   type StreamingImplementation = Value
 }
 
-object BasicGenerator {
+object RootGenerator {
 
   val classGenerator = new ClassDefinitionGenerator()
   val endpointGenerator = new EndpointGenerator()
 
   def generateObjects(
-      doc: OpenapiDocument,
+      unNormalisedDoc: OpenapiDocument,
       packagePath: String,
       objName: String,
       targetScala3: Boolean,
@@ -46,8 +46,10 @@ object BasicGenerator {
       streamingImplementation: String,
       validateNonDiscriminatedOneOfs: Boolean,
       maxSchemasPerFile: Int,
-      generateEndpointTypes: Boolean
+      generateEndpointTypes: Boolean,
+      generateValidators: Boolean
   ): Map[String, String] = {
+    val doc = unNormalisedDoc.resolveAllOfSchemas
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
       case "jsoniter" => JsonSerdeLib.Jsoniter
@@ -79,6 +81,8 @@ object BasicGenerator {
         StreamingImplementation.FS2
     }
 
+    val validators = if (generateValidators) ValidationGenerator.mkValidators(doc) else ValidationDefns.empty
+
     val EndpointDefs(
       endpointsByTag,
       queryOrPathParamRefs,
@@ -92,7 +96,9 @@ object BasicGenerator {
         normalisedJsonLib,
         normalisedXmlLib,
         normalisedStreamingImplementation,
-        generateEndpointTypes
+        generateEndpointTypes,
+        validators,
+        generateValidators
       )
     val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas, xmlSerdes) =
       classGenerator
@@ -113,13 +119,14 @@ object BasicGenerator {
     val hasJsonSerdes = jsonSerdes.nonEmpty
     val hasXmlSerdes = xmlSerdes.nonEmpty
 
+    val maybeValidatorImport = if (validators.defns.nonEmpty) s"\nimport $packagePath.${objName}Validators._" else ""
     val maybeJsonImport = if (hasJsonSerdes) s"\nimport $packagePath.${objName}JsonSerdes._" else ""
     val maybeXmlImport = if (hasXmlSerdes) s"\nimport $packagePath.${objName}XmlSerdes._" else ""
     val maybeSchemaImport =
       if (schemas.size > 1) (1 to schemas.size).map(i => s"import ${objName}Schemas$i._").mkString("\n", "\n", "")
       else if (schemas.size == 1) s"\nimport ${objName}Schemas._"
       else ""
-    val internalImports = s"import $packagePath.$objName._$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
+    val internalImports = s"import $packagePath.$objName._$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
 
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
@@ -137,6 +144,20 @@ object BasicGenerator {
            |}""".stripMargin
         headTag -> taggedObj
     }
+    val validationObj =
+      if (validators.defns.isEmpty) None
+      else {
+        val body =
+          s"""package $packagePath
+             |
+             |object ${objName}Validators {
+             |  import $packagePath.$objName._
+             |  import sttp.tapir.{ValidationResult, Validator}
+             |
+             |${indent(2)(validators.render)}
+             |}""".stripMargin
+        Some(s"${objName}Validators" -> body)
+      }
 
     val jsonSerdeObj = jsonSerdes.map { body =>
       s"""package $packagePath
@@ -212,7 +233,7 @@ object BasicGenerator {
         case ct => throw new NotImplementedError(s"Cannot handle content type '$ct'")
       }
       .mkString("\n")
-    val extraImports = if (endpointsInMain.nonEmpty) s"$maybeJsonImport$maybeXmlImport$maybeSchemaImport" else ""
+    val extraImports = if (endpointsInMain.nonEmpty) s"$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport" else ""
     val queryParamSupport =
       """
       |case class CommaSeparatedValues[T](values: List[T])
@@ -276,7 +297,7 @@ object BasicGenerator {
         |}
         |""".stripMargin
     taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ xmlSerdeObj.map(s"${objName}XmlSerdes" -> _) ++
-      schemaObjs + (objName -> mainObj)
+      validationObj ++ schemaObjs + (objName -> mainObj)
   }
 
   private[codegen] def imports(jsonSerdeLib: JsonSerdeLib.JsonSerdeLib): String = {
@@ -305,19 +326,19 @@ object BasicGenerator {
 
   def mapSchemaSimpleTypeToType(osst: OpenapiSchemaSimpleType, multipartForm: Boolean = false): (String, Boolean) = {
     osst match {
-      case OpenapiSchemaDouble(nb) =>
+      case OpenapiSchemaDouble(nb, _) =>
         ("Double", nb)
-      case OpenapiSchemaFloat(nb) =>
+      case OpenapiSchemaFloat(nb, _) =>
         ("Float", nb)
-      case OpenapiSchemaInt(nb) =>
+      case OpenapiSchemaInt(nb, _) =>
         ("Int", nb)
-      case OpenapiSchemaLong(nb) =>
+      case OpenapiSchemaLong(nb, _) =>
         ("Long", nb)
       case OpenapiSchemaDateTime(nb) =>
         ("java.time.Instant", nb)
       case OpenapiSchemaUUID(nb) =>
         ("java.util.UUID", nb)
-      case OpenapiSchemaString(nb) =>
+      case OpenapiSchemaString(nb, _, _, _) =>
         ("String", nb)
       case OpenapiSchemaBoolean(nb) =>
         ("Boolean", nb)
