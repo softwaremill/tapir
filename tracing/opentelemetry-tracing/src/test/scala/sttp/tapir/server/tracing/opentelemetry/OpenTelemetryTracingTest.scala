@@ -1,5 +1,6 @@
 package sttp.tapir.server.tracing.opentelemetry
 
+import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
 import io.opentelemetry.context.propagation.ContextPropagators
 import io.opentelemetry.sdk.OpenTelemetrySdk
@@ -66,6 +67,7 @@ class OpenTelemetrySyncTracingTest extends AnyFlatSpec with Matchers {
         .handle(_ => Right("hello")),
       serverRequestFromUri(uri"http://example.com/person?name=Adam")
     ) { span =>
+      span.getKind shouldBe SpanKind.SERVER
       span.getName() shouldBe "GET /person"
       span.getAttributes().get(HttpAttributes.HTTP_RESPONSE_STATUS_CODE) shouldBe 200L
       span.getAttributes().get(UrlAttributes.URL_PATH) shouldBe "/person"
