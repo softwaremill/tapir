@@ -2133,7 +2133,8 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
-    )
+    ),
+    sbtPluginPublishLegacyMavenStyle := false // required by sonatype central
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 
