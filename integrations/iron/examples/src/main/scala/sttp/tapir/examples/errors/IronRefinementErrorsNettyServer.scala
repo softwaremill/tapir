@@ -7,7 +7,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.25
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.25
 // FIXME: it's currenly after `sbt "project iron3" 'set version := "1.11.26"' publishLocal`
-//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.11.26
+//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.11.28
 //> using dep com.softwaremill.sttp.client4::core:4.0.3
 
 package sttp.tapir.examples.errors
