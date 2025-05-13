@@ -259,6 +259,20 @@ paths:
             text/csv:
               schema:
                 $ref: '#/components/schemas/SomeBinaryType'
+  '/unique-items':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HasASet'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HasASet'
 
 components:
   schemas:
@@ -466,3 +480,19 @@ components:
       xml:
         name: category
       type: object
+    HasASet:
+      title: HasASet
+      type: object
+      required:
+        - setA
+      properties:
+        setA:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        setB:
+          type: array
+          uniqueItems: true
+          items:
+            type: integer

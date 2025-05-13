@@ -21,6 +21,8 @@ object TapirGeneratedEndpointsJsonSerdes {
   }
   implicit lazy val subtypeWithoutD1JsonDecoder: zio.json.JsonDecoder[SubtypeWithoutD1] = zio.json.DeriveJsonDecoder.gen[SubtypeWithoutD1]
   implicit lazy val subtypeWithoutD1JsonEncoder: zio.json.JsonEncoder[SubtypeWithoutD1] = zio.json.DeriveJsonEncoder.gen[SubtypeWithoutD1]
+  implicit lazy val hasASetJsonDecoder: zio.json.JsonDecoder[HasASet] = zio.json.DeriveJsonDecoder.gen[HasASet]
+  implicit lazy val hasASetJsonEncoder: zio.json.JsonEncoder[HasASet] = zio.json.DeriveJsonEncoder.gen[HasASet]
   implicit lazy val subtypeWithD1JsonDecoder: zio.json.JsonDecoder[SubtypeWithD1] = zio.json.DeriveJsonDecoder.gen[SubtypeWithD1]
   implicit lazy val subtypeWithD1JsonEncoder: zio.json.JsonEncoder[SubtypeWithD1] = zio.json.DeriveJsonEncoder.gen[SubtypeWithD1]
   implicit lazy val aDTWithDiscriminatorNoMappingJsonEncoder: zio.json.JsonEncoder[ADTWithDiscriminatorNoMapping] = zio.json.JsonEncoder[zio.json.ast.Json].contramap {
