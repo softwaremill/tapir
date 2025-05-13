@@ -3,7 +3,7 @@ package sttp.tapir.sbt
 import sbt._
 import sbt.util.FileInfo.hash
 import sbt.util.Tracked.inputChanged
-import sttp.tapir.codegen.{BasicGenerator, YamlParser}
+import sttp.tapir.codegen.{RootGenerator, YamlParser}
 
 case class OpenapiCodegenTask(
     inputYaml: File,
@@ -16,6 +16,7 @@ case class OpenapiCodegenTask(
     validateNonDiscriminatedOneOfs: Boolean,
     maxSchemasPerFile: Int,
     generateEndpointTypes: Boolean,
+    disableValidatorGeneration: Boolean,
     dir: File,
     cacheDir: File,
     targetScala3: Boolean,
@@ -51,7 +52,7 @@ case class OpenapiCodegenTask(
         .parseFile(IO.readLines(inputYaml).mkString("\n"))
         .left
         .map(d => new RuntimeException(_root_.io.circe.Error.showError.show(d)))
-      BasicGenerator
+      RootGenerator
         .generateObjects(
           parsed.toTry.get,
           packageName,
@@ -63,7 +64,8 @@ case class OpenapiCodegenTask(
           streamingImplementation,
           validateNonDiscriminatedOneOfs,
           maxSchemasPerFile,
-          generateEndpointTypes
+          generateEndpointTypes,
+          !disableValidatorGeneration
         )
         .map { case (objectName, fileBody) =>
           val file = directory / s"$objectName.scala"

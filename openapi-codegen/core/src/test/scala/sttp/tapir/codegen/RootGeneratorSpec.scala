@@ -3,13 +3,13 @@ package sttp.tapir.codegen
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
-class BasicGeneratorSpec extends CompileCheckTestBase {
+class RootGeneratorSpec extends CompileCheckTestBase {
   def genMap(
       doc: OpenapiDocument,
       useHeadTagForObjectNames: Boolean,
       jsonSerdeLib: String
   ) = {
-    BasicGenerator.generateObjects(
+    RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
@@ -20,7 +20,8 @@ class BasicGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      generateEndpointTypes = false
+      generateEndpointTypes = false,
+      generateValidators = true
     )
   }
   def gen(

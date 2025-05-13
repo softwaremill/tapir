@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.BasicGenerator.indent
+import sttp.tapir.codegen.RootGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -112,11 +112,13 @@ object JsonSerdeGenerator {
   private def inlineEndpointSchemas(doc: OpenapiDocument): Seq[(String, OpenapiSchemaType, Boolean)] =
     doc.paths.flatMap(p =>
       p.methods.flatMap(m =>
-        m.responses.map(_.resolve(doc))
+        m.responses
+          .map(_.resolve(doc))
           .flatMap(_.content)
           .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
           .map(c => (m.name(p.url).capitalize + "Response", c.schema, true)) ++
-          m.requestBody.toSeq.map(_.resolve(doc))
+          m.requestBody.toSeq
+            .map(_.resolve(doc))
             .flatMap(_.content)
             .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
             .map(c => (m.name(p.url).capitalize + "Request", c.schema, true))
@@ -158,16 +160,16 @@ object JsonSerdeGenerator {
 
   private def genCirceObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => genCirceObjectSerde(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _), _)) =>
+      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => genCirceObjectSerde(s"$name${k.capitalize}", `type`)
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
       case Nil => ""
       case s   => s.mkString("", "\n", "\n")
     }
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.generic.semiauto.deriveDecoder[$name]
        |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.generic.semiauto.deriveEncoder[$name]""".stripMargin
   }
@@ -185,7 +187,7 @@ object JsonSerdeGenerator {
       name: String,
       validateNonDiscriminatedOneOfs: Boolean
   ): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
 
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
@@ -291,8 +293,8 @@ object JsonSerdeGenerator {
       // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
       case (name, o: OpenapiSchemaObject, isJson) =>
         val inlinedEnumDefns = if (allTransitiveJsonParamRefs.contains(name)) {
-          o.properties.collect {
-            case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _)) => genJsoniterEnumSerde(name + en.capitalize)
+          o.properties.collect { case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _)) =>
+            genJsoniterEnumSerde(name + en.capitalize)
           }
         } else Nil
         val supertypes =
@@ -332,7 +334,7 @@ object JsonSerdeGenerator {
   }
 
   private def genJsoniterClassSerde(supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     if (supertypes.exists(_.discriminator.isDefined))
       throw new NotImplementedError(
         s"A class cannot be used both in a oneOf with discriminator and at the top level when using jsoniter serdes at $name"
@@ -342,13 +344,13 @@ object JsonSerdeGenerator {
   }
 
   private def genJsoniterEnumSerde(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""
        |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[${name}] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniteEnumConfig.withDiscriminatorFieldName(scala.None))""".stripMargin
   }
 
   private def genJsoniterNamedSerde(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""
        |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniterBaseConfig)""".stripMargin
   }
@@ -359,7 +361,7 @@ object JsonSerdeGenerator {
       schema: OpenapiSchemaOneOf,
       validateNonDiscriminatedOneOfs: Boolean
   ): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
         def subtypeNames = schema.types.map {
@@ -395,7 +397,7 @@ object JsonSerdeGenerator {
         if (validateNonDiscriminatedOneOfs) checkForSoundness(allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
         val childNameAndSerde = schemas.collect { case ref: OpenapiSchemaRef =>
           val name = ref.stripped
-          name -> s"${BasicGenerator.uncapitalise(name)}JsonCodec"
+          name -> s"${RootGenerator.uncapitalise(name)}JsonCodec"
         }
         val childSerdes = childNameAndSerde.map(_._2)
         val doDecode = childSerdes.mkString("List(\n  ", ",\n  ", ")\n") +
@@ -460,16 +462,16 @@ object JsonSerdeGenerator {
 
   private def genZioObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => genZioObjectSerde(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _), _)) =>
+      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => genZioObjectSerde(s"$name${k.capitalize}", `type`)
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
       case Nil => ""
       case s   => s.mkString("", "\n", "\n")
     }
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: zio.json.JsonDecoder[$name] = zio.json.DeriveJsonDecoder.gen[$name]
        |implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = zio.json.DeriveJsonEncoder.gen[$name]""".stripMargin
   }
@@ -483,7 +485,7 @@ object JsonSerdeGenerator {
   }
 
   private def genZioEnumSerde(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""
        |implicit lazy val ${uncapitalisedName}JsonCodec: zio.json.JsonCodec[$name] = zio.json.JsonCodec[$name](
        |  zio.json.JsonEncoder[String].contramap[$name](_.entryName),
@@ -497,7 +499,7 @@ object JsonSerdeGenerator {
       name: String,
       validateNonDiscriminatedOneOfs: Boolean
   ): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
 
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
