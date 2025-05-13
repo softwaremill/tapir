@@ -156,6 +156,15 @@ object JsonSerdeGenerator {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
       }
+      .map(s =>
+        s"""implicit val byteStringJsonDecoder: io.circe.Decoder[ByteString] =
+           |  io.circe.Decoder.decodeString
+           |    .map(java.util.Base64.getDecoder.decode)
+           |    .map(toByteString)
+           |implicit val byteStringJsonEncoder: io.circe.Encoder[ByteString] =
+           |  io.circe.Encoder.encodeString
+           |    .contramap(java.util.Base64.getEncoder.encodeToString)
+           |$s""".stripMargin)
   }
 
   private def genCirceObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
@@ -331,6 +340,15 @@ object JsonSerdeGenerator {
         case (None, a)    => Some(a)
       }
       .map(jsonSerdeHelpers + additionalExplicitSerdes + _)
+      .map(s =>
+        s"""implicit val byteStringJsonCodec: $jsoniterPkgCore.JsonValueCodec[ByteString] = new $jsoniterPkgCore.JsonValueCodec[ByteString] {
+           |  def nullValue: ByteString = Array.empty[Byte]
+           |  def decodeValue(in: $jsoniterPkgCore.JsonReader, default: ByteString): ByteString =
+           |    toByteString(java.util.Base64.getDecoder.decode(in.readString("")))
+           |  def encodeValue(x: ByteString, out: $jsoniterPkgCore.JsonWriter): _root_.scala.Unit =
+           |    out.writeVal(java.util.Base64.getEncoder.encodeToString(x))
+           |}
+           |$s""".stripMargin)
   }
 
   private def genJsoniterClassSerde(supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {
@@ -458,6 +476,12 @@ object JsonSerdeGenerator {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
       }
+      .map(s =>
+      s"""implicit lazy val byteStringJsonCodec: zio.json.JsonCodec[ByteString] = zio.json.JsonCodec[ByteString](
+         |  zio.json.JsonEncoder[String].contramap[ByteString](java.util.Base64.getEncoder.encodeToString),
+         |  zio.json.JsonDecoder[String].mapOrFail(s => scala.util.Try(java.util.Base64.getDecoder.decode(s)).toEither.map(toByteString).left.map(error => error.getMessage)),
+         |)
+         |$s""".stripMargin)
   }
 
   private def genZioObjectSerde(name: String, schema: OpenapiSchemaObject): String = {

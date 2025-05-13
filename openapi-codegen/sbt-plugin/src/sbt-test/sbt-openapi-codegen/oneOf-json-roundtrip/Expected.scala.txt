@@ -67,6 +67,8 @@ object TapirGeneratedEndpoints {
   implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
     def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
   }
+  type ByteString <: Array[Byte]
+  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
   case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
     // Case-insensitive mapping
@@ -141,7 +143,7 @@ object TapirGeneratedEndpoints {
     i: String
   )
   case class SubtypeWithD1 (
-    s: String,
+    s: ByteString,
     i: Option[Int] = None,
     d: Option[Double] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {

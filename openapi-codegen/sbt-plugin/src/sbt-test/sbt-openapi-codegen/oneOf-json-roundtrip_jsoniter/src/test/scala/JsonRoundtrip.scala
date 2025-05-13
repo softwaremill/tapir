@@ -1,4 +1,4 @@
-import com.github.plokhotnyuk.jsoniter_scala.core.writeToString
+import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonValueCodec, JsonWriter, writeToString}
 import io.circe.parser.parse
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
