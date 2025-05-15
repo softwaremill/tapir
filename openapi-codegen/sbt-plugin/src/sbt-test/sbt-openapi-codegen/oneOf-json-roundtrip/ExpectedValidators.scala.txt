@@ -68,6 +68,14 @@ object TapirGeneratedEndpointsValidators {
           errs.flatMap(_.customMessage).toList
         ValidationResult.Invalid(msgs)
     }
+  ), Validator.custom(
+    (obj: ValidatedObj) => obj.set.toSeq.flatMap(ValidatedObjSetValidator.apply) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedObj.set" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
   ))
   lazy val ValidatedObjArrValidator: Validator[Seq[Int]] = Validator.all(Validator.custom(
     (_: Seq[Int]).map(ValidatedObjArrItemValidator.apply).zipWithIndex.flatMap { case (l, i) => l.map(_ -> i) } match {
@@ -93,6 +101,7 @@ object TapirGeneratedEndpointsValidators {
   ), Validator.maxSize(12), Validator.minSize(3))
   lazy val ValidatedObjMapItemValidator: Validator[Int] = Validator.all(Validator.max(900, exclusive = true), Validator.min(0, exclusive = false))
   lazy val ValidatedObjQuuxValidator: Validator[String] = Validator.maxLength(128)
+  lazy val ValidatedObjSetValidator: Validator[Set[String]] = Validator.maxSize(9)
   lazy val ValidatedOneOfValidator: Validator[ValidatedOneOf] = Validator.custom(
     (obj: ValidatedOneOf) => (obj match {
       case o: ValidatedOneOfA => ValidatedOneOfAValidator.apply(o)
