@@ -2,6 +2,7 @@ package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiResponseContent
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  NumericRestrictions,
   OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaField,
@@ -11,9 +12,9 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaString
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
-  OpenapiSecuritySchemeBearerType,
+  OpenapiSecuritySchemeApiKeyType,
   OpenapiSecuritySchemeBasicType,
-  OpenapiSecuritySchemeApiKeyType
+  OpenapiSecuritySchemeBearerType
 }
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -51,7 +52,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
           Map(
             "User" -> OpenapiSchemaObject(
               Map(
-                "id" -> OpenapiSchemaField(OpenapiSchemaInt(false), None),
+                "id" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None),
                 "name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)
               ),
               Seq("id", "name"),
