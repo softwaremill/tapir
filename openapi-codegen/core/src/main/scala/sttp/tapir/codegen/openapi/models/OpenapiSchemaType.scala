@@ -1,6 +1,6 @@
 package sttp.tapir.codegen.openapi.models
 
-import io.circe.Json
+import io.circe.{Json, JsonNumber}
 
 sealed trait OpenapiSchemaType {
   def nullable: Boolean
@@ -30,7 +30,7 @@ object OpenapiSchemaType {
   }
 
   case class OpenapiSchemaAllOf(
-      types: Seq[OpenapiSchemaSimpleType]
+      types: Seq[OpenapiSchemaType]
   ) extends OpenapiSchemaMixedType {
     val nullable: Boolean = false
   }
@@ -42,29 +42,49 @@ object OpenapiSchemaType {
   }
 
   // https://swagger.io/docs/specification/data-models/data-types/#numbers
-  // no min/max, exclusiveMin/exclusiveMax, multipleOf support
-  sealed trait OpenapiSchemaNumericType extends OpenapiSchemaSimpleType
+  case class NumericRestrictions(
+      min: Option[JsonNumber] = None,
+      max: Option[JsonNumber] = None,
+      exclusiveMinimum: Option[Boolean] = None,
+      exclusiveMaximum: Option[Boolean] = None,
+      multipleOf: Option[JsonNumber] = None
+  ) {
+    def hasRestriction: Boolean = min.isDefined || max.isDefined || multipleOf.isDefined
+  }
+  sealed trait OpenapiSchemaNumericType extends OpenapiSchemaSimpleType {
+    def restrictions: NumericRestrictions
+    def scalaType: String
+  }
 
   case class OpenapiSchemaDouble(
-      nullable: Boolean
-  ) extends OpenapiSchemaNumericType
+      nullable: Boolean,
+      restrictions: NumericRestrictions
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Double" }
   case class OpenapiSchemaFloat(
-      nullable: Boolean
-  ) extends OpenapiSchemaNumericType
+      nullable: Boolean,
+      restrictions: NumericRestrictions
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Float" }
   case class OpenapiSchemaLong(
-      nullable: Boolean
-  ) extends OpenapiSchemaNumericType
+      nullable: Boolean,
+      restrictions: NumericRestrictions
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Long" }
   case class OpenapiSchemaInt(
-      nullable: Boolean
-  ) extends OpenapiSchemaNumericType
+      nullable: Boolean,
+      restrictions: NumericRestrictions
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Int" }
 
   // https://swagger.io/docs/specification/data-models/data-types/#string
-  // no minLength/maxLength, pattern support
+  // no minLength/maxLength, pattern support on 'formatted' subtypes.
   sealed trait OpenapiSchemaStringType extends OpenapiSchemaSimpleType
 
   case class OpenapiSchemaString(
-      nullable: Boolean
-  ) extends OpenapiSchemaStringType
+      nullable: Boolean,
+      pattern: Option[String] = None,
+      minLength: Option[Int] = None,
+      maxLength: Option[Int] = None
+  ) extends OpenapiSchemaStringType {
+    def hasRestriction: Boolean = pattern.isDefined || minLength.isDefined || maxLength.isDefined
+  }
   case class OpenapiSchemaDate(
       nullable: Boolean
   ) extends OpenapiSchemaStringType
@@ -110,17 +130,32 @@ object OpenapiSchemaType {
       nullable: Boolean
   ) extends OpenapiSchemaType
 
-  // no minItems/maxItems, uniqueItems support
+  case class ArrayRestrictions(minItems: Option[Int] = None, maxItems: Option[Int] = None, uniqueItems: Option[Boolean] = None) {
+    // We exclude 'uniqueItems' from this check because we don't use it to construct a validator -- rather, it results in us defining a Set instead of a Seq
+    def hasRestriction: Boolean = minItems.isDefined || maxItems.isDefined
+  }
   case class OpenapiSchemaArray(
       items: OpenapiSchemaType,
       nullable: Boolean,
-      xml: Option[OpenapiXml.XmlArrayConfiguration] = None
+      xml: Option[OpenapiXml.XmlArrayConfiguration] = None,
+      restrictions: ArrayRestrictions = ArrayRestrictions()
   ) extends OpenapiSchemaType
 
+  case class ObjectFieldRestrictions(
+      readOnly: Option[Boolean] = None,
+      writeOnly: Option[Boolean] = None
+  )
   case class OpenapiSchemaField(
       `type`: OpenapiSchemaType,
-      default: Option[Json]
+      default: Option[Json],
+      restrictions: ObjectFieldRestrictions = ObjectFieldRestrictions()
   )
+  case class ObjectRestrictions(
+      minProperties: Option[Int] = None,
+      maxProperties: Option[Int] = None
+  ) {
+    def hasRestriction: Boolean = minProperties.isDefined || maxProperties.isDefined
+  }
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaObject(
       properties: Map[String, OpenapiSchemaField],
@@ -129,10 +164,11 @@ object OpenapiSchemaType {
       xml: Option[OpenapiXml.XmlObjectConfiguration] = None
   ) extends OpenapiSchemaType
 
-  // no readOnly/writeOnly, minProperties/maxProperties support
+  // no readOnly/writeOnly support
   case class OpenapiSchemaMap(
       items: OpenapiSchemaType,
-      nullable: Boolean
+      nullable: Boolean,
+      restrictions: ObjectRestrictions = ObjectRestrictions()
   ) extends OpenapiSchemaType
 
   // ///////////////////////////////////////////////////////
@@ -175,16 +211,19 @@ object OpenapiSchemaType {
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not string!", c.history))(_._1 == "string")
       f <- c.downField("format").as[Option[String]]
+      pattern <- c.downField("pattern").as[Option[String]]
+      min <- c.downField("minLength").as[Option[Int]]
+      max <- c.downField("maxLength").as[Option[Int]]
     } yield {
       f.fold[OpenapiSchemaStringType](
-        OpenapiSchemaString(p._2)
+        OpenapiSchemaString(p._2, pattern, min, max)
       ) {
         case "date"      => OpenapiSchemaDate(p._2)
         case "date-time" => OpenapiSchemaDateTime(p._2)
         case "byte"      => OpenapiSchemaByte(p._2)
         case "binary"    => OpenapiSchemaBinary(p._2)
         case "uuid"      => OpenapiSchemaUUID(p._2)
-        case _           => OpenapiSchemaString(p._2)
+        case _           => OpenapiSchemaString(p._2, pattern, min, max)
       }
     }
   }
@@ -195,24 +234,30 @@ object OpenapiSchemaType {
         .ensure(DecodingFailure("Given type is not number/integer!", c.history))(v => v._1 == "number" || v._1 == "integer")
       (t, nb) = p
       f <- c.downField("format").as[Option[String]]
+      min <- c.downField("minimum").as[Option[JsonNumber]]
+      max <- c.downField("maximum").as[Option[JsonNumber]]
+      exclusiveMinimum <- c.downField("exclusiveMinimum").as[Option[Boolean]]
+      exclusiveMaximum <- c.downField("exclusiveMaximum").as[Option[Boolean]]
+      multipleOf <- c.downField("multipleOf").as[Option[JsonNumber]]
+      restrictions = NumericRestrictions(min, max, exclusiveMinimum, exclusiveMaximum, multipleOf)
     } yield {
       if (t == "number") {
         f.fold[OpenapiSchemaNumericType](
-          OpenapiSchemaDouble(nb)
+          OpenapiSchemaDouble(nb, restrictions)
         ) {
-          case "int64"  => OpenapiSchemaLong(nb)
-          case "int32"  => OpenapiSchemaInt(nb)
-          case "float"  => OpenapiSchemaFloat(nb)
-          case "double" => OpenapiSchemaDouble(nb)
-          case _        => OpenapiSchemaDouble(nb)
+          case "int64"  => OpenapiSchemaLong(nb, restrictions)
+          case "int32"  => OpenapiSchemaInt(nb, restrictions)
+          case "float"  => OpenapiSchemaFloat(nb, restrictions)
+          case "double" => OpenapiSchemaDouble(nb, restrictions)
+          case _        => OpenapiSchemaDouble(nb, restrictions)
         }
       } else {
         f.fold[OpenapiSchemaNumericType](
-          OpenapiSchemaInt(nb)
+          OpenapiSchemaInt(nb, restrictions)
         ) {
-          case "int64" => OpenapiSchemaLong(nb)
-          case "int32" => OpenapiSchemaInt(nb)
-          case _       => OpenapiSchemaInt(nb)
+          case "int64" => OpenapiSchemaLong(nb, restrictions)
+          case "int32" => OpenapiSchemaInt(nb, restrictions)
+          case _       => OpenapiSchemaInt(nb, restrictions)
         }
       }
     }
@@ -244,7 +289,7 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaAllOfDecoder: Decoder[OpenapiSchemaAllOf] = { (c: HCursor) =>
     for {
-      d <- c.downField("allOf").as[Seq[OpenapiSchemaSimpleType]]
+      d <- c.downField("allOf").as[Seq[OpenapiSchemaType]]
     } yield {
       OpenapiSchemaAllOf(d)
     }
@@ -286,19 +331,21 @@ object OpenapiSchemaType {
     } yield OpenapiSchemaEnum(tpe, items, nb)
   }
 
-  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json])] = { (c: HCursor) =>
+  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)] = { (c: HCursor) =>
     for {
       schemaType <- c.as[OpenapiSchemaType]
       maybeDefault <- c.downField("default").as[Option[Json]]
-    } yield (schemaType, maybeDefault)
+      readOnly <- c.downField("readOnly").as[Option[Boolean]]
+      writeOnly <- c.downField("writeOnly").as[Option[Boolean]]
+    } yield (schemaType, maybeDefault, ObjectFieldRestrictions(readOnly, writeOnly))
   }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
-      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json])]]]
+      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)]]]
       r <- c.downField("required").as[Option[Seq[String]]]
       (_, nb) = p
-      fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d)) => k -> OpenapiSchemaField(f, d) }
+      fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d, r)) => k -> OpenapiSchemaField(f, d, r) }
     } yield {
       OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb)
     }
@@ -308,9 +355,11 @@ object OpenapiSchemaType {
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
       t <- c.downField("additionalProperties").as[OpenapiSchemaType]
+      mi <- c.downField("minProperties").as[Option[Int]]
+      ma <- c.downField("maxProperties").as[Option[Int]]
       (_, nb) = p
     } yield {
-      OpenapiSchemaMap(t, nb)
+      OpenapiSchemaMap(t, nb, ObjectRestrictions(mi, ma))
     }
   }
 
@@ -332,8 +381,12 @@ object OpenapiSchemaType {
         case Some(some) => Some(some.copy(itemName = xmlItemName))
         case None       => xmlItemName.map(n => OpenapiXml.XmlArrayConfiguration(itemName = Some(n)))
       }
+      minItems <- c.downField("minItems").as[Option[Int]]
+      maxItems <- c.downField("maxItems").as[Option[Int]]
+      uniqueItems <- c.downField("uniqueItems").as[Option[Boolean]]
+      restrictions = ArrayRestrictions(minItems, maxItems, uniqueItems)
     } yield {
-      OpenapiSchemaArray(f, nb, xml)
+      OpenapiSchemaArray(f, nb, xml, restrictions)
     }
   }
 

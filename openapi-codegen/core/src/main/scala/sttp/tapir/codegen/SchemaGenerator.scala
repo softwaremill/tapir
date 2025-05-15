@@ -1,6 +1,6 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.BasicGenerator.indent
+import sttp.tapir.codegen.RootGenerator.indent
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
@@ -10,6 +10,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaAnyOf,
   OpenapiSchemaArray,
+  OpenapiSchemaByte,
   OpenapiSchemaConstantString,
   OpenapiSchemaEnum,
   OpenapiSchemaField,
@@ -40,12 +41,15 @@ object SchemaGenerator {
           "anyTapirSchema" -> "implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]"
         )
       else throw new NotImplementedError("any not implemented for json libs other than circe and jsoniter")
-    val maybeAnySchemaSchema = Seq(maybeAnySchema.map { case (_, _) => "anyTapirSchema" -> OpenapiSchemaAny(false) }.toSeq)
+    val extraSchemaRefs: Seq[Seq[(String, OpenapiSchemaType)]] = Seq(
+      Seq("byteStringSchema" -> OpenapiSchemaByte(false)),
+      maybeAnySchema.map { case (_, _) => "anyTapirSchema" -> OpenapiSchemaAny(false) }.toSeq
+    )
     val openApiSchemasWithTapirSchemas = doc.components
       .map(_.schemas.flatMap {
         case (name, _: OpenapiSchemaEnum) =>
           Some(
-            name -> s"implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
+            name -> s"implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
           )
         case (name, obj: OpenapiSchemaObject)   => Some(name -> schemaForObject(name, obj))
         case (name, schema: OpenapiSchemaMap)   => Some(name -> schemaForMapOrArray(name, schema.items))
@@ -57,7 +61,7 @@ object SchemaGenerator {
       })
       .toSeq
       .flatMap(maybeAnySchema.toSeq ++ _)
-      .toMap
+      .toMap + ("byteStringSchema" -> "implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)")
 
     // The algorithm here is to aviod mutually references between objects. It goes like this:
     // 1) Find all 'rings' -- that is, sets of mutually-recursive object references that will need to be defined in the same object
@@ -66,7 +70,7 @@ object SchemaGenerator {
     // 2) Order the definitions, such that objects appear before any places they're referenced
     val orderedLayers = orderLayers(groupedByRing)
     // 3) Group the definitions into at most `maxSchemasPerFile`, whilst avoiding splitting groups across files
-    val foldedLayers = foldLayers(maxSchemasPerFile)(maybeAnySchemaSchema ++ orderedLayers)
+    val foldedLayers = foldLayers(maxSchemasPerFile)(extraSchemaRefs ++ orderedLayers)
     // Our output will now only need to imports the 'earlier' files into the 'later' files, and _not_ vice verse
     foldedLayers.map(ring => ring.map(openApiSchemasWithTapirSchemas apply _._1).mkString("\n"))
   }
@@ -87,9 +91,9 @@ object SchemaGenerator {
     def getDirectChildren(schema: OpenapiSchemaType): Set[String] = schema match {
       case r: OpenapiSchemaRef                                                                => Set(r.stripped)
       case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString => Set.empty[String]
-      case OpenapiSchemaArray(items, _, _)                                                    => getDirectChildren(items)
+      case OpenapiSchemaArray(items, _, _, _)                                                 => getDirectChildren(items)
       case OpenapiSchemaNot(items)                                                            => getDirectChildren(items)
-      case OpenapiSchemaMap(items, _)                                                         => getDirectChildren(items)
+      case OpenapiSchemaMap(items, _, _)                                                      => getDirectChildren(items)
       case OpenapiSchemaOneOf(items, _)                                                       => items.flatMap(getDirectChildren).toSet
       case OpenapiSchemaAnyOf(items)                                                          => items.flatMap(getDirectChildren).toSet
       case OpenapiSchemaAllOf(items)                                                          => items.flatMap(getDirectChildren).toSet
@@ -169,9 +173,9 @@ object SchemaGenerator {
     // these types cannot contain a reference
     case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString => Set.empty
     // descend into the sole child type
-    case OpenapiSchemaArray(items, _, _) => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
-    case OpenapiSchemaNot(items)         => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
-    case OpenapiSchemaMap(items, _)      => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
+    case OpenapiSchemaArray(items, _, _, _) => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
+    case OpenapiSchemaNot(items)            => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
+    case OpenapiSchemaMap(items, _, _)      => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
     // descend into all child types
     case OpenapiSchemaOneOf(items, _) => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
     case OpenapiSchemaAllOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
@@ -182,21 +186,21 @@ object SchemaGenerator {
 
   private def schemaForObject(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => schemaForObject(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _), _)) =>
+      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => schemaForObject(s"$name${k.capitalize}", `type`)
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
         schemaForObject(s"$name${k.capitalize}Item", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         schemaForObject(s"$name${k.capitalize}Item", `type`)
-      case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _)) => schemaForEnum(s"$name${k.capitalize}")
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _), _)) =>
+      case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _)) => schemaForEnum(s"$name${k.capitalize}")
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _, _), _, _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(_: OpenapiSchemaEnum, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(_: OpenapiSchemaEnum, _, _), _, _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
     } match {
       case Nil => ""
       case s   => s.mkString("", "\n", "\n")
     }
-    s"${subs}implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
+    s"${subs}implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
   }
   private def schemaForMapOrArray(name: String, schema: OpenapiSchemaType): String = {
     val subs = schema match {
@@ -206,7 +210,7 @@ object SchemaGenerator {
     subs.fold("")("\n" + _)
   }
   private def schemaForEnum(name: String): String =
-    s"""implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"""
+    s"""implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"""
 
   private def genADTSchema(name: String, schema: OpenapiSchemaOneOf, fullModelPath: Option[String]): String = {
     val schemaImpl = schema match {
@@ -242,6 +246,6 @@ object SchemaGenerator {
            |}""".stripMargin
     }
 
-    s"implicit lazy val ${BasicGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = ${schemaImpl}"
+    s"implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = ${schemaImpl}"
   }
 }
