@@ -9,6 +9,7 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.json.circe._
   import io.circe.generic.semiauto._
 
+  import sttp.tapir.generated.TapirGeneratedEndpointsValidators._
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
 
@@ -66,6 +67,8 @@ object TapirGeneratedEndpoints {
   implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
     def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
   }
+  type ByteString <: Array[Byte]
+  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
   case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
     // Case-insensitive mapping
@@ -85,11 +88,26 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
+  sealed trait ValidatedOneOf
   sealed trait ADTWithDiscriminator
   sealed trait AnyObjectWithInlineEnum
   sealed trait Error
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
+  case class ValidatedObj (
+    oneOf: Option[ValidatedOneOf] = None,
+    bar: ValidatedSubObj,
+    foo: String,
+    map: Option[Map[String, Int]] = None,
+    set: Option[Set[String]] = None,
+    rec: Option[ValidatedRecursive] = None,
+    arr: Option[Seq[Int]] = None,
+    quux: Option[String] = None,
+    baz: Option[ValidatedSubObj] = None
+  )
+  case class ValidatedOneOfA (
+    s: String
+  ) extends ValidatedOneOf
   case class NotNullableThingy (
     uuid: java.util.UUID
   )
@@ -109,19 +127,31 @@ object TapirGeneratedEndpoints {
   case class NotFoundError (
     reason: String
   ) extends Error
+  case class HasBar (
+    bar: String
+  )
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  case class HasBaz (
+    baz: Int
+  )
+  case class ValidatedSubObj (
+    i: String
+  )
   case class SubtypeWithD1 (
-    s: String,
+    s: ByteString,
     i: Option[Int] = None,
     d: Option[Double] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
     def `type`: String = "SubA"
   }
+  case class ValidatedOneOfB (
+    i: Option[Int] = None
+  ) extends ValidatedOneOf
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
@@ -144,10 +174,19 @@ object TapirGeneratedEndpoints {
     case object foo3 extends ObjectWithInlineEnumInlineEnum
     case object foo4 extends ObjectWithInlineEnumInlineEnum
   }
+  case class ValidatedRecursive (
+    self: Option[Seq[ValidatedRecursive]] = None
+  )
   case class SubtypeWithoutD2 (
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  case class HasFooBarBazQuux (
+    foo: Option[String] = None,
+    bar: String,
+    baz: Int,
+    quux: Option[Int] = None
+  )
   case class SubtypeWithD2 (
     s: String,
     a: Option[Seq[String]] = None
@@ -162,6 +201,12 @@ object TapirGeneratedEndpoints {
     case object Bar extends AnEnum
     case object Baz extends AnEnum
   }
+  case class HasFoo (
+    foo: Option[String] = None
+  )
+  case class ValidatedOneOfC (
+    j: Option[Int] = None
+  ) extends ValidatedOneOf
   type ListType = List[String]
   case class NullableThingy (
     uuid: java.util.UUID
@@ -294,6 +339,15 @@ object TapirGeneratedEndpoints {
       .prependSecurityIn("security-group" / path[String]("securityGroupName").description("used by security logic"))
       .out(statusCode(sttp.model.StatusCode(204)).description("OK"))
 
+  type PostValidationTestEndpoint = Endpoint[String, Option[ValidatedObj], Unit, Unit, Any]
+  lazy val postValidationTest: PostValidationTestEndpoint =
+    endpoint
+      .post
+      .in(("validation" / "test"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(jsonBody[Option[ValidatedObj]].validateOption(ValidatedObjValidator))
+      .out(statusCode(sttp.model.StatusCode(204)).description("ok"))
+
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
@@ -310,6 +364,14 @@ object TapirGeneratedEndpoints {
       .securityIn(auth.apiKey(header[String]("api_key")))
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
+
+  type GetHeadersTestsEndpoint = Endpoint[String, Unit, Unit, Option[String], Any]
+  lazy val getHeadersTests: GetHeadersTestsEndpoint =
+    endpoint
+      .get
+      .in(("headers" / "tests"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .out(statusCode(sttp.model.StatusCode(302)).description("response").and(header[Option[String]]("foo").description("a description")))
 
   type GetOneofErrorSecParamTestEndpoint = Endpoint[(String, Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn), Unit, Error, Unit, Any]
   lazy val getOneofErrorSecParamTest: GetOneofErrorSecParamTestEndpoint =
@@ -340,6 +402,15 @@ object TapirGeneratedEndpoints {
         oneOfVariant[SimpleError](sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
       .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
 
+  type PostAllOfEndpoint = Endpoint[String, Option[HasFooBarBazQuux], Unit, Unit, Any]
+  lazy val postAllOf: PostAllOfEndpoint =
+    endpoint
+      .post
+      .in(("allOf"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(jsonBody[Option[HasFooBarBazQuux]].description("list type in"))
+      .out(statusCode(sttp.model.StatusCode(204)).description("fine"))
+
   type GetSecurityGroupSecurityGroupNameMorePathEndpoint = Endpoint[(String, String), Unit, Unit, Unit, Any]
   lazy val getSecurityGroupSecurityGroupNameMorePath: GetSecurityGroupSecurityGroupNameMorePathEndpoint =
     endpoint
@@ -359,6 +430,24 @@ object TapirGeneratedEndpoints {
         oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(None).description("No response").and(header[Option[String]]("common-response-header"))){ case (None, _) => true},
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum), _) => true },
         oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum2), _) => true }))
+
+  type GetPatternRestrictedObjectEndpoint = Endpoint[String, (String, Option[String], String, Option[String], String), Unit, String, Any]
+  lazy val getPatternRestrictedObject: GetPatternRestrictedObjectEndpoint =
+    endpoint
+      .get
+      .in(("pattern" / path[String]("restricted").validate(Validator.all(Validator.maxLength(10), Validator.minLength(3), Validator.pattern("[a-z]+"))).description("used by security logic") / "object"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(query[Option[String]]("q1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.pattern("[a-z_].+")(_)).map{
+        case Nil => ValidationResult.Valid
+        case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
+      }.getOrElse(ValidationResult.Valid))))
+      .in(query[String]("q2").validate(Validator.minLength(3)))
+      .in(header[Option[String]]("h1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.all(Validator.minLength(3), Validator.pattern("[a-z_].+"))(_)).map{
+        case Nil => ValidationResult.Valid
+        case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
+      }.getOrElse(ValidationResult.Valid))))
+      .in(header[String]("h2").validate(Validator.minLength(3)))
+      .out(jsonBody[String].description("ok"))
 
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =
@@ -457,7 +546,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[ListType].description("list type out"))
 
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, putAdtTest, postAdtTest, getOneofErrorSecParamTest, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, postValidationTest, putAdtTest, postAdtTest, getHeadersTests, getOneofErrorSecParamTest, postAllOf, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, getPatternRestrictedObject, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
 
   object Servers {

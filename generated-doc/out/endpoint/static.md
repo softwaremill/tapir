@@ -11,7 +11,7 @@ the API documentation of the old static content API, switch documentation to an 
 In order to use static content endpoints, add the module to your dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-files" % "1.11.25"
+"com.softwaremill.sttp.tapir" %% "tapir-files" % "1.11.28"
 ```
 
 ## Files
@@ -62,7 +62,9 @@ Similarly, the `staticResourcesGetServerEndpoint` can be used to expose the appl
 
 A single resource can be exposed using `staticResourceGetServerEndpoint`.
 
-## FileOptions
+## Additional Configuration
+
+### FileOptions
 
 Endpoint constructor methods for files and resources can receive optional `FileOptions`, which allow to configure additional settings:
 
@@ -89,6 +91,29 @@ val options: FilesOptions[Identity] =
 
 val endpoint = staticFilesGetServerEndpoint[Identity](emptyInput)("/var/www", options)
 ```
+
+### Static Headers
+
+In addition to the `FileOptions`, zero or more `Header`s  can also be provided to a server endpoint
+as a `List[Header]`. These can be used to attached fixed headers to the responses. As an example:
+
+```scala
+import sttp.model.Header
+import sttp.model.headers.CacheDirective
+import sttp.tapir.emptyInput
+import sttp.tapir.*
+import sttp.tapir.files.*
+import sttp.shared.Identity
+import scala.concurrent.duration.FiniteDuration
+import java.util.concurrent.TimeUnit
+
+val headers = List(Header.cacheControl(CacheDirective.MaxAge(FiniteDuration(365, TimeUnit.DAYS))))
+
+val endpoint = staticFilesGetServerEndpoint[Identity](emptyInput)("/var/www", extraHeaders = headers)
+```
+
+The above `cacheControl` header makes this resource eligible for caching for up to a year on the
+client machine. The headers which can be provided are not limited to just caching, however.
 
 ## Endpoint description and server logic
 

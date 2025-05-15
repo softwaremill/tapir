@@ -38,7 +38,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   "Generated codec for MatchesRegex" should "use tapir Validator.Pattern" in {
     type VariableConstraint = Match["[a-zA-Z][-a-zA-Z0-9_]*"]
     type VariableString = String :| VariableConstraint
-    val identifierCodec = implicitly[PlainCodec[VariableString]]
+    val identifierCodec = summon[PlainCodec[VariableString]]
 
     val expectedValidator: Validator[String] = Validator.pattern("[a-zA-Z][-a-zA-Z0-9_]*")
 
@@ -50,7 +50,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   it should "decode value matching pattern" in {
     type VariableConstraint = Match["[a-zA-Z][-a-zA-Z0-9_]*"]
     type VariableString = String :| VariableConstraint
-    val identifierCodec = implicitly[PlainCodec[VariableString]]
+    val identifierCodec = summon[PlainCodec[VariableString]]
     "ok".refineEither[VariableConstraint] match {
       case Right(s) => identifierCodec.decode("ok") shouldBe DecodeResult.Value(s)
       case Left(_)  => fail()
@@ -60,7 +60,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   "Generated codec for MaxLength on string" should "use tapir Validator.maxLength" in {
     type VariableConstraint = MaxLength[2]
     type VariableString = String :| VariableConstraint
-    val identifierCodec = implicitly[PlainCodec[VariableString]]
+    val identifierCodec = summon[PlainCodec[VariableString]]
 
     val expectedValidator: Validator[String] = Validator.maxLength(2)
     identifierCodec.decode("bad") should matchPattern {
@@ -71,7 +71,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   "Generated codec for MinLength on string" should "use tapir Validator.minLength" in {
     type VariableConstraint = MinLength[42]
     type VariableString = String :| VariableConstraint
-    val identifierCodec = implicitly[PlainCodec[VariableString]]
+    val identifierCodec = summon[PlainCodec[VariableString]]
 
     val expectedValidator: Validator[String] = Validator.minLength(42)
     identifierCodec.decode("bad") should matchPattern {
@@ -80,31 +80,31 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   }
 
   "Generated schema for described Int with extra constrains" should "apply given constrains" in {
-    val schema = implicitly[Schema[Int :| (Positive DescribedAs "Age should be positive")]]
+    val schema = summon[Schema[Int :| DescribedAs[Positive, "Age should be positive"]]]
 
     schema.validator should matchPattern { case Validator.Mapped(Validator.Min(0, true), _) =>
     }
   }
 
   "Generated schema for described String with extra constrains" should "apply given constrains" in {
-    type Constraint = (Not[Empty] & Alphanumeric) DescribedAs "name should not be empty and only made of alphanumeric characters"
+    type Constraint = DescribedAs[Not[Empty] & Alphanumeric, "name should not be empty and only made of alphanumeric characters"]
     type VariableString = String :| Constraint
-    val schema = implicitly[Schema[VariableString]]
+    val schema = summon[Schema[VariableString]]
 
     schema.validator should matchPattern {
       case Validator.Mapped(Validator.All(List(Validator.MinLength(1, false), Validator.Custom(_, _))), _) =>
     }
-    val codec = implicitly[PlainCodec[VariableString]]
-    codec.decode("alpha1") shouldBe a[DecodeResult.Value[_]]
+    val codec = summon[PlainCodec[VariableString]]
+    codec.decode("alpha1") shouldBe a[DecodeResult.Value[?]]
     codec.decode("bad!") shouldBe a[DecodeResult.InvalidValue]
     codec.decode("") shouldBe a[DecodeResult.InvalidValue]
-    codec.decode("954") shouldBe a[DecodeResult.Value[_]]
+    codec.decode("954") shouldBe a[DecodeResult.Value[?]]
     codec.decode("spaces not allowed") shouldBe a[DecodeResult.InvalidValue]
   }
 
   "Generated schema for non empty string" should "use a MinLength validator" in {
     type VariableString = String :| Not[Empty]
-    val schema = implicitly[Schema[VariableString]]
+    val schema = summon[Schema[VariableString]]
 
     schema.validator should matchPattern { case Validator.Mapped(Validator.MinLength(1, false), _) =>
     }
@@ -112,7 +112,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
 
   "Generated schema for union and intersection on string" should "use a list of tapir validations" in {
     type VariableString = String :| (MinLength[33] & MaxLength[83])
-    val schema = implicitly[Schema[VariableString]]
+    val schema = summon[Schema[VariableString]]
 
     schema.validator should matchPattern {
       case Validator.Mapped(Validator.All(List(Validator.MinLength(33, false), Validator.MaxLength(83, false))), _) =>
@@ -122,7 +122,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   "Generated codec for Less" should "use tapir Validator.max" in {
     type IntConstraint = Less[3]
     type LimitedInt = Int :| IntConstraint
-    val limitedIntCodec = implicitly[PlainCodec[LimitedInt]]
+    val limitedIntCodec = summon[PlainCodec[LimitedInt]]
 
     val expectedValidator: Validator[Int] = Validator.max(3, exclusive = true)
     limitedIntCodec.decode("3") should matchPattern {
@@ -278,7 +278,7 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   }
 
   "Generated validator for described union" should "use tapir Validator.min and Validator.max" in {
-    type IntConstraint = (Less[1] | Greater[3]) DescribedAs ("Should be included in less than 1 or more than 3")
+    type IntConstraint = DescribedAs[Less[1] | Greater[3], "Should be included in less than 1 or more than 3"]
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern {
@@ -287,17 +287,17 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   }
 
   "Generated validator for described union" should "work with strings" in {
-    type StrConstraint = (Match["[a-c]*"] | Match["[x-z]*"]) DescribedAs ("Some description")
+    type StrConstraint = DescribedAs[Match["[a-c]*"] | Match["[x-z]*"], "Some description"]
     type LimitedStr = String :| StrConstraint
 
-    val identifierCodec = implicitly[PlainCodec[LimitedStr]]
+    val identifierCodec = summon[PlainCodec[LimitedStr]]
     identifierCodec.decode("aac") shouldBe DecodeResult.Value("aac")
     identifierCodec.decode("yzx") shouldBe DecodeResult.Value("yzx")
     identifierCodec.decode("aax") shouldBe a[DecodeResult.InvalidValue]
   }
 
   "Generated validator for described single constraint" should "use tapir Validator.max" in {
-    type IntConstraint = (Less[1]) DescribedAs ("Should be included in less than 1 or more than 3")
+    type IntConstraint = DescribedAs[Less[1], "Should be included in less than 1 or more than 3"]
     type LimitedInt = Int :| IntConstraint
 
     summon[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Max(1, true), _) =>
@@ -305,14 +305,14 @@ class TapirCodecIronTestScala3 extends AnyFlatSpec with Matchers {
   }
 
   "Generated schema for NonEmpty and MinSize" should "not be optional" in {
-    assert(implicitly[Schema[List[Int]]].isOptional)
-    assert(!implicitly[Schema[List[Int] :| Not[Empty]]].isOptional)
-    assert(!implicitly[Schema[Set[Int] :| Not[Empty]]].isOptional)
-    assert(!implicitly[Schema[List[Int] :| MinLength[3]]].isOptional)
-    assert(!implicitly[Schema[List[Int] :| (MinLength[3] & MaxLength[6])]].isOptional)
-    assert(implicitly[Schema[List[Int] :| MinLength[0]]].isOptional)
-    assert(implicitly[Schema[List[Int] :| MaxLength[5]]].isOptional)
-    assert(implicitly[Schema[Option[List[Int] :| Not[Empty]]]].isOptional)
+    assert(summon[Schema[List[Int]]].isOptional)
+    assert(!summon[Schema[List[Int] :| Not[Empty]]].isOptional)
+    assert(!summon[Schema[Set[Int] :| Not[Empty]]].isOptional)
+    assert(!summon[Schema[List[Int] :| MinLength[3]]].isOptional)
+    assert(!summon[Schema[List[Int] :| (MinLength[3] & MaxLength[6])]].isOptional)
+    assert(summon[Schema[List[Int] :| MinLength[0]]].isOptional)
+    assert(summon[Schema[List[Int] :| MaxLength[5]]].isOptional)
+    assert(summon[Schema[Option[List[Int] :| Not[Empty]]]].isOptional)
   }
 
   "Instances for opaque refined type" should "be correctly derived" in:

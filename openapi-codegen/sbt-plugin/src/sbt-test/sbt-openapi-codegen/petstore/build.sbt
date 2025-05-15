@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
-  "io.circe" %% "circe-generic" % "0.14.12",
+  "io.circe" %% "circe-generic" % "0.14.13",
   "com.beachape" %% "enumeratum" % "1.7.5",
   "com.beachape" %% "enumeratum-circe" % "1.7.5",
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
