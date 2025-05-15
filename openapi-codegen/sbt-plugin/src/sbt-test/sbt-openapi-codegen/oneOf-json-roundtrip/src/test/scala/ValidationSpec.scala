@@ -79,6 +79,7 @@ class ValidationSpec extends AnyFreeSpec with Matchers {
     checkSuccess(Some(minimalValidObj.copy(map = Some(Map("a" -> 1, "b" -> 2, "c" -> 2)))))
     checkSuccess(Some(minimalValidObj.copy(arr = Some(Seq(3, 6, 9)))))
     checkSuccess(Some(minimalValidObj.copy(baz = Some(ValidatedSubObj("i1")))))
+    checkSuccess(Some(minimalValidObj.copy(set = Some(Set("i1", "hi")))))
     /// FAILURES
     def checkFailure(v: Params) = {
       val req = runReq(v)
@@ -98,6 +99,7 @@ class ValidationSpec extends AnyFreeSpec with Matchers {
     checkFailure(Some(minimalValidObj.copy(arr = Some(Seq(0)))))
     checkFailure(Some(minimalValidObj.copy(arr = Some(Seq(15)))))
     checkFailure(Some(minimalValidObj.copy(baz = Some(ValidatedSubObj("1")))))
+    checkFailure(Some(minimalValidObj.copy(set = Some((1 to 20).map(_.toString).toSet))))
   }
 
 }

@@ -130,9 +130,9 @@ object OpenapiSchemaType {
       nullable: Boolean
   ) extends OpenapiSchemaType
 
-  // no uniqueItems support
   case class ArrayRestrictions(minItems: Option[Int] = None, maxItems: Option[Int] = None, uniqueItems: Option[Boolean] = None) {
-    def hasRestriction: Boolean = minItems.isDefined || maxItems.isDefined || uniqueItems.isDefined
+    // We exclude 'uniqueItems' from this check because we don't use it to construct a validator -- rather, it results in us defining a Set instead of a Seq
+    def hasRestriction: Boolean = minItems.isDefined || maxItems.isDefined
   }
   case class OpenapiSchemaArray(
       items: OpenapiSchemaType,
@@ -164,7 +164,7 @@ object OpenapiSchemaType {
       xml: Option[OpenapiXml.XmlObjectConfiguration] = None
   ) extends OpenapiSchemaType
 
-  // no readOnly/writeOnly, minProperties/maxProperties support
+  // no readOnly/writeOnly support
   case class OpenapiSchemaMap(
       items: OpenapiSchemaType,
       nullable: Boolean,
@@ -383,7 +383,8 @@ object OpenapiSchemaType {
       }
       minItems <- c.downField("minItems").as[Option[Int]]
       maxItems <- c.downField("maxItems").as[Option[Int]]
-      restrictions = ArrayRestrictions(minItems, maxItems)
+      uniqueItems <- c.downField("uniqueItems").as[Option[Boolean]]
+      restrictions = ArrayRestrictions(minItems, maxItems, uniqueItems)
     } yield {
       OpenapiSchemaArray(f, nb, xml, restrictions)
     }

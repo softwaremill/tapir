@@ -532,6 +532,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate ADTs for oneOf schemas (jsoniter)" in {
     val imports =
       """import sttp.tapir.generic.auto._
+        |type ByteString = Array[Byte]
+        |implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
@@ -565,6 +567,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate ADTs for oneOf schemas (circe)" in {
     val imports =
       """import sttp.tapir.generic.auto._
+        |type ByteString = Array[Byte]
+        |implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {

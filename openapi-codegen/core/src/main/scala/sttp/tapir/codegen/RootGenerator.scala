@@ -5,6 +5,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaBinary,
   OpenapiSchemaBoolean,
+  OpenapiSchemaByte,
   OpenapiSchemaDateTime,
   OpenapiSchemaDouble,
   OpenapiSchemaFloat,
@@ -286,6 +287,8 @@ object RootGenerator {
         |  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
         |    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
         |  }
+        |  type ByteString <: Array[Byte]
+        |  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
         |
         |${indent(2)(classDefns)}
         |${indent(2)(inlineDefns.mkString("\n"))}
@@ -346,6 +349,8 @@ object RootGenerator {
         ("sttp.model.Part[java.io.File]", nb)
       case OpenapiSchemaBinary(nb) =>
         ("Array[Byte]", nb)
+      case OpenapiSchemaByte(nb) =>
+        ("ByteString", nb)
       case OpenapiSchemaAny(nb) =>
         ("io.circe.Json", nb)
       case OpenapiSchemaRef(t) =>

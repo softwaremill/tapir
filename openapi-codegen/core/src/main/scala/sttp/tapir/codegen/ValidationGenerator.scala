@@ -211,21 +211,25 @@ object ValidationGenerator {
       ignoreRefs: Boolean
   )(name: String, arr: OpenapiSchemaArray): Seq[ValidationDefn] = arr match {
     case OpenapiSchemaArray(t, nb, _, restrictions) =>
+      val isSet = restrictions.uniqueItems.contains(true)
+      val (maybeToList, maybeElemIdx, container) = if (isSet) (".toList", "", "Set") else ("", " $idx", "Seq")
       genValidationForTypeContainer[ArrayRestrictions](schemas, ignoreRefs, t, nb, restrictions)(name)(
         (r: ArrayRestrictions) =>
           r.minItems.map(s => s"""Validator.minSize($s)""").toSeq ++
             r.maxItems.map(s => s"""Validator.maxSize($s)""").toSeq,
-        (rawTpeName: String, validatorName: String) => s"""Validator.custom(
-             |  (_: $rawTpeName).map($validatorName.apply).zipWithIndex.flatMap { case (l, i) => l.map(_ -> i) } match {
+        (rawTpeName: String, validatorName: String) => {
+          s"""Validator.custom(
+             |  (_: $rawTpeName)$maybeToList.map($validatorName.apply).zipWithIndex.flatMap { case (l, i) => l.map(_ -> i) } match {
              |    case Nil => ValidationResult.Valid
              |    case errs =>
              |      val msgs: List[String] = "Array item validation failed for $rawTpeName" +: errs.map { case (err, idx) =>
-             |        s"Element $$idx is invalid$${err.customMessage.map(" because: " + _).getOrElse("")}"
+             |        s"Element$maybeElemIdx is invalid$${err.customMessage.map(" because: " + _).getOrElse("")}"
              |      }.toList
              |      ValidationResult.Invalid(msgs)
              |  }
-             |)""".stripMargin,
-        s => s"Seq[$s]"
+             |)""".stripMargin
+        },
+        s => s"$container[$s]"
       )
   }
 

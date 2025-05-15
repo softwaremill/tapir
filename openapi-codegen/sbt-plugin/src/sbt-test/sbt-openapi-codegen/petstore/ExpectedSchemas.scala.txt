@@ -3,6 +3,7 @@ package sttp.tapir.generated
 object TapirGeneratedEndpointsSchemas {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
+  implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)
   implicit lazy val apiResponseTapirSchema: sttp.tapir.Schema[ApiResponse] = sttp.tapir.Schema.derived
   implicit lazy val categoryTapirSchema: sttp.tapir.Schema[Category] = sttp.tapir.Schema.derived
   implicit lazy val orderStatusTapirSchema: sttp.tapir.Schema[OrderStatus] = sttp.tapir.Schema.derived

@@ -10,6 +10,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaAnyOf,
   OpenapiSchemaArray,
+  OpenapiSchemaByte,
   OpenapiSchemaConstantString,
   OpenapiSchemaEnum,
   OpenapiSchemaField,
@@ -40,7 +41,10 @@ object SchemaGenerator {
           "anyTapirSchema" -> "implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]"
         )
       else throw new NotImplementedError("any not implemented for json libs other than circe and jsoniter")
-    val maybeAnySchemaSchema = Seq(maybeAnySchema.map { case (_, _) => "anyTapirSchema" -> OpenapiSchemaAny(false) }.toSeq)
+    val extraSchemaRefs: Seq[Seq[(String, OpenapiSchemaType)]] = Seq(
+      Seq("byteStringSchema" -> OpenapiSchemaByte(false)),
+      maybeAnySchema.map { case (_, _) => "anyTapirSchema" -> OpenapiSchemaAny(false) }.toSeq
+    )
     val openApiSchemasWithTapirSchemas = doc.components
       .map(_.schemas.flatMap {
         case (name, _: OpenapiSchemaEnum) =>
@@ -57,7 +61,7 @@ object SchemaGenerator {
       })
       .toSeq
       .flatMap(maybeAnySchema.toSeq ++ _)
-      .toMap
+      .toMap + ("byteStringSchema" -> "implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)")
 
     // The algorithm here is to aviod mutually references between objects. It goes like this:
     // 1) Find all 'rings' -- that is, sets of mutually-recursive object references that will need to be defined in the same object
@@ -66,7 +70,7 @@ object SchemaGenerator {
     // 2) Order the definitions, such that objects appear before any places they're referenced
     val orderedLayers = orderLayers(groupedByRing)
     // 3) Group the definitions into at most `maxSchemasPerFile`, whilst avoiding splitting groups across files
-    val foldedLayers = foldLayers(maxSchemasPerFile)(maybeAnySchemaSchema ++ orderedLayers)
+    val foldedLayers = foldLayers(maxSchemasPerFile)(extraSchemaRefs ++ orderedLayers)
     // Our output will now only need to imports the 'earlier' files into the 'later' files, and _not_ vice verse
     foldedLayers.map(ring => ring.map(openApiSchemasWithTapirSchemas apply _._1).mkString("\n"))
   }

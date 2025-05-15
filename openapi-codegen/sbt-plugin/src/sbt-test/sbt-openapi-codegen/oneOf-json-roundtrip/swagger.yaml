@@ -589,6 +589,7 @@ components:
           type: string
         s:
           type: string
+          format: byte
         i:
           type: integer
         d:
@@ -871,6 +872,12 @@ components:
             exclusiveMinimum: true
             multipleOf: 3
           maxItems: 9
+        set:
+          type: array
+          items:
+            type: string
+          maxItems: 9
+          uniqueItems: true
         oneOf:
           $ref: '#/components/schemas/ValidatedOneOf'
         rec:
