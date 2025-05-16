@@ -104,6 +104,22 @@ case class Schema[T](
   def name(name: SName): Schema[T] = copy(name = Some(name))
   def name(name: Option[SName]): Schema[T] = copy(name = name)
 
+  /** Renames a schema derived from generic class according to the instantiated type parameter.
+    *
+    * Due to some limitations of semi-automatic derivation, when a generic class `G[TT]` is instantiated to `G[A]`, the schema which is
+    * automatically derived contains the name `G[TT]` instead of `G[A]`. This function adjusts `name.typeParameterShortNames` of the schema
+    * to fix this.
+    */
+  def renameWithTypeParameter[TT](implicit stt: Schema[TT]): Schema[T] =
+    name match {
+      case None => throw new IllegalArgumentException("Generic class is nameless")
+      case Some(name) =>
+        stt.name match {
+          case None          => throw new IllegalArgumentException("Type parameter of generic class is nameless")
+          case Some(sttName) => copy(name = Some(SName(name.fullName, sttName.fullName :: sttName.typeParameterShortNames)))
+        }
+    }
+
   def description(d: String): Schema[T] = copy(description = Some(d))
 
   def encodedExample(e: Any): Schema[T] = copy(encodedExample = Some(e))

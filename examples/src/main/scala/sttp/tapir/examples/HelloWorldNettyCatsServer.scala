@@ -1,7 +1,7 @@
 // {cat=Hello, World!; effects=cats-effect; server=Netty}: Exposing an endpoint using the Netty server (cats-effect variant)
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.25
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.25
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.28
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.28
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 //> using dep ch.qos.logback:logback-classic:1.5.8
 

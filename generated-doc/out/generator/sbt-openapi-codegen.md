@@ -1,7 +1,9 @@
 # Generate endpoint definitions from an OpenAPI YAML
 
 ```{note}
-This is a really early alpha implementation.
+This is a relatively mature implementation that should be sufficiently capable for the majority of use-cases, but
+nonetheless does not yet completely cover the openapi spec. Pull requests or issues for missing or
+incorrectly-implemented functionality are highly encouraged.
 ```
 
 ## Installation steps
@@ -9,7 +11,7 @@ This is a really early alpha implementation.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.25")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.28")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -178,10 +180,10 @@ param serdes.
 Models containing binary data cannot be re-used between json and multi-part form endpoints, due to having different
 representation types for the binary data
 
-We currently miss a lot of OpenApi features like:
+We currently miss a few OpenApi features. Notable are:
 
-- tags
-- anyOf/allOf
-- missing model types and meta descriptions (like date, minLength)
-- file handling
+- anyOf
+- not all validation is supported (readOnly/writeOnly, uniqueItems on arrays, and minProperties/maxProperties on
+  heterogeneous object schemas, are currently unsupported)
+- missing model types (date, duration, etc)
 
