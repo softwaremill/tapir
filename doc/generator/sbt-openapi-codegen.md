@@ -49,6 +49,7 @@ openapiMaxSchemasPerFile              400                                  Maxim
 openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
 openapiStreamingImplementation        fs2                                  Implementation for streamTextBody. Supports: akka, fs2, pekko, zio
 openapiGenerateEndpointTypes          false                                Whether to emit explicit types for endpoint defns
+openapiDisableValidatorGeneration     false                                If true, we will not generate validation for constraints (min, max, pattern etc)
 ===================================== ==================================== ==================================================================================================
 ```
 
@@ -180,9 +181,10 @@ param serdes.
 Models containing binary data cannot be re-used between json and multi-part form endpoints, due to having different
 representation types for the binary data
 
-We currently miss a few OpenApi features. Notably are:
+We currently miss a few OpenApi features. Notable are:
 
 - anyOf
-- validation (minLength, pattern, etc)
+- not all validation is supported (readOnly/writeOnly, and minProperties/maxProperties on heterogeneous object schemas,
+  are currently unsupported)
 - missing model types (date, duration, etc)
 

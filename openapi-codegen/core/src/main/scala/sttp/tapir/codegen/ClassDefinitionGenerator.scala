@@ -5,8 +5,7 @@ import sttp.tapir.codegen.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-
-import scala.annotation.tailrec
+import sttp.tapir.codegen.util.DocUtils
 
 case class GeneratedClassDefinitions(
     classRepr: String,
@@ -42,7 +41,7 @@ class ClassDefinitionGenerator {
 
     def fetchTransitiveParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
-      case head +: tail => recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
+      case head +: tail => DocUtils.recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
     }
 
     val allTransitiveJsonParamRefs = fetchTransitiveParamRefs(
@@ -80,9 +79,9 @@ class ClassDefinitionGenerator {
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
         case (name, obj: OpenapiSchemaEnum) =>
           EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
-        case (name, OpenapiSchemaMap(valueSchema, _))      => generateMap(name, valueSchema)
-        case (name, OpenapiSchemaArray(valueSchema, _, _)) => generateArray(name, valueSchema)
-        case (_, _: OpenapiSchemaOneOf)                    => Nil
+        case (name, OpenapiSchemaMap(valueSchema, _, _))       => generateMap(name, valueSchema)
+        case (name, OpenapiSchemaArray(valueSchema, _, _, rs)) => generateArray(name, valueSchema, rs)
+        case (_, _: OpenapiSchemaOneOf)                        => Nil
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
@@ -169,46 +168,6 @@ class ClassDefinitionGenerator {
         |""".stripMargin
   }
 
-  @tailrec
-  final def recursiveFindAllReferencedSchemaTypes(
-      allSchemas: Map[String, OpenapiSchemaType]
-  )(toCheck: OpenapiSchemaType, checked: Set[String], tail: Seq[OpenapiSchemaType]): Set[String] = {
-    def nextParamsFromTypeSeq(types: Seq[OpenapiSchemaType]) = types match {
-      case Nil          => None
-      case next +: rest => Some((next, checked, rest ++ tail))
-    }
-    val maybeNextParams = toCheck match {
-      case ref: OpenapiSchemaRef if ref.isSchema =>
-        val name = ref.stripped
-        val maybeAppended = if (checked contains name) None else allSchemas.get(name)
-        (tail ++ maybeAppended) match {
-          case Nil          => None
-          case next +: rest => Some((next, checked + name, rest))
-        }
-      case OpenapiSchemaArray(items, _, _)                                => Some((items, checked, tail))
-      case OpenapiSchemaNot(items)                                        => Some((items, checked, tail))
-      case OpenapiSchemaMap(items, _)                                     => Some((items, checked, tail))
-      case OpenapiSchemaOneOf(types, _)                                   => nextParamsFromTypeSeq(types)
-      case OpenapiSchemaAnyOf(types)                                      => nextParamsFromTypeSeq(types)
-      case OpenapiSchemaAllOf(types)                                      => nextParamsFromTypeSeq(types)
-      case OpenapiSchemaObject(properties, _, _, _) if properties.isEmpty => None
-      case OpenapiSchemaObject(properties, required, nullable, _) =>
-        val propToCheck = properties.head
-        val (propToCheckName, OpenapiSchemaField(propToCheckType, _)) = propToCheck
-        val objectWithoutHeadField = OpenapiSchemaObject(properties - propToCheckName, required, nullable)
-        Some((propToCheckType, checked, objectWithoutHeadField +: tail))
-      case _ => None
-    }
-    maybeNextParams match {
-      case None =>
-        tail match {
-          case Nil          => checked
-          case next +: rest => recursiveFindAllReferencedSchemaTypes(allSchemas)(next, checked, rest)
-        }
-      case Some((next, checked, rest)) => recursiveFindAllReferencedSchemaTypes(allSchemas)(next, checked, rest)
-    }
-  }
-
   private[codegen] def generateMap(
       name: String,
       valueSchema: OpenapiSchemaType
@@ -222,14 +181,16 @@ class ClassDefinitionGenerator {
 
   private[codegen] def generateArray(
       name: String,
-      valueSchema: OpenapiSchemaType
+      valueSchema: OpenapiSchemaType,
+      rs: ArrayRestrictions
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
       case simpleType: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(simpleType)._1
       case otherType =>
         throw new NotImplementedError(s"Only simple value types and refs are implemented for named arrays (found $otherType)")
     }
-    Seq(s"""type $name = List[$valueSchemaName]""")
+    if (rs.uniqueItems.contains(true)) Seq(s"""type $name = Set[$valueSchemaName]""")
+    else Seq(s"""type $name = List[$valueSchemaName]""")
   }
 
   private[codegen] def generateClass(
@@ -245,15 +206,15 @@ class ClassDefinitionGenerator {
     def rec(name: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
       val innerClasses = obj.properties
         .collect {
-          case (propName, OpenapiSchemaField(st: OpenapiSchemaObject, _)) =>
+          case (propName, OpenapiSchemaField(st: OpenapiSchemaObject, _, _)) =>
             val newName = addName(name, propName)
             rec(newName, st, Nil)
 
-          case (propName, OpenapiSchemaField(OpenapiSchemaMap(st: OpenapiSchemaObject, _), _)) =>
+          case (propName, OpenapiSchemaField(OpenapiSchemaMap(st: OpenapiSchemaObject, _, _), _, _)) =>
             val newName = addName(addName(name, propName), "item")
             rec(newName, st, Nil)
 
-          case (propName, OpenapiSchemaField(OpenapiSchemaArray(st: OpenapiSchemaObject, _, _), _)) =>
+          case (propName, OpenapiSchemaField(OpenapiSchemaArray(st: OpenapiSchemaObject, _, _, _), _, _)) =>
             val newName = addName(addName(name, propName), "item")
             rec(newName, st, Nil)
         }
@@ -283,7 +244,7 @@ class ClassDefinitionGenerator {
 
       val (properties, maybeEnums) = obj.properties
         .filterNot(discriminatorDefFields.map(_._1) contains _._1)
-        .map { case (key, OpenapiSchemaField(schemaType, maybeDefault)) =>
+        .map { case (key, OpenapiSchemaField(schemaType, maybeDefault, _)) =>
           val (tpe, maybeEnum) = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType, isJson, jsonSerdeLib, targetScala3)
           val fixedKey = fixKey(key)
           val optional = schemaType.nullable || !obj.required.contains(key)
@@ -341,7 +302,8 @@ class ClassDefinitionGenerator {
             jsonSerdeLib,
             targetScala3
           )
-        (s"Seq[$innerType]" -> arrayType.nullable, maybeEnum)
+        val container = if (arrayType.restrictions.uniqueItems.contains(true)) "Set" else "Seq"
+        (s"$container[$innerType]" -> arrayType.nullable, maybeEnum)
 
       case e: OpenapiSchemaEnum =>
         val enumName = addName(parentName.capitalize, key)
@@ -374,14 +336,14 @@ class ClassDefinitionGenerator {
   }
 
   private def schemaContainsAny(schema: OpenapiSchemaType): Boolean = schema match {
-    case _: OpenapiSchemaAny              => true
-    case OpenapiSchemaArray(items, _, _)  => schemaContainsAny(items)
-    case OpenapiSchemaMap(items, _)       => schemaContainsAny(items)
-    case OpenapiSchemaObject(fs, _, _, _) => fs.values.map(_.`type`).exists(schemaContainsAny)
-    case OpenapiSchemaOneOf(types, _)     => types.exists(schemaContainsAny)
-    case OpenapiSchemaAllOf(types)        => types.exists(schemaContainsAny)
-    case OpenapiSchemaAnyOf(types)        => types.exists(schemaContainsAny)
-    case OpenapiSchemaNot(item)           => schemaContainsAny(item)
+    case _: OpenapiSchemaAny                => true
+    case OpenapiSchemaArray(items, _, _, _) => schemaContainsAny(items)
+    case OpenapiSchemaMap(items, _, _)      => schemaContainsAny(items)
+    case OpenapiSchemaObject(fs, _, _, _)   => fs.values.map(_.`type`).exists(schemaContainsAny)
+    case OpenapiSchemaOneOf(types, _)       => types.exists(schemaContainsAny)
+    case OpenapiSchemaAllOf(types)          => types.exists(schemaContainsAny)
+    case OpenapiSchemaAnyOf(types)          => types.exists(schemaContainsAny)
+    case OpenapiSchemaNot(item)             => schemaContainsAny(item)
     case _: OpenapiSchemaSimpleType | _: OpenapiSchemaEnum | _: OpenapiSchemaConstantString | _: OpenapiSchemaRef => false
   }
 }

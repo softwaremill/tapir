@@ -51,6 +51,8 @@ object TapirGeneratedEndpoints {
   implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
     def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
   }
+  type ByteString <: Array[Byte]
+  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
@@ -64,6 +66,10 @@ object TapirGeneratedEndpoints {
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  case class HasASet (
+    setA: Set[String],
+    setB: Option[Set[Int]] = None
+  )
   case class SubtypeWithD1 (
     s: String,
     i: Option[Int] = None,
@@ -162,12 +168,19 @@ object TapirGeneratedEndpoints {
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
 
+  type PostUniqueItemsEndpoint = Endpoint[Unit, Option[HasASet], Unit, HasASet, Any]
+  lazy val postUniqueItems: PostUniqueItemsEndpoint =
+    endpoint
+      .post
+      .in(("unique-items"))
+      .in(jsonBody[Option[HasASet]])
+      .out(jsonBody[HasASet].description("OK"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postUniqueItems)
 
-   object Servers {
+  object Servers {
     import sttp.model.Uri.UriContext
 
-     val `/v3`: sttp.model.Uri = uri"/v3"
-   }
+    val `/v3`: sttp.model.Uri = uri"/v3"
+  }
 }

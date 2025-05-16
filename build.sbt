@@ -16,7 +16,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.20"
 val scala2_13 = "2.13.16"
-val scala3 = "3.3.5"
+val scala3 = "3.3.6"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -1027,8 +1027,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.3.6",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.6",
+      "io.prometheus" % "prometheus-metrics-core" % "1.3.7",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.7",
       scalaTest.value % Test
     )
   )
@@ -2133,7 +2133,8 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
-    )
+    ),
+    sbtPluginPublishLegacyMavenStyle := false // required by sonatype central
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 

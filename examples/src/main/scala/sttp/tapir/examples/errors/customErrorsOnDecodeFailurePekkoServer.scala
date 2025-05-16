@@ -1,7 +1,7 @@
 // {cat=Error handling; effects=Future; server=Pekko HTTP}: Customising errors that are reported on decode failures (e.g. invalid or missing query parameter)
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.25
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.25
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.28
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.28
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3

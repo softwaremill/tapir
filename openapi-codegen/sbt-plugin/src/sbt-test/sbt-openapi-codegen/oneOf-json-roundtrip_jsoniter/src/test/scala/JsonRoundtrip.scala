@@ -1,4 +1,4 @@
-import com.github.plokhotnyuk.jsoniter_scala.core.writeToString
+import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonValueCodec, JsonWriter, writeToString}
 import io.circe.parser.parse
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -175,6 +175,34 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         .map { resp =>
           resp.code.code shouldEqual 200
           resp.body shouldEqual Right(s"\"Foo\"")
+        },
+      1.second
+    )
+  }
+
+  "set roundtrip" in {
+    val route = TapirGeneratedEndpoints.postUniqueItems.serverLogic[Future]({
+      case None =>
+        Future successful Right(HasASet(Set.empty, None))
+      case Some(hasASet) =>
+        Future successful Right(HasASet(hasASet.setB.map(_.map(_.toString())).getOrElse(Set.empty), Some(hasASet.setA.map(_.toInt))))
+    })
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+    val reqBody = HasASet(Set("1", "2"), Some(Set(3, 4)))
+    val reqJsonBody = writeToString(reqBody)
+    val respBody = HasASet(Set("3", "4"), Some(Set(1, 2)))
+    val respJsonBody = writeToString(respBody)
+    Await.result(
+      sttp.client3.basicRequest
+        .post(uri"http://test.com/unique-items")
+        .body(reqJsonBody)
+        .send(stub)
+        .map { resp =>
+          resp.code.code shouldEqual 200
+          resp.body shouldEqual Right(respJsonBody)
         },
       1.second
     )

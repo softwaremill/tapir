@@ -112,11 +112,13 @@ object JsonSerdeGenerator {
   private def inlineEndpointSchemas(doc: OpenapiDocument): Seq[(String, OpenapiSchemaType, Boolean)] =
     doc.paths.flatMap(p =>
       p.methods.flatMap(m =>
-        m.responses.map(_.resolve(doc))
+        m.responses
+          .map(_.resolve(doc))
           .flatMap(_.content)
           .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
           .map(c => (m.name(p.url).capitalize + "Response", c.schema, true)) ++
-          m.requestBody.toSeq.map(_.resolve(doc))
+          m.requestBody.toSeq
+            .map(_.resolve(doc))
             .flatMap(_.content)
             .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
             .map(c => (m.name(p.url).capitalize + "Request", c.schema, true))
@@ -154,14 +156,23 @@ object JsonSerdeGenerator {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
       }
+      .map(s =>
+        s"""implicit val byteStringJsonDecoder: io.circe.Decoder[ByteString] =
+           |  io.circe.Decoder.decodeString
+           |    .map(java.util.Base64.getDecoder.decode)
+           |    .map(toByteString)
+           |implicit val byteStringJsonEncoder: io.circe.Encoder[ByteString] =
+           |  io.circe.Encoder.encodeString
+           |    .contramap(java.util.Base64.getEncoder.encodeToString)
+           |$s""".stripMargin)
   }
 
   private def genCirceObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => genCirceObjectSerde(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _), _)) =>
+      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => genCirceObjectSerde(s"$name${k.capitalize}", `type`)
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
       case Nil => ""
@@ -291,8 +302,8 @@ object JsonSerdeGenerator {
       // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
       case (name, o: OpenapiSchemaObject, isJson) =>
         val inlinedEnumDefns = if (allTransitiveJsonParamRefs.contains(name)) {
-          o.properties.collect {
-            case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _)) => genJsoniterEnumSerde(name + en.capitalize)
+          o.properties.collect { case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _)) =>
+            genJsoniterEnumSerde(name + en.capitalize)
           }
         } else Nil
         val supertypes =
@@ -329,6 +340,15 @@ object JsonSerdeGenerator {
         case (None, a)    => Some(a)
       }
       .map(jsonSerdeHelpers + additionalExplicitSerdes + _)
+      .map(s =>
+        s"""implicit val byteStringJsonCodec: $jsoniterPkgCore.JsonValueCodec[ByteString] = new $jsoniterPkgCore.JsonValueCodec[ByteString] {
+           |  def nullValue: ByteString = Array.empty[Byte]
+           |  def decodeValue(in: $jsoniterPkgCore.JsonReader, default: ByteString): ByteString =
+           |    toByteString(java.util.Base64.getDecoder.decode(in.readString("")))
+           |  def encodeValue(x: ByteString, out: $jsoniterPkgCore.JsonWriter): _root_.scala.Unit =
+           |    out.writeVal(java.util.Base64.getEncoder.encodeToString(x))
+           |}
+           |$s""".stripMargin)
   }
 
   private def genJsoniterClassSerde(supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {
@@ -456,14 +476,20 @@ object JsonSerdeGenerator {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
       }
+      .map(s =>
+      s"""implicit lazy val byteStringJsonCodec: zio.json.JsonCodec[ByteString] = zio.json.JsonCodec[ByteString](
+         |  zio.json.JsonEncoder[String].contramap[ByteString](java.util.Base64.getEncoder.encodeToString),
+         |  zio.json.JsonDecoder[String].mapOrFail(s => scala.util.Try(java.util.Base64.getDecoder.decode(s)).toEither.map(toByteString).left.map(error => error.getMessage)),
+         |)
+         |$s""".stripMargin)
   }
 
   private def genZioObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => genZioObjectSerde(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _), _)) =>
+      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => genZioObjectSerde(s"$name${k.capitalize}", `type`)
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
       case Nil => ""
