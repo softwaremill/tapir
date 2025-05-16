@@ -177,9 +177,8 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
       .name(SName(validator.possibleValues.toList.mkString("_or_")))
       .validate(validator)
 
-  /** Creates a schema for a generic class `G[T]`. Include the name of `T` in the schema name.
-    */
-  inline def derivedWithTypeParameter[G[T], T: Schema](using m: Mirror.Of[G[T]]): Schema[G[T]] = derived[G[T]].renameWithTypeParameter[T]
+  /** Creates a schema for a generic class `G[T]`. Include the name of `T` in the schema's name. */
+  inline def derivedWithTypeParameter[G[_], T: Schema](using m: Mirror.Of[G[T]]): Schema[G[T]] = derived[G[T]].renameWithTypeParameter[T]
 }
 
 private[tapir] object SchemaCompanionMacros {

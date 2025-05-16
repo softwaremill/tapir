@@ -133,8 +133,8 @@ final case class SomeInt(int: Int) derives Schema
 val nameBad = summon[Schema[PaginatedBad[SomeInt]]].name
 ```
 
-Due to the way semi-automatic derivation works, the name of `Schema[PaginatedBad[SomeInt]]` uses `T` instead of `SomeInt`.
-This leads to generating inconsistent OpenAPI specifications (as explained in
+Due to the way semi-automatic derivation works, the name of `Schema[PaginatedBad[SomeInt]]` uses `T` instead of 
+`SomeInt`. This leads to generating inconsistent OpenAPI specifications (as explained in
 [GitHub issues #3922](https://github.com/softwaremill/tapir/issues/3922) and
 [#4549](https://github.com/softwaremill/tapir/issues/4549)).
 
@@ -148,7 +148,8 @@ object Paginated:
 val name = summon[Schema[Paginated[SomeInt]]].name
 ```
 
-If using `inline given` is not possible, the name of the `Schema` can be adjusted after the derivation:
+If using `inline given` is not possible, or if the inline itself is part of a generic method, the name of the `Schema`
+can be adjusted after the derivation:
 
 ```scala mdoc
 final case class Paginated2[T](data: List[T], nextPage: Option[Int])
