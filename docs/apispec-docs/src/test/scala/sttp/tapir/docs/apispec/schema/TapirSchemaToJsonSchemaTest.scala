@@ -177,4 +177,36 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     // then
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft/2020-12/schema#","title":"Parent","required":["innerChildField","nullableInnerChild"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"},"nullableInnerChild":{"title":"Child","anyOf":[{"$$ref":"#/$$defs/Child"},{"type":"null"}]}},"$$defs":{"Child":{"title":"Child","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
   }
+
+  it should "generate a top-level array schema" in {
+    // given
+    case class Test(i: Int)
+
+    // when
+    val result: ASchema = TapirSchemaToJsonSchema(implicitly[Schema[List[Test]]], markOptionsAsNullable = true)
+
+    // then
+    result.asJson shouldBe json"""{
+      "$$schema" : "http://json-schema.org/draft/2020-12/schema#",
+      "$$defs" : {
+        "Test" : {
+          "title" : "Test",
+          "type" : "object",
+          "required" : [
+            "i"
+          ],
+          "properties" : {
+            "i" : {
+              "type" : "integer",
+              "format" : "int32"
+            }
+          }
+        }
+      },
+      "type" : "array",
+      "items" : {
+        "$$ref" : "#/$$defs/Test"
+      }
+    }"""
+  }
 }

@@ -4,6 +4,7 @@ import sttp.apispec.{Schema => ASchema}
 import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Schema => TSchema}
 import scala.collection.immutable.ListMap
+import sttp.tapir.SchemaType
 
 /** Renders json schema from tapir schema.
   *
@@ -18,7 +19,13 @@ object TapirSchemaToJsonSchema {
       schemaName: TSchema.SName => String = defaultSchemaName
   ): ASchema = {
 
-    val asKeyedSchemas = ToKeyedSchemas(schema).drop(1)
+    var asKeyedSchemas = ToKeyedSchemas(schema)
+    // The schemas in `asKeyedSchemas` will be part of `defs`. If the top-level schema is not an array), it should
+    // be rendered at the top-level, not through a def - then, dropping the first schema from definitions.
+    if (!schema.schemaType.isInstanceOf[SchemaType.SArray[_, _]]) {
+      asKeyedSchemas = asKeyedSchemas.drop(1)
+    }
+
     val keyedSchemas = ToKeyedSchemas.uniqueCombined(asKeyedSchemas)
 
     val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
