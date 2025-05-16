@@ -3,6 +3,7 @@ package sttp.tapir
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.internal.SNameMacros
+import sttp.tapir.TestUtil.field
 
 class SchemaMacroScala3Test extends AnyFlatSpec with Matchers:
   import SchemaMacroScala3Test._
@@ -122,6 +123,41 @@ class SchemaMacroScala3Test extends AnyFlatSpec with Matchers:
 
     s.schemaType should matchPattern { case SchemaType.SString() => }
     s.validator should matchPattern { case Validator.Enumeration(List("a", "b", "c"), _, _) => }
+  }
+
+  it should "derive a schema for a generic class with parameterized types" in {
+    // when
+    final case class Paginated[T](data: List[T])
+    object Paginated:
+      given [T: Schema]: Schema[Paginated[T]] = Schema.derivedWithTypeParameter[Paginated, T]
+
+    final case class SomeInt(int: Int) derives Schema
+
+    final case class Values[A](values: List[A])
+    object Values:
+      inline given [A]: Schema[Values[A]] = Schema.derived
+
+    // then
+    val sPaginatedSomeInt = summon[Schema[Paginated[SomeInt]]]
+    sPaginatedSomeInt.name shouldBe Some(
+      Schema.SName(
+        "sttp.tapir.SchemaMacroScala3Test.<local SchemaMacroScala3Test>.Paginated",
+        List("sttp.tapir.SchemaMacroScala3Test.<local SchemaMacroScala3Test>.SomeInt")
+      )
+    )
+    val sPaginatedValues = summon[Schema[Paginated[Values[String]]]]
+    sPaginatedValues.name shouldBe Some(
+      Schema.SName(
+        "sttp.tapir.SchemaMacroScala3Test.<local SchemaMacroScala3Test>.Paginated",
+        List(
+          "sttp.tapir.SchemaMacroScala3Test.<local SchemaMacroScala3Test>.Values",
+          "java.lang.String"
+        )
+      )
+    )
+
+    sPaginatedSomeInt.schemaType shouldBe SchemaType.SProduct(List(field(FieldName("data"), summon[Schema[SomeInt]].asArray)))
+    sPaginatedValues.schemaType shouldBe SchemaType.SProduct(List(field(FieldName("data"), summon[Schema[Values[String]]].asArray)))
   }
 
 object SchemaMacroScala3Test:
