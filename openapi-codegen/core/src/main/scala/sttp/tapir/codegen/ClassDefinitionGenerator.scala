@@ -68,7 +68,7 @@ class ClassDefinitionGenerator {
       adtInheritanceMap.mapValues(_.map(_._1)),
       targetScala3,
       schemasContainAny,
-      useCustomJsoniterSerdes && !targetScala3
+      useCustomJsoniterSerdes
     )
     val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
       xmlParamRefs,
