@@ -50,8 +50,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiAdditionalPackages := Nil,
     openapiStreamingImplementation := "fs2",
     openapiGenerateEndpointTypes := false,
-    openapiUseCustomJsoniterSerdes := false,
     openapiDisableValidatorGeneration := false,
+    openapiUseCustomJsoniterSerdes := false,
     standardParamSetting
   )
 
