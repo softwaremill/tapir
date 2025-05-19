@@ -6,7 +6,7 @@ lazy val root = (project in file("."))
     openapiJsonSerdeLib := "jsoniter",
     openapiXmlSerdeLib := "none",
     openapiStreamingImplementation := "pekko",
-    useCustomJsoniterSerdesOpt := false
+    openapiUseCustomJsoniterSerdes := false
   )
 
 val tapirVersion = "1.11.16"
