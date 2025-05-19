@@ -552,12 +552,14 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       val fullRes = imports + res + "\n" + jsonSerdes.get
       res shouldCompile ()
       fullRes shouldCompile ()
-      if (useCustomMacros) jsonSerdes.get should include(
-        """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type")"""
-      )
-      else jsonSerdes.get should include(
-        """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
-      )
+      if (useCustomMacros)
+        jsonSerdes.get should include(
+          """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type")"""
+        )
+      else
+        jsonSerdes.get should include(
+          """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
+        )
     }
     testOK(false, TestHelpers.oneOfDocsWithMapping)
     testOK(false, TestHelpers.oneOfDocsWithDiscriminatorNoMapping)

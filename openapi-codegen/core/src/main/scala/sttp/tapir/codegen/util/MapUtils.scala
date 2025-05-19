@@ -6,7 +6,7 @@ object MapUtils {
     m2.iterator.foldLeft(m1) { case (m, (k, v)) =>
       m.get(k) match {
         case Some(value) => m + (k -> (value ++ v))
-        case None => m + (k -> v)
+        case None        => m + (k -> v)
       }
     }
 }
