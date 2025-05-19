@@ -21,7 +21,8 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
       generateEndpointTypes = false,
-      generateValidators = true
+      generateValidators = true,
+      useCustomJsoniterSerdes = true
     )
   }
   def gen(

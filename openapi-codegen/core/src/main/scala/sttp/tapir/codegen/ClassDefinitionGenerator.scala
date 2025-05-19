@@ -29,7 +29,8 @@ class ClassDefinitionGenerator {
       validateNonDiscriminatedOneOfs: Boolean = true,
       maxSchemasPerFile: Int = 400,
       enumsDefinedOnEndpointParams: Boolean = false,
-      xmlParamRefs: Set[String] = Set.empty
+      xmlParamRefs: Set[String] = Set.empty,
+      useCustomJsoniterSerdes: Boolean = true
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -66,7 +67,8 @@ class ClassDefinitionGenerator {
       validateNonDiscriminatedOneOfs,
       adtInheritanceMap.mapValues(_.map(_._1)),
       targetScala3,
-      schemasContainAny
+      schemasContainAny,
+      useCustomJsoniterSerdes && !targetScala3
     )
     val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
       xmlParamRefs,

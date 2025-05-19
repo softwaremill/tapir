@@ -5,7 +5,8 @@ lazy val root = (project in file("."))
     version := "0.1",
     openapiJsonSerdeLib := "jsoniter",
     openapiXmlSerdeLib := "none",
-    openapiStreamingImplementation := "pekko"
+    openapiStreamingImplementation := "pekko",
+    useCustomJsoniterSerdesOpt := false
   )
 
 val tapirVersion = "1.11.16"
@@ -15,8 +16,8 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
   "com.beachape" %% "enumeratum" % "1.7.6",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.35.3",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.35.3" % "compile-internal",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.0",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.0" % "compile-internal",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test
 )
@@ -26,19 +27,23 @@ import sttp.tapir.sbt.OpenapiCodegenPlugin.autoImport.{openapiJsonSerdeLib, open
 import scala.io.Source
 import scala.util.Using
 
-TaskKey[Unit]("check") := {
+def compare(name: String, genFn: String, expFn: String) = {
   val generatedCode =
-    Using(Source.fromFile("target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala"))(
-      _.getLines.mkString("\n")
-    ).get
-  val expected = Using(Source.fromFile("Expected.scala.txt"))(_.getLines.mkString("\n")).get
+    Using(Source.fromFile(genFn))(_.getLines.mkString("\n")).get
+  val expected = Using(Source.fromFile(expFn))(_.getLines.mkString("\n")).get
   val generatedTrimmed =
     generatedCode.linesIterator.zipWithIndex.filterNot(_._1.isBlank).map { case (a, i) => a.trim -> i }.toSeq
   val expectedTrimmed = expected.linesIterator.filterNot(_.isBlank).map(_.trim).toSeq
   generatedTrimmed.zip(expectedTrimmed).foreach { case ((a, i), b) =>
-    if (a != b) sys.error(s"Generated code did not match (expected '$b' on line $i, found '$a')")
+    if (a != b) sys.error(s"Generated code did not match for $name (expected '$b' on line $i, found '$a')")
   }
   if (generatedTrimmed.size != expectedTrimmed.size)
-    sys.error(s"expected ${expectedTrimmed.size} non-empty lines, found ${generatedTrimmed.size}")
+    sys.error(s"For $name expected ${expectedTrimmed.size} non-empty lines, found ${generatedTrimmed.size}")
+
+}
+
+TaskKey[Unit]("check") := {
+  compare("endpoints", "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
+  compare("json", "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala", "ExpectedJsonSerdes.scala.txt")
   ()
 }
