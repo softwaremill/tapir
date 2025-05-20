@@ -536,7 +536,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
-    def testOK(doc: OpenapiDocument) = {
+    def testOK(useCustomMacros: Boolean, doc: OpenapiDocument) = {
       val GeneratedClassDefinitions(res, jsonSerdes, _, _) =
         gen
           .classDefs(
@@ -544,19 +544,27 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             false,
             jsonSerdeLib = JsonSerdeLib.Jsoniter,
             jsonParamRefs = Set("ReqWithVariants"),
-            fullModelPath = "foo.bar.baz"
+            fullModelPath = "foo.bar.baz",
+            useCustomJsoniterSerdes = useCustomMacros
           )
           .get
 
       val fullRes = imports + res + "\n" + jsonSerdes.get
       res shouldCompile ()
       fullRes shouldCompile ()
-      jsonSerdes.get should include(
-        """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
-      )
+      if (useCustomMacros)
+        jsonSerdes.get should include(
+          """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type")"""
+        )
+      else
+        jsonSerdes.get should include(
+          """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
+        )
     }
-    testOK(TestHelpers.oneOfDocsWithMapping)
-    testOK(TestHelpers.oneOfDocsWithDiscriminatorNoMapping)
+    testOK(false, TestHelpers.oneOfDocsWithMapping)
+    testOK(false, TestHelpers.oneOfDocsWithDiscriminatorNoMapping)
+    testOK(true, TestHelpers.oneOfDocsWithMapping)
+    testOK(true, TestHelpers.oneOfDocsWithDiscriminatorNoMapping)
     val failed = Try(
       gen.classDefs(TestHelpers.oneOfDocsNoDiscriminator, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants"))
     )

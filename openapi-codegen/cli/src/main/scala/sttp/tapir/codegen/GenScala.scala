@@ -74,6 +74,9 @@ object GenScala {
   private val disableValidatorGenerationOpt: Opts[Boolean] =
     Opts.flag("disableValidatorGeneration", "Whether to disable validator declarations").orFalse
 
+  private val useCustomJsoniterSerdesOpt: Opts[Boolean] =
+    Opts.flag("useCustomJsoniterSerdesOpt", "Set to true to enable usage of custom jsoniter macros (mitigates compilation flakiness, compatible with jsoniter-scala versions >= 2.36.x)").orFalse
+
   private val destDirOpt: Opts[File] =
     Opts
       .option[String]("destdir", "Destination directory", "d")
@@ -100,7 +103,8 @@ object GenScala {
       maxSchemasPerFileOpt,
       streamingImplementationOpt,
       generateEndpointTypesOpt,
-      disableValidatorGenerationOpt
+      disableValidatorGenerationOpt,
+      useCustomJsoniterSerdesOpt
     )
       .mapN {
         case (
@@ -116,7 +120,8 @@ object GenScala {
               maxSchemasPerFile,
               streamingImplementation,
               generateEndpointTypes,
-              disableValidatorGeneration
+              disableValidatorGeneration,
+              useCustomJsoniterSerdes
             ) =>
           val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
@@ -134,7 +139,8 @@ object GenScala {
                 validateNonDiscriminatedOneOfs,
                 maxSchemasPerFile.getOrElse(400),
                 generateEndpointTypes,
-                !disableValidatorGeneration
+                !disableValidatorGeneration,
+                useCustomJsoniterSerdes
               )
             )
             destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }

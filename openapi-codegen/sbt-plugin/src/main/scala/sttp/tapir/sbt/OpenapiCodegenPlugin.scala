@@ -35,6 +35,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiMaxSchemasPerFile.value,
       openapiGenerateEndpointTypes.value,
       openapiDisableValidatorGeneration.value,
+      openapiUseCustomJsoniterSerdes.value,
       openapiAdditionalPackages.value
     )
   def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
@@ -50,6 +51,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiStreamingImplementation := "fs2",
     openapiGenerateEndpointTypes := false,
     openapiDisableValidatorGeneration := false,
+    openapiUseCustomJsoniterSerdes := false,
     standardParamSetting
   )
 
@@ -82,6 +84,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
               c.maxSchemasPerFile,
               c.generateEndpointTypes,
               c.disableValidatorGeneration,
+              c.useCustomJsoniterSerdes,
               srcDir,
               taskStreams.cacheDirectory,
               sv.startsWith("3"),
