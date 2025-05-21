@@ -16,8 +16,8 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
   "com.beachape" %% "enumeratum" % "1.7.6",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.0",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.0" % "compile-internal",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.1",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.1" % "compile-internal",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test
 )
@@ -44,6 +44,10 @@ def compare(name: String, genFn: String, expFn: String) = {
 
 TaskKey[Unit]("check") := {
   compare("endpoints", "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
-  compare("json", "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala", "ExpectedJsonSerdes.scala.txt")
+  compare(
+    "json",
+    "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
+    "ExpectedJsonSerdes.scala.txt"
+  )
   ()
 }
