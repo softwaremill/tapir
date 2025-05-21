@@ -3,7 +3,6 @@ package sttp.tapir.docs.apispec.schema
 import sttp.apispec.{Schema => ASchema}
 import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Schema => TSchema}
-import scala.collection.immutable.ListMap
 import sttp.tapir.SchemaType
 
 /** Renders json schema from tapir schema.
@@ -20,9 +19,14 @@ object TapirSchemaToJsonSchema {
   ): ASchema = {
 
     var asKeyedSchemas = ToKeyedSchemas(schema)
-    // The schemas in `asKeyedSchemas` will be part of `defs`. If the top-level schema is not an array), it should
-    // be rendered at the top-level, not through a def - then, dropping the first schema from definitions.
-    if (!schema.schemaType.isInstanceOf[SchemaType.SArray[_, _]]) {
+    val rootRecursive = isRootRecursive(schema)
+
+    // The schemas in `asKeyedSchemas` will be part of `defs` in the generated JSON Schema. The first schema should be
+    // part of the defs if:
+    // - the top-level schema is an array
+    // - the top-level schema is referenced in the schema itself (recursive)
+    // In other cases, dropping the first schema, as it will be rendered at the top-level instead.
+    if (!schema.schemaType.isInstanceOf[SchemaType.SArray[_, _]] && !rootRecursive) {
       asKeyedSchemas = asKeyedSchemas.drop(1)
     }
 
@@ -35,7 +39,7 @@ object TapirSchemaToJsonSchema {
     val schemaIds = keysToSchemas.map { case (k, v) => k -> ((keysToIds(k), v)) }
 
     val defsList = schemaIds.values.toListMap
-    val rootApiSpecSchemaOrRef: ASchema = tschemaToASchema(schema, allowReference = false)
+    val rootApiSpecSchemaOrRef: ASchema = tschemaToASchema(schema, allowReference = rootRecursive)
 
     rootApiSpecSchemaOrRef.copy(
       `$schema` = Some(metaSchema.schemaId),
@@ -43,12 +47,18 @@ object TapirSchemaToJsonSchema {
     )
   }
 
-  // binary compatibility shim
-  private[docs] def apply(
-      schema: TSchema[_],
-      markOptionsAsNullable: Boolean,
-      addTitleToDefs: Boolean,
-      metaSchema: MetaSchema,
-      schemaName: TSchema.SName => String
-  ): ASchema = apply(schema, markOptionsAsNullable, metaSchema, schemaName)
+  /** @return true iff there is a reference ([[SchemaType.SRef]]) to the root schema in the schema itself. */
+  private def isRootRecursive(schema: TSchema[_]): Boolean = schema.name.exists(hasReferenceTo(schema, _))
+
+  private def hasReferenceTo(schema: TSchema[_], name: TSchema.SName): Boolean = {
+    schema.schemaType match {
+      case SchemaType.SProduct(fields)            => fields.exists(f => hasReferenceTo(f.schema, name))
+      case SchemaType.SCoproduct(subtypes, _)     => subtypes.exists(s => hasReferenceTo(s, name))
+      case SchemaType.SArray(element)             => hasReferenceTo(element, name)
+      case SchemaType.SOption(element)            => hasReferenceTo(element, name)
+      case SchemaType.SOpenProduct(fields, value) => fields.exists(f => hasReferenceTo(f.schema, name)) || hasReferenceTo(value, name)
+      case SchemaType.SRef(name2)                 => name == name2
+      case _                                      => false
+    }
+  }
 }
