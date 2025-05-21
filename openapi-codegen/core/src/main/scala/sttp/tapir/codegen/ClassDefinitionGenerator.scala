@@ -280,50 +280,62 @@ class ClassDefinitionGenerator {
       isJson: Boolean,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
       targetScala3: Boolean
-  ): (String, Option[InlineEnumDefn]) = {
-    val ((tpe, optional), maybeEnum) = schemaType match {
-      case simpleType: OpenapiSchemaSimpleType =>
-        mapSchemaSimpleTypeToType(simpleType, multipartForm = !isJson) -> None
+  ): (String, Option[InlineEnumDefn]) = schemaType match {
+    case OpenapiSchemaAllOf(Seq(singleElem)) =>
+      mapSchemaTypeToType(parentName, key, required, singleElem, isJson, jsonSerdeLib, targetScala3)
+    case _ =>
+      val ((tpe, optional), maybeEnum) = schemaType match {
 
-      case objectType: OpenapiSchemaObject =>
-        (addName(parentName, key) -> objectType.nullable, None)
+        case simpleType: OpenapiSchemaSimpleType =>
+          mapSchemaSimpleTypeToType(simpleType, multipartForm = !isJson) -> None
 
-      case mapType: OpenapiSchemaMap =>
-        val (innerType, maybeEnum) =
-          mapSchemaTypeToType(addName(parentName, key), "item", required = true, mapType.items, isJson = isJson, jsonSerdeLib, targetScala3)
-        (s"Map[String, $innerType]" -> mapType.nullable, maybeEnum)
+        case objectType: OpenapiSchemaObject =>
+          (addName(parentName, key) -> objectType.nullable, None)
 
-      case arrayType: OpenapiSchemaArray =>
-        val (innerType, maybeEnum) =
-          mapSchemaTypeToType(
-            addName(parentName, key),
-            "item",
-            required = true,
-            arrayType.items,
-            isJson = isJson,
+        case mapType: OpenapiSchemaMap =>
+          val (innerType, maybeEnum) =
+            mapSchemaTypeToType(
+              addName(parentName, key),
+              "item",
+              required = true,
+              mapType.items,
+              isJson = isJson,
+              jsonSerdeLib,
+              targetScala3
+            )
+          (s"Map[String, $innerType]" -> mapType.nullable, maybeEnum)
+
+        case arrayType: OpenapiSchemaArray =>
+          val (innerType, maybeEnum) =
+            mapSchemaTypeToType(
+              addName(parentName, key),
+              "item",
+              required = true,
+              arrayType.items,
+              isJson = isJson,
+              jsonSerdeLib,
+              targetScala3
+            )
+          val container = if (arrayType.restrictions.uniqueItems.contains(true)) "Set" else "Seq"
+          (s"$container[$innerType]" -> arrayType.nullable, maybeEnum)
+
+        case e: OpenapiSchemaEnum =>
+          val enumName = addName(parentName.capitalize, key)
+          val enumDefn = EnumGenerator.generateEnum(
+            enumName,
+            e,
+            targetScala3,
+            Set.empty,
             jsonSerdeLib,
-            targetScala3
+            if (isJson) Set(enumName) else Set.empty
           )
-        val container = if (arrayType.restrictions.uniqueItems.contains(true)) "Set" else "Seq"
-        (s"$container[$innerType]" -> arrayType.nullable, maybeEnum)
+          (enumName -> e.nullable, Some(InlineEnumDefn(enumName, enumDefn.mkString("\n"))))
 
-      case e: OpenapiSchemaEnum =>
-        val enumName = addName(parentName.capitalize, key)
-        val enumDefn = EnumGenerator.generateEnum(
-          enumName,
-          e,
-          targetScala3,
-          Set.empty,
-          jsonSerdeLib,
-          if (isJson) Set(enumName) else Set.empty
-        )
-        (enumName -> e.nullable, Some(InlineEnumDefn(enumName, enumDefn.mkString("\n"))))
+        case _ =>
+          throw new NotImplementedError(s"We can't serialize some of the properties yet! $parentName $key $schemaType")
+      }
 
-      case _ =>
-        throw new NotImplementedError(s"We can't serialize some of the properties yet! $parentName $key $schemaType")
-    }
-
-    (if (optional || !required) s"Option[$tpe]" else tpe, maybeEnum)
+      (if (optional || !required) s"Option[$tpe]" else tpe, maybeEnum)
   }
 
   private def addName(parentName: String, key: String) = parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
