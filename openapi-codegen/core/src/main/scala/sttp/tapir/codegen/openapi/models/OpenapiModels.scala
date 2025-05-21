@@ -364,7 +364,7 @@ object OpenapiModels {
     for {
       paths <- c
         .withFocusM[Decoder.Result](j => Right(j.mapObject(_.filterKeys(!specificationExtensionKeys.contains(_)))))
-        .flatMap(_.as[Map[String, OpenapiPath]])
+        .flatMap(_.as[mutable.LinkedHashMap[String, OpenapiPath]])
       extensions = extensionsFrom(c, specificationExtensionKeys)
     } yield paths.map { case (url, path) => path.copy(url = url) }.toSeq -> extensions
   }

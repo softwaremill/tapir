@@ -134,17 +134,6 @@ object TapirGeneratedEndpoints {
     message: Option[String] = None
   )
 
-  sealed trait PlaceOrderBodyIn extends Product with java.io.Serializable
-  case class PlaceOrderBodyOption_Order_In(value: Option[Order]) extends PlaceOrderBodyIn
-  case class PlaceOrderBody2In(value: Array[Byte]) extends PlaceOrderBodyIn
-
-  type FindPetsByTagsResponse <: Seq[Pet]
-  implicit val FindPetsByTagsResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByTagsResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByTagsResponse])
-  implicit val FindPetsByTagsResponseSeqEncoder: cats.xml.codec.Encoder[FindPetsByTagsResponse] =
-    seqEncoder[Pet]("Pet", isWrapped = false, itemName = "Pet").contramap(_.asInstanceOf[Seq[Pet]])
-  implicit val FindPetsByTagsResponseSeqSchema: sttp.tapir.Schema[FindPetsByTagsResponse] =
-    implicitly[Schema[Seq[Pet]]].map(x => Some(x.asInstanceOf[FindPetsByTagsResponse]))(_.asInstanceOf[Seq[Pet]])
-
   sealed trait UpdatePetBodyIn extends Product with java.io.Serializable
   case class UpdatePetBodyPetIn(value: Pet) extends UpdatePetBodyIn
   case class UpdatePetBody2In(value: Array[Byte]) extends UpdatePetBodyIn
@@ -154,59 +143,34 @@ object TapirGeneratedEndpoints {
   case class AddPetBodyPetIn(value: Pet) extends AddPetBodyIn
   case class AddPetBody2In(value: Array[Byte]) extends AddPetBodyIn
 
-
-  sealed trait UpdateUserBodyIn extends Product with java.io.Serializable
-  case class UpdateUserBodyOption_User_In(value: Option[User]) extends UpdateUserBodyIn
-  case class UpdateUserBody2In(value: Array[Byte]) extends UpdateUserBodyIn
-
-
-  sealed trait CreateUserBodyIn extends Product with java.io.Serializable
-  case class CreateUserBodyOption_User_In(value: Option[User]) extends CreateUserBodyIn
-  case class CreateUserBody2In(value: Array[Byte]) extends CreateUserBodyIn
-
   type FindPetsByStatusResponse <: Seq[Pet]
   implicit val FindPetsByStatusResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByStatusResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByStatusResponse])
   implicit val FindPetsByStatusResponseSeqEncoder: cats.xml.codec.Encoder[FindPetsByStatusResponse] =
     seqEncoder[Pet]("Pet", isWrapped = false, itemName = "Pet").contramap(_.asInstanceOf[Seq[Pet]])
   implicit val FindPetsByStatusResponseSeqSchema: sttp.tapir.Schema[FindPetsByStatusResponse] =
     implicitly[Schema[Seq[Pet]]].map(x => Some(x.asInstanceOf[FindPetsByStatusResponse]))(_.asInstanceOf[Seq[Pet]])
+  type FindPetsByTagsResponse <: Seq[Pet]
+  implicit val FindPetsByTagsResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByTagsResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByTagsResponse])
+  implicit val FindPetsByTagsResponseSeqEncoder: cats.xml.codec.Encoder[FindPetsByTagsResponse] =
+    seqEncoder[Pet]("Pet", isWrapped = false, itemName = "Pet").contramap(_.asInstanceOf[Seq[Pet]])
+  implicit val FindPetsByTagsResponseSeqSchema: sttp.tapir.Schema[FindPetsByTagsResponse] =
+    implicitly[Schema[Seq[Pet]]].map(x => Some(x.asInstanceOf[FindPetsByTagsResponse]))(_.asInstanceOf[Seq[Pet]])
+
+  sealed trait PlaceOrderBodyIn extends Product with java.io.Serializable
+  case class PlaceOrderBodyOption_Order_In(value: Option[Order]) extends PlaceOrderBodyIn
+  case class PlaceOrderBody2In(value: Array[Byte]) extends PlaceOrderBodyIn
+
+
+  sealed trait CreateUserBodyIn extends Product with java.io.Serializable
+  case class CreateUserBodyOption_User_In(value: Option[User]) extends CreateUserBodyIn
+  case class CreateUserBody2In(value: Array[Byte]) extends CreateUserBodyIn
+
+  sealed trait UpdateUserBodyIn extends Product with java.io.Serializable
+  case class UpdateUserBodyOption_User_In(value: Option[User]) extends UpdateUserBodyIn
+  case class UpdateUserBody2In(value: Array[Byte]) extends UpdateUserBodyIn
 
   type SwaggerRouterControllerExtension = String
   val swaggerRouterControllerExtensionKey = new sttp.tapir.AttributeKey[SwaggerRouterControllerExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.SwaggerRouterControllerExtension")
-
-  type PlaceOrderEndpoint = Endpoint[Unit, PlaceOrderBodyIn, Unit, Order, Any]
-  lazy val placeOrder: PlaceOrderEndpoint =
-    endpoint
-      .name("placeOrder")
-      .post
-      .in(("store" / "order"))
-      .in(oneOfBody[PlaceOrderBodyIn](
-        jsonBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn],
-        xmlBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn],
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PlaceOrderBody2In(_))(_.value).widenBody[PlaceOrderBodyIn]))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(jsonBody[Order].description("successful operation"))
-      .tags(List("store"))
-      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
-
-  type FindPetsByTagsEndpoint = Endpoint[String, List[String], Unit, List[Pet], Any]
-  lazy val findPetsByTags: FindPetsByTagsEndpoint =
-    endpoint
-      .name("findPetsByTags")
-      .get
-      .in(("pet" / "findByTags"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(query[ExplodedValues[String]]("tags").map(_.values)(ExplodedValues(_)).description("Tags to filter by"))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid tag value"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody[List[Pet]](
-        jsonBody[List[Pet]].description("successful operation"),
-        xmlBody[FindPetsByTagsResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByTagsResponse]).description("successful operation")))
-      .tags(List("pet"))
 
   type UpdatePetEndpoint = Endpoint[String, UpdatePetBodyIn, Unit, Pet, Any]
   lazy val updatePet: UpdatePetEndpoint =
@@ -249,142 +213,47 @@ object TapirGeneratedEndpoints {
         xmlBody[Pet].description("Successful operation")))
       .tags(List("pet"))
 
-  type GetOrderByIdEndpoint = Endpoint[Unit, Long, Unit, Order, Any]
-  lazy val getOrderById: GetOrderByIdEndpoint =
+  type FindPetsByStatusEndpoint = Endpoint[String, Option[FindPetsByStatusStatus], Unit, List[Pet], Any]
+  lazy val findPetsByStatus: FindPetsByStatusEndpoint =
     endpoint
-      .name("getOrderById")
+      .name("findPetsByStatus")
       .get
-      .in(("store" / "order" / path[Long]("orderId").description("ID of order that needs to be fetched")))
+      .in(("pet" / "findByStatus"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(query[Option[FindPetsByStatusStatus]]("status").description("Status values that need to be considered for filter"))
       .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid status value"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody[Order](
-        jsonBody[Order].description("successful operation"),
-        xmlBody[Order].description("successful operation")))
-      .tags(List("store"))
-      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
+      .out(oneOfBody[List[Pet]](
+        jsonBody[List[Pet]].description("successful operation"),
+        xmlBody[FindPetsByStatusResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByStatusResponse]).description("successful operation")))
+      .tags(List("pet"))
 
-  type DeleteOrderEndpoint = Endpoint[Unit, Long, Unit, Unit, Any]
-  lazy val deleteOrder: DeleteOrderEndpoint =
-    endpoint
-      .name("deleteOrder")
-      .delete
-      .in(("store" / "order" / path[Long]("orderId").description("ID of the order that needs to be deleted")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .tags(List("store"))
-      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
+  sealed trait FindPetsByStatusStatus extends enumeratum.EnumEntry
+  object FindPetsByStatusStatus extends enumeratum.Enum[FindPetsByStatusStatus] with enumeratum.CirceEnum[FindPetsByStatusStatus] {
+    val values = findValues
+    case object available extends FindPetsByStatusStatus
+    case object pending extends FindPetsByStatusStatus
+    case object sold extends FindPetsByStatusStatus
+    implicit val enumCodecSupportFindPetsByStatusStatus: ExtraParamSupport[FindPetsByStatusStatus] =
+      extraCodecSupport[FindPetsByStatusStatus]("FindPetsByStatusStatus", FindPetsByStatusStatus)
+  }
 
-  type LogoutUserEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
-  lazy val logoutUser: LogoutUserEndpoint =
+  type FindPetsByTagsEndpoint = Endpoint[String, List[String], Unit, List[Pet], Any]
+  lazy val findPetsByTags: FindPetsByTagsEndpoint =
     endpoint
-      .name("logoutUser")
+      .name("findPetsByTags")
       .get
-      .in(("user" / "logout"))
-      .tags(List("user"))
-
-  type GetInventoryEndpoint = Endpoint[String, Unit, Unit, Map[String, Int], Any]
-  lazy val getInventory: GetInventoryEndpoint =
-    endpoint
-      .name("getInventory")
-      .get
-      .in(("store" / "inventory"))
-      .securityIn(auth.apiKey(header[String]("api_key")))
-      .out(jsonBody[Map[String, Int]].description("successful operation"))
-      .tags(List("store"))
-      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
-
-  type CreateUsersWithListInputEndpoint = Endpoint[Unit, Option[List[User]], Unit, User, Any]
-  lazy val createUsersWithListInput: CreateUsersWithListInputEndpoint =
-    endpoint
-      .name("createUsersWithListInput")
-      .post
-      .in(("user" / "createWithList"))
-      .in(jsonBody[Option[List[User]]])
-      .out(oneOfBody[User](
-        jsonBody[User].description("Successful operation"),
-        xmlBody[User].description("Successful operation")))
-      .tags(List("user"))
-      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
-
-  type GetUserByNameEndpoint = Endpoint[Unit, String, Unit, User, Any]
-  lazy val getUserByName: GetUserByNameEndpoint =
-    endpoint
-      .name("getUserByName")
-      .get
-      .in(("user" / path[String]("username").description("The name that needs to be fetched. Use user1 for testing")))
+      .in(("pet" / "findByTags"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(query[ExplodedValues[String]]("tags").map(_.values)(ExplodedValues(_)).description("Tags to filter by"))
       .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid tag value"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody[User](
-        jsonBody[User].description("successful operation"),
-        xmlBody[User].description("successful operation")))
-      .tags(List("user"))
-
-  type UpdateUserEndpoint = Endpoint[Unit, (String, UpdateUserBodyIn), Unit, Unit, Any]
-  lazy val updateUser: UpdateUserEndpoint =
-    endpoint
-      .name("updateUser")
-      .put
-      .in(("user" / path[String]("username").description("name that need to be deleted")))
-      .in(oneOfBody[UpdateUserBodyIn](
-        jsonBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"),
-        xmlBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"),
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(UpdateUserBody2In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("bad request"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("user not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .tags(List("user"))
-      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
-
-  type DeleteUserEndpoint = Endpoint[Unit, String, Unit, Unit, Any]
-  lazy val deleteUser: DeleteUserEndpoint =
-    endpoint
-      .name("deleteUser")
-      .delete
-      .in(("user" / path[String]("username").description("The name that needs to be deleted")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .tags(List("user"))
-
-  type LoginUserEndpoint = Endpoint[Unit, (Option[String], Option[String]), Unit, (String, Option[Int], Option[java.time.Instant]), Any]
-  lazy val loginUser: LoginUserEndpoint =
-    endpoint
-      .name("loginUser")
-      .get
-      .in(("user" / "login"))
-      .in(query[Option[String]]("username").description("The user name for login"))
-      .in(query[Option[String]]("password").description("The password for login in clear text"))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username/password supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody[String](
-        xmlBody[String].description("successful operation"),
-        jsonBody[String].description("successful operation")).and(header[Option[Int]]("X-Rate-Limit").description("calls per hour allowed by the user")).and(header[Option[java.time.Instant]]("X-Expires-After").description("date in UTC when token expires")))
-      .tags(List("user"))
-
-  type CreateUserEndpoint = Endpoint[Unit, CreateUserBodyIn, Unit, User, Any]
-  lazy val createUser: CreateUserEndpoint =
-    endpoint
-      .name("createUser")
-      .post
-      .in(("user"))
-      .in(oneOfBody[CreateUserBodyIn](
-        jsonBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"),
-        xmlBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"),
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(CreateUserBody2In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object")))
-      .out(oneOfBody[User](
-        jsonBody[User].description("successful operation"),
-        xmlBody[User].description("successful operation")))
-      .tags(List("user"))
-      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
+      .out(oneOfBody[List[Pet]](
+        jsonBody[List[Pet]].description("successful operation"),
+        xmlBody[FindPetsByTagsResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByTagsResponse]).description("successful operation")))
+      .tags(List("pet"))
 
   type GetPetByIdEndpoint = Endpoint[Bearer_or_api_key_SecurityIn, Long, Unit, Pet, Any]
   lazy val getPetById: GetPetByIdEndpoint =
@@ -459,34 +328,162 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[ApiResponse].description("successful operation"))
       .tags(List("pet"))
 
-  type FindPetsByStatusEndpoint = Endpoint[String, Option[FindPetsByStatusStatus], Unit, List[Pet], Any]
-  lazy val findPetsByStatus: FindPetsByStatusEndpoint =
+  type GetInventoryEndpoint = Endpoint[String, Unit, Unit, Map[String, Int], Any]
+  lazy val getInventory: GetInventoryEndpoint =
     endpoint
-      .name("findPetsByStatus")
+      .name("getInventory")
       .get
-      .in(("pet" / "findByStatus"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(query[Option[FindPetsByStatusStatus]]("status").description("Status values that need to be considered for filter"))
+      .in(("store" / "inventory"))
+      .securityIn(auth.apiKey(header[String]("api_key")))
+      .out(jsonBody[Map[String, Int]].description("successful operation"))
+      .tags(List("store"))
+      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
+
+  type PlaceOrderEndpoint = Endpoint[Unit, PlaceOrderBodyIn, Unit, Order, Any]
+  lazy val placeOrder: PlaceOrderEndpoint =
+    endpoint
+      .name("placeOrder")
+      .post
+      .in(("store" / "order"))
+      .in(oneOfBody[PlaceOrderBodyIn](
+        jsonBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn],
+        xmlBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn],
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PlaceOrderBody2In(_))(_.value).widenBody[PlaceOrderBodyIn]))
       .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid status value"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
-      .out(oneOfBody[List[Pet]](
-        jsonBody[List[Pet]].description("successful operation"),
-        xmlBody[FindPetsByStatusResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByStatusResponse]).description("successful operation")))
-      .tags(List("pet"))
+      .out(jsonBody[Order].description("successful operation"))
+      .tags(List("store"))
+      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
 
-  sealed trait FindPetsByStatusStatus extends enumeratum.EnumEntry
-  object FindPetsByStatusStatus extends enumeratum.Enum[FindPetsByStatusStatus] with enumeratum.CirceEnum[FindPetsByStatusStatus] {
-    val values = findValues
-    case object available extends FindPetsByStatusStatus
-    case object pending extends FindPetsByStatusStatus
-    case object sold extends FindPetsByStatusStatus
-    implicit val enumCodecSupportFindPetsByStatusStatus: ExtraParamSupport[FindPetsByStatusStatus] =
-      extraCodecSupport[FindPetsByStatusStatus]("FindPetsByStatusStatus", FindPetsByStatusStatus)
-  }
+  type GetOrderByIdEndpoint = Endpoint[Unit, Long, Unit, Order, Any]
+  lazy val getOrderById: GetOrderByIdEndpoint =
+    endpoint
+      .name("getOrderById")
+      .get
+      .in(("store" / "order" / path[Long]("orderId").description("ID of order that needs to be fetched")))
+      .errorOut(oneOf[Unit](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .out(oneOfBody[Order](
+        jsonBody[Order].description("successful operation"),
+        xmlBody[Order].description("successful operation")))
+      .tags(List("store"))
+      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
 
+  type DeleteOrderEndpoint = Endpoint[Unit, Long, Unit, Unit, Any]
+  lazy val deleteOrder: DeleteOrderEndpoint =
+    endpoint
+      .name("deleteOrder")
+      .delete
+      .in(("store" / "order" / path[Long]("orderId").description("ID of the order that needs to be deleted")))
+      .errorOut(oneOf[Unit](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .tags(List("store"))
+      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
 
-  lazy val generatedEndpoints = List(placeOrder, findPetsByTags, updatePet, addPet, getOrderById, deleteOrder, logoutUser, getInventory, createUsersWithListInput, getUserByName, updateUser, deleteUser, loginUser, createUser, getPetById, updatePetWithForm, deletePet, uploadFile, findPetsByStatus)
+  type CreateUserEndpoint = Endpoint[Unit, CreateUserBodyIn, Unit, User, Any]
+  lazy val createUser: CreateUserEndpoint =
+    endpoint
+      .name("createUser")
+      .post
+      .in(("user"))
+      .in(oneOfBody[CreateUserBodyIn](
+        jsonBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"),
+        xmlBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"),
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(CreateUserBody2In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object")))
+      .out(oneOfBody[User](
+        jsonBody[User].description("successful operation"),
+        xmlBody[User].description("successful operation")))
+      .tags(List("user"))
+      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
+
+  type CreateUsersWithListInputEndpoint = Endpoint[Unit, Option[List[User]], Unit, User, Any]
+  lazy val createUsersWithListInput: CreateUsersWithListInputEndpoint =
+    endpoint
+      .name("createUsersWithListInput")
+      .post
+      .in(("user" / "createWithList"))
+      .in(jsonBody[Option[List[User]]])
+      .out(oneOfBody[User](
+        jsonBody[User].description("Successful operation"),
+        xmlBody[User].description("Successful operation")))
+      .tags(List("user"))
+      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
+
+  type LoginUserEndpoint = Endpoint[Unit, (Option[String], Option[String]), Unit, (String, Option[Int], Option[java.time.Instant]), Any]
+  lazy val loginUser: LoginUserEndpoint =
+    endpoint
+      .name("loginUser")
+      .get
+      .in(("user" / "login"))
+      .in(query[Option[String]]("username").description("The user name for login"))
+      .in(query[Option[String]]("password").description("The password for login in clear text"))
+      .errorOut(oneOf[Unit](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username/password supplied"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .out(oneOfBody[String](
+        xmlBody[String].description("successful operation"),
+        jsonBody[String].description("successful operation")).and(header[Option[Int]]("X-Rate-Limit").description("calls per hour allowed by the user")).and(header[Option[java.time.Instant]]("X-Expires-After").description("date in UTC when token expires")))
+      .tags(List("user"))
+
+  type LogoutUserEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
+  lazy val logoutUser: LogoutUserEndpoint =
+    endpoint
+      .name("logoutUser")
+      .get
+      .in(("user" / "logout"))
+      .tags(List("user"))
+
+  type GetUserByNameEndpoint = Endpoint[Unit, String, Unit, User, Any]
+  lazy val getUserByName: GetUserByNameEndpoint =
+    endpoint
+      .name("getUserByName")
+      .get
+      .in(("user" / path[String]("username").description("The name that needs to be fetched. Use user1 for testing")))
+      .errorOut(oneOf[Unit](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .out(oneOfBody[User](
+        jsonBody[User].description("successful operation"),
+        xmlBody[User].description("successful operation")))
+      .tags(List("user"))
+
+  type UpdateUserEndpoint = Endpoint[Unit, (String, UpdateUserBodyIn), Unit, Unit, Any]
+  lazy val updateUser: UpdateUserEndpoint =
+    endpoint
+      .name("updateUser")
+      .put
+      .in(("user" / path[String]("username").description("name that need to be deleted")))
+      .in(oneOfBody[UpdateUserBodyIn](
+        jsonBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"),
+        xmlBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"),
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(UpdateUserBody2In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store")))
+      .errorOut(oneOf[Unit](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("bad request"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("user not found"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .tags(List("user"))
+      .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
+
+  type DeleteUserEndpoint = Endpoint[Unit, String, Unit, Unit, Any]
+  lazy val deleteUser: DeleteUserEndpoint =
+    endpoint
+      .name("deleteUser")
+      .delete
+      .in(("user" / path[String]("username").description("The name that needs to be deleted")))
+      .errorOut(oneOf[Unit](
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found"))(()),
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .tags(List("user"))
+
+  lazy val generatedEndpoints = List(updatePet, addPet, findPetsByStatus, findPetsByTags, getPetById, updatePetWithForm, deletePet, uploadFile, getInventory, placeOrder, getOrderById, deleteOrder, createUser, createUsersWithListInput, loginUser, logoutUser, getUserByName, updateUser, deleteUser)
 
   object Servers {
     import sttp.model.Uri.UriContext
