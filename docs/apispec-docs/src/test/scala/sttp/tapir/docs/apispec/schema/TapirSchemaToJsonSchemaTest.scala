@@ -245,4 +245,61 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
       "$$ref" : "#/$$defs/Test"
     }"""
   }
+
+  it should "generate a top-level recursive schema with coproducts" in {
+    // given
+    sealed trait Model
+    final case class SetModel(set: Set[Model]) extends Model
+    final case class LeafModel(num: Int) extends Model
+
+    implicit lazy val schema: Schema[Model] = Schema.derived[Model]
+
+    // when
+    val result: ASchema = TapirSchemaToJsonSchema(implicitly[Schema[Model]], markOptionsAsNullable = true)
+
+    // then
+    result.asJson shouldBe json"""{
+      "$$schema" : "http://json-schema.org/draft/2020-12/schema#",
+      "$$ref" : "#/$$defs/Model",
+      "$$defs" : {
+        "Model" : {
+          "title" : "Model",
+          "oneOf" : [
+            {
+              "$$ref" : "#/$$defs/LeafModel"
+            },
+            {
+              "$$ref" : "#/$$defs/SetModel"
+            }
+          ]
+        },
+        "LeafModel" : {
+          "title" : "LeafModel",
+          "type" : "object",
+          "required" : [
+            "num"
+          ],
+          "properties" : {
+            "num" : {
+              "type" : "integer",
+              "format" : "int32"
+            }
+          }
+        },
+        "SetModel" : {
+          "title" : "SetModel",
+          "type" : "object",
+          "properties" : {
+            "set" : {
+              "type" : "array",
+              "uniqueItems" : true,
+              "items" : {
+                "$$ref" : "#/$$defs/Model"
+              }
+            }
+          }
+        }
+      }
+    }"""
+  }
 }
