@@ -95,15 +95,15 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
   case class ValidatedObj (
-    oneOf: Option[ValidatedOneOf] = None,
     foo: String,
-    map: Option[Map[String, Int]] = None,
-    set: Option[Set[String]] = None,
     bar: ValidatedSubObj = ValidatedSubObj(i = "i..."),
-    rec: Option[ValidatedRecursive] = None,
-    arr: Option[Seq[Int]] = None,
+    baz: Option[ValidatedSubObj] = None,
     quux: Option[String] = None,
-    baz: Option[ValidatedSubObj] = None
+    map: Option[Map[String, Int]] = None,
+    arr: Option[Seq[Int]] = None,
+    set: Option[Set[String]] = None,
+    oneOf: Option[ValidatedOneOf] = None,
+    rec: Option[ValidatedRecursive] = None
   )
   case class ValidatedOneOfA (
     s: String

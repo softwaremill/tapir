@@ -79,12 +79,12 @@ object TapirGeneratedEndpoints {
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
   case class Pet (
-    status: Option[PetStatus] = None,
-    tags: Option[Seq[Tag]] = None,
     id: Option[Long] = None,
-    photoUrls: Seq[String],
     name: String,
-    category: Option[Category] = None
+    category: Option[Category] = None,
+    photoUrls: Seq[String],
+    tags: Option[Seq[Tag]] = None,
+    status: Option[PetStatus] = None
   )
 
   sealed trait PetStatus extends enumeratum.EnumEntry
@@ -103,22 +103,22 @@ object TapirGeneratedEndpoints {
     name: Option[String] = None
   )
   case class User (
-    userStatus: Option[Int] = None,
-    phone: Option[String] = None,
-    lastName: Option[String] = None,
     id: Option[Long] = None,
     username: Option[String] = None,
-    password: Option[String] = None,
+    firstName: Option[String] = None,
+    lastName: Option[String] = None,
     email: Option[String] = None,
-    firstName: Option[String] = None
+    password: Option[String] = None,
+    phone: Option[String] = None,
+    userStatus: Option[Int] = None
   )
   case class Order (
     id: Option[Long] = None,
-    status: Option[OrderStatus] = None,
-    shipDate: Option[java.time.Instant] = None,
+    petId: Option[Long] = None,
     quantity: Option[Int] = None,
-    complete: Option[Boolean] = None,
-    petId: Option[Long] = None
+    shipDate: Option[java.time.Instant] = None,
+    status: Option[OrderStatus] = None,
+    complete: Option[Boolean] = None
   )
 
   sealed trait OrderStatus extends enumeratum.EnumEntry

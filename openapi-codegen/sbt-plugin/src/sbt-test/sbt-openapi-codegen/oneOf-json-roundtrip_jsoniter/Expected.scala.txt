@@ -91,13 +91,13 @@ object TapirGeneratedEndpoints {
     case object sold extends PetStatus
   }
   case class Pet (
-    status: Option[PetStatus] = None,
-    tags: Option[Seq[Tag]] = None,
     id: Option[Long] = None,
-    tags2: Option[Seq[Tag2]] = None,
-    photoUrls: Seq[String],
     name: String,
-    category: Option[Category] = None
+    category: Option[Category] = None,
+    photoUrls: Seq[String],
+    tags: Option[Seq[Tag]] = None,
+    tags2: Option[Seq[Tag2]] = None,
+    status: Option[PetStatus] = None
   )
   case class Category (
     id: Option[Long] = None,
@@ -122,11 +122,11 @@ object TapirGeneratedEndpoints {
     d: Option[Double] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
   case class SubtypeWithoutD3 (
-    absent: Option[String] = None,
     s: String,
     i: Option[Int] = None,
+    e: Option[AnEnum] = None,
     e2: Option[SubtypeWithoutD3E2] = None,
-    e: Option[AnEnum] = None
+    absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
 
   sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry

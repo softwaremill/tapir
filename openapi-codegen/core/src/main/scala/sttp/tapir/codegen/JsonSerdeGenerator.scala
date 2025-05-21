@@ -176,8 +176,8 @@ object JsonSerdeGenerator {
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
-      case Nil => ""
-      case s   => s.mkString("", "\n", "\n")
+      case s if s.isEmpty => ""
+      case s              => s.mkString("", "\n", "\n")
     }
     val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.generic.semiauto.deriveDecoder[$name]
@@ -515,8 +515,8 @@ object JsonSerdeGenerator {
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
-      case Nil => ""
-      case s   => s.mkString("", "\n", "\n")
+      case s if s.isEmpty => ""
+      case s              => s.mkString("", "\n", "\n")
     }
     val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: zio.json.JsonDecoder[$name] = zio.json.DeriveJsonDecoder.gen[$name]
