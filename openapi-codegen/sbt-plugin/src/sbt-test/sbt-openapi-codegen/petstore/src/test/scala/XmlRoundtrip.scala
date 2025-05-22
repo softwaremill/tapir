@@ -14,12 +14,12 @@ import scala.concurrent.{Await, Future}
 
 class XmlRoundtrip extends AnyFreeSpec with Matchers {
   val pet: Pet = Pet(
-    Some(PetStatus.available),
-    Some(Seq(Tag(Some(1), Some("tag 1")), Tag(Some(2), Some("tag 2")))),
     Some(123L),
-    Seq("http://example.com/image.jpg"),
     "bobby",
-    Some(Category(Some(4), Some("cat")))
+    Some(Category(Some(4), Some("cat"))),
+    Seq("http://example.com/image.jpg"),
+    Some(Seq(Tag(Some(1), Some("tag 1")), Tag(Some(2), Some("tag 2")))),
+    Some(PetStatus.available)
   )
   val petWithTag = pet.copy(tags = pet.tags.map(ts => ts :+ Tag(name = Some("taggle"))))
   "can fetch xml and json" in {
@@ -43,7 +43,15 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
       decodedXmlBody shouldEqual cats.data.Validated.Valid(List(petWithTag, pet))
       val expectedXml = {
         s"""<Pet>
-           | <status>available</status>
+           | <id>123</id>
+           | <name>bobby</name>
+           | <category>
+           |  <id>4</id>
+           |  <name>cat</name>
+           | </category>
+           | <photoUrls>
+           |  <photoUrl>http://example.com/image.jpg</photoUrl>
+           | </photoUrls>
            | <tags>
            |  <tags>
            |   <id>1</id>
@@ -57,18 +65,18 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
            |   <name>taggle</name>
            |  </tags>
            | </tags>
+           | <status>available</status>
+           |</Pet>
+           |<Pet>
            | <id>123</id>
-           | <photoUrls>
-           |  <photoUrl>http://example.com/image.jpg</photoUrl>
-           | </photoUrls>
            | <name>bobby</name>
            | <category>
            |  <id>4</id>
            |  <name>cat</name>
            | </category>
-           |</Pet>
-           |<Pet>
-           | <status>available</status>
+           | <photoUrls>
+           |  <photoUrl>http://example.com/image.jpg</photoUrl>
+           | </photoUrls>
            | <tags>
            |  <tags>
            |   <id>1</id>
@@ -79,15 +87,7 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
            |   <name>tag 2</name>
            |  </tags>
            | </tags>
-           | <id>123</id>
-           | <photoUrls>
-           |  <photoUrl>http://example.com/image.jpg</photoUrl>
-           | </photoUrls>
-           | <name>bobby</name>
-           | <category>
-           |  <id>4</id>
-           |  <name>cat</name>
-           | </category>
+           | <status>available</status>
            |</Pet>""".stripMargin
       }
       respXml.toString() shouldEqual expectedXml
@@ -105,7 +105,7 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
       )
 
       val expectedJson =
-        """[{"status":"available","tags":[{"id":1,"name":"tag 1"},{"id":2,"name":"tag 2"},{"id":null,"name":"taggle"}],"id":123,"photoUrls":["http://example.com/image.jpg"],"name":"bobby","category":{"id":4,"name":"cat"}},{"status":"available","tags":[{"id":1,"name":"tag 1"},{"id":2,"name":"tag 2"}],"id":123,"photoUrls":["http://example.com/image.jpg"],"name":"bobby","category":{"id":4,"name":"cat"}}]"""
+        """[{"id":123,"name":"bobby","category":{"id":4,"name":"cat"},"photoUrls":["http://example.com/image.jpg"],"tags":[{"id":1,"name":"tag 1"},{"id":2,"name":"tag 2"},{"id":null,"name":"taggle"}],"status":"available"},{"id":123,"name":"bobby","category":{"id":4,"name":"cat"},"photoUrls":["http://example.com/image.jpg"],"tags":[{"id":1,"name":"tag 1"},{"id":2,"name":"tag 2"}],"status":"available"}]"""
       Await.result(
         sttp.client3.basicRequest
           .get(uri"http://test.com/pet/findByTags?tags=taggle")
@@ -128,7 +128,7 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
         {
           case PlaceOrderBodyOption_Order_In(Some(o)) =>
             Future successful Right(o)
-          case PlaceOrderBodyOption_Order_In(None)                 => Future.successful(Right(Order()))
+          case PlaceOrderBodyOption_Order_In(None)       => Future.successful(Right(Order()))
           case PlaceOrderBody2In(bytes) if bytes.isEmpty => Future.successful(Right(Order()))
           case PlaceOrderBody2In(bytes) =>
             val m = new String(bytes, "utf-8").split('&').map(_.split("=", 2)).map { case Array(k, v) => k -> v }.toMap
@@ -160,17 +160,17 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
       petId = Some(98765)
     )
     val formOrder = s"id=123&status=placed&shipDate=${ts}&quantity=123&complete=false&petId=98765"
-    val jsonOrder = s"""{"id":123,"status":"placed","shipDate":"$ts","quantity":123,"complete":false,"petId":98765}"""
+    val jsonOrder = s"""{"id":123,"petId":98765,"quantity":123,"shipDate":"$ts","status":"placed","complete":false}"""
     val xmlOrder =
       s"""<Order>
          | <id>123</id>
-         | <status>placed</status>
-         | <shipDate>${ts}</shipDate>
-         | <quantity>123</quantity>
-         | <complete>false</complete>
          | <petId>98765</petId>
+         | <quantity>123</quantity>
+         | <shipDate>${ts}</shipDate>
+         | <status>placed</status>
+         | <complete>false</complete>
          |</Order>""".stripMargin
-    val nullOrder = s"""{"id":null,"status":null,"shipDate":null,"quantity":null,"complete":null,"petId":null}"""
+    val nullOrder = s"""{"id":null,"petId":null,"quantity":null,"shipDate":null,"status":null,"complete":null}"""
     // ok bodies
     Await.result(
       sttp.client3.basicRequest

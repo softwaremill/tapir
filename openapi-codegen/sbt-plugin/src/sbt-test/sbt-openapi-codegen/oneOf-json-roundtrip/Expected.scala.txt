@@ -95,15 +95,15 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
   case class ValidatedObj (
-    oneOf: Option[ValidatedOneOf] = None,
     foo: String,
-    map: Option[Map[String, Int]] = None,
-    set: Option[Set[String]] = None,
     bar: ValidatedSubObj = ValidatedSubObj(i = "i..."),
-    rec: Option[ValidatedRecursive] = None,
-    arr: Option[Seq[Int]] = None,
+    baz: Option[ValidatedSubObj] = None,
     quux: Option[String] = None,
-    baz: Option[ValidatedSubObj] = None
+    map: Option[Map[String, Int]] = None,
+    arr: Option[Seq[Int]] = None,
+    set: Option[Set[String]] = None,
+    oneOf: Option[ValidatedOneOf] = None,
+    rec: Option[ValidatedRecursive] = None
   )
   case class ValidatedOneOfA (
     s: String
@@ -252,6 +252,23 @@ object TapirGeneratedEndpoints {
   type TapirCodegenDirectivesExtension = Seq[String]
   val tapirCodegenDirectivesExtensionKey = new sttp.tapir.AttributeKey[TapirCodegenDirectivesExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.TapirCodegenDirectivesExtension")
 
+  type GetSecurityGroupSecurityGroupNameEndpoint = Endpoint[(String, String), Unit, Unit, Unit, Any]
+  lazy val getSecurityGroupSecurityGroupName: GetSecurityGroupSecurityGroupNameEndpoint =
+    endpoint
+      .get
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .prependSecurityIn("security-group" / path[String]("securityGroupName").description("used by security logic"))
+      .out(statusCode(sttp.model.StatusCode(204)).description("OK"))
+
+  type GetSecurityGroupSecurityGroupNameMorePathEndpoint = Endpoint[(String, String), Unit, Unit, Unit, Any]
+  lazy val getSecurityGroupSecurityGroupNameMorePath: GetSecurityGroupSecurityGroupNameMorePathEndpoint =
+    endpoint
+      .get
+      .in(("more-path"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .prependSecurityIn("security-group" / path[String]("securityGroupName").description("used by security logic"))
+      .out(statusCode(sttp.model.StatusCode(204)).description("OK"))
+
   type GetBinaryTestEndpoint = Endpoint[String, Unit, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
   lazy val getBinaryTest: GetBinaryTestEndpoint =
     endpoint
@@ -303,51 +320,6 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[NullableThingy2]].description("an optional request body (nullable)"))
       .out(jsonBody[Option[NullableThingy]].description("an optional response body"))
 
-  type PostJsonStringJsonBodyEndpoint = Endpoint[Option[String], PostJsonStringJsonBodyBodyIn, Unit, Option[PostJsonStringJsonBodyBodyOut], Any]
-  lazy val postJsonStringJsonBody: PostJsonStringJsonBodyEndpoint =
-    endpoint
-      .post
-      .in(("json" / "stringJsonBody"))
-      .securityIn(auth.bearer[Option[String]]())
-      .in(oneOfBody[PostJsonStringJsonBodyBodyIn](
-        stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn],
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn]))
-      .out(oneOf[Option[PostJsonStringJsonBodyBodyOut]](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), oneOfBody[PostJsonStringJsonBodyBodyOut](
-        stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_Out(_))(_.`application/json`())
-        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBodyOption_String_Out(p.`application/json`())).description("Possibly-invalid json"),
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1Out(_))(_.`application/zip`())
-        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBody1Out(p.`application/zip`())).description("Possibly-invalid json")).map(Some(_))(_.orNull)){ case Some(_: PostJsonStringJsonBodyBodyOut) => true },
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None)))
-      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("json-body-as-string"))
-
-  type PostJsonStringJsonBodySimpleEndpoint = Endpoint[String, String, Unit, String, Any]
-  lazy val postJsonStringJsonBodySimple: PostJsonStringJsonBodySimpleEndpoint =
-    endpoint
-      .post
-      .in(("json" / "stringJsonBody" / "simple"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(stringJsonBody)
-      .out(stringJsonBody.description("Possibly-invalid json"))
-      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("json-body-as-string"))
-
-  type GetSecurityGroupSecurityGroupNameEndpoint = Endpoint[(String, String), Unit, Unit, Unit, Any]
-  lazy val getSecurityGroupSecurityGroupName: GetSecurityGroupSecurityGroupNameEndpoint =
-    endpoint
-      .get
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .prependSecurityIn("security-group" / path[String]("securityGroupName").description("used by security logic"))
-      .out(statusCode(sttp.model.StatusCode(204)).description("OK"))
-
-  type PostValidationTestEndpoint = Endpoint[String, Option[ValidatedObj], Unit, Unit, Any]
-  lazy val postValidationTest: PostValidationTestEndpoint =
-    endpoint
-      .post
-      .in(("validation" / "test"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(jsonBody[Option[ValidatedObj]].validateOption(ValidatedObjValidator))
-      .out(statusCode(sttp.model.StatusCode(204)).description("ok"))
-
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
@@ -364,90 +336,6 @@ object TapirGeneratedEndpoints {
       .securityIn(auth.apiKey(header[String]("api_key")))
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
-
-  type GetHeadersTestsEndpoint = Endpoint[String, Unit, Unit, Option[String], Any]
-  lazy val getHeadersTests: GetHeadersTestsEndpoint =
-    endpoint
-      .get
-      .in(("headers" / "tests"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .out(statusCode(sttp.model.StatusCode(302)).description("response").and(header[Option[String]]("foo").description("a description")))
-
-  type GetOneofErrorSecParamTestEndpoint = Endpoint[(String, Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn), Unit, Error, Unit, Any]
-  lazy val getOneofErrorSecParamTest: GetOneofErrorSecParamTestEndpoint =
-    endpoint
-      .get
-      .in(("test"))
-      .securityIn(auth.apiKey(header[Option[String]]("api_key")))
-      .securityIn(auth.apiKey(header[Option[String]]("api_key"))
-        .and(auth.bearer[Option[String]]()).map(Api_key_and_BearerSecurityInMapping))
-      .securityIn(auth.bearer[Option[String]]())
-      .mapSecurityInDecode[Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn]{
-        case (Some(x), None, None) => DecodeResult.Value(Api_keySecurityIn(x))
-        case (_, Some(x), _) => DecodeResult.Value(Api_key_and_BearerSecurityIn(x))
-        case (None, None, Some(x)) => DecodeResult.Value(BearerSecurityIn(x))
-        case (None, None, None) => DecodeResult.Value(EmptySecurityIn)
-        case other =>
-          val count = other.productIterator.count(_.isInstanceOf[Some[?]])
-          DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
-      }{
-        case Api_keySecurityIn(x) => (Some(x), None, None)
-        case Api_key_and_BearerSecurityIn(x) => (None, Some(x), None)
-        case BearerSecurityIn(x) => (None, None, Some(x))
-        case EmptySecurityIn => (None, None, None)
-      }
-      .prependSecurityIn("oneof" / "error" / path[String]("secParam"))
-      .errorOut(oneOf[Error](
-        oneOfVariant[NotFoundError](sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")),
-        oneOfVariant[SimpleError](sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
-      .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
-
-  type PostAllOfEndpoint = Endpoint[String, Option[HasFooBarBazQuux], Unit, Unit, Any]
-  lazy val postAllOf: PostAllOfEndpoint =
-    endpoint
-      .post
-      .in(("allOf"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(jsonBody[Option[HasFooBarBazQuux]].description("list type in"))
-      .out(statusCode(sttp.model.StatusCode(204)).description("fine"))
-
-  type GetSecurityGroupSecurityGroupNameMorePathEndpoint = Endpoint[(String, String), Unit, Unit, Unit, Any]
-  lazy val getSecurityGroupSecurityGroupNameMorePath: GetSecurityGroupSecurityGroupNameMorePathEndpoint =
-    endpoint
-      .get
-      .in(("more-path"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .prependSecurityIn("security-group" / path[String]("securityGroupName").description("used by security logic"))
-      .out(statusCode(sttp.model.StatusCode(204)).description("OK"))
-
-  type GetOneofOptionTestEndpoint = Endpoint[String, Unit, Unit, (Option[AnyObjectWithInlineEnum], Option[String]), Any]
-  lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
-    endpoint
-      .get
-      .in(("oneof" / "option" / "test"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .out(oneOf[(Option[AnyObjectWithInlineEnum], Option[String])](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(None).description("No response").and(header[Option[String]]("common-response-header"))){ case (None, _) => true},
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum), _) => true },
-        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum2), _) => true }))
-
-  type GetPatternRestrictedObjectEndpoint = Endpoint[String, (String, Option[String], String, Option[String], String), Unit, String, Any]
-  lazy val getPatternRestrictedObject: GetPatternRestrictedObjectEndpoint =
-    endpoint
-      .get
-      .in(("pattern" / path[String]("restricted").validate(Validator.all(Validator.maxLength(10), Validator.minLength(3), Validator.pattern("[a-z]+"))).description("used by security logic") / "object"))
-      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(query[Option[String]]("q1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.pattern("[a-z_].+")(_)).map{
-        case Nil => ValidationResult.Valid
-        case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
-      }.getOrElse(ValidationResult.Valid))))
-      .in(query[String]("q2").validate(Validator.minLength(3)))
-      .in(header[Option[String]]("h1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.all(Validator.minLength(3), Validator.pattern("[a-z_].+"))(_)).map{
-        case Nil => ValidationResult.Valid
-        case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
-      }.getOrElse(ValidationResult.Valid))))
-      .in(header[String]("h2").validate(Validator.minLength(3)))
-      .out(jsonBody[String].description("ok"))
 
   type PostInlineEnumTestEndpoint = Endpoint[Unit, (PostInlineEnumTestQueryEnum, Option[PostInlineEnumTestQueryOptEnum], List[PostInlineEnumTestQuerySeqEnum], Option[List[PostInlineEnumTestQueryOptSeqEnum]], ObjectWithInlineEnum), Unit, Unit, Any]
   lazy val postInlineEnumTest: PostInlineEnumTestEndpoint =
@@ -501,6 +389,100 @@ object TapirGeneratedEndpoints {
       extraCodecSupport[PostInlineEnumTestQueryOptSeqEnum]("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
   }
 
+  type GetOneofErrorSecParamTestEndpoint = Endpoint[(String, Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn), Unit, Error, Unit, Any]
+  lazy val getOneofErrorSecParamTest: GetOneofErrorSecParamTestEndpoint =
+    endpoint
+      .get
+      .in(("test"))
+      .securityIn(auth.apiKey(header[Option[String]]("api_key")))
+      .securityIn(auth.apiKey(header[Option[String]]("api_key"))
+        .and(auth.bearer[Option[String]]()).map(Api_key_and_BearerSecurityInMapping))
+      .securityIn(auth.bearer[Option[String]]())
+      .mapSecurityInDecode[Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn]{
+        case (Some(x), None, None) => DecodeResult.Value(Api_keySecurityIn(x))
+        case (_, Some(x), _) => DecodeResult.Value(Api_key_and_BearerSecurityIn(x))
+        case (None, None, Some(x)) => DecodeResult.Value(BearerSecurityIn(x))
+        case (None, None, None) => DecodeResult.Value(EmptySecurityIn)
+        case other =>
+          val count = other.productIterator.count(_.isInstanceOf[Some[?]])
+          DecodeResult.Error(s"$count security inputs", new RuntimeException(s"Expected a single security input, found $count"))
+      }{
+        case Api_keySecurityIn(x) => (Some(x), None, None)
+        case Api_key_and_BearerSecurityIn(x) => (None, Some(x), None)
+        case BearerSecurityIn(x) => (None, None, Some(x))
+        case EmptySecurityIn => (None, None, None)
+      }
+      .prependSecurityIn("oneof" / "error" / path[String]("secParam"))
+      .errorOut(oneOf[Error](
+        oneOfVariant[NotFoundError](sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")),
+        oneOfVariant[SimpleError](sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
+      .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
+
+  type PostJsonStringJsonBodyEndpoint = Endpoint[Option[String], PostJsonStringJsonBodyBodyIn, Unit, Option[PostJsonStringJsonBodyBodyOut], Any]
+  lazy val postJsonStringJsonBody: PostJsonStringJsonBodyEndpoint =
+    endpoint
+      .post
+      .in(("json" / "stringJsonBody"))
+      .securityIn(auth.bearer[Option[String]]())
+      .in(oneOfBody[PostJsonStringJsonBodyBodyIn](
+        stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn],
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn]))
+      .out(oneOf[Option[PostJsonStringJsonBodyBodyOut]](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), oneOfBody[PostJsonStringJsonBodyBodyOut](
+        stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_Out(_))(_.`application/json`())
+        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBodyOption_String_Out(p.`application/json`())).description("Possibly-invalid json"),
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1Out(_))(_.`application/zip`())
+        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBody1Out(p.`application/zip`())).description("Possibly-invalid json")).map(Some(_))(_.orNull)){ case Some(_: PostJsonStringJsonBodyBodyOut) => true },
+        oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None)))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("json-body-as-string"))
+
+  type PostJsonStringJsonBodySimpleEndpoint = Endpoint[String, String, Unit, String, Any]
+  lazy val postJsonStringJsonBodySimple: PostJsonStringJsonBodySimpleEndpoint =
+    endpoint
+      .post
+      .in(("json" / "stringJsonBody" / "simple"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(stringJsonBody)
+      .out(stringJsonBody.description("Possibly-invalid json"))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("json-body-as-string"))
+
+  type GetOneofOptionTestEndpoint = Endpoint[String, Unit, Unit, (Option[AnyObjectWithInlineEnum], Option[String]), Any]
+  lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
+    endpoint
+      .get
+      .in(("oneof" / "option" / "test"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .out(oneOf[(Option[AnyObjectWithInlineEnum], Option[String])](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(None).description("No response").and(header[Option[String]]("common-response-header"))){ case (None, _) => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum), _) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object").and(header[Option[String]]("common-response-header"))){ case (Some(_: ObjectWithInlineEnum2), _) => true }))
+
+  type GetHeadersTestsEndpoint = Endpoint[String, Unit, Unit, Option[String], Any]
+  lazy val getHeadersTests: GetHeadersTestsEndpoint =
+    endpoint
+      .get
+      .in(("headers" / "tests"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .out(statusCode(sttp.model.StatusCode(302)).description("response").and(header[Option[String]]("foo").description("a description")))
+
+  type GetPatternRestrictedObjectEndpoint = Endpoint[String, (String, Option[String], String, Option[String], String), Unit, String, Any]
+  lazy val getPatternRestrictedObject: GetPatternRestrictedObjectEndpoint =
+    endpoint
+      .get
+      .in(("pattern" / path[String]("restricted").validate(Validator.all(Validator.maxLength(10), Validator.minLength(3), Validator.pattern("[a-z]+"))).description("used by security logic") / "object"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(query[Option[String]]("q1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.pattern("[a-z_].+")(_)).map{
+        case Nil => ValidationResult.Valid
+        case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
+      }.getOrElse(ValidationResult.Valid))))
+      .in(query[String]("q2").validate(Validator.minLength(3)))
+      .in(header[Option[String]]("h1").validate(Validator.custom[Option[String]](ot => ot.map(Validator.all(Validator.minLength(3), Validator.pattern("[a-z_].+"))(_)).map{
+        case Nil => ValidationResult.Valid
+        case l   => ValidationResult.Invalid(l.flatMap(_.customMessage).toList)
+      }.getOrElse(ValidationResult.Valid))))
+      .in(header[String]("h2").validate(Validator.minLength(3)))
+      .out(jsonBody[String].description("ok"))
+
   type PutInlineSimpleObjectEndpoint = Endpoint[String, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
@@ -545,8 +527,26 @@ object TapirGeneratedEndpoints {
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
 
+  type PostAllOfEndpoint = Endpoint[String, Option[HasFooBarBazQuux], Unit, Unit, Any]
+  lazy val postAllOf: PostAllOfEndpoint =
+    endpoint
+      .post
+      .in(("allOf"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(jsonBody[Option[HasFooBarBazQuux]].description("list type in"))
+      .out(statusCode(sttp.model.StatusCode(204)).description("fine"))
 
-  lazy val generatedEndpoints = List(getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getSecurityGroupSecurityGroupName, postValidationTest, putAdtTest, postAdtTest, getHeadersTests, getOneofErrorSecParamTest, postAllOf, getSecurityGroupSecurityGroupNameMorePath, getOneofOptionTest, getPatternRestrictedObject, postInlineEnumTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
+  type PostValidationTestEndpoint = Endpoint[String, Option[ValidatedObj], Unit, Unit, Any]
+  lazy val postValidationTest: PostValidationTestEndpoint =
+    endpoint
+      .post
+      .in(("validation" / "test"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(jsonBody[Option[ValidatedObj]].validateOption(ValidatedObjValidator))
+      .out(statusCode(sttp.model.StatusCode(204)).description("ok"))
+
+
+  lazy val generatedEndpoints = List(getSecurityGroupSecurityGroupName, getSecurityGroupSecurityGroupNameMorePath, getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, postInlineEnumTest, getOneofErrorSecParamTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getOneofOptionTest, getHeadersTests, getPatternRestrictedObject, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postAllOf, postValidationTest)
 
 
   object Servers {

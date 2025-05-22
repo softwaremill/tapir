@@ -197,8 +197,8 @@ object SchemaGenerator {
       case (k, OpenapiSchemaField(OpenapiSchemaMap(_: OpenapiSchemaEnum, _, _), _, _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
     } match {
-      case Nil => ""
-      case s   => s.mkString("", "\n", "\n")
+      case s if s.isEmpty => ""
+      case s              => s.mkString("", "\n", "\n")
     }
     s"${subs}implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
   }
