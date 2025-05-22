@@ -1,33 +1,12 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{
-  OpenapiDocument,
-  OpenapiParameter,
-  OpenapiPath,
-  OpenapiPathMethod,
-  OpenapiRequestBody,
-  OpenapiRequestBodyContent,
-  OpenapiRequestBodyDefn,
-  OpenapiResponse,
-  OpenapiResponseContent,
-  OpenapiResponseDef,
-  Resolved
-}
-import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
-  OpenapiSecuritySchemeApiKeyType,
-  OpenapiSecuritySchemeBasicType,
-  OpenapiSecuritySchemeBearerType
-}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  OpenapiSchemaArray,
-  OpenapiSchemaBinary,
-  OpenapiSchemaField,
-  OpenapiSchemaObject,
-  OpenapiSchemaRef,
-  OpenapiSchemaString
-}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiPathMethod, OpenapiRequestBody, OpenapiRequestBodyContent, OpenapiRequestBodyDefn, OpenapiResponse, OpenapiResponseContent, OpenapiResponseDef, Resolved}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeBasicType, OpenapiSecuritySchemeBearerType}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaBinary, OpenapiSchemaField, OpenapiSchemaObject, OpenapiSchemaRef, OpenapiSchemaString}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
+
+import scala.collection.mutable
 
 class EndpointGeneratorSpec extends CompileCheckTestBase {
 
@@ -274,7 +253,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
         OpenapiComponent(
           schemas = Map(
             "FileUpload" -> OpenapiSchemaObject(
-              properties = Map(
+              properties = mutable.LinkedHashMap(
                 "file" -> OpenapiSchemaField(OpenapiSchemaBinary(false), None)
               ),
               required = Seq("file"),
@@ -297,7 +276,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
       generateEndpointTypes = false,
-      generateValidators = true
+      generateValidators = true,
+      useCustomJsoniterSerdes = true
     )("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
@@ -322,7 +302,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
       generateEndpointTypes = false,
-      generateValidators = true
+      generateValidators = true,
+      useCustomJsoniterSerdes = true
     )("TapirGeneratedEndpoints")
     generatedCode shouldCompile ()
     val expectedAttrDecls = Seq(

@@ -2,6 +2,8 @@ package sttp.tapir.codegen.openapi.models
 
 import io.circe.{Json, JsonNumber}
 
+import scala.collection.mutable
+
 sealed trait OpenapiSchemaType {
   def nullable: Boolean
 }
@@ -158,7 +160,7 @@ object OpenapiSchemaType {
   }
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaObject(
-      properties: Map[String, OpenapiSchemaField],
+      properties: mutable.LinkedHashMap[String, OpenapiSchemaField],
       required: Seq[String],
       nullable: Boolean,
       xml: Option[OpenapiXml.XmlObjectConfiguration] = None
@@ -342,10 +344,12 @@ object OpenapiSchemaType {
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
-      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)]]]
+      fieldsWithDefaults <- c
+        .downField("properties")
+        .as[Option[mutable.LinkedHashMap[String, (OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)]]]
       r <- c.downField("required").as[Option[Seq[String]]]
       (_, nb) = p
-      fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d, r)) => k -> OpenapiSchemaField(f, d, r) }
+      fields = fieldsWithDefaults.getOrElse(mutable.LinkedHashMap.empty).map { case (k, (f, d, r)) => k -> OpenapiSchemaField(f, d, r) }
     } yield {
       OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb)
     }

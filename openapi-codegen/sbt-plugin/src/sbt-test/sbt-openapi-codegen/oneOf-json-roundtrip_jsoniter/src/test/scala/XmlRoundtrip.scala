@@ -25,20 +25,29 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
 
     locally {
       val reqBody = Pet(
-        Some(PetStatus.pending),
-        Some(Seq(Tag(Some(1), Some("foo")), Tag(Some(2), None))),
         Some(2L),
-        Some(Seq(Tag2(Some(3), Some("bar")), Tag2(Some(4), None))),
-        Seq("uri1", "uri2"),
         "a name",
-        Some(Category(Some(3L), Some("a category")))
+        Some(Category(Some(3L), Some("a category"))),
+        Seq("uri1", "uri2"),
+        Some(Seq(Tag(Some(1), Some("foo")), Tag(Some(2), None))),
+        Some(Seq(Tag2(Some(3), Some("bar")), Tag2(Some(4), None))),
+        Some(PetStatus.pending)
       )
       val reqXmlBody = TapirGeneratedEndpointsXmlSerdes.PetXmlEncoder.encode(reqBody)
       val decodedXmlBody = TapirGeneratedEndpointsXmlSerdes.PetXmlDecoder.decode(reqXmlBody)
       decodedXmlBody shouldEqual cats.data.Validated.Valid(reqBody)
       reqXmlBody.toString() shouldEqual
         """<Pet>
-          | <status>pending</status>
+          | <id>2</id>
+          | <name>a name</name>
+          | <category>
+          |  <id>3</id>
+          |  <name>a category</name>
+          | </category>
+          | <photoUrls>
+          |  <photoUrl>uri1</photoUrl>
+          |  <photoUrl>uri2</photoUrl>
+          | </photoUrls>
           | <tags>
           |  <tag>
           |   <id>1</id>
@@ -48,7 +57,6 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
           |   <id>2</id>
           |  </tag>
           | </tags>
-          | <id>2</id>
           | <extra-tags>
           |  <id>3</id>
           |  <name>bar</name>
@@ -56,15 +64,7 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
           | <extra-tags>
           |  <id>4</id>
           | </extra-tags>
-          | <photoUrls>
-          |  <photoUrl>uri1</photoUrl>
-          |  <photoUrl>uri2</photoUrl>
-          | </photoUrls>
-          | <name>a name</name>
-          | <category>
-          |  <id>3</id>
-          |  <name>a category</name>
-          | </category>
+          | <status>pending</status>
           |</Pet>""".stripMargin
       Await.result(
         sttp.client3.basicRequest

@@ -13,6 +13,8 @@ import OpenapiSchemaType.{
 import io.circe.Json
 import sttp.tapir.codegen.RootGenerator.strippedToCamelCase
 import sttp.tapir.codegen.util.MapUtils
+
+import scala.collection.mutable
 // https://swagger.io/specification/
 object OpenapiModels {
 
@@ -59,7 +61,7 @@ object OpenapiModels {
                     s"Only objects and object refs are currently supported in allOf schemas.For $n found ${s.map(_.getClass.getSimpleName)}"
                   )
               }
-              val merged = resolved.foldLeft((Set.empty[String], Map.empty[String, OpenapiSchemaField])) {
+              val merged = resolved.foldLeft((Set.empty[String], mutable.LinkedHashMap.empty[String, OpenapiSchemaField])) {
                 case ((_, accProp), next) if accProp.isEmpty => next
                 case ((accReq, accProp), (nextReq, nextProp)) =>
                   val dupDecls = accProp.keySet.intersect(nextProp.keySet)
@@ -362,7 +364,7 @@ object OpenapiModels {
     for {
       paths <- c
         .withFocusM[Decoder.Result](j => Right(j.mapObject(_.filterKeys(!specificationExtensionKeys.contains(_)))))
-        .flatMap(_.as[Map[String, OpenapiPath]])
+        .flatMap(_.as[mutable.LinkedHashMap[String, OpenapiPath]])
       extensions = extensionsFrom(c, specificationExtensionKeys)
     } yield paths.map { case (url, path) => path.copy(url = url) }.toSeq -> extensions
   }

@@ -7,6 +7,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   ArrayRestrictions,
   ObjectRestrictions,
+  OpenapiSchemaAllOf,
   OpenapiSchemaArray,
   OpenapiSchemaEnum,
   OpenapiSchemaMap,
@@ -84,14 +85,15 @@ object ValidationGenerator {
   // See comments on `mkValidators`.
   private def validationExists(defns: Set[String])(schema: OpenapiSchemaType, ignoreRefs: Boolean = false): Boolean =
     schema match {
-      case ref: OpenapiSchemaRef           => !ignoreRefs && defns.contains(ref.stripped)
-      case OpenapiSchemaArray(t, _, _, r)  => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
-      case OpenapiSchemaMap(t, _, r)       => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
-      case OpenapiSchemaObject(t, _, _, _) => t.exists { case (_, f) => validationExists(defns)(f.`type`, ignoreRefs) }
-      case OpenapiSchemaOneOf(ts, _)       => ts.exists { s => validationExists(defns)(s, ignoreRefs) }
-      case s: OpenapiSchemaString          => s.hasRestriction
-      case n: OpenapiSchemaNumericType     => n.restrictions.hasRestriction
-      case _                               => false
+      case OpenapiSchemaAllOf(Seq(singleType)) => validationExists(defns)(singleType, ignoreRefs)
+      case ref: OpenapiSchemaRef               => !ignoreRefs && defns.contains(ref.stripped)
+      case OpenapiSchemaArray(t, _, _, r)      => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
+      case OpenapiSchemaMap(t, _, r)           => r.hasRestriction || validationExists(defns)(t, ignoreRefs)
+      case OpenapiSchemaObject(t, _, _, _)     => t.exists { case (_, f) => validationExists(defns)(f.`type`, ignoreRefs) }
+      case OpenapiSchemaOneOf(ts, _)           => ts.exists { s => validationExists(defns)(s, ignoreRefs) }
+      case s: OpenapiSchemaString              => s.hasRestriction
+      case n: OpenapiSchemaNumericType         => n.restrictions.hasRestriction
+      case _                                   => false
     }
 
   private def genRefDef(name: String, r: OpenapiSchemaRef): Seq[ValidationDefn] = {
@@ -153,11 +155,12 @@ object ValidationGenerator {
     val itemName = s"${name.capitalize}Item"
 
     def genTypeName(t: OpenapiSchemaType): String = t match {
-      case s: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(s)._1
-      case e: OpenapiSchemaEnum       => e.`type`
-      case a: OpenapiSchemaArray      => s"Seq[${genTypeName(a.items)}]"
-      case a: OpenapiSchemaMap        => s"Map[String, ${genTypeName(a.items)}]"
-      case _: OpenapiSchemaObject     => itemName
+      case OpenapiSchemaAllOf(Seq(singleType)) => genTypeName(singleType)
+      case s: OpenapiSchemaSimpleType          => RootGenerator.mapSchemaSimpleTypeToType(s)._1
+      case e: OpenapiSchemaEnum                => e.`type`
+      case a: OpenapiSchemaArray               => s"Seq[${genTypeName(a.items)}]"
+      case a: OpenapiSchemaMap                 => s"Map[String, ${genTypeName(a.items)}]"
+      case _: OpenapiSchemaObject              => itemName
       case x =>
         throw new NotImplementedError(
           s"Error at $name definition. Validation is not supported on arrays or maps containing elements like ${x}. Try extracting the element definition into its own schema."
@@ -361,14 +364,15 @@ object ValidationGenerator {
       ignoreRefs: Boolean
   )(name: String, schema: OpenapiSchemaType): Seq[ValidationDefn] =
     schema match {
-      case r: OpenapiSchemaRef               => genRefDef(name, r)
-      case s: OpenapiSchemaString            => genStrDef(name, s)
-      case numeric: OpenapiSchemaNumericType => genNumDef(name, numeric)
-      case a: OpenapiSchemaArray             => genArrDef(schemas, ignoreRefs)(name, a)
-      case m: OpenapiSchemaMap               => genMapDef(schemas, ignoreRefs)(name, m)
-      case o: OpenapiSchemaObject            => genObjDef(schemas, ignoreRefs)(name, o)
-      case o: OpenapiSchemaOneOf             => genOneOfDef(ignoreRefs)(name, o)
-      case _                                 => Nil
+      case OpenapiSchemaAllOf(Seq(singleType)) => genValidationDefn(schemas, ignoreRefs)(name, singleType)
+      case r: OpenapiSchemaRef                 => genRefDef(name, r)
+      case s: OpenapiSchemaString              => genStrDef(name, s)
+      case numeric: OpenapiSchemaNumericType   => genNumDef(name, numeric)
+      case a: OpenapiSchemaArray               => genArrDef(schemas, ignoreRefs)(name, a)
+      case m: OpenapiSchemaMap                 => genMapDef(schemas, ignoreRefs)(name, m)
+      case o: OpenapiSchemaObject              => genObjDef(schemas, ignoreRefs)(name, o)
+      case o: OpenapiSchemaOneOf               => genOneOfDef(ignoreRefs)(name, o)
+      case _                                   => Nil
     }
 
   // for non-object validations
