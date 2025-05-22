@@ -87,7 +87,7 @@ class ValidationSpec extends AnyFreeSpec with Matchers {
       resp.code.code shouldEqual 400
       resp.body shouldEqual Left(())
     }
-    checkFailure(Some(ValidatedObj(None, ValidatedSubObj(""), "", None, None, None, None)))
+    checkFailure(Some(minimalValidObj.copy(bar = ValidatedSubObj(""))))
     checkFailure(Some(minimalValidObj.copy(oneOf = Some(ValidatedOneOfA("i")))))
     checkFailure(Some(minimalValidObj.copy(oneOf = Some(ValidatedOneOfB(Some(-1))))))
     checkFailure(Some(minimalValidObj.copy(map = Some(Map("a" -> 1, "b" -> 2, "c" -> -1)))))
