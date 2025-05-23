@@ -11,7 +11,7 @@ incorrectly-implemented functionality are highly encouraged.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.29")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.30")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -50,6 +50,7 @@ openapiAdditionalPackages             Nil                                  Addit
 openapiStreamingImplementation        fs2                                  Implementation for streamTextBody. Supports: akka, fs2, pekko, zio
 openapiGenerateEndpointTypes          false                                Whether to emit explicit types for endpoint defns
 openapiDisableValidatorGeneration     false                                If true, we will not generate validation for constraints (min, max, pattern etc)
+openapiUseCustomJsoniterSerdes        false                                If true and openapiJsonSerdeLib = jsoniter, serdes will be generated to use custom 'openapi' make defns. May help with flaky compilation, but requires jsoniter-scala >= 2.36.0+
 ===================================== ==================================== ==================================================================================================
 ```
 
