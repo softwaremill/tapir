@@ -5,14 +5,14 @@ import cats.effect.std.Dispatcher
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client4._
 import sttp.client4.httpclient.fs2.HttpClientFs2Backend
-import sttp.tapir.client.tests.ClientTests
+import sttp.tapir.client.tests.ClientTestsIO
 import sttp.tapir.{DecodeResult, Endpoint}
 
-abstract class StreamSttpClientTestsSender extends ClientTests[Fs2Streams[IO]] {
+abstract class StreamSttpClientTestsSender extends ClientTestsIO[Fs2Streams[IO]] {
   val (dispatcher, closeDispatcher) = Dispatcher.parallel[IO](false).allocated.unsafeRunSync()
   val backend: StreamBackend[IO, Fs2Streams[IO]] = HttpClientFs2Backend[IO](dispatcher).unsafeRunSync()
 
-  override def send[A, I, E, O](
+  override def sendIO[A, I, E, O](
       e: Endpoint[A, I, E, O, Fs2Streams[IO]],
       port: Port,
       securityArgs: A,
@@ -27,7 +27,7 @@ abstract class StreamSttpClientTestsSender extends ClientTests[Fs2Streams[IO]] {
       .map(_.body)
   }
 
-  override def safeSend[A, I, E, O](
+  override def safeSendIO[A, I, E, O](
       e: Endpoint[A, I, E, O, Fs2Streams[IO]],
       port: Port,
       securityArgs: A,

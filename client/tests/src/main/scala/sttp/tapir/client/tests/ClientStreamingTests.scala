@@ -19,14 +19,12 @@ trait ClientStreamingTests[S] { this: ClientTests[S] =>
         .map(_.toOption.get)
         .map(rmStream)
         .map(_ shouldBe "mango cranberry")
-        .unsafeToFuture()
     }
 
     test(in_stream_out_string(streams).showDetail) {
       send(in_stream_out_string(streams), port, (), mkStream("mango cranberry"))
         .map(_.toOption.get)
         .map(_ shouldBe "mango cranberry")
-        .unsafeToFuture()
     }
 
     test(in_string_stream_out_either_error_stream(streams).showDetail + ", success case") {
@@ -34,13 +32,11 @@ trait ClientStreamingTests[S] { this: ClientTests[S] =>
         .map(_.toOption.get)
         .map(rmStream)
         .map(_ shouldBe "mango cranberry")
-        .unsafeToFuture()
     }
 
     test(in_string_stream_out_either_error_stream(streams).showDetail + ", error case") {
       send(in_string_stream_out_either_error_stream(streams), port, (), (true, mkStream("mango cranberry")))
         .map(_ shouldBe Left("error as requested"))
-        .unsafeToFuture()
     }
 
     test(in_string_out_stream_and_header(streams).showDetail) {
@@ -52,7 +48,6 @@ trait ClientStreamingTests[S] { this: ClientTests[S] =>
         }
         .map(rmStream)
         .map(_ shouldBe "mango cranberry")
-        .unsafeToFuture()
     }
   }
 }
