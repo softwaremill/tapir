@@ -15,14 +15,13 @@ abstract class SttpClientTestsSender extends ClientTests[Any] {
                                  securityArgs: A,
                                  args: I,
                                  scheme: String = "http"
-                               ): IO[Either[E, O]] = {
+                               ): Future[Either[E, O]] = {
     val response = SttpClientInterpreter()
       .toSecureRequestThrowDecodeFailures[A, I, E, O](e, Some(uri"$scheme://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)
       .map(_.body)
-    IO.fromFuture(IO(response))
   }
 
   override def safeSend[A, I, E, O](
@@ -30,15 +29,13 @@ abstract class SttpClientTestsSender extends ClientTests[Any] {
                                      port: Port,
                                      securityArgs: A,
                                      args: I
-                                   ): IO[DecodeResult[Either[E, O]]] = {
+                                   ): Future[DecodeResult[Either[E, O]]] = {
     val response = SttpClientInterpreter()
       .toSecureRequest[A, I, E, O](e, Some(uri"http://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)
       .map(_.body)
-
-    IO.fromFuture(IO(response))
   }
 
   override protected def afterAll(): Unit = {

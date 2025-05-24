@@ -12,7 +12,7 @@ object OneOfBody {
     Codec
       .id(CodecFormat.Xml(), Schema.string[String])
       .mapDecode { xml =>
-        DecodeResult.fromOption("""<f>(.*?)</f>""".r.findFirstMatchIn(xml).map(_.group(1)).map(Fruit))
+        DecodeResult.fromOption("""<f>(.*?)</f>""".r.findFirstMatchIn(xml).map(_.group(1)).map(Fruit.apply))
       }(fruit => s"<f>${fruit.f}</f>")
       .schema(implicitly[Schema[Fruit]])
 

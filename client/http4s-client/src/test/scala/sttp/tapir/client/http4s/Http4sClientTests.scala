@@ -3,12 +3,12 @@ package sttp.tapir.client.http4s
 import cats.effect.IO
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.{Request, Response, Uri}
-import sttp.tapir.client.tests.ClientTests
+import sttp.tapir.client.tests.ClientTestsIO
 import sttp.tapir.{DecodeResult, Endpoint}
 import scala.concurrent.ExecutionContext.global
 
-abstract class Http4sClientTests[R] extends ClientTests[R] {
-  override def send[A, I, E, O](
+abstract class Http4sClientTests[R] extends ClientTestsIO[R] {
+  override def sendIO[A, I, E, O](
       e: Endpoint[A, I, E, O, R],
       port: Port,
       securityArgs: A,
@@ -24,7 +24,7 @@ abstract class Http4sClientTests[R] extends ClientTests[R] {
     sendAndParseResponse(request, parseResponse)
   }
 
-  override def safeSend[A, I, E, O](e: Endpoint[A, I, E, O, R], port: Port, securityArgs: A, args: I): IO[DecodeResult[Either[E, O]]] = {
+  override def safeSendIO[A, I, E, O](e: Endpoint[A, I, E, O, R], port: Port, securityArgs: A, args: I): IO[DecodeResult[Either[E, O]]] = {
     val (request, parseResponse) =
       Http4sClientInterpreter[IO]()
         .toSecureRequest(e, Some(Uri.unsafeFromString(s"http://localhost:$port")))
