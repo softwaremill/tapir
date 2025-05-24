@@ -1,6 +1,5 @@
 package sttp.tapir.client.sttp4.ws
 
-import cats.effect.IO
 import org.apache.pekko.actor.ActorSystem
 import sttp.capabilities.WebSockets
 import sttp.capabilities.pekko.PekkoStreams
@@ -25,18 +24,14 @@ abstract class WebSocketSttpClientPekkoTestsSender extends ClientTests[WebSocket
       securityArgs: A,
       args: I,
       scheme: String = "http"
-  ): IO[Either[E, O]] = {
+  ): Future[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[WebSockets with PekkoStreams] = wsToPipe
-    IO.fromFuture(
-      IO {
-        WebSocketSttpClientInterpreter()
-          .toSecureRequestThrowDecodeFailures[Future, A, I, E, O, WebSockets with PekkoStreams](e, Some(uri"$scheme://localhost:$port"))
-          .apply(securityArgs)
-          .apply(args)
-          .send(backend)
-          .map(_.body)
-      }
-    )
+    WebSocketSttpClientInterpreter()
+      .toSecureRequestThrowDecodeFailures[Future, A, I, E, O, WebSockets with PekkoStreams](e, Some(uri"$scheme://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
   }
 
   override def safeSend[A, I, E, O](
@@ -44,17 +39,13 @@ abstract class WebSocketSttpClientPekkoTestsSender extends ClientTests[WebSocket
       port: Port,
       securityArgs: A,
       args: I
-  ): IO[DecodeResult[Either[E, O]]] = {
+  ): Future[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[WebSockets with PekkoStreams] = wsToPipe
-    IO.fromFuture(
-      IO {
-        WebSocketSttpClientInterpreter()
-          .toSecureRequest[Future, A, I, E, O, WebSockets with PekkoStreams](e, Some(uri"http://localhost:$port"))
-          .apply(securityArgs)
-          .apply(args)
-          .send(backend)
-          .map(_.body)
-      }
-    )
+    WebSocketSttpClientInterpreter()
+      .toSecureRequest[Future, A, I, E, O, WebSockets with PekkoStreams](e, Some(uri"http://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
   }
 }

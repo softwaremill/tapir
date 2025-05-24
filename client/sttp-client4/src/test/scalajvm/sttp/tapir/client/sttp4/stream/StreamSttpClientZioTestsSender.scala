@@ -8,6 +8,7 @@ import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 import zio.Runtime.default
 import zio.{CancelableFuture, Task, Unsafe}
+import scala.concurrent.Future
 
 abstract class StreamSttpClientZioTestsSender extends ClientTests[ZioStreams] {
   private val runtime: default.UnsafeAPI = zio.Runtime.default.unsafe
@@ -19,35 +20,32 @@ abstract class StreamSttpClientZioTestsSender extends ClientTests[ZioStreams] {
       securityArgs: A,
       args: I,
       scheme: String = "http"
-  ): IO[Either[E, O]] =
-    IO.fromFuture(IO.delay {
-      val send = StreamSttpClientInterpreter()
-        .toSecureRequestThrowDecodeFailures[A, I, E, O, ZioStreams](e, Some(uri"$scheme://localhost:$port"))
-        .apply(securityArgs)
-        .apply(args)
-        .send[Task, ZioStreams](backend)
-        .map(_.body)
+  ): Future[Either[E, O]] = {
+    val send = StreamSttpClientInterpreter()
+      .toSecureRequestThrowDecodeFailures[A, I, E, O, ZioStreams](e, Some(uri"$scheme://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send[Task, ZioStreams](backend)
+      .map(_.body)
 
-      unsafeToFuture(send).future
-    })
+    unsafeToFuture(send).future
+  }
 
   override def safeSend[A, I, E, O](
       e: Endpoint[A, I, E, O, ZioStreams],
       port: Port,
       securityArgs: A,
       args: I
-  ): IO[DecodeResult[Either[E, O]]] =
-    IO.fromFuture(IO.delay {
-      val send = StreamSttpClientInterpreter()
-        .toSecureRequest[A, I, E, O, ZioStreams](e, Some(uri"http://localhost:$port"))
-        .apply(securityArgs)
-        .apply(args)
-        .send[Task, ZioStreams](backend)
-        .map(_.body)
+  ): Future[DecodeResult[Either[E, O]]] = {
+    val send = StreamSttpClientInterpreter()
+      .toSecureRequest[A, I, E, O, ZioStreams](e, Some(uri"http://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send[Task, ZioStreams](backend)
+      .map(_.body)
 
-      unsafeToFuture(send).future
-    })
-
+    unsafeToFuture(send).future
+  }
   override protected def afterAll(): Unit = {
     unsafeRun(backend.close())
     super.afterAll()
