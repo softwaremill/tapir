@@ -2,7 +2,7 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.28
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.28
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.28
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.31
 //> using dep ch.qos.logback:logback-classic:1.5.8
 
 package sttp.tapir.examples.json
