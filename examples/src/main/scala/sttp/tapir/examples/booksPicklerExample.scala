@@ -1,4 +1,4 @@
-// {cat=Hello, World!; effects=Future; server=Netty; client=sttp3; JSON=Pickler; docs=Swagger UI}: A demo of Tapir's capabilities
+// {cat=Hello, World!; effects=Future; server=Netty; client=sttp4; JSON=Pickler; docs=Swagger UI}: A demo of Tapir's capabilities
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.22
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.28
