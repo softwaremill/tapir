@@ -4,13 +4,12 @@ import org.reactivestreams.{Processor, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import ox.*
 import ox.channels.*
+import ox.flow.Flow
 import sttp.tapir.server.netty.sync.OxStreams
 
 import scala.concurrent.duration.*
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, Future, Promise}
 import scala.util.control.NonFatal
-import ox.flow.Flow
-import scala.concurrent.Promise
 
 /** A reactive Processor, which is both a Publisher and a Subscriber
   *

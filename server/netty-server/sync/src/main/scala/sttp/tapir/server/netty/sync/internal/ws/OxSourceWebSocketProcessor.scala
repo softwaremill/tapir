@@ -6,6 +6,7 @@ import org.reactivestreams.{Processor, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import ox.*
 import ox.channels.ChannelClosedException
+import ox.flow.Flow
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters.*
 import sttp.tapir.server.netty.sync.OxStreams
@@ -15,9 +16,7 @@ import sttp.ws.WebSocketFrame
 
 import java.io.IOException
 import java.util.concurrent.Semaphore
-
 import scala.concurrent.duration.*
-import ox.flow.Flow
 
 private[sync] object OxSourceWebSocketProcessor:
   private val logger = LoggerFactory.getLogger(getClass.getName)
