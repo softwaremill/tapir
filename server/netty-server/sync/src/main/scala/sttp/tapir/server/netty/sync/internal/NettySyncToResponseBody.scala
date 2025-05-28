@@ -1,7 +1,8 @@
 package sttp.tapir.server.netty.sync.internal
 
+import _root_.ox.flow.Flow
 import _root_.ox.flow.reactive.toReactiveStreamsPublisher
-import _root_.ox.{ExternalRunner, forkDiscard}
+import _root_.ox.{Chunk, InScopeRunner, forkDiscard}
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
@@ -15,13 +16,10 @@ import sttp.tapir.server.netty.NettyResponse
 import sttp.tapir.server.netty.NettyResponseContent.{ReactivePublisherNettyResponseContent, ReactiveWebSocketProcessorNettyResponseContent}
 import sttp.tapir.server.netty.internal.{NettyToResponseBody, RunAsync}
 import sttp.tapir.server.netty.sync.*
-import sttp.tapir.server.netty.sync.internal.ox.OxDispatcher
 
 import java.nio.charset.Charset
-import _root_.ox.flow.Flow
-import _root_.ox.Chunk
 
-private[sync] class NettySyncToResponseBody(runAsync: RunAsync[Identity], oxDispatcher: OxDispatcher, externalRunner: ExternalRunner)(using
+private[sync] class NettySyncToResponseBody(runAsync: RunAsync[Identity], inScopeRunner: InScopeRunner)(using
     me: MonadError[Identity]
 ) extends ToResponseBody[NettyResponse, OxStreams]:
 
@@ -41,7 +39,7 @@ private[sync] class NettySyncToResponseBody(runAsync: RunAsync[Identity], oxDisp
         // transformation until the subscriber is known.
         new Publisher[HttpContent]:
           override def subscribe(s: Subscriber[_ >: HttpContent]): Unit =
-            externalRunner.runAsync(
+            inScopeRunner.async(
               forkDiscard(
                 v.map(chunk => new DefaultHttpContent(Unpooled.wrappedBuffer(chunk.toArray)))
                   .toReactiveStreamsPublisher
@@ -58,7 +56,7 @@ private[sync] class NettySyncToResponseBody(runAsync: RunAsync[Identity], oxDisp
     new ReactiveWebSocketProcessorNettyResponseContent(
       channelPromise,
       ws.OxSourceWebSocketProcessor[REQ, RESP](
-        oxDispatcher,
+        inScopeRunner,
         pipe.asInstanceOf[OxStreams.Pipe[REQ, RESP]],
         o.asInstanceOf[WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams]],
         ctx

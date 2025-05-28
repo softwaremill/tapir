@@ -9,7 +9,6 @@ import ox.channels.ChannelClosedException
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters.*
 import sttp.tapir.server.netty.sync.OxStreams
-import sttp.tapir.server.netty.sync.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.sync.internal.reactivestreams.OxProcessor
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
@@ -25,7 +24,7 @@ private[sync] object OxSourceWebSocketProcessor:
   private val outgoingCloseAfterCloseTimeout = 1.second
 
   def apply[REQ, RESP](
-      oxDispatcher: OxDispatcher,
+      inScopeRunner: InScopeRunner,
       processingPipe: OxStreams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
       ctx: ChannelHandlerContext
@@ -67,7 +66,7 @@ private[sync] object OxSourceWebSocketProcessor:
         val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "normal closure"))
         sub.onComplete()
     }
-    new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
+    new OxProcessor(inScopeRunner, frame2FramePipe, wrapSubscriberWithNettyCallback)
   end apply
 
   private def optionallyConcatenateFrames(doConcatenate: Boolean)(f: Flow[WebSocketFrame]): Flow[WebSocketFrame] =

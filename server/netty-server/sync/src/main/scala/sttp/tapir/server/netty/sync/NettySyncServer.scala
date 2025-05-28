@@ -21,8 +21,6 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 
-import internal.ox.OxDispatcher
-
 case class NettySyncServer(
     serverEndpoints: Vector[ServerEndpoint[OxStreams & WebSockets, Identity]],
     otherRoutes: Vector[IdRoute],
@@ -81,7 +79,7 @@ case class NettySyncServer(
     *   server binding, to be used to control stopping of the server or obtaining metadata like port.
     */
   def start()(using Ox): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](None, OxDispatcher.create, externalRunner()) match
+    startUsingSocketOverride[InetSocketAddress](None, inScopeRunner()) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop).tap: binding =>
           logger.info(s"Tapir Netty server started on ${binding.hostName}:${binding.port}")
@@ -101,16 +99,15 @@ case class NettySyncServer(
         NettySyncServerBinding(socket, stop)
 
   def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
-    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), OxDispatcher.create, externalRunner()) match
+    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), inScopeRunner()) match
       case (socket, stop) =>
         NettySyncDomainSocketBinding(socket, stop)
 
   private def startUsingSocketOverride[SA <: SocketAddress](
       socketOverride: Option[SA],
-      oxDispatcher: OxDispatcher,
-      externalRunner: ExternalRunner
+      inScopeRunner: InScopeRunner
   ): (SA, () => Unit) =
-    val endpointRoute = NettySyncServerInterpreter(options).toRoute(serverEndpoints.toList, oxDispatcher, externalRunner)
+    val endpointRoute = NettySyncServerInterpreter(options).toRoute(serverEndpoints.toList, inScopeRunner)
     val route = Route.combine(endpointRoute +: otherRoutes)
     startUsingSocketOverride(route, socketOverride)
 
