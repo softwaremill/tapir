@@ -7,15 +7,15 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.client4._
 import sttp.client4.httpclient.fs2.HttpClientFs2Backend
 import sttp.tapir.client.sttp4.WebSocketToPipe
-import sttp.tapir.client.tests.ClientTests
+import sttp.tapir.client.tests.ClientTestsIO
 import sttp.tapir.{DecodeResult, Endpoint}
 
-abstract class WebSocketSttpClientTestsSender extends ClientTests[WebSockets with Fs2Streams[IO]] {
+abstract class WebSocketSttpClientTestsSender extends ClientTestsIO[WebSockets with Fs2Streams[IO]] {
   val (dispatcher, closeDispatcher) = Dispatcher.parallel[IO](false).allocated.unsafeRunSync()
   val backend: WebSocketBackend[IO] = HttpClientFs2Backend[IO](dispatcher).unsafeRunSync()
   def wsToPipe: WebSocketToPipe[WebSockets with Fs2Streams[IO]]
 
-  override def send[A, I, E, O](
+  override def sendIO[A, I, E, O](
       e: Endpoint[A, I, E, O, WebSockets with Fs2Streams[IO]],
       port: Port,
       securityArgs: A,
@@ -31,7 +31,7 @@ abstract class WebSocketSttpClientTestsSender extends ClientTests[WebSockets wit
       .map(_.body)
   }
 
-  override def safeSend[A, I, E, O](
+  override def safeSendIO[A, I, E, O](
       e: Endpoint[A, I, E, O, WebSockets with Fs2Streams[IO]],
       port: Port,
       securityArgs: A,
