@@ -26,7 +26,6 @@ import scala.concurrent.duration.FiniteDuration
 import ox.flow.Flow
 import scala.annotation.nowarn
 import sttp.tapir.server.netty.NettySyncRequestTimeoutTests
-import cats.effect.kernel.Par
 import sttp.model.sse.ServerSentEvent
 import java.util.UUID
 import scala.util.Random
