@@ -84,6 +84,10 @@
 * [Separating security and server logic, with a reusable base endpoint, accepting & refreshing credentials via cookies](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/serverSecurityLogicRefreshCookiesPekko.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Pekko HTTP</span>
 * [Separating security and server logic, with a reusable base endpoint, accepting & refreshing credentials via cookies](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/ServerSecurityLogicZio.scala) <span class="example-tag example-effects">ZIO</span> <span class="example-tag example-server">ZIO HTTP</span>
 
+## Server Sent Events
+
+* [Describe and implement an endpoint which emits SSE](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/sse/sseNettySyncServer.scala) <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
+
 ## Static content
 
 * [Serving static files from a directory](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/static_content/staticContentFromFilesNettyServer.scala) <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>

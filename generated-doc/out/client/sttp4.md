@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-client4" % "1.11.32"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-client4" % "1.11.33"
 ```
 
 To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
@@ -124,7 +124,7 @@ In this case add the following dependencies (note the [`%%%`](https://www.scala-
 instead of the usual `%%`):
 
 ```scala
-"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client4" % "1.11.32"
+"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client4" % "1.11.33"
 "io.github.cquiroz" %%% "scala-java-time" % "2.2.0" // implementations of java.time classes for Scala.JS
 ```
 
