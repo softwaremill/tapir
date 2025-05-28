@@ -1,11 +1,11 @@
 package sttp.tapir.server.netty.sync
 
-import ox.*
-import internal.ox.OxDispatcher
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{Channel, EventLoopGroup}
 import io.netty.util.concurrent.DefaultEventExecutor
+import org.slf4j.LoggerFactory
+import ox.*
 import sttp.capabilities.WebSockets
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
@@ -16,11 +16,12 @@ import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{Executors, Future => JFuture}
+import java.util.concurrent.{Executors, Future as JFuture}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
-import org.slf4j.LoggerFactory
+
+import internal.ox.OxDispatcher
 
 case class NettySyncServer(
     serverEndpoints: Vector[ServerEndpoint[OxStreams & WebSockets, Identity]],
@@ -80,7 +81,7 @@ case class NettySyncServer(
     *   server binding, to be used to control stopping of the server or obtaining metadata like port.
     */
   def start()(using Ox): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](None, OxDispatcher.create) match
+    startUsingSocketOverride[InetSocketAddress](None, OxDispatcher.create, externalRunner()) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop).tap: binding =>
           logger.info(s"Tapir Netty server started on ${binding.hostName}:${binding.port}")
@@ -100,12 +101,16 @@ case class NettySyncServer(
         NettySyncServerBinding(socket, stop)
 
   def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
-    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), OxDispatcher.create) match
+    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), OxDispatcher.create, externalRunner()) match
       case (socket, stop) =>
         NettySyncDomainSocketBinding(socket, stop)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA], oxDispatcher: OxDispatcher): (SA, () => Unit) =
-    val endpointRoute = NettySyncServerInterpreter(options).toRoute(serverEndpoints.toList, oxDispatcher)
+  private def startUsingSocketOverride[SA <: SocketAddress](
+      socketOverride: Option[SA],
+      oxDispatcher: OxDispatcher,
+      externalRunner: ExternalRunner
+  ): (SA, () => Unit) =
+    val endpointRoute = NettySyncServerInterpreter(options).toRoute(serverEndpoints.toList, oxDispatcher, externalRunner)
     val route = Route.combine(endpointRoute +: otherRoutes)
     startUsingSocketOverride(route, socketOverride)
 

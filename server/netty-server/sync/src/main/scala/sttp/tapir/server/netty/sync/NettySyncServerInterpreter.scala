@@ -1,31 +1,32 @@
 package sttp.tapir.server.netty.sync
 
-import internal.{NettySyncRequestBody, NettySyncToResponseBody}
-import internal.ox.OxDispatcher
+import ox.ExternalRunner
 import sttp.capabilities.WebSockets
-import sttp.monad.syntax._
+import sttp.monad.syntax.*
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.RequestResult
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync}
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
+import internal.{NettySyncRequestBody, NettySyncToResponseBody}
+import internal.ox.OxDispatcher
+
 trait NettySyncServerInterpreter:
   def nettyServerOptions: NettySyncServerOptions
 
-  /** Requires supervision scope (Ox), because it needs to know in which scope it can start background forks in the Web Sockets processor.
-    */
   def toRoute(
       ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
-      oxDispatcher: OxDispatcher
+      oxDispatcher: OxDispatcher,
+      externalRunner: ExternalRunner
   ): IdRoute =
     implicit val bodyListener: BodyListener[Identity, NettyResponse] = new NettyBodyListener(RunAsync.Id)
     val serverInterpreter = new ServerInterpreter[OxStreams with WebSockets, Identity, NettyResponse, OxStreams](
       FilterServerEndpoints(ses),
       new NettySyncRequestBody(nettyServerOptions.createFile),
-      new NettySyncToResponseBody(RunAsync.Id, oxDispatcher),
+      new NettySyncToResponseBody(RunAsync.Id, oxDispatcher, externalRunner),
       RejectInterceptor.disableWhenSingleEndpoint(nettyServerOptions.interceptors, ses),
       nettyServerOptions.deleteFile
     )

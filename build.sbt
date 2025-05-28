@@ -1534,7 +1534,8 @@ lazy val nettyServerSync: ProjectMatrix =
       useCoursier := false,
       Test / run / fork := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.ox" %% "core" % Versions.ox
+        "com.softwaremill.ox" %% "core" % Versions.ox,
+        "com.softwaremill.ox" %% "flow-reactive-streams" % Versions.ox
       )
     )
     .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
