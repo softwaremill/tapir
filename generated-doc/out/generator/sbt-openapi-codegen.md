@@ -11,7 +11,7 @@ incorrectly-implemented functionality are highly encouraged.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.28")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.33")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -49,6 +49,8 @@ openapiMaxSchemasPerFile              400                                  Maxim
 openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
 openapiStreamingImplementation        fs2                                  Implementation for streamTextBody. Supports: akka, fs2, pekko, zio
 openapiGenerateEndpointTypes          false                                Whether to emit explicit types for endpoint defns
+openapiDisableValidatorGeneration     false                                If true, we will not generate validation for constraints (min, max, pattern etc)
+openapiUseCustomJsoniterSerdes        false                                If true and openapiJsonSerdeLib = jsoniter, serdes will be generated to use custom 'openapi' make defns. May help with flaky compilation, but requires jsoniter-scala >= 2.36.0+
 ===================================== ==================================== ==================================================================================================
 ```
 
@@ -183,7 +185,7 @@ representation types for the binary data
 We currently miss a few OpenApi features. Notable are:
 
 - anyOf
-- not all validation is supported (readOnly/writeOnly, uniqueItems on arrays, and minProperties/maxProperties on
-  heterogeneous object schemas, are currently unsupported)
+- not all validation is supported (readOnly/writeOnly, and minProperties/maxProperties on heterogeneous object schemas,
+  are currently unsupported)
 - missing model types (date, duration, etc)
 

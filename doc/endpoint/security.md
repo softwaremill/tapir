@@ -29,9 +29,11 @@ cookie or a query parameter
 base64-encoded username/password combination, use: `basic[UsernamePassword]`.
 * `auth.bearer[T]`: reads data from the `Authorization` header, removing the `Bearer ` prefix. To get the token
 as a string, use: `bearer[String]`.
-* `auth.oauth2.authorizationCode(authorizationUrl, scopes, tokenUrl, refreshUrl): EndpointInput[String]`: creates an 
+* `auth.oauth2.authorizationCodeFlow(authorizationUrl, scopes, tokenUrl, refreshUrl): EndpointInput[String]`: creates an 
 OAuth2 authorization using authorization code - sign in using an auth service (for documentation, requires defining also 
-the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../docs/openapi.md))
+the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../docs/openapi.md)). Other OAuth2 flows are also
+supported, as well as optional variants: `authorizationCodeFlow[Optional]`, `clientCredentialsFlow[Optional]`, 
+`implicitFlow[Optional]`.
 
 ## Authentication challenges
 

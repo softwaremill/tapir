@@ -48,7 +48,8 @@ object RootGenerator {
       validateNonDiscriminatedOneOfs: Boolean,
       maxSchemasPerFile: Int,
       generateEndpointTypes: Boolean,
-      generateValidators: Boolean
+      generateValidators: Boolean,
+      useCustomJsoniterSerdes: Boolean
   ): Map[String, String] = {
     val doc = unNormalisedDoc.resolveAllOfSchemas
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
@@ -114,7 +115,8 @@ object RootGenerator {
           validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs,
           maxSchemasPerFile = maxSchemasPerFile,
           enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams,
-          xmlParamRefs = xmlParamRefs
+          xmlParamRefs = xmlParamRefs,
+          useCustomJsoniterSerdes = useCustomJsoniterSerdes
         )
         .getOrElse(GeneratedClassDefinitions("", None, Nil, None))
     val hasJsonSerdes = jsonSerdes.nonEmpty

@@ -29,7 +29,8 @@ object JsonSerdeGenerator {
       validateNonDiscriminatedOneOfs: Boolean,
       adtInheritanceMap: Map[String, Seq[String]],
       targetScala3: Boolean,
-      schemasContainAny: Boolean
+      schemasContainAny: Boolean,
+      useCustomJsoniterSerdes: Boolean
   ): Option[String] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
 
@@ -43,7 +44,8 @@ object JsonSerdeGenerator {
           allTransitiveJsonParamRefs,
           adtInheritanceMap,
           validateNonDiscriminatedOneOfs,
-          schemasContainAny
+          schemasContainAny,
+          useCustomJsoniterSerdes
         )
       case JsonSerdeLib.Zio => genZioSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs, targetScala3)
     }
@@ -156,8 +158,7 @@ object JsonSerdeGenerator {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
       }
-      .map(s =>
-        s"""implicit val byteStringJsonDecoder: io.circe.Decoder[ByteString] =
+      .map(s => s"""implicit val byteStringJsonDecoder: io.circe.Decoder[ByteString] =
            |  io.circe.Decoder.decodeString
            |    .map(java.util.Base64.getDecoder.decode)
            |    .map(toByteString)
@@ -175,8 +176,8 @@ object JsonSerdeGenerator {
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
-      case Nil => ""
-      case s   => s.mkString("", "\n", "\n")
+      case s if s.isEmpty => ""
+      case s              => s.mkString("", "\n", "\n")
     }
     val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.generic.semiauto.deriveDecoder[$name]
@@ -260,7 +261,7 @@ object JsonSerdeGenerator {
   // - require presence of collections when decoding if 'required'
   private val jsoniterBaseConfig =
     s"$jsoniterPkgMacros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true)"
-  private val jsoniteEnumConfig = s"$jsoniterBaseConfig.withDiscriminatorFieldName(scala.None)"
+  private val jsoniterEnumConfig = s"$jsoniterBaseConfig.withDiscriminatorFieldName(scala.None)"
   private def genJsoniterSerdes(
       doc: OpenapiDocument,
       allSchemas: Map[String, OpenapiSchemaType],
@@ -268,7 +269,8 @@ object JsonSerdeGenerator {
       allTransitiveJsonParamRefs: Set[String],
       adtInheritanceMap: Map[String, Seq[String]],
       validateNonDiscriminatedOneOfs: Boolean,
-      schemasContainAny: Boolean
+      schemasContainAny: Boolean,
+      useCustomJsoniterSerdes: Boolean
   ): Option[String] = {
     // if schemas contain an 'any' (i.e. any json), we assume jsoniter-scala-circe is a dependency
     val maybeAnySerde =
@@ -303,27 +305,27 @@ object JsonSerdeGenerator {
       case (name, o: OpenapiSchemaObject, isJson) =>
         val inlinedEnumDefns = if (allTransitiveJsonParamRefs.contains(name)) {
           o.properties.collect { case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _)) =>
-            genJsoniterEnumSerde(name + en.capitalize)
+            genJsoniterEnumSerde(useCustomJsoniterSerdes, name + en.capitalize)
           }
         } else Nil
         val supertypes =
           adtInheritanceMap.getOrElse(name, Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
         val topLevelDefn =
           if (isJson || jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty))
-            Seq(genJsoniterClassSerde(supertypes)(name))
+            Seq(genJsoniterClassSerde(useCustomJsoniterSerdes, supertypes)(name))
           else Nil
         topLevelDefn ++ inlinedEnumDefns
       // For named maps and arrays, only generate the schema if it's a 'top level' json schema
       case (name, _: OpenapiSchemaMap, isJson) if jsonParamRefs.contains(name) || isJson =>
-        Seq(genJsoniterNamedSerde(name))
+        Seq(genJsoniterNamedSerde(useCustomJsoniterSerdes, name))
       case (name, _: OpenapiSchemaArray, isJson) if jsonParamRefs.contains(name) || isJson =>
-        Seq(genJsoniterNamedSerde(name))
+        Seq(genJsoniterNamedSerde(useCustomJsoniterSerdes, name))
       // For enums, generate the serde if it's referenced in any json model
       case (name, _: OpenapiSchemaEnum, _) if allTransitiveJsonParamRefs.contains(name) =>
-        Seq(genJsoniterEnumSerde(name))
+        Seq(genJsoniterEnumSerde(useCustomJsoniterSerdes, name))
       // For ADTs, generate the serde if it's referenced in any json model
       case (name, schema: OpenapiSchemaOneOf, _) if allTransitiveJsonParamRefs.contains(name) =>
-        Seq(generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs))
+        Seq(generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs, useCustomJsoniterSerdes))
       case (
             _,
             _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf |
@@ -348,36 +350,48 @@ object JsonSerdeGenerator {
            |  def encodeValue(x: ByteString, out: $jsoniterPkgCore.JsonWriter): _root_.scala.Unit =
            |    out.writeVal(java.util.Base64.getEncoder.encodeToString(x))
            |}
-           |$s""".stripMargin)
+           |$s""".stripMargin
+      )
   }
 
-  private def genJsoniterClassSerde(supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {
+  private def genJsoniterClassSerde(useCustomJsoniterSerdes: Boolean, supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {
     val uncapitalisedName = RootGenerator.uncapitalise(name)
     if (supertypes.exists(_.discriminator.isDefined))
       throw new NotImplementedError(
         s"A class cannot be used both in a oneOf with discriminator and at the top level when using jsoniter serdes at $name"
       )
-    else
-      s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterBaseConfig)"""
+    else {
+      if (useCustomJsoniterSerdes)
+        s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike"""
+      else
+        s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterBaseConfig)"""
+    }
   }
 
-  private def genJsoniterEnumSerde(name: String): String = {
+  private def genJsoniterEnumSerde(useCustomJsoniterSerdes: Boolean, name: String): String = {
     val uncapitalisedName = RootGenerator.uncapitalise(name)
-    s"""
-       |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[${name}] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniteEnumConfig.withDiscriminatorFieldName(scala.None))""".stripMargin
+    if (useCustomJsoniterSerdes)
+      s"""
+         |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLikeWithoutDiscriminator""".stripMargin
+    else s"""
+            |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[${name}] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniterEnumConfig)""".stripMargin
   }
 
-  private def genJsoniterNamedSerde(name: String): String = {
+  private def genJsoniterNamedSerde(useCustomJsoniterSerdes: Boolean, name: String): String = {
     val uncapitalisedName = RootGenerator.uncapitalise(name)
-    s"""
-       |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniterBaseConfig)""".stripMargin
+    if (useCustomJsoniterSerdes)
+      s"""
+         |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike""".stripMargin
+    else s"""
+            |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniterBaseConfig)""".stripMargin
   }
 
   private def generateJsoniterAdtSerde(
       allSchemas: Map[String, OpenapiSchemaType],
       name: String,
       schema: OpenapiSchemaOneOf,
-      validateNonDiscriminatedOneOfs: Boolean
+      validateNonDiscriminatedOneOfs: Boolean,
+      useCustomJsoniterSerdes: Boolean
   ): String = {
     val uncapitalisedName = RootGenerator.uncapitalise(name)
     schema match {
@@ -397,17 +411,25 @@ object JsonSerdeGenerator {
               .map { case (k, v) => s"""case "$k" => "$v"""" }
               .mkString("\n", "\n", "\n")
           )
-          val config =
-            s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {$discriminatorMap})"""
           val serde =
-            s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
+            if (useCustomJsoniterSerdes)
+              s"""implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${discriminator.propertyName}", {$discriminatorMap})"""
+            else {
+              val config =
+                s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {$discriminatorMap})"""
+              s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
+            }
 
           s"""$serde
              |""".stripMargin
         } else {
-          val config =
-            s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}"))"""
-          s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
+          if (useCustomJsoniterSerdes)
+            s"""implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${discriminator.propertyName}")"""
+          else {
+            val config =
+              s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}"))"""
+            s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
+          }
         }
         body
 
@@ -477,11 +499,12 @@ object JsonSerdeGenerator {
         case (None, a)    => Some(a)
       }
       .map(s =>
-      s"""implicit lazy val byteStringJsonCodec: zio.json.JsonCodec[ByteString] = zio.json.JsonCodec[ByteString](
+        s"""implicit lazy val byteStringJsonCodec: zio.json.JsonCodec[ByteString] = zio.json.JsonCodec[ByteString](
          |  zio.json.JsonEncoder[String].contramap[ByteString](java.util.Base64.getEncoder.encodeToString),
          |  zio.json.JsonDecoder[String].mapOrFail(s => scala.util.Try(java.util.Base64.getDecoder.decode(s)).toEither.map(toByteString).left.map(error => error.getMessage)),
          |)
-         |$s""".stripMargin)
+         |$s""".stripMargin
+      )
   }
 
   private def genZioObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
@@ -492,8 +515,8 @@ object JsonSerdeGenerator {
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
-      case Nil => ""
-      case s   => s.mkString("", "\n", "\n")
+      case s if s.isEmpty => ""
+      case s              => s.mkString("", "\n", "\n")
     }
     val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: zio.json.JsonDecoder[$name] = zio.json.DeriveJsonDecoder.gen[$name]

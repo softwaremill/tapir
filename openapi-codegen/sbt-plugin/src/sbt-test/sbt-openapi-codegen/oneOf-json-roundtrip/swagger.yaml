@@ -654,7 +654,9 @@ components:
         i:
           type: integer
         e:
-          $ref: '#/components/schemas/AnEnum'
+          allOf:
+            - $ref: '#/components/schemas/AnEnum'
+          default: Foo
         absent:
           type: string
     AnEnum:
@@ -824,10 +826,13 @@ components:
       type: object
       properties:
         self:
-          type: array
-          maxItems: 3
-          items:
-            $ref: '#/components/schemas/ValidatedRecursive'
+          allOf:
+            - type: array
+              maxItems: 3
+              items:
+                $ref: '#/components/schemas/ValidatedRecursive'
+          default:
+            - self: [ ]
     ValidatedSubObj:
       title: ValidatedSubObj
       type: object
@@ -848,7 +853,10 @@ components:
           type: string
           maxLength: 128
         bar:
-          $ref: '#/components/schemas/ValidatedSubObj'
+          allOf:
+            - $ref: '#/components/schemas/ValidatedSubObj'
+          default:
+            i: "i..."
         baz:
           $ref: '#/components/schemas/ValidatedSubObj'
         quux:

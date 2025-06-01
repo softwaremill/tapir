@@ -19,6 +19,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaUUID
 }
 
+import scala.collection.mutable
+
 object TestHelpers {
 
   val myBookshopYaml =
@@ -269,7 +271,11 @@ object TestHelpers {
     Some(
       OpenapiComponent(
         schemas = Map(
-          "Book" -> OpenapiSchemaObject(Map("title" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), Seq("title"), false)
+          "Book" -> OpenapiSchemaObject(
+            mutable.LinkedHashMap("title" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+            Seq("title"),
+            false
+          )
         ),
         securitySchemes = Map.empty,
         parameters = Map(
@@ -417,9 +423,9 @@ object TestHelpers {
     Some(
       OpenapiComponent(
         Map(
-          "Author" -> OpenapiSchemaObject(Map("name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("name"), false),
+          "Author" -> OpenapiSchemaObject(mutable.LinkedHashMap("name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("name"), false),
           "Book" -> OpenapiSchemaObject(
-            properties = Map(
+            properties = mutable.LinkedHashMap(
               "title" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
               "year" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None),
               "author" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/Author"), None)
@@ -810,7 +816,7 @@ object TestHelpers {
       OpenapiComponent(
         Map(
           "ReqWithDefaults" -> OpenapiSchemaObject(
-            Map(
+            mutable.LinkedHashMap(
               "f1" -> OpenapiSchemaField(OpenapiSchemaString(false), Some(Json.fromString("default string"))),
               "f2" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), Some(Json.fromLong(1977)))
             ),
@@ -818,7 +824,7 @@ object TestHelpers {
             false
           ),
           "RespWithDefaults" -> OpenapiSchemaObject(
-            Map(
+            mutable.LinkedHashMap(
               "g1" -> OpenapiSchemaField(OpenapiSchemaUUID(false), Some(Json.fromString("default string"))),
               "g2" -> OpenapiSchemaField(OpenapiSchemaFloat(false, NumericRestrictions()), Some(Json.fromLong(1977))),
               "g3" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/AnEnum"), Some(Json.fromString("v1"))),
@@ -851,12 +857,12 @@ object TestHelpers {
             false
           ),
           "SubObject" -> OpenapiSchemaObject(
-            Map("subsub" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/SubSubObject"), None)),
+            mutable.LinkedHashMap("subsub" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/SubSubObject"), None)),
             List("subsub"),
             false
           ),
           "SubSubObject" -> OpenapiSchemaObject(
-            Map(
+            mutable.LinkedHashMap(
               "value" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
               "value2" -> OpenapiSchemaField(OpenapiSchemaUUID(false), None)
             ),
@@ -1142,13 +1148,13 @@ object TestHelpers {
             false
           ),
           "ReqSubtype1" -> OpenapiSchemaObject(
-            Map("foo" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None)),
+            mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None)),
             List("foo"),
             false
           ),
-          "ReqSubtype2" -> OpenapiSchemaObject(Map("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("foo"), false),
-          "ReqSubtype3" -> OpenapiSchemaObject(Map("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("foo"), false),
-          "ReqSubtype4" -> OpenapiSchemaObject(Map("bar" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("bar"), false)
+          "ReqSubtype2" -> OpenapiSchemaObject(mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("foo"), false),
+          "ReqSubtype3" -> OpenapiSchemaObject(mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("foo"), false),
+          "ReqSubtype4" -> OpenapiSchemaObject(mutable.LinkedHashMap("bar" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("bar"), false)
         ),
         Map(),
         Map()

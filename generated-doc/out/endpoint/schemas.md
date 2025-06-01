@@ -121,6 +121,66 @@ e.g. `type AorB = "a" | "b"`
 
 See [enumerations](enumerations.html#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
 
+### Derivation for generic case classes
+
+Semi-automatic derivation with `derives Schema` or `given ... = Schema.derived` does not work well with generic case
+classes. For example, an application exposing a paginated REST API could use:
+
+```scala
+final case class PaginatedBad[T](data: List[T], nextPage: Option[Int]) derives Schema
+final case class SomeInt(int: Int) derives Schema
+
+val nameBad = summon[Schema[PaginatedBad[SomeInt]]].name
+// nameBad: Option[SName] = Some(
+//   value = SName(
+//     fullName = "repl.MdocSession.MdocApp2.PaginatedBad",
+//     typeParameterShortNames = List(
+//       "repl.MdocSession.MdocApp2.PaginatedBad.derived$Schema.T"
+//     )
+//   )
+// )
+```
+
+Due to the way semi-automatic derivation works, the name of `Schema[PaginatedBad[SomeInt]]` uses `T` instead of 
+`SomeInt`. This leads to generating inconsistent OpenAPI specifications (as explained in
+[GitHub issues #3922](https://github.com/softwaremill/tapir/issues/3922) and
+[#4549](https://github.com/softwaremill/tapir/issues/4549)).
+
+To fix this, the `given` (or `implicit def`) statement can be made `inline`:
+
+```scala
+final case class Paginated[T](data: List[T], nextPage: Option[Int])
+object Paginated:
+  inline given [T: Schema]: Schema[Paginated[T]] = Schema.derived
+
+val name = summon[Schema[Paginated[SomeInt]]].name
+// name: Option[SName] = Some(
+//   value = SName(
+//     fullName = "repl.MdocSession.MdocApp2.Paginated",
+//     typeParameterShortNames = List("repl.MdocSession.MdocApp2.SomeInt")
+//   )
+// )
+```
+
+If using `inline given` is not possible, or if the inline itself is part of a generic method, the name of the `Schema`
+can be adjusted after the derivation:
+
+```scala
+final case class Paginated2[T](data: List[T], nextPage: Option[Int])
+object Paginated2:
+  given [T: Schema]: Schema[Paginated2[T]] = Schema.derivedWithTypeParameter
+    // Or Schema.derivedWithTypeParameter[Paginated2, T]
+    // Or Schema.derived[Paginated2[T]].renameWithTypeParameter[T]
+
+val name2 = summon[Schema[Paginated2[SomeInt]]].name
+// name2: Option[SName] = Some(
+//   value = SName(
+//     fullName = "repl.MdocSession.MdocApp2.Paginated2",
+//     typeParameterShortNames = List("repl.MdocSession.MdocApp2.SomeInt")
+//   )
+// )
+```
+
 ## Configuring derivation
 
 It is possible to configure Magnolia's automatic derivation to use `snake_case`, `kebab-case` or a custom field naming

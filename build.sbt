@@ -432,7 +432,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.16")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.18")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.10",
@@ -1027,8 +1027,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.3.7",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.7",
+      "io.prometheus" % "prometheus-metrics-core" % "1.3.8",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.8",
       scalaTest.value % Test
     )
   )
@@ -1534,7 +1534,8 @@ lazy val nettyServerSync: ProjectMatrix =
       useCoursier := false,
       Test / run / fork := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.ox" %% "core" % Versions.ox
+        "com.softwaremill.ox" %% "core" % Versions.ox,
+        "com.softwaremill.ox" %% "flow-reactive-streams" % Versions.ox
       )
     )
     .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
@@ -2109,8 +2110,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.7.6" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.7.5" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.28.2" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.28.2" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.0" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
