@@ -200,7 +200,7 @@ To use [Tethys JSON](https://github.com/tethys-json/tethys) add the following de
 Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../other/mytapir.md) and add `TapirJsonTethys` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
-import sttp.tapir.json.tethysjson.*
+import sttp.tapir.json.tethys.*
 ```
 
 Tethys JSON requires `JsonReader` and `JsonWriter` implicit values in scope for each type you want to serialize.
