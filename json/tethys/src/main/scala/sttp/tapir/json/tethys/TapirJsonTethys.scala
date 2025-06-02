@@ -1,4 +1,4 @@
-package sttp.tapir.json.circe
+package sttp.tapir.json.tethys
 
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
