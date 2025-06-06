@@ -1,7 +1,5 @@
 package sttp.tapir.client.sttp
 
-import cats.effect.IO
-
 import scala.concurrent.Future
 import sttp.tapir.{DecodeResult, Endpoint}
 import sttp.tapir.client.tests.ClientTests
@@ -17,16 +15,14 @@ abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
       securityArgs: A,
       args: I,
       scheme: String = "http"
-  ): IO[Either[E, O]] = {
+  ): Future[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    val response: Future[Either[E, O]] =
-      SttpClientInterpreter()
-        .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
-        .apply(securityArgs)
-        .apply(args)
-        .send(backend)
-        .map(_.body)
-    IO.fromFuture(IO(response))
+    SttpClientInterpreter()
+      .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
   }
 
   override def safeSend[A, I, E, O](
@@ -34,16 +30,14 @@ abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
       port: Port,
       securityArgs: A,
       args: I
-  ): IO[DecodeResult[Either[E, O]]] = {
+  ): Future[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    def response: Future[DecodeResult[Either[E, O]]] =
-      SttpClientInterpreter()
-        .toSecureRequest(e, Some(uri"http://localhost:$port"))
-        .apply(securityArgs)
-        .apply(args)
-        .send(backend)
-        .map(_.body)
-    IO.fromFuture(IO(response))
+    SttpClientInterpreter()
+      .toSecureRequest(e, Some(uri"http://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
   }
 
   override protected def afterAll(): Unit = {
