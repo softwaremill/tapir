@@ -8,6 +8,7 @@ import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 import zio.Runtime.default
 import zio.{CancelableFuture, Task, Unsafe}
+import scala.concurrent.Future
 
 abstract class SttpClientZioTestsSender extends ClientTests[Any] {
   private val runtime: default.UnsafeAPI = zio.Runtime.default.unsafe
@@ -19,33 +20,31 @@ abstract class SttpClientZioTestsSender extends ClientTests[Any] {
       securityArgs: A,
       args: I,
       scheme: String = "http"
-  ): IO[Either[E, O]] =
-    IO.fromFuture(IO.delay {
-      val send = SttpClientInterpreter()
-        .toSecureRequestThrowDecodeFailures[A, I, E, O](e, Some(uri"$scheme://localhost:$port"))
-        .apply(securityArgs)
-        .apply(args)
-        .send(backend)
-        .map(_.body)
+  ): Future[Either[E, O]] = {
+    val send = SttpClientInterpreter()
+      .toSecureRequestThrowDecodeFailures[A, I, E, O](e, Some(uri"$scheme://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
 
-      unsafeToFuture(send).future
-    })
+    unsafeToFuture(send).future
+  }
 
   override def safeSend[A, I, E, O](
       e: Endpoint[A, I, E, O, Any],
       port: Port,
       securityArgs: A,
       args: I
-  ): IO[DecodeResult[Either[E, O]]] =
-    IO.fromFuture(IO.delay {
-      val send = SttpClientInterpreter()
-        .toSecureRequest[A, I, E, O](e, Some(uri"http://localhost:$port"))
-        .apply(securityArgs)
-        .apply(args)
-        .send(backend)
-        .map(_.body)
-      unsafeToFuture(send).future
-    })
+  ): Future[DecodeResult[Either[E, O]]] = {
+    val send = SttpClientInterpreter()
+      .toSecureRequest[A, I, E, O](e, Some(uri"http://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
+    unsafeToFuture(send).future
+  }
 
   override protected def afterAll(): Unit = {
     unsafeRun(backend.close())

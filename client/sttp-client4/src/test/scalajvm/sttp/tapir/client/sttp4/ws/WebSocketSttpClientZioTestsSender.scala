@@ -10,6 +10,7 @@ import _root_.zio.{CancelableFuture, Task, Unsafe}
 import sttp.tapir.client.sttp4.WebSocketToPipe
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
+import scala.concurrent.Future
 
 abstract class WebSocketSttpClientZioTestsSender extends ClientTests[WebSockets with ZioStreams] {
   private val runtime: default.UnsafeAPI = default.unsafe
@@ -22,34 +23,32 @@ abstract class WebSocketSttpClientZioTestsSender extends ClientTests[WebSockets 
       securityArgs: A,
       args: I,
       scheme: String = "http"
-  ): IO[Either[E, O]] =
-    IO.fromFuture(IO.delay {
-      implicit val wst: WebSocketToPipe[WebSockets with ZioStreams] = wsToPipe
-      val send = WebSocketSttpClientInterpreter()
-        .toSecureRequestThrowDecodeFailures[Task, A, I, E, O, WebSockets with ZioStreams](e, Some(uri"$scheme://localhost:$port"))
-        .apply(securityArgs)
-        .apply(args)
-        .send(backend)
-        .map(_.body)
-      unsafeToFuture(send).future
-    })
+  ): Future[Either[E, O]] = {
+    implicit val wst: WebSocketToPipe[WebSockets with ZioStreams] = wsToPipe
+    val send = WebSocketSttpClientInterpreter()
+      .toSecureRequestThrowDecodeFailures[Task, A, I, E, O, WebSockets with ZioStreams](e, Some(uri"$scheme://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
+    unsafeToFuture(send).future
+  }
 
   override def safeSend[A, I, E, O](
       e: Endpoint[A, I, E, O, WebSockets with ZioStreams],
       port: Port,
       securityArgs: A,
       args: I
-  ): IO[DecodeResult[Either[E, O]]] =
-    IO.fromFuture(IO.delay {
-      implicit val wst: WebSocketToPipe[WebSockets with ZioStreams] = wsToPipe
-      val send = WebSocketSttpClientInterpreter()
-        .toSecureRequest[Task, A, I, E, O, WebSockets with ZioStreams](e, Some(uri"http://localhost:$port"))
-        .apply(securityArgs)
-        .apply(args)
-        .send(backend)
-        .map(_.body)
-      unsafeToFuture(send).future
-    })
+  ): Future[DecodeResult[Either[E, O]]] = {
+    implicit val wst: WebSocketToPipe[WebSockets with ZioStreams] = wsToPipe
+    val send = WebSocketSttpClientInterpreter()
+      .toSecureRequest[Task, A, I, E, O, WebSockets with ZioStreams](e, Some(uri"http://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
+    unsafeToFuture(send).future
+  }
 
   override protected def afterAll(): Unit = {
     unsafeRun(backend.close())
