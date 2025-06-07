@@ -1,7 +1,9 @@
 # Generate endpoint definitions from an OpenAPI YAML
 
 ```{note}
-This is a really early alpha implementation.
+This is a relatively mature implementation that should be sufficiently capable for the majority of use-cases, but
+nonetheless does not yet completely cover the openapi spec. Pull requests or issues for missing or
+incorrectly-implemented functionality are highly encouraged.
 ```
 
 ## Installation steps
@@ -47,6 +49,8 @@ openapiMaxSchemasPerFile              400                                  Maxim
 openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
 openapiStreamingImplementation        fs2                                  Implementation for streamTextBody. Supports: akka, fs2, pekko, zio
 openapiGenerateEndpointTypes          false                                Whether to emit explicit types for endpoint defns
+openapiDisableValidatorGeneration     false                                If true, we will not generate validation for constraints (min, max, pattern etc)
+openapiUseCustomJsoniterSerdes        false                                If true and openapiJsonSerdeLib = jsoniter, serdes will be generated to use custom 'openapi' make defns. May help with flaky compilation, but requires jsoniter-scala >= 2.36.0+
 ===================================== ==================================== ==================================================================================================
 ```
 
@@ -178,10 +182,10 @@ param serdes.
 Models containing binary data cannot be re-used between json and multi-part form endpoints, due to having different
 representation types for the binary data
 
-We currently miss a lot of OpenApi features like:
+We currently miss a few OpenApi features. Notable are:
 
-- tags
-- anyOf/allOf
-- missing model types and meta descriptions (like date, minLength)
-- file handling
+- anyOf
+- not all validation is supported (readOnly/writeOnly, and minProperties/maxProperties on heterogeneous object schemas,
+  are currently unsupported)
+- missing model types (date, duration, etc)
 

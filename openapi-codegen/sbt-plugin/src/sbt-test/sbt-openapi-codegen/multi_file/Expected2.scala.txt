@@ -1,0 +1,78 @@
+
+package sttp.tapir.generated.swagger2
+
+object TapirGeneratedEndpoints {
+
+  import sttp.tapir._
+  import sttp.tapir.model._
+  import sttp.tapir.generic.auto._
+  import sttp.tapir.json.circe._
+  import io.circe.generic.semiauto._
+
+  import sttp.tapir.generated.swagger2.TapirGeneratedEndpointsJsonSerdes._
+  import TapirGeneratedEndpointsSchemas._
+
+
+
+
+
+  case class CommaSeparatedValues[T](values: List[T])
+  case class ExplodedValues[T](values: List[T])
+  trait ExtraParamSupport[T] {
+    def decode(s: String): sttp.tapir.DecodeResult[T]
+    def encode(t: T): String
+  }
+  implicit def makePathCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[String, T, sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.string.mapDecode(support.decode)(support.encode)
+  }
+  implicit def makeQueryCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(support.decode)(support.encode)
+  }
+  implicit def makeQueryOptCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[List[String], Option[T], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(maybeV => DecodeResult.sequence(maybeV.toSeq.map(support.decode)).map(_.headOption))(_.map(support.encode))
+  }
+  implicit def makeUnexplodedQuerySeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], CommaSeparatedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode(values => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(s => CommaSeparatedValues(s.toList)))(_.values.map(support.encode).mkString(","))
+  }
+  implicit def makeUnexplodedQueryOptSeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], Option[CommaSeparatedValues[T]], sttp.tapir.CodecFormat.TextPlain] = {
+    sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
+      .mapDecode{
+        case None => DecodeResult.Value(None)
+        case Some(values) => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(r => Some(CommaSeparatedValues(r.toList)))
+      }(_.map(_.values.map(support.encode).mkString(",")))
+  }
+  implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
+    support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
+  }
+  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
+    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  type ByteString <: Array[Byte]
+  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
+
+
+  case class Book (
+    title: String
+  )
+
+
+
+
+  lazy val putBooksGenreYear =
+    endpoint
+      .name("putBooksGenreYear")
+      .put
+      .in(("books"))
+      .in(jsonBody[Option[Book]])
+      .out(statusCode(sttp.model.StatusCode(204)).description("OK"))
+
+
+  lazy val generatedEndpoints = List(putBooksGenreYear)
+
+}

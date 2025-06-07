@@ -1,23 +1,13 @@
 package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiResponseContent
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  OpenapiSchemaAny,
-  OpenapiSchemaArray,
-  OpenapiSchemaField,
-  OpenapiSchemaInt,
-  OpenapiSchemaMap,
-  OpenapiSchemaObject,
-  OpenapiSchemaString
-}
-import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
-  OpenapiSecuritySchemeBearerType,
-  OpenapiSecuritySchemeBasicType,
-  OpenapiSecuritySchemeApiKeyType
-}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{NumericRestrictions, OpenapiSchemaAny, OpenapiSchemaArray, OpenapiSchemaField, OpenapiSchemaInt, OpenapiSchemaMap, OpenapiSchemaObject, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeBasicType, OpenapiSecuritySchemeBearerType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
+
+import scala.collection.mutable
 
 class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
   import io.circe.yaml.parser
@@ -50,8 +40,8 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
         OpenapiComponent(
           Map(
             "User" -> OpenapiSchemaObject(
-              Map(
-                "id" -> OpenapiSchemaField(OpenapiSchemaInt(false), None),
+              mutable.LinkedHashMap(
+                "id" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None),
                 "name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)
               ),
               Seq("id", "name"),
@@ -85,7 +75,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       OpenapiComponent(
         Map(
           "User" -> OpenapiSchemaObject(
-            Map("attributes" -> OpenapiSchemaField(OpenapiSchemaMap(OpenapiSchemaString(false), false), None)),
+            mutable.LinkedHashMap("attributes" -> OpenapiSchemaField(OpenapiSchemaMap(OpenapiSchemaString(false), false), None)),
             Seq("attributes"),
             false
           )
@@ -113,7 +103,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       OpenapiComponent(
         Map(
           "User" -> OpenapiSchemaObject(
-            Map("anyValue" -> OpenapiSchemaField(OpenapiSchemaAny(false), None)),
+            mutable.LinkedHashMap("anyValue" -> OpenapiSchemaField(OpenapiSchemaAny(false), None)),
             Seq("anyValue"),
             false
           )
@@ -197,7 +187,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .flatMap(_.as[Seq[OpenapiResponseContent]])
 
     res shouldBe Right(
-      Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaObject(Map.empty, Seq.empty, false), false)))
+      Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaObject(mutable.LinkedHashMap.empty, Seq.empty, false), false)))
     )
   }
 

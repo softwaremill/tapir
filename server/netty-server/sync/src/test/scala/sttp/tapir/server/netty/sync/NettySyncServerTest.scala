@@ -26,6 +26,10 @@ import scala.concurrent.duration.FiniteDuration
 import ox.flow.Flow
 import scala.annotation.nowarn
 import sttp.tapir.server.netty.NettySyncRequestTimeoutTests
+import sttp.model.sse.ServerSentEvent
+import java.util.UUID
+import scala.util.Random
+import sttp.tapir.server.netty.OxServerSentEvents.parseBytesToSSE
 
 class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
@@ -42,11 +46,13 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false)
         .tests() ++
         new ServerGracefulShutdownTests(createServerTest, sleeper).tests() ++
+        new ServerStreamingTests(createServerTest).tests(OxStreams)(_.runDrain()) ++
         new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, handlePong = true) {
           override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
           override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
         }.tests() ++
-        NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests()
+        NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
+        additionalTests(createServerTest)
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -56,10 +62,32 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       }
     }
   }
+
   override protected def afterAll(): Unit = {
     stopBackend.unsafeRunSync()
     super.afterAll()
   }
+
+  def additionalTests(createServerTest: CreateServerTest[Identity, OxStreams & WebSockets, NettySyncServerOptions, IdRoute]): List[Test] =
+    List(
+      {
+        def randomUUID = Some(UUID.randomUUID().toString)
+        val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
+        val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
+        createServerTest.testServerLogic(
+          endpoint.get.in("sse").out(serverSentEventsBody).handleSuccess(_ => Flow.fromIterable(List(sse1, sse2)))
+        ) { (backend, baseUri) =>
+          basicRequest
+            .get(uri"$baseUri/sse")
+            .response(asByteArrayAlways)
+            .send(backend)
+            .map(_.body)
+            .map { bytes =>
+              parseBytesToSSE(Flow.fromValues(Chunk.fromArray(bytes))).runToList() shouldBe List(sse1, sse2)
+            }
+        }
+      }
+    )
 }
 
 class NettySyncCreateServerTest(

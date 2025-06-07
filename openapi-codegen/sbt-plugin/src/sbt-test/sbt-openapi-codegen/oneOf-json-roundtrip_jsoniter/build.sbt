@@ -5,17 +5,18 @@ lazy val root = (project in file("."))
     version := "0.1",
     openapiJsonSerdeLib := "jsoniter",
     openapiStreamingImplementation := "pekko",
-    openapiGenerateEndpointTypes := true
+    openapiGenerateEndpointTypes := true,
+    openapiUseCustomJsoniterSerdes := true
   )
 
 val catsXmlVersion = "0.0.20"
-val jsoniterScalaVersion = "2.34.0"
+val jsoniterScalaVersion = "2.36.0"
 val tapirVersion = "1.11.18"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
-  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.8",
+  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
   "com.beachape" %% "enumeratum" % "1.7.6",
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % jsoniterScalaVersion,
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterScalaVersion % "compile-internal",
@@ -53,5 +54,6 @@ TaskKey[Unit]("check") := {
     "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsXmlSerdes.scala",
     "ExpectedXmlSerdes.scala.txt"
   )
+  compare("json", "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala", "ExpectedJsonSerdes.scala.txt")
   ()
 }

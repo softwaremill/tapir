@@ -7,7 +7,7 @@ import cats.implicits._
 import com.monovore.decline._
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.{BasicGenerator, YamlParser}
+import sttp.tapir.codegen.{RootGenerator, YamlParser}
 
 import java.io.File
 import java.nio.charset.StandardCharsets
@@ -71,6 +71,12 @@ object GenScala {
   private val generateEndpointTypesOpt: Opts[Boolean] =
     Opts.flag("generateEndpointTypes", "Whether to emit explicit type aliases for endpoint declarations", "e").orFalse
 
+  private val disableValidatorGenerationOpt: Opts[Boolean] =
+    Opts.flag("disableValidatorGeneration", "Whether to disable validator declarations").orFalse
+
+  private val useCustomJsoniterSerdesOpt: Opts[Boolean] =
+    Opts.flag("useCustomJsoniterSerdesOpt", "Set to true to enable usage of custom jsoniter macros (mitigates compilation flakiness, compatible with jsoniter-scala versions >= 2.36.x)").orFalse
+
   private val destDirOpt: Opts[File] =
     Opts
       .option[String]("destdir", "Destination directory", "d")
@@ -96,7 +102,9 @@ object GenScala {
       validateNonDiscriminatedOneOfsOpt,
       maxSchemasPerFileOpt,
       streamingImplementationOpt,
-      generateEndpointTypesOpt
+      generateEndpointTypesOpt,
+      disableValidatorGenerationOpt,
+      useCustomJsoniterSerdesOpt
     )
       .mapN {
         case (
@@ -111,13 +119,15 @@ object GenScala {
               validateNonDiscriminatedOneOfs,
               maxSchemasPerFile,
               streamingImplementation,
-              generateEndpointTypes
+              generateEndpointTypes,
+              disableValidatorGeneration,
+              useCustomJsoniterSerdes
             ) =>
           val objectName = maybeObjectName.getOrElse(DefaultObjectName)
 
           def generateCode(doc: OpenapiDocument): IO[Unit] = for {
             contents <- IO.pure(
-              BasicGenerator.generateObjects(
+              RootGenerator.generateObjects(
                 doc,
                 packageName,
                 objectName,
@@ -128,7 +138,9 @@ object GenScala {
                 streamingImplementation.getOrElse("fs2"),
                 validateNonDiscriminatedOneOfs,
                 maxSchemasPerFile.getOrElse(400),
-                generateEndpointTypes
+                generateEndpointTypes,
+                !disableValidatorGeneration,
+                useCustomJsoniterSerdes
               )
             )
             destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }

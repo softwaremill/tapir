@@ -4,7 +4,9 @@ import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
+import sttp.tapir.codegen.util.DocUtils
 
+import scala.collection.mutable
 import scala.util.Try
 
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
@@ -23,7 +25,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
+            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
           )
         )
       ),
@@ -52,7 +54,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    // the enumeratum import should be included by the BasicGenerator iff we generated enums
+    // the enumeratum import should be included by the RootGenerator iff we generated enums
     new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
   }
 
@@ -65,7 +67,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(Map("type" -> noDefault(OpenapiSchemaString(false))), Seq("type"), false)
+            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("type" -> noDefault(OpenapiSchemaString(false))), Seq("type"), false)
           )
         )
       ),
@@ -85,7 +87,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         OpenapiComponent(
           Map(
             "Test" -> OpenapiSchemaObject(
-              Map("texts" -> noDefault(OpenapiSchemaArray(OpenapiSchemaString(false), false))),
+              mutable.LinkedHashMap("texts" -> noDefault(OpenapiSchemaArray(OpenapiSchemaString(false), false))),
               Seq("texts"),
               false
             )
@@ -108,7 +110,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         OpenapiComponent(
           Map(
             "Test" -> OpenapiSchemaObject(
-              Map("texts" -> noDefault(OpenapiSchemaMap(OpenapiSchemaString(false), false))),
+              mutable.LinkedHashMap("texts" -> noDefault(OpenapiSchemaMap(OpenapiSchemaString(false), false))),
               Seq("texts"),
               false
             )
@@ -130,7 +132,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(Map("anyType" -> noDefault(OpenapiSchemaAny(false))), Seq("anyType"), false)
+            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("anyType" -> noDefault(OpenapiSchemaAny(false))), Seq("anyType"), false)
           )
         )
       ),
@@ -150,8 +152,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         OpenapiComponent(
           Map(
             "Test" -> OpenapiSchemaObject(
-              Map(
-                "inner" -> noDefault(OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false))
+              mutable.LinkedHashMap(
+                "inner" -> noDefault(OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false))
               ),
               Seq("inner"),
               false
@@ -176,10 +178,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
           Map(
             "Test" ->
               OpenapiSchemaObject(
-                Map(
+                mutable.LinkedHashMap(
                   "objects" -> noDefault(
                     OpenapiSchemaArray(
-                      OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
+                      OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
                       false
                     )
                   )
@@ -207,10 +209,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
           Map(
             "Test" ->
               OpenapiSchemaObject(
-                Map(
+                mutable.LinkedHashMap(
                   "objects" -> noDefault(
                     OpenapiSchemaMap(
-                      OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
+                      OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
                       false
                     )
                   )
@@ -236,7 +238,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
+            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
           )
         )
       ),
@@ -250,7 +252,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
+            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
           )
         )
       ),
@@ -272,7 +274,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
+            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
           )
         )
       ),
@@ -286,7 +288,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false)
+            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false)
           )
         )
       ),
@@ -369,7 +371,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "MyObject" -> OpenapiSchemaObject(Map("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false),
+            "MyObject" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false),
             "MyEnum" -> OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false),
             "MyMapPrimitive" -> OpenapiSchemaMap(OpenapiSchemaString(false), false),
             "MyMapObject" -> OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MyObject"), false),
@@ -428,7 +430,9 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             jsonSerdeLib = JsonSerdeLib.Circe,
             xmlSerdeLib = XmlSerdeLib.CatsXml,
             streamingImplementation = StreamingImplementation.FS2,
-            generateEndpointTypes = false
+            generateEndpointTypes = false,
+            validators = ValidationDefns.empty,
+            generateValidators = true
           )
           .endpointDecls(None)
     }
@@ -463,7 +467,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       ),
       "OneOfValue" -> OpenapiSchemaArray(OpenapiSchemaBinary(false), false),
       "TopObject" -> OpenapiSchemaObject(
-        Map(
+        mutable.LinkedHashMap(
           "innerMap" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/TopMap"), None),
           "innerArray" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/TopArray"), None),
           "innerOneOf" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/TopOneOf"), None),
@@ -476,7 +480,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
     def fetchJsonParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
-      case head +: tail => new ClassDefinitionGenerator().recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
+      case head +: tail => DocUtils.recursiveFindAllReferencedSchemaTypes(allSchemas)(head, initialSet, tail)
     }
     fetchJsonParamRefs(Set("MapType"), Seq(allSchemas("MapType"))) shouldEqual Set("MapType", "MapValue")
     fetchJsonParamRefs(Set("TopMap"), Seq(allSchemas("TopMap"))) shouldEqual Set("TopMap", "MapType", "MapValue")
@@ -529,9 +533,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate ADTs for oneOf schemas (jsoniter)" in {
     val imports =
       """import sttp.tapir.generic.auto._
+        |type ByteString = Array[Byte]
+        |implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
-    def testOK(doc: OpenapiDocument) = {
+    def testOK(useCustomMacros: Boolean, doc: OpenapiDocument) = {
       val GeneratedClassDefinitions(res, jsonSerdes, _, _) =
         gen
           .classDefs(
@@ -539,19 +545,27 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             false,
             jsonSerdeLib = JsonSerdeLib.Jsoniter,
             jsonParamRefs = Set("ReqWithVariants"),
-            fullModelPath = "foo.bar.baz"
+            fullModelPath = "foo.bar.baz",
+            useCustomJsoniterSerdes = useCustomMacros
           )
           .get
 
       val fullRes = imports + res + "\n" + jsonSerdes.get
       res shouldCompile ()
       fullRes shouldCompile ()
-      jsonSerdes.get should include(
-        """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
-      )
+      if (useCustomMacros)
+        jsonSerdes.get should include(
+          """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type")"""
+        )
+      else
+        jsonSerdes.get should include(
+          """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
+        )
     }
-    testOK(TestHelpers.oneOfDocsWithMapping)
-    testOK(TestHelpers.oneOfDocsWithDiscriminatorNoMapping)
+    testOK(false, TestHelpers.oneOfDocsWithMapping)
+    testOK(false, TestHelpers.oneOfDocsWithDiscriminatorNoMapping)
+    testOK(true, TestHelpers.oneOfDocsWithMapping)
+    testOK(true, TestHelpers.oneOfDocsWithDiscriminatorNoMapping)
     val failed = Try(
       gen.classDefs(TestHelpers.oneOfDocsNoDiscriminator, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants"))
     )
@@ -562,6 +576,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   it should "generate ADTs for oneOf schemas (circe)" in {
     val imports =
       """import sttp.tapir.generic.auto._
+        |type ByteString = Array[Byte]
+        |implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {

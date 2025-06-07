@@ -52,6 +52,8 @@ object TapirGeneratedEndpoints {
   implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
     def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
   }
+  type ByteString <: Array[Byte]
+  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
@@ -61,13 +63,13 @@ object TapirGeneratedEndpoints {
     case available, pending, sold
   }
   case class Pet (
-    status: Option[PetStatus] = None,
-    tags: Option[Seq[Tag]] = None,
     id: Option[Long] = None,
-    tags2: Option[Seq[Tag2]] = None,
-    photoUrls: Seq[String],
     name: String,
-    category: Option[Category] = None
+    category: Option[Category] = None,
+    photoUrls: Seq[String],
+    tags: Option[Seq[Tag]] = None,
+    tags2: Option[Seq[Tag2]] = None,
+    status: Option[PetStatus] = None
   )
   case class Category (
     id: Option[Long] = None,
@@ -138,9 +140,11 @@ object TapirGeneratedEndpoints {
 
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postXmlEndpoint)
 
-   object Servers {
+
+  object Servers {
     import sttp.model.Uri.UriContext
 
-     val `/v3`: sttp.model.Uri = uri"/v3"
-   }
+    val `/v3`: sttp.model.Uri = uri"/v3"
+
+  }
 }

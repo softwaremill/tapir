@@ -329,6 +329,61 @@ paths:
               schema:
                 $ref: '#/components/schemas/ObjectWithInlineEnum2'
 
+  '/headers/tests':
+    get:
+      responses:
+        "302":
+          description: response
+          headers:
+            foo:
+              description: a description
+              schema:
+                type: string
+
+  '/pattern/{restricted}/object':
+    parameters:
+      - name: restricted
+        in: path
+        description: used by security logic
+        required: true
+        schema:
+          type: string
+          minLength: 3
+          maxLength: 10
+          pattern: "[a-z]+"
+      - name: q1
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: "[a-z_].+"
+      - name: q2
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 3
+      - name: h1
+        in: header
+        required: false
+        schema:
+          type: string
+          pattern: "[a-z_].+"
+          minLength: 3
+      - name: h2
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 3
+    get:
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: string
   '/inline/simple/object':
     post:
       requestBody:
@@ -436,7 +491,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListType'
+  '/allOf':
+    post:
+      requestBody:
+        description: list type in
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HasFooBarBazQuux'
+      responses:
+        "204":
+          description: fine
 
+  '/validation/test':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidatedObj'
+      responses:
+        "204":
+          description: ok
 
 components:
   parameters:
@@ -513,6 +589,7 @@ components:
           type: string
         s:
           type: string
+          format: byte
         i:
           type: integer
         d:
@@ -577,7 +654,9 @@ components:
         i:
           type: integer
         e:
-          $ref: '#/components/schemas/AnEnum'
+          allOf:
+            - $ref: '#/components/schemas/AnEnum'
+          default: Foo
         absent:
           type: string
     AnEnum:
@@ -678,3 +757,136 @@ components:
       type: array
       items:
         type: string
+    HasFoo:
+      title: HasFoo
+      type: object
+      properties:
+        foo:
+          type: string
+    HasBar:
+      title: HasBar
+      type: object
+      required:
+        - bar
+      properties:
+        bar:
+          type: string
+    HasBaz:
+      title: HasBaz
+      type: object
+      required:
+        - baz
+      properties:
+        baz:
+          type: integer
+    HasFooBarBazQuux:
+      title: HasFooBarBazQuux
+      allOf:
+        - $ref: '#/components/schemas/HasFoo'
+        - $ref: '#/components/schemas/HasBar'
+        - $ref: '#/components/schemas/HasBaz'
+        - title: HasQuux
+          type: object
+          properties:
+            quux:
+              type: integer
+    ValidatedOneOfA:
+      title: ValidatedOneOfA
+      type: object
+      required:
+        - s
+      properties:
+        s:
+          type: string
+          pattern: 'i+.+'
+    ValidatedOneOfB:
+      title: ValidatedOneOfB
+      type: object
+      properties:
+        i:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: false
+    ValidatedOneOfC:
+      title: ValidatedOneOfC
+      type: object
+      properties:
+        j:
+          type: integer
+    ValidatedOneOf:
+      title: ValidatedOneOf
+      oneOf:
+        - $ref: '#/components/schemas/ValidatedOneOfA'
+        - $ref: '#/components/schemas/ValidatedOneOfB'
+        - $ref: '#/components/schemas/ValidatedOneOfC'
+      discriminator:
+        propertyName: type
+    ValidatedRecursive:
+      title: ValidatedRecursive
+      type: object
+      properties:
+        self:
+          allOf:
+            - type: array
+              maxItems: 3
+              items:
+                $ref: '#/components/schemas/ValidatedRecursive'
+          default:
+            - self: [ ]
+    ValidatedSubObj:
+      title: ValidatedSubObj
+      type: object
+      required:
+        - i
+      properties:
+        i:
+          type: string
+          pattern: 'i+.+'
+    ValidatedObj:
+      title: ValidatedObj
+      type: object
+      required:
+        - foo
+        - bar
+      properties:
+        foo:
+          type: string
+          maxLength: 128
+        bar:
+          allOf:
+            - $ref: '#/components/schemas/ValidatedSubObj'
+          default:
+            i: "i..."
+        baz:
+          $ref: '#/components/schemas/ValidatedSubObj'
+        quux:
+          type: string
+          maxLength: 128
+        map:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+            maximum: 900
+            exclusiveMaximum: true
+          minProperties: 3
+          maxProperties: 12
+        arr:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 12
+            exclusiveMinimum: true
+            multipleOf: 3
+          maxItems: 9
+        set:
+          type: array
+          items:
+            type: string
+          maxItems: 9
+          uniqueItems: true
+        oneOf:
+          $ref: '#/components/schemas/ValidatedOneOf'
+        rec:
+          $ref: '#/components/schemas/ValidatedRecursive'

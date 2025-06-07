@@ -34,6 +34,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiValidateNonDiscriminatedOneOfs.value,
       openapiMaxSchemasPerFile.value,
       openapiGenerateEndpointTypes.value,
+      openapiDisableValidatorGeneration.value,
+      openapiUseCustomJsoniterSerdes.value,
       openapiAdditionalPackages.value
     )
   def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
@@ -48,6 +50,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiAdditionalPackages := Nil,
     openapiStreamingImplementation := "fs2",
     openapiGenerateEndpointTypes := false,
+    openapiDisableValidatorGeneration := false,
+    openapiUseCustomJsoniterSerdes := false,
     standardParamSetting
   )
 
@@ -79,12 +83,26 @@ object OpenapiCodegenPlugin extends AutoPlugin {
               c.validateNonDiscriminatedOneOfs,
               c.maxSchemasPerFile,
               c.generateEndpointTypes,
+              c.disableValidatorGeneration,
+              c.useCustomJsoniterSerdes,
               srcDir,
               taskStreams.cacheDirectory,
               sv.startsWith("3"),
               directoryName
             )
-          (genTask(c.swaggerFile, c.packageName).file +: c.additionalPackages.map { case (pkg, defns) =>
+
+          val overriddenDefaultLocation = c.additionalPackages.find(_._2 == c.swaggerFile)
+          val defaultIsRedeclared = overriddenDefaultLocation.isDefined
+          val maybeDefaultFileTask = {
+            if (defaultIsRedeclared) {
+              System.err.println(s"WARN: Default swagger file is redeclared. Writing to ${overriddenDefaultLocation.get._1}")
+              Nil
+            } else if (!c.swaggerFile.exists() && c.additionalPackages.nonEmpty) {
+              System.err.println(s"WARN: File not found: ${c.swaggerFile.toPath}. Skipping default, only writing additional packages.")
+              Nil
+            } else Seq(genTask(c.swaggerFile, c.packageName).file)
+          }
+          (maybeDefaultFileTask ++ c.additionalPackages.map { case (pkg, defns) =>
             genTask(defns, pkg, Some(pkg.replace('.', '/'))).file
           })
             .reduceLeft((l, r) => l.flatMap(_l => r.map(_l ++ _)))

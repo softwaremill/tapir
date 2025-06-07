@@ -1,33 +1,12 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{
-  OpenapiDocument,
-  OpenapiParameter,
-  OpenapiPath,
-  OpenapiPathMethod,
-  OpenapiRequestBody,
-  OpenapiRequestBodyContent,
-  OpenapiRequestBodyDefn,
-  OpenapiResponse,
-  OpenapiResponseContent,
-  OpenapiResponseDef,
-  Resolved
-}
-import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
-  OpenapiSecuritySchemeApiKeyType,
-  OpenapiSecuritySchemeBasicType,
-  OpenapiSecuritySchemeBearerType
-}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  OpenapiSchemaArray,
-  OpenapiSchemaBinary,
-  OpenapiSchemaField,
-  OpenapiSchemaObject,
-  OpenapiSchemaRef,
-  OpenapiSchemaString
-}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiPathMethod, OpenapiRequestBody, OpenapiRequestBodyContent, OpenapiRequestBodyDefn, OpenapiResponse, OpenapiResponseContent, OpenapiResponseDef, Resolved}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeBasicType, OpenapiSecuritySchemeBearerType}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaBinary, OpenapiSchemaField, OpenapiSchemaObject, OpenapiSchemaRef, OpenapiSchemaString}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
+
+import scala.collection.mutable
 
 class EndpointGeneratorSpec extends CompileCheckTestBase {
 
@@ -65,7 +44,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null,
       Nil
     )
-    val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
+    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
         .endpointDefs(
           doc,
@@ -74,7 +53,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -154,7 +135,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    BasicGenerator.imports(JsonSerdeLib.Circe) ++
+    RootGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
         .endpointDefs(
           doc,
@@ -163,7 +144,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true
         )
         .endpointDecls(None) shouldCompile ()
   }
@@ -210,7 +193,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null,
       Nil
     )
-    val generatedCode = BasicGenerator.imports(JsonSerdeLib.Circe) ++
+    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) ++
       new EndpointGenerator()
         .endpointDefs(
           doc,
@@ -219,7 +202,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
           streamingImplementation = StreamingImplementation.FS2,
-          generateEndpointTypes = false
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true
         )
         .endpointDecls(None)
     generatedCode should include(
@@ -268,7 +253,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
         OpenapiComponent(
           schemas = Map(
             "FileUpload" -> OpenapiSchemaObject(
-              properties = Map(
+              properties = mutable.LinkedHashMap(
                 "file" -> OpenapiSchemaField(OpenapiSchemaBinary(false), None)
               ),
               required = Seq("file"),
@@ -279,7 +264,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    val generatedCode = BasicGenerator.generateObjects(
+    val generatedCode = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
@@ -290,7 +275,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      generateEndpointTypes = false
+      generateEndpointTypes = false,
+      generateValidators = true,
+      useCustomJsoniterSerdes = true
     )("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
@@ -303,7 +290,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
 
   it should "generate attributes for specification extensions on path and operation objects" in {
     val doc = TestHelpers.specificationExtensionDocs
-    val generatedCode = BasicGenerator.generateObjects(
+    val generatedCode = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
@@ -314,7 +301,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       validateNonDiscriminatedOneOfs = true,
       maxSchemasPerFile = 400,
       streamingImplementation = "fs2",
-      generateEndpointTypes = false
+      generateEndpointTypes = false,
+      generateValidators = true,
+      useCustomJsoniterSerdes = true
     )("TapirGeneratedEndpoints")
     generatedCode shouldCompile ()
     val expectedAttrDecls = Seq(

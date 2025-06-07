@@ -1,7 +1,7 @@
 // {cat=Streaming; effects=cats-effect; server=http4s}: Respond with an fs2 stream, or with an error, represented as a failed effect in the business logic
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.24
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.24
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.28
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.28
 //> using dep org.http4s::http4s-ember-server:0.23.30
 
 package sttp.tapir.examples.streaming

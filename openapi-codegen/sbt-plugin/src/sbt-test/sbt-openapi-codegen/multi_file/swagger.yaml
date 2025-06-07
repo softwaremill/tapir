@@ -1,0 +1,57 @@
+openapi: 3.1.0
+info:
+  title: My Bookshop
+  version: '1.0'
+paths:
+  /books/{genre}/{year}:
+    get:
+      operationId: getBooksGenreYear
+      parameters:
+      - name: genre
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: year
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: limit
+        in: query
+        description: Maximum number of books to retrieve
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: X-Auth-Token
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+        '400':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Book:
+      title: Book
+      required:
+      - title
+      type: object
+      properties:
+        title:
+          type: string

@@ -1,0 +1,51 @@
+package sttp.tapir.generated
+
+object TapirGeneratedEndpointsJsonSerdes {
+  import sttp.tapir.generated.TapirGeneratedEndpoints._
+  import sttp.tapir.generic.auto._
+  implicit val byteStringJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ByteString] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ByteString] {
+    def nullValue: ByteString = Array.empty[Byte]
+    def decodeValue(in: com.github.plokhotnyuk.jsoniter_scala.core.JsonReader, default: ByteString): ByteString =
+      toByteString(java.util.Base64.getDecoder.decode(in.readString("")))
+    def encodeValue(x: ByteString, out: com.github.plokhotnyuk.jsoniter_scala.core.JsonWriter): _root_.scala.Unit =
+      out.writeVal(java.util.Base64.getEncoder.encodeToString(x))
+  }
+
+  implicit def seqCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[List[T]] =
+    com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[List[T]]
+  implicit def optionCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Option[T]] =
+    com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[Option[T]]
+
+  implicit lazy val aDTWithDiscriminatorCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithDiscriminator] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {
+    case "SubtypeWithD1" => "SubA"
+    case "SubtypeWithD2" => "SubB"}))
+
+  implicit lazy val subtypeWithoutD1JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD1] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true))
+  implicit lazy val aDTWithDiscriminatorNoMappingCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithDiscriminatorNoMapping] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))
+  implicit lazy val subtypeWithoutD3JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD3] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true))
+  implicit lazy val subtypeWithoutD2JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD2] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true))
+
+  implicit lazy val anEnumJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[AnEnum] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withDiscriminatorFieldName(scala.None))
+  implicit lazy val aDTWithoutDiscriminatorCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithoutDiscriminator] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithoutDiscriminator] {
+    def decodeValue(in: com.github.plokhotnyuk.jsoniter_scala.core.JsonReader, default: ADTWithoutDiscriminator): ADTWithoutDiscriminator = {
+      List(
+        subtypeWithoutD1JsonCodec,
+        subtypeWithoutD2JsonCodec,
+        subtypeWithoutD3JsonCodec)
+        .foldLeft(Option.empty[ADTWithoutDiscriminator]) {
+          case (Some(v), _) => Some(v)
+          case (None, next) =>
+            in.setMark()
+            scala.util.Try(next.asInstanceOf[com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithoutDiscriminator]].decodeValue(in, default))
+              .fold(_ => { in.rollbackToMark(); None }, Some(_))
+        }.getOrElse(throw new RuntimeException("Unable to decode json to untagged ADT type ADTWithoutDiscriminator"))
+    }
+    def encodeValue(x: ADTWithoutDiscriminator, out: com.github.plokhotnyuk.jsoniter_scala.core.JsonWriter): Unit = x match {
+      case x: SubtypeWithoutD1 => subtypeWithoutD1JsonCodec.encodeValue(x, out)
+      case x: SubtypeWithoutD2 => subtypeWithoutD2JsonCodec.encodeValue(x, out)
+      case x: SubtypeWithoutD3 => subtypeWithoutD3JsonCodec.encodeValue(x, out)
+    }
+  
+    def nullValue: ADTWithoutDiscriminator = subtypeWithoutD1JsonCodec.nullValue
+  }
+}

@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.11.24"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.11.33"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.24"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.33"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.11.24"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.11.33"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.11.24"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.11.33"
 ```
 
 Then, use:
@@ -155,11 +155,38 @@ object WebSocketsNettyCatsServer extends ResourceApp.Forever {
 
 ### tapir-netty-server-sync
 
-In the Loom-based backend, Tapir uses [Ox](https://ox.softwaremill.com) to manage concurrency, and your transformation pipeline should be represented as `Ox ?=> Source[A] => Source[B]`. Any forks started within this function will be run under a safely isolated internal scope.
+In the Loom-based backend, Tapir uses [Ox](https://ox.softwaremill.com) to manage concurrency, and your transformation pipeline should be represented as `Flow[A] => Flow[B]`. Any forks started within this function will be run under a safely isolated internal scope.
 See [examples/websocket/WebSocketNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/websocket/WebSocketNettySyncServer.scala) for a full example.
 
 ```{note}
-The pipeline transform a source of incoming web socket messages (received from the client), into a source of outgoing web socket messages (which will be sent to the client), within some concurrency scope. Once the incoming source is done, the client has closed the connection. In that case, remember to close the outgoing source as well: otherwise the scope will leak and won't be closed. An error will be logged if the outgoing channel is not closed within a timeout after a close frame is received.
+The pipeline transforms a source of incoming web socket messages (received from the client), into a source of outgoing web socket messages (which will be sent to the client), within some concurrency scope. Once the incoming source is done, the client has closed the connection. In that case, remember to close the outgoing source as well: otherwise the scope will leak and won't be closed. An error will be logged if the outgoing channel is not closed within a timeout after a close frame is received.
+```
+
+## Server Sent Events
+
+### tapir-netty-server-sync
+
+The interpreter supports [SSE (Server Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events). 
+
+For example, to define an endpoint that returns event stream:
+
+```scala
+import ox.flow.Flow
+import sttp.model.sse.ServerSentEvent
+import sttp.tapir.*
+import sttp.tapir.server.netty.sync.serverSentEventsBody
+
+import scala.concurrent.duration.*
+
+val sseEndpoint = endpoint.get.out(serverSentEventsBody)
+
+val sseFlow = Flow
+  .tick(1.second) // emit a new event every second
+  .take(10)
+  .map(_ => s"Event at ${System.currentTimeMillis()}")
+  .map(event => ServerSentEvent(data = Some(event)))
+
+val sseServerEndpoint = sseEndpoint.handleSuccess(_ => sseFlow)
 ```
 
 ## Graceful shutdown

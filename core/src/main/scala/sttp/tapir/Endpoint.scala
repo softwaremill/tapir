@@ -255,7 +255,12 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
   def errorOutVariantsFromCurrent[E2 >: E](variants: EndpointOutput[E] => List[OneOfVariant[_ <: E2]]): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(EndpointOutput.OneOf[E2, E2](variants(errorOutput), Mapping.id), identity)
 
-  /** Adds a new error variant, where the current error output is represented as a `Left`, and the given one as a `Right`. */
+  /** Adds a new error variant, where the current error output is represented as a `Left`, and the given one as a `Right`.
+    *
+    * The `Right`-variant (corresponding to the parameter of this method, `o`) is matched first, which might be significant for client
+    * interpreters, when there is no upfront way to discriminate which branch to decode, except for attempting to decode the inputs
+    * (including the body).
+    */
   def errorOutEither[E2](o: EndpointOutput[E2]): EndpointType[A, I, Either[E, E2], O, R] =
     withErrorOutputVariant(
       oneOf(

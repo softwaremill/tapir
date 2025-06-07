@@ -13,6 +13,8 @@ case class OpenApiConfiguration(
     validateNonDiscriminatedOneOfs: Boolean,
     maxSchemasPerFile: Int,
     generateEndpointTypes: Boolean,
+    disableValidatorGeneration: Boolean,
+    useCustomJsoniterSerdes: Boolean,
     additionalPackages: List[(String, File)]
 )
 
@@ -31,6 +33,8 @@ trait OpenapiCodegenKeys {
   lazy val openapiAdditionalPackages = settingKey[List[(String, File)]]("Addition package -> spec mappings to generate.")
   lazy val openapiStreamingImplementation = settingKey[String]("Implementation for streamTextBody. Supports: akka, fs2, pekko, zio.")
   lazy val openapiGenerateEndpointTypes = settingKey[Boolean]("Whether to emit explicit types for endpoint defns")
+  lazy val openapiDisableValidatorGeneration = settingKey[Boolean]("Set to true to disable validator generation")
+  lazy val openapiUseCustomJsoniterSerdes = settingKey[Boolean]("Set to true to enable usage of custom jsoniter macros (decreases compilation flakiness, compatible with jsoniter-scala versions >= 2.36.x)")
   lazy val openapiOpenApiConfiguration =
     settingKey[OpenApiConfiguration]("Aggregation of other settings. Manually set value will be disregarded.")
 
