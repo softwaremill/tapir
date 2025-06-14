@@ -1402,6 +1402,7 @@ lazy val sttpStub4Server: ProjectMatrix = (projectMatrix in file("server/sttp-st
     name := "tapir-sttp-stub4-server"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
   .dependsOn(serverCore, sttpClient4, tests % Test)
 
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
