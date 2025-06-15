@@ -25,7 +25,7 @@ object Versions {
   val finatra = "24.2.0"
   val catbird = "21.12.0"
   val json4s = "4.0.7"
-  val metrics4Scala = "4.3.4"
+  val metrics4Scala = "4.3.5"
   val nettyReactiveStreams = "3.0.4"
   val ox = "0.6.0"
   val reactiveStreams = "1.0.4"
