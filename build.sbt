@@ -1402,6 +1402,7 @@ lazy val sttpStub4Server: ProjectMatrix = (projectMatrix in file("server/sttp-st
     name := "tapir-sttp-stub4-server"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
   .dependsOn(serverCore, sttpClient4, tests % Test)
 
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
@@ -2110,8 +2111,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.7.6" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.7.5" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.0" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.4" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.4" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
