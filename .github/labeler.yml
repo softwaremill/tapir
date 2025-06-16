@@ -13,4 +13,4 @@ labels:
       - "build.sbt"
       - "project/Versions.scala"
       - "project/plugins.sbt"
-      - "examples/src/main\scala/.*"
+      - "examples/src/main/scala/.*"
