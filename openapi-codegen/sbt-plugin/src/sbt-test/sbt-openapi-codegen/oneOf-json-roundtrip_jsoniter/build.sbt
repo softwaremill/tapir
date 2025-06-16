@@ -10,7 +10,7 @@ lazy val root = (project in file("."))
   )
 
 val catsXmlVersion = "0.0.20"
-val jsoniterScalaVersion = "2.36.0"
+val jsoniterScalaVersion = "2.36.4"
 val tapirVersion = "1.11.18"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,
@@ -54,6 +54,10 @@ TaskKey[Unit]("check") := {
     "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsXmlSerdes.scala",
     "ExpectedXmlSerdes.scala.txt"
   )
-  compare("json", "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala", "ExpectedJsonSerdes.scala.txt")
+  compare(
+    "json",
+    "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
+    "ExpectedJsonSerdes.scala.txt"
+  )
   ()
 }
