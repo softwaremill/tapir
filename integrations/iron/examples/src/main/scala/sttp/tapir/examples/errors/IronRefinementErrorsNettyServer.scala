@@ -3,11 +3,11 @@
 // scala 3.6.+ is required for iron
 //> using scala 3.6.4
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.33
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.33
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.33
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.34
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.34
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.34
 // FIXME: it's currenly after `sbt "project iron3" 'set version := "1.11.26"' publishLocal`
-//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.11.33
+//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.11.34
 //> using dep com.softwaremill.sttp.client4::core:4.0.3
 
 package sttp.tapir.examples.errors
