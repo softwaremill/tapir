@@ -44,6 +44,7 @@ if os.environ.get("READTHEDOCS", "") == "True":
 extensions = ['myst_parser', 'sphinx_rtd_theme']
 
 myst_enable_extensions = ['attrs_block']
+myst_heading_anchors = 3
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
