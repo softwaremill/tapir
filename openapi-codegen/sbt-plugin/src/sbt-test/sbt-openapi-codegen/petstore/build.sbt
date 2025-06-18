@@ -16,7 +16,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
   "io.circe" %% "circe-generic" % "0.14.14",
   "com.beachape" %% "enumeratum" % "1.7.5",
-  "com.beachape" %% "enumeratum-circe" % "1.7.5",
+  "com.beachape" %% "enumeratum-circe" % "1.9.0",
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
   "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
