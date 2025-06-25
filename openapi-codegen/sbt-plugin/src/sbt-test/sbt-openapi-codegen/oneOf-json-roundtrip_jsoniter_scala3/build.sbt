@@ -6,7 +6,8 @@ lazy val root = (project in file("."))
     openapiJsonSerdeLib := "jsoniter",
     openapiXmlSerdeLib := "none",
     openapiStreamingImplementation := "pekko",
-    openapiUseCustomJsoniterSerdes := false
+    openapiUseCustomJsoniterSerdes := false,
+    openapiGenerateEndpointTypes := true
   )
 
 val tapirVersion = "1.11.16"
@@ -19,7 +20,8 @@ libraryDependencies ++= Seq(
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.5",
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.5" % "compile-internal",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test
+  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test,
+  "com.softwaremill.sttp.client3" %% "http4s-backend" % "3.11.0" % Test
 )
 
 import sttp.tapir.sbt.OpenapiCodegenPlugin.autoImport.{openapiJsonSerdeLib, openapiUseHeadTagForObjectName}
@@ -48,6 +50,11 @@ TaskKey[Unit]("check") := {
     "json",
     "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
     "ExpectedJsonSerdes.scala.txt"
+  )
+  compare(
+    "schemas",
+    "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsSchemas.scala",
+    "ExpectedSchemas.scala.txt"
   )
   ()
 }

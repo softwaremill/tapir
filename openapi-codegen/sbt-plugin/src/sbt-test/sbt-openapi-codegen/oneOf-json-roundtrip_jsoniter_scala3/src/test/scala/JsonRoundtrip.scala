@@ -7,7 +7,13 @@ import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJsonSerdes}
 import sttp.tapir.generated.TapirGeneratedEndpoints.*
 import sttp.tapir.generated.TapirGeneratedEndpointsSchemas.*
-import TapirGeneratedEndpointsJsonSerdes._
+import TapirGeneratedEndpointsJsonSerdes.*
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
+import sttp.capabilities.pekko.PekkoStreams
+import sttp.monad.FutureMonad
+import sttp.tapir.DecodeResult
+import sttp.tapir.client.sttp.{SttpClientInterpreter, SttpClientOptions, WebSocketToPipe}
 import sttp.tapir.server.stub.TapirStubInterpreter
 
 import scala.concurrent.duration.DurationInt
@@ -142,6 +148,23 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         1.second
       )
     }
+  }
 
+  "schemas generated for recursive types are ok" in {
+    val interpreter = SttpClientInterpreter(SttpClientOptions.default)
+    val route =
+      TapirGeneratedEndpoints.postRecursiveSchemaEndpoint
+        .serverLogicPure[Future](n => Right(Node("parent", Option(Seq(n)))))
+    val stub = TapirStubInterpreter(SttpBackendStub[Future, Any](new FutureMonad()))
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+    val req = interpreter
+      .toRequest(TapirGeneratedEndpoints.postRecursiveSchemaEndpoint, None)(WebSocketToPipe.webSocketsNotSupported[Any])(Node("leaf", None))
+    val resp = Await.result(stub.send(req), 1.second)
+    resp.body match {
+      case DecodeResult.Value(v) => v shouldEqual Right(Node("parent", Some(Seq(Node("leaf", None)))))
+      case err => fail(s"unexpected response: $err")
+    }
   }
 }
