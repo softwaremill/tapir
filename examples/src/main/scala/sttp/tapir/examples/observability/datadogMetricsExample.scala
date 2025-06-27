@@ -1,9 +1,9 @@
 // {cat=Observability; effects=Future; server=Netty; json=circe}: Reporting DataDog metrics
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.34
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.34
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.34
-//> using dep com.softwaremill.sttp.tapir::tapir-datadog-metrics:1.11.34
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.35
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.35
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.35
+//> using dep com.softwaremill.sttp.tapir::tapir-datadog-metrics:1.11.35
 //> using dep ch.qos.logback:logback-classic:1.5.17
 
 package sttp.tapir.examples.observability

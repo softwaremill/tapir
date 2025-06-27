@@ -1,9 +1,9 @@
 // {cat=WebSocket; effects=Future; server=Pekko HTTP}: Describe and implement a WebSocket endpoint
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.34
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.34
-//> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.11.34
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.34
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.35
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.35
+//> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.11.35
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.35
 //> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
 //> using dep com.softwaremill.sttp.client4::pekko-http-backend:4.0.0-RC3
 
