@@ -22,7 +22,6 @@ val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
 val codegenScalaVersions = List(scala2_12)
-val ironScalaVersion = "3.6.4"
 
 val examplesScalaVersion = scala3
 val documentationScalaVersion = scala3
@@ -177,7 +176,6 @@ lazy val rawAllAggregates = core.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
   iron.projectRefs ++
-  ironExamples.projectRefs ++
   zio.projectRefs ++
   newtype.projectRefs ++
   monixNewtype.projectRefs ++
@@ -679,7 +677,6 @@ lazy val iron: ProjectMatrix = (projectMatrix in file("integrations/iron"))
       "io.github.iltotore" %%% "iron" % Versions.iron,
       scalaTest.value % Test
     ),
-    scalaVersion := ironScalaVersion
   )
   .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
   .jsPlatform(scalaVersions = List(scala3), settings = commonJsSettings)
@@ -2155,19 +2152,6 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 
-// TODO: fold back to examples when new Scala 3 LTS is available
-lazy val ironExamples = (projectMatrix in file("integrations/iron/examples"))
-  .settings(
-    name := "iron-examples",
-    publishArtifact := false,
-    Compile / run / fork := true,
-    commonSettings,
-    verifyExamplesCompileUsingScalaCli := VerifyExamplesCompileUsingScalaCli(sLog.value, sourceDirectory.value),
-    scalaVersion := ironScalaVersion
-  )
-  .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
-  .dependsOn(iron, nettyServerCats, circeJson, sttpClient4)
-
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonSettings)
   .settings(
@@ -2207,6 +2191,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     http4sClient,
     http4sServer,
     http4sServerZio,
+    iron,
     jdkhttpServer,
     jsoniterScala,
     nettyServer,
