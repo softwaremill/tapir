@@ -15,7 +15,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
-  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
+  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
   "com.beachape" %% "enumeratum" % "1.9.0",
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.6",
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.6" % "compile-internal",
