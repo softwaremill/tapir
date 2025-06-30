@@ -8,6 +8,7 @@ import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
+import scala.concurrent.Future
 
 import scala.concurrent.Future
 
@@ -22,18 +23,14 @@ abstract class SttpAkkaClientTests[R >: WebSockets with AkkaStreams] extends Cli
       securityArgs: A,
       args: I,
       scheme: String = "http"
-  ): IO[Either[E, O]] = {
+  ): Future[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    IO.fromFuture(
-      IO(
-        SttpClientInterpreter()
-          .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
-          .apply(securityArgs)
-          .apply(args)
-          .send(backend)
-          .map(_.body)
-      )
-    )
+    SttpClientInterpreter()
+      .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
   }
 
   override def safeSend[A, I, E, O](
@@ -41,17 +38,13 @@ abstract class SttpAkkaClientTests[R >: WebSockets with AkkaStreams] extends Cli
       port: Port,
       securityArgs: A,
       args: I
-  ): IO[DecodeResult[Either[E, O]]] = {
+  ): Future[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    IO.fromFuture(
-      IO(
-        SttpClientInterpreter()
-          .toSecureRequest(e, Some(uri"http://localhost:$port"))
-          .apply(securityArgs)
-          .apply(args)
-          .send(backend)
-          .map(_.body)
-      )
-    )
+    SttpClientInterpreter()
+      .toSecureRequest(e, Some(uri"http://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
   }
 }
