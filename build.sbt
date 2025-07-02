@@ -2081,7 +2081,7 @@ lazy val play29Client: ProjectMatrix = (projectMatrix in file("client/play29-cli
   .settings(
     name := "tapir-play29-client",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-ahc-ws-standalone" % Versions.play29Client,
+      "org.playframework" %% "play-ahc-ws-standalone" % Versions.play29Client,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
     )
