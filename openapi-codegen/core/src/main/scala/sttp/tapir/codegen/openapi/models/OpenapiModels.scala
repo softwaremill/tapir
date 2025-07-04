@@ -12,6 +12,7 @@ import OpenapiSchemaType.{
 }
 import io.circe.Json
 import sttp.tapir.codegen.RootGenerator.strippedToCamelCase
+import sttp.tapir.codegen.openapi.models.GenerationDirectives.{forceEager, forceStreaming}
 import sttp.tapir.codegen.util.MapUtils
 
 import scala.collection.mutable
@@ -129,10 +130,13 @@ object OpenapiModels {
       this.copy(parameters = filteredParents ++ resolved)
     }
     val tapirCodegenDirectives: Set[String] = {
-      specificationExtensions
+      val readDirectives = specificationExtensions
         .collect { case (GenerationDirectives.extensionKey, json) => json.asArray.toSeq.flatMap(_.flatMap(_.asString)) }
         .flatten
         .toSet
+      if (readDirectives.contains(forceEager) && readDirectives.contains(forceStreaming))
+        throw new IllegalArgumentException(s"May not have both $forceEager and $forceStreaming directives on same endpoint")
+      readDirectives
     }
   }
 
