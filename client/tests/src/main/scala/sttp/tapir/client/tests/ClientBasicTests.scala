@@ -60,7 +60,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         port,
         (),
         List("plum", "watermelon", "apple")
-      ).unsafeToFuture()
+      )
         .map(
           _.toOption.get should contain theSameElementsAs (
             // The fetch API merges multiple header values having the same name into a single comma separated value
@@ -79,7 +79,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
           port,
           (),
           (23, "pomegranate")
-        ).unsafeToFuture().map(_.toOption.get.head.split(" ;") should contain theSameElementsAs "etanargemop=2c ;32=1c".split(" ;"))
+        ).map(_.toOption.get.head.split(" ;") should contain theSameElementsAs "etanargemop=2c ;32=1c".split(" ;"))
       }
     }
     // TODO: test root path
@@ -130,7 +130,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         port,
         (),
         List(sttp.model.Header("X-Fruit", "apple"), sttp.model.Header("Y-Fruit", "Orange"))
-      ).unsafeToFuture()
+      )
         .map(_.toOption.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO")))
     }
 
@@ -138,7 +138,6 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     if (!platformIsScalaJS && !platformIsScalaNative) {
       test(in_json_out_headers.showDetail) {
         send(in_json_out_headers, port, (), FruitAmount("apple", 10))
-          .unsafeToFuture()
           .map(_.toOption.get should contain(sttp.model.Header("Content-Type", "application/json".reverse)))
       }
     }
@@ -147,7 +146,6 @@ trait ClientBasicTests { this: ClientTests[Any] =>
 
     test(in_fixed_header_out_string.showDetail) {
       send(in_fixed_header_out_string, port, (), ())
-        .unsafeToFuture()
         .map(_ shouldBe Right("Location: secret"))
     }
 
@@ -155,7 +153,6 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     if (!platformIsScalaJS) {
       test("not existing endpoint, with error output not matching 404") {
         safeSend(not_existing_endpoint, port, (), ())
-          .unsafeToFuture()
           .map(_ should matchPattern { case DecodeResult.Mismatch(_, _) =>
           })
       }
