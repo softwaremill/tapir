@@ -482,6 +482,9 @@ paths:
                   bar:
                     type: string
                     format: uuid
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ValidatedObj'
     put:
       x-tapir-codegen-directives:
         - force-streaming
