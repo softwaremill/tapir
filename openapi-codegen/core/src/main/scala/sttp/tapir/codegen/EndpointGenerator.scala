@@ -26,7 +26,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaString
 }
 import sttp.tapir.codegen.openapi.models._
-import sttp.tapir.codegen.openapi.models.GenerationDirectives.{jsonBodyAsString, securityPrefixKey}
+import sttp.tapir.codegen.openapi.models.GenerationDirectives.{forceEager, forceStreaming, jsonBodyAsString, securityPrefixKey}
 import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.{JavaEscape, Location}
 
@@ -458,7 +458,11 @@ class EndpointGenerator {
       .map { case (defn, enums, tpe) => (s".in($defn)", enums, tpe) }
       .unzip3
 
-    def mapContent(content: OpenapiRequestBodyContent, required: Boolean, forceEager: Boolean = false): (String, String, Option[String]) = {
+    def mapContent(
+        content: OpenapiRequestBodyContent,
+        required: Boolean,
+        preferEager: Boolean = false
+    ): (String, String, Option[String]) = {
       val schemaIsNullable = content.schema.nullable || (content.schema match {
         case ref: OpenapiSchemaRef =>
           doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
@@ -472,7 +476,8 @@ class EndpointGenerator {
           required && !schemaIsNullable,
           endpointName,
           "Request",
-          forceEager,
+          false,
+          preferEager,
           xmlSerdeLib,
           tapirCodegenDirectives,
           validators
@@ -605,7 +610,7 @@ class EndpointGenerator {
     }
 
     def bodyFmt(resp: OpenapiResponseDef, isErrorPosition: Boolean, optional: Boolean = false): (String, Option[String], Option[String]) = {
-      def wrapContent(content: OpenapiResponseContent, forceEager: Boolean = false) = {
+      def wrapContent(content: OpenapiResponseContent, preferEager: Boolean = false) = {
         val schemaIsNullable = content.schema.nullable || (content.schema match {
           case ref: OpenapiSchemaRef =>
             doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
@@ -619,7 +624,8 @@ class EndpointGenerator {
             !(optional || schemaIsNullable),
             endpointName,
             "Response",
-            isErrorPosition || forceEager,
+            isErrorPosition,
+            preferEager,
             xmlSerdeLib,
             tapirCodegenDirectives,
             validators
@@ -855,6 +861,8 @@ class EndpointGenerator {
               )
             )
             .map {
+              case (_, _, _) if !isErrorPosition && tapirCodegenDirectives.contains(forceStreaming) =>
+                capabilityType(streamingImplementation)
               case (_, _, true)                                                                    => traitName
               case (ct, _, _) if ct.startsWith("text/") && isErrorPosition                         => "String"
               case ("text/plain" | "text/html", _, _)                                              => "String"
@@ -862,8 +870,8 @@ class EndpointGenerator {
               case (ct, r: OpenapiSchemaRef, _) if mappable.contains(ct)                           => r.stripped
               case (ct, x: OpenapiSchemaSimpleType, _) if mappable.contains(ct)                    => mapSchemaSimpleTypeToType(x)._1
               case (ct, x, _) if mappable.contains(ct) => bail(s"Unexpected oneOf elem type $x with content type $ct")
-              case (_, _, _) if isErrorPosition        => "Array[Byte]"
-              case (_, _, _)                           => capabilityType(streamingImplementation)
+              case (_, _, _) if isErrorPosition || tapirCodegenDirectives.contains(forceEager) => "Array[Byte]"
+              case (_, _, _)                                                                   => capabilityType(streamingImplementation)
             }
             .distinct
           val commmonType = {
@@ -921,7 +929,8 @@ class EndpointGenerator {
       required: Boolean,
       endpointName: String,
       position: String,
-      forceEager: Boolean, // no streaming support for errorOut
+      isError: Boolean, // no streaming support for errorOut
+      defaultEager: Boolean,
       xmlSerdeLib: XmlSerdeLib,
       tapirCodegenDirectives: Set[String],
       validators: ValidationDefns
@@ -943,6 +952,8 @@ class EndpointGenerator {
     }
     def v(tpe: String, r: Boolean) = vRef(schema, r)
     contentType match {
+      case any if tapirCodegenDirectives.contains(forceStreaming) && !isError =>
+        failoverBinaryCase(endpointName, position, any, schema, false, streamingImplementation)
       case "text/plain" =>
         MappedContentType("stringBody", "String")
       case "text/html" =>
@@ -995,11 +1006,21 @@ class EndpointGenerator {
             MappedContentType(s"multipartBody[$inlineClassName]" + v(inlineClassName, required), inlineClassName, inlineClassDefn)
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
-      case other => failoverBinaryCase(other, schema, forceEager, streamingImplementation)
-      case x     => bail(s"Not all content types supported! Found $x")
+      case other =>
+        failoverBinaryCase(
+          endpointName,
+          position,
+          other,
+          schema,
+          isError || defaultEager || tapirCodegenDirectives.contains(forceEager),
+          streamingImplementation
+        )
+      case x => bail(s"Not all content types supported! Found $x")
     }
   }
   private def failoverBinaryCase(
+      endpointName: String,
+      position: String,
       contentType: String,
       schema: OpenapiSchemaType,
       isErrorPosition: Boolean,
@@ -1019,9 +1040,16 @@ class EndpointGenerator {
       case o                          => s"EndpointIO.Body(RawBodyType.ByteArrayBody, ${codec("Array[Byte]", o)}, EndpointIO.Info.empty)"
     }
     def streamingBody = contentType match {
-      case "application/octet-stream" => "CodecFormat.OctetStream()"
-      case "application/xml"          => "CodecFormat.Xml()"
-      case o                          => s"`${o}CodecFormat`()"
+      case "text/plain"                        => "CodecFormat.TextPlain()"
+      case "text/html"                         => "CodecFormat.TextHtml()"
+      case "multipart/form-data"               => "CodecFormat.MultipartFormData()"
+      case "application/grpc"                  => "CodecFormat.Grpc()"
+      case "application/json"                  => "CodecFormat.Json()"
+      case "application/octet-stream"          => "CodecFormat.OctetStream()"
+      case "application/xml"                   => "CodecFormat.Xml()"
+      case "application/x-www-form-urlencoded" => "CodecFormat.XWwwFormUrlencoded()"
+      case "application/zip"                   => "CodecFormat.Zip()"
+      case o                                   => s"`${o}CodecFormat`()"
     }
     if (isErrorPosition) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")
     else {
@@ -1031,19 +1059,20 @@ class EndpointGenerator {
         case _: OpenapiSchemaString =>
           MappedContentType(s"streamTextBody($capability)($streamingBody)", tpe)
         case schema =>
-          val outT = schema match {
+          val (outT, maybeInlineDefn) = schema match {
             case st: OpenapiSchemaSimpleType =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
-              t
+              t -> None
             case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
-              s"List[$t]"
+              s"List[$t]" -> None
             case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _, _) =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
-              s"Map[String, $t]"
-            case x => bail(s"Can't create this param as output (found $x)")
+              s"Map[String, $t]" -> None
+            case o: OpenapiSchemaObject => inlineDefn(endpointName, position, o)
+            case x                      => bail(s"Can't create this param as output (found $x)")
           }
-          MappedContentType(s"streamBody($capability)(Schema.binary[$outT], $streamingBody)", tpe)
+          MappedContentType(s"streamBody($capability)(Schema.binary[$outT], $streamingBody)", tpe, inlineDefns = maybeInlineDefn)
       }
     }
   }
