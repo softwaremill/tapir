@@ -98,6 +98,8 @@ Supported specifications are:
 name                 description
 ==================== ===================================================================================================================================
 json-body-as-string  If present on an operation, all application/json requests and responses will be interpreted mapped to a string with stringJsonBody
+force-eager          If present on an operation, all content types will be forced to eager, even if the default implementation is streaming
+force-streaming      If present on an operation, all content types will be forced to streaming, even if the default implementation is eager, unless it is in error position (which is always eager)
 ==================== ===================================================================================================================================
 ```
 

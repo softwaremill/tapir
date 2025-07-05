@@ -64,7 +64,8 @@ object TapirGeneratedEndpoints {
 
 
 
-  lazy val getBooksGenreYear =
+  type GetBooksGenreYearEndpoint = Endpoint[Unit, (String, Int, Int, String), String, List[Book], Any]
+  lazy val getBooksGenreYear: GetBooksGenreYearEndpoint =
     endpoint
       .name("getBooksGenreYear")
       .get
