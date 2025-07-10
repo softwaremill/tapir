@@ -30,9 +30,9 @@ import ox.either.*
   val streamPeopleEndpoint = endpoint.post
     .in("count")
     .in(
-      // Construing the body directly using the EndpointIO.Body data structure, instead of the helper methods (such as
-      // inputStreamBody or binaryBody), so that we can provide a custom codec format (JSON) and schema (an array of
-      // persons). That way, the documentation is properly generated, even though the format is only enforced by the
+      // Constructing the body directly using the EndpointIO.Body data structure, instead of the helper methods (such
+      // as inputStreamBody or binaryBody), so that we can provide a custom codec format (JSON) and schema (a person
+      // array). That way, the documentation is properly generated, even though the format is only enforced by the
       // endpoint's logic, not by Tapir's library code.
       EndpointIO.Body(
         RawBodyType.InputStreamBody,
