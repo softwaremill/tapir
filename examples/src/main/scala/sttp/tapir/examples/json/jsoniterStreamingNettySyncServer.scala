@@ -1,14 +1,11 @@
 // {cat=JSON; effects=Direct; server=Netty; JSON=jsoniter; docs=Swagger UI}: Receive JSON, parse it in a streaming way, expose documentation
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.35
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.11.35
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.35
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.35
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.36
+//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.11.36
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.36
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.36
 //> using dep ch.qos.logback:logback-classic:1.5.18
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.36.7
-
-// TODO: remove when tapir 1.11.36 is released
-//> using dep com.softwaremill.ox::core:0.7.1
 
 package sttp.tapir.examples.json
 
