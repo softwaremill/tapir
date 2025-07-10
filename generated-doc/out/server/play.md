@@ -6,19 +6,19 @@ See the [Play framework documentation](https://www.playframework.com/documentati
 To expose an endpoint as a [play-server](https://www.playframework.com/), using **Play 2.9 with Akka**, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play29-server" % "1.11.35"
+"com.softwaremill.sttp.tapir" %% "tapir-play29-server" % "1.11.36"
 ```
 
 and (if you don't already depend on Play)
 
 ```scala
-"org.playframework" %% "play-akka-http-server" % "2.9.7"
+"org.playframework" %% "play-akka-http-server" % "2.9.8"
 ```
 
 or
 
 ```scala
-"org.playframework" %% "play-netty-server" % "2.9.7"
+"org.playframework" %% "play-netty-server" % "2.9.8"
 ```
 
 depending on whether you want to use netty or Akka based http-server under the hood. Please note that Play 2.9 server is available only for Scala 2.13.
@@ -26,19 +26,19 @@ depending on whether you want to use netty or Akka based http-server under the h
 To expose an endpoint as a [play-server](https://www.playframework.com/), using **Play 3.0 with Pekko**, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.11.35"
+"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "1.11.36"
 ```
 
 and (if you don't already depend on Play)
 
 ```scala
-"org.playframework" %% "play-pekko-http-server" % "3.0.6"
+"org.playframework" %% "play-pekko-http-server" % "3.0.8"
 ```
 
 or
 
 ```scala
-"org.playframework" %% "play-netty-server" % "3.0.6"
+"org.playframework" %% "play-netty-server" % "3.0.8"
 ```
 
 depending on whether you want to use netty or Pekko based http-server under the hood.

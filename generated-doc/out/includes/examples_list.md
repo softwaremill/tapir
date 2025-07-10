@@ -38,6 +38,7 @@
 
 ## JSON
 
+* [Receive JSON, parse it in a streaming way, expose documentation](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/json/jsoniterStreamingNettySyncServer.scala) <span class="example-tag example-json">jsoniter</span> <span class="example-tag example-docs">Swagger UI</span> <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
 * [Return a JSON body which optionally serializes as `null`](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/json/circeNullBody.scala) <span class="example-tag example-json">circe</span> <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
 * [Return a JSON response with Circe and auto-dervied codecs](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/json/circeAutoDerivationNettySyncServer.scala) <span class="example-tag example-json">circe</span> <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
 * [Return a JSON response with Jsoniter](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/json/jsoniterNettySyncServer.scala) <span class="example-tag example-json">jsoniter</span> <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
