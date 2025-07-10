@@ -7,6 +7,9 @@
 //> using dep ch.qos.logback:logback-classic:1.5.18
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.36.7
 
+// TODO: remove when tapir 1.11.36 is released
+//> using dep com.softwaremill.ox::core:0.7.1
+
 package sttp.tapir.examples.json
 
 import com.github.plokhotnyuk.jsoniter_scala.core.*
@@ -20,6 +23,8 @@ import sttp.tapir.server.netty.sync.NettySyncServer
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 import java.io.InputStream
+import ox.either
+import ox.either.*
 
 @main def jsoniterStreamingNettySyncServer(): Unit =
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -41,7 +46,7 @@ import java.io.InputStream
     .errorOut(stringBody)
     .out(stringBody)
     .handle(is =>
-      try
+      either:
         val received = Flow
           .usingEmit(emit =>
             scanJsonArrayFromStream[Person](is) { p =>
@@ -53,12 +58,14 @@ import java.io.InputStream
           // Here, arbitrary streaming transformations can be applied; the entire request body is never
           // fully accumulated in memory.
           .runFold(0)(_ + _)
+          // Since the parsing is done in the endpoint's logic, any exceptions which are normally handled by Tapir's
+          // JSON integrations, and then by the decode failure handler, need to be done manually here: Tapir considers
+          // the body as already parsed & validated, even though it's only an InputStream.
+          .catching[JsonReaderException]
+          .ok()
 
-        Right(s"Received data for $received people")
-      // Since the parsing is done in the endpoint's logic, any exceptions which are normally handled by Tapir's JSON
-      // integrations, and then by the decode failure handler, need to be done manually here: Tapir considers the
-      // body as already parsed & validated, even though it's only an InputStream.
-      catch case error: JsonReaderException => Left(error.getMessage())
+        s"Received data for $received people"
+      .left.map(_.getMessage())
     )
 
   val docsEndpoints = SwaggerInterpreter().fromServerEndpoints(List(streamPeopleEndpoint), "People streaming", "1.0.0")
