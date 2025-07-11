@@ -1,7 +1,7 @@
 // {cat=Streaming; effects=ZIO; server=Netty}: Stream response as a ZIO stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.35
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-zio:1.11.35
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.36
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-zio:1.11.36
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.streaming
