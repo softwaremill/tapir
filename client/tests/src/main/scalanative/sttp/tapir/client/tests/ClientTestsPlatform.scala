@@ -1,6 +1,6 @@
 package sttp.tapir.client.tests
 
-import cats.effect.unsafe.IORuntime
+// import cats.effect.unsafe.IORuntime
 import scala.concurrent.ExecutionContext
 
 object ClientTestsPlatform {
@@ -13,8 +13,8 @@ object ClientTestsPlatform {
     def execute(runnable: Runnable): Unit = runnable.run()
     def reportFailure(cause: Throwable): Unit = cause.printStackTrace()
   }
-  private val globalRT: IORuntime = cats.effect.unsafe.implicits.global
-  val ioRT: IORuntime = IORuntime.apply(executionContext, executionContext, globalRT.scheduler, globalRT.shutdown, globalRT.config)
+  // private val globalRT: IORuntime = cats.effect.unsafe.implicits.global
+  // val ioRT: IORuntime = IORuntime.apply(executionContext, executionContext, globalRT.scheduler, globalRT.shutdown, globalRT.config)
 
   val platformIsScalaJS: Boolean = false
   val platformIsScalaNative: Boolean = true
