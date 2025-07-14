@@ -1,4 +1,4 @@
-package sttp.tapir.json.circe
+package sttp.tapir.json.tethys
 
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers

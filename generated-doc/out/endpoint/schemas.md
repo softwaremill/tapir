@@ -45,7 +45,7 @@ If you have a case class which contains some non-standard types (other than stri
 collections), you only need to provide implicit schemas for them. Using these, the rest will be derived automatically.
 
 Note that when using [datatypes integrations](integrations.md), respective schemas & codecs must also be imported to 
-enable the derivation, e.g. for [newtype](integrations.html#newtype-integration) you'll have to add
+enable the derivation, e.g. for [newtype](integrations.md#newtype-integration) you'll have to add
 `import sttp.tapir.codec.newtype.*` or extend `TapirCodecNewType`.
 
 ## Semi-automatic derivation
@@ -119,7 +119,7 @@ the union type, as it's not possible to generate a runtime check for the generic
 ### Derivation for string-based constant union types
 e.g. `type AorB = "a" | "b"`
 
-See [enumerations](enumerations.html#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
+See [enumerations](enumerations.md#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
 
 ### Derivation for generic case classes
 
@@ -218,8 +218,8 @@ encoded and decoded by the codec. E.g. when the schema is for a json body, the d
 configured in the json library, matching the configuration of the schema.
 
 Alternatively, instead of deriving schemas and json codecs separately, you can use the experimental
-[pickler](https://tapir.softwaremill.com/en/latest/endpoint/pickler.html) 
-module, which provides a higher level `Pickler` concept, which takes care of consistent derivation.  
+[pickler](pickler.md) module, which provides a higher level `Pickler` concept, which takes care of consistent
+derivation.
 ```
 
 ### Field discriminators

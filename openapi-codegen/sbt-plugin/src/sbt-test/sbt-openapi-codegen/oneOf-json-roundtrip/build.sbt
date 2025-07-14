@@ -13,11 +13,11 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % tapirVersion,
-  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
+  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
   "com.softwaremill.sttp.client3" %% "http4s-backend" % "3.11.0",
-  "io.circe" %% "circe-generic" % "0.14.13",
-  "com.beachape" %% "enumeratum" % "1.7.6",
-  "com.beachape" %% "enumeratum-circe" % "1.7.5",
+  "io.circe" %% "circe-generic" % "0.14.14",
+  "com.beachape" %% "enumeratum" % "1.9.0",
+  "com.beachape" %% "enumeratum-circe" % "1.9.0",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
 )

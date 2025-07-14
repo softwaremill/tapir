@@ -12,7 +12,6 @@ import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.EndpointExtensions.*
 import sttp.tapir.server.netty.sync.OxStreams
-import sttp.tapir.Endpoint
 import sttp.capabilities.WebSockets
 import scala.concurrent.duration._
 

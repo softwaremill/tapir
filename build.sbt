@@ -22,7 +22,6 @@ val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
 val codegenScalaVersions = List(scala2_12)
-val ironScalaVersion = "3.6.4"
 
 val examplesScalaVersion = scala3
 val documentationScalaVersion = scala3
@@ -177,7 +176,6 @@ lazy val rawAllAggregates = core.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
   iron.projectRefs ++
-  ironExamples.projectRefs ++
   zio.projectRefs ++
   newtype.projectRefs ++
   monixNewtype.projectRefs ++
@@ -560,10 +558,10 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.19.0",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.19.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
-      "io.github.classgraph" % "classgraph" % "4.8.179",
+      "io.github.classgraph" % "classgraph" % "4.8.180",
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
@@ -703,8 +701,7 @@ lazy val iron: ProjectMatrix = (projectMatrix in file("integrations/iron"))
     libraryDependencies ++= Seq(
       "io.github.iltotore" %%% "iron" % Versions.iron,
       scalaTest.value % Test
-    ),
-    scalaVersion := ironScalaVersion
+    )
   )
   .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
   .jsPlatform(scalaVersions = List(scala3), settings = commonJsSettings)
@@ -1032,7 +1029,7 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
   .settings(
     name := "tapir-pekko-grpc-examples",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-discovery" % "1.1.3",
+      "org.apache.pekko" %% "pekko-discovery" % "1.1.4",
       slf4j
     ),
     fork := true
@@ -1052,8 +1049,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.3.7",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.7",
+      "io.prometheus" % "prometheus-metrics-core" % "1.3.10",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.3.10",
       scalaTest.value % Test
     )
   )
@@ -1427,6 +1424,7 @@ lazy val sttpStub4Server: ProjectMatrix = (projectMatrix in file("server/sttp-st
     name := "tapir-sttp-stub4-server"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
   .dependsOn(serverCore, sttpClient4, tests % Test)
 
 lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
@@ -1559,7 +1557,8 @@ lazy val nettyServerSync: ProjectMatrix =
       useCoursier := false,
       Test / run / fork := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.ox" %% "core" % Versions.ox
+        "com.softwaremill.ox" %% "core" % Versions.ox,
+        "com.softwaremill.ox" %% "flow-reactive-streams" % Versions.ox
       )
     )
     .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
@@ -2143,10 +2142,10 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       scalaOrganization.value % "scala-reflect" % scalaVersion.value,
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
-      "com.beachape" %% "enumeratum" % "1.7.6" % Test,
-      "com.beachape" %% "enumeratum-circe" % "1.7.5" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.0" % Provided
+      "com.beachape" %% "enumeratum" % "1.9.0" % Test,
+      "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.7" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.7" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
@@ -2189,19 +2188,6 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 
-// TODO: fold back to examples when new Scala 3 LTS is available
-lazy val ironExamples = (projectMatrix in file("integrations/iron/examples"))
-  .settings(
-    name := "iron-examples",
-    publishArtifact := false,
-    Compile / run / fork := true,
-    commonSettings,
-    verifyExamplesCompileUsingScalaCli := VerifyExamplesCompileUsingScalaCli(sLog.value, sourceDirectory.value),
-    scalaVersion := ironScalaVersion
-  )
-  .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
-  .dependsOn(iron, nettyServerCats, circeJson, sttpClient4)
-
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonSettings)
   .settings(
@@ -2241,6 +2227,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     http4sClient,
     http4sServer,
     http4sServerZio,
+    iron,
     jdkhttpServer,
     jsoniterScala,
     nettyServer,
