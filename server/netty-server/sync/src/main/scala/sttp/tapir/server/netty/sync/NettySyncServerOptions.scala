@@ -41,7 +41,7 @@ object NettySyncServerOptions:
 
   private val log = LoggerFactory.getLogger(getClass.getName)
 
-  lazy val defaultServerLog: ServerLog[Identity] =
+  lazy val defaultServerLog: DefaultServerLog[Identity] =
     DefaultServerLog[Identity](
       doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,
