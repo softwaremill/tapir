@@ -130,7 +130,7 @@ case class NettySyncServer(
       (
         scalaPromise.future,
         () => {
-          jFuture.cancel(true)
+          jFuture.cancel(options.interruptServerLogicWhenRequestCancelled)
           Future.unit
         }
       )
