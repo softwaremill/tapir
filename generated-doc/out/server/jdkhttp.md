@@ -5,7 +5,7 @@ To expose endpoints using the
 (`com.sun.net.httpserver`), first add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-jdkhttp-server" % "1.11.37"
+"com.softwaremill.sttp.tapir" %% "tapir-jdkhttp-server" % "1.11.38"
 ```
 
 Then, import the package:
