@@ -507,6 +507,13 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
             .unsafeToFuture()
         }
       },
+      Test("should return a 404 when the single file from the given system path does not exist") {
+        withTestFilesDirectory { testDir =>
+          serveRoute(staticFileGetServerEndpoint[F]("test")(testDir.toPath.resolve("f_not_there").toFile.getAbsolutePath))
+            .use { port => get(port, List("test")).map(_.code shouldBe StatusCode.NotFound) }
+            .unsafeToFuture()
+        }
+      },
       Test("if an etag is present, should only return the resource if it doesn't match the etag") {
         serveRoute(staticResourcesGetServerEndpoint[F](emptyInput)(classLoader, "test"))
           .use { port =>

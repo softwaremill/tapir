@@ -7,7 +7,6 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.FileRange
 import sttp.tapir.RangeValue
-import sttp.tapir.files.StaticInput
 
 import java.io.File
 import java.net.URL
@@ -31,13 +30,14 @@ object Files {
   def get[F[_]](
       systemPath: String,
       options: FilesOptions[F] = FilesOptions.default[F]
-  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = { implicit monad => filesInput =>
-    MonadError[F]
-      .blocking(Paths.get(systemPath).toRealPath())
-      .flatMap(path => {
-        val resolveUrlFn: ResolveUrlFn = resolveSystemPathUrl(filesInput, options, path)
+  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
+    val systemPathAsPath = Paths.get(systemPath)
+
+    implicit monad =>
+      filesInput => {
+        val resolveUrlFn: ResolveUrlFn = resolveSystemPathUrl(filesInput, options, systemPathAsPath)
         files(filesInput, options, resolveUrlFn, fileRangeFromUrl)
-      })
+      }
   }
 
   def defaultEtag[F[_]]: MonadError[F] => Option[RangeValue] => URL => F[Option[ETag]] = monad => { range => url =>
