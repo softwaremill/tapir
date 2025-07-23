@@ -1,8 +1,8 @@
 // {cat=Static content; effects=Future; server=Pekko HTTP}: Serving static files from resources
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.37
-//> using dep com.softwaremill.sttp.tapir::tapir-files:1.11.37
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.37
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.38
+//> using dep com.softwaremill.sttp.tapir::tapir-files:1.11.38
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.38
 
 package sttp.tapir.examples.static_content
 
