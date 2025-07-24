@@ -30,13 +30,21 @@ object Files {
   def get[F[_]](
       systemPath: String,
       options: FilesOptions[F] = FilesOptions.default[F]
-  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = {
-    val systemPathAsPath = Paths.get(systemPath)
-
-    implicit monad =>
-      filesInput => {
-        val resolveUrlFn: ResolveUrlFn = resolveSystemPathUrl(filesInput, options, systemPathAsPath)
-        files(filesInput, options, resolveUrlFn, fileRangeFromUrl)
+  ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = { implicit monad => filesInput =>
+    MonadError[F]
+      .blocking {
+        // resolve the system path to a real path upfront, so that later security checks (that the user's request doesn't try to access
+        // files outside of the system path) work properly
+        val systemPathAsPath = Paths.get(systemPath)
+        if (JFiles.exists(systemPathAsPath, LinkOption.NOFOLLOW_LINKS)) Some(systemPathAsPath.toRealPath()) else None
+      }
+      .flatMap {
+        case Some(path) =>
+          val resolveUrlFn: ResolveUrlFn = resolveSystemPathUrl(filesInput, options, path)
+          files(filesInput, options, resolveUrlFn, fileRangeFromUrl)
+        case None =>
+          // if the system path doesn't exist, just return a 404
+          MonadError[F].unit(Left(StaticErrorOutput.NotFound))
       }
   }
 

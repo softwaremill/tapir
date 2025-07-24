@@ -507,6 +507,16 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
             .unsafeToFuture()
         }
       },
+      Test("should serve a single file from the given relative system path") {
+        withTestFilesDirectory { testDir =>
+          val cwd = System.getProperty("user.dir")
+          val relativePath = java.nio.file.Paths.get(cwd).relativize(testDir.toPath.resolve("f1")).toString
+
+          serveRoute(staticFileGetServerEndpoint[F]("test")(relativePath))
+            .use { port => get(port, List("test")).map(_.body shouldBe "f1 content") }
+            .unsafeToFuture()
+        }
+      },
       Test("should return a 404 when the single file from the given system path does not exist") {
         withTestFilesDirectory { testDir =>
           serveRoute(staticFileGetServerEndpoint[F]("test")(testDir.toPath.resolve("f_not_there").toFile.getAbsolutePath))
