@@ -510,7 +510,6 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       Test("should serve a single file from the given relative system path") {
         withTestFilesDirectory { testDir =>
           val cwd = System.getProperty("user.dir")
-          val f1 = testDir.toPath.resolve("f1").toFile.getAbsolutePath
           val relativePath = java.nio.file.Paths.get(cwd).relativize(testDir.toPath.resolve("f1")).toString
 
           serveRoute(staticFileGetServerEndpoint[F]("test")(relativePath))
