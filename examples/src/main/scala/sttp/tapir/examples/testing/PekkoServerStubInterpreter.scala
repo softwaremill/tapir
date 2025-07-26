@@ -1,8 +1,8 @@
 // {cat=Testing; effects=Future; server=Pekko HTTP}: Test endpoints using the TapirStubInterpreter
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.22
-//> using dep com.softwaremill.sttp.tapir::tapir-sttp-stub4-server:1.11.39
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.39
+//> using dep com.softwaremill.sttp.tapir::tapir-sttp-stub4-server:1.11.40
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.40
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC4
 //> using dep org.scalatest::scalatest:3.2.19
 
