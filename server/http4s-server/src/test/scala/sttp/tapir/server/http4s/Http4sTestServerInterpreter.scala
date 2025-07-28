@@ -29,7 +29,12 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   }
 
   private val anyAvailablePort = ip4s.Port.fromInt(0).get
-  private val serverBuilder = EmberServerBuilder.default[IO].withPort(anyAvailablePort)
+  private val serverBuilder = EmberServerBuilder
+    .default[IO]
+    .withPort(anyAvailablePort)
+    .withAdditionalSocketOptions(
+      List(fs2.io.net.SocketOption.noDelay(true)) // https://github.com/http4s/http4s/issues/7668
+    )
 
   def buildServer(
       makeService: WebSocketBuilder2[IO] => HttpApp[IO],
