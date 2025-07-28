@@ -28,7 +28,8 @@ import java.io.ByteArrayInputStream
 class ServerFilesTests[F[_], OPTIONS, ROUTE](
     serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
     backend: WebSocketStreamBackend[IO, Fs2Streams[IO]],
-    supportSettingContentLength: Boolean = true
+    supportSettingContentLength: Boolean = true,
+    supportContentLengthInHeadRequests: Boolean = true
 ) {
 
   private def get(port: Int, path: List[String]): IO[Response[String]] = basicRequest
@@ -42,6 +43,17 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
     .send(backend)
 
   private val classLoader = classOf[ServerFilesTests[F, OPTIONS, ROUTE]].getClassLoader
+
+  private def checkContentLengthInHeadResponse(headers: Seq[Header], expectedLength: String) = {
+    // https://github.com/softwaremill/tapir/issues/4702
+    // According to RFC 9110, server MAY send Content-Length header in response to HEAD request.
+    // For backends that follow the RFC strictly, we validate that the header has expected value only if it is present.
+    if (supportContentLengthInHeadRequests) {
+      headers contains Header(HeaderNames.ContentLength, expectedLength) shouldBe true
+    } else {
+      headers find (_.name == HeaderNames.ContentLength) forall (_.value == expectedLength) shouldBe true
+    }
+  }
 
   def tests(): List[Test] = {
     val baseTests = List(
@@ -99,7 +111,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
                 .map { r =>
                   r.code shouldBe StatusCode.Ok
                   r.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true
-                  r.headers contains Header(HeaderNames.ContentLength, file.length().toString) shouldBe true
+                  checkContentLengthInHeadResponse(headers = r.headers, expectedLength = file.length().toString)
                 }
             }
             .unsafeToFuture()
@@ -114,7 +126,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
                 .map { r =>
                   r.code shouldBe StatusCode.Ok
                   r.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true
-                  r.headers contains Header(HeaderNames.ContentLength, file.length().toString) shouldBe true
+                  checkContentLengthInHeadResponse(headers = r.headers, expectedLength = file.length().toString)
                 }
             }
             .unsafeToFuture()
@@ -127,7 +139,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
               .map { r =>
                 r.code shouldBe StatusCode.Ok
                 r.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true
-                r.headers contains Header(HeaderNames.ContentLength, "10") shouldBe true
+                checkContentLengthInHeadResponse(headers = r.headers, expectedLength = "10")
               }
           }
           .unsafeToFuture()
@@ -492,6 +504,23 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
         withTestFilesDirectory { testDir =>
           serveRoute(staticFileGetServerEndpoint[F]("test")(testDir.toPath.resolve("f1").toFile.getAbsolutePath))
             .use { port => get(port, List("test")).map(_.body shouldBe "f1 content") }
+            .unsafeToFuture()
+        }
+      },
+      Test("should serve a single file from the given relative system path") {
+        withTestFilesDirectory { testDir =>
+          val cwd = System.getProperty("user.dir")
+          val relativePath = java.nio.file.Paths.get(cwd).relativize(testDir.toPath.resolve("f1")).toString
+
+          serveRoute(staticFileGetServerEndpoint[F]("test")(relativePath))
+            .use { port => get(port, List("test")).map(_.body shouldBe "f1 content") }
+            .unsafeToFuture()
+        }
+      },
+      Test("should return a 404 when the single file from the given system path does not exist") {
+        withTestFilesDirectory { testDir =>
+          serveRoute(staticFileGetServerEndpoint[F]("test")(testDir.toPath.resolve("f_not_there").toFile.getAbsolutePath))
+            .use { port => get(port, List("test")).map(_.code shouldBe StatusCode.NotFound) }
             .unsafeToFuture()
         }
       },

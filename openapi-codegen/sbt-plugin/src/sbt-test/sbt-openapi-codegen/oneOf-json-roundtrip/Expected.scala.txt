@@ -16,6 +16,9 @@ object TapirGeneratedEndpoints {
   case class `application/zipCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "zip")
   }
+  case class `text/csvCodecFormat`() extends CodecFormat {
+    override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "text", subType = "csv")
+  }
   sealed trait Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn
   sealed trait Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
   case class Api_keySecurityIn(value: String) extends Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn with Bearer_or_api_key_or_api_key_and_Bearer_SecurityIn
@@ -230,6 +233,102 @@ object TapirGeneratedEndpoints {
   }
   case class PostJsonStringJsonBodyBody1Out(value: Array[Byte]) extends PostJsonStringJsonBodyBodyOut{
     override def `application/zip`: () => Array[Byte] = () => value
+  }
+
+  case class GetForceEagerRequest (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+  case class PostForceEagerRequest (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+  case class PostForceEagerResponse (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+  case class PatchForceEagerResponse (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+  case class GetForceStreamingRequest (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+  case class GetForceStreamingResponse (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+
+  sealed trait GetForceStreamingBodyOut extends Product with java.io.Serializable {
+    def `application/json`: () => GetForceStreamingResponse = () => throw new RuntimeException("Body for content type application/json not provided")
+    def `text/plain`: () => String = () => throw new RuntimeException("Body for content type text/plain not provided")
+  }
+  case class GetForceStreamingBodyOutFull (
+    override val `application/json`: () => GetForceStreamingResponse,
+    override val `text/plain`: () => String,
+  ) extends GetForceStreamingBodyOut
+  case class GetForceStreamingBodyGetForceStreamingResponseOut(value: GetForceStreamingResponse) extends GetForceStreamingBodyOut{
+    override def `application/json`: () => GetForceStreamingResponse = () => value
+  }
+  case class GetForceStreamingBodyStringOut(value: String) extends GetForceStreamingBodyOut{
+    override def `text/plain`: () => String = () => value
+  }
+
+  case class PutForceStreamingRequest (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+  case class PutForceStreamingResponse (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+  case class PostForceStreamingRequest (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+  case class PostForceStreamingResponse (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+
+  sealed trait PostForceStreamingBodyOut extends Product with java.io.Serializable {
+    def `application/json`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/json not provided")
+    def `text/plain`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/plain not provided")
+  }
+  case class PostForceStreamingBodyOutFull (
+    override val `application/json`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+    override val `text/plain`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+  ) extends PostForceStreamingBodyOut
+  case class PostForceStreamingBody0Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostForceStreamingBodyOut{
+    override def `application/json`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
+  }
+  case class PostForceStreamingBody1Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostForceStreamingBodyOut{
+    override def `text/plain`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
+  }
+
+  case class PatchForceStreamingRequest (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+  case class PatchForceStreamingResponse (
+    foo: String,
+    bar: Option[java.util.UUID] = None
+  )
+
+  sealed trait PatchForceStreamingBodyOut extends Product with java.io.Serializable {
+    def `application/json`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/json not provided")
+    def `text/plain`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/plain not provided")
+  }
+  case class PatchForceStreamingBodyOutFull (
+    override val `application/json`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+    override val `text/plain`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+  ) extends PatchForceStreamingBodyOut
+  case class PatchForceStreamingBody0Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PatchForceStreamingBodyOut{
+    override def `application/json`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
+  }
+  case class PatchForceStreamingBody1Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PatchForceStreamingBodyOut{
+    override def `text/plain`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
   }
 
   case class PutInlineSimpleObjectRequest (
@@ -483,6 +582,99 @@ object TapirGeneratedEndpoints {
       .in(header[String]("h2").validate(Validator.minLength(3)))
       .out(jsonBody[String].description("ok"))
 
+  type GetForceEagerEndpoint = Endpoint[String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, String, sttp.capabilities.pekko.PekkoStreams]
+  lazy val getForceEager: GetForceEagerEndpoint =
+    endpoint
+      .get
+      .in(("force" / "eager"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[GetForceEagerRequest], `text/csvCodecFormat`()))
+      .out(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)).description("An object"))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-resp-body-eager"))
+
+  type PutForceEagerEndpoint = Endpoint[String, String, Unit, String, Any]
+  lazy val putForceEager: PutForceEagerEndpoint =
+    endpoint
+      .put
+      .in(("force" / "eager"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)))
+      .out(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)).description("An object"))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-eager"))
+
+  type PostForceEagerEndpoint = Endpoint[String, Option[PostForceEagerRequest], Unit, PostForceEagerResponse, Any]
+  lazy val postForceEager: PostForceEagerEndpoint =
+    endpoint
+      .post
+      .in(("force" / "eager"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(jsonBody[Option[PostForceEagerRequest]])
+      .out(jsonBody[PostForceEagerResponse].description("An object"))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-eager"))
+
+  type PatchForceEagerEndpoint = Endpoint[String, String, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
+  lazy val patchForceEager: PatchForceEagerEndpoint =
+    endpoint
+      .patch
+      .in(("force" / "eager"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[PatchForceEagerResponse], `text/csvCodecFormat`()).description("An object"))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-req-body-eager"))
+
+  type GetForceStreamingEndpoint = Endpoint[String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, GetForceStreamingBodyOut, sttp.capabilities.pekko.PekkoStreams]
+  lazy val getForceStreaming: GetForceStreamingEndpoint =
+    endpoint
+      .get
+      .in(("force" / "streaming"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[GetForceStreamingRequest], CodecFormat.Json()))
+      .out(oneOfBody[GetForceStreamingBodyOut](
+        jsonBody[GetForceStreamingResponse].map(GetForceStreamingBodyGetForceStreamingResponseOut(_))(_.`application/json`())
+        .map(_.asInstanceOf[GetForceStreamingBodyOut])(p => GetForceStreamingBodyGetForceStreamingResponseOut(p.`application/json`())).description("An object"),
+        stringBody.map(GetForceStreamingBodyStringOut(_))(_.`text/plain`())
+        .map(_.asInstanceOf[GetForceStreamingBodyOut])(p => GetForceStreamingBodyStringOut(p.`text/plain`())).description("An object")))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-req-body-streaming"))
+
+  type PutForceStreamingEndpoint = Endpoint[String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
+  lazy val putForceStreaming: PutForceStreamingEndpoint =
+    endpoint
+      .put
+      .in(("force" / "streaming"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[PutForceStreamingRequest], `text/csvCodecFormat`()))
+      .errorOut(stringBody.description("An object").and(statusCode(sttp.model.StatusCode(404))))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[PutForceStreamingResponse], `text/csvCodecFormat`()).description("An object"))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-streaming"))
+
+  type PostForceStreamingEndpoint = Endpoint[String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, PostForceStreamingBodyOut, sttp.capabilities.pekko.PekkoStreams]
+  lazy val postForceStreaming: PostForceStreamingEndpoint =
+    endpoint
+      .post
+      .in(("force" / "streaming"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[PostForceStreamingRequest], CodecFormat.Json()))
+      .out(oneOfBody[PostForceStreamingBodyOut](
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[PostForceStreamingResponse], CodecFormat.Json()).map(PostForceStreamingBody0Out(_))(_.`application/json`())
+        .map(_.asInstanceOf[PostForceStreamingBodyOut])(p => PostForceStreamingBody0Out(p.`application/json`())).description("An object")),
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[ValidatedObj], CodecFormat.TextPlain()).map(PostForceStreamingBody1Out(_))(_.`text/plain`())
+        .map(_.asInstanceOf[PostForceStreamingBodyOut])(p => PostForceStreamingBody1Out(p.`text/plain`())).description("An object"))))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-streaming"))
+
+  type PatchForceStreamingEndpoint = Endpoint[String, Option[PatchForceStreamingRequest], Unit, PatchForceStreamingBodyOut, sttp.capabilities.pekko.PekkoStreams]
+  lazy val patchForceStreaming: PatchForceStreamingEndpoint =
+    endpoint
+      .patch
+      .in(("force" / "streaming"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .in(jsonBody[Option[PatchForceStreamingRequest]])
+      .out(oneOfBody[PatchForceStreamingBodyOut](
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[PatchForceStreamingResponse], CodecFormat.Json()).map(PatchForceStreamingBody0Out(_))(_.`application/json`())
+        .map(_.asInstanceOf[PatchForceStreamingBodyOut])(p => PatchForceStreamingBody0Out(p.`application/json`())).description("An object")),
+        sttp.tapir.EndpointIO.StreamBodyWrapper(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[ValidatedObj], CodecFormat.TextPlain()).map(PatchForceStreamingBody1Out(_))(_.`text/plain`())
+        .map(_.asInstanceOf[PatchForceStreamingBodyOut])(p => PatchForceStreamingBody1Out(p.`text/plain`())).description("An object"))))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-resp-body-streaming"))
+
   type PutInlineSimpleObjectEndpoint = Endpoint[String, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
@@ -546,7 +738,7 @@ object TapirGeneratedEndpoints {
       .out(statusCode(sttp.model.StatusCode(204)).description("ok"))
 
 
-  lazy val generatedEndpoints = List(getSecurityGroupSecurityGroupName, getSecurityGroupSecurityGroupNameMorePath, getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, postInlineEnumTest, getOneofErrorSecParamTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getOneofOptionTest, getHeadersTests, getPatternRestrictedObject, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postAllOf, postValidationTest)
+  lazy val generatedEndpoints = List(getSecurityGroupSecurityGroupName, getSecurityGroupSecurityGroupNameMorePath, getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, postInlineEnumTest, getOneofErrorSecParamTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getOneofOptionTest, getHeadersTests, getPatternRestrictedObject, getForceEager, putForceEager, postForceEager, patchForceEager, getForceStreaming, putForceStreaming, postForceStreaming, patchForceStreaming, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postAllOf, postValidationTest)
 
 
   object Servers {

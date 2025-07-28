@@ -12,6 +12,14 @@ import OpenapiSchemaType.{
 }
 import io.circe.Json
 import sttp.tapir.codegen.RootGenerator.strippedToCamelCase
+import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
+  forceEager,
+  forceReqEager,
+  forceReqStreaming,
+  forceRespEager,
+  forceRespStreaming,
+  forceStreaming
+}
 import sttp.tapir.codegen.util.MapUtils
 
 import scala.collection.mutable
@@ -129,10 +137,22 @@ object OpenapiModels {
       this.copy(parameters = filteredParents ++ resolved)
     }
     val tapirCodegenDirectives: Set[String] = {
-      specificationExtensions
+      val readDirectives = specificationExtensions
         .collect { case (GenerationDirectives.extensionKey, json) => json.asArray.toSeq.flatMap(_.flatMap(_.asString)) }
         .flatten
         .toSet
+      // Disallow directives with conflicting semantics, since it's not obvious what the generator will do in such cases
+      val incompatiblePairs =
+        Seq(forceStreaming, forceReqStreaming, forceRespStreaming).map(forceEager -> _) ++
+          Seq(forceReqEager, forceRespEager).map(forceStreaming -> _) :+
+          (forceReqEager -> forceReqStreaming) :+
+          (forceRespEager -> forceRespStreaming)
+      val matchingIncompatible = incompatiblePairs.filter { case (a, b) => readDirectives.contains(a) && readDirectives.contains(b) }
+      val incompatErrMsgs =
+        matchingIncompatible.map { case (a, b) => s"May not have both $a and $b directives on same endpoint" }.mkString(". ")
+      if (matchingIncompatible.nonEmpty)
+        throw new IllegalArgumentException(s"Incompatible directives found: $incompatErrMsgs")
+      readDirectives
     }
   }
 

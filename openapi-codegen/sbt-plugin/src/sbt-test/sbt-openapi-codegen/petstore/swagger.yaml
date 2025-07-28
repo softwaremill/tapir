@@ -230,7 +230,7 @@ paths:
         default:
           description: Unexpected error
       security:
-        - api_key: []
+        - api_key: [ ]
         - petstore_auth:
             - write:pets
             - read:pets
@@ -372,7 +372,7 @@ paths:
         default:
           description: Unexpected error
       security:
-        - api_key: []
+        - api_key: [ ]
   /store/order:
     post:
       tags:
@@ -572,7 +572,7 @@ paths:
       summary: Logs out current logged in user session.
       description: Log user out of the system.
       operationId: logoutUser
-      parameters: []
+      parameters: [ ]
       responses:
         '200':
           description: successful operation

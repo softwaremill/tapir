@@ -2,7 +2,8 @@ lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
     scalaVersion := "2.13.16",
-    version := "0.1"
+    version := "0.1",
+    openapiGenerateEndpointTypes := true
   )
 
 libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.10.0"

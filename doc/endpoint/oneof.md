@@ -7,11 +7,10 @@ There are two kind of one-of inputs/outputs:
 
 ```{note}
 `oneOf` and `oneOfBody` outputs are not related to `oneOf:` schemas when 
-[generating](https://tapir.softwaremill.com/en/latest/docs/openapi.html) OpenAPI documentation.
+[generating](../docs/openapi.md) OpenAPI documentation.
 
 Such schemas are generated for coproducts - e.g. `sealed trait` families - given an appropriate codec. See the
-documentation on [coproducts](https://tapir.softwaremill.com/en/latest/endpoint/schemas.html#sealed-traits-coproducts) 
-for details.
+documentation on [coproducts](schemas.md#sealed-traits--coproducts) for details.
 ```
 
 ## `oneOf` outputs

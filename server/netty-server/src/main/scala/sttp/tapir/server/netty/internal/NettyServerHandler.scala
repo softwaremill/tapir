@@ -25,7 +25,7 @@ import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketP
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{TimeUnit, TimeoutException}
+import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
@@ -93,7 +93,7 @@ class NettyServerHandler[F[_]](
           logger.debug("Http channel to {} closed. Cancelling {} responses.", ctx.channel.remoteAddress, pendingResponses.length)
         }
         while (pendingResponses.nonEmpty) {
-          pendingResponses.dequeue().apply()
+          pendingResponses.dequeue().apply(): Unit // running the cancellation for background side-effects only (best-effort)
         }
       }
     }
@@ -180,9 +180,12 @@ class NettyServerHandler[F[_]](
                 // pendingResponses is already dequeued because the channel is closed
                 result match {
                   case Success(serverResponse) =>
-                    val e = new TimeoutException("Request timed out")
-                    responseCompletedPromise = Some(handleResponseAfterTimeout(ctx, serverResponse, e))
-                    Failure(e)
+                    val e = new RuntimeException("Client disconnected, request timed out, or request cancelled")
+                    responseCompletedPromise = Some(handleResponseWhenChannelClosed(ctx, serverResponse, e))
+                    logger.debug(
+                      "Response created but not sent, as the channel is closed (due to client disconnect, timeout, or cancellation)."
+                    )
+                    Success(())
                   case Failure(e) => Failure(e)
                 }
               }
@@ -305,27 +308,27 @@ class NettyServerHandler[F[_]](
       }
     )
 
-  private def handleResponseAfterTimeout(
+  private def handleResponseWhenChannelClosed(
       ctx: ChannelHandlerContext,
       serverResponse: ServerResponse[NettyResponse],
-      timeoutException: Exception
+      channelPromiseFailure: Exception
   ): ChannelPromise =
     serverResponse.handle(
       ctx = ctx,
-      byteBufHandler = (channelPromise, byteBuf) => { val _ = channelPromise.setFailure(timeoutException) },
+      byteBufHandler = (channelPromise, byteBuf) => { val _ = channelPromise.setFailure(channelPromiseFailure) },
       chunkedStreamHandler = (channelPromise, chunkedStream) => {
         chunkedStream.close()
-        val _ = channelPromise.setFailure(timeoutException)
+        val _ = channelPromise.setFailure(channelPromiseFailure)
       },
       chunkedFileHandler = (channelPromise, chunkedFile) => {
         chunkedFile.close()
-        val _ = channelPromise.setFailure(timeoutException)
+        val _ = channelPromise.setFailure(channelPromiseFailure)
       },
       reactiveStreamHandler = (channelPromise, publisher) => {
         publisher.subscribe(new Subscriber[HttpContent] {
           override def onSubscribe(s: Subscription): Unit = {
             s.cancel()
-            val _ = channelPromise.setFailure(timeoutException)
+            val _ = channelPromise.setFailure(channelPromiseFailure)
           }
           override def onNext(t: HttpContent): Unit = ()
           override def onError(t: Throwable): Unit = ()
@@ -333,7 +336,7 @@ class NettyServerHandler[F[_]](
         })
       },
       wsHandler = (responseContent) => {
-        val _ = responseContent.channelPromise.setFailure(timeoutException)
+        val _ = responseContent.channelPromise.setFailure(channelPromiseFailure)
       },
       noBodyHandler = () => ()
     )

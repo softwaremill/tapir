@@ -1,10 +1,10 @@
 // {cat=Custom types; effects=Future; server=Pekko HTTP; client=sttp4; JSON=circe; docs=Swagger UI}: A demo of Tapir's capabilities using semi-auto derivation
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.22
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.28
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.40
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.22
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.22
-//> using dep com.softwaremill.sttp.tapir::tapir-sttp-client4:1.11.28
+//> using dep com.softwaremill.sttp.tapir::tapir-sttp-client4:1.11.40
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
 

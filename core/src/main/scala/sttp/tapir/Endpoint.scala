@@ -32,7 +32,7 @@ import scala.reflect.ClassTag
   * regular inputs. This allows short-circuiting further processing in case security checks fail. Server logic can be provided using
   * [[EndpointServerLogicOps.serverSecurityLogic]] variants for secure endpoints, and [[EndpointServerLogicOps.serverLogic]] variants for
   * public endpoints; when using a synchronous server, you can also use the more concise [[EndpointServerLogicOps.handle]] methods, which
-  * work the save as above, but have the "effect" type fixed to [[Identity]].
+  * work the same as above, but have the "effect" type fixed to [[Identity]].
   *
   * A concise description of an endpoint can be generated using the [[EndpointMetaOps.show]] method.
   *

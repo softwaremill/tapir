@@ -130,10 +130,11 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
   }
 
   private def handleResponseExceptions[T](r: => F[T], e: AnyEndpoint)(implicit monad: MonadError[F]): F[T] =
-    r.handleError { case ex: Exception => collectExceptionMetrics(e, ex) }
+    // we only need to "tap" the error, hence re-throwing after the metrics are collected
+    r.handleError { case ex: Exception => collectExceptionMetrics(e, ex).flatMap(_ => monad.error(ex)) }
 
-  private def collectExceptionMetrics[T](e: AnyEndpoint, ex: Throwable)(implicit monad: MonadError[F]): F[T] =
-    collectMetrics { case EndpointMetric(_, _, _, Some(onException)) => onException(e, ex) }.flatMap(_ => monad.error(ex))
+  private def collectExceptionMetrics[T](e: AnyEndpoint, ex: Throwable)(implicit monad: MonadError[F]): F[Unit] =
+    collectMetrics { case EndpointMetric(_, _, _, Some(onException)) => onException(e, ex) }
 
   private def collectRequestMetrics(endpoint: AnyEndpoint)(implicit monad: MonadError[F]): F[Unit] =
     collectMetrics { case EndpointMetric(Some(onRequest), _, _, _) => onRequest(endpoint) }

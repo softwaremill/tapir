@@ -11,7 +11,7 @@ incorrectly-implemented functionality are highly encouraged.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.33")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.40")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -94,11 +94,17 @@ Supported specifications are:
 - x-tapir-codegen-directives: supported on openapi operations. This is an array of string flags. Supported values are:
 
 ```{eval-rst}
-==================== ===================================================================================================================================
-name                 description
-==================== ===================================================================================================================================
-json-body-as-string  If present on an operation, all application/json requests and responses will be interpreted mapped to a string with stringJsonBody
-==================== ===================================================================================================================================
+========================= ===================================================================================================================================
+name                      description
+========================= ===================================================================================================================================
+json-body-as-string       If present on an operation, all application/json requests and responses will be interpreted mapped to a string with stringJsonBody
+force-eager               If present on an operation, all content types will be forced to eager, even if the default implementation is streaming
+force-streaming           If present on an operation, all content types will be forced to streaming, even if the default implementation is eager, unless it is in error position (which is always eager)
+force-req-body-eager      Like force-eager, but applies only to req body
+force-resp-body-eager     Like force-eager, but applies only to resp body
+force-req-body-streaming  Like force-streaming, but applies only to req body
+force-resp-body-streaming Like force-streaming, but applies only to resp body
+========================= ===================================================================================================================================
 ```
 
 ### Output files

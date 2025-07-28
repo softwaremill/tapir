@@ -328,7 +328,7 @@ res.toString
 
 Note that the above takes into account only the method & the shape of the path. It does *not* take into account possible
 decoding failures: these might impact request-endpoint matching, and the exact behavior is determined by the
-[`DecodeFailureHandler`](server/errors.html#decode-failures) used.
+[`DecodeFailureHandler`](server/errors.md#decode-failures) used.
 
 ### Incorrect path at endpoint
 

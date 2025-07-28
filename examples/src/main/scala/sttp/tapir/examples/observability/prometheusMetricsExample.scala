@@ -1,9 +1,9 @@
 // {cat=Observability; effects=Future; server=Netty; json=circe}: Reporting Prometheus metrics
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.28
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.28
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.28
-//> using dep com.softwaremill.sttp.tapir::tapir-prometheus-metrics:1.11.28
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.40
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.40
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.40
+//> using dep com.softwaremill.sttp.tapir::tapir-prometheus-metrics:1.11.40
 //> using dep ch.qos.logback:logback-classic:1.5.17
 
 package sttp.tapir.examples.observability

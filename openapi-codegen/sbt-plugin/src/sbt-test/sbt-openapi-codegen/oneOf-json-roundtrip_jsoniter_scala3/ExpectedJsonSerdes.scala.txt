@@ -21,6 +21,7 @@ object TapirGeneratedEndpointsJsonSerdes {
     case "SubtypeWithD2" => "SubB"}))
 
   implicit lazy val subtypeWithoutD1JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD1] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true))
+  implicit lazy val nodeJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Node] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true))
   implicit lazy val aDTWithDiscriminatorNoMappingCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithDiscriminatorNoMapping] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))
   implicit lazy val subtypeWithoutD3JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD3] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true))
   implicit lazy val subtypeWithoutD2JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD2] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true))
@@ -45,7 +46,7 @@ object TapirGeneratedEndpointsJsonSerdes {
       case x: SubtypeWithoutD2 => subtypeWithoutD2JsonCodec.encodeValue(x, out)
       case x: SubtypeWithoutD3 => subtypeWithoutD3JsonCodec.encodeValue(x, out)
     }
-  
+
     def nullValue: ADTWithoutDiscriminator = subtypeWithoutD1JsonCodec.nullValue
   }
 }

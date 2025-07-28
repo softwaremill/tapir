@@ -208,7 +208,8 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
       def drainAkka(stream: AkkaStreams.BinaryStream): Future[Unit] =
         stream.runWith(Sink.ignore).map(_ => ())
 
-      new AllServerTests(createServerTest, interpreter, backend).tests() ++
+      new AllServerTests(createServerTest, interpreter, backend, staticContent = false).tests() ++
+        new ServerFilesTests(interpreter, backend, supportContentLengthInHeadRequests = false).tests() ++
         new ServerStreamingTests(createServerTest).tests(AkkaStreams)(drainAkka) ++
         new ServerWebSocketTests(
           createServerTest,

@@ -52,6 +52,16 @@ trait Http4sServerInterpreter[F[_]] {
   def toContextRoutes[T: ClassTag](ses: List[ServerEndpoint[Fs2Streams[F] with Context[T], F]]): ContextRoutes[T, F] =
     toContextRoutes(contextAttributeKey[T], ses, None)
 
+  def toContextWebSocketRoutes[T: ClassTag](
+      se: ServerEndpoint[Fs2Streams[F] with Context[T] with WebSockets, F]
+  ): WebSocketBuilder2[F] => ContextRoutes[T, F] =
+    wsb => toContextRoutes(contextAttributeKey[T], List(se), Some(wsb))
+
+  def toContextWebSocketRoutes[T: ClassTag](
+      ses: List[ServerEndpoint[Fs2Streams[F] with Context[T] with WebSockets, F]]
+  ): WebSocketBuilder2[F] => ContextRoutes[T, F] =
+    wsb => toContextRoutes(contextAttributeKey[T], ses, Some(wsb))
+
   private def createInterpreter[T](
       serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets with Context[T], F]]
   ): ServerInterpreter[Fs2Streams[F] with WebSockets with Context[T], F, Http4sResponseBody[F], Fs2Streams[F]] = {

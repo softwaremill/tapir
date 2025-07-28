@@ -81,6 +81,10 @@ object TapirGeneratedEndpoints {
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  case class Node (
+    value: String,
+    children: Option[Seq[Node]] = None
+  )
   case class SubtypeWithD1 (
     s: String,
     i: Option[Int] = None,
@@ -116,29 +120,39 @@ object TapirGeneratedEndpoints {
 
 
 
-  lazy val putAdtTest =
+  type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
+  lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
       .put
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
-  lazy val postAdtTest =
+  type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
+  lazy val postAdtTest: PostAdtTestEndpoint =
     endpoint
       .post
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
-  lazy val postXmlEndpoint =
+  type PostXmlEndpointEndpoint = Endpoint[Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
+  lazy val postXmlEndpoint: PostXmlEndpointEndpoint =
     endpoint
       .post
       .in(("xml" / "endpoint"))
       .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Pet], CodecFormat.Xml()))
       .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Pet], CodecFormat.Xml()).description("An object"))
 
+  type PostRecursiveSchemaEndpointEndpoint = Endpoint[Unit, Node, Unit, Node, Any]
+  lazy val postRecursiveSchemaEndpoint: PostRecursiveSchemaEndpointEndpoint =
+    endpoint
+      .post
+      .in(("recursive" / "schema" / "endpoint"))
+      .in(jsonBody[Node])
+      .out(jsonBody[Node].description("An object"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postXmlEndpoint)
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postXmlEndpoint, postRecursiveSchemaEndpoint)
 
 
   object Servers {
