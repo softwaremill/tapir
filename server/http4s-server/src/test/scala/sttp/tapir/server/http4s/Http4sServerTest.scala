@@ -153,11 +153,8 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         // middleware to add the context to each request (so here string constant)
         val middleware: ContextMiddleware[IO, String] = ContextMiddleware.const(expectedContext)
 
-        BlazeServerBuilder[IO]
-          .withExecutionContext(ExecutionContext.global)
-          .bindHttp(0, "localhost")
-          .withHttpWebSocketApp(wsb => middleware(routesWithContext(wsb)).orNotFound)
-          .resource
+        interpreter
+          .buildServer(wsb => middleware(routesWithContext(wsb)).orNotFound)
           .use { server =>
             val port = server.address.getPort
             basicRequest

@@ -5,6 +5,7 @@ import cats.effect.{IO, Resource}
 import cats.syntax.all._
 import com.comcast.ip4s
 import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.server.Server
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.{HttpApp, HttpRoutes}
 import sttp.capabilities.WebSockets
@@ -30,19 +31,21 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   private val anyAvailablePort = ip4s.Port.fromInt(0).get
   private val serverBuilder = EmberServerBuilder.default[IO].withPort(anyAvailablePort)
 
-  override def server(
-      routes: NonEmptyList[Routes],
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, Port] = {
-    val service: WebSocketBuilder2[IO] => HttpApp[IO] =
-      wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
-
+  def buildServer(
+      makeService: WebSocketBuilder2[IO] => HttpApp[IO],
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, Server] =
     serverBuilder
-      .withHttpWebSocketApp(service)
+      .withHttpWebSocketApp(makeService)
       .withShutdownTimeout(
         gracefulShutdownTimeout.getOrElse(0.seconds) // no need to wait unless it's explicitly required by test
       )
       .build
+
+  override def server(
+      routes: NonEmptyList[Routes],
+      gracefulShutdownTimeout: Option[FiniteDuration]
+  ): Resource[IO, Port] =
+    buildServer(wsb => routes.map(_.apply(wsb)).reduceK.orNotFound, gracefulShutdownTimeout)
       .map(_.address.getPort)
-  }
 }
