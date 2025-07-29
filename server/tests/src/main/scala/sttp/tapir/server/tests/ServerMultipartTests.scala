@@ -59,6 +59,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
     }
   )
 
+  case class SingleFileBody(file: Part[TapirFile])
   def basicTests(): List[Test] = {
     List(
       testServer(in_simple_multipart_out_multipart)((fa: FruitAmount) =>
@@ -183,6 +184,19 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
           .map { r =>
             r.code shouldBe StatusCode.Ok
             r.body should be("firstPart:BODYONE\r\n--AA\n__\nsecondPart:BODYTWO")
+          }
+      },
+      testServer(endpoint.post.in("hello").in(multipartBody[SingleFileBody]).out(stringBody), "special characters in filename")(
+        (data: SingleFileBody) => pureResult(s"${data.file.fileName.getOrElse("no file name")}".asRight[Unit])
+      ) { (backend, baseUri) =>
+        val file = writeToFile("ąęść_рус", "txt", "peach mario")
+        basicStringRequest
+          .post(uri"$baseUri/hello")
+          .multipartBody(multipartFile("file", file))
+          .send(backend)
+          .map { r =>
+            r.body shouldBe file.getName
+            r.body should include("ąęść_рус")
           }
       }
     )
