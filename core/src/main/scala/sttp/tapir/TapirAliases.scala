@@ -5,11 +5,11 @@ trait TapirAliases {
 
   /** attribute.scala */
   type AttributeKey[T] = sttp.tapir.AttributeKey[T]
-  val AttributeKey = sttp.tapir.AttributeKey
+  // mima val AttributeKey = sttp.tapir.AttributeKey
 
   /** attribute.scala */
   type AttributeMap = sttp.tapir.AttributeMap
-  val AttributeMap = sttp.tapir.AttributeMap
+  // mima val AttributeMap = sttp.tapir.AttributeMap
 
   /** Codec.scala */
   type Codec[L, H, CF <: CodecFormat] = sttp.tapir.Codec[L, H, CF]
@@ -17,19 +17,19 @@ trait TapirAliases {
 
   /** Codec.scala */
   type PartCodec[R, T] = sttp.tapir.PartCodec[R, T]
-  val PartCodec = sttp.tapir.PartCodec
+  // mima val PartCodec = sttp.tapir.PartCodec
 
   /** Codec.scala */
   type MultipartCodec[T] = sttp.tapir.MultipartCodec[T]
-  val MultipartCodec = sttp.tapir.MultipartCodec
+  // mima val MultipartCodec = sttp.tapir.MultipartCodec
 
   /** Codec.scala */
   type RawBodyType[R] = sttp.tapir.RawBodyType[R]
-  val RawBodyType = sttp.tapir.RawBodyType
+  // mima val RawBodyType = sttp.tapir.RawBodyType
 
   /** CodecFormat.scala */
   type CodecFormat = sttp.tapir.CodecFormat
-  val CodecFormat = sttp.tapir.CodecFormat
+  // mima val CodecFormat = sttp.tapir.CodecFormat
 
   /** DecodeResult.scala */
   type DecodeResult[+T] = sttp.tapir.DecodeResult[T]
@@ -59,28 +59,34 @@ trait TapirAliases {
   val EndpointIO = sttp.tapir.EndpointIO
 
   /** EndpointIO.scala */
+  @deprecated("Use StreamBodyIO instead")
+  type StreamBody[BS, T, S] = sttp.tapir.StreamBodyIO[BS, T, S]
+  @deprecated("Use StreamBodyIO instead")
+  val StreamBody = sttp.tapir.StreamBodyIO
+
+  /** EndpointIO.scala */
   type StreamBodyIO[BS, T, S] = sttp.tapir.StreamBodyIO[BS, T, S]
-  val StreamBodyIO = sttp.tapir.StreamBodyIO
+  // mima val StreamBodyIO = sttp.tapir.StreamBodyIO
 
   /** EndpointIO.scala */
   type WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = sttp.tapir.WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S]
-  val WebSocketBodyOutput = sttp.tapir.WebSocketBodyOutput
+  // mima val WebSocketBodyOutput = sttp.tapir.WebSocketBodyOutput
 
   /** FieldName.scala */
   type FieldName = sttp.tapir.FieldName
-  val FieldName = sttp.tapir.FieldName
+  // mima val FieldName = sttp.tapir.FieldName
 
   /** FileRange.scala */
   type FileRange = sttp.tapir.FileRange
-  val FileRange = sttp.tapir.FileRange
+  // mima val FileRange = sttp.tapir.FileRange
 
   /** FileRange.scala */
   type RangeValue = sttp.tapir.RangeValue
-  val RangeValue = sttp.tapir.RangeValue
+  // mima val RangeValue = sttp.tapir.RangeValue
 
   /** InputStreamRange.scala */
   type InputStreamRange = sttp.tapir.InputStreamRange
-  val InputStreamRange = sttp.tapir.InputStreamRange
+  // mima val InputStreamRange = sttp.tapir.InputStreamRange
 
   /** package.scala */
   type RawPart = sttp.tapir.RawPart
@@ -99,7 +105,7 @@ trait TapirAliases {
 
   /** SchemaAnnotations.scala */
   type SchemaAnnotations[T] = sttp.tapir.SchemaAnnotations[T]
-  val SchemaAnnotations = sttp.tapir.SchemaAnnotations
+  // mima val SchemaAnnotations = sttp.tapir.SchemaAnnotations
 
   /** Tapir.scala */
   type Tapir = sttp.tapir.Tapir
@@ -108,14 +114,14 @@ trait TapirAliases {
   val TapirAuth = sttp.tapir.TapirAuth
 
   /** Validator.scala */
-  val Validator = sttp.tapir.Validator
+  // mima val Validator = sttp.tapir.Validator
 
   /** Validator.scala */
   type ValidationResult = sttp.tapir.ValidationResult
-  val ValidationResult = sttp.tapir.ValidationResult
+  // mima val ValidationResult = sttp.tapir.ValidationResult
 
   /** Validator.scala */
   type ValidationError[T] = sttp.tapir.ValidationError[T]
-  val ValidationError = sttp.tapir.ValidationError
+  // mima val ValidationError = sttp.tapir.ValidationError
 
 }
