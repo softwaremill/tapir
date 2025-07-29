@@ -85,13 +85,18 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
 
   private def toRawPart[R](serverRequest: ServerRequest, part: multipart.Part[F], partType: RawBodyType[R]): F[Part[R]] = {
     val dispositionParams = part.headers.get[`Content-Disposition`].map(_.parameters).getOrElse(Map.empty)
+
+    // #4730: filenames need to be treated separately, as part.filename decodes the name using UTF-8, otherwise an incorrect encoding is used
+    var otherDispositionParams = dispositionParams.map { case (k, v) => k.toString -> v } - Part.NameDispositionParam
+    part.filename.foreach(f => otherDispositionParams += Part.FileNameDispositionParam -> f)
+
     val charset = part.headers.get[`Content-Type`].flatMap(_.charset)
     toRawFromStream(serverRequest, part.body, partType, charset, maxBytes = None)
       .map(r =>
         Part(
           part.name.getOrElse(""),
           r.value,
-          otherDispositionParams = dispositionParams.map { case (k, v) => k.toString -> v } - Part.NameDispositionParam,
+          otherDispositionParams = otherDispositionParams,
           headers = part.headers.headers.map(h => Header(h.name.toString, h.value))
         )
       )
