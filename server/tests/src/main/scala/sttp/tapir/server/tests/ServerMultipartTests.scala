@@ -26,13 +26,15 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
     partContentTypeHeaderSupport: Boolean = true,
     partOtherHeaderSupport: Boolean = true,
-    maxContentLengthSupport: Boolean = true
+    maxContentLengthSupport: Boolean = true,
+    utf8FileNameSupport: Boolean = true
 )(implicit m: MonadError[F]) {
   import createServerTest._
 
   def tests(): List[Test] =
     basicTests() ++ (if (partContentTypeHeaderSupport) contentTypeHeaderTests() else Nil) ++
-      (if (maxContentLengthSupport) maxContentLengthTests() else Nil)
+      (if (maxContentLengthSupport) maxContentLengthTests() else Nil) ++
+      (if (utf8FileNameSupport) utf8FileNameTests() else Nil)
 
   def maxContentLengthTests(): List[Test] = List(
     testServer(
@@ -185,22 +187,25 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             r.code shouldBe StatusCode.Ok
             r.body should be("firstPart:BODYONE\r\n--AA\n__\nsecondPart:BODYTWO")
           }
-      },
-      testServer(endpoint.post.in("hello").in(multipartBody[SingleFileBody]).out(stringBody), "special characters in filename")(
-        (data: SingleFileBody) => pureResult(s"${data.file.fileName.getOrElse("no file name")}".asRight[Unit])
-      ) { (backend, baseUri) =>
-        val file = writeToFile("ąęść_рус", "txt", "peach mario")
-        basicStringRequest
-          .post(uri"$baseUri/hello")
-          .multipartBody(multipartFile("file", file))
-          .send(backend)
-          .map { r =>
-            r.body shouldBe file.getName
-            r.body should include("ąęść_рус")
-          }
       }
     )
   }
+
+  def utf8FileNameTests(): List[Test] = List(
+    testServer(endpoint.post.in("hello").in(multipartBody[SingleFileBody]).out(stringBody), "special characters in filename")(
+      (data: SingleFileBody) => pureResult(s"${data.file.fileName.getOrElse("no file name")}".asRight[Unit])
+    ) { (backend, baseUri) =>
+      val file = writeToFile("ąęść_рус", "txt", "peach mario")
+      basicStringRequest
+        .post(uri"$baseUri/hello")
+        .multipartBody(multipartFile("file", file))
+        .send(backend)
+        .map { r =>
+          r.body shouldBe file.getName
+          r.body should include("ąęść_рус")
+        }
+    }
+  )
 
   def contentTypeHeaderTests(): List[Test] = List(
     testServer(in_file_multipart_out_multipart, "with part content type header")((fd: FruitData) =>
