@@ -1,11 +1,14 @@
 package sttp.tapir.client.sttp
 
 import cats.effect.IO
+import cats.effect.unsafe._
 import cats.implicits._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.client.tests.ClientStreamingTests
 
 class SttpClientStreamingTests extends SttpClientTests[Fs2Streams[IO]] with ClientStreamingTests[Fs2Streams[IO]] {
+  private implicit val ioRT: IORuntime = cats.effect.unsafe.implicits.global
+
   override def wsToPipe: WebSocketToPipe[Fs2Streams[IO]] = implicitly
   override val streams: Fs2Streams[IO] = Fs2Streams[IO]
 
