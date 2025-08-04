@@ -52,11 +52,11 @@ The capability can be added to the classpath independently of the interpreter th
 ## Http4s backends
 
 Http4s integrates with a couple of [server backends](https://http4s.org/v1.0/integrations/), the most popular being 
-Blaze and Ember. In the [examples](../examples.md) and throughout the docs we use Blaze, but other backends can be used
+Blaze and Ember. In the [examples](../examples.md) and throughout the docs we use Ember, but other backends can be used
 as well. This means adding another dependency, such as:
 
 ```scala
-"org.http4s" %% "http4s-blaze-server" % Http4sVersion
+"org.http4s" %% "http4s-ember-server" % Http4sVersion
 ```
 
 ## Web sockets
@@ -75,24 +75,21 @@ import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.websocket.WebSocketBuilder2
 import fs2.*
 import scala.concurrent.ExecutionContext
-
-given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
 val wsEndpoint: PublicEndpoint[Unit, Unit, Pipe[IO, String, String], Fs2Streams[IO] with WebSockets] =
   endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](Fs2Streams[IO]))
     
 val wsRoutes: WebSocketBuilder2[IO] => HttpRoutes[IO] =
   Http4sServerInterpreter[IO]().toWebSocketRoutes(wsEndpoint.serverLogicSuccess[IO](_ => ???))
-    
-BlazeServerBuilder[IO]
-  .withExecutionContext(summon[ExecutionContext])
-  .bindHttp(8080, "localhost")
-  .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)        
+
+EmberServerBuilder
+  .default[IO]
+  .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
 ```
 
 ```{note}
