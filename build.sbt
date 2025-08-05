@@ -2108,7 +2108,7 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.9.0" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.37.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.37.1" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.37.0" % Provided
     )
   )
