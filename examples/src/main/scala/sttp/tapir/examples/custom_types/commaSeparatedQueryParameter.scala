@@ -1,8 +1,8 @@
 // {cat=Custom types; effects=Direct; server=Netty; docs=Swagger UI}: Handling comma-separated query parameters
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.40
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.40
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.40
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.41
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.41
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.41
 
 package sttp.tapir.examples.custom_types
 
