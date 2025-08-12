@@ -74,7 +74,7 @@ object NettySyncServerRunner {
     )
   val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe)
 
-  val endpoints = genEndpointsId(1)
+  val endpoints = genEndpointsId(128)
 
   def main(args: Array[String]): Unit = {
     val declaredPort = 8080

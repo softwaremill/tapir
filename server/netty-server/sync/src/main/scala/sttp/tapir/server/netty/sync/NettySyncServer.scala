@@ -16,10 +16,10 @@ import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{Executors, Future as JFuture}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
+import java.util.concurrent.atomic.AtomicReference
 
 case class NettySyncServer(
     serverEndpoints: Vector[ServerEndpoint[OxStreams & WebSockets, Identity]],
@@ -27,7 +27,6 @@ case class NettySyncServer(
     options: NettySyncServerOptions,
     config: NettyConfig
 ):
-  private val executor = Executors.newVirtualThreadPerTaskExecutor()
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
   def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Identity]): NettySyncServer = addEndpoints(List(se))
@@ -93,11 +92,6 @@ case class NettySyncServer(
       never
     }
 
-  private[netty] def start(route: Route[Identity]): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](route, None) match
-      case (socket, stop) =>
-        NettySyncServerBinding(socket, stop)
-
   def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
     startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), inScopeRunner()) match
       case (socket, stop) =>
@@ -109,28 +103,52 @@ case class NettySyncServer(
   ): (SA, () => Unit) =
     val endpointRoute = NettySyncServerInterpreter(options).toRoute(serverEndpoints.toList, inScopeRunner)
     val route = Route.combine(endpointRoute +: otherRoutes)
-    startUsingSocketOverride(route, socketOverride)
+    startUsingSocketOverride(route, socketOverride, inScopeRunner)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](route: Route[Identity], socketOverride: Option[SA]): (SA, () => Unit) =
+  private def startUsingSocketOverride[SA <: SocketAddress](
+      route: Route[Identity],
+      socketOverride: Option[SA],
+      inScopeRunner: InScopeRunner
+  ): (SA, () => Unit) =
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
 
     def unsafeRunF(
         callToExecute: () => Identity[ServerResponse[NettyResponse]]
     ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
       val scalaPromise = Promise[ServerResponse[NettyResponse]]()
-      val jFuture: JFuture[?] = executor.submit(new Runnable {
-        override def run(): Unit = try {
-          val result = callToExecute()
-          scalaPromise.success(result)
-        } catch {
-          case NonFatal(e) => scalaPromise.failure(e)
-        }
-      })
+
+      // used to cancel the fork, possible states:
+      // - Cancelled: needed if cancellation happens after the fork starts, but before it is set in the atomic reference
+      // - CancellableFork: used when cancellation using interruption is enabled
+      // - None: means that the fork was not set yet
+      object Cancelled
+      val runningFork = new AtomicReference[None.type | CancellableFork[Unit] | Cancelled.type](None)
+      // #4747: we are creating forks using the concurrency scope within which the netty server is running
+      // however, this is called on a Netty-managed thread, hence we need to use the inScopeRunner
+      inScopeRunner.async {
+        def run(): Unit =
+          if runningFork.get() != Cancelled then
+            try scalaPromise.success(callToExecute())
+            catch case NonFatal(e) => scalaPromise.failure(e)
+
+        if options.interruptServerLogicWhenRequestCancelled then
+          val forked = forkCancellable(run())
+          // we only update the state if it's not cancelled already
+          runningFork.getAndAccumulate(forked, (cur, giv) => if cur != Cancelled then giv else cur) match {
+            case None                     => // common "happy path" case
+            case _: CancellableFork[Unit] => throw new IllegalStateException("Another fork was already set")
+            case Cancelled                => forked.cancelNow() // cancellation happened before the fork was set
+          }
+        else forkDiscard(run())
+      }
 
       (
         scalaPromise.future,
         () => {
-          jFuture.cancel(options.interruptServerLogicWhenRequestCancelled)
+          runningFork.getAndSet(Cancelled) match {
+            case fork: CancellableFork[Unit] => fork.cancelNow()
+            case _                           => // skip - fork not yet set
+          }
           Future.unit
         }
       )
