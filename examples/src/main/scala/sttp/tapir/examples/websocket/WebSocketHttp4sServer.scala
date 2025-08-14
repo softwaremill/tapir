@@ -1,9 +1,9 @@
 // {cat=WebSocket; effects=cats-effect; server=http4s; json=circe; docs=AsyncAPI}: Describe and implement a WebSocket endpoint
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.41
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.41
-//> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.11.41
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.41
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.42
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.42
+//> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.11.42
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.42
 //> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
 //> using dep com.softwaremill.sttp.client4::fs2:4.0.0-RC3
 //> using dep org.http4s::http4s-blaze-server:0.23.16
