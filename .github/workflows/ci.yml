@@ -33,7 +33,7 @@ jobs:
             java: "21"
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     - uses: sbt/setup-sbt@v1
     - name: Set up JDK 
       uses: actions/setup-java@v4
@@ -150,7 +150,7 @@ jobs:
         java: [ "11", "21" ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - uses: sbt/setup-sbt@v1
       - name: Set up JDK
         uses: actions/setup-java@v4
