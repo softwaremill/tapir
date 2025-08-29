@@ -157,7 +157,7 @@ object OpenTelemetryMetrics {
       meter
         .histogramBuilder("http.server.request.duration")
         .setDescription("Duration of HTTP requests")
-        .setUnit("s")
+        .setUnit("ms")
         .build(),
       onRequest = (req, recorder, m) =>
         m.eval {

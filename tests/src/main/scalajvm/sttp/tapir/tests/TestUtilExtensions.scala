@@ -6,8 +6,10 @@ import scala.concurrent.Future
 import scala.io.Source
 
 trait TestUtilExtensions {
-  def writeToFile(s: String): File = {
-    val f = File.createTempFile("test", "tapir")
+  def writeToFile(s: String): File = writeToFile("test", "tapir", s)
+
+  def writeToFile(fileName: String, suffix: String, s: String): File = {
+    val f = File.createTempFile(fileName, suffix)
     new PrintWriter(f) { write(s); close() }
     f.deleteOnExit()
     f

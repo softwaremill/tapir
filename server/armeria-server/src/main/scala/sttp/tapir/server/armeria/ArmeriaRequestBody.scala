@@ -14,6 +14,7 @@ import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.{ExecutionContext, Future}
+import java.nio.charset.StandardCharsets
 
 private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     serverOptions: ArmeriaServerOptions[F],

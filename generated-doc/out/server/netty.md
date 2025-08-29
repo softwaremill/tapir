@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you are using Future or just exploring:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.11.36"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.11.42"
 
 // if you want to use Java 21 Loom virtual threads in direct style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.36"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.11.42"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.11.36"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.11.42"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.11.36"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.11.42"
 ```
 
 Then, use:
@@ -49,7 +49,7 @@ val binding: Future[NettyFutureServerBinding] =
 The `tapir-netty-server-sync` server uses `Identity[T]` as its wrapper effect for compatibility; `Identity[A]` means in 
 fact just `A`, representing direct style. It is available only for Scala 3.
 
-See [examples/HelloWorldNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldNettySyncServer.scala) for a full example.
+See [examples/helloWorldNettySyncServer.scala](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/helloWorldNettySyncServer.scala) for a full example.
 
 To provide server logic for an endpoint when using the `-sync` server, you can use the dedicated `handle`
 methods, and its variants. This provides better type inference.

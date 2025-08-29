@@ -7,6 +7,7 @@ import fs2.Pipe
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.ContextMiddleware
+import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.ContextRoutes
 import org.http4s.HttpRoutes
 import org.scalatest.{Assertion, OptionValues}
@@ -138,6 +139,45 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
           })
           .send(backend)
           .map(_.body.right.toOption.value shouldBe List(sse1, sse2))
+      },
+      Test("should work with a router and context web socket routes in a context") {
+        val expectedContext: String = "[PREFIX]" // the context we expect http4s to provide to the endpoint
+
+        val e: Endpoint[Unit, String, Unit, Pipe[IO, String, String], Context[String] with WebSockets with Fs2Streams[IO]] =
+          endpoint.get
+            .in("test" / "ws")
+            .contextIn[String]()
+            .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](Fs2Streams[IO]))
+
+        val routesWithContext: WebSocketBuilder2[IO] => ContextRoutes[String, IO] =
+          Http4sServerInterpreter[IO]()
+            // server logic is to return the context as is
+            .toContextWebSocketRoutes(e.serverLogicSuccess(ctx => IO.pure((in: fs2.Stream[IO, String]) => in.map(s => s"$ctx: $s"))))
+
+        // middleware to add the context to each request (so here string constant)
+        val middleware: ContextMiddleware[IO, String] = ContextMiddleware.const(expectedContext)
+
+        BlazeServerBuilder[IO]
+          .withExecutionContext(ExecutionContext.global)
+          .bindHttp(0, "localhost")
+          .withHttpWebSocketApp(wsb => middleware(routesWithContext(wsb)).orNotFound)
+          .resource
+          .use { server =>
+            val port = server.address.getPort
+            basicRequest
+              .get(uri"ws://localhost:$port/test/ws")
+              .response(asWebSocket { (ws: WebSocket[IO]) =>
+                for {
+                  _ <- ws.sendText("test1")
+                  m1 <- ws.receiveText()
+                } yield m1
+              })
+              .send(backend)
+              .map { r =>
+                r.body shouldBe Right("[PREFIX]: test1")
+              }
+          }
+          .unsafeRunSync()
       }
     )
 
