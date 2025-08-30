@@ -1889,7 +1889,7 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
       "org.typelevel" %% "jawn-parser" % "1.6.0"
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions, settings = commonJvmSettings)
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(core, tests % Test)
 
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
