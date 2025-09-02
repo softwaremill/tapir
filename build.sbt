@@ -389,6 +389,23 @@ val clientTestServerSettings = Seq(
   })
 )
 
+lazy val superMatrixSettings = Seq((Compile / unmanagedSourceDirectories) ++= {
+  val allCombos = List("js", "jvm", "native").combinations(2).toList
+  val dis =
+    virtualAxes.value.collectFirst { case p: VirtualAxis.PlatformAxis =>
+      p.directorySuffix
+    }.get
+
+  allCombos
+    .filter(_.contains(dis))
+    .map { suff =>
+      val suffixes = "scala" + suff.mkString("-", "-", "")
+
+      (Compile / sourceDirectory).value / suffixes
+    }
+})
+
+
 lazy val clientTestServer = (projectMatrix in file("client/testserver"))
   .settings(commonSettings)
   .settings(
@@ -504,14 +521,22 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
       "io.circe" %%% "circe-generic" % Versions.circe,
       "com.softwaremill.common" %%% "tagging" % "2.3.5",
       scalaTest.value,
-      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       logback
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies += "org.typelevel" %%% "cats-effect" % Versions.catsEffect
+    )
+  )
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = Seq(scala3),
+    settings = commonNativeSettings
   )
   .dependsOn(core, files, circeJson, cats)
 
@@ -1936,7 +1961,9 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .nativePlatform(scalaVersions = Seq(scala3), settings = commonNativeSettings)
   .dependsOn(tests)
+  .settings(superMatrixSettings)
 
 lazy val clientCore: ProjectMatrix = (projectMatrix in file("client/core"))
   .settings(commonSettings)
@@ -2056,6 +2083,15 @@ lazy val sttpClient4: ProjectMatrix = (projectMatrix in file("client/sttp-client
         "com.softwaremill.sttp.client4" %%% "zio" % Versions.sttp4 % Test,
         "com.softwaremill.sttp.shared" %%% "fs2" % Versions.sttpShared % Optional,
         "com.softwaremill.sttp.shared" %%% "zio" % Versions.sttpShared % Optional
+      )
+    )
+  )
+  .nativePlatform(
+    scalaVersions = Seq(scala3),
+    settings = commonNativeSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.nativeScalaJavaTime,
+        "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.nativeScalaJavaTime % Test
       )
     )
   )
