@@ -385,7 +385,7 @@ val clientTestServerSettings = Seq(
     .evaluated,
   Test / testOptions += Tests.Setup(() => {
     val port = (clientTestServer2_13 / clientTestServerPort).value
-    PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
+    PollingUtils.waitUntilServerAvailable(url(s"http://localhost:$port"))
   })
 )
 
@@ -558,7 +558,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.19.2",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.0",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.180",
@@ -1029,7 +1029,7 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
   .settings(
     name := "tapir-pekko-grpc-examples",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-discovery" % "1.1.5",
+      "org.apache.pekko" %% "pekko-discovery" % "1.2.0",
       slf4j
     ),
     fork := true
@@ -1710,7 +1710,7 @@ lazy val awsLambdaZioTests: ProjectMatrix = (projectMatrix in file("serverless/a
       Seq(
         Tests.Setup(() => {
           val samReady = PollingUtils.poll(60.seconds, 1.second) {
-            sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3002/health"))
+            sam.isAlive() && PollingUtils.urlConnectionAvailable(url(s"http://127.0.0.1:3002/health"))
           }
           if (!samReady) {
             sam.destroy()
@@ -1783,7 +1783,7 @@ lazy val awsLambdaCatsEffectTests: ProjectMatrix = (projectMatrix in file("serve
       Seq(
         Tests.Setup(() => {
           val samReady = PollingUtils.poll(60.seconds, 1.second) {
-            sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3001/health"))
+            sam.isAlive() && PollingUtils.urlConnectionAvailable(url(s"http://127.0.0.1:3001/health"))
           }
           if (!samReady) {
             sam.destroy()
@@ -1850,7 +1850,7 @@ lazy val awsCdkTests: ProjectMatrix = (projectMatrix in file("serverless/aws/cdk
               log.error(s"Failed to run cdk synth for aws cdk tests (exit code: $cdkExit)")
             } else {
               val samReady = PollingUtils.poll(60.seconds, 1.second) {
-                sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3010/health"))
+                sam.isAlive() && PollingUtils.urlConnectionAvailable(url(s"http://127.0.0.1:3010/health"))
               }
               if (!samReady) {
                 sam.destroy()
@@ -1914,7 +1914,7 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
       "org.typelevel" %% "jawn-parser" % "1.6.0"
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions, settings = commonJvmSettings)
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(core, tests % Test)
 
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
