@@ -1,8 +1,6 @@
 package sttp.tapir.client.tests
 
 import java.io.InputStream
-// import cats.effect._
-// import cats.effect.unsafe.IORuntime
 import cats.implicits._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AsyncFunSuite
@@ -13,7 +11,6 @@ import sttp.tapir.{DecodeResult, _}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAndAfterAll {
-  // implicit val ioRT: IORuntime = ClientTestsPlatform.ioRT
   implicit override val executionContext: ExecutionContext = ClientTestsPlatform.executionContext
 
   type Port = Int
