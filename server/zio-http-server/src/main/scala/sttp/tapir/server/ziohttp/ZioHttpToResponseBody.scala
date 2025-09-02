@@ -14,7 +14,7 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-class ZioHttpToResponseBody extends ToResponseBody[ZioResponseBody, ZioStreams] {
+class ZioHttpToResponseBody(inputStreamChunkSize: Int) extends ToResponseBody[ZioResponseBody, ZioStreams] {
   override val streams: ZioStreams = ZioStreams
 
   override def fromRawValue[R](
@@ -49,16 +49,16 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioResponseBody, ZioStreams] 
         val buffer: ByteBuffer = r
         ZioRawHttpResponseBody(Chunk.fromByteBuffer(buffer), Some(buffer.remaining()))
       case RawBodyType.InputStreamBody =>
-        ZioStreamHttpResponseBody(ZStream.fromInputStream(r), None)
+        ZioStreamHttpResponseBody(ZStream.fromInputStream(r, inputStreamChunkSize), None)
       case RawBodyType.InputStreamRangeBody =>
         r.range
           .map(range =>
             ZioStreamHttpResponseBody(
-              ZStream.fromInputStream(r.inputStreamFromRangeStart()).take(range.contentLength),
+              ZStream.fromInputStream(r.inputStreamFromRangeStart(), inputStreamChunkSize).take(range.contentLength),
               Some(range.contentLength)
             )
           )
-          .getOrElse(ZioStreamHttpResponseBody(ZStream.fromInputStream(r.inputStream()), None))
+          .getOrElse(ZioStreamHttpResponseBody(ZStream.fromInputStream(r.inputStream(), inputStreamChunkSize), None))
       case RawBodyType.FileBody =>
         val tapirFile = r
         tapirFile.range
@@ -118,14 +118,14 @@ class ZioHttpToResponseBody extends ToResponseBody[ZioResponseBody, ZioStreams] 
       case RawBodyType.InputStreamBody =>
         FormField.streamingBinaryField(
           part.name,
-          ZStream.fromInputStream(part.body).orDie,
+          ZStream.fromInputStream(part.body, inputStreamChunkSize).orDie,
           mediaType.getOrElse(MediaType.application.`octet-stream`),
           filename = part.fileName
         )
       case RawBodyType.InputStreamRangeBody =>
         FormField.streamingBinaryField(
           part.name,
-          ZStream.fromInputStream(part.body.inputStream()).orDie,
+          ZStream.fromInputStream(part.body.inputStream(), inputStreamChunkSize).orDie,
           mediaType.getOrElse(MediaType.application.`octet-stream`),
           filename = part.fileName
         )
