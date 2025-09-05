@@ -1,6 +1,6 @@
 package sttp.tapir.server.tracing.otel4s
 
-import io.opentelemetry.semconv.{ErrorAttributes, HttpAttributes, ServerAttributes, UrlAttributes}
+import org.typelevel.otel4s.semconv.attributes.{ErrorAttributes, HttpAttributes, ServerAttributes, UrlAttributes}
 import org.typelevel.otel4s.trace.Tracer
 import org.typelevel.otel4s.{Attribute, Attributes}
 import sttp.model.headers.{Forwarded, Host}
@@ -66,7 +66,7 @@ object Otel4sTracingConfig {
     def spanNameFromEndpointAndAttributes(request: ServerRequest, endpoint: AnyEndpoint): (String, Attributes) = {
       val route = endpoint.showPathTemplate(showQueryParam = None)
       val name = s"${request.method.method} $route"
-      (name, Attributes(Attribute(HttpAttributes.HTTP_ROUTE.getKey, route)))
+      (name, Attributes(HttpAttributes.HttpRoute(route)))
     }
 
     def requestAttributes(request: ServerRequest): Attributes = {
@@ -81,25 +81,25 @@ object Otel4sTracingConfig {
       val (host, _) = Host.parseHostAndPort(hostHeader)
 
       Attributes(
-        Attribute(HttpAttributes.HTTP_REQUEST_METHOD.getKey, request.method.method),
-        Attribute(UrlAttributes.URL_PATH.getKey, request.uri.pathToString),
-        Attribute(UrlAttributes.URL_SCHEME.getKey, request.uri.scheme.getOrElse("http")),
-        Attribute(ServerAttributes.SERVER_ADDRESS.getKey, host)
+        HttpAttributes.HttpRequestMethod(request.method.method),
+        UrlAttributes.UrlPath(request.uri.pathToString),
+        UrlAttributes.UrlScheme(request.uri.scheme.getOrElse("http")),
+        ServerAttributes.ServerAddress(host)
       )
     }
 
     def spanName(request: ServerRequest): String = s"${request.method.method}"
 
     def responseAttributes(request: ServerRequest, response: ServerResponse[_]): Attributes =
-      Attributes(Attribute(HttpAttributes.HTTP_RESPONSE_STATUS_CODE.getKey, response.code.code.toLong))
+      Attributes(HttpAttributes.HttpResponseStatusCode(response.code.code.toLong))
 
     def errorAttributes(e: Either[StatusCode, Throwable]): Attributes = Attributes(e match {
       case Left(statusCode) =>
         // see footnote for error.type
-        Attribute(ErrorAttributes.ERROR_TYPE.getKey, statusCode.code.toString)
+        ErrorAttributes.ErrorType(statusCode.code.toString)
       case Right(exception) =>
         val errorType = exception.getClass.getSimpleName
-        Attribute(ErrorAttributes.ERROR_TYPE.getKey, errorType)
+        ErrorAttributes.ErrorType(errorType)
     })
   }
 }

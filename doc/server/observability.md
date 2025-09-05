@@ -154,6 +154,56 @@ val metrics = OpenTelemetryMetrics.default[Future](meter)
 val metricsInterceptor = metrics.metricsInterceptor() // add to your server options
 ```
 
+## otel4s OpenTelemetry metrics
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-otel4s-metrics" % "@VERSION@"
+```
+
+The `Otel4sMetrics` provides integration with the [otel4s](https://typelevel.org/otel4s/) library for OpenTelemetry metrics.
+This allows you to create metrics for your tapir endpoints using a purely functional API.
+
+`Otel4sMetrics` encapsulates metric instances and needs a `Meter[F]` from `otel4s` to create default metrics.
+
+It should be set as `metricsInterceptor` of your ServerOptions: 
+
+Example using Http4s:
+```scala mdoc:compile-only
+import cats.effect.IO
+import org.typelevel.otel4s.oteljava.OtelJava
+import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerOptions
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.metrics.otel4s.Otel4sMetrics
+
+OtelJava
+  .autoConfigured[IO]()
+  .use { otel4s =>
+    otel4s.meterProvider.get("meter-name").flatMap { meter =>
+      val endpoints: List[ServerEndpoint[Any, IO]] = ???
+      val routes =
+        Http4sServerInterpreter[IO](
+          Http4sServerOptions
+            .customiseInterceptors[IO]
+            .metricsInterceptor(Otel4sMetrics.default(meter).metricsInterceptor())
+            .options
+        ).toRoutes(endpoints)
+      // start your server
+      ???
+    }
+  }
+```
+
+By default, the following metrics are exposed:
+
+* `http.server.active_requests` (up-down-counter)
+* `http.server.requests.total` (counter)
+* `http.server.request.duration` (histogram)
+
+
+
 ## Datadog Metrics
 
 Add the following dependency:
