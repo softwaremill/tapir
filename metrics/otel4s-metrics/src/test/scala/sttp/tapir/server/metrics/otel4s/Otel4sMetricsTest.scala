@@ -2,7 +2,7 @@ package sttp.tapir.server.metrics.otel4s
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import cats.syntax.traverse.*
+import cats.syntax.traverse._
 import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator
 import io.opentelemetry.api.common.{AttributeKey, Attributes}
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
@@ -15,10 +15,10 @@ import org.typelevel.otel4s.oteljava.testkit.OtelJavaTestkit
 import org.typelevel.otel4s.Attribute
 import org.typelevel.otel4s.metrics.Meter
 import sttp.capabilities.Streams
-import sttp.model.*
-import sttp.model.Uri.*
+import sttp.model._
+import sttp.model.Uri._
 import sttp.monad.MonadError
-import sttp.tapir.{AttributeKey => _, *}
+import sttp.tapir.{AttributeKey => _, _}
 import sttp.tapir.TestUtil.serverRequestFromUri
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.integ.cats.effect.CatsMonadError
@@ -26,11 +26,11 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.TestUtil.StringToResponseBody
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
-import sttp.tapir.server.interpreter.*
+import sttp.tapir.server.interpreter._
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabelsTyped}
 import sttp.tapir.server.metrics.otel4s.Otel4sMetrics.{requestAttrs, responseAttrs}
 
-import scala.jdk.CollectionConverters.*
+import scala.jdk.CollectionConverters._
 import scala.util.{Success, Try}
 
 class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {

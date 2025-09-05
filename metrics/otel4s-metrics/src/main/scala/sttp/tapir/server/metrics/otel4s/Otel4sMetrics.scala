@@ -13,7 +13,7 @@ import java.time.{Duration, Instant}
 
 case class Otel4sMetrics[F[_]](metrics: List[Metric[F, _]]) {
 
-  import Otel4sMetrics.*
+  import Otel4sMetrics._
 
   /** Registers a `http.server.active_requests` up-down-counter (assuming default labels). */
   def addRequestsActive(meter: Meter[F], labels: MetricLabels = DefaultMetricLabels): Otel4sMetrics[F] =
