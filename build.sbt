@@ -188,6 +188,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   datadogMetrics.projectRefs ++
   zioMetrics.projectRefs ++
   opentelemetryTracing.projectRefs ++
+  otel4sMetrics.projectRefs ++
   otel4sTracing.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
@@ -1121,8 +1122,24 @@ lazy val otel4sTracing: ProjectMatrix = (projectMatrix in file("tracing/otel4s-t
   .settings(
     name := "tapir-otel4s-tracing",
     libraryDependencies ++= Seq(
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
+      "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
       "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
+      "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
+
+lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-metrics"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-otel4s-metrics",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
+      "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
       "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
       scalaTest.value % Test
     )
@@ -2236,6 +2253,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     opentelemetryMetrics,
     opentelemetryTracing,
     otel4sTracing,
+    otel4sMetrics,
     pekkoHttpServer,
     picklerJson,
     prometheusMetrics,
@@ -2305,6 +2323,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     opentelemetryMetrics,
     opentelemetryTracing,
     otel4sTracing,
+    otel4sMetrics,
     pekkoHttpServer,
     picklerJson,
     playClient,
