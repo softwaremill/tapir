@@ -1,7 +1,7 @@
 package sttp.tapir.server.metrics.otel4s
 
 import org.typelevel.otel4s.{Attribute, Attributes}
-import org.typelevel.otel4s.metrics.{Counter, Histogram, Meter}
+import org.typelevel.otel4s.metrics.{Counter, Histogram, Meter, UpDownCounter}
 import org.typelevel.otel4s.semconv.attributes.{ErrorAttributes, HttpAttributes, UrlAttributes}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabelsTyped}
@@ -79,7 +79,7 @@ object Otel4sMetrics {
     )
   )
 
-  private def requestActive[F[_]](meter: Meter[F], labels: MetricLabels): Metric[F, ?] =
+  private def requestActive[F[_]](meter: Meter[F], labels: MetricLabels): Metric[F, F[UpDownCounter[F, Long]]] =
     Metric(
       metric = meter
         .upDownCounter[Long]("http.server.active_requests")
