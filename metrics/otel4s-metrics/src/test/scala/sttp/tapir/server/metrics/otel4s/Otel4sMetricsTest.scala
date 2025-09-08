@@ -13,7 +13,7 @@ import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.otel4s.oteljava.testkit.OtelJavaTestkit
 import org.typelevel.otel4s.Attribute
-import org.typelevel.otel4s.metrics.Meter
+import org.typelevel.otel4s.metrics.{Gauge, Meter}
 import sttp.capabilities.Streams
 import sttp.model._
 import sttp.model.Uri._
@@ -180,11 +180,13 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
           val requestsTotalData = requestsTotal.getData.getPoints.asScala.toList.asInstanceOf[List[LongPointData]].head
           requestsTotalData.getValue shouldBe expectedCount
           if (isFailure) {
+            // deliberately checking against Opentelemetry API (Java)
+            // Java API could claim about types, so that's why long2Long conversion is applied for a value of HttpAttributes.HTTP_RESPONSE_STATUS_CODE
             requestsTotalData.getAttributes shouldBe
               Attributes
                 .builder()
                 .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, expectedStatusCode)
+                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
                 .put(HttpAttributes.HTTP_ROUTE, "/person")
                 .put(UrlAttributes.URL_SCHEME, "http")
                 .put(ErrorAttributes.ERROR_TYPE, "java.lang.RuntimeException")
@@ -194,7 +196,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
               Attributes
                 .builder()
                 .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, expectedStatusCode)
+                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
                 .put(HttpAttributes.HTTP_ROUTE, "/person")
                 .put(UrlAttributes.URL_SCHEME, "http")
                 .build()
@@ -225,12 +227,14 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
 
           val requestDurationData = requestDuration.getData.getPoints.asScala.toList.asInstanceOf[List[HistogramPointData]]
           if (isFailure) {
+            // deliberately checking against Opentelemetry API (Java)
+            // Java API could claim about types, so that's why long2Long conversion is applied for a value of HttpAttributes.HTTP_RESPONSE_STATUS_CODE
             requestDurationData.map(_.getCount) shouldBe List(expectedCount)
             requestDurationData.map(_.getAttributes) shouldBe List(
               Attributes
                 .builder()
                 .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, expectedStatusCode)
+                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
                 .put(HttpAttributes.HTTP_ROUTE, "/person")
                 .put(UrlAttributes.URL_SCHEME, "http")
                 .put(ErrorAttributes.ERROR_TYPE, "java.lang.RuntimeException")
@@ -242,7 +246,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
               Attributes
                 .builder()
                 .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, expectedStatusCode)
+                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
                 .put(HttpAttributes.HTTP_ROUTE, "/person")
                 .put(UrlAttributes.URL_SCHEME, "http")
                 .put(AttributeKey.stringKey("phase"), "headers")
@@ -250,7 +254,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
               Attributes
                 .builder()
                 .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, expectedStatusCode)
+                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
                 .put(HttpAttributes.HTTP_ROUTE, "/person")
                 .put(UrlAttributes.URL_SCHEME, "http")
                 .put(AttributeKey.stringKey("phase"), "body")
@@ -274,7 +278,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
         }
       )
     )
-    val customGauge: Meter[IO] => Metric[IO, _] = meter =>
+    val customGauge: Meter[IO] => Metric[IO, IO[Gauge[IO, Long]]] = meter =>
       Metric(
         metric = meter
           .gauge[Long]("my.custom.gauge")
