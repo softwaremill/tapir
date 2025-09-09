@@ -10,7 +10,7 @@ lazy val root = (project in file("."))
   )
 
 val catsXmlVersion = "0.0.20"
-val jsoniterScalaVersion = "2.37.9"
+val jsoniterScalaVersion = "2.37.10"
 val tapirVersion = "1.11.18"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,
