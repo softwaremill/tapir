@@ -1155,8 +1155,8 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
     name := "tapir-apispec-docs",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %%% "asyncapi-model" % Versions.sttpApispec,
-      "com.softwaremill.sttp.apispec" %% "jsonschema-circe" % Versions.sttpApispec % Test,
-      "io.circe" %% "circe-literal" % Versions.circe % Test
+      "com.softwaremill.sttp.apispec" %%% "jsonschema-circe" % Versions.sttpApispec % Test,
+      "io.circe" %%% "circe-literal" % Versions.circe % Test
     )
   )
   .jvmPlatform(
@@ -1176,7 +1176,7 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     libraryDependencies ++= Seq(
       "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
       "com.softwaremill.sttp.apispec" %%% "openapi-model" % Versions.sttpApispec,
-      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test
+      "com.softwaremill.sttp.apispec" %%% "openapi-circe-yaml" % Versions.sttpApispec % Test
     )
   )
   .jvmPlatform(
@@ -1194,10 +1194,10 @@ lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-v
   .settings(
     name := "tapir-openapi-verifier",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test,
+      "com.softwaremill.sttp.apispec" %%% "openapi-circe-yaml" % Versions.sttpApispec % Test,
       "com.softwaremill.sttp.apispec" %%% "openapi-circe" % Versions.sttpApispec,
-      "io.circe" %% "circe-parser" % Versions.circe,
-      "io.circe" %% "circe-yaml" % Versions.circeYaml
+      "io.circe" %%% "circe-parser" % Versions.circe,
+      "io.circe" %%% "circe-yaml" % Versions.circeYaml
     )
   )
   .jvmPlatform(
