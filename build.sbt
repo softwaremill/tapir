@@ -188,6 +188,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   datadogMetrics.projectRefs ++
   zioMetrics.projectRefs ++
   opentelemetryTracing.projectRefs ++
+  otel4sMetrics.projectRefs ++
   otel4sTracing.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
@@ -404,7 +405,6 @@ lazy val superMatrixSettings = Seq((Compile / unmanagedSourceDirectories) ++= {
       (Compile / sourceDirectory).value / suffixes
     }
 })
-
 
 lazy val clientTestServer = (projectMatrix in file("client/testserver"))
   .settings(commonSettings)
@@ -1122,8 +1122,24 @@ lazy val otel4sTracing: ProjectMatrix = (projectMatrix in file("tracing/otel4s-t
   .settings(
     name := "tapir-otel4s-tracing",
     libraryDependencies ++= Seq(
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
+      "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
       "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
+      "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
+
+lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-metrics"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-otel4s-metrics",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
+      "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
       "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
       scalaTest.value % Test
     )
@@ -2144,8 +2160,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.9.0" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.37.6" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.37.6" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.37.10" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.37.10" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
@@ -2237,6 +2253,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     opentelemetryMetrics,
     opentelemetryTracing,
     otel4sTracing,
+    otel4sMetrics,
     pekkoHttpServer,
     picklerJson,
     prometheusMetrics,
@@ -2306,6 +2323,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     opentelemetryMetrics,
     opentelemetryTracing,
     otel4sTracing,
+    otel4sMetrics,
     pekkoHttpServer,
     picklerJson,
     playClient,

@@ -40,6 +40,12 @@ case class MetricLabels(
   def valuesForResponse(ex: Throwable): List[String] = forResponse.flatMap { case (_, f) => f(Left(ex)).toList }
 }
 
+case class MetricLabelsTyped[A](
+    forRequest: List[(AnyEndpoint, ServerRequest) => A],
+    forResponse: List[Either[Throwable, ServerResponse[_]] => Option[A]],
+    forResponsePhase: ResponsePhaseLabel = ResponsePhaseLabel("phase", "headers", "body")
+)
+
 object MetricLabels {
 
   /** Labels request by path and method, response by status code */
