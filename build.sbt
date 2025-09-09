@@ -1197,7 +1197,7 @@ lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-v
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test,
       "com.softwaremill.sttp.apispec" %%% "openapi-circe" % Versions.sttpApispec,
       "io.circe" %%% "circe-parser" % Versions.circe,
-      "io.circe" %%% "circe-yaml" % Versions.circeYaml
+      "io.circe" %% "circe-yaml" % Versions.circeYaml
     )
   )
   .jvmPlatform(
