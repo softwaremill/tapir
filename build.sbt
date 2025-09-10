@@ -1154,9 +1154,9 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
   .settings(
     name := "tapir-apispec-docs",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.apispec" %% "asyncapi-model" % Versions.sttpApispec,
-      "com.softwaremill.sttp.apispec" %% "jsonschema-circe" % Versions.sttpApispec % Test,
-      "io.circe" %% "circe-literal" % Versions.circe % Test
+      "com.softwaremill.sttp.apispec" %%% "asyncapi-model" % Versions.sttpApispec,
+      "com.softwaremill.sttp.apispec" %%% "jsonschema-circe" % Versions.sttpApispec % Test,
+      "io.circe" %%% "circe-literal" % Versions.circe % Test
     )
   )
   .jvmPlatform(
@@ -1175,7 +1175,7 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     name := "tapir-openapi-docs",
     libraryDependencies ++= Seq(
       "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
-      "com.softwaremill.sttp.apispec" %% "openapi-model" % Versions.sttpApispec,
+      "com.softwaremill.sttp.apispec" %%% "openapi-model" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test
     )
   )
@@ -1195,8 +1195,8 @@ lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-v
     name := "tapir-openapi-verifier",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test,
-      "com.softwaremill.sttp.apispec" %% "openapi-circe" % Versions.sttpApispec,
-      "io.circe" %% "circe-parser" % Versions.circe,
+      "com.softwaremill.sttp.apispec" %%% "openapi-circe" % Versions.sttpApispec,
+      "io.circe" %%% "circe-parser" % Versions.circe,
       "io.circe" %% "circe-yaml" % Versions.circeYaml
     )
   )
@@ -1754,7 +1754,7 @@ lazy val awsLambdaCatsEffect: ProjectMatrix = (projectMatrix in file("serverless
   .settings(
     name := "tapir-aws-lambda",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client4" %% "fs2" % Versions.sttp4,
+      "com.softwaremill.sttp.client4" %%% "fs2" % Versions.sttp4,
       "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface,
       slf4j
     )
