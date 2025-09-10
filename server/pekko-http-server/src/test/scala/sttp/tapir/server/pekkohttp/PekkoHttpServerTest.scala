@@ -48,12 +48,24 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
-          val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
+          val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(req => ("ok".asRight[Unit]).unit)
           val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
+            }
+            .unsafeToFuture()
+        },
+
+        Test("server reads remoteInfo") {
+          val e = endpoint.get.in("test").in(extractFromRequest(req => req.connectionInfo) ).out(stringBody)
+            .serverLogic(connectionInfo => (connectionInfo.remote.map(_.toString).getOrElse("unknown").asRight[Unit]).unit)
+          val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
+          interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.get(uri"http://localhost:$port/api/test").send(backend).map(_.body shouldBe Right(s"/127.0.0.1:$port"))
             }
             .unsafeToFuture()
         },
