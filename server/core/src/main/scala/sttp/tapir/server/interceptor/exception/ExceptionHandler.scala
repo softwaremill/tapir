@@ -7,25 +7,25 @@ import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir._
 
 trait ExceptionHandler[F[_]] {
-  def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]]
+  def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]]
 }
 
 object ExceptionHandler {
-  def apply[F[_]](f: ExceptionContext => F[Option[ValuedEndpointOutput[_]]]): ExceptionHandler[F] =
+  def apply[F[_]](f: ExceptionContext => F[Option[ValuedEndpointOutput[?]]]): ExceptionHandler[F] =
     new ExceptionHandler[F] {
-      override def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+      override def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]] =
         f(ctx)
     }
 
-  def pure[F[_]](f: ExceptionContext => Option[ValuedEndpointOutput[_]]): ExceptionHandler[F] =
+  def pure[F[_]](f: ExceptionContext => Option[ValuedEndpointOutput[?]]): ExceptionHandler[F] =
     new ExceptionHandler[F] {
-      override def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+      override def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]] =
         monad.unit(f(ctx))
     }
 }
 
-case class DefaultExceptionHandler[F[_]](response: (StatusCode, String) => ValuedEndpointOutput[_]) extends ExceptionHandler[F] {
-  override def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+case class DefaultExceptionHandler[F[_]](response: (StatusCode, String) => ValuedEndpointOutput[?]) extends ExceptionHandler[F] {
+  override def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]] =
     (ctx.e, ctx.e.getCause()) match {
       case (StreamMaxLengthExceededException(maxBytes), _) =>
         monad.unit(Some(response(StatusCode.PayloadTooLarge, s"Payload limit (${maxBytes}B) exceeded")))

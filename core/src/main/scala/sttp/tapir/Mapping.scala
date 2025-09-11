@@ -88,7 +88,7 @@ object Mapping {
   private[tapir] def decode[L, H](
       l: L,
       rawDecode: L => DecodeResult[H],
-      applyValidation: H => List[ValidationError[_]]
+      applyValidation: H => List[ValidationError[?]]
   ): DecodeResult[H] = {
     def tryRawDecode(l: L): DecodeResult[H] = {
       Try(rawDecode(l)) match {

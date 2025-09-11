@@ -27,7 +27,7 @@ class MatchTypeTest extends AnyFlatSpec with MatchTypeTestExtensions with Matche
   }
 
   it should "provide implicit for all primitive class returning true for other primitive type" in {
-    matcherAndTypes.foreach({ (matcher: MatchType[_], a: Any) =>
+    matcherAndTypes.foreach({ (matcher: MatchType[?], a: Any) =>
       (matcher(a) shouldBe true) withClue (s"Matcher $matcher did not recognize $a")
     }.tupled)
   }
