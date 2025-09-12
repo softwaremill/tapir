@@ -8,6 +8,7 @@ import sttp.model.StatusCode
 import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.ztapir._
 import zio.http.{Response => ZioHttpResponse, endpoint => _, _}
+import zio.http.codec.PathCodec.literal
 import zio.{Task, ZIO}
 
 class ZioHttpCompositionTest(
@@ -29,13 +30,15 @@ class ZioHttpCompositionTest(
         val route1: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter().toHttp(ep1)
         val route2: Routes[Any, ZioHttpResponse] = Routes(Method.GET / "p2" -> handler(ZioHttpResponse.ok))
         val route3: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter().toHttp(ep3)
+        val route4: Routes[Any, ZioHttpResponse] = literal("p4") / route1
 
-        NonEmptyList.of(route3, route1, route2)
+        NonEmptyList.of(route3, route1, route2, route4)
       }
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/p1").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri/p2").send(backend).map(_.code shouldBe StatusCode.Ok) >>
-        basicRequest.get(uri"$baseUri/p3").send(backend).map(_.code shouldBe StatusCode.BadRequest)
+        basicRequest.get(uri"$baseUri/p3").send(backend).map(_.code shouldBe StatusCode.BadRequest) >>
+        basicRequest.get(uri"$baseUri/p4/p3").send(backend).map(_.code shouldBe StatusCode.Ok)
     }
   )
 }
