@@ -175,7 +175,17 @@ trait ZioHttpInterpreter[R] {
       val pattern = sesWithPattern.head.routePattern
       val endpoints = sesWithPattern.sortBy(_.index).map(_.endpoint)
       // The pattern that we generate should be the same for all endpoints in a group
-      Route.handledIgnoreParams(pattern)(Handler.fromFunctionHandler { (request: Request) => handleRequest(request, endpoints) })
+      def stripPrefix(request: Request): Request =
+        if (pattern.matches(request.method, request.path)) {
+          request
+        } else if (request.path.nonEmpty) {
+          stripPrefix(request.updatePath(_.drop(1)))
+        } else {
+          request
+        }
+      Route.handledIgnoreParams(pattern)(Handler.fromFunctionHandler { (request: Request) =>
+        handleRequest(stripPrefix(request), endpoints)
+      })
     }
 
     Routes(Chunk.fromIterable(handlers))
