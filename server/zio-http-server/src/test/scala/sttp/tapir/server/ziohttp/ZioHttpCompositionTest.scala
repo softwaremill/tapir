@@ -38,7 +38,7 @@ class ZioHttpCompositionTest(
       basicRequest.get(uri"$baseUri/p1").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri/p2").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri/p3").send(backend).map(_.code shouldBe StatusCode.BadRequest) >>
-        basicRequest.get(uri"$baseUri/p4/p3").send(backend).map(_.code shouldBe StatusCode.Ok)
+        basicRequest.get(uri"$baseUri/p4/p1").send(backend).map(_.code shouldBe StatusCode.Ok)
     }
   )
 }
