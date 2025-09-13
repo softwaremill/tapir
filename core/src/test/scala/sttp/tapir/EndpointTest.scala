@@ -154,7 +154,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     """)
   }
 
-  def pairToTuple(input: EndpointInput[_]): Any =
+  def pairToTuple(input: EndpointInput[?]): Any =
     input match {
       case EndpointInput.Pair(left, right, _, _) => (pairToTuple(left), pairToTuple(right))
       case EndpointIO.Pair(left, right, _, _)    => (pairToTuple(left), pairToTuple(right))

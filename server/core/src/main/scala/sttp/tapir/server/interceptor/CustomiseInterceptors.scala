@@ -94,7 +94,7 @@ case class CustomiseInterceptors[F[_], O](
     *   rejection to the server library
     */
   def defaultHandlers(
-      errorMessageOutput: String => ValuedEndpointOutput[_],
+      errorMessageOutput: String => ValuedEndpointOutput[?],
       notFoundWhenRejected: Boolean = false
   ): CustomiseInterceptors[F, O] = {
     copy(

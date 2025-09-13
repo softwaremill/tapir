@@ -8,7 +8,7 @@ class CompileCheckTestBaseSpec extends CompileCheckTestBase {
   }
 
   it should "not compile invalid code" in {
-    compile("asdf") shouldBe a[util.Failure[_]]
+    compile("asdf") shouldBe a[util.Failure[?]]
   }
 
   it should "work with an extender too" in {

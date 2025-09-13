@@ -39,7 +39,7 @@ case class PrometheusMetrics[F[_]](
   def addRequestsDuration(
       labels: MetricLabels = MetricLabels.Default,
       clock: Clock = Clock.systemUTC(),
-      bucketsOverride: List[Double] = List.empty,
+      bucketsOverride: List[Double] = List.empty
   ): PrometheusMetrics[F] =
     copy(metrics = metrics :+ requestDuration(registry, namespace, labels, clock, bucketsOverride))
 
@@ -135,7 +135,7 @@ object PrometheusMetrics {
       namespace: String,
       labels: MetricLabels,
       clock: Clock = Clock.systemUTC(),
-      bucketsOverride: List[Double] = List.empty,
+      bucketsOverride: List[Double] = List.empty
   ): Metric[F, Histogram] =
     Metric[F, Histogram](
       (if (bucketsOverride.nonEmpty) Histogram.builder().classicUpperBounds(bucketsOverride: _*) else Histogram.builder())

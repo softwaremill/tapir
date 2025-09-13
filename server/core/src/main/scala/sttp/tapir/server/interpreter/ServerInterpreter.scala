@@ -85,7 +85,7 @@ class ServerInterpreter[R, F[_], B, S](
   ): F[RequestResult[B]] = {
 
     val resultOrValueFrom = new ResultOrValueFrom {
-      def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]] = {
+      def onDecodeFailure(input: EndpointInput[?], failure: DecodeResult.Failure): F[RequestResult[B]] = {
         val decodeFailureContext = interceptor.DecodeFailureContext(se.endpoint, input, failure, request)
         endpointHandler(defaultSecurityFailureResponse, endpointInterceptors)
           .onDecodeFailure(decodeFailureContext)
@@ -204,7 +204,7 @@ class ServerInterpreter[R, F[_], B, S](
 
   private def unsupportedInputMediaTypeResponse(
       request: ServerRequest,
-      oneOfBodyInput: EndpointIO.OneOfBody[_, _]
+      oneOfBodyInput: EndpointIO.OneOfBody[?, ?]
   ): F[DecodeBasicInputsResult] =
     (DecodeBasicInputsResult.Failure(
       oneOfBodyInput,
@@ -293,6 +293,6 @@ class ServerInterpreter[R, F[_], B, S](
     }
     def value[T](v: F[T]): ResultOrValue[T] = ResultOrValue(v.map(Right(_)))
 
-    def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]]
+    def onDecodeFailure(input: EndpointInput[?], failure: DecodeResult.Failure): F[RequestResult[B]]
   }
 }

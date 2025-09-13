@@ -7,7 +7,7 @@ import scala.collection.immutable
 import scala.util.matching.Regex
 
 sealed trait Validator[T] {
-  def apply(t: T): List[ValidationError[_]]
+  def apply(t: T): List[ValidationError[?]]
 
   def contramap[TT](g: TT => T): Validator[TT] = Validator.Mapped(this, g)
 
@@ -111,10 +111,10 @@ object Validator extends ValidatorMacros {
   def nonEmptyString[T <: String]: Validator.Primitive[T] = MinLength(1)
 
   // iterable
-  def minSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
-  def maxSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
-  def nonEmpty[T, C[_] <: Iterable[_]]: Validator.Primitive[C[T]] = MinSize(1)
-  def fixedSize[T, C[_] <: Iterable[_]](value: Int): Validator[C[T]] = MinSize(value).and(MaxSize(value))
+  def minSize[T, C[_] <: Iterable[?]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
+  def maxSize[T, C[_] <: Iterable[?]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
+  def nonEmpty[T, C[_] <: Iterable[?]]: Validator.Primitive[C[T]] = MinSize(1)
+  def fixedSize[T, C[_] <: Iterable[?]](value: Int): Validator[C[T]] = MinSize(value).and(MaxSize(value))
 
   // enum
   /** Create an enumeration validator, with the given possible values.
@@ -207,10 +207,10 @@ object Validator extends ValidatorMacros {
     def apply[T <: String](value: Int) = new MaxLength[T](value, false)
   }
 
-  case class MinSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
+  case class MinSize[T, C[_] <: Iterable[?]](value: Int) extends Primitive[C[T]] {
     override def doValidate(t: C[T]): ValidationResult = ValidationResult.validWhen(t.size >= value)
   }
-  case class MaxSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
+  case class MaxSize[T, C[_] <: Iterable[?]](value: Int) extends Primitive[C[T]] {
     override def doValidate(t: C[T]): ValidationResult = ValidationResult.validWhen(t.size <= value)
   }
   case class Custom[T](validationLogic: T => ValidationResult, showMessage: Option[String] = None) extends Primitive[T] {
@@ -239,18 +239,18 @@ object Validator extends ValidatorMacros {
   //
 
   case class Mapped[TT, T](wrapped: Validator[T], g: TT => T) extends Validator[TT] {
-    override def apply(t: TT): List[ValidationError[_]] = wrapped.apply(g(t))
+    override def apply(t: TT): List[ValidationError[?]] = wrapped.apply(g(t))
   }
 
   case class All[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
-    override def apply(t: T): List[ValidationError[_]] = validators.flatMap(_.apply(t)).toList
+    override def apply(t: T): List[ValidationError[?]] = validators.flatMap(_.apply(t)).toList
 
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) this.asInstanceOf[Validator[TT]] else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
   }
 
   case class Any[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
-    override def apply(t: T): List[ValidationError[_]] = {
+    override def apply(t: T): List[ValidationError[?]] = {
       val results = validators.map(_.apply(t))
       if (results.exists(_.isEmpty)) {
         List.empty

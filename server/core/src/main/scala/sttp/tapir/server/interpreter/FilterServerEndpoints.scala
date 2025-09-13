@@ -26,8 +26,8 @@ object FilterServerEndpoints {
       .asVectorOfBasicInputs()
       .collect {
         case EndpointInput.FixedPath(s, _, _) => Exact(s)
-        case _: EndpointInput.PathCapture[_]  => AnySingle
-        case _: EndpointInput.PathsCapture[_] => AnyMulti
+        case _: EndpointInput.PathCapture[?]  => AnySingle
+        case _: EndpointInput.PathsCapture[?] => AnyMulti
       }
       .toList
 

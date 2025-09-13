@@ -130,16 +130,16 @@ object EndpointTransput {
   }
 
   sealed trait Pair[T] extends EndpointTransput[T] {
-    def left: EndpointTransput[_]
-    def right: EndpointTransput[_]
+    def left: EndpointTransput[?]
+    def right: EndpointTransput[?]
 
     private[tapir] val combine: CombineParams
     private[tapir] val split: SplitParams
 
     override def show: String = {
-      def flattenedPairs(et: EndpointTransput[_]): Vector[EndpointTransput[_]] =
+      def flattenedPairs(et: EndpointTransput[?]): Vector[EndpointTransput[?]] =
         et match {
-          case p: Pair[_] => flattenedPairs(p.left) ++ flattenedPairs(p.right)
+          case p: Pair[?] => flattenedPairs(p.left) ++ flattenedPairs(p.right)
           case other      => Vector(other)
         }
       showMultiple(flattenedPairs(this))
@@ -384,7 +384,7 @@ object EndpointOutput extends EndpointOutputMacros {
     override def show: String = s"status code ($statusCode)"
   }
 
-  case class WebSocketBodyWrapper[PIPE_REQ_RESP, T](wrapped: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, T, _]) extends Atom[T] {
+  case class WebSocketBodyWrapper[PIPE_REQ_RESP, T](wrapped: WebSocketBodyOutput[PIPE_REQ_RESP, ?, ?, T, ?]) extends Atom[T] {
     override private[tapir] type ThisType[X] = WebSocketBodyWrapper[PIPE_REQ_RESP, X]
     override private[tapir] type L = PIPE_REQ_RESP
     override private[tapir] type CF = CodecFormat
@@ -415,7 +415,7 @@ object EndpointOutput extends EndpointOutputMacros {
       appliesTo: Any => Boolean
   )
 
-  case class OneOf[O, T](variants: List[OneOfVariant[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
+  case class OneOf[O, T](variants: List[OneOfVariant[? <: O]], mapping: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
     override def map[U](_mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](mapping = mapping.map(_mapping))
     override def show: String = showOneOf(variants.map(_.output.show))
@@ -472,7 +472,7 @@ object EndpointIO {
     override private[tapir] type CF = CodecFormat
     override private[tapir] def copyWith[U](c: Codec[R, U, CodecFormat], i: Info[U]): Body[R, U] = copy(codec = c, info = i)
     override def show: String = {
-      val charset = bodyType.asInstanceOf[RawBodyType[_]] match {
+      val charset = bodyType.asInstanceOf[RawBodyType[?]] match {
         case RawBodyType.StringBody(charset) => s" (${charset.toString})"
         case _                               => ""
       }
@@ -481,7 +481,7 @@ object EndpointIO {
     }
   }
 
-  case class StreamBodyWrapper[BS, T](wrapped: StreamBodyIO[BS, T, _]) extends Atom[T] {
+  case class StreamBodyWrapper[BS, T](wrapped: StreamBodyIO[BS, T, ?]) extends Atom[T] {
     override private[tapir] type ThisType[X] = StreamBodyWrapper[BS, X]
     override private[tapir] type L = BS
     override private[tapir] type CF = CodecFormat
@@ -495,10 +495,10 @@ object EndpointIO {
     override def show: String = wrapped.show
   }
 
-  case class OneOfBodyVariant[O](range: ContentTypeRange, body: Either[Body[_, O], StreamBodyWrapper[_, O]]) {
+  case class OneOfBodyVariant[O](range: ContentTypeRange, body: Either[Body[?, O], StreamBodyWrapper[?, O]]) {
     def show: String = bodyAsAtom.show
     def mediaTypeWithCharset: MediaType = body.fold(_.mediaTypeWithCharset, _.mediaTypeWithCharset)
-    def codec: Codec[_, O, _ <: CodecFormat] = bodyAsAtom.codec
+    def codec: Codec[?, O, ? <: CodecFormat] = bodyAsAtom.codec
     def info: Info[O] = bodyAsAtom.info
     private[tapir] def bodyAsAtom: EndpointIO.Atom[O] = body match {
       case Left(b)  => b
@@ -659,7 +659,7 @@ object EndpointIO {
     class basic(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.basic) extends StaticAnnotation
     class bearer(val challenge: WWWAuthenticateChallenge = WWWAuthenticateChallenge.bearer) extends StaticAnnotation
     class securitySchemeName(val name: String) extends StaticAnnotation
-    class customise(val f: EndpointTransput[_] => EndpointTransput[_]) extends StaticAnnotation
+    class customise(val f: EndpointTransput[?] => EndpointTransput[?]) extends StaticAnnotation
 
     /** A class-level annotation, specifies the path to the endpoint. To capture segments of the path, surround the segment's name with
       * `{...}` (curly braces), and reference the name using [[annotations.path]].

@@ -6,7 +6,7 @@ import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, Mapping}
 sealed trait InputValueResult
 object InputValueResult {
   case class Value(params: Params, remainingBasicValues: Vector[Any]) extends InputValueResult
-  case class Failure(input: EndpointInput[_], failure: DecodeResult.Failure) extends InputValueResult
+  case class Failure(input: EndpointInput[?], failure: DecodeResult.Failure) extends InputValueResult
 }
 
 object InputValue {
@@ -14,17 +14,17 @@ object InputValue {
   /** Returns the value of the input, tupled and mapped as described by the data structure. Values of basic inputs are taken as consecutive
     * values from `values.basicInputsValues`. Hence, these should match (in order).
     */
-  def apply(input: EndpointInput[_], values: DecodeBasicInputsResult.Values): InputValueResult =
+  def apply(input: EndpointInput[?], values: DecodeBasicInputsResult.Values): InputValueResult =
     apply(input, values.basicInputsValues)
 
-  private def apply(input: EndpointInput[_], remainingBasicValues: Vector[Any]): InputValueResult = {
+  private def apply(input: EndpointInput[?], remainingBasicValues: Vector[Any]): InputValueResult = {
     input match {
       case EndpointInput.Pair(left, right, combine, _) => handlePair(left, right, combine, remainingBasicValues)
       case EndpointIO.Pair(left, right, combine, _)    => handlePair(left, right, combine, remainingBasicValues)
       case EndpointInput.MappedPair(wrapped, codec)    => handleMappedPair(wrapped, codec, remainingBasicValues)
       case EndpointIO.MappedPair(wrapped, codec)       => handleMappedPair(wrapped, codec, remainingBasicValues)
-      case auth: EndpointInput.Auth[_, _]              => apply(auth.input, remainingBasicValues)
-      case _: EndpointInput.Basic[_] =>
+      case auth: EndpointInput.Auth[?, ?]              => apply(auth.input, remainingBasicValues)
+      case _: EndpointInput.Basic[?] =>
         remainingBasicValues.headAndTail match {
           case Some((v, valuesTail)) => InputValueResult.Value(ParamsAsAny(v), valuesTail)
           case None =>
@@ -34,8 +34,8 @@ object InputValue {
   }
 
   private def handlePair(
-      left: EndpointInput[_],
-      right: EndpointInput[_],
+      left: EndpointInput[?],
+      right: EndpointInput[?],
       combine: CombineParams,
       remainingBasicValues: Vector[Any]
   ): InputValueResult = {

@@ -252,7 +252,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
         Schema.oneOfUsingField[Entity, String]({ _.kind }, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType
       )
     ) {
-      _.asInstanceOf[SCoproduct[_]].discriminator shouldBe Some(
+      _.asInstanceOf[SCoproduct[?]].discriminator shouldBe Some(
         SDiscriminator(
           FieldName("kind"),
           Map(
@@ -270,7 +270,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
 
     val schema = Schema
       .oneOfUsingField[WrapperT[String, Int, String], String]({ x => x.e.kind(x.a) }, _.toString)("user" -> sUser, "org" -> sOrganization)
-    val schemaType = schema.schemaType.asInstanceOf[SCoproduct[_]]
+    val schemaType = schema.schemaType.asInstanceOf[SCoproduct[?]]
 
     schemaType.discriminator shouldBe Some(
       SDiscriminator(
@@ -290,7 +290,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
   it should "add the discriminator as a field when using oneOfUsingField" in {
     val schema =
       Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("user" -> Schema.derived[User], "org" -> Schema.derived[Organization])
-    val schemaType = schema.schemaType.asInstanceOf[SCoproduct[_]]
+    val schemaType = schema.schemaType.asInstanceOf[SCoproduct[?]]
 
     schemaType.discriminator shouldBe Some(
       SDiscriminator(
@@ -303,7 +303,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     )
 
     schemaType.subtypes.foreach { childSchema =>
-      val childProduct = childSchema.schemaType.asInstanceOf[SProduct[_]]
+      val childProduct = childSchema.schemaType.asInstanceOf[SProduct[?]]
       val discValue = if (childSchema.name.get.fullName == "sttp.tapir.SchemaMacroTestData.User") "user" else "org"
       childProduct.fields.find(_.name.name == "kind") shouldBe Some(
         SProductField(

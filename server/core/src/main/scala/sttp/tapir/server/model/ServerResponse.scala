@@ -5,7 +5,7 @@ import sttp.model.{Header, Headers, ResponseMetadata, StatusCode}
 import scala.collection.immutable.Seq
 
 /** @param source The output, from which this response has been created. */
-case class ServerResponse[+B](code: StatusCode, headers: Seq[Header], body: Option[B], source: Option[ValuedEndpointOutput[_]])
+case class ServerResponse[+B](code: StatusCode, headers: Seq[Header], body: Option[B], source: Option[ValuedEndpointOutput[?]])
     extends ResponseMetadata {
   override def statusText: String = ""
   override def toString: String = s"ServerResponse($code,${Headers.toStringSafe(headers)})"

@@ -251,7 +251,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *
     * Note that exhaustiveness of the variants (that all subtypes of `T` are covered) is not checked.
     */
-  def oneOf[T](firstVariant: OneOfVariant[_ <: T], otherVariants: OneOfVariant[_ <: T]*): EndpointOutput.OneOf[T, T] =
+  def oneOf[T](firstVariant: OneOfVariant[? <: T], otherVariants: OneOfVariant[? <: T]*): EndpointOutput.OneOf[T, T] =
     EndpointOutput.OneOf[T, T](firstVariant +: otherVariants.toList, Mapping.id)
 
   /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the runtime
@@ -278,7 +278,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariant[T: ClassTag: ErasureSameAsType](code: StatusCode, output: EndpointOutput[T]): OneOfVariant[T] =
     oneOfVariant(statusCode(code).and(output))
 
-  private val primitiveToBoxedClasses = Map[Class[_], Class[_]](
+  private val primitiveToBoxedClasses = Map[Class[?], Class[?]](
     classOf[Byte] -> classOf[java.lang.Byte],
     classOf[Short] -> classOf[java.lang.Short],
     classOf[Char] -> classOf[java.lang.Character],
@@ -297,7 +297,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     */
   def oneOfVariantClassMatcher[T](
       output: EndpointOutput[T],
-      runtimeClass: Class[_]
+      runtimeClass: Class[?]
   ): OneOfVariant[T] = {
     // when used with a primitive type or Unit, the class tag will correspond to the primitive type, but at runtime
     // we'll get boxed values
@@ -313,7 +313,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOfVariantClassMatcher[T](
       code: StatusCode,
       output: EndpointOutput[T],
-      runtimeClass: Class[_]
+      runtimeClass: Class[?]
   ): OneOfVariant[T] = oneOfVariantClassMatcher(statusCode(code).and(output), runtimeClass)
 
   /** Create a one-of-variant which uses `output` if the provided value (when interpreting as a server matches the `matcher` predicate).
@@ -440,14 +440,14 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *
     * All possible bodies must have the same type `T`. Typically, the bodies will vary in the [[Codec]]s that are used for the body.
     */
-  def oneOfBody[T](first: EndpointIO.Body[_, T], others: EndpointIO.Body[_, T]*): EndpointIO.OneOfBody[T, T] =
+  def oneOfBody[T](first: EndpointIO.Body[?, T], others: EndpointIO.Body[?, T]*): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T](
       (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), Left(b))),
       Mapping.id
     )
 
   /** Streaming variant of [[oneOfBody]]. */
-  def oneOfBody[T](first: EndpointIO.StreamBodyWrapper[_, T], others: EndpointIO.StreamBodyWrapper[_, T]*): EndpointIO.OneOfBody[T, T] =
+  def oneOfBody[T](first: EndpointIO.StreamBodyWrapper[?, T], others: EndpointIO.StreamBodyWrapper[?, T]*): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T](
       (first +: others.toList).map(b => EndpointIO.OneOfBodyVariant(ContentTypeRange.exactNoCharset(b.codec.format.mediaType), Right(b))),
       Mapping.id
@@ -459,8 +459,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * as specified by the body's codec. This is only used when choosing which body to decode.
     */
   def oneOfBody[T](
-      first: (ContentTypeRange, EndpointIO.Body[_, T]),
-      others: (ContentTypeRange, EndpointIO.Body[_, T])*
+      first: (ContentTypeRange, EndpointIO.Body[?, T]),
+      others: (ContentTypeRange, EndpointIO.Body[?, T])*
   ): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T]((first +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Left(b)) }, Mapping.id)
 
@@ -470,10 +470,10 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * as specified by the body's codec. This is only used when choosing which body to decode.
     */
   def oneOfBody[T](
-      first: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
+      first: (ContentTypeRange, EndpointIO.StreamBodyWrapper[?, T]),
       // this is needed so that the signature is different from the previous method
-      second: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T]),
-      others: (ContentTypeRange, EndpointIO.StreamBodyWrapper[_, T])*
+      second: (ContentTypeRange, EndpointIO.StreamBodyWrapper[?, T]),
+      others: (ContentTypeRange, EndpointIO.StreamBodyWrapper[?, T])*
   ): EndpointIO.OneOfBody[T, T] =
     EndpointIO.OneOfBody[T, T](
       (first +: second +: others.toList).map { case (r, b) => EndpointIO.OneOfBodyVariant(r, Right(b)) },

@@ -4,8 +4,8 @@ import sttp.tapir.EndpointInput.{PathCapture, Query}
 import sttp.tapir.{EndpointInput, EndpointMetaOps}
 
 private[tapir] object ShowPathTemplate {
-  type ShowPathParam = (Int, PathCapture[_]) => String
-  type ShowQueryParam = (Int, Query[_]) => String
+  type ShowPathParam = (Int, PathCapture[?]) => String
+  type ShowQueryParam = (Int, Query[?]) => String
 
   def apply(
       e: EndpointMetaOps
@@ -31,21 +31,21 @@ private[tapir] object ShowPathTemplate {
   }
 
   private def shownPathComponents(
-      inputs: Vector[EndpointInput.Basic[_]],
+      inputs: Vector[EndpointInput.Basic[?]],
       showPathParam: ShowPathParam,
       showPathsAs: Option[String]
   ): (Vector[String], Int) =
     inputs.foldLeft((Vector.empty[String], 1)) { case ((acc, index), component) =>
       component match {
-        case p: EndpointInput.PathCapture[_] if !p.codec.schema.hidden  => (acc :+ showPathParam(index, p), index + 1)
-        case p: EndpointInput.PathsCapture[_] if !p.codec.schema.hidden => (showPathsAs.fold(acc)(acc :+ _), index)
-        case p: EndpointInput.FixedPath[_] if !p.codec.schema.hidden    => (acc :+ UrlencodedData.encodePathSegment(p.s), index)
+        case p: EndpointInput.PathCapture[?] if !p.codec.schema.hidden  => (acc :+ showPathParam(index, p), index + 1)
+        case p: EndpointInput.PathsCapture[?] if !p.codec.schema.hidden => (showPathsAs.fold(acc)(acc :+ _), index)
+        case p: EndpointInput.FixedPath[?] if !p.codec.schema.hidden    => (acc :+ UrlencodedData.encodePathSegment(p.s), index)
         case _                                                          => (acc, index)
       }
     }
 
   private def shownQueryComponents(
-      inputs: Vector[EndpointInput.Basic[_]],
+      inputs: Vector[EndpointInput.Basic[?]],
       showQueryParam: ShowQueryParam,
       pathParamCount: Int,
       showQueryParamsAs: Option[String]
@@ -53,8 +53,8 @@ private[tapir] object ShowPathTemplate {
     inputs
       .foldLeft((Vector.empty[String], pathParamCount)) { case ((acc, index), component) =>
         component match {
-          case q: EndpointInput.Query[_] if !q.codec.schema.hidden       => (acc :+ showQueryParam(index, q), index + 1)
-          case q: EndpointInput.QueryParams[_] if !q.codec.schema.hidden => (showQueryParamsAs.fold(acc)(acc :+ _), index)
+          case q: EndpointInput.Query[?] if !q.codec.schema.hidden       => (acc :+ showQueryParam(index, q), index + 1)
+          case q: EndpointInput.QueryParams[?] if !q.codec.schema.hidden => (showQueryParamsAs.fold(acc)(acc :+ _), index)
           case _                                                         => (acc, index)
         }
       }

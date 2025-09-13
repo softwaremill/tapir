@@ -178,7 +178,7 @@ object fs2 {
 
       private def decodeFrame[REQ, RESP](
           frame: WebSocketFrame,
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, Fs2Streams[F]]
       ): REQ = {
         o.requests.decode(frame) match {
           case DecodeResult.Value(v)         => v
@@ -189,7 +189,7 @@ object fs2 {
       private def fastPath[REQ, RESP](
           in: Stream[F, WebSocketFrame],
           pipe: streams.Pipe[REQ, RESP],
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, Fs2Streams[F]]
       ): ReadStream[WebSocketFrame] = {
         val contatenatedFrames = optionallyContatenateFrames(in, o.concatenateFragmentedFrames)
         val ignorePongs = optionallyIgnorePong(contatenatedFrames, o.ignorePong)
@@ -206,7 +206,7 @@ object fs2 {
       private def standardPath[REQ, RESP](
           in: Stream[F, WebSocketFrame],
           pipe: streams.Pipe[REQ, RESP],
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, Fs2Streams[F]]
       ): ReadStream[WebSocketFrame] = {
         val mergedStream = Channel.bounded[F, Chunk[WebSocketFrame]](64).map { c =>
           val contatenatedFrames = optionallyContatenateFrames(in, o.concatenateFragmentedFrames)
@@ -237,7 +237,7 @@ object fs2 {
       override def webSocketPipe[REQ, RESP](
           readStream: ReadStream[WebSocketFrame],
           pipe: streams.Pipe[REQ, RESP],
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, Fs2Streams[F]]
       ): ReadStream[WebSocketFrame] = {
         val stream = fromReadStreamInternal(readStream)
 

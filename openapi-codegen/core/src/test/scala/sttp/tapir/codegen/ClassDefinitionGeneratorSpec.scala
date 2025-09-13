@@ -153,7 +153,9 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
           Map(
             "Test" -> OpenapiSchemaObject(
               mutable.LinkedHashMap(
-                "inner" -> noDefault(OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false))
+                "inner" -> noDefault(
+                  OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
+                )
               ),
               Seq("inner"),
               false
