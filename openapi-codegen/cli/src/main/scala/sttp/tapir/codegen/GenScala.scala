@@ -75,7 +75,12 @@ object GenScala {
     Opts.flag("disableValidatorGeneration", "Whether to disable validator declarations").orFalse
 
   private val useCustomJsoniterSerdesOpt: Opts[Boolean] =
-    Opts.flag("useCustomJsoniterSerdesOpt", "Set to true to enable usage of custom jsoniter macros (mitigates compilation flakiness, compatible with jsoniter-scala versions >= 2.36.x)").orFalse
+    Opts
+      .flag(
+        "useCustomJsoniterSerdesOpt",
+        "Set to true to enable usage of custom jsoniter macros (mitigates compilation flakiness, compatible with jsoniter-scala versions >= 2.36.x)"
+      )
+      .orFalse
 
   private val destDirOpt: Opts[File] =
     Opts

@@ -8,9 +8,9 @@ import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, EndpointOutput,
 import scala.annotation.tailrec
 
 abstract class ClientOutputParams {
-  def apply(output: EndpointOutput[_], body: Any, meta: ResponseMetadata): DecodeResult[Params] =
+  def apply(output: EndpointOutput[?], body: Any, meta: ResponseMetadata): DecodeResult[Params] =
     output match {
-      case s: EndpointOutput.Single[_] =>
+      case s: EndpointOutput.Single[?] =>
         (s match {
           case EndpointIO.Body(_, codec, _) => decode(codec, body)
           case EndpointIO.OneOfBody(variants, mapping) =>
@@ -36,7 +36,7 @@ abstract class ClientOutputParams {
               .header(HeaderNames.ContentType)
               .map(MediaType.parse)
 
-            val mappingsFilteredByContentType: List[OneOfVariant[_]] = contentType match {
+            val mappingsFilteredByContentType: List[OneOfVariant[?]] = contentType match {
               case None | Some(Left(_)) => mappings
               case Some(Right(content)) =>
                 val mappingsForContentType = mappings.collect {
@@ -66,8 +66,8 @@ abstract class ClientOutputParams {
     }
 
   private def handleOutputPair(
-      left: EndpointOutput[_],
-      right: EndpointOutput[_],
+      left: EndpointOutput[?],
+      right: EndpointOutput[?],
       combine: CombineParams,
       body: Any,
       meta: ResponseMetadata
@@ -77,12 +77,12 @@ abstract class ClientOutputParams {
     l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
   }
 
-  private def decode[L, H](codec: Codec[L, H, _ <: CodecFormat], v: Any): DecodeResult[H] = codec.decode(v.asInstanceOf[L])
+  private def decode[L, H](codec: Codec[L, H, ? <: CodecFormat], v: Any): DecodeResult[H] = codec.decode(v.asInstanceOf[L])
   private def decode[L, H](mapping: Mapping[L, H], v: Any): DecodeResult[H] = mapping.decode(v.asInstanceOf[L])
 
   @tailrec
   private def tryDecodeOneOf(
-      mappings: List[OneOfVariant[_]],
+      mappings: List[OneOfVariant[?]],
       body: Any,
       meta: ResponseMetadata,
       firstFailure: Option[DecodeResult.Failure]
@@ -94,10 +94,10 @@ abstract class ClientOutputParams {
       }
     case mapping :: other =>
       apply(mapping.output, body, meta) match {
-        case v: DecodeResult.Value[_]      => Some(v)
+        case v: DecodeResult.Value[?]      => Some(v)
         case failure: DecodeResult.Failure => tryDecodeOneOf(other, body, meta, firstFailure.orElse(Some(failure)))
       }
   }
 
-  def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any]
+  def decodeWebSocketBody(o: WebSocketBodyOutput[?, ?, ?, ?, ?], body: Any): DecodeResult[Any]
 }

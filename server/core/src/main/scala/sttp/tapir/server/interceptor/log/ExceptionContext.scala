@@ -4,7 +4,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerRequest
 
 case class ExceptionContext[A, U](
-    endpoint: Endpoint[A, _, _, _, _],
+    endpoint: Endpoint[A, ?, ?, ?, ?],
     securityInput: Option[A],
     principal: Option[U],
     request: ServerRequest

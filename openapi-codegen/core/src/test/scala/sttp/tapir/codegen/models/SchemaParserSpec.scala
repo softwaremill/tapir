@@ -1,8 +1,21 @@
 package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiResponseContent
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{NumericRestrictions, OpenapiSchemaAny, OpenapiSchemaArray, OpenapiSchemaField, OpenapiSchemaInt, OpenapiSchemaMap, OpenapiSchemaObject, OpenapiSchemaString}
-import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeBasicType, OpenapiSecuritySchemeBearerType}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  NumericRestrictions,
+  OpenapiSchemaAny,
+  OpenapiSchemaArray,
+  OpenapiSchemaField,
+  OpenapiSchemaInt,
+  OpenapiSchemaMap,
+  OpenapiSchemaObject,
+  OpenapiSchemaString
+}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
+  OpenapiSecuritySchemeApiKeyType,
+  OpenapiSecuritySchemeBasicType,
+  OpenapiSecuritySchemeBearerType
+}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
@@ -187,7 +200,12 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .flatMap(_.as[Seq[OpenapiResponseContent]])
 
     res shouldBe Right(
-      Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaObject(mutable.LinkedHashMap.empty, Seq.empty, false), false)))
+      Seq(
+        OpenapiResponseContent(
+          "application/json",
+          OpenapiSchemaArray(OpenapiSchemaObject(mutable.LinkedHashMap.empty, Seq.empty, false), false)
+        )
+      )
     )
   }
 
