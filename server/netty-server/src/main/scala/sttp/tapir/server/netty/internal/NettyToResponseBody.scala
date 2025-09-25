@@ -3,9 +3,12 @@ package sttp.tapir.server.netty.internal
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.HttpContent
+import org.apache.http.entity.ContentType
+import org.apache.http.entity.mime.content._
+import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import org.reactivestreams.Publisher
 import sttp.capabilities
-import sttp.model.HasHeaders
+import sttp.model.{HasHeaders, Part}
 import sttp.monad.MonadError
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
@@ -13,7 +16,7 @@ import sttp.tapir.server.netty.NettyResponse
 import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ReactivePublisherNettyResponseContent}
 import sttp.tapir.server.netty.internal.NettyToResponseBody.DefaultChunkSize
 import sttp.tapir.server.netty.internal.reactivestreams.{FileRangePublisher, InputStreamPublisher}
-import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, FileRange, InputStreamRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -48,10 +51,18 @@ private[netty] class NettyToResponseBody[F[_]](runAsync: RunAsync[F])(implicit m
       case RawBodyType.InputStreamRangeBody =>
         (ctx: ChannelHandlerContext) => ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
 
-      case RawBodyType.FileBody => { (ctx: ChannelHandlerContext) =>
+      case RawBodyType.FileBody => (ctx: ChannelHandlerContext) =>
         ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(v))
-      }
-      case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
+
+      case m: RawBodyType.MultipartBody =>
+        val entity = MultipartEntityBuilder.create()
+        v.flatMap(rawPartToFormBodyPart(m, _)).foreach { (formBodyPart: FormBodyPart) => entity.addPart(formBodyPart) }
+        val builtEntity = entity.build()
+
+        (ctx: ChannelHandlerContext) => {
+          val inputStream = builtEntity.getContent
+          ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(inputStream))
+        }
     }
   }
 
@@ -65,6 +76,47 @@ private[netty] class NettyToResponseBody[F[_]](runAsync: RunAsync[F])(implicit m
 
   private def wrap(content: InputStream): Publisher[HttpContent] = {
     wrap(InputStreamRange(() => content, range = None))
+  }
+
+  private def rawPartToFormBodyPart[R](m: RawBodyType.MultipartBody, part: Part[R]): Option[FormBodyPart] = {
+    m.partType(part.name).map { partType =>
+      val builder = FormBodyPartBuilder
+        .create(
+          part.name,
+          rawValueToContentBody(partType.asInstanceOf[RawBodyType[R]], part)
+        )
+
+      part.headers.foreach(header => builder.addField(header.name, header.value))
+
+      builder.build()
+    }
+  }
+
+  private def rawValueToContentBody[R](bodyType: RawBodyType[R], part: Part[R]): ContentBody = {
+    val contentType: String = part.header("content-type").getOrElse("text/plain")
+    val r = part.body
+
+    bodyType match {
+      case RawBodyType.StringBody(_) =>
+        new StringBody(r.toString, ContentType.parse(contentType))
+      case RawBodyType.ByteArrayBody =>
+        new ByteArrayBody(r, ContentType.create(contentType), part.fileName.get)
+      case RawBodyType.ByteBufferBody =>
+        val array: Array[Byte] = new Array[Byte](r.remaining)
+        r.get(array)
+        new ByteArrayBody(array, ContentType.create(contentType), part.fileName.get)
+      case RawBodyType.FileBody =>
+        part.fileName match {
+          case Some(filename) => new FileBody(r.file, ContentType.create(contentType), filename)
+          case None           => new FileBody(r.file, ContentType.create(contentType))
+        }
+      case RawBodyType.InputStreamRangeBody =>
+        new InputStreamBody(r.inputStream(), ContentType.create(contentType), part.fileName.get)
+      case RawBodyType.InputStreamBody =>
+        new InputStreamBody(r, ContentType.create(contentType), part.fileName.get)
+      case _: RawBodyType.MultipartBody =>
+        throw new UnsupportedOperationException("Nested multipart messages are not supported.")
+    }
   }
 
   override def fromStreamValue(
