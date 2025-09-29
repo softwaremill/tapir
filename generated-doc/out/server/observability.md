@@ -53,7 +53,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.11.44"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.11.45"
 ```
 
 `PrometheusMetrics` encapsulates `PrometheusReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -132,7 +132,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.de
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.11.44"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.11.45"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -159,7 +159,7 @@ val metricsInterceptor = metrics.metricsInterceptor() // add to your server opti
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-otel4s-metrics" % "1.11.44"
+"com.softwaremill.sttp.tapir" %% "tapir-otel4s-metrics" % "1.11.45"
 ```
 
 The `Otel4sMetrics` provides integration with the [otel4s](https://typelevel.org/otel4s/) library for OpenTelemetry metrics.
@@ -209,7 +209,7 @@ By default, the following metrics are exposed:
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.11.44"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.11.45"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -275,7 +275,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.11.44"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.11.45"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.
@@ -337,7 +337,7 @@ object ZioEndpoint:
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.11.44"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.11.45"
 ```
 
 OpenTelemetry tracing is vendor-agnostic and can be exported using an exporters, such as Jaeger, Zipkin, DataDog, 
@@ -375,7 +375,7 @@ NettySyncServer().options(serverOptions).addEndpoint(???).startAndWait()
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-otel4s-tracing" % "1.11.44"
+"com.softwaremill.sttp.tapir" %% "tapir-otel4s-tracing" % "1.11.45"
 ```
 
 The `Otel4sTracing` interceptor provides integration with the [otel4s](https://typelevel.org/otel4s/) library for OpenTelemetry tracing.
