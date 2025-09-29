@@ -10,6 +10,9 @@ import sttp.tapir.server.netty.internal.RichNettyHttpHeaders
 import io.netty.handler.codec.http.FullHttpRequest
 
 case class NettyServerRequest(req: HttpRequest, attributes: AttributeMap = AttributeMap.Empty) extends ServerRequest {
+  // non-lazy, so that we can validate that the URI parses upfront
+  override val uri: Uri = Uri.unsafeParse(req.uri())
+
   override lazy val protocol: String = req.protocolVersion().text()
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo.NoInfo
   override lazy val underlying: Any = req
@@ -25,7 +28,7 @@ case class NettyServerRequest(req: HttpRequest, attributes: AttributeMap = Attri
   }
   override lazy val method: Method = Method.unsafeApply(req.method().name())
   override lazy val showShort: String = s"$method ${req.uri()}"
-  override lazy val uri: Uri = Uri.unsafeParse(req.uri())
+
   override lazy val pathSegments: List[String] = uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList
   override lazy val headers: Seq[Header] = req.headers().toHeaderSeq ::: (req match {
     case full: FullHttpRequest => full.trailingHeaders().toHeaderSeq
