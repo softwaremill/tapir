@@ -10,6 +10,7 @@ import io.netty.handler.timeout.{IdleState, IdleStateEvent, IdleStateHandler}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, DefaultWebSocketHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
+import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
@@ -24,8 +25,8 @@ import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, S
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
@@ -141,11 +142,18 @@ class NettyServerHandler[F[_]](
       }
       requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
-        route(NettyServerRequest(req))
-          .map {
-            case Some(response) => response
-            case None           => ServerResponse.notFound
+        try {
+          route(NettyServerRequest(req))
+            .map {
+              case Some(response) => response
+              case None           => ServerResponse.notFound
+            }
+        } catch {
+          case e: IllegalArgumentException if e.getMessage.startsWith("URLDecoder:") => {
+            logger.debug(s"Invalid request URL: ${req.uri()}", e)
+            me.unit(ServerResponse[NettyResponse](StatusCode.BadRequest, Nil, None, None))
           }
+        }
       }
       pendingResponses.enqueue(cancellationSwitch)
       lastResponseSent = lastResponseSent.flatMap { _ =>
