@@ -1,9 +1,9 @@
 package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.{ByteBuf, Unpooled}
-import io.netty.channel.*
+import io.netty.channel._
 import io.netty.channel.group.ChannelGroup
-import io.netty.handler.codec.http.*
+import io.netty.handler.codec.http._
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import io.netty.handler.timeout.{IdleState, IdleStateEvent, IdleStateHandler}
@@ -12,7 +12,7 @@ import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import sttp.model.StatusCode
 import sttp.monad.MonadError
-import sttp.monad.syntax.*
+import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.NettyResponseContent.{
   ByteBufNettyResponseContent,
@@ -27,8 +27,8 @@ import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, 
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import scala.collection.JavaConverters.*
-import scala.collection.mutable.Queue as MutableQueue
+import scala.collection.JavaConverters._
+import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
@@ -148,11 +148,12 @@ class NettyServerHandler[F[_]](
               case Some(response) => response
               case None           => ServerResponse.notFound
             }
-        } catch
+        } catch {
           case e: IllegalArgumentException if e.getMessage.startsWith("URLDecoder:") => {
             logger.debug(s"Invalid request URL: ${req.uri()}", e)
             me.unit(ServerResponse[NettyResponse](StatusCode.BadRequest, Nil, None, None))
           }
+        }
       }
       pendingResponses.enqueue(cancellationSwitch)
       lastResponseSent = lastResponseSent.flatMap { _ =>
