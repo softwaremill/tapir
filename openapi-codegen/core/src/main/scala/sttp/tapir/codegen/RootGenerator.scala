@@ -74,16 +74,19 @@ object RootGenerator {
     }
     val fs2WithEffect = """fs2-(.+)""".r
     val normalisedStreamingImplementation: StreamingImplementation = streamingImplementation.toLowerCase match {
-      case "akka"                    => Akka
-      case "fs2"                     => FS2()
-      case "pekko"                   => Pekko
-      case "zio"                     => Zio
-      case fs2WithEffect(effectType) => FS2(effectType)
+      case "akka"  => Akka
+      case "fs2"   => FS2()
+      case "pekko" => Pekko
+      case "zio"   => Zio
       case _ =>
-        System.err.println(
-          s"!!! Unrecognised value $streamingImplementation for streaming impl -- should be one of akka, fs2, pekko or zio. Defaulting to fs2 !!!"
-        )
-        FS2()
+        streamingImplementation match {
+          case fs2WithEffect(effectType) =>
+            FS2(effectType)
+            System.err.println(
+              s"!!! Unrecognised value $streamingImplementation for streaming impl -- should be one of akka, fs2, pekko or zio. Defaulting to fs2 !!!"
+            )
+            FS2()
+        }
     }
 
     val validators = if (generateValidators) ValidationGenerator.mkValidators(doc) else ValidationDefns.empty
