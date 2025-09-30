@@ -431,7 +431,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             targetScala3 = false,
             jsonSerdeLib = JsonSerdeLib.Circe,
             xmlSerdeLib = XmlSerdeLib.CatsXml,
-            streamingImplementation = StreamingImplementation.FS2,
+            streamingImplementation = FS2(),
             generateEndpointTypes = false,
             validators = ValidationDefns.empty,
             generateValidators = true
