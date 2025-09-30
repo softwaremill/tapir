@@ -2,7 +2,6 @@ package sttp.tapir.codegen
 import io.circe.Json
 import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
-import sttp.tapir.codegen.StreamingImplementation.StreamingImplementation
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
@@ -111,14 +110,14 @@ class EndpointGenerator {
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
   private def capabilityImpl(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
-    case StreamingImplementation.Akka  => "sttp.capabilities.akka.AkkaStreams"
-    case StreamingImplementation.FS2   => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
-    case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
-    case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
+    case Akka            => "sttp.capabilities.akka.AkkaStreams"
+    case FS2(effectType) => s"sttp.capabilities.fs2.Fs2Streams[$effectType]"
+    case Pekko           => "sttp.capabilities.pekko.PekkoStreams"
+    case Zio             => "sttp.capabilities.zio.ZioStreams"
   }
   private def capabilityType(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
-    case StreamingImplementation.FS2 => "fs2.Stream[cats.effect.IO, Byte]"
-    case x                           => s"${capabilityImpl(x)}.BinaryStream"
+    case FS2(effectType) => s"fs2.Stream[$effectType, Byte]"
+    case x               => s"${capabilityImpl(x)}.BinaryStream"
   }
 
   def endpointDefs(
