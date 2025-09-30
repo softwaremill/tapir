@@ -11,7 +11,7 @@ incorrectly-implemented functionality are highly encouraged.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.45")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.11.46")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -47,7 +47,8 @@ openapiXmlSerdeLib                    cats-xml                             The x
 openapiValidateNonDiscriminatedOneOfs true                                 Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated.
 openapiMaxSchemasPerFile              400                                  Maximum number of schemas to generate in a single file (tweak if hitting javac class size limits).
 openapiAdditionalPackages             Nil                                  Additional packageName/swaggerFile pairs for generating from multiple schemas 
-openapiStreamingImplementation        fs2                                  Implementation for streamTextBody. Supports: akka, fs2, pekko, zio
+openapiStreamingImplementation        fs2                                  Implementation for streamTextBody. Supports: akka, fs2, pekko, zio.
+                                                                           fs2 defaults to using the IO effect -- an alternative effect type can be specified with fs2-my.fully.qualified.Effect
 openapiGenerateEndpointTypes          false                                Whether to emit explicit types for endpoint defns
 openapiDisableValidatorGeneration     false                                If true, we will not generate validation for constraints (min, max, pattern etc)
 openapiUseCustomJsoniterSerdes        false                                If true and openapiJsonSerdeLib = jsoniter, serdes will be generated to use custom 'openapi' make defns. May help with flaky compilation, but requires jsoniter-scala >= 2.36.0+
