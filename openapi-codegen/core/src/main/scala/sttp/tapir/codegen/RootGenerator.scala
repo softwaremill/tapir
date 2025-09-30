@@ -82,6 +82,7 @@ object RootGenerator {
         streamingImplementation match {
           case fs2WithEffect(effectType) =>
             FS2(effectType)
+          case _ =>
             System.err.println(
               s"!!! Unrecognised value $streamingImplementation for streaming impl -- should be one of akka, fs2, pekko or zio. Defaulting to fs2 !!!"
             )
