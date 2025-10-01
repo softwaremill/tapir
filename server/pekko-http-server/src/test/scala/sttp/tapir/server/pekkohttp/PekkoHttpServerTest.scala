@@ -57,18 +57,6 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
             }
             .unsafeToFuture()
         },
-
-        Test("server reads remoteInfo") {
-          val e = endpoint.get.in("test").in(extractFromRequest(req => req.connectionInfo) ).out(stringBody)
-            .serverLogic(connectionInfo => (connectionInfo.remote.map(_.toString).getOrElse("unknown").asRight[Unit]).unit)
-          val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
-          interpreter
-            .server(NonEmptyList.of(route))
-            .use { port =>
-              basicRequest.get(uri"http://localhost:$port/api/test").send(backend).map(_.body shouldBe Right(s"/127.0.0.1:$port"))
-            }
-            .unsafeToFuture()
-        },
         Test("Send and receive SSE") {
           implicit val ec = actorSystem.dispatcher
           val e = endpoint.get
@@ -175,7 +163,21 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
               basicRequest.get(uri"http://localhost:$port/api/custom_code").send(backend).map(_.code shouldBe StatusCode(800))
             }
             .unsafeToFuture()
-        }
+        },
+        Test("Server reads remote address and secure from connectionInfo") {
+          val e = endpoint.get.in("test").in(extractFromRequest(req => req.connectionInfo) ).out(stringBody)
+            .serverLogic{connectionInfo =>
+              val remote = connectionInfo.remote
+              val secure = connectionInfo.secure
+              s"$remote $secure".asRight[Unit].unit}
+          val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
+          interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.get(uri"http://localhost:$port/api/test").send(backend).map(_.body.value should fullyMatch regex """Some\(/127\.0\.0\.1:\d+\) Some\(false\)""")
+            }
+            .unsafeToFuture()
+        },
       )
       def drainPekko(stream: PekkoStreams.BinaryStream): Future[Unit] =
         stream.runWith(Sink.ignore).map(_ => ())

@@ -18,9 +18,18 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
     .attribute(AttributeKeys.remoteAddress)
     .flatMap(_.toIP)
 
-  override def connectionInfo: ConnectionInfo = ConnectionInfo(None, remote.map( addr =>
-    new InetSocketAddress(addr.ip, addr.port.getOrElse(0))
-  ) , None)
+  override def connectionInfo: ConnectionInfo = {
+    // simple / naive deduction of secure property, as pekko uses only this 4 schemes
+    // @see org.apache.pekko.http.scaladsl.model.HttpRequest#verifyUri
+    val secure = ctx.request.uri.scheme match {
+      case "https" | "wss" => Some(true)
+      case "http" | "ws" => Some(false)
+      case _ => None
+    }
+    ConnectionInfo(None, remote.map( addr =>
+      new InetSocketAddress(addr.ip, addr.port.getOrElse(0))
+    ) , secure)
+  }
   override def underlying: Any = ctx
 
   override lazy val pathSegments: List[String] = {
@@ -83,4 +92,5 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
 
   override def withUnderlying(underlying: Any): ServerRequest =
     PekkoServerRequest(ctx = underlying.asInstanceOf[RequestContext], attributes)
+
 }
