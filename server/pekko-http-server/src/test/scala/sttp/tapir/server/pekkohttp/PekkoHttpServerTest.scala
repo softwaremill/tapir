@@ -48,7 +48,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
-          val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(req => ("ok".asRight[Unit]).unit)
+          val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
           val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
           interpreter
             .server(NonEmptyList.of(route))
