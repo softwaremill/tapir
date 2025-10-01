@@ -130,12 +130,6 @@ jobs:
   # identify binary incompatibilities (check build.sbt for details)
   mima:
     uses: softwaremill/github-actions-workflows/.github/workflows/mima.yml@main
-    # run on 1) push, 2) external PRs, 3) softwaremill-ci PRs
-    # do not run on internal, non-steward PRs since those will be run by push to branch
-    if: |
-      github.event_name == 'push' || 
-      github.event.pull_request.head.repo.full_name != github.repository ||
-      github.event.pull_request.user.login == 'softwaremill-ci'
     with:
       java-version: '21'
       java-opts: '-Xms4g -Xmx4g' # SBT_JAVA_OPTS env parameter adapted for JVM

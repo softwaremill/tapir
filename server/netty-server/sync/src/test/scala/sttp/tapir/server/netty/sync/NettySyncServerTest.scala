@@ -86,6 +86,16 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
               parseBytesToSSE(Flow.fromValues(Chunk.fromArray(bytes))).runToList() shouldBe List(sse1, sse2)
             }
         }
+      },
+      createServerTest.testServerLogic(
+        endpoint.get.in("hello").out(stringBody).handleSuccess(_ => "ok"),
+        testNameSuffix = "properly log invalid requests when the URL is malformed"
+      ) { (backend, baseUri) =>
+        IO.blocking:
+          val conn = new java.net.URL(s"$baseUri/hello?param=%%2G").openConnection().asInstanceOf[java.net.HttpURLConnection]
+          try
+            conn.getResponseCode() shouldBe 400
+          finally conn.disconnect
       }
     )
 }

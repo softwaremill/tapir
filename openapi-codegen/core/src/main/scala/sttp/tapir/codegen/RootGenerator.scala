@@ -26,10 +26,11 @@ object XmlSerdeLib extends Enumeration {
   val CatsXml, NoSupport = Value
   type XmlSerdeLib = Value
 }
-object StreamingImplementation extends Enumeration {
-  val Akka, FS2, Pekko, Zio = Value
-  type StreamingImplementation = Value
-}
+sealed trait StreamingImplementation
+object Akka extends StreamingImplementation
+case class FS2(effectType: String = "cats.effect.IO") extends StreamingImplementation
+object Pekko extends StreamingImplementation
+object Zio extends StreamingImplementation
 
 object RootGenerator {
 
@@ -71,16 +72,22 @@ object RootGenerator {
         )
         XmlSerdeLib.NoSupport
     }
-    val normalisedStreamingImplementation = streamingImplementation.toLowerCase match {
-      case "akka"  => StreamingImplementation.Akka
-      case "fs2"   => StreamingImplementation.FS2
-      case "pekko" => StreamingImplementation.Pekko
-      case "zio"   => StreamingImplementation.Zio
+    val fs2WithEffect = """fs2-(.+)""".r
+    val normalisedStreamingImplementation: StreamingImplementation = streamingImplementation.toLowerCase match {
+      case "akka"  => Akka
+      case "fs2"   => FS2()
+      case "pekko" => Pekko
+      case "zio"   => Zio
       case _ =>
-        System.err.println(
-          s"!!! Unrecognised value $streamingImplementation for streaming impl -- should be one of akka, fs2, pekko or zio. Defaulting to fs2 !!!"
-        )
-        StreamingImplementation.FS2
+        streamingImplementation match {
+          case fs2WithEffect(effectType) =>
+            FS2(effectType)
+          case _ =>
+            System.err.println(
+              s"!!! Unrecognised value $streamingImplementation for streaming impl -- should be one of akka, fs2, pekko or zio. Defaulting to fs2 !!!"
+            )
+            FS2()
+        }
     }
 
     val validators = if (generateValidators) ValidationGenerator.mkValidators(doc) else ValidationDefns.empty

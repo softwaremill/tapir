@@ -41,6 +41,6 @@ object RejectInterceptor {
   /** When interpreting a single endpoint, disabling the reject interceptor, as returning a method mismatch only makes sense when there are
     * more endpoints
     */
-  def disableWhenSingleEndpoint[F[_]](interceptors: List[Interceptor[F]], ses: List[ServerEndpoint[_, F]]): List[Interceptor[F]] =
+  def disableWhenSingleEndpoint[F[_]](interceptors: List[Interceptor[F]], ses: List[ServerEndpoint[?, F]]): List[Interceptor[F]] =
     if (ses.length > 1) interceptors else interceptors.filterNot(_.isInstanceOf[RejectInterceptor[F]])
 }

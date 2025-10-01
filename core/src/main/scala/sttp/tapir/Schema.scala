@@ -267,9 +267,9 @@ case class Schema[T](
   }
 
   /** Apply defined validation rules to the given value. */
-  def applyValidation(t: T): List[ValidationError[_]] = applyValidation(t, Map())
+  def applyValidation(t: T): List[ValidationError[?]] = applyValidation(t, Map())
 
-  private def applyValidation(t: T, objects: Map[SName, Schema[_]]): List[ValidationError[_]] = {
+  private def applyValidation(t: T, objects: Map[SName, Schema[?]]): List[ValidationError[?]] = {
     val objects2 = name.fold(objects)(n => objects + (n -> this))
 
     def applyFieldsValidation(fields: List[SProductField[T]]) = {
@@ -475,7 +475,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * }}}
       */
     class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
-    class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation with Serializable
+    class customise(val f: Schema[?] => Schema[?]) extends StaticAnnotation with Serializable
   }
 
   /** Wraps the given schema with a single-field product, where `fieldName` maps to `schema`.

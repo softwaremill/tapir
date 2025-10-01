@@ -188,6 +188,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   datadogMetrics.projectRefs ++
   zioMetrics.projectRefs ++
   opentelemetryTracing.projectRefs ++
+  otel4sMetrics.projectRefs ++
   otel4sTracing.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
@@ -1121,8 +1122,24 @@ lazy val otel4sTracing: ProjectMatrix = (projectMatrix in file("tracing/otel4s-t
   .settings(
     name := "tapir-otel4s-tracing",
     libraryDependencies ++= Seq(
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
+      "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
       "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
+      "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
+
+lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-metrics"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-otel4s-metrics",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
+      "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
       "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
       scalaTest.value % Test
     )
@@ -1137,9 +1154,9 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
   .settings(
     name := "tapir-apispec-docs",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.apispec" %% "asyncapi-model" % Versions.sttpApispec,
-      "com.softwaremill.sttp.apispec" %% "jsonschema-circe" % Versions.sttpApispec % Test,
-      "io.circe" %% "circe-literal" % Versions.circe % Test
+      "com.softwaremill.sttp.apispec" %%% "asyncapi-model" % Versions.sttpApispec,
+      "com.softwaremill.sttp.apispec" %%% "jsonschema-circe" % Versions.sttpApispec % Test,
+      "io.circe" %%% "circe-literal" % Versions.circe % Test
     )
   )
   .jvmPlatform(
@@ -1158,7 +1175,7 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     name := "tapir-openapi-docs",
     libraryDependencies ++= Seq(
       "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
-      "com.softwaremill.sttp.apispec" %% "openapi-model" % Versions.sttpApispec,
+      "com.softwaremill.sttp.apispec" %%% "openapi-model" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test
     )
   )
@@ -1178,8 +1195,8 @@ lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-v
     name := "tapir-openapi-verifier",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test,
-      "com.softwaremill.sttp.apispec" %% "openapi-circe" % Versions.sttpApispec,
-      "io.circe" %% "circe-parser" % Versions.circe,
+      "com.softwaremill.sttp.apispec" %%% "openapi-circe" % Versions.sttpApispec,
+      "io.circe" %%% "circe-parser" % Versions.circe,
       "io.circe" %% "circe-yaml" % Versions.circeYaml
     )
   )
@@ -1737,7 +1754,7 @@ lazy val awsLambdaCatsEffect: ProjectMatrix = (projectMatrix in file("serverless
   .settings(
     name := "tapir-aws-lambda",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client4" %% "fs2" % Versions.sttp4,
+      "com.softwaremill.sttp.client4" %%% "fs2" % Versions.sttp4,
       "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface,
       slf4j
     )
@@ -2143,8 +2160,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.9.0" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.37.9" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.37.9" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.2" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
@@ -2236,6 +2253,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     opentelemetryMetrics,
     opentelemetryTracing,
     otel4sTracing,
+    otel4sMetrics,
     pekkoHttpServer,
     picklerJson,
     prometheusMetrics,
@@ -2305,6 +2323,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     opentelemetryMetrics,
     opentelemetryTracing,
     otel4sTracing,
+    otel4sMetrics,
     pekkoHttpServer,
     picklerJson,
     playClient,

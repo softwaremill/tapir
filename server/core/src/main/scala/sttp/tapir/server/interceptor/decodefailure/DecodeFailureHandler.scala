@@ -20,19 +20,19 @@ trait DecodeFailureHandler[F[_]] {
     * Inputs are decoded in the following order: path, method, query, headers, body. Hence, if there's a decode failure on a query
     * parameter, any method & path inputs of the input must have matched and must have been decoded successfully.
     */
-  def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]]
+  def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]]
 }
 
 object DecodeFailureHandler {
-  def apply[F[_]](f: DecodeFailureContext => F[Option[ValuedEndpointOutput[_]]]): DecodeFailureHandler[F] =
+  def apply[F[_]](f: DecodeFailureContext => F[Option[ValuedEndpointOutput[?]]]): DecodeFailureHandler[F] =
     new DecodeFailureHandler[F] {
-      override def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+      override def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]] =
         f(ctx)
     }
 
-  def pure[F[_]](f: DecodeFailureContext => Option[ValuedEndpointOutput[_]]): DecodeFailureHandler[F] =
+  def pure[F[_]](f: DecodeFailureContext => Option[ValuedEndpointOutput[?]]): DecodeFailureHandler[F] =
     new DecodeFailureHandler[F] {
-      override def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+      override def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]] =
         monad.unit(f(ctx))
     }
 }
@@ -46,9 +46,9 @@ object DecodeFailureHandler {
 case class DefaultDecodeFailureHandler[F[_]](
     respond: DecodeFailureContext => Option[(StatusCode, List[Header])],
     failureMessage: DecodeFailureContext => String,
-    response: (StatusCode, List[Header], String) => ValuedEndpointOutput[_]
+    response: (StatusCode, List[Header], String) => ValuedEndpointOutput[?]
 ) extends DecodeFailureHandler[F] {
-  def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+  def apply(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]] =
     monad.unit(
       respond(ctx).map { case (sc, hs) =>
         val failureMsg = failureMessage(ctx)
@@ -56,7 +56,7 @@ case class DefaultDecodeFailureHandler[F[_]](
       }
     )
 
-  def response(messageOutput: String => ValuedEndpointOutput[_]): DefaultDecodeFailureHandler[F] =
+  def response(messageOutput: String => ValuedEndpointOutput[?]): DefaultDecodeFailureHandler[F] =
     copy(response = (s, h, m) => messageOutput(m).prepend(statusCode.and(headers), (s, h)))
 }
 
@@ -107,38 +107,38 @@ object DefaultDecodeFailureHandler {
   def hideEndpointsWithAuth[F[_]]: DefaultDecodeFailureHandler[F] =
     DefaultDecodeFailureHandler[F].copy(respond = ctx => respondNotFoundIfHasAuth(ctx, respond(ctx)))
 
-  def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
+  def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[?] =
     server.model.ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m))
 
   def respond(
       ctx: DecodeFailureContext
   ): Option[(StatusCode, List[Header])] = {
     (failingInput(ctx), ctx.failure) match {
-      case (i: EndpointTransput.Atom[_], _) if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureNextEndpointAttribute()) => None
-      case (_: EndpointInput.Query[_], _)       => respondBadRequest
-      case (_: EndpointInput.QueryParams[_], _) => respondBadRequest
-      case (_: EndpointInput.Cookie[_], _)      => respondBadRequest
-      case (h: EndpointIO.Header[_], _: DecodeResult.Mismatch) if h.name == HeaderNames.ContentType =>
+      case (i: EndpointTransput.Atom[?], _) if i.attribute(OnDecodeFailure.key).contains(OnDecodeFailureNextEndpointAttribute()) => None
+      case (_: EndpointInput.Query[?], _)       => respondBadRequest
+      case (_: EndpointInput.QueryParams[?], _) => respondBadRequest
+      case (_: EndpointInput.Cookie[?], _)      => respondBadRequest
+      case (h: EndpointIO.Header[?], _: DecodeResult.Mismatch) if h.name == HeaderNames.ContentType =>
         respondUnsupportedMediaType
-      case (_: EndpointIO.Header[_], _) => respondBadRequest
-      case (fh: EndpointIO.FixedHeader[_], _: DecodeResult.Mismatch) if fh.h.name == HeaderNames.ContentType =>
+      case (_: EndpointIO.Header[?], _) => respondBadRequest
+      case (fh: EndpointIO.FixedHeader[?], _: DecodeResult.Mismatch) if fh.h.name == HeaderNames.ContentType =>
         respondUnsupportedMediaType
-      case (_: EndpointIO.FixedHeader[_], _)                               => respondBadRequest
-      case (_: EndpointIO.Headers[_], _)                                   => respondBadRequest
+      case (_: EndpointIO.FixedHeader[?], _)                               => respondBadRequest
+      case (_: EndpointIO.Headers[?], _)                                   => respondBadRequest
       case (_, DecodeResult.Error(_, _: StreamMaxLengthExceededException)) => respondPayloadTooLarge
-      case (_: EndpointIO.Body[_, _], _)                                   => respondBadRequest
-      case (_: EndpointIO.OneOfBody[_, _], _: DecodeResult.Mismatch)       => respondUnsupportedMediaType
-      case (_: EndpointIO.StreamBodyWrapper[_, _], _)                      => respondBadRequest
+      case (_: EndpointIO.Body[?, ?], _)                                   => respondBadRequest
+      case (_: EndpointIO.OneOfBody[?, ?], _: DecodeResult.Mismatch)       => respondUnsupportedMediaType
+      case (_: EndpointIO.StreamBodyWrapper[?, ?], _)                      => respondBadRequest
       // we assume that the only decode failure that might happen during path segment decoding is an error
       // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
       // a path shape mismatch
-      case (_: EndpointInput.PathCapture[_], _: DecodeResult.Error | _: DecodeResult.InvalidValue) =>
+      case (_: EndpointInput.PathCapture[?], _: DecodeResult.Error | _: DecodeResult.InvalidValue) =>
         respondBadRequest
-      case (_: EndpointInput.PathsCapture[_], _) => respondBadRequest
+      case (_: EndpointInput.PathsCapture[?], _) => respondBadRequest
       // if the failing input contains an authentication input (potentially nested), sending its challenge
       case (FirstAuth(a), _) => Some((StatusCode.Unauthorized, Header.wwwAuthenticate(a.challenge)))
       // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)
-      case (_: EndpointInput.Basic[_], _) => None
+      case (_: EndpointInput.Basic[?], _) => None
       // all other inputs (tuples, mapped) - responding with bad request
       case _ => respondBadRequest
     }
@@ -164,7 +164,7 @@ object DefaultDecodeFailureHandler {
     import sttp.tapir.internal.RichEndpointInput
     ctx.failure match {
       case DecodeResult.Missing =>
-        def missingAuth(i: EndpointInput[_]) = i.pathTo(ctx.failingInput).collectFirst { case a: EndpointInput.Auth[_, _] =>
+        def missingAuth(i: EndpointInput[?]) = i.pathTo(ctx.failingInput).collectFirst { case a: EndpointInput.Auth[?, ?] =>
           a
         }
         missingAuth(ctx.endpoint.securityInput).orElse(missingAuth(ctx.endpoint.input)).getOrElse(ctx.failingInput)
@@ -173,8 +173,8 @@ object DefaultDecodeFailureHandler {
   }
 
   private object FirstAuth {
-    def unapply(input: EndpointInput[_]): Option[EndpointInput.Auth[_, _]] = input match {
-      case a: EndpointInput.Auth[_, _]           => Some(a)
+    def unapply(input: EndpointInput[?]): Option[EndpointInput.Auth[?, ?]] = input match {
+      case a: EndpointInput.Auth[?, ?]           => Some(a)
       case EndpointInput.MappedPair(input, _)    => unapply(input)
       case EndpointIO.MappedPair(input, _)       => unapply(input)
       case EndpointInput.Pair(left, right, _, _) => unapply(left).orElse(unapply(right))
@@ -188,7 +188,7 @@ object DefaultDecodeFailureHandler {
 
     /** Describes the source of the failure: in which part of the request did the failure occur. */
     @tailrec
-    def failureSourceMessage(input: EndpointInput[_]): String =
+    def failureSourceMessage(input: EndpointInput[?]): String =
       input match {
         case EndpointInput.FixedMethod(_, _, _)      => s"Invalid value for: method"
         case EndpointInput.FixedPath(_, _, _)        => s"Invalid value for: path segment"
@@ -197,11 +197,11 @@ object DefaultDecodeFailureHandler {
         case EndpointInput.Query(name, _, _, _)      => s"Invalid value for: query parameter $name"
         case EndpointInput.QueryParams(_, _)         => "Invalid value for: query parameters"
         case EndpointInput.Cookie(name, _, _)        => s"Invalid value for: cookie $name"
-        case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
-        case a: EndpointInput.Auth[_, _]             => failureSourceMessage(a.input)
-        case _: EndpointInput.MappedPair[_, _, _, _] => "Invalid value"
-        case _: EndpointIO.Body[_, _]                => s"Invalid value for: body"
-        case _: EndpointIO.StreamBodyWrapper[_, _]   => s"Invalid value for: body"
+        case _: EndpointInput.ExtractFromRequest[?]  => "Invalid value"
+        case a: EndpointInput.Auth[?, ?]             => failureSourceMessage(a.input)
+        case _: EndpointInput.MappedPair[?, ?, ?, ?] => "Invalid value"
+        case _: EndpointIO.Body[?, ?]                => s"Invalid value for: body"
+        case _: EndpointIO.StreamBodyWrapper[?, ?]   => s"Invalid value for: body"
         case EndpointIO.Header(name, _, _)           => s"Invalid value for: header $name"
         case EndpointIO.FixedHeader(name, _, _)      => s"Invalid value for: header $name"
         case EndpointIO.Headers(_, _)                => s"Invalid value for: headers"
@@ -293,10 +293,10 @@ object DefaultDecodeFailureHandler {
       }
 
     /** Default message describing the validation error: which value is invalid, and why. */
-    def validationErrorMessage(ve: ValidationError[_]): String = invalidValueMessage(ve, pathMessage(ve.path).getOrElse("value"))
+    def validationErrorMessage(ve: ValidationError[?]): String = invalidValueMessage(ve, pathMessage(ve.path).getOrElse("value"))
 
     /** Default message describing a list of validation errors: which values are invalid, and why. */
-    def validationErrorsMessage(ve: List[ValidationError[_]]): String = ve.map(validationErrorMessage).mkString(", ")
+    def validationErrorsMessage(ve: List[ValidationError[?]]): String = ve.map(validationErrorMessage).mkString(", ")
 
     private def quoteIfString(v: Any): Any = v match {
       case s: String => s""""$s""""
@@ -304,7 +304,7 @@ object DefaultDecodeFailureHandler {
     }
 
     private def size(v: Any): Any = v match {
-      case i: Iterable[_] => i.size
+      case i: Iterable[?] => i.size
       case _              => v
     }
   }
@@ -314,7 +314,7 @@ object DefaultDecodeFailureHandler {
   object OnDecodeFailure {
     private[decodefailure] val key: AttributeKey[OnDecodeFailureNextEndpointAttribute] = AttributeKey[OnDecodeFailureNextEndpointAttribute]
 
-    implicit class RichEndpointTransput[ET <: EndpointTransput.Atom[_]](val et: ET) extends AnyVal {
+    implicit class RichEndpointTransput[ET <: EndpointTransput.Atom[?]](val et: ET) extends AnyVal {
       def onDecodeFailureNextEndpoint: ET = et.attribute(key, OnDecodeFailureNextEndpointAttribute()).asInstanceOf[ET]
     }
   }

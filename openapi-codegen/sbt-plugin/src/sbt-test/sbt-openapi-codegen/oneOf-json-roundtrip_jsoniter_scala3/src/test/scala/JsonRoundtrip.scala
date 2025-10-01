@@ -8,9 +8,6 @@ import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJso
 import sttp.tapir.generated.TapirGeneratedEndpoints.*
 import sttp.tapir.generated.TapirGeneratedEndpointsSchemas.*
 import TapirGeneratedEndpointsJsonSerdes.*
-import org.apache.pekko.stream.scaladsl.Source
-import org.apache.pekko.util.ByteString
-import sttp.capabilities.pekko.PekkoStreams
 import sttp.monad.FutureMonad
 import sttp.tapir.DecodeResult
 import sttp.tapir.client.sttp.{SttpClientInterpreter, SttpClientOptions, WebSocketToPipe}
