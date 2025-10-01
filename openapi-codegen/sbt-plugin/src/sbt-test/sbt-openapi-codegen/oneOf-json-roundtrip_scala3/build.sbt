@@ -9,7 +9,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.11.16",
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.11.16",
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
-  "io.circe" %% "circe-generic" % "0.14.14",
+  "io.circe" %% "circe-generic" % "0.14.15",
   "org.latestbit" %% "circe-tagged-adt-codec" % "0.11.0",
   "io.github.bishabosha" %% "enum-extensions" % "0.1.1",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
