@@ -92,5 +92,4 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
 
   override def withUnderlying(underlying: Any): ServerRequest =
     PekkoServerRequest(ctx = underlying.asInstanceOf[RequestContext], attributes)
-
 }
