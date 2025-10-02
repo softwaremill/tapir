@@ -1,7 +1,7 @@
 // {cat=Security; effects=Future; server=Pekko HTTP}: Separating security and server logic, with a reusable base endpoint
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.45
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.45
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.46
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.46
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.security
