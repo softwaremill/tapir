@@ -60,6 +60,7 @@ private[netty] class NettyToResponseBody[F[_]](runAsync: RunAsync[F])(implicit m
         val builtEntity = entity.build()
 
         (ctx: ChannelHandlerContext) => {
+          // TODO: This call is blocking, we need to wrap it appropriately when we have non-blocking multipart implementations
           val inputStream = builtEntity.getContent
           ReactivePublisherNettyResponseContent(ctx.newPromise(), wrap(inputStream))
         }
