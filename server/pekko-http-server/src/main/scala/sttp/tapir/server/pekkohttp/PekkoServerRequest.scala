@@ -1,13 +1,13 @@
 package sttp.tapir.server.pekkohttp
 
-import org.apache.pekko.http.scaladsl.model.{AttributeKeys, Uri as PekkoUri}
+import org.apache.pekko.http.scaladsl.model.{AttributeKeys, Uri => PekkoUri}
 import org.apache.pekko.http.scaladsl.server.RequestContext
 import sttp.model.Uri.{Authority, FragmentSegment, HostSegment, PathSegments, QuerySegment}
 import sttp.model.{Header, HeaderNames, Method, QueryParams, Uri}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.{AttributeKey, AttributeMap}
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.InetSocketAddress
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 
