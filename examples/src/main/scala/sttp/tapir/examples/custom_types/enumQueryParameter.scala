@@ -1,7 +1,7 @@
 // {cat=Custom types; effects=Direct; server=Netty}: A query parameter which maps to a Scala 3 enum (enumeration)
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.45
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.45
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.46
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.46
 //> using dep ch.qos.logback:logback-classic:1.5.8
 
 package sttp.tapir.examples.custom_types
