@@ -35,20 +35,22 @@ private[sync] class NettySyncRequestBody(val createFile: ServerRequest => TapirF
       maxBytes: Option[Long]
   ): RawValue[Seq[RawPart]] = {
     val decoder = new HttpPostMultipartRequestDecoder(nettyRequest)
-    val requestFlow = FlowReactiveStreams.fromPublisher(nettyRequest)
 
-    val rawParts = (maxBytes match
-      case Some(value) =>
-        requestFlow.mapStatefulConcat(0): (bytesSoFar, httpContent) =>
-          val newBytesSoFar = bytesSoFar + httpContent.content().readableBytes()
-          if (newBytesSoFar > value) throw StreamMaxLengthExceededException(value)
-          (newBytesSoFar, decoder.decodeChunk(httpContent))
-      case None => requestFlow.mapConcat(decoder.decodeChunk)
-    ).mapConcat: httpData =>
-      m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType))
-    .runToList()
+    val rawParts =
+      try
+        val requestFlow = FlowReactiveStreams.fromPublisher(nettyRequest)
+        (maxBytes match
+          case Some(value) =>
+            requestFlow.mapStatefulConcat(0): (bytesSoFar, httpContent) =>
+              val newBytesSoFar = bytesSoFar + httpContent.content().readableBytes()
+              if (newBytesSoFar > value) throw StreamMaxLengthExceededException(value)
+              (newBytesSoFar, decoder.decodeChunk(httpContent))
+          case None => requestFlow.mapConcat(decoder.decodeChunk)
+        ).mapConcat: httpData =>
+          m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType))
+        .runToList()
+      finally decoder.destroy()
 
-    decoder.destroy()
     RawValue.fromParts(rawParts)
   }
 
