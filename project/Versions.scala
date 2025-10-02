@@ -47,7 +47,7 @@ object Versions {
   val play29Client = "2.2.12"
   val play29Server = "2.9.9"
   val tethys = "0.29.5"
-  val vertx = "4.5.21"
+  val vertx = "5.0.4"
   val jsScalaJavaTime = "2.6.0"
   val nativeScalaJavaTime = "2.6.0"
   val jwtScala = "10.0.4"
