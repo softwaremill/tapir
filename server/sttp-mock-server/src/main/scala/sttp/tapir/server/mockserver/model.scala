@@ -36,11 +36,13 @@ sealed trait ExpectationBodyDefinition extends Product with Serializable
 object ExpectationBodyDefinition {
   private[mockserver] val PlainType: String = "STRING"
   private[mockserver] val JsonType: String = "JSON"
+  private[mockserver] val BinaryType: String = "BINARY"
 
-  private[mockserver] val KnownTypes: List[String] = List(PlainType, JsonType)
+  private[mockserver] val KnownTypes: List[String] = List(PlainType, JsonType, BinaryType)
   private[mockserver] val KnownTypesString: String = KnownTypes.mkString("[", ", ", "]")
 
   case class PlainBodyDefinition(string: String, contentType: MediaType) extends ExpectationBodyDefinition
+  case class BinaryBodyDefinition(base64Bytes: String, contentType: MediaType) extends ExpectationBodyDefinition
   case class JsonBodyDefinition(json: JsonObject, matchType: JsonMatchType) extends ExpectationBodyDefinition
   // NOTE: for some reasons mock-server just returns the JSON body in httpResponse field...
   case class RawJson(underlying: JsonObject) extends ExpectationBodyDefinition
