@@ -51,6 +51,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
           override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
         }.tests() ++
+        new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
         additionalTests(createServerTest)
 

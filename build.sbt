@@ -1556,6 +1556,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
     libraryDependencies ++= Seq(
       "io.netty" % "netty-all" % Versions.nettyAll,
       "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams,
+      "org.apache.httpcomponents" % "httpmime" % "4.5.14",
       slf4j
     ),
     // needed because of https://github.com/coursier/coursier/issues/2016

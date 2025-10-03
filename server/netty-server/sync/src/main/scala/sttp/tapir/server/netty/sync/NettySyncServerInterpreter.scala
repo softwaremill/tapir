@@ -23,7 +23,11 @@ trait NettySyncServerInterpreter:
     implicit val bodyListener: BodyListener[Identity, NettyResponse] = new NettyBodyListener(RunAsync.Id)
     val serverInterpreter = new ServerInterpreter[OxStreams with WebSockets, Identity, NettyResponse, OxStreams](
       FilterServerEndpoints(ses),
-      new NettySyncRequestBody(nettyServerOptions.createFile),
+      new NettySyncRequestBody(
+        nettyServerOptions.createFile,
+        nettyServerOptions.multipartTempDirectory,
+        nettyServerOptions.multipartMinSizeForDisk
+      ),
       new NettySyncToResponseBody(RunAsync.Id, inScopeRunner),
       RejectInterceptor.disableWhenSingleEndpoint(nettyServerOptions.interceptors, ses),
       nettyServerOptions.deleteFile
