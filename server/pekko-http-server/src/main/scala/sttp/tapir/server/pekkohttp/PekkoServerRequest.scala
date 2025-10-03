@@ -1,18 +1,35 @@
 package sttp.tapir.server.pekkohttp
 
-import org.apache.pekko.http.scaladsl.model.{Uri => PekkoUri}
+import org.apache.pekko.http.scaladsl.model.{AttributeKeys, Uri => PekkoUri}
 import org.apache.pekko.http.scaladsl.server.RequestContext
 import sttp.model.Uri.{Authority, FragmentSegment, HostSegment, PathSegments, QuerySegment}
 import sttp.model.{Header, HeaderNames, Method, QueryParams, Uri}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.{AttributeKey, AttributeMap}
 
+import java.net.InetSocketAddress
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 
 private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes: AttributeMap = AttributeMap.Empty) extends ServerRequest {
   override def protocol: String = ctx.request.protocol.value
-  override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
+  private lazy val remote = ctx
+    .request
+    .attribute(AttributeKeys.remoteAddress)
+    .flatMap(_.toIP)
+
+  override def connectionInfo: ConnectionInfo = {
+    // simple / naive deduction of secure property, as pekko uses only this 4 schemes
+    // @see org.apache.pekko.http.scaladsl.model.HttpRequest#verifyUri
+    val secure = ctx.request.uri.scheme match {
+      case "https" | "wss" => Some(true)
+      case "http" | "ws" => Some(false)
+      case _ => None
+    }
+    ConnectionInfo(None, remote.map( addr =>
+      new InetSocketAddress(addr.ip, addr.port.getOrElse(0))
+    ) , secure)
+  }
   override def underlying: Any = ctx
 
   override lazy val pathSegments: List[String] = {
