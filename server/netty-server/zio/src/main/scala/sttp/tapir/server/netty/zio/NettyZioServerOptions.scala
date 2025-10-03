@@ -4,7 +4,6 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
-import sttp.tapir.server.netty.NettyServerOptions
 import sttp.tapir.{Defaults, TapirFile}
 import zio.{Cause, RIO, ZIO}
 
@@ -15,10 +14,8 @@ import zio.{Cause, RIO, ZIO}
 case class NettyZioServerOptions[R](
     interceptors: List[Interceptor[RIO[R, *]]],
     createFile: ServerRequest => RIO[R, TapirFile],
-    deleteFile: TapirFile => RIO[R, Unit],
-    multipartTempDirectory: Option[TapirFile],
-    multipartMinSizeForDisk: Option[Long]
-) extends NettyServerOptions[RIO[R, *]] {
+    deleteFile: TapirFile => RIO[R, Unit]
+) {
   def prependInterceptor(i: Interceptor[RIO[R, *]]): NettyZioServerOptions[R] = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[RIO[R, *]]): NettyZioServerOptions[R] = copy(interceptors = interceptors :+ i)
   def widen[R2 <: R]: NettyZioServerOptions[R2] = this.asInstanceOf[NettyZioServerOptions[R2]]
@@ -34,9 +31,7 @@ object NettyZioServerOptions {
     NettyZioServerOptions(
       interceptors,
       _ => ZIO.attemptBlocking(Defaults.createTempFile()),
-      file => ZIO.attemptBlocking(Defaults.deleteFile()(file)),
-      None,
-      None
+      file => ZIO.attemptBlocking(Defaults.deleteFile()(file))
     )
 
   def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], NettyZioServerOptions[R]] =
