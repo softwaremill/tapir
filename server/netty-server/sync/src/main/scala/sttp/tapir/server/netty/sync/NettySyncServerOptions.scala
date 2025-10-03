@@ -6,6 +6,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.netty.NettyServerOptions
 import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -13,13 +14,15 @@ case class NettySyncServerOptions(
     interceptors: List[Interceptor[Identity]],
     createFile: ServerRequest => TapirFile,
     deleteFile: TapirFile => Unit,
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long],
     /** When a request is cancelled (due to client closing the connection or a timeout), should the server's logic be interrupted (using
       * `Thread.interrupt`)? This might be useful for long-running requests. However, if all requests are fast, it might have a net negative
       * impact: for example, when a database query is interrupted, the db connection becomes marked as broken, and will have to be
       * re-established.
       */
     interruptServerLogicWhenRequestCancelled: Boolean
-):
+) extends NettyServerOptions[Identity]:
   def prependInterceptor(i: Interceptor[Identity]): NettySyncServerOptions = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[Identity]): NettySyncServerOptions = copy(interceptors = interceptors :+ i)
 
@@ -37,6 +40,8 @@ object NettySyncServerOptions:
       interceptors,
       _ => Defaults.createTempFile(),
       Defaults.deleteFile(),
+      None,
+      None,
       interruptServerLogicWhenRequestCancelled = true
     )
 

@@ -17,8 +17,10 @@ import scala.concurrent.{Future, blocking}
 case class NettyFutureServerOptions(
     interceptors: List[Interceptor[Future]],
     createFile: ServerRequest => Future[TapirFile],
-    deleteFile: TapirFile => Future[Unit]
-) {
+    deleteFile: TapirFile => Future[Unit],
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long]
+) extends NettyServerOptions[Future] {
   def prependInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[Future]): NettyFutureServerOptions = copy(interceptors = interceptors :+ i)
 }
@@ -37,7 +39,9 @@ object NettyFutureServerOptions {
       file => {
         import scala.concurrent.ExecutionContext.Implicits.global
         Future(blocking(Defaults.deleteFile()(file)))
-      }
+      },
+      None,
+      None
     )
 
   /** Customise the interceptors that are being used when exposing endpoints as a server. */

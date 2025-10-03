@@ -7,6 +7,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.netty.NettyServerOptions
 import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -18,8 +19,10 @@ case class NettyCatsServerOptions[F[_]](
     interceptors: List[Interceptor[F]],
     createFile: ServerRequest => F[TapirFile],
     deleteFile: TapirFile => F[Unit],
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long],
     dispatcher: Dispatcher[F]
-) {
+) extends NettyServerOptions[F] {
   def prependInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = interceptors :+ i)
 }
@@ -37,6 +40,8 @@ object NettyCatsServerOptions {
       interceptors,
       _ => Sync[F].delay(Defaults.createTempFile()),
       file => Sync[F].delay(Defaults.deleteFile()(file)),
+      None,
+      None,
       dispatcher
     )
 
