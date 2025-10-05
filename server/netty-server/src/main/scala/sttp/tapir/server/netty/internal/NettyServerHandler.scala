@@ -143,7 +143,7 @@ class NettyServerHandler[F[_]](
       requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
         try {
-          route(NettyServerRequest(req))
+          route(NettyServerRequest(req, ctx))
             .map {
               case Some(response) => response
               case None           => ServerResponse.notFound
