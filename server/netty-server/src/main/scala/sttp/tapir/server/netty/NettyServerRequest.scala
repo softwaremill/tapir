@@ -30,7 +30,6 @@ case class NettyServerRequest(req: HttpRequest, ctx: ChannelHandlerContext, attr
       case _                       => None
     }
 
-    // Check if SSL/TLS is enabled by looking for SslHandler in the pipeline
     val secure = uri.scheme match {
       case Some("https") | Some("wss") => Some(true)
       case Some("http") | Some("ws")   => Some(false)
