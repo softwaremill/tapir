@@ -1,8 +1,8 @@
 // {cat=OpenAPI documentation; effects=Future; server=Pekko HTTP; docs=Swagger UI}: Securing Swagger UI using OAuth 2
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.47
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.47
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.47
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.48
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.48
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.48
 
 package sttp.tapir.examples.openapi
 
