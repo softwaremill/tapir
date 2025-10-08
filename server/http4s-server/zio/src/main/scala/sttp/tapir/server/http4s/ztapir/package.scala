@@ -6,11 +6,11 @@ import sttp.tapir.ztapir.ZioServerSentEvents
 import sttp.tapir.{CodecFormat, StreamBodyIO, streamTextBody}
 import zio.stream._
 
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
 package object ztapir {
   val serverSentEventsBody: StreamBodyIO[Stream[Throwable, Byte], Stream[Throwable, ServerSentEvent], ZioStreams] = {
-    streamTextBody(ZioStreams)(CodecFormat.TextEventStream(), Some(Charset.forName("UTF-8")))
+    streamTextBody(ZioStreams)(CodecFormat.TextEventStream(), Some(StandardCharsets.UTF_8))
       .map(ZioServerSentEvents.parseBytesToSSE)(ZioServerSentEvents.serialiseSSEToBytes)
   }
 }

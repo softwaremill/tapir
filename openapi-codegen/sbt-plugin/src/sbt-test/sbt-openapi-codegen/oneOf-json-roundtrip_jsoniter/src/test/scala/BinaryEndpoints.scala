@@ -23,6 +23,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.util.Random
+import java.nio.charset.StandardCharsets
 
 class BinaryEndpoints extends AnyFreeSpec with Matchers {
   private implicit val system: ActorSystem = ActorSystem()
@@ -35,7 +36,7 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
       def next(): ByteString = {
         val nxt = Random.alphanumeric.take(140).mkString
         linesToGo -= 1
-        ByteString.fromString(nxt, "utf-8")
+        ByteString.fromString(nxt, StandardCharsets.UTF_8)
       }
     }
     def handleCsv(stream: ByteString): State = State(stream.utf8String.take(100).mkString)
