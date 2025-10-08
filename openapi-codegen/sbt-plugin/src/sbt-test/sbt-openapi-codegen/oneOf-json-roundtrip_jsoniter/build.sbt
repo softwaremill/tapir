@@ -1,7 +1,7 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.16",
+    scalaVersion := "2.13.17",
     version := "0.1",
     openapiJsonSerdeLib := "jsoniter",
     openapiStreamingImplementation := "pekko",
