@@ -383,7 +383,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
       }
 
     def encode(up: UsernamePassword): String =
-      Base64.getEncoder.encodeToString(s"${up.username}:${up.password.getOrElse("")}".getBytes("UTF-8"))
+      Base64.getEncoder.encodeToString(s"${up.username}:${up.password.getOrElse("")}".getBytes(StandardCharsets.UTF_8))
 
     Codec.string.mapDecode(decode)(encode)
   }

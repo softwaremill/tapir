@@ -4,7 +4,7 @@ import sttp.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, Sec
 import sttp.tapir.{AnyEndpoint, Codec, EndpointInput, Schema, SchemaType}
 
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
 package object apispec {
   private[docs] type SchemeName = String
@@ -21,8 +21,8 @@ package object apispec {
   }
 
   private def rawToString(v: Any): String = v match {
-    case a: Array[Byte] => new String(a, "UTF-8")
-    case b: ByteBuffer  => Charset.forName("UTF-8").decode(b).toString
+    case a: Array[Byte] => new String(a, StandardCharsets.UTF_8)
+    case b: ByteBuffer  => StandardCharsets.UTF_8.decode(b).toString
     case _              => v.toString
   }
 
