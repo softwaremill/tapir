@@ -10,6 +10,7 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.{FileRange, RawBodyType, RawPart, InputStreamRange}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -59,14 +60,17 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
       case RawBodyType.InputStreamRangeBody =>
         Future.successful(RawValue(InputStreamRange(() => body.dataBytes.runWith(StreamConverters.asInputStream()))))
       case m: RawBodyType.MultipartBody =>
-        implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(body).flatMap { fd =>
-          fd.parts
-            .mapConcat(part => m.partType(part.name).map((part, _)).toList)
-            .mapAsync[RawPart](1) { case (part, codecMeta) => toRawPart(request, part, codecMeta) }
-            .runWith[Future[scala.collection.immutable.Seq[RawPart]]](Sink.seq)
-            .map(RawValue.fromParts)
-            .asInstanceOf[Future[RawValue[R]]]
-        }
+        implicitly[FromEntityUnmarshaller[Multipart.FormData]]
+          .apply(body)
+          .flatMap { fd =>
+            fd.parts
+              .mapConcat(part => m.partType(part.name).map((part, _)).toList)
+              .mapAsync[RawPart](1) { case (part, codecMeta) => toRawPart(request, part, codecMeta) }
+              .runWith[Future[scala.collection.immutable.Seq[RawPart]]](Sink.seq)
+              .map(RawValue.fromParts)
+              .asInstanceOf[Future[RawValue[R]]]
+          }
+          .recoverWith { case e: ParsingException => Future.failed(InvalidMultipartBodyException(e)) }
     }
   }
 
