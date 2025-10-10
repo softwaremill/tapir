@@ -11,6 +11,7 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.server.netty.internal.reactivestreams.SubscriberInputStream
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart, TapirFile}
 
@@ -85,8 +86,9 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
       } yield RawValue(FileRange(file), Seq(FileRange(file)))
     case m: RawBodyType.MultipartBody =>
       serverRequest.underlying match {
-        case r: StreamedHttpRequest => publisherToMultipart(r, serverRequest, m, maxBytes)
-        case _                      => monad.error(new UnsupportedOperationException("Expected a streamed request for multipart body"))
+        case r: StreamedHttpRequest                                  => publisherToMultipart(r, serverRequest, m, maxBytes)
+        case r if r.getClass().getSimpleName() == "EmptyHttpRequest" => monad.error(InvalidMultipartBodyException("Empty multipart body"))
+        case _ => monad.error(new UnsupportedOperationException("Expected a streamed request for multipart body"))
       }
   }
 

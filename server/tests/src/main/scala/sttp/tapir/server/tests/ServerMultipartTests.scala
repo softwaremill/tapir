@@ -187,6 +187,46 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             r.code shouldBe StatusCode.Ok
             r.body should be("firstPart:BODYONE\r\n--AA\n__\nsecondPart:BODYTWO")
           }
+      },
+      testServer(in_raw_multipart_out_string, "empty multipart body")((parts: Seq[Part[Array[Byte]]]) =>
+        pureResult(parts.length.toString.asRight[Unit])
+      ) { (backend, baseUri) =>
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .header("Content-Type", "multipart/form-data; boundary=AAB")
+          .body("")
+          .send(backend)
+          .map { r =>
+            // no parts should be parsed, or a bad request should be returned
+            r.code match {
+              case StatusCode.BadRequest => succeed
+              case StatusCode.Ok         => r.body should be("0")
+              case _ =>
+                fail("Expected BadRequest, but got " + r.code)
+            }
+          }
+      },
+      testServer(in_raw_multipart_out_string, "invalid multipart body")((parts: Seq[Part[Array[Byte]]]) =>
+        pureResult(parts.length.toString.asRight[Unit])
+      ) { (backend, baseUri) =>
+        val testBody = "--ABC\r\n" + // different boundary
+          "Content-Disposition: form-data; name=\"firstPart\"\r\n" +
+          "Content-Type: text/plain\r\n" +
+          "-ABC\r\n" // invalid boundary
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .header("Content-Type", "multipart/form-data; boundary=AAB")
+          .body(testBody)
+          .send(backend)
+          .map { r =>
+            // no parts should be parsed, or a bad request should be returned
+            r.code match {
+              case StatusCode.BadRequest => succeed
+              case StatusCode.Ok         => r.body should be("0")
+              case _ =>
+                fail("Expected BadRequest, but got " + r.code)
+            }
+          }
       }
     )
   }
