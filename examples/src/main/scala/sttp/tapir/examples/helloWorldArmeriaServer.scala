@@ -1,7 +1,7 @@
 // {cat=Hello, World!; effects=Future; server=Armeria}: Exposing an endpoint using the Armeria server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.48
-//> using dep com.softwaremill.sttp.tapir::tapir-armeria-server:1.11.48
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.49
+//> using dep com.softwaremill.sttp.tapir::tapir-armeria-server:1.11.49
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples
