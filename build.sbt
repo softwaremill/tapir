@@ -561,7 +561,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.0",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
-      "io.github.classgraph" % "classgraph" % "4.8.180",
+      "io.github.classgraph" % "classgraph" % "4.8.184",
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
