@@ -91,8 +91,7 @@ object SwaggerUI {
     val yamlEndpoint = baseEndpoint
       .in(options.yamlName)
       .out(stringBodyUtf8AnyFormat(Codec.string.format(new CodecFormat {
-        // #2396: although application/yaml is not official, that's what swagger ui sends in the accept header
-        override def mediaType: MediaType = MediaType("application", "yaml")
+        override def mediaType: MediaType = MediaType.ApplicationYaml
       })))
       .serverLogicSuccessPure[F](_ => yaml)
 
