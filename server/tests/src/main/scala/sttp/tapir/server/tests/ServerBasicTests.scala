@@ -135,6 +135,38 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .send(backend)
         .map(_.contentType shouldBe Some(sttp.model.MediaType.ApplicationJson.toString))
     },
+    testServer(in_string_out_string_media_type_json, s"With ${HeaderNames.Accept}: ${MediaType.ApplicationJson}")((b: String) =>
+      pureResult(s"""{"$b":"$b"}""".asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .header(Header.accept(MediaType.ApplicationJson))
+        .post(uri"$baseUri/api/json")
+        .body("Sweet")
+        .send(backend)
+        .map { r =>
+          r.body shouldBe Right("""{"Sweet":"Sweet"}""")
+        }
+    },
+    testServer(in_string_out_string_media_type_json)((b: String) => pureResult(s"""{"$b":"$b"}""".asRight[Unit])) { (backend, baseUri) =>
+      basicRequest
+        .post(uri"$baseUri/api/json")
+        .body("Sweet")
+        .send(backend)
+        .map { r =>
+          r.body shouldBe Right("""{"Sweet":"Sweet"}""")
+        }
+    },
+    testServer(in_string_out_string_media_type_json_body)((b: String) => pureResult(s"""{"$b":"$b"}""".asRight[Unit])) {
+      (backend, baseUri) =>
+        basicRequest
+          .header(Header.accept(MediaType.ApplicationJson))
+          .post(uri"$baseUri/api/json_body")
+          .body("Sweet")
+          .send(backend)
+          .map { r =>
+            r.body shouldBe Right("""{"Sweet":"Sweet"}""")
+          }
+    },
     testServer(in_byte_array_out_byte_array)((b: Array[Byte]) => pureResult(b.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.post(uri"$baseUri/api/echo").body("banana kiwi".getBytes).send(backend).map(_.body shouldBe Right("banana kiwi"))
     },
