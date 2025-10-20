@@ -20,7 +20,7 @@ import scala.collection.immutable.Seq
 object ZTapirTest extends ZIOSpecDefault with ZTapir {
 
   def spec: Spec[TestEnvironment, Any] =
-    suite("ZTapir tests")(testZServerLogicErrorHandling, testZServerSecurityLogicErrorHandling)
+    suite("ZTapir tests")(testZServerLogicErrorHandling, testZServerSecurityLogicErrorHandling, testZServerLogicReturnType)
 
   type ResponseBodyType = String
 
@@ -125,5 +125,16 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
           isSubtype[RequestResult.Response[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
         )
       }
+  }
+
+  private val testZServerLogicReturnType = test("zServerLogic return type") {
+    assertZIO(typeCheck("""
+    import sttp.tapir.endpoint
+    import sttp.tapir.server.ServerEndpoint
+    import sttp.tapir.ztapir._
+    import zio.Task
+    
+    endpoint.zServerLogic(_ => ZIO.unit): ServerEndpoint[Any, Task] { type INPUT = Unit; type OUTPUT = Unit; type ERROR_OUTPUT = Unit }
+    """))(isRight)
   }
 }
