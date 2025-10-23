@@ -130,9 +130,9 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
   private val testZServerLogicReturnType = test("zServerLogic return type") {
     assertZIO(typeCheck("""
     import sttp.tapir.server.ServerEndpoint
-    import sttp.tapir.ztapir._
-    import zio.Task
-    
+    import sttp.tapir.ztapir.{endpoint, RichZEndpoint}
+    import zio.{Task, ZIO}
+
     endpoint.zServerLogic(_ => ZIO.unit): ServerEndpoint[Any, Task] { type INPUT = Unit; type OUTPUT = Unit; type ERROR_OUTPUT = Unit }
     """))(isRight)
   }
