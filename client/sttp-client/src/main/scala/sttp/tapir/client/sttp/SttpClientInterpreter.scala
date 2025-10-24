@@ -214,10 +214,10 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     }
 
   private def throwErrorExceptionMsg[I, E, O, R](endpoint: PublicEndpoint[I, E, O, R], i: I, e: E): String =
-    s"Endpoint ${endpoint.show} returned error: $e, inputs: $i."
+    s"Endpoint ${sttpClientOptions.showEndpoint(endpoint)} returned error: $e, inputs: $i."
 
   private def throwErrorExceptionMsg[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R], a: A, i: I, e: E): String =
-    s"Endpoint ${endpoint.show} returned error: $e, for security inputs: $a, inputs: $i."
+    s"Endpoint ${sttpClientOptions.showEndpoint(endpoint)} returned error: $e, for security inputs: $a, inputs: $i."
 }
 
 object SttpClientInterpreter {
