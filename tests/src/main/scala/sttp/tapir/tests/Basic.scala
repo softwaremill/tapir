@@ -64,6 +64,19 @@ object Basic {
       .in(header[MediaType]("Content-Type"))
   }
 
+  val in_string_out_string_media_type_json: PublicEndpoint[String, Unit, String, Any] =
+    endpoint.post
+      .in("api" / "json")
+      .in(stringBody)
+      .out(stringBody)
+      .out(header(Header.contentType(MediaType.ApplicationJson)))
+
+  val in_string_out_string_media_type_json_body: PublicEndpoint[String, Unit, String, Any] =
+    endpoint.post
+      .in("api" / "json_body")
+      .in(stringBody)
+      .out(stringJsonBody)
+
   val in_byte_array_out_byte_array: PublicEndpoint[Array[Byte], Unit, Array[Byte], Any] =
     endpoint.post.in("api" / "echo").in(byteArrayBody).out(byteArrayBody).name("echo byte array")
 
