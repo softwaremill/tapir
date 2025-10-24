@@ -113,8 +113,8 @@ trait WebSocketSttpClientInterpreter {
         .apply(i)
         .mapResponse(throwDecodeFailures)
         .mapResponse {
-          case Left(t: Throwable) => throw new RuntimeException(throwErrorExceptionMsg(e, i, t.asInstanceOf[E]), t)
-          case Left(t)            => throw new RuntimeException(throwErrorExceptionMsg(e, i, t))
+          case Left(t: Throwable) => throw new RuntimeException(throwErrorExceptionMsg(e, i, t.asInstanceOf[E], sttpClientOptions), t)
+          case Left(t)            => throw new RuntimeException(throwErrorExceptionMsg(e, i, t, sttpClientOptions))
           case Right(o)           => o
         }
 
@@ -232,8 +232,8 @@ trait WebSocketSttpClientInterpreter {
           .apply(i)
           .mapResponse(throwDecodeFailures)
           .mapResponse {
-            case Left(t: Throwable) => throw new RuntimeException(throwErrorExceptionMsg(e, a, i, t.asInstanceOf[E]), t)
-            case Left(t)            => throw new RuntimeException(throwErrorExceptionMsg(e, a, i, t))
+            case Left(t: Throwable) => throw new RuntimeException(throwErrorExceptionMsg(e, a, i, t.asInstanceOf[E], sttpClientOptions), t)
+            case Left(t)            => throw new RuntimeException(throwErrorExceptionMsg(e, a, i, t, sttpClientOptions))
             case Right(o)           => o
           }
 }

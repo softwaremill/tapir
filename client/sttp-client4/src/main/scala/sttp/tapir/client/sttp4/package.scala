@@ -11,11 +11,11 @@ package object sttp4 {
       case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
     }
 
-  private[sttp4] def throwErrorExceptionMsg[I, E, O, R](endpoint: PublicEndpoint[I, E, O, R], i: I, e: E): String =
-    s"Endpoint ${endpoint.show} returned error: $e, inputs: $i."
+  private[sttp4] def throwErrorExceptionMsg[I, E, O, R](endpoint: PublicEndpoint[I, E, O, R], i: I, e: E, options: SttpClientOptions): String =
+    s"Endpoint ${options.showEndpoint(endpoint)} returned error: $e, inputs: $i."
 
-  private[sttp4] def throwErrorExceptionMsg[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R], a: A, i: I, e: E): String =
-    s"Endpoint ${endpoint.show} returned error: $e, for security inputs: $a, inputs: $i."
+  private[sttp4] def throwErrorExceptionMsg[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R], a: A, i: I, e: E, options: SttpClientOptions): String =
+    s"Endpoint ${options.showEndpoint(endpoint)} returned error: $e, for security inputs: $a, inputs: $i."
 
   private[sttp4] type RequestStreamBody = (Streams[_], Any)
 }
