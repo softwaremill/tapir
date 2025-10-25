@@ -2033,7 +2033,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
           case Some((3, _)) => Nil
-          case _ =>
+          case _            =>
             Seq(
               "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
               "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test,
@@ -2081,7 +2081,7 @@ lazy val sttpClient4: ProjectMatrix = (projectMatrix in file("client/sttp-client
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
           case Some((3, _)) => Nil
-          case _ =>
+          case _            =>
             Seq(
               "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
               "com.softwaremill.sttp.client4" %% "akka-http-backend" % Versions.sttp4 % Test,

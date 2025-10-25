@@ -42,9 +42,9 @@ class FinatraRequestBody(serverOptions: FinatraServerOptions) extends RequestBod
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
         Future.value[R](new String(asByteArray, charset.getOrElse(defaultCharset))).map(RawValue(_))
-      case RawBodyType.ByteArrayBody   => Future.value[R](asByteArray).map(RawValue(_))
-      case RawBodyType.ByteBufferBody  => Future.value[R](asByteBuffer).map(RawValue(_))
-      case RawBodyType.InputStreamBody => Future.value[R](new ByteArrayInputStream(asByteArray)).map(RawValue(_))
+      case RawBodyType.ByteArrayBody        => Future.value[R](asByteArray).map(RawValue(_))
+      case RawBodyType.ByteBufferBody       => Future.value[R](asByteBuffer).map(RawValue(_))
+      case RawBodyType.InputStreamBody      => Future.value[R](new ByteArrayInputStream(asByteArray)).map(RawValue(_))
       case RawBodyType.InputStreamRangeBody =>
         Future.value[R](InputStreamRange(() => new ByteArrayInputStream(asByteArray))).map(RawValue(_))
 

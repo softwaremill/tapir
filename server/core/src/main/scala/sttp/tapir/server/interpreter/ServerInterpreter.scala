@@ -32,10 +32,10 @@ class ServerInterpreter[R, F[_], B, S](
   ): RequestHandler[F, R, B] = {
     is match {
       case Nil => RequestHandler.from { (request, ses, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
-      case is =>
+      case is  =>
         is.head match {
           case ei: EndpointInterceptor[F] => callInterceptors(is.tail, ei :: eisAcc, responder)
-          case i: RequestInterceptor[F] =>
+          case i: RequestInterceptor[F]   =>
             i(
               responder,
               { ei => RequestHandler.from { (request, ses, _) => callInterceptors(is.tail, ei :: eisAcc, responder).apply(request, ses) } }
@@ -190,7 +190,7 @@ class ServerInterpreter[R, F[_], B, S](
       .toRaw(request, bodyInput.bodyType, maxBodyLength)
       .flatMap { v =>
         bodyInput.codec.decode(v.value) match {
-          case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
+          case DecodeResult.Value(bodyV)     => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
           case failure: DecodeResult.Failure =>
             v.createdFiles
               .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))

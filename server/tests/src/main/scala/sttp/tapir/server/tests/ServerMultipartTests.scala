@@ -201,7 +201,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             r.code match {
               case StatusCode.BadRequest => succeed
               case StatusCode.Ok         => r.body should be("0")
-              case _ =>
+              case _                     =>
                 fail("Expected BadRequest, but got " + r.code)
             }
           }
@@ -223,7 +223,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             r.code match {
               case StatusCode.BadRequest => succeed
               case StatusCode.Ok         => r.body should be("0")
-              case _ =>
+              case _                     =>
                 fail("Expected BadRequest, but got " + r.code)
             }
           }
