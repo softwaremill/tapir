@@ -40,7 +40,7 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
       case RawBodyType.ByteArrayBody        => RawValue(asByteArray)
       case RawBodyType.ByteBufferBody       => RawValue(ByteBuffer.wrap(asByteArray))
       case RawBodyType.InputStreamBody      => RawValue(asInputStream)
-      case RawBodyType.FileBody =>
+      case RawBodyType.FileBody             =>
         val file = createFile(serverRequest)
         Files.copy(asInputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
         RawValue(FileRange(file), Seq(FileRange(file)))

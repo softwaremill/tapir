@@ -468,7 +468,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
                   val detail = response.body match {
                     case Left(e)                                     => fail(s"error response: $e")
                     case Right(b) if b.length != largePayload.length => s"body length: ${b.length}, expected: ${largePayload.length}"
-                    case Right(b) =>
+                    case Right(b)                                    =>
                       val original = largePayload.getBytes()
                       val received = b.getBytes()
                       val firstDifference = original.zip(received).indexWhere { case (a, b) => a != b }

@@ -86,7 +86,7 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
     private val ExposeAllHeaders = Header.accessControlExposeHeaders(Wildcard)
 
     def allowOrigin(origin: String): Option[Header] = config.allowedOrigin match {
-      case AllowedOrigin.All => Some(AllowAnyOrigin)
+      case AllowedOrigin.All                                                                      => Some(AllowAnyOrigin)
       case AllowedOrigin.Single(allowedOrigin) if origin.equalsIgnoreCase(allowedOrigin.toString) =>
         Some(Header.accessControlAllowOrigin(origin))
       case AllowedOrigin.Matching(predicate) if predicate(origin) =>

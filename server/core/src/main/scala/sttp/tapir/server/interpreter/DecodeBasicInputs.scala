@@ -249,7 +249,7 @@ object DecodeBasicInputs {
       ctx: DecodeInputsContext
   ): (DecodeBasicInputsResult, DecodeInputsContext) = {
     inputs.headAndTail match {
-      case None => (values, ctx)
+      case None                                                                           => (values, ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.Body(_, _, _), index), inputsTail)) =>
         matchOthers(inputsTail, values.addBodyInput(input, index), ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.OneOfBody(_, _), index), inputsTail)) =>

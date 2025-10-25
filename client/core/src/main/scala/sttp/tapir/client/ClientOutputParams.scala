@@ -12,7 +12,7 @@ abstract class ClientOutputParams {
     output match {
       case s: EndpointOutput.Single[?] =>
         (s match {
-          case EndpointIO.Body(_, codec, _) => decode(codec, body)
+          case EndpointIO.Body(_, codec, _)            => decode(codec, body)
           case EndpointIO.OneOfBody(variants, mapping) =>
             val body2 = decode(mapping, body)
             val bodyVariant = meta.contentType
@@ -25,12 +25,12 @@ abstract class ClientOutputParams {
           case EndpointIO.Header(name, codec, _)                             => codec.decode(meta.headers(name).toList)
           case EndpointIO.Headers(codec, _)                                  => codec.decode(meta.headers.toList)
           case EndpointOutput.StatusCode(_, codec, _)                        => codec.decode(meta.code)
-          case EndpointOutput.FixedStatusCode(sc, codec, _) =>
+          case EndpointOutput.FixedStatusCode(sc, codec, _)                  =>
             if (meta.code == sc) codec.decode(()) else DecodeResult.Mismatch(sc.toString(), meta.code.toString())
           case EndpointIO.FixedHeader(h, codec, _) =>
             if (meta.header(h.name) == Option(h.value)) codec.decode(())
             else DecodeResult.Mismatch(Some(h).toString, meta.headers.find(_.is(h.name)).toString)
-          case EndpointIO.Empty(codec, _) => codec.decode(())
+          case EndpointIO.Empty(codec, _)            => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
             val contentType = meta
               .header(HeaderNames.ContentType)

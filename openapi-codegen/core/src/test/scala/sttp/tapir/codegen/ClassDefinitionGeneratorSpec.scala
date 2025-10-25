@@ -423,7 +423,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val res: String = parserRes match {
       case Left(value) => throw new Exception(value)
-      case Right(doc) =>
+      case Right(doc)  =>
         new EndpointGenerator()
           .endpointDefs(
             doc,

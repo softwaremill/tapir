@@ -15,7 +15,7 @@ private[tapir] object MultipartCodecMacro {
     @tailrec
     def firstNotEmpty(candidates: List[() => (Tree, Tree)]): (Tree, Tree) =
       candidates match {
-        case Nil => (EmptyTree, EmptyTree)
+        case Nil    => (EmptyTree, EmptyTree)
         case h :: t =>
           val (a, b) = h()
           val result = c.typecheck(b, silent = true)

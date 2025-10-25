@@ -55,7 +55,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
           interpreter(serverRequest)
             .flatMap {
               // in vertx, endpoints are attempted to be decoded individually; if this endpoint didn't match - another one might
-              case RequestResult.Failure(_) => ZIO.succeed(rc.next())
+              case RequestResult.Failure(_)         => ZIO.succeed(rc.next())
               case RequestResult.Response(response) =>
                 ZIO.async((k: Task[Unit] => Unit) => {
                   VertxOutputEncoders(response)
