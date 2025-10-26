@@ -61,7 +61,6 @@ object StreamingNettyFs2Server extends IOApp:
 
         startServer
           .map { binding =>
-
             println(s"Server started at port = ${binding.port}")
 
             val backend: SyncBackend = HttpClientSyncBackend()
