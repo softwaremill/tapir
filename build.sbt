@@ -824,8 +824,8 @@ lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
   .settings(
     name := "tapir-json-json4s",
     libraryDependencies ++= Seq(
-      "org.json4s" %%% "json4s-core" % Versions.json4s,
-      "org.json4s" %%% "json4s-jackson" % Versions.json4s % Test,
+      "io.github.json4s" %%% "json4s-core" % Versions.json4s,
+      "io.github.json4s" %%% "json4s-jackson" % Versions.json4s % Test,
       scalaTest.value % Test
     )
   )
