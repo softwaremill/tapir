@@ -44,7 +44,7 @@ import zio.stream
 import zio.stream.ZPipeline
 import zio.stream.ZStream
 
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.time
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
@@ -222,7 +222,7 @@ class ZioHttpServerTest extends TestSuite {
             val input: ZStream[Any, Nothing, Byte] =
               ZStream(inputStrings: _*)
                 .via(ZPipeline.intersperse(java.lang.System.lineSeparator()))
-                .mapConcat(_.getBytes(Charset.forName("UTF-8")))
+                .mapConcat(_.getBytes(StandardCharsets.UTF_8))
 
             val makeRequest = basicRequest
               .post(uri"/hello")

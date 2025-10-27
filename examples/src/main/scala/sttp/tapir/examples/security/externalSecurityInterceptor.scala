@@ -1,7 +1,7 @@
 // {cat=Security; effects=Future; server=Netty}: Interceptor verifying externally added security credentials
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.40
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.40
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.50
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.50
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.security

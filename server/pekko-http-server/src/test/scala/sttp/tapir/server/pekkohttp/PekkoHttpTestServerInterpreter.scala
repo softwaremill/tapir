@@ -27,7 +27,14 @@ class PekkoHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
       routes: NonEmptyList[Route],
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
-    val bind = IO.fromFuture(IO(Http().newServerAt("localhost", 0).bind(concat(routes.toList: _*))))
+    val bind = IO.fromFuture(
+      IO(
+        Http()
+          .newServerAt("localhost", 0)
+          .adaptSettings(setts => setts.withRemoteAddressAttribute(true))
+          .bind(concat(routes.toList: _*))
+      )
+    )
 
     Resource
       .make(bind)(server => IO.fromFuture(IO(server.terminate(gracefulShutdownTimeout.getOrElse(50.millis)))).void)

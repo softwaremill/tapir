@@ -7,7 +7,7 @@ import sttp.monad.syntax._
 import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
-import sttp.tapir.server.model.{MaxContentLength, ServerResponse, ValuedEndpointOutput}
+import sttp.tapir.server.model.{InvalidMultipartBodyException, MaxContentLength, ServerResponse, ValuedEndpointOutput}
 import sttp.tapir.server.{model, _}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
 import sttp.tapir.EndpointInfo
@@ -32,10 +32,10 @@ class ServerInterpreter[R, F[_], B, S](
   ): RequestHandler[F, R, B] = {
     is match {
       case Nil => RequestHandler.from { (request, ses, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
-      case is =>
+      case is  =>
         is.head match {
           case ei: EndpointInterceptor[F] => callInterceptors(is.tail, ei :: eisAcc, responder)
-          case i: RequestInterceptor[F] =>
+          case i: RequestInterceptor[F]   =>
             i(
               responder,
               { ei => RequestHandler.from { (request, ses, _) => callInterceptors(is.tail, ei :: eisAcc, responder).apply(request, ses) } }
@@ -85,7 +85,7 @@ class ServerInterpreter[R, F[_], B, S](
   ): F[RequestResult[B]] = {
 
     val resultOrValueFrom = new ResultOrValueFrom {
-      def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]] = {
+      def onDecodeFailure(input: EndpointInput[?], failure: DecodeResult.Failure): F[RequestResult[B]] = {
         val decodeFailureContext = interceptor.DecodeFailureContext(se.endpoint, input, failure, request)
         endpointHandler(defaultSecurityFailureResponse, endpointInterceptors)
           .onDecodeFailure(decodeFailureContext)
@@ -190,21 +190,23 @@ class ServerInterpreter[R, F[_], B, S](
       .toRaw(request, bodyInput.bodyType, maxBodyLength)
       .flatMap { v =>
         bodyInput.codec.decode(v.value) match {
-          case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
+          case DecodeResult.Value(bodyV)     => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
           case failure: DecodeResult.Failure =>
             v.createdFiles
               .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
               .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
         }
       }
-      .handleError { case e: StreamMaxLengthExceededException =>
+      // if the exception is "known" - might be the result of a malformed body - treating as a decode failure
+      // otherwise, it's a bug in the interpreter
+      .handleError { case e @ (StreamMaxLengthExceededException(_) | InvalidMultipartBodyException(_, _)) =>
         (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.Error("", e)): DecodeBasicInputsResult).unit
       }
   }
 
   private def unsupportedInputMediaTypeResponse(
       request: ServerRequest,
-      oneOfBodyInput: EndpointIO.OneOfBody[_, _]
+      oneOfBodyInput: EndpointIO.OneOfBody[?, ?]
   ): F[DecodeBasicInputsResult] =
     (DecodeBasicInputsResult.Failure(
       oneOfBodyInput,
@@ -293,6 +295,6 @@ class ServerInterpreter[R, F[_], B, S](
     }
     def value[T](v: F[T]): ResultOrValue[T] = ResultOrValue(v.map(Right(_)))
 
-    def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]]
+    def onDecodeFailure(input: EndpointInput[?], failure: DecodeResult.Failure): F[RequestResult[B]]
   }
 }

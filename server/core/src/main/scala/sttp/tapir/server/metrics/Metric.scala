@@ -15,30 +15,36 @@ case class EndpointMetric[F[_]](
     /** Called when an endpoint matches the request, before calling the server logic. */
     onEndpointRequest: Option[AnyEndpoint => F[Unit]] = None,
     /** Called when the response headers are ready (not necessarily the whole response body). */
-    onResponseHeaders: Option[(AnyEndpoint, ServerResponse[_]) => F[Unit]] = None,
+    onResponseHeaders: Option[(AnyEndpoint, ServerResponse[?]) => F[Unit]] = None,
     /** Called when the response body is complete. */
-    onResponseBody: Option[(AnyEndpoint, ServerResponse[_]) => F[Unit]] = None,
+    onResponseBody: Option[(AnyEndpoint, ServerResponse[?]) => F[Unit]] = None,
     onException: Option[(AnyEndpoint, Throwable) => F[Unit]] = None
 ) {
   def onEndpointRequest(f: AnyEndpoint => F[Unit]): EndpointMetric[F] = this.copy(onEndpointRequest = Some(f))
-  def onResponseHeaders(f: (AnyEndpoint, ServerResponse[_]) => F[Unit]): EndpointMetric[F] = this.copy(onResponseHeaders = Some(f))
-  def onResponseBody(f: (AnyEndpoint, ServerResponse[_]) => F[Unit]): EndpointMetric[F] = this.copy(onResponseBody = Some(f))
+  def onResponseHeaders(f: (AnyEndpoint, ServerResponse[?]) => F[Unit]): EndpointMetric[F] = this.copy(onResponseHeaders = Some(f))
+  def onResponseBody(f: (AnyEndpoint, ServerResponse[?]) => F[Unit]): EndpointMetric[F] = this.copy(onResponseBody = Some(f))
   def onException(f: (AnyEndpoint, Throwable) => F[Unit]): EndpointMetric[F] = this.copy(onException = Some(f))
 }
 
 case class ResponsePhaseLabel(name: String, headersValue: String, bodyValue: String)
 case class MetricLabels(
     forRequest: List[(String, (AnyEndpoint, ServerRequest) => String)],
-    forResponse: List[(String, Either[Throwable, ServerResponse[_]] => Option[String])],
+    forResponse: List[(String, Either[Throwable, ServerResponse[?]] => Option[String])],
     forResponsePhase: ResponsePhaseLabel = ResponsePhaseLabel("phase", "headers", "body")
 ) {
   def namesForRequest: List[String] = forRequest.map { case (name, _) => name }
   def namesForResponse: List[String] = forResponse.map { case (name, _) => name }
 
   def valuesForRequest(ep: AnyEndpoint, req: ServerRequest): List[String] = forRequest.map { case (_, f) => f(ep, req) }
-  def valuesForResponse(res: ServerResponse[_]): List[String] = forResponse.flatMap { case (_, f) => f(Right(res)).toList }
+  def valuesForResponse(res: ServerResponse[?]): List[String] = forResponse.flatMap { case (_, f) => f(Right(res)).toList }
   def valuesForResponse(ex: Throwable): List[String] = forResponse.flatMap { case (_, f) => f(Left(ex)).toList }
 }
+
+case class MetricLabelsTyped[A](
+    forRequest: List[(AnyEndpoint, ServerRequest) => A],
+    forResponse: List[Either[Throwable, ServerResponse[?]] => Option[A]],
+    forResponsePhase: ResponsePhaseLabel = ResponsePhaseLabel("phase", "headers", "body")
+)
 
 object MetricLabels {
 

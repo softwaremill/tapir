@@ -28,7 +28,7 @@ trait ZioHttpInterpreter[R] {
     val widenedSes = ses.map(_.widen[R & R2])
     val widenedServerOptions = zioHttpServerOptions.widen[R & R2]
     val zioHttpRequestBody = new ZioHttpRequestBody(widenedServerOptions)
-    val zioHttpResponseBody = new ZioHttpToResponseBody
+    val zioHttpResponseBody = new ZioHttpToResponseBody(zioHttpServerOptions.inputStreamChunkSize)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes)
 
     def handleRequest(req: Request, filteredEndpoints: List[ZServerEndpoint[R & R2, ZioStreams with WebSockets]]) =

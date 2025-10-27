@@ -153,7 +153,9 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
           Map(
             "Test" -> OpenapiSchemaObject(
               mutable.LinkedHashMap(
-                "inner" -> noDefault(OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false))
+                "inner" -> noDefault(
+                  OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
+                )
               ),
               Seq("inner"),
               false
@@ -421,7 +423,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val res: String = parserRes match {
       case Left(value) => throw new Exception(value)
-      case Right(doc) =>
+      case Right(doc)  =>
         new EndpointGenerator()
           .endpointDefs(
             doc,
@@ -429,7 +431,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             targetScala3 = false,
             jsonSerdeLib = JsonSerdeLib.Circe,
             xmlSerdeLib = XmlSerdeLib.CatsXml,
-            streamingImplementation = StreamingImplementation.FS2,
+            streamingImplementation = FS2(),
             generateEndpointTypes = false,
             validators = ValidationDefns.empty,
             generateValidators = true

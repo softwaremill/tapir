@@ -53,7 +53,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.11.40"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.11.50"
 ```
 
 `PrometheusMetrics` encapsulates `PrometheusReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -132,7 +132,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.de
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.11.40"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.11.50"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -154,12 +154,62 @@ val metrics = OpenTelemetryMetrics.default[Future](meter)
 val metricsInterceptor = metrics.metricsInterceptor() // add to your server options
 ```
 
+## otel4s OpenTelemetry metrics
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-otel4s-metrics" % "1.11.50"
+```
+
+The `Otel4sMetrics` provides integration with the [otel4s](https://typelevel.org/otel4s/) library for OpenTelemetry metrics.
+This allows you to create metrics for your tapir endpoints using a purely functional API.
+
+`Otel4sMetrics` encapsulates metric instances and needs a `Meter[F]` from `otel4s` to create default metrics.
+
+It should be set as `metricsInterceptor` of your ServerOptions: 
+
+Example using Http4s:
+```scala
+import cats.effect.IO
+import org.typelevel.otel4s.oteljava.OtelJava
+import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerOptions
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.metrics.otel4s.Otel4sMetrics
+
+OtelJava
+  .autoConfigured[IO]()
+  .use { otel4s =>
+    otel4s.meterProvider.get("meter-name").flatMap { meter =>
+      val endpoints: List[ServerEndpoint[Any, IO]] = ???
+      val routes =
+        Http4sServerInterpreter[IO](
+          Http4sServerOptions
+            .customiseInterceptors[IO]
+            .metricsInterceptor(Otel4sMetrics.default(meter).metricsInterceptor())
+            .options
+        ).toRoutes(endpoints)
+      // start your server
+      ???
+    }
+  }
+```
+
+By default, the following metrics are exposed:
+
+* `http.server.active_requests` (up-down-counter)
+* `http.server.requests.total` (counter)
+* `http.server.request.duration` (histogram)
+
+
+
 ## Datadog Metrics
 
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.11.40"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.11.50"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -225,7 +275,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.11.40"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.11.50"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.
@@ -287,7 +337,7 @@ object ZioEndpoint:
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.11.40"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.11.50"
 ```
 
 OpenTelemetry tracing is vendor-agnostic and can be exported using an exporters, such as Jaeger, Zipkin, DataDog, 
@@ -325,7 +375,7 @@ NettySyncServer().options(serverOptions).addEndpoint(???).startAndWait()
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-otel4s-tracing" % "1.11.40"
+"com.softwaremill.sttp.tapir" %% "tapir-otel4s-tracing" % "1.11.50"
 ```
 
 The `Otel4sTracing` interceptor provides integration with the [otel4s](https://typelevel.org/otel4s/) library for OpenTelemetry tracing.

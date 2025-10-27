@@ -2,7 +2,6 @@ package sttp.tapir.codegen
 import io.circe.Json
 import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
-import sttp.tapir.codegen.StreamingImplementation.StreamingImplementation
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
@@ -111,14 +110,14 @@ class EndpointGenerator {
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
   private def capabilityImpl(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
-    case StreamingImplementation.Akka  => "sttp.capabilities.akka.AkkaStreams"
-    case StreamingImplementation.FS2   => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
-    case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
-    case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
+    case Akka            => "sttp.capabilities.akka.AkkaStreams"
+    case FS2(effectType) => s"sttp.capabilities.fs2.Fs2Streams[$effectType]"
+    case Pekko           => "sttp.capabilities.pekko.PekkoStreams"
+    case Zio             => "sttp.capabilities.zio.ZioStreams"
   }
   private def capabilityType(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
-    case StreamingImplementation.FS2 => "fs2.Stream[cats.effect.IO, Byte]"
-    case x                           => s"${capabilityImpl(x)}.BinaryStream"
+    case FS2(effectType) => s"fs2.Stream[$effectType, Byte]"
+    case x               => s"${capabilityImpl(x)}.BinaryStream"
   }
 
   def endpointDefs(
@@ -285,7 +284,7 @@ class EndpointGenerator {
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
-              case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _, _) =>
+              case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _, _)                   =>
                 bail("Cannot generate schema for 'Any' with jsoniter library")
               case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _) =>
                 val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
@@ -646,7 +645,7 @@ class EndpointGenerator {
         (decl, tpe, maybeInlineDefn)
       }
       resp.content match {
-        case Nil => ("", None, None)
+        case Nil            => ("", None, None)
         case content +: Nil =>
           val (decl, tpe, maybeInlineDefn) = wrapContent(content)
           val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
@@ -732,7 +731,7 @@ class EndpointGenerator {
     }
     def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) =
       group match {
-        case Nil => (None, None, None)
+        case Nil         => (None, None, None)
         case resp +: Nil =>
           val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.headers
             // according to api spec, content-type header should be ignored - cf https://swagger.io/specification/#response-object

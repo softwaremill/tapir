@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import sttp.model.{ContentTypeRange, MediaType, Method}
+import sttp.model.{ContentTypeRange, HeaderNames, MediaType, Method}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.BinaryTupleOp
@@ -58,39 +58,39 @@ package object internal {
   implicit class RichEndpoint[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R]) {
     private def allInputs = endpoint.securityInput.and(endpoint.input)
 
-    def auths: Vector[EndpointInput.Auth[_, _ <: EndpointInput.AuthType]] =
-      allInputs.traverseInputs { case a: EndpointInput.Auth[_, _] =>
+    def auths: Vector[EndpointInput.Auth[?, ? <: EndpointInput.AuthType]] =
+      allInputs.traverseInputs { case a: EndpointInput.Auth[?, ?] =>
         Vector(a)
       }
 
-    def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] = allInputs.asVectorOfBasicInputs(includeAuth)
+    def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[?]] = allInputs.asVectorOfBasicInputs(includeAuth)
   }
 
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
-    def traverseInputs[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] =
+    def traverseInputs[T](handle: PartialFunction[EndpointInput[?], Vector[T]]): Vector[T] =
       input match {
-        case i: EndpointInput[_] if handle.isDefinedAt(i) => handle(i)
+        case i: EndpointInput[?] if handle.isDefinedAt(i) => handle(i)
         case EndpointInput.Pair(left, right, _, _)        => left.traverseInputs(handle) ++ right.traverseInputs(handle)
         case EndpointIO.Pair(left, right, _, _)           => left.traverseInputs(handle) ++ right.traverseInputs(handle)
         case EndpointInput.MappedPair(wrapped, _)         => wrapped.traverseInputs(handle)
         case EndpointIO.MappedPair(wrapped, _)            => wrapped.traverseInputs(handle)
-        case a: EndpointInput.Auth[_, _]                  => a.input.traverseInputs(handle)
+        case a: EndpointInput.Auth[?, ?]                  => a.input.traverseInputs(handle)
         case _                                            => Vector.empty
       }
 
-    def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] =
+    def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[?]] =
       traverseInputs {
-        case b: EndpointInput.Basic[_]   => Vector(b)
-        case a: EndpointInput.Auth[_, _] => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
+        case b: EndpointInput.Basic[?]   => Vector(b)
+        case a: EndpointInput.Auth[?, ?] => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
       }
 
     def method: Option[Method] =
-      traverseInputs { case i: EndpointInput.FixedMethod[_] =>
+      traverseInputs { case i: EndpointInput.FixedMethod[?] =>
         Vector(i.m)
       }.headOption
 
-    def pathTo(targetInput: EndpointInput[_]): Vector[EndpointInput[_]] = {
-      def findIn(parent: EndpointInput[_], inputs: EndpointInput[_]*) = inputs.foldLeft(Vector.empty[EndpointInput[_]]) {
+    def pathTo(targetInput: EndpointInput[?]): Vector[EndpointInput[?]] = {
+      def findIn(parent: EndpointInput[?], inputs: EndpointInput[?]*) = inputs.foldLeft(Vector.empty[EndpointInput[?]]) {
         case (v, input) if v.isEmpty =>
           val path = input.pathTo(targetInput)
           if (path.nonEmpty) parent +: path else path
@@ -99,40 +99,40 @@ package object internal {
       if (targetInput == input) Vector(input)
       else
         input match {
-          case _: EndpointInput.Basic[_]                 => Vector.empty
+          case _: EndpointInput.Basic[?]                 => Vector.empty
           case i @ EndpointInput.Pair(left, right, _, _) => findIn(i, left, right)
           case i @ EndpointIO.Pair(left, right, _, _)    => findIn(i, left, right)
-          case a: EndpointInput.Auth[_, _]               => findIn(a, a.input)
+          case a: EndpointInput.Auth[?, ?]               => findIn(a, a.input)
           case i @ EndpointInput.MappedPair(p, _)        => findIn(i, p)
           case i @ EndpointIO.MappedPair(p, _)           => findIn(i, p)
         }
     }
   }
 
-  def basicInputSortIndex(i: EndpointInput.Basic[_]): Int =
+  def basicInputSortIndex(i: EndpointInput.Basic[?]): Int =
     i match {
-      case _: EndpointInput.FixedMethod[_]        => 0
-      case _: EndpointInput.FixedPath[_]          => 1
-      case _: EndpointInput.PathCapture[_]        => 1
-      case _: EndpointInput.PathsCapture[_]       => 1
-      case _: EndpointInput.Query[_]              => 2
-      case _: EndpointInput.QueryParams[_]        => 2
-      case _: EndpointInput.Cookie[_]             => 3
-      case _: EndpointIO.Header[_]                => 3
-      case _: EndpointIO.Headers[_]               => 3
-      case _: EndpointIO.FixedHeader[_]           => 3
-      case _: EndpointInput.ExtractFromRequest[_] => 4
-      case _: EndpointIO.Body[_, _]               => 6
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
-      case _: EndpointIO.OneOfBody[_, _]          => 6
-      case _: EndpointIO.Empty[_]                 => 7
+      case _: EndpointInput.FixedMethod[?]        => 0
+      case _: EndpointInput.FixedPath[?]          => 1
+      case _: EndpointInput.PathCapture[?]        => 1
+      case _: EndpointInput.PathsCapture[?]       => 1
+      case _: EndpointInput.Query[?]              => 2
+      case _: EndpointInput.QueryParams[?]        => 2
+      case _: EndpointInput.Cookie[?]             => 3
+      case _: EndpointIO.Header[?]                => 3
+      case _: EndpointIO.Headers[?]               => 3
+      case _: EndpointIO.FixedHeader[?]           => 3
+      case _: EndpointInput.ExtractFromRequest[?] => 4
+      case _: EndpointIO.Body[?, ?]               => 6
+      case _: EndpointIO.StreamBodyWrapper[?, ?]  => 6
+      case _: EndpointIO.OneOfBody[?, ?]          => 6
+      case _: EndpointIO.Empty[?]                 => 7
     }
 
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {
     // Outputs may have many variants because of `oneOf`. This method extracts the status code
     // mapping to the top-level. In the map, the `None` key stands for the default status code, and a `Some` value
     // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs without metadata are skipped.
-    type BasicOutputs = Vector[EndpointOutput.Basic[_]]
+    type BasicOutputs = Vector[EndpointOutput.Basic[?]]
     def asBasicOutputsList: List[BasicOutputs] = {
       def product(l: List[BasicOutputs], r: List[BasicOutputs]): List[BasicOutputs] = l.flatMap(o1 => r.map(o2 => o1 ++ o2))
 
@@ -141,40 +141,42 @@ package object internal {
         case EndpointIO.Pair(left, right, _, _)     => product(left.asBasicOutputsList, right.asBasicOutputsList)
         case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsList
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsList
-        case _: EndpointOutput.Void[_]              => List(Vector.empty)
-        case s: EndpointOutput.OneOf[_, _]          => s.variants.flatMap(_.output.asBasicOutputsList)
+        case _: EndpointOutput.Void[?]              => List(Vector.empty)
+        case s: EndpointOutput.OneOf[?, ?]          => s.variants.flatMap(_.output.asBasicOutputsList)
         case EndpointIO.OneOfBody(variants, _)      => variants.flatMap(_.body.fold(_.asBasicOutputsList, _.asBasicOutputsList))
-        case e: EndpointIO.Empty[_]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
-        case b: EndpointOutput.Basic[_]             => List(Vector(b))
+        case e: EndpointIO.Empty[?]                 => if (hasMetaData(e)) List(Vector(e)) else List(Vector.empty)
+        case b: EndpointOutput.Basic[?]             => List(Vector(b))
       }
     }
 
-    private def hasMetaData(e: EndpointIO.Empty[_]): Boolean = {
+    private def hasMetaData(e: EndpointIO.Empty[?]): Boolean = {
       e.info.deprecated || e.info.description.nonEmpty || e.info.attributes.nonEmpty || e.info.examples.nonEmpty
     }
 
-    def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
+    def traverseOutputs[T](handle: PartialFunction[EndpointOutput[?], Vector[T]]): Vector[T] =
       output match {
-        case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
+        case o: EndpointOutput[?] if handle.isDefinedAt(o) => handle(o)
         case EndpointOutput.Pair(left, right, _, _)        => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
         case EndpointIO.Pair(left, right, _, _)            => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
         case EndpointOutput.MappedPair(wrapped, _)         => wrapped.traverseOutputs(handle)
         case EndpointIO.MappedPair(wrapped, _)             => wrapped.traverseOutputs(handle)
-        case s: EndpointOutput.OneOf[_, _]                 => s.variants.toVector.flatMap(_.output.traverseOutputs(handle))
+        case s: EndpointOutput.OneOf[?, ?]                 => s.variants.toVector.flatMap(_.output.traverseOutputs(handle))
         case _                                             => Vector.empty
       }
 
-    def bodyType: Option[RawBodyType[_]] = {
-      traverseOutputs[RawBodyType[_]] {
-        case b: EndpointIO.Body[_, _]          => Vector(b.bodyType)
+    def bodyType: Option[RawBodyType[?]] = {
+      traverseOutputs[RawBodyType[?]] {
+        case b: EndpointIO.Body[?, ?]          => Vector(b.bodyType)
         case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.body.fold(body => Some(body.bodyType), _.bodyType)).toVector
       }.headOption
     }
 
     def supportedMediaTypes: Vector[MediaType] = traverseOutputs {
-      case b: EndpointIO.Body[_, _]              => Vector(b.mediaTypeWithCharset)
+      case b: EndpointIO.Body[?, ?]              => Vector(b.mediaTypeWithCharset)
       case EndpointIO.OneOfBody(variants, _)     => variants.map(_.mediaTypeWithCharset).toVector
-      case b: EndpointIO.StreamBodyWrapper[_, _] => Vector(b.mediaTypeWithCharset)
+      case b: EndpointIO.StreamBodyWrapper[?, ?] => Vector(b.mediaTypeWithCharset)
+      case EndpointIO.FixedHeader(h, _, _) if h.name.equalsIgnoreCase(HeaderNames.ContentType) =>
+        MediaType.parse(h.value).toOption.toVector
     }
 
     def hasOptionalBodyMatchingContent(content: MediaType): Boolean = {
@@ -193,19 +195,19 @@ package object internal {
     }
   }
 
-  private[tapir] implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
-    def sortByType: Vector[EndpointOutput.Basic[_]] =
+  private[tapir] implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[?]]) {
+    def sortByType: Vector[EndpointOutput.Basic[?]] =
       outputs.sortBy {
-        case _: EndpointIO.Empty[_]                       => 0
-        case _: EndpointOutput.StatusCode[_]              => 0
-        case _: EndpointOutput.FixedStatusCode[_]         => 0
-        case _: EndpointIO.Header[_]                      => 1
-        case _: EndpointIO.Headers[_]                     => 1
-        case _: EndpointIO.FixedHeader[_]                 => 1
-        case _: EndpointIO.Body[_, _]                     => 2
-        case _: EndpointIO.StreamBodyWrapper[_, _]        => 2
-        case _: EndpointIO.OneOfBody[_, _]                => 2
-        case _: EndpointOutput.WebSocketBodyWrapper[_, _] => 2
+        case _: EndpointIO.Empty[?]                       => 0
+        case _: EndpointOutput.StatusCode[?]              => 0
+        case _: EndpointOutput.FixedStatusCode[?]         => 0
+        case _: EndpointIO.Header[?]                      => 1
+        case _: EndpointIO.Headers[?]                     => 1
+        case _: EndpointIO.FixedHeader[?]                 => 1
+        case _: EndpointIO.Body[?, ?]                     => 2
+        case _: EndpointIO.StreamBodyWrapper[?, ?]        => 2
+        case _: EndpointIO.OneOfBody[?, ?]                => 2
+        case _: EndpointOutput.WebSocketBodyWrapper[?, ?] => 2
       }
   }
 
@@ -214,7 +216,7 @@ package object internal {
   }
 
   implicit class RichOneOfBody[O, T](body: EndpointIO.OneOfBody[O, T]) {
-    def chooseBodyToDecode(contentType: Option[MediaType]): Option[Either[EndpointIO.Body[_, O], EndpointIO.StreamBodyWrapper[_, O]]] = {
+    def chooseBodyToDecode(contentType: Option[MediaType]): Option[Either[EndpointIO.Body[?, O], EndpointIO.StreamBodyWrapper[?, O]]] = {
       contentType match {
         case Some(ct) => body.variants.find { case EndpointIO.OneOfBodyVariant(range, _) => ct.matches(range) }
         case None     => Some(body.variants.head)
@@ -226,14 +228,14 @@ package object internal {
     def mediaTypeWithCharset: MediaType = body.codec.format.mediaType.copy(charset = body.wrapped.charset.map(_.name()))
   }
 
-  private[tapir] def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {
+  private[tapir] def addValidatorShow(s: String, schema: Schema[?]): String = schema.showValidators match {
     case None     => s
     case Some(sv) => s"$s($sv)"
   }
 
-  private[tapir] def showMultiple(et: Vector[EndpointTransput[_]]): String = {
+  private[tapir] def showMultiple(et: Vector[EndpointTransput[?]]): String = {
     val et2 = et.filter {
-      case _: EndpointIO.Empty[_] => false
+      case _: EndpointIO.Empty[?] => false
       case _                      => true
     }
     if (et2.isEmpty) "-" else et2.map(_.show).mkString(" ")
@@ -245,7 +247,7 @@ package object internal {
     case l       => s"one of(${l.mkString("|")})"
   }
 
-  private[tapir] def charset(bodyType: RawBodyType[_]): Option[Charset] = {
+  private[tapir] def charset(bodyType: RawBodyType[?]): Option[Charset] = {
     bodyType match {
       case RawBodyType.StringBody(charset) => Some(charset)
       case _                               => None
@@ -278,9 +280,9 @@ package object internal {
     result(m)(())
   }
 
-  private[tapir] def findWebSocket(e: Endpoint[_, _, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
+  private[tapir] def findWebSocket(e: Endpoint[?, ?, ?, ?, ?]): Option[WebSocketBodyWrapper[?, ?]] =
     e.output
-      .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _]] { case ws: EndpointOutput.WebSocketBodyWrapper[_, _] =>
+      .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[?, ?]] { case ws: EndpointOutput.WebSocketBodyWrapper[?, ?] =>
         Vector(ws)
       }
       .headOption
@@ -315,14 +317,14 @@ package object internal {
   }
 
   private[tapir] implicit class ValidatorSyntax[T](v: Validator[T]) {
-    def asPrimitiveValidators: Seq[Validator.Primitive[_]] = {
-      def toPrimitives(v: Validator[_]): Seq[Validator.Primitive[_]] = {
+    def asPrimitiveValidators: Seq[Validator.Primitive[?]] = {
+      def toPrimitives(v: Validator[?]): Seq[Validator.Primitive[?]] = {
         v match {
           case Validator.Mapped(wrapped, _) => toPrimitives(wrapped)
           case Validator.All(validators)    => validators.flatMap(toPrimitives)
           case Validator.Any(validators)    => validators.flatMap(toPrimitives)
           case Validator.Custom(_, _)       => Nil
-          case bv: Validator.Primitive[_]   => List(bv)
+          case bv: Validator.Primitive[?]   => List(bv)
         }
       }
       toPrimitives(v)

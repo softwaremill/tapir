@@ -56,10 +56,10 @@ object OpenapiModels {
             else {
               val resolved = s.map {
                 case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
-                case ref: OpenapiSchemaRef =>
+                case ref: OpenapiSchemaRef    =>
                   schemas(ref.stripped) match {
                     case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
-                    case other =>
+                    case other                    =>
                       throw new NotImplementedError(
                         s"Only object type refs are supported for allOf schemas. For $n found ${other.getClass.getName} under ${ref.stripped}"
                       )
@@ -70,7 +70,7 @@ object OpenapiModels {
                   )
               }
               val merged = resolved.foldLeft((Set.empty[String], mutable.LinkedHashMap.empty[String, OpenapiSchemaField])) {
-                case ((_, accProp), next) if accProp.isEmpty => next
+                case ((_, accProp), next) if accProp.isEmpty  => next
                 case ((accReq, accProp), (nextReq, nextProp)) =>
                   val dupDecls = accProp.keySet.intersect(nextProp.keySet)
                   dupDecls.foreach { fieldName =>

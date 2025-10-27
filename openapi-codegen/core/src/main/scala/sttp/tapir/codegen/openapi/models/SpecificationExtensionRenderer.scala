@@ -24,7 +24,7 @@ object SpecificationExtensionRenderer {
         groupedByBaseType.head match {
           case (t @ ("Boolean" | "String"), _) => t
           case ("Number", vs)                  => if (vs.forall(_.asNumber.flatMap(_.toLong).isDefined)) "Long" else "Double"
-          case ("Array", vs) =>
+          case ("Array", vs)                   =>
             val t = renderCombinedType(vs.flatMap(_.asArray).flatten)
             s"Seq[$t]"
           case ("Object", kvs) =>

@@ -11,7 +11,7 @@ import sttp.tapir.server.model.ServerResponse
 
 import scala.util.{Failure, Success, Try}
 
-class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[AnyEndpoint]) extends RequestInterceptor[F] {
+class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, ?]], ignoreEndpoints: Seq[AnyEndpoint]) extends RequestInterceptor[F] {
 
   override def apply[R, B](
       responder: Responder[F, B],

@@ -216,9 +216,9 @@ object SchemaGenerator {
     case OpenapiSchemaNot(items)            => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
     case OpenapiSchemaMap(items, _, _)      => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
     // descend into all child types
-    case OpenapiSchemaOneOf(items, _) => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
-    case OpenapiSchemaAllOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
-    case OpenapiSchemaAnyOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
+    case OpenapiSchemaOneOf(items, _)      => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
+    case OpenapiSchemaAllOf(items)         => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
+    case OpenapiSchemaAnyOf(items)         => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
     case OpenapiSchemaObject(kvs, _, _, _) =>
       kvs.values.flatMap(v => getReferencesToXInY(allSchemas, referent, v.`type`, checked, maybeRefs)).toSet
   }
@@ -230,7 +230,7 @@ object SchemaGenerator {
         schemaForObject(s"$name${k.capitalize}Item", isRecursive, `type`)
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         schemaForObject(s"$name${k.capitalize}Item", isRecursive, `type`)
-      case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _)) => schemaForEnum(s"$name${k.capitalize}")
+      case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _))                              => schemaForEnum(s"$name${k.capitalize}")
       case (k, OpenapiSchemaField(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _, _), _, _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
       case (k, OpenapiSchemaField(OpenapiSchemaMap(_: OpenapiSchemaEnum, _, _), _, _)) =>
@@ -253,13 +253,13 @@ object SchemaGenerator {
 
   private def genADTSchema(name: String, schema: OpenapiSchemaOneOf, isRecursive: Boolean, fullModelPath: Option[String]): String = {
     val schemaImpl = schema match {
-      case OpenapiSchemaOneOf(_, None) => "sttp.tapir.Schema.derived"
+      case OpenapiSchemaOneOf(_, None)                                            => "sttp.tapir.Schema.derived"
       case OpenapiSchemaOneOf(_, Some(Discriminator(propertyName, maybeMapping))) =>
         val mapping =
           maybeMapping.map(_.map { case (propName, fullRef) => propName -> fullRef.stripPrefix("#/components/schemas/") }).getOrElse {
             schema.types.map {
               case ref: OpenapiSchemaRef => ref.stripped -> ref.stripped
-              case other =>
+              case other                 =>
                 throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
             }.toMap
           }
