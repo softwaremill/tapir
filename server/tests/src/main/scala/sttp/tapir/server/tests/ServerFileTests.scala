@@ -31,6 +31,7 @@ class ServerFileTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         testServer(endpoint.post.in("api" / "echo").in(fileBody).out(stringBody), "file deleted after request handling completes")(
           (file: File) => {
             files.add(file)
+            file.exists() shouldBe true
             pureResult("ok".asRight[Unit])
           }
         ) { (backend, baseUri) =>

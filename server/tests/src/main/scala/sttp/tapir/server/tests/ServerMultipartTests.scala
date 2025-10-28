@@ -259,6 +259,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             .out(stringBody),
           "file part deleted after request handling completes"
         )((data: SingleFileBody) => {
+          data.file.body.exists() shouldBe true
           files.add(data.file.body)
           pureResult("ok".asRight[Unit])
         }) { (backend, baseUri) =>
