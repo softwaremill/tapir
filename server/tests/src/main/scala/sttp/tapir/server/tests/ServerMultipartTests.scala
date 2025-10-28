@@ -3,6 +3,7 @@ package sttp.tapir.server.tests
 import cats.effect.IO
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers._
+import org.scalatest.concurrent.Eventually.eventually
 import sttp.client4.{multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
@@ -274,12 +275,14 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             }
 
           testWithBody(smallBody) >> testWithBody(largeBody) >> IO.blocking {
-            files.asScala.foreach { file =>
-              if (Files.exists(file.toPath)) {
-                fail(s"File ${file.getName} still exists")
+            eventually { // file cleanup might run asynchronously to completing the request
+              files.asScala.foreach { file =>
+                if (Files.exists(file.toPath)) {
+                  fail(s"File ${file.getName} still exists")
+                }
               }
+              succeed
             }
-            succeed
           }
         }
       }

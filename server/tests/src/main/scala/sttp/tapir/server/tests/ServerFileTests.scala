@@ -2,6 +2,7 @@ package sttp.tapir.server.tests
 
 import cats.effect.IO
 import cats.implicits._
+import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import sttp.client4._
 import sttp.model.StatusCode
@@ -41,12 +42,14 @@ class ServerFileTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
             .send(backend)
             .map(_.code shouldBe StatusCode.Ok)
           val checkFiles = IO.blocking {
-            files.asScala.foreach { file =>
-              if (Files.exists(file.toPath)) {
-                fail(s"File ${file.getName} still exists")
+            eventually { // file cleanup might run asynchronously to completing the request
+              files.asScala.foreach { file =>
+                if (Files.exists(file.toPath)) {
+                  fail(s"File ${file.getName} still exists")
+                }
               }
+              succeed
             }
-            succeed
           }
           sendRequest >> checkFiles
         }
