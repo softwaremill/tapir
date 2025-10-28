@@ -163,16 +163,14 @@ class ServerInterpreter[R, F[_], B, S](
       }
   }
 
-  private def cleanupRawValues(rawValues: Iterable[RawValue[?]]): F[Unit] = {
-    if (rawValues.isEmpty) {
-      monad.unit(())
-    } else {
-      monad.blocking {
-        rawValues.foreach { rawValue =>
-          rawValue.createdFiles.foreach(f => deleteFile(f.file))
-          rawValue.cleanup()
-        }
-      }
+  private def cleanupRawValues(rawValues: Iterable[RawValue[?]]): F[Unit] =
+    rawValues.foldLeft(monad.unit(()))((u, rv) => u.flatMap(_ => cleanupRawValue(rv)))
+
+  private def cleanupRawValue(rawValue: RawValue[?]): F[Unit] = {
+    def cleanupFiles = rawValue.createdFiles.foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
+    rawValue.cleanup match {
+      case Some(cleanup) => cleanupFiles.flatMap(_ => monad.blocking(cleanup()))
+      case None          => cleanupFiles
     }
   }
 

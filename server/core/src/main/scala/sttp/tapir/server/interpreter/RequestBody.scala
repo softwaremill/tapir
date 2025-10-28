@@ -18,7 +18,7 @@ trait RequestBody[F[_], S] {
   * @param cleanup
   *   Cleanup function to be called when the request is processed.
   */
-case class RawValue[R](value: R, createdFiles: Seq[FileRange] = Nil, cleanup: () => Unit = () => ())
+case class RawValue[R](value: R, createdFiles: Seq[FileRange] = Nil, cleanup: Option[() => Unit] = None)
 
 object RawValue {
   def fromParts(parts: Seq[RawPart]): RawValue[Seq[RawPart]] =

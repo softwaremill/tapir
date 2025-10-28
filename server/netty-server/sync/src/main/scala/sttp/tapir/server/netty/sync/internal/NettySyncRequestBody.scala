@@ -66,7 +66,7 @@ private[sync] class NettySyncRequestBody(
           decoder.destroy()
           throw t
 
-    RawValue.fromParts(rawParts).copy(cleanup = () => decoder.destroy())
+    RawValue.fromParts(rawParts).copy(cleanup = Some(() => decoder.destroy()))
   }
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =
