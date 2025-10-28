@@ -153,7 +153,7 @@ class ServerInterpreter[R, F[_], B, S](
       }
     } yield response).fold
       // 6. #4886: when the request is fully processed, delete any temporary files and run cleanup functions
-      .handleError(t => cleanupRawValues(rawValues.asScala).flatMap(_ => monad.error(t)))
+      .handleError { case t: Throwable => cleanupRawValues(rawValues.asScala).flatMap(_ => monad.error(t)) }
       .flatMap {
         case RequestResult.Response(s @ ServerResponse(_, _, Some(body), _)) =>
           bodyListener
