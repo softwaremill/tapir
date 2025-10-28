@@ -909,7 +909,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       maxLength: Int
   ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
-    "checks payload limit and returns OK on content length  below or equal max (request)"
+    "checks payload limit and returns OK on content length below or equal max (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
     val fineBody: String = List.fill(maxLength)('x').mkString
     basicRequest.post(uri"$baseUri/api/echo").body(fineBody).send(backend).map(_.code shouldBe StatusCode.Ok)
@@ -937,7 +937,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       testPayloadWithinLimit(in_string_out_string, maxLength),
       testServer(
         in_input_stream_out_input_stream.maxRequestBodyLength(maxLength.toLong),
-        "checks payload limit and returns OK on content length  below or equal max (request)"
+        "checks payload limit and returns OK on content length below or equal max (request)"
       )(i => {
         // Forcing server logic to drain the InputStream
         blockingResult(i.readAllBytes()).map(_ => new ByteArrayInputStream(Array.empty[Byte]).asRight[Unit])
