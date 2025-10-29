@@ -12,12 +12,12 @@ env:
   SBT_JAVA_OPTS: -J-Xms4g -J-Xmx4g
 jobs:
   ci:
-    # run on 1) push, 2) external PRs, 3) softwaremill-ci PRs
+    # run on 1) push, 2) external PRs, 3) github-actions PRs
     # do not run on internal, non-steward PRs since those will be run by push to branch
     if: |
       github.event_name == 'push' || 
       github.event.pull_request.head.repo.full_name != github.repository ||
-      github.event.pull_request.user.login == 'softwaremill-ci'
+      github.event.pull_request.user.login == 'github-actions[bot]'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -195,20 +195,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   label:
-    # only for PRs by softwaremill-ci
-    if: github.event.pull_request.user.login == 'softwaremill-ci'
+    # only for PRs by github-actions[bot]
+    if: github.event.pull_request.user.login == 'github-actions[bot]'
     uses: softwaremill/github-actions-workflows/.github/workflows/label.yml@main
     secrets: inherit
 
-  auto-merge-softwaremill-ci:
-    # only for PRs by softwaremill-ci
-    if: github.event.pull_request.user.login == 'softwaremill-ci'
+  auto-merge-github-actions:
+    # only for PRs by github-actions[bot]
+    if: github.event.pull_request.user.login == 'github-actions[bot]'
     needs: [ ci, mima, label ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
     secrets: inherit
 
   auto-merge-dependabot:
-    # only for PRs by softwaremill-ci
+    # only for PRs by dependabot[bot]
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     needs: [ ci, mima ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main

@@ -1,14 +1,14 @@
 version: 1
 labels:
   - label: "automerge"
-    authors: ["softwaremill-ci"]
+    authors: ["github-actions"]
     files:
       - "build.sbt"
       - "project/Versions.scala"
       - "project/plugins.sbt"
       - "examples\\/.*\\.scala"
   - label: "dependency"
-    authors: ["softwaremill-ci"]
+    authors: ["github-actions"]
     files:
       - "build.sbt"
       - "project/Versions.scala"
