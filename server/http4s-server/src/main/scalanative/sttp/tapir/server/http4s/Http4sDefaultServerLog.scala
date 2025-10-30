@@ -16,7 +16,7 @@ object Http4sDefaultServerLog {
 
   private def debugLog[F[_]](msg: String, exOpt: Option[Throwable])(implicit sync: Sync[F]): F[Unit] =
     exOpt match {
-      case None => Sync[F].delay(println(msg))
+      case None     => Sync[F].delay(println(msg))
       case Some(ex) =>
         Sync[F].delay {
           println(msg)

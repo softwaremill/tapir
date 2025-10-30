@@ -39,7 +39,7 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
       case RawBodyType.ByteArrayBody              => asByteArray.map(RawValue(_))
       case RawBodyType.ByteBufferBody             => asByteArray.map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
       case RawBodyType.InputStreamBody            => asByteArray.map(new ByteArrayInputStream(_)).map(RawValue(_))
-      case RawBodyType.InputStreamRangeBody =>
+      case RawBodyType.InputStreamRangeBody       =>
         asByteArray.map(bytes => InputStreamRange(() => new ByteArrayInputStream(bytes))).map(RawValue(_))
       case RawBodyType.FileBody =>
         for {

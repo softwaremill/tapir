@@ -20,7 +20,9 @@ trait ZTapir {
       * value (except for endpoint meta-data). Secure endpoints allow providing the security logic before all the inputs and outputs are
       * specified.
       */
-    def zServerLogic[R](logic: INPUT => ZIO[R, ERROR_OUTPUT, OUTPUT])(implicit aIsUnit: SECURITY_INPUT =:= Unit): ZServerEndpoint[R, C] =
+    def zServerLogic[R](logic: INPUT => ZIO[R, ERROR_OUTPUT, OUTPUT])(implicit
+        aIsUnit: SECURITY_INPUT =:= Unit
+    ): ServerEndpoint.Full[Unit, Unit, INPUT, ERROR_OUTPUT, OUTPUT, C, RIO[R, *]] =
       ServerEndpoint.public(e.asInstanceOf[Endpoint[Unit, INPUT, ERROR_OUTPUT, OUTPUT, C]], _ => logic(_: INPUT).either.resurrect)
 
     /** Combine this endpoint description with a function, which implements the security logic of the endpoint.

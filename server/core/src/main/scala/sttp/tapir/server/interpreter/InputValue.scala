@@ -24,10 +24,10 @@ object InputValue {
       case EndpointInput.MappedPair(wrapped, codec)    => handleMappedPair(wrapped, codec, remainingBasicValues)
       case EndpointIO.MappedPair(wrapped, codec)       => handleMappedPair(wrapped, codec, remainingBasicValues)
       case auth: EndpointInput.Auth[?, ?]              => apply(auth.input, remainingBasicValues)
-      case _: EndpointInput.Basic[?] =>
+      case _: EndpointInput.Basic[?]                   =>
         remainingBasicValues.headAndTail match {
           case Some((v, valuesTail)) => InputValueResult.Value(ParamsAsAny(v), valuesTail)
-          case None =>
+          case None                  =>
             throw new IllegalStateException(s"Mismatch between basic input values: $remainingBasicValues, and basic inputs in: $input")
         }
     }
