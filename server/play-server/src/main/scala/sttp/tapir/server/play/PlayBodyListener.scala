@@ -17,7 +17,7 @@ class PlayBodyListener(implicit ec: ExecutionContext) extends BodyListener[Futur
 
     body match {
       case ws @ Left(_) => cb(Success(())).map(_ => ws)
-      case Right(r) =>
+      case Right(r)     =>
         (r match {
           case e @ HttpEntity.Streamed(data, _, _) =>
             Future.successful(e.copy(data = data.watchTermination() { case (_, f) => onDone(f) }))

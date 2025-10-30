@@ -1,8 +1,8 @@
 // {cat=JSON; effects=Direct; server=Netty; JSON=circe}: Return a JSON body which optionally serializes as `null`
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.49
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.49
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.49
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.0
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.12.0
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.12.0
 //> using dep ch.qos.logback:logback-classic:1.5.8
 
 package sttp.tapir.examples.json

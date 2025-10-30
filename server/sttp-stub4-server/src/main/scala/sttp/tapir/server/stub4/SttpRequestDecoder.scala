@@ -38,7 +38,7 @@ private[stub4] object SttpRequestDecoder {
             oneOfBodyInput.chooseBodyToDecode(requestContentType.flatMap(MediaType.parse(_).toOption)) match {
               case Some(Left(body))                                          => decodeBody(body)
               case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(body)
-              case None =>
+              case None                                                      =>
                 DecodeBasicInputsResult.Failure(
                   oneOfBodyInput,
                   DecodeResult.Mismatch(oneOfBodyInput.show, requestContentType.getOrElse(""))

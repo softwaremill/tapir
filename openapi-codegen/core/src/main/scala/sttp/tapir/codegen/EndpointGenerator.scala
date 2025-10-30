@@ -284,7 +284,7 @@ class EndpointGenerator {
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
-              case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _, _) =>
+              case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _, _)                   =>
                 bail("Cannot generate schema for 'Any' with jsoniter library")
               case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _) =>
                 val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
@@ -645,7 +645,7 @@ class EndpointGenerator {
         (decl, tpe, maybeInlineDefn)
       }
       resp.content match {
-        case Nil => ("", None, None)
+        case Nil            => ("", None, None)
         case content +: Nil =>
           val (decl, tpe, maybeInlineDefn) = wrapContent(content)
           val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
@@ -731,7 +731,7 @@ class EndpointGenerator {
     }
     def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) =
       group match {
-        case Nil => (None, None, None)
+        case Nil         => (None, None, None)
         case resp +: Nil =>
           val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.headers
             // according to api spec, content-type header should be ignored - cf https://swagger.io/specification/#response-object

@@ -28,7 +28,7 @@ object StaticErrorOutput {
 sealed trait StaticOutput[+T] {
   def withoutBody: StaticOutput[Unit] =
     this match {
-      case StaticOutput.NotModified => StaticOutput.NotModified
+      case StaticOutput.NotModified        => StaticOutput.NotModified
       case o: StaticOutput.FoundPartial[T] =>
         o.copy(body = ())
       case o: StaticOutput.Found[T] =>

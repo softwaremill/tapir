@@ -25,6 +25,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
 import java.nio.charset.StandardCharsets
 import java.time._
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Success, Try}
@@ -127,7 +128,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     interpreter.apply(PersonsApi.request("Mike"))
     interpreter.apply(PersonsApi.request(""))
 
-    waitReceiveMessage(statsdServer)
+    waitReceiveMessage(statsdServer, "4xx")
 
     // then
     statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:2xx,method:GET,path:/person""")
@@ -173,7 +174,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     interpret(200, 2000)
     interpret(300, 3000)
 
-    waitReceiveMessage(statsdServer)
+    waitReceiveMessage(statsdServer, "0.3")
 
     // then
     // headers
@@ -257,9 +258,17 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
 }
 
 object DatadogMetricsTest {
-  private def waitReceiveMessage(statsdServer: MockStatsDServer): Unit = {
-    while (statsdServer.getReceivedMessages.count(m => !m.startsWith("datadog")) == 0) {
+  val Tries = 5
+
+  @tailrec
+  private def waitReceiveMessage(statsdServer: MockStatsDServer, expected: String = "method", tries: Int = Tries): Unit = {
+    if (
+      statsdServer.getReceivedMessages
+        .count(m => !m.startsWith("datadog")) == 0 || (tries > 0 && statsdServer.getReceivedMessages
+        .count(m => m.startsWith(expected)) > 0)
+    ) {
       Thread.sleep(100)
+      waitReceiveMessage(statsdServer, expected, tries - 1)
     }
   }
 
