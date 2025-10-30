@@ -64,7 +64,7 @@ private[akkagrpc] class AkkaGrpcToResponseBody(implicit m: Materializer, ec: Exe
       case CodecFormat.Zip()         => MediaTypes.`application/zip`
       case CodecFormat.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`
       case CodecFormat.MultipartFormData()  => MediaTypes.`multipart/form-data`
-      case f =>
+      case f                                =>
         val mt = if (f.mediaType.isText) charset.fold(f.mediaType)(f.mediaType.charset(_)) else f.mediaType
         parseContentType(mt.toString())
     }

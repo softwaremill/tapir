@@ -13,8 +13,7 @@ import scala.collection.immutable.Seq
 
 private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes: AttributeMap = AttributeMap.Empty) extends ServerRequest {
   override def protocol: String = ctx.request.protocol.value
-  private lazy val remote = ctx
-    .request
+  private lazy val remote = ctx.request
     .attribute(AttributeKeys.remoteAddress)
     .flatMap(_.toIP)
 
@@ -23,12 +22,10 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
     // @see org.apache.pekko.http.scaladsl.model.HttpRequest#verifyUri
     val secure = ctx.request.uri.scheme match {
       case "https" | "wss" => Some(true)
-      case "http" | "ws" => Some(false)
-      case _ => None
+      case "http" | "ws"   => Some(false)
+      case _               => None
     }
-    ConnectionInfo(None, remote.map( addr =>
-      new InetSocketAddress(addr.ip, addr.port.getOrElse(0))
-    ) , secure)
+    ConnectionInfo(None, remote.map(addr => new InetSocketAddress(addr.ip, addr.port.getOrElse(0))), secure)
   }
   override def underlying: Any = ctx
 

@@ -129,7 +129,7 @@ trait Http4sServerInterpreter[F[_]] {
         pipeF.flatMap { pipe =>
           webSocketBuilder match {
             case Some(wsb) => wsb.withHeaders(headers).build(pipe)
-            case None =>
+            case None      =>
               monad.error(
                 new Http4sInvalidWebSocketUse(
                   "Invalid usage of web socket endpoint without WebSocketBuilder2. " +
