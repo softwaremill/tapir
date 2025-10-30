@@ -96,7 +96,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     def encodePathSegment(p: String): String = URLEncoder.encode(p, "UTF-8")
     input match {
       case EndpointInput.FixedMethod(m, _, _) => req.withMethod(m.method)
-      case EndpointInput.FixedPath(p, _, _) =>
+      case EndpointInput.FixedPath(p, _, _)   =>
         req.withUrl(req.url + "/" + encodePathSegment(p))
       case EndpointInput.PathCapture(_, codec, _) =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
@@ -115,7 +115,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointInput.QueryParams(codec, _) =>
         val mqp = codec.encode(value)
         req.addQueryStringParameters(mqp.toSeq: _*)
-      case EndpointIO.Empty(_, _) => req
+      case EndpointIO.Empty(_, _)              => req
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         req2
@@ -125,7 +125,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
             _
           ) =>
         setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
-      case EndpointIO.OneOfBody(Nil, _) => throw new RuntimeException("One of body without variants")
+      case EndpointIO.OneOfBody(Nil, _)                                    => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>
@@ -146,7 +146,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)
-      case EndpointInput.MappedPair(wrapped, codec) =>
+      case EndpointInput.MappedPair(wrapped, codec)  =>
         handleMapped(wrapped.asInstanceOf[EndpointInput[Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
       case EndpointIO.MappedPair(wrapped, codec) =>
         handleMapped(wrapped.asInstanceOf[EndpointInput[Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
@@ -228,10 +228,10 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case None =>
         out.bodyType
           .map {
-            case RawBodyType.StringBody(_)   => response.body
-            case RawBodyType.ByteArrayBody   => response.body[Array[Byte]]
-            case RawBodyType.ByteBufferBody  => response.body[ByteBuffer]
-            case RawBodyType.InputStreamBody => new ByteArrayInputStream(response.body[Array[Byte]])
+            case RawBodyType.StringBody(_)        => response.body
+            case RawBodyType.ByteArrayBody        => response.body[Array[Byte]]
+            case RawBodyType.ByteBufferBody       => response.body[ByteBuffer]
+            case RawBodyType.InputStreamBody      => new ByteArrayInputStream(response.body[Array[Byte]])
             case RawBodyType.InputStreamRangeBody =>
               InputStreamRange(() => new ByteArrayInputStream(response.body[Array[Byte]]))
             case RawBodyType.FileBody =>

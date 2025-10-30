@@ -126,4 +126,14 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
         )
       }
   }
+
+  // the test is that the code compiles
+  def testZServerLogicReturnType(): Unit = {
+    import sttp.tapir.server.ServerEndpoint
+    import zio.{Task, ZIO}
+
+    val _ = endpoint.zServerLogic(_ => ZIO.unit): ServerEndpoint[Any, Task] {
+      type INPUT = Unit; type OUTPUT = Unit; type ERROR_OUTPUT = Unit
+    }
+  }
 }

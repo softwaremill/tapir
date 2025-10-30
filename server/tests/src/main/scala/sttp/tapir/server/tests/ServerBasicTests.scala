@@ -135,6 +135,38 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .send(backend)
         .map(_.contentType shouldBe Some(sttp.model.MediaType.ApplicationJson.toString))
     },
+    testServer(in_string_out_string_media_type_json, s"With ${HeaderNames.Accept}: ${MediaType.ApplicationJson}")((b: String) =>
+      pureResult(s"""{"$b":"$b"}""".asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .header(Header.accept(MediaType.ApplicationJson))
+        .post(uri"$baseUri/api/json")
+        .body("Sweet")
+        .send(backend)
+        .map { r =>
+          r.body shouldBe Right("""{"Sweet":"Sweet"}""")
+        }
+    },
+    testServer(in_string_out_string_media_type_json)((b: String) => pureResult(s"""{"$b":"$b"}""".asRight[Unit])) { (backend, baseUri) =>
+      basicRequest
+        .post(uri"$baseUri/api/json")
+        .body("Sweet")
+        .send(backend)
+        .map { r =>
+          r.body shouldBe Right("""{"Sweet":"Sweet"}""")
+        }
+    },
+    testServer(in_string_out_string_media_type_json_body)((b: String) => pureResult(s"""{"$b":"$b"}""".asRight[Unit])) {
+      (backend, baseUri) =>
+        basicRequest
+          .header(Header.accept(MediaType.ApplicationJson))
+          .post(uri"$baseUri/api/json_body")
+          .body("Sweet")
+          .send(backend)
+          .map { r =>
+            r.body shouldBe Right("""{"Sweet":"Sweet"}""")
+          }
+    },
     testServer(in_byte_array_out_byte_array)((b: Array[Byte]) => pureResult(b.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.post(uri"$baseUri/api/echo").body("banana kiwi".getBytes).send(backend).map(_.body shouldBe Right("banana kiwi"))
     },
@@ -436,7 +468,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
                   val detail = response.body match {
                     case Left(e)                                     => fail(s"error response: $e")
                     case Right(b) if b.length != largePayload.length => s"body length: ${b.length}, expected: ${largePayload.length}"
-                    case Right(b) =>
+                    case Right(b)                                    =>
                       val original = largePayload.getBytes()
                       val received = b.getBytes()
                       val firstDifference = original.zip(received).indexWhere { case (a, b) => a != b }
@@ -877,7 +909,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       maxLength: Int
   ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
-    "checks payload limit and returns OK on content length  below or equal max (request)"
+    "checks payload limit and returns OK on content length below or equal max (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
     val fineBody: String = List.fill(maxLength)('x').mkString
     basicRequest.post(uri"$baseUri/api/echo").body(fineBody).send(backend).map(_.code shouldBe StatusCode.Ok)
@@ -905,7 +937,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       testPayloadWithinLimit(in_string_out_string, maxLength),
       testServer(
         in_input_stream_out_input_stream.maxRequestBodyLength(maxLength.toLong),
-        "checks payload limit and returns OK on content length  below or equal max (request)"
+        "checks payload limit and returns OK on content length below or equal max (request)"
       )(i => {
         // Forcing server logic to drain the InputStream
         blockingResult(i.readAllBytes()).map(_ => new ByteArrayInputStream(Array.empty[Byte]).asRight[Unit])

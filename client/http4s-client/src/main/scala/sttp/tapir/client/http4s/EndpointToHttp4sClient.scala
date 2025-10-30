@@ -77,8 +77,8 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
     def value: I = params.asAny.asInstanceOf[I]
 
     input match {
-      case EndpointInput.FixedMethod(m, _, _) => req.withMethod(Method.fromString(m.method).right.get)
-      case EndpointInput.FixedPath(p, _, _)   => req.withUri(req.uri.addSegment(p))
+      case EndpointInput.FixedMethod(m, _, _)     => req.withMethod(Method.fromString(m.method).right.get)
+      case EndpointInput.FixedPath(p, _, _)       => req.withUri(req.uri.addSegment(p))
       case EndpointInput.PathCapture(_, codec, _) =>
         val path = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
         req.withUri(req.uri.addSegment(path))
@@ -108,7 +108,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
             _
           ) =>
         setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
-      case EndpointIO.OneOfBody(Nil, _) => throw new RuntimeException("One of body without variants")
+      case EndpointIO.OneOfBody(Nil, _)                                    => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>
@@ -122,7 +122,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)
-      case EndpointInput.MappedPair(wrapped, codec) =>
+      case EndpointInput.MappedPair(wrapped, codec)  =>
         handleMapped(wrapped.asInstanceOf[EndpointInput.Pair[Any, Any, Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
       case EndpointIO.MappedPair(wrapped, codec) =>
         handleMapped(wrapped.asInstanceOf[EndpointIO.Pair[Any, Any, Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
