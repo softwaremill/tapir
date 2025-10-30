@@ -1568,8 +1568,6 @@ lazy val nettyServerSync: ProjectMatrix =
     .settings(commonSettings)
     .settings(
       name := "tapir-netty-server-sync",
-      // needed because of https://github.com/coursier/coursier/issues/2016
-      useCoursier := false,
       Test / run / fork := true,
       libraryDependencies ++= Seq(
         "com.softwaremill.ox" %% "core" % Versions.ox,
@@ -1600,9 +1598,7 @@ def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
   ProjectMatrix(s"nettyServer${proj.capitalize}", file(s"server/netty-server/$proj"))
     .settings(commonSettings)
     .settings(
-      name := s"tapir-netty-server-$proj",
-      // needed because of https://github.com/coursier/coursier/issues/2016
-      useCoursier := false
+      name := s"tapir-netty-server-$proj"
     )
     .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
     .dependsOn(nettyServer, dependency, serverTests % Test)
@@ -2295,9 +2291,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
-    ),
-    // needed because of https://github.com/coursier/coursier/issues/2016
-    useCoursier := false
+    )
   )
   .jvmPlatform(scalaVersions = List(documentationScalaVersion), settings = commonJvmSettings)
   .dependsOn(
