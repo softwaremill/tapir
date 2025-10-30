@@ -50,7 +50,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
               RawValue(file, Seq(file))
             }
           case None if rc.body().buffer() != null =>
-            val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
+            val filePath = newTempFilePath()
             val fs = rc.vertx.fileSystem
             val result = fs
               .createFile(filePath)
@@ -110,8 +110,11 @@ class VertxRequestBody[F[_], S <: Streams[S]](
       case RawBodyType.ByteBufferBody       => Some(ByteBuffer.wrap(part.getBytes(Charset.defaultCharset())))
       case RawBodyType.InputStreamBody      => throw new IllegalArgumentException("Cannot create a multipart as an InputStream")
       case RawBodyType.InputStreamRangeBody => throw new IllegalArgumentException("Cannot create a multipart as an InputStream")
-      case RawBodyType.FileBody             => None
-      case RawBodyType.MultipartBody(_, _)  => None
+      case RawBodyType.FileBody             =>
+        val file = Paths.get(newTempFilePath())
+        Files.write(file, part.getBytes(Charset.defaultCharset()))
+        Some(FileRange(file.toFile))
+      case RawBodyType.MultipartBody(_, _) => None
     }
   }
 
@@ -130,4 +133,8 @@ class VertxRequestBody[F[_], S <: Streams[S]](
   private def readFileBytes(fu: FileUpload) = Files.readAllBytes(Paths.get(fu.uploadedFileName()))
 
   private def routingContext(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[RoutingContext]
+
+  private def newTempFilePath(): String = {
+    s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
+  }
 }
