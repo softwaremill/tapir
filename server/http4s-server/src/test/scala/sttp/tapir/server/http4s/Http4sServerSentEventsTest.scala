@@ -6,7 +6,7 @@ import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.model.sse.ServerSentEvent
 
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
 class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
 
@@ -22,7 +22,7 @@ class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
              |id: id1
              |retry: 10
              |
-             |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList
+             |""".stripMargin.getBytes(StandardCharsets.UTF_8).toList
       })
       .unsafeToFuture()
   }
@@ -37,7 +37,7 @@ class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
           s"""data: data
              |id: id1
              |
-             |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList
+             |""".stripMargin.getBytes(StandardCharsets.UTF_8).toList
       })
       .unsafeToFuture()
   }
@@ -62,7 +62,7 @@ class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
              |data: some data info 2
              |data: some data info 3
              |
-             |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList
+             |""".stripMargin.getBytes(StandardCharsets.UTF_8).toList
       })
       .unsafeToFuture()
   }
@@ -80,7 +80,7 @@ class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
           |data: event2 data3
           |id: id2
           |
-          |""".stripMargin.getBytes(Charset.forName("UTF-8"))
+          |""".stripMargin.getBytes(StandardCharsets.UTF_8)
     )
     val parsed = Http4sServerSentEvents.parseBytesToSSE[IO](sseBytes)
     val futureEvents = parsed.compile.toList

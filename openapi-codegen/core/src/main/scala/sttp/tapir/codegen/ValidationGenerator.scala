@@ -116,7 +116,7 @@ object ValidationGenerator {
       validations match {
         case Nil                => Nil
         case (h: String) +: Nil => singleton(name, opt("String", nullable), allowNull("String", !nullable)(h))
-        case seq =>
+        case seq                =>
           singleton(name, opt("String", nullable), allowNull("String", !nullable)(s"""Validator.all(${seq.sorted.mkString(", ")})"""))
       }
   }
@@ -138,7 +138,7 @@ object ValidationGenerator {
     validations match {
       case Nil                => Nil
       case (h: String) +: Nil => singleton(name, opt(scalaType, nullable), allowNull(scalaType, !nullable)(h))
-      case seq =>
+      case seq                =>
         singleton(name, opt(scalaType, nullable), allowNull(scalaType, !nullable)(s"""Validator.all(${seq.sorted.mkString(", ")})"""))
     }
   }
@@ -161,7 +161,7 @@ object ValidationGenerator {
       case a: OpenapiSchemaArray               => s"Seq[${genTypeName(a.items)}]"
       case a: OpenapiSchemaMap                 => s"Map[String, ${genTypeName(a.items)}]"
       case _: OpenapiSchemaObject              => itemName
-      case x =>
+      case x                                   =>
         throw new NotImplementedError(
           s"Error at $name definition. Validation is not supported on arrays or maps containing elements like ${x}. Try extracting the element definition into its own schema."
         )
@@ -177,14 +177,14 @@ object ValidationGenerator {
     val maybeItemValidation: Option[Set[String] => Option[String]] = elemValidators match {
       case Nil                                                        => None
       case _ if elemType.isInstanceOf[OpenapiSchemaRef] && ignoreRefs => None
-      case h +: _ =>
+      case h +: _                                                     =>
         Some(defns => if (validationExists(defns)(elemType, ignoreRefs)) Some(mkItemValidation(h.name + "Validator")) else None)
     }
     ((validations, maybeItemValidation) match {
-      case (Nil, None) => Nil
+      case (Nil, None)            => Nil
       case (Nil, Some(maybeDefn)) =>
         Seq(ValidationDefn(name, tpeName, maybeDefn(_).map(v => allowNull(rawTpeName, !nb)(v))))
-      case ((h: String) +: Nil, None) => singleton(name, tpeName, allowNull(rawTpeName, !nb)(h))
+      case ((h: String) +: Nil, None)            => singleton(name, tpeName, allowNull(rawTpeName, !nb)(h))
       case ((h: String) +: Nil, Some(maybeItem)) =>
         Seq(
           ValidationDefn(
@@ -301,7 +301,7 @@ object ValidationGenerator {
         )
       }.toSeq
       val x = elemValidations match {
-        case Nil => Nil
+        case Nil                       => Nil
         case (h, hasValidation) +: Nil =>
           Seq(
             ValidationDefn(
@@ -331,7 +331,7 @@ object ValidationGenerator {
   }
   private def genOneOfDef(ignoreRefs: Boolean)(name: String, m: OpenapiSchemaOneOf): Seq[ValidationDefn] = m match {
     case OpenapiSchemaOneOf(t, _) if ignoreRefs || !t.forall(_.isInstanceOf[OpenapiSchemaRef]) => Nil
-    case OpenapiSchemaOneOf(ts: Seq[OpenapiSchemaRef @unchecked], _) =>
+    case OpenapiSchemaOneOf(ts: Seq[OpenapiSchemaRef @unchecked], _)                           =>
       Seq(
         ValidationDefn(
           name,

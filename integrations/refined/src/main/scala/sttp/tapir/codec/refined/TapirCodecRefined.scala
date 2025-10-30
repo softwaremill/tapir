@@ -42,7 +42,7 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
       ) // in reality if this validator has to fail, it will fail before in mapDecode while trying to construct refined type
       .mapDecode { (v: V) =>
         refineV[P](v) match {
-          case Right(refined) => DecodeResult.Value(refined)
+          case Right(refined)     => DecodeResult.Value(refined)
           case Left(errorMessage) =>
             DecodeResult.InvalidValue(refinedValidatorTranslation.validationErrors(v, errorMessage))
         }

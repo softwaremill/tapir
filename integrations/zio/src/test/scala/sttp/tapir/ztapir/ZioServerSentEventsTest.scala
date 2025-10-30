@@ -6,7 +6,7 @@ import zio.test._
 import zio.test.Assertion._
 import zio.stream._
 
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
 object ZioServerSentEventsTest extends ZIOSpecDefault {
   def spec: Spec[TestEnvironment, Any] =
@@ -20,7 +20,7 @@ object ZioServerSentEventsTest extends ZIOSpecDefault {
              |id: id1
              |retry: 10
              |
-             |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList))
+             |""".stripMargin.getBytes(StandardCharsets.UTF_8).toList))
         }
       },
       test("serialiseSSEToBytes should omit fields that are not set") {
@@ -30,7 +30,7 @@ object ZioServerSentEventsTest extends ZIOSpecDefault {
           assert(sseEvents.toList)(equalTo(s"""data: data
              |id: id1
              |
-             |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList))
+             |""".stripMargin.getBytes(StandardCharsets.UTF_8).toList))
         }
       },
       test("serialiseSSEToBytes should successfully serialise multiline data event") {
@@ -50,7 +50,7 @@ object ZioServerSentEventsTest extends ZIOSpecDefault {
              |data: some data info 2
              |data: some data info 3
              |
-             |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList))
+             |""".stripMargin.getBytes(StandardCharsets.UTF_8).toList))
         }
       },
       test("parseBytesToSSE should successfully parse SSE bytes to SSE structure") {
@@ -67,7 +67,7 @@ object ZioServerSentEventsTest extends ZIOSpecDefault {
           |data: event2 data3
           |id: id2
           |
-          |""".stripMargin.getBytes(Charset.forName("UTF-8"))
+          |""".stripMargin.getBytes(StandardCharsets.UTF_8)
           )
         )
         val parsed = ZioServerSentEvents.parseBytesToSSE(sseBytes)

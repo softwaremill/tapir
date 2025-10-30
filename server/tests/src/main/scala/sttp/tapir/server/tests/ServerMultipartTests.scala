@@ -1,7 +1,9 @@
 package sttp.tapir.server.tests
 
+import cats.effect.IO
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers._
+import org.scalatest.concurrent.Eventually.eventually
 import sttp.client4.{multipartFile, _}
 import sttp.model.{Part, StatusCode}
 import sttp.monad.MonadError
@@ -21,6 +23,10 @@ import sttp.tapir.server.model.EndpointExtensions._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import scala.collection.JavaConverters.asScalaSetConverter
+import java.nio.file.Files
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.ConcurrentHashMap
 
 class ServerMultipartTests[F[_], OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, Any, OPTIONS, ROUTE],
@@ -187,6 +193,98 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
             r.code shouldBe StatusCode.Ok
             r.body should be("firstPart:BODYONE\r\n--AA\n__\nsecondPart:BODYTWO")
           }
+      },
+      testServer(in_raw_multipart_out_string, "empty multipart body")((parts: Seq[Part[Array[Byte]]]) =>
+        pureResult(parts.length.toString.asRight[Unit])
+      ) { (backend, baseUri) =>
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .header("Content-Type", "multipart/form-data; boundary=AAB")
+          .body("")
+          .send(backend)
+          .map { r =>
+            // no parts should be parsed, or a bad request should be returned
+            r.code match {
+              case StatusCode.BadRequest => succeed
+              case StatusCode.Ok         => r.body should be("0")
+              case _                     =>
+                fail("Expected BadRequest, but got " + r.code)
+            }
+          }
+      },
+      testServer(in_raw_multipart_out_string, "invalid multipart body")((parts: Seq[Part[Array[Byte]]]) =>
+        pureResult(parts.length.toString.asRight[Unit])
+      ) { (backend, baseUri) =>
+        val testBody = "--ABC\r\n" + // different boundary
+          "Content-Disposition: form-data; name=\"firstPart\"\r\n" +
+          "Content-Type: text/plain\r\n" +
+          "-ABC\r\n" // invalid boundary
+        basicStringRequest
+          .post(uri"$baseUri/api/echo/multipart")
+          .header("Content-Type", "multipart/form-data; boundary=AAB")
+          .body(testBody)
+          .send(backend)
+          .map { r =>
+            // no parts should be parsed, or a bad request should be returned
+            r.code match {
+              case StatusCode.BadRequest => succeed
+              case StatusCode.Ok         => r.body should be("0")
+              case _                     =>
+                fail("Expected BadRequest, but got " + r.code)
+            }
+          }
+      },
+      testServer(
+        endpoint.post
+          .in("api" / "echo" / "multipart")
+          .in(multipartBody[SingleFileBody])
+          .out(stringBody),
+        "large part"
+      )((data: SingleFileBody) => pureResult((Files.readString(data.file.body.toPath, StandardCharsets.UTF_8)).asRight[Unit])) {
+        (backend, baseUri) =>
+          val largeBody = "pineapple".repeat(10000)
+          basicStringRequest
+            .post(uri"$baseUri/api/echo/multipart")
+            .multipartBody(multipart("file", largeBody))
+            .send(backend)
+            .map { r =>
+              r.code shouldBe StatusCode.Ok
+              r.body shouldBe largeBody
+            }
+      }, {
+        val files = ConcurrentHashMap.newKeySet[TapirFile]()
+        testServer(
+          endpoint.post
+            .in("api" / "echo" / "multipart")
+            .in(multipartBody[SingleFileBody])
+            .out(stringBody),
+          "file part deleted after request handling completes"
+        )((data: SingleFileBody) => {
+          data.file.body.exists() shouldBe true
+          files.add(data.file.body)
+          pureResult("ok".asRight[Unit])
+        }) { (backend, baseUri) =>
+          val smallBody = "pineapple"
+          val largeBody = smallBody.repeat(10000)
+          def testWithBody(body: String) = basicStringRequest
+            .post(uri"$baseUri/api/echo/multipart")
+            .multipartBody(multipart("file", body))
+            .send(backend)
+            .map { r =>
+              r.code shouldBe StatusCode.Ok
+            }
+
+          testWithBody(smallBody) >> testWithBody(largeBody) >> IO.blocking {
+            eventually { // file cleanup might run asynchronously to completing the request
+              files.asScala.foreach { file =>
+                if (Files.exists(file.toPath)) {
+                  fail(s"File ${file.getName} still exists")
+                }
+              }
+              succeed
+            }
+          }
+        }
       }
     )
   }

@@ -1,8 +1,8 @@
 // {cat=WebSocket; effects=ZIO; server=ZIO HTTP; json=ZIO JSON}: Describe and implement a WebSocket endpoint, accepting and returning JSON messages
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.46
-//> using dep com.softwaremill.sttp.tapir::tapir-json-zio:1.11.46
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.46
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.0
+//> using dep com.softwaremill.sttp.tapir::tapir-json-zio:1.12.0
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.12.0
 
 package sttp.tapir.examples.websocket
 

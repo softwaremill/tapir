@@ -88,8 +88,8 @@ private[sttp4] trait EndpointToSttpClientBase {
   ): (Uri, PartialAnyRequest, Option[RequestStreamBody]) = {
     def value: I = params.asAny.asInstanceOf[I]
     input match {
-      case EndpointInput.FixedMethod(_, _, _) => (uri, req, streamBody)
-      case EndpointInput.FixedPath(p, _, _)   => (uri.addPath(p), req, streamBody)
+      case EndpointInput.FixedMethod(_, _, _)     => (uri, req, streamBody)
+      case EndpointInput.FixedPath(p, _, _)       => (uri.addPath(p), req, streamBody)
       case EndpointInput.PathCapture(_, codec, _) =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
         (uri.addPath(v), req, streamBody)
@@ -108,7 +108,7 @@ private[sttp4] trait EndpointToSttpClientBase {
         val mqp = codec.encode(value)
         val uri2 = uri.addParams(mqp.toSeq: _*)
         (uri2, req, streamBody)
-      case EndpointIO.Empty(_, _) => (uri, req, streamBody)
+      case EndpointIO.Empty(_, _)              => (uri, req, streamBody)
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2, streamBody)
@@ -121,7 +121,7 @@ private[sttp4] trait EndpointToSttpClientBase {
         (uri, req2, streamBody)
       case EndpointIO.OneOfBody(Nil, _)                                        => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, codec, _, _, _)) => (uri, req, Some((streams, codec.encode(value))))
-      case EndpointIO.Header(name, codec, _) =>
+      case EndpointIO.Header(name, codec, _)                                   =>
         val req2 = codec
           .encode(value)
           .foldLeft(req) { case (r, v) => r.header(name, v) }
@@ -193,7 +193,7 @@ private[sttp4] trait EndpointToSttpClientBase {
       case RawBodyType.InputStreamBody      => req.body(encoded)
       case RawBodyType.FileBody             => req.body(encoded.file)
       case RawBodyType.InputStreamRangeBody => req.body(encoded.inputStream())
-      case m: RawBodyType.MultipartBody =>
+      case m: RawBodyType.MultipartBody     =>
         val parts: Seq[Part[BasicBodyPart]] = (encoded: Seq[RawPart]).flatMap { p =>
           m.partType(p.name).map { partType =>
             // copying the name & body
