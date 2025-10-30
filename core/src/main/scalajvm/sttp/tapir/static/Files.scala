@@ -26,7 +26,7 @@ object Files {
             Left(StaticErrorOutput.NotFound)
           } else {
             resolveRealPath(Paths.get(systemPath).toRealPath(), input.path, options.defaultFile) match {
-              case Left(error) => Left(error)
+              case Left(error)     => Left(error)
               case Right(resolved) =>
                 val file = resolved.toFile
                 Right(HeadOutput.Found(Some(ContentRangeUnits.Bytes), Some(file.length()), Some(contentTypeFromName(file.getName))))
@@ -59,7 +59,7 @@ object Files {
         (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
       else {
         resolveRealPath(realSystemPath, filesInput.path, options.defaultFile) match {
-          case Left(error) => (Left(error): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
+          case Left(error)             => (Left(error): Either[StaticErrorOutput, StaticOutput[FileRange]]).unit
           case Right(realResolvedPath) =>
             filesInput.range match {
               case Some(range) =>

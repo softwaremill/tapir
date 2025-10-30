@@ -100,7 +100,7 @@ class ClassDefinitionGenerator {
       .flatMap { case (name, schema) =>
         val validatedChildren = schema.types.map {
           case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
-          case other =>
+          case other                                 =>
             val unsupportedChild = other.getClass.getName
             throw new NotImplementedError(
               s"oneOf declarations are only supported when all variants are declared schemas. Found type '$unsupportedChild' as variant of $name"
@@ -108,7 +108,7 @@ class ClassDefinitionGenerator {
         }
         // If defined, check that the discriminator mappings match the oneOf refs
         schema.discriminator match {
-          case None | Some(Discriminator(_, None)) => // if there's no discriminator or no mapping, nothing to validate
+          case None | Some(Discriminator(_, None))   => // if there's no discriminator or no mapping, nothing to validate
           case Some(Discriminator(_, Some(mapping))) =>
             val targetClassNames = mapping.values.map(_.split('/').last).toSet
             if (targetClassNames != validatedChildren.toSet)
@@ -189,7 +189,7 @@ class ClassDefinitionGenerator {
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
       case simpleType: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(simpleType)._1
-      case otherType =>
+      case otherType                           =>
         throw new NotImplementedError(s"Only simple value types and refs are implemented for named arrays (found $otherType)")
     }
     if (rs.uniqueItems.contains(true)) Seq(s"""type $name = Set[$valueSchemaName]""")
@@ -237,7 +237,7 @@ class ClassDefinitionGenerator {
         }
         .distinct
       val discriminatorDefBody = discriminatorDefFields.filter { case (n, _) => obj.properties.map(_._1).toSet.contains(n) } match {
-        case Nil => ""
+        case Nil    => ""
         case fields =>
           val fs = fields.map { case (k, v) => s"""def `$k`: String = "$v"""" }.mkString("\n")
           s""" {
