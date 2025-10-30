@@ -1,7 +1,7 @@
 // {cat=Streaming; effects=Future; server=Pekko HTTP}: Stream response as a Pekko stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.48
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.48
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.0
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.12.0
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.streaming

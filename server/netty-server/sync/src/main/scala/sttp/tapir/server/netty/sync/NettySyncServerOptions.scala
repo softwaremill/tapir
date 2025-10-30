@@ -11,8 +11,12 @@ import sttp.tapir.{Defaults, TapirFile}
 
 case class NettySyncServerOptions(
     interceptors: List[Interceptor[Identity]],
+    /** Used to create temporary files to store file bodies, as well as small multipart attributes (smaller than `multipartMinSizeForDisk`)
+      * that are specified to be stored as a file.
+      */
     createFile: ServerRequest => TapirFile,
     deleteFile: TapirFile => Unit,
+    /** Used to configure Netty's multipart parser. Large parts and file uploads will be stored in this directory. */
     multipartTempDirectory: Option[TapirFile],
     multipartMinSizeForDisk: Option[Long],
     /** When a request is cancelled (due to client closing the connection or a timeout), should the server's logic be interrupted (using

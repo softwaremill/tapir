@@ -53,7 +53,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
       .validate(validatorTranslation.validator)
       .mapDecode { (v: Value) =>
         v.refineEither[Predicate] match {
-          case Right(refined) => DecodeResult.Value[Value :| Predicate](refined)
+          case Right(refined)     => DecodeResult.Value[Value :| Predicate](refined)
           case Left(errorMessage) =>
             DecodeResult.InvalidValue(validatorTranslation.makeErrors(v, constraint.message))
         }
@@ -130,7 +130,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
 
   private inline def summonValidators[N, A <: Tuple]: List[ValidatorForPredicate[N, Any]] = {
     inline erasedValue[A] match
-      case _: EmptyTuple => Nil
+      case _: EmptyTuple     => Nil
       case _: (head *: tail) =>
         val headValidator: ValidatorForPredicate[N, ?] = summonFrom {
           case pv: PrimitiveValidatorForPredicate[N, `head`] => pv
@@ -163,7 +163,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
 
   private inline def strictValues[N, V <: Tuple]: List[N] = {
     inline erasedValue[V] match
-      case _: EmptyTuple => Nil
+      case _: EmptyTuple             => Nil
       case _: (StrictEqual[t] *: ts) =>
         inline erasedValue[t] match
           case e: N => e :: strictValues[N, ts]

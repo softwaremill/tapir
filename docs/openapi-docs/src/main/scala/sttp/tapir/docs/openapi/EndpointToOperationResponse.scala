@@ -109,7 +109,7 @@ private[openapi] class EndpointToOperationResponse(
   private def mergeMediaTypesToAnyOf(bodies: Vector[MediaType]): MediaType =
     bodies.toSet.toList match {
       case List(body) => body
-      case bodies =>
+      case bodies     =>
         MediaType(
           schema = Some(ASchema(anyOf = bodies.flatMap(_.schema))),
           example = bodies.flatMap(_.example).headOption,

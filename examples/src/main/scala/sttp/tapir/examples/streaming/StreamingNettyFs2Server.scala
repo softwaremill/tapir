@@ -1,7 +1,7 @@
 // {cat=Streaming; effects=cats-effect; server=Netty}: Stream response as an fs2 stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.48
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.48
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.0
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.12.0
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.streaming
@@ -61,7 +61,6 @@ object StreamingNettyFs2Server extends IOApp:
 
         startServer
           .map { binding =>
-
             println(s"Server started at port = ${binding.port}")
 
             val backend: SyncBackend = HttpClientSyncBackend()

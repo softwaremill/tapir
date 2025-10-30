@@ -165,19 +165,26 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
             .unsafeToFuture()
         },
         Test("Server reads remote address and secure from connectionInfo") {
-          val e = endpoint.get.in("test").in(extractFromRequest(req => req.connectionInfo) ).out(stringBody)
-            .serverLogic{connectionInfo =>
+          val e = endpoint.get
+            .in("test")
+            .in(extractFromRequest(req => req.connectionInfo))
+            .out(stringBody)
+            .serverLogic { connectionInfo =>
               val remote = connectionInfo.remote
               val secure = connectionInfo.secure
-              s"$remote $secure".asRight[Unit].unit}
+              s"$remote $secure".asRight[Unit].unit
+            }
           val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>
-              basicRequest.get(uri"http://localhost:$port/api/test").send(backend).map(_.body.value should fullyMatch regex """Some\(/127\.0\.0\.1:\d+\) Some\(false\)""")
+              basicRequest
+                .get(uri"http://localhost:$port/api/test")
+                .send(backend)
+                .map(_.body.value should fullyMatch regex """Some\(/127\.0\.0\.1:\d+\) Some\(false\)""")
             }
             .unsafeToFuture()
-        },
+        }
       )
       def drainPekko(stream: PekkoStreams.BinaryStream): Future[Unit] =
         stream.runWith(Sink.ignore).map(_ => ())

@@ -9,7 +9,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.ParamConcat
 import sttp.tapir.{AttributeKey, CodecFormat, Endpoint, StreamBodyIO, extractFromRequest, streamTextBody}
 
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import scala.reflect.ClassTag
 
 package object http4s {
@@ -18,7 +18,7 @@ package object http4s {
 
   def serverSentEventsBody[F[_]]: StreamBodyIO[fs2.Stream[F, Byte], fs2.Stream[F, ServerSentEvent], Fs2Streams[F]] = {
     val fs2Streams = Fs2Streams[F]
-    streamTextBody(fs2Streams)(CodecFormat.TextEventStream(), Some(Charset.forName("UTF-8")))
+    streamTextBody(fs2Streams)(CodecFormat.TextEventStream(), Some(StandardCharsets.UTF_8))
       .map(Http4sServerSentEvents.parseBytesToSSE[F])(Http4sServerSentEvents.serialiseSSEToBytes[F])
   }
 

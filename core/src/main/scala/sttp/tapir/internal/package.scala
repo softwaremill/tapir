@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import sttp.model.{ContentTypeRange, MediaType, Method}
+import sttp.model.{ContentTypeRange, HeaderNames, MediaType, Method}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.BinaryTupleOp
@@ -175,6 +175,8 @@ package object internal {
       case b: EndpointIO.Body[?, ?]              => Vector(b.mediaTypeWithCharset)
       case EndpointIO.OneOfBody(variants, _)     => variants.map(_.mediaTypeWithCharset).toVector
       case b: EndpointIO.StreamBodyWrapper[?, ?] => Vector(b.mediaTypeWithCharset)
+      case EndpointIO.FixedHeader(h, _, _) if h.name.equalsIgnoreCase(HeaderNames.ContentType) =>
+        MediaType.parse(h.value).toOption.toVector
     }
 
     def hasOptionalBodyMatchingContent(content: MediaType): Boolean = {

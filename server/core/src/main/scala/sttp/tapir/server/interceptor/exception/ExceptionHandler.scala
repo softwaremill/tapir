@@ -3,7 +3,7 @@ package sttp.tapir.server.interceptor.exception
 import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.model.StatusCode
 import sttp.monad.MonadError
-import sttp.tapir.server.model.ValuedEndpointOutput
+import sttp.tapir.server.model.{InvalidMultipartBodyException, ValuedEndpointOutput}
 import sttp.tapir._
 
 trait ExceptionHandler[F[_]] {
@@ -31,6 +31,8 @@ case class DefaultExceptionHandler[F[_]](response: (StatusCode, String) => Value
         monad.unit(Some(response(StatusCode.PayloadTooLarge, s"Payload limit (${maxBytes}B) exceeded")))
       case (_, StreamMaxLengthExceededException(maxBytes)) =>
         monad.unit(Some(response(StatusCode.PayloadTooLarge, s"Payload limit (${maxBytes}B) exceeded")))
+      case (InvalidMultipartBodyException(_, _), _) =>
+        monad.unit(Some(response(StatusCode.BadRequest, s"Invalid multipart body")))
       case _ =>
         monad.unit(Some(response(StatusCode.InternalServerError, "Internal server error")))
     }

@@ -57,7 +57,7 @@ object RootGenerator {
       case "circe"    => JsonSerdeLib.Circe
       case "jsoniter" => JsonSerdeLib.Jsoniter
       case "zio"      => JsonSerdeLib.Zio
-      case _ =>
+      case _          =>
         System.err.println(
           s"!!! Unrecognised value $jsonSerdeLib for json serde lib -- should be one of circe, jsoniter, zio. Defaulting to circe !!!"
         )
@@ -66,7 +66,7 @@ object RootGenerator {
     val normalisedXmlLib = xmlSerdeLib.toLowerCase match {
       case "cats-xml" => XmlSerdeLib.CatsXml
       case "none"     => XmlSerdeLib.NoSupport
-      case _ =>
+      case _          =>
         System.err.println(
           s"!!! Unrecognised value $xmlSerdeLib for xml serde lib -- should be one of cats-xml, none. Defaulting to none !!!"
         )
@@ -78,7 +78,7 @@ object RootGenerator {
       case "fs2"   => FS2()
       case "pekko" => Pekko
       case "zio"   => Zio
-      case _ =>
+      case _       =>
         streamingImplementation match {
           case fs2WithEffect(effectType) =>
             FS2(effectType)

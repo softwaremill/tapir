@@ -32,7 +32,7 @@ object ServerRunner extends ResourceApp.Forever {
   def startServerByTypeName(serverName: ServerName): Resource[IO, Unit] =
     serverName match {
       case ExternalServerName => Resource.unit
-      case _ =>
+      case _                  =>
         Resource
           .eval(
             IO({
