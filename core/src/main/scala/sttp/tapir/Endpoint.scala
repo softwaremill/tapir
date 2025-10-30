@@ -362,11 +362,12 @@ trait EndpointMetaOps {
     * `POST /books /add {header Authorization} {body as application/json (UTF-8)} -> {body as text/plain (UTF-8)}/-`
     */
   lazy val show: String = {
-    def showOutputs(o: EndpointOutput[?]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType)))
+    def showOutputs(o: EndpointOutput[?]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType, _.show)))
 
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
     val showInputs = showMultiple(
-      (securityInput.asVectorOfBasicInputs() ++ input.asVectorOfBasicInputs()).sortBy(basicInputSortIndex)
+      (securityInput.asVectorOfBasicInputs() ++ input.asVectorOfBasicInputs()).sortBy(basicInputSortIndex),
+      _.show
     )
     val showSuccessOutputs = showOutputs(output)
     val showErrorOutputs = showOutputs(errorOutput)
@@ -382,7 +383,7 @@ trait EndpointMetaOps {
     * }}}
     */
   lazy val showDetail: String =
-    s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.show}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
+    s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.showDetail}, in: ${input.showDetail}, errout: ${errorOutput.showDetail}, out: ${output.showDetail})"
   protected def showType: String
 
   /** Equivalent to `.toString`, shows the whole case class structure. */

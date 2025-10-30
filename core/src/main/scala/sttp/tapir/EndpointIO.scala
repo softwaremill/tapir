@@ -82,6 +82,8 @@ sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
 
   def show: String
+
+  def showDetail: String = show // default implementation needed for binary compatibility
 }
 
 object EndpointTransput {
@@ -127,6 +129,8 @@ object EndpointTransput {
     def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
     def attribute[A](k: AttributeKey[A]): Option[A] = info.attribute(k)
     def attribute[A](k: AttributeKey[A], v: A): ThisType[T] = copyWith(codec, info.attribute(k, v))
+
+    override def showDetail: String = addValidatorShow(show, codec.schema)
   }
 
   sealed trait Pair[T] extends EndpointTransput[T] {
@@ -136,14 +140,14 @@ object EndpointTransput {
     private[tapir] val combine: CombineParams
     private[tapir] val split: SplitParams
 
-    override def show: String = {
-      def flattenedPairs(et: EndpointTransput[?]): Vector[EndpointTransput[?]] =
-        et match {
-          case p: Pair[?] => flattenedPairs(p.left) ++ flattenedPairs(p.right)
-          case other      => Vector(other)
-        }
-      showMultiple(flattenedPairs(this))
-    }
+    private def flattenedPairs(et: EndpointTransput[?]): Vector[EndpointTransput[?]] =
+      et match {
+        case p: Pair[?] => flattenedPairs(p.left) ++ flattenedPairs(p.right)
+        case other      => Vector(other)
+      }
+
+    override def show: String = showMultiple(flattenedPairs(this), _.show)
+    override def showDetail: String = showMultiple(flattenedPairs(this), _.showDetail)
   }
 }
 
@@ -246,7 +250,8 @@ object EndpointInput extends EndpointInputMacros {
       info: AuthInfo
   ) extends Single[T] {
     override private[tapir] type ThisType[X] = Auth[X, TYPE]
-    override def show: String = if (isInputEmpty) s"auth(-)"
+
+    private def show(doShow: Single[?] => String): String = if (isInputEmpty) s"auth(-)"
     else
       authType match {
         case AuthType.Http(scheme)       => s"auth($scheme http, via ${input.show})"
@@ -255,6 +260,9 @@ object EndpointInput extends EndpointInputMacros {
         case AuthType.ScopedOAuth2(_, _) => s"auth(scoped oauth2, via ${input.show})"
         case _                           => throw new RuntimeException("Impossible, but the compiler complains.")
       }
+    override def show: String = show(_.show)
+    override def showDetail: String = show(_.showDetail)
+
     override def map[U](mapping: Mapping[T, U]): Auth[U, TYPE] = copy(input = input.map(mapping))
 
     def securitySchemeName: Option[String] = info.securitySchemeName
@@ -321,6 +329,7 @@ object EndpointInput extends EndpointInputMacros {
   case class MappedPair[T, U, TU, V](input: Pair[T, U, TU], mapping: Mapping[TU, V]) extends Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
     override def show: String = input.show
+    override def showDetail: String = input.showDetail
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](input, mapping.map(m))
   }
 
@@ -360,8 +369,10 @@ object EndpointOutput extends EndpointOutputMacros {
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[sttp.model.StatusCode, U, TextPlain], i: Info[U]): StatusCode[U] =
       copy(codec = c, info = i)
+
     override def show: String =
       s"status code - possible codes (${documentedCodes.map { case (k, v) => k.fold(_.toString, _.toString) -> v }})"
+    override def showDetail: String = show
 
     def description(code: sttp.model.StatusCode, d: String): StatusCode[T] = {
       val updatedCodes = documentedCodes + (Left(code) -> Info.empty[Unit].description(d))
@@ -397,6 +408,7 @@ object EndpointOutput extends EndpointOutputMacros {
     override def info: Info[T] = wrapped.info
 
     override def show: String = wrapped.show
+    override def showDetail: String = wrapped.showDetail
   }
 
   /** Specifies one possible `output`.
@@ -419,6 +431,7 @@ object EndpointOutput extends EndpointOutputMacros {
     override private[tapir] type ThisType[X] = OneOf[O, X]
     override def map[U](_mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](mapping = mapping.map(_mapping))
     override def show: String = showOneOf(variants.map(_.output.show))
+    override def showDetail: String = showOneOf(variants.map(_.output.showDetail))
   }
 
   //
@@ -426,6 +439,7 @@ object EndpointOutput extends EndpointOutputMacros {
   case class Void[T]() extends EndpointOutput[T] {
     override private[tapir] type ThisType[X] = Void[X]
     override def show: String = "void"
+    override def showDetail: String = show
     override def map[U](mapping: Mapping[T, U]): Void[U] = Void()
 
     override def and[U, TU](other: EndpointOutput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
@@ -437,6 +451,7 @@ object EndpointOutput extends EndpointOutputMacros {
   case class MappedPair[T, U, TU, V](output: Pair[T, U, TU], mapping: Mapping[TU, V]) extends Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
     override def show: String = output.show
+    override def showDetail: String = output.showDetail
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](output, mapping.map(m))
   }
 
@@ -493,10 +508,12 @@ object EndpointIO {
     override def info: Info[T] = wrapped.info
 
     override def show: String = wrapped.show
+    override def showDetail: String = wrapped.showDetail
   }
 
   case class OneOfBodyVariant[O](range: ContentTypeRange, body: Either[Body[?, O], StreamBodyWrapper[?, O]]) {
     def show: String = bodyAsAtom.show
+    def showDetail: String = bodyAsAtom.showDetail
     def mediaTypeWithCharset: MediaType = body.fold(_.mediaTypeWithCharset, _.mediaTypeWithCharset)
     def codec: Codec[?, O, ? <: CodecFormat] = bodyAsAtom.codec
     def info: Info[O] = bodyAsAtom.info
@@ -507,12 +524,16 @@ object EndpointIO {
   }
   case class OneOfBody[O, T](variants: List[OneOfBodyVariant[O]], mapping: Mapping[O, T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = OneOfBody[O, X]
-    override def show: String = showOneOf(variants.map { variant =>
+
+    private def show(doShow: OneOfBodyVariant[O] => String): String = showOneOf(variants.map { variant =>
       val prefix =
         if (ContentTypeRange.exactNoCharset(variant.codec.format.mediaType) == variant.range) ""
         else s"${variant.range} -> "
       prefix + variant.show
     })
+    override def show: String = show(_.show)
+    override def showDetail: String = show(_.showDetail)
+
     override def map[U](m: Mapping[T, U]): OneOfBody[O, U] = copy[O, U](mapping = mapping.map(m))
   }
 
@@ -554,6 +575,7 @@ object EndpointIO {
   case class MappedPair[T, U, TU, V](io: Pair[T, U, TU], mapping: Mapping[TU, V]) extends Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
     override def show: String = io.show
+    override def showDetail: String = io.showDetail
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](io, mapping.map(m))
   }
 
