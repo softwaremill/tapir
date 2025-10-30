@@ -9,7 +9,7 @@ class CdkAppTemplate[F[_]: Sync](es: Set[ServerEndpoint[Any, F]], options: AwsCd
   def generate(): F[Either[Throwable, Unit]] =
     serverEndpointsToRequests(es) match {
       case Nil => Sync[F].delay(Left(new RuntimeException("No single valid endpoint to generate stack")))
-      case rs =>
+      case rs  =>
         for {
           files <- new AppTemplateFiles[F](sourceDir = "/app-template", outputDir = options.outputDir).pure[F]
           _ <- files.clearOutputDir()

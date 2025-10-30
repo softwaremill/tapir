@@ -151,7 +151,7 @@ object Validator extends ValidatorMacros {
   sealed trait Primitive[T] extends Validator[T] {
     def doValidate(t: T): ValidationResult
     override def apply(t: T): List[ValidationError[T]] = doValidate(t) match {
-      case ValidationResult.Valid => Nil
+      case ValidationResult.Valid                   => Nil
       case ValidationResult.Invalid(customMessages) =>
         customMessages match {
           case Nil => List(ValidationError(this, t, Nil, None))
@@ -283,7 +283,7 @@ object Validator extends ValidatorMacros {
       case Custom(_, showMessage)            => showMessage.orElse(Some("custom"))
       case Enumeration(possibleValues, _, _) => Some(s"in(${possibleValues.mkString(",")}")
       case Mapped(wrapped, _)                => show(wrapped)
-      case All(validators) =>
+      case All(validators)                   =>
         validators.flatMap(show(_)) match {
           case immutable.Seq()  => None
           case immutable.Seq(s) => Some(s)

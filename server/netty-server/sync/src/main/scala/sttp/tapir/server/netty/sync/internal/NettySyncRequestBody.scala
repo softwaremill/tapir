@@ -61,9 +61,12 @@ private[sync] class NettySyncRequestBody(
         ).mapConcat: httpData =>
           m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType))
         .runToList()
-      finally decoder.destroy()
+      catch
+        case t: Throwable =>
+          decoder.destroy()
+          throw t
 
-    RawValue.fromParts(rawParts)
+    RawValue.fromParts(rawParts).copy(cleanup = Some(() => decoder.destroy()))
   }
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =

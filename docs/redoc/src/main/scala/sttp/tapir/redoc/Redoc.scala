@@ -63,9 +63,9 @@ object Redoc {
 
     val specNameLowerCase = specName.toLowerCase
     val specMediaType =
-      if (specNameLowerCase.endsWith(".json")) MediaType("application", "json")
+      if (specNameLowerCase.endsWith(".json")) MediaType.ApplicationJson
       else if (specNameLowerCase.endsWith(".yaml") || specNameLowerCase.endsWith(".yml")) MediaType("text", "yaml")
-      else MediaType("text", "plain")
+      else MediaType.TextPlain
 
     val specEndpoint = contentEndpoint(specName, specMediaType).serverLogicSuccessPure[F](_ => spec)
 

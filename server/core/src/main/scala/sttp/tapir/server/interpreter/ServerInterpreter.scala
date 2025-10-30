@@ -12,6 +12,8 @@ import sttp.tapir.server.{model, _}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
 import sttp.tapir.EndpointInfo
 import sttp.tapir.AttributeKey
+import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConverters.asScalaSetConverter
 
 class ServerInterpreter[R, F[_], B, S](
     serverEndpoints: ServerRequest => List[ServerEndpoint[R, F]],
@@ -32,10 +34,10 @@ class ServerInterpreter[R, F[_], B, S](
   ): RequestHandler[F, R, B] = {
     is match {
       case Nil => RequestHandler.from { (request, ses, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
-      case is =>
+      case is  =>
         is.head match {
           case ei: EndpointInterceptor[F] => callInterceptors(is.tail, ei :: eisAcc, responder)
-          case i: RequestInterceptor[F] =>
+          case i: RequestInterceptor[F]   =>
             i(
               responder,
               { ei => RequestHandler.from { (request, ses, _) => callInterceptors(is.tail, ei :: eisAcc, responder).apply(request, ses) } }
@@ -104,12 +106,17 @@ class ServerInterpreter[R, F[_], B, S](
     // the regular input is required to match the whole remaining path; otherwise a decode failure is reported
     // to keep the progress in path matching, we are using the context returned by decoding the security input
     val (regularBasicInputs, _) = DecodeBasicInputs(se.endpoint.input, decodeBasicContext2)
+    // an ugly but efficient way to keep track of any `RawValue`s that are created during request processing
+    // each returned `RawValue` needs to be cleaned up when the request is processed
+    val rawValues = ConcurrentHashMap.newKeySet[RawValue[?]]()
+    val addRawValue: RawValue[?] => Unit = rawValues.add(_): Unit
+
     (for {
       // 2. if the decoding failed, short-circuiting further processing with the decode failure that has a lower sort
       // index (so that the correct one is passed to the decode failure handler)
       _ <- resultOrValueFrom(DecodeBasicInputsResult.higherPriorityFailure(securityBasicInputs, regularBasicInputs))
       // 3. computing the security input value
-      securityValues <- resultOrValueFrom(decodeBody(request, securityBasicInputs, se.info))
+      securityValues <- resultOrValueFrom(decodeBody(request, securityBasicInputs, se.info, addRawValue))
       securityParams <- resultOrValueFrom(InputValue(se.endpoint.securityInput, securityValues))
       inputValues <- resultOrValueFrom(regularBasicInputs)
       a = securityParams.asAny.asInstanceOf[A]
@@ -135,7 +142,7 @@ class ServerInterpreter[R, F[_], B, S](
         case Right(u) =>
           for {
             // 5. decoding the body of regular inputs, computing the input value, and running the main logic
-            values <- resultOrValueFrom(decodeBody(request, inputValues, se.endpoint.info))
+            values <- resultOrValueFrom(decodeBody(request, inputValues, se.endpoint.info, addRawValue))
             params <- resultOrValueFrom(InputValue(se.endpoint.input, values))
             response <- resultOrValueFrom.value(
               endpointHandler(defaultSecurityFailureResponse, endpointInterceptors)
@@ -145,12 +152,33 @@ class ServerInterpreter[R, F[_], B, S](
           } yield response
       }
     } yield response).fold
+      // 6. #4886: when the request is fully processed, delete any temporary files and run cleanup functions
+      .handleError { case t: Throwable => cleanupRawValues(rawValues.asScala).flatMap(_ => monad.error(t)) }
+      .flatMap {
+        case RequestResult.Response(s @ ServerResponse(_, _, Some(body), _)) =>
+          bodyListener
+            .onComplete(body)(_ => cleanupRawValues(rawValues.asScala))
+            .map(bodyWithCleanup => RequestResult.Response(s.copy(body = Some(bodyWithCleanup))))
+        case other => cleanupRawValues(rawValues.asScala).map(_ => other)
+      }
+  }
+
+  private def cleanupRawValues(rawValues: Iterable[RawValue[?]]): F[Unit] =
+    rawValues.foldLeft(monad.unit(()))((u, rv) => u.flatMap(_ => cleanupRawValue(rv)))
+
+  private def cleanupRawValue(rawValue: RawValue[?]): F[Unit] = {
+    def cleanupFiles = rawValue.createdFiles.foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
+    rawValue.cleanup match {
+      case Some(cleanup) => cleanupFiles.flatMap(_ => monad.blocking(cleanup()))
+      case None          => cleanupFiles
+    }
   }
 
   private def decodeBody(
       request: ServerRequest,
       result: DecodeBasicInputsResult,
-      endpointInfo: EndpointInfo
+      endpointInfo: EndpointInfo,
+      addRawValue: RawValue[?] => Unit
   ): F[DecodeBasicInputsResult] =
     result match {
       case values: DecodeBasicInputsResult.Values =>
@@ -158,7 +186,7 @@ class ServerInterpreter[R, F[_], B, S](
         values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
-              case Some(Left(body))                                          => decodeBody(request, values, body, maxBodyLength)
+              case Some(Left(body)) => decodeBody(request, values, body, maxBodyLength, addRawValue)
               case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body, maxBodyLength)
               case None                                                      => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
@@ -184,17 +212,16 @@ class ServerInterpreter[R, F[_], B, S](
       request: ServerRequest,
       values: DecodeBasicInputsResult.Values,
       bodyInput: EndpointIO.Body[RAW, T],
-      maxBodyLength: Option[Long]
+      maxBodyLength: Option[Long],
+      addRawValue: RawValue[?] => Unit
   ): F[DecodeBasicInputsResult] = {
     requestBody
       .toRaw(request, bodyInput.bodyType, maxBodyLength)
       .flatMap { v =>
+        addRawValue(v)
         bodyInput.codec.decode(v.value) match {
-          case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
-          case failure: DecodeResult.Failure =>
-            v.createdFiles
-              .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f.file)))
-              .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
+          case DecodeResult.Value(bodyV)     => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
+          case failure: DecodeResult.Failure => (DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult).unit
         }
       }
       // if the exception is "known" - might be the result of a malformed body - treating as a decode failure
