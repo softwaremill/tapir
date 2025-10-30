@@ -1049,8 +1049,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.4.1",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.4.1",
+      "io.prometheus" % "prometheus-metrics-core" % "1.4.2",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.4.2",
       scalaTest.value % Test
     )
   )
@@ -1347,7 +1347,7 @@ lazy val pekkoGrpcServer: ProjectMatrix = (projectMatrix in file("server/pekko-g
   .settings(
     name := "tapir-pekko-grpc-server",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1"
+      "org.apache.pekko" %% "pekko-grpc-runtime" % "1.2.0"
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
@@ -1507,7 +1507,7 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
 // Play 2.9 Server
 lazy val play29Scala2Deps = Map(
   "com.typesafe.akka" -> ("2.6.21", Seq("akka-actor", "akka-actor-typed", "akka-slf4j", "akka-serialization-jackson", "akka-stream")),
-  "com.typesafe" -> ("0.6.1", Seq("ssl-config-core")),
+  "com.typesafe" -> ("0.7.1", Seq("ssl-config-core")),
   "com.fasterxml.jackson.module" -> ("2.14.3", Seq("jackson-module-scala"))
 )
 
@@ -2033,7 +2033,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
           case Some((3, _)) => Nil
-          case _ =>
+          case _            =>
             Seq(
               "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
               "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test,
@@ -2081,7 +2081,7 @@ lazy val sttpClient4: ProjectMatrix = (projectMatrix in file("client/sttp-client
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
           case Some((3, _)) => Nil
-          case _ =>
+          case _            =>
             Seq(
               "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
               "com.softwaremill.sttp.client4" %% "akka-http-backend" % Versions.sttp4 % Test,

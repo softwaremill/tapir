@@ -6,11 +6,14 @@ on:
     branches:
       - master
 
+permissions:
+  contents: write # needed to submit the dependency graph
+
 jobs:
   update-graph:
     name: Update Dependency Graph
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: sbt/setup-sbt@v1
-      - uses: scalacenter/sbt-dependency-submission@v3
+      - uses: sbt/setup-sbt@3e125ece5c3e5248e18da9ed8d2cce3d335ec8dd # v1, specifically v1.1.14
+      - uses: scalacenter/sbt-dependency-submission@64084844d2b0a9b6c3765f33acde2fbe3f5ae7d3 # v3, specifically v3.1.0

@@ -121,7 +121,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
       partType: RawBodyType[R]
   ): F[Part[R]] = {
     data match {
-      case httpData: HttpData => toRawPartHttpData(serverRequest, httpData, partType)
+      case httpData: HttpData  => toRawPartHttpData(serverRequest, httpData, partType)
       case unsupportedDataType =>
         monad.error(new UnsupportedOperationException(s"Unsupported multipart data type: $unsupportedDataType in part ${data.getName}"))
     }
