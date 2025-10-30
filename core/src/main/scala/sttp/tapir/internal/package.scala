@@ -228,11 +228,6 @@ package object internal {
     def mediaTypeWithCharset: MediaType = body.codec.format.mediaType.copy(charset = body.wrapped.charset.map(_.name()))
   }
 
-  private[tapir] def addValidatorShow(s: String, schema: Schema[?]): String = schema.showValidators match {
-    case None     => s
-    case Some(sv) => s"$s($sv)"
-  }
-
   private[tapir] def showMultiple(et: Vector[EndpointTransput[?]]): String = {
     val et2 = et.filter {
       case _: EndpointIO.Empty[?] => false

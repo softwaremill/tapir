@@ -183,7 +183,7 @@ object EndpointInput extends EndpointInputMacros {
     override private[tapir] type L = String
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[String, U, TextPlain], i: Info[U]): PathCapture[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.schema)
+    override def show: String = s"/[${name.getOrElse("")}]"
 
     def name(n: String): PathCapture[T] = copy(name = Some(n))
   }
@@ -202,7 +202,7 @@ object EndpointInput extends EndpointInputMacros {
     override private[tapir] type CF = CodecFormat
     override private[tapir] def copyWith[U](c: Codec[List[String], U, CodecFormat], i: Info[U]): Query[U] =
       copy(flagValue = flagValue.map(t => c.decode(codec.encode(t))).collect { case DecodeResult.Value(u) => u }, codec = c, info = i)
-    override def show: String = addValidatorShow(s"?$name", codec.schema)
+    override def show: String = s"?$name"
 
     /** Indicates that this query parameter can be used as a flag in the URI (that is, the query string will contain just the name, without
       * a value). When used as a flag, its decoded value is `v`.
@@ -224,7 +224,7 @@ object EndpointInput extends EndpointInputMacros {
     override private[tapir] type L = Option[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[Option[String], U, TextPlain], i: Info[U]): Cookie[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"{cookie $name}", codec.schema)
+    override def show: String = s"{cookie $name}"
   }
 
   case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain], info: Info[T]) extends Atom[T] {
@@ -477,7 +477,7 @@ object EndpointIO {
         case _                               => ""
       }
       val format = codec.format.mediaType
-      addValidatorShow(s"{body as $format$charset}", codec.schema)
+      s"{body as $format$charset}"
     }
   }
 
@@ -529,7 +529,7 @@ object EndpointIO {
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Header[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"{header $name}", codec.schema)
+    override def show: String = s"{header $name}"
   }
 
   case class Headers[T](codec: Codec[List[sttp.model.Header], T, TextPlain], info: Info[T]) extends Atom[T] {
