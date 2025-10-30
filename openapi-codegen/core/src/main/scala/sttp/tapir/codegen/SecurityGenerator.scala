@@ -90,10 +90,10 @@ object SecurityGenerator {
             Seq((s"""auth.apiKey($in[${wrap("String")}]("$name"))""", schemeName, schemeName))
 
           case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeOAuth2Type(flows)) if flows.isEmpty => Nil
-          case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeOAuth2Type(flows)) =>
+          case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeOAuth2Type(flows))                  =>
             flows.map {
-              case (_, _) if multi              => (s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName)
-              case (OAuth2FlowType.password, _) => (s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName)
+              case (_, _) if multi                => (s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName)
+              case (OAuth2FlowType.password, _)   => (s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName)
               case (OAuth2FlowType.`implicit`, f) =>
                 val authUrl = f.authorizationUrl.getOrElse(bail("authorizationUrl required for implicit flow"))
                 val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
@@ -118,7 +118,7 @@ object SecurityGenerator {
     inner().distinct match {
       case Nil                          => SecurityDefn(None, None, None)
       case Seq((h, authType, _)) +: Nil => SecurityDefn(Some(s".securityIn($h)"), Some(typeFromAuthType(authType)), None)
-      case s =>
+      case s                            =>
         def handleMultiple = {
           val isMultiOr: Boolean = s.count(_.nonEmpty) > 1
           def wrapT(s: String): String = if (isMultiOr || securityIsOptional) s"Option[$s]" else s

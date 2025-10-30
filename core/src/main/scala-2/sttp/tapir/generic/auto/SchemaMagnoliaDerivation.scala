@@ -61,10 +61,10 @@ trait SchemaMagnoliaDerivation {
 
   private def enrichSchema[X](schema: Schema[X], annotations: Seq[Any]): Schema[X] = {
     annotations.foldLeft(schema) {
-      case (schema, ann: Schema.annotations.description)    => schema.description(ann.text)
-      case (schema, ann: Schema.annotations.encodedExample) => schema.encodedExample(ann.example)
-      case (schema, ann: Schema.annotations.default[X])     => schema.default(ann.default, ann.encoded)
-      case (schema, ann: Schema.annotations.validate[X])    => schema.validate(ann.v)
+      case (schema, ann: Schema.annotations.description)     => schema.description(ann.text)
+      case (schema, ann: Schema.annotations.encodedExample)  => schema.encodedExample(ann.example)
+      case (schema, ann: Schema.annotations.default[X])      => schema.default(ann.default, ann.encoded)
+      case (schema, ann: Schema.annotations.validate[X])     => schema.validate(ann.v)
       case (schema, ann: Schema.annotations.validateEach[X]) =>
         schema.modifyUnsafe(Schema.ModifyCollectionElements)((_: Schema[X]).validate(ann.v))
       case (schema, ann: Schema.annotations.format)    => schema.format(ann.format)

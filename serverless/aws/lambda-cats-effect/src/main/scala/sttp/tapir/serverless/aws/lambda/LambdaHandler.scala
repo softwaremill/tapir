@@ -32,12 +32,12 @@ abstract class LambdaHandler[F[_]: Sync, R: Decoder](options: AwsServerOptions[F
       allBytes <- Sync[F].blocking(input.readAllBytes())
       decoded <- Sync[F].delay(decode[R](new String(allBytes, StandardCharsets.UTF_8)))
       response <- decoded match {
-        case Left(e) => Sync[F].pure(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
+        case Left(e)           => Sync[F].pure(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
         case Right(awsRequest) =>
           awsRequest match {
             case r: AwsRequestV1 => server.toRoute(getAllEndpoints)(r.toV2)
             case r: AwsRequest   => server.toRoute(getAllEndpoints)(r)
-            case r =>
+            case r               =>
               Sync[F].raiseError[AwsResponse](
                 new IllegalArgumentException(s"Request of type ${r.getClass.getCanonicalName} is not suppoerted")
               )

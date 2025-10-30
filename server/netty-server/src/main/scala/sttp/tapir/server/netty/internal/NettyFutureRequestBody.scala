@@ -39,7 +39,8 @@ private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Fut
       case _                      => monad.unit(()) // Empty request
     }
 
-  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): Future[Unit] = Future.failed(new UnsupportedOperationException("Multipart requests are not supported"))
+  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): Future[Unit] =
+    Future.failed(new UnsupportedOperationException("Multipart requests are not supported"))
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException()
