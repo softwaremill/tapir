@@ -113,7 +113,7 @@ trait PlayServerInterpreter {
               response.body match {
                 case Some(Left(flow))    => Right(flow)
                 case Some(Right(entity)) => Left(Result(ResponseHeader(status, headers), entity))
-                case None =>
+                case None                =>
                   if (serverRequest.method.is(Method.HEAD) && response.contentLength.isDefined)
                     Left(
                       Result(

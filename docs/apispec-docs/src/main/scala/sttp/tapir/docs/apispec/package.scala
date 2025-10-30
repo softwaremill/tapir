@@ -33,7 +33,7 @@ package object apispec {
     // #3581: if there's a delimiter and the encoded value is a string, the codec will have produced a final
     // representation (with the delimiter applied), but in the docs we want to show the split values
     val rawDelimited = schema.attribute(Schema.Delimiter.Attribute) match {
-      case None => raw
+      case None                      => raw
       case Some(Schema.Delimiter(d)) =>
         raw match {
           case s: String       => s.split(d).toSeq

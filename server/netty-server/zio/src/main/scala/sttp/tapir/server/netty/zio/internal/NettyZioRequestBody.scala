@@ -38,5 +38,6 @@ private[zio] class NettyZioRequestBody[Env](
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): RIO[Env, Unit] =
     toStream(serverRequest, maxBytes).run(ZSink.fromFile(file)).map(_ => ())
 
-  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): RIO[Env, Unit] = ZIO.die(new UnsupportedOperationException("Multipart requests are not supported"))
+  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): RIO[Env, Unit] =
+    ZIO.die(new UnsupportedOperationException("Multipart requests are not supported"))
 }
