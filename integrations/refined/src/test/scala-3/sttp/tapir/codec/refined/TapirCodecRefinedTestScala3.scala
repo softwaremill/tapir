@@ -190,4 +190,32 @@ class TapirCodecRefinedTestScala3 extends AnyFlatSpec with Matchers with TapirCo
     }
   }
 
+  // #4895: show tests
+
+  {
+    import eu.timepit.refined.api._
+    import eu.timepit.refined.string._
+    import eu.timepit.refined._
+    import sttp.tapir._
+    import sttp.tapir.generic.auto._
+
+    type NumRegex = MatchesRegex["""\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d"""]
+    case class Numbers(a: String Refined NumRegex, b: String Refined NumRegex)
+    object Numbers {
+      implicit lazy val schema: Schema[Numbers] = Schema.derived
+    }
+
+    val instance = endpoint.post
+      .tag("test")
+      .in("numbers")
+      .in(formBody[Numbers])
+
+    "show" should "not include validator information" in {
+      instance.show shouldBe "POST /numbers {body as application/x-www-form-urlencoded (UTF-8)} -> -/-"
+    }
+
+    "showDetail" should "include validator information" in {
+      instance.showDetail shouldBe """Endpoint(securityin: -, in: POST /numbers {body as application/x-www-form-urlencoded (UTF-8)}(a->(~\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d),b->(~\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d)), errout: -, out: -)"""
+    }
+  }
 }
