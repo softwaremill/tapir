@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import sttp.model.{ContentTypeRange, MediaType, Method}
+import sttp.model.{ContentTypeRange, HeaderNames, MediaType, Method}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.BinaryTupleOp
@@ -175,6 +175,8 @@ package object internal {
       case b: EndpointIO.Body[?, ?]              => Vector(b.mediaTypeWithCharset)
       case EndpointIO.OneOfBody(variants, _)     => variants.map(_.mediaTypeWithCharset).toVector
       case b: EndpointIO.StreamBodyWrapper[?, ?] => Vector(b.mediaTypeWithCharset)
+      case EndpointIO.FixedHeader(h, _, _) if h.name.equalsIgnoreCase(HeaderNames.ContentType) =>
+        MediaType.parse(h.value).toOption.toVector
     }
 
     def hasOptionalBodyMatchingContent(content: MediaType): Boolean = {
@@ -231,12 +233,12 @@ package object internal {
     case Some(sv) => s"$s($sv)"
   }
 
-  private[tapir] def showMultiple(et: Vector[EndpointTransput[?]]): String = {
+  private[tapir] def showMultiple(et: Vector[EndpointTransput[?]], doShow: EndpointTransput[?] => String): String = {
     val et2 = et.filter {
       case _: EndpointIO.Empty[?] => false
       case _                      => true
     }
-    if (et2.isEmpty) "-" else et2.map(_.show).mkString(" ")
+    if (et2.isEmpty) "-" else et2.map(doShow).mkString(" ")
   }
 
   private[tapir] def showOneOf(mappings: List[String]): String = mappings.distinct match {

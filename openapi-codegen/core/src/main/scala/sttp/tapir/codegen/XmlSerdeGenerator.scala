@@ -118,7 +118,7 @@ object XmlSerdeGenerator {
               case s              => Some(s.mkString("\n"))
             }
             val decoderDefn = maybeElemSeqDecoders match {
-              case None => s"deriveConfiguredDecoder[$ref]"
+              case None    => s"deriveConfiguredDecoder[$ref]"
               case Some(e) =>
                 s"""{
                    |${indent(2)(e)}
@@ -126,7 +126,7 @@ object XmlSerdeGenerator {
                    |}""".stripMargin
             }
             val encoderDefn = maybeElemSeqEncoders match {
-              case None => s"deriveConfiguredEncoder[$ref]"
+              case None    => s"deriveConfiguredEncoder[$ref]"
               case Some(e) =>
                 s"""{
                    |${indent(2)(e)}

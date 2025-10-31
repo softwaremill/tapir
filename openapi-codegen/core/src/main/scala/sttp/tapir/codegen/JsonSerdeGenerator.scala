@@ -35,7 +35,7 @@ object JsonSerdeGenerator {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
 
     jsonSerdeLib match {
-      case JsonSerdeLib.Circe => genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs)
+      case JsonSerdeLib.Circe    => genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs)
       case JsonSerdeLib.Jsoniter =>
         genJsoniterSerdes(
           doc,

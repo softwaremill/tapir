@@ -41,8 +41,8 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
         body.through(decodeWithCharset(charset.map(_.nioCharset).getOrElse(defaultCharset))).compile.string.map(RawValue(_))
-      case RawBodyType.ByteArrayBody  => asByteArray.map(RawValue(_))
-      case RawBodyType.ByteBufferBody => asChunk.map(c => RawValue(c.toByteBuffer))
+      case RawBodyType.ByteArrayBody   => asByteArray.map(RawValue(_))
+      case RawBodyType.ByteBufferBody  => asChunk.map(c => RawValue(c.toByteBuffer))
       case RawBodyType.InputStreamBody =>
         toInputStreamResource(body).allocated.map { case (is, _) => RawValue(is) }
       case RawBodyType.InputStreamRangeBody =>
@@ -59,7 +59,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
           .value
           .flatMap {
             case Left(failure) => Sync[F].raiseError(failure)
-            case Right(mp) =>
+            case Right(mp)     =>
               val rawPartsF: Vector[F[RawPart]] = mp.parts
                 .flatMap(part => part.name.flatMap(name => m.partType(name)).map((part, _)).toList)
                 .map { case (part, codecMeta) => toRawPart(serverRequest, part, codecMeta).asInstanceOf[F[RawPart]] }

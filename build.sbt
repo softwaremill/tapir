@@ -1049,8 +1049,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.4.1",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.4.1",
+      "io.prometheus" % "prometheus-metrics-core" % "1.4.2",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.4.2",
       scalaTest.value % Test
     )
   )
@@ -1347,7 +1347,7 @@ lazy val pekkoGrpcServer: ProjectMatrix = (projectMatrix in file("server/pekko-g
   .settings(
     name := "tapir-pekko-grpc-server",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-grpc-runtime" % "1.1.1"
+      "org.apache.pekko" %% "pekko-grpc-runtime" % "1.2.0"
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
@@ -1507,7 +1507,7 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
 // Play 2.9 Server
 lazy val play29Scala2Deps = Map(
   "com.typesafe.akka" -> ("2.6.21", Seq("akka-actor", "akka-actor-typed", "akka-slf4j", "akka-serialization-jackson", "akka-stream")),
-  "com.typesafe" -> ("0.6.1", Seq("ssl-config-core")),
+  "com.typesafe" -> ("0.7.1", Seq("ssl-config-core")),
   "com.fasterxml.jackson.module" -> ("2.14.3", Seq("jackson-module-scala"))
 )
 
@@ -1558,9 +1558,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
       "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams,
       "org.apache.httpcomponents" % "httpmime" % "4.5.14",
       slf4j
-    ),
-    // needed because of https://github.com/coursier/coursier/issues/2016
-    useCoursier := false
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore, serverTests % Test)
@@ -1570,8 +1568,6 @@ lazy val nettyServerSync: ProjectMatrix =
     .settings(commonSettings)
     .settings(
       name := "tapir-netty-server-sync",
-      // needed because of https://github.com/coursier/coursier/issues/2016
-      useCoursier := false,
       Test / run / fork := true,
       libraryDependencies ++= Seq(
         "com.softwaremill.ox" %% "core" % Versions.ox,
@@ -1602,9 +1598,7 @@ def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
   ProjectMatrix(s"nettyServer${proj.capitalize}", file(s"server/netty-server/$proj"))
     .settings(commonSettings)
     .settings(
-      name := s"tapir-netty-server-$proj",
-      // needed because of https://github.com/coursier/coursier/issues/2016
-      useCoursier := false
+      name := s"tapir-netty-server-$proj"
     )
     .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
     .dependsOn(nettyServer, dependency, serverTests % Test)
@@ -2033,7 +2027,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
           case Some((3, _)) => Nil
-          case _ =>
+          case _            =>
             Seq(
               "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
               "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test,
@@ -2081,7 +2075,7 @@ lazy val sttpClient4: ProjectMatrix = (projectMatrix in file("client/sttp-client
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
           case Some((3, _)) => Nil
-          case _ =>
+          case _            =>
             Seq(
               "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
               "com.softwaremill.sttp.client4" %% "akka-http-backend" % Versions.sttp4 % Test,
@@ -2297,9 +2291,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
-    ),
-    // needed because of https://github.com/coursier/coursier/issues/2016
-    useCoursier := false
+    )
   )
   .jvmPlatform(scalaVersions = List(documentationScalaVersion), settings = commonJvmSettings)
   .dependsOn(

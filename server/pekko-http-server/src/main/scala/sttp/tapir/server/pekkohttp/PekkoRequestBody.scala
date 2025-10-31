@@ -38,9 +38,9 @@ private[pekkohttp] class PekkoRequestBody(serverOptions: PekkoHttpServerOptions)
       bodyType: RawBodyType[R]
   ): Future[RawValue[R]] = {
     bodyType match {
-      case RawBodyType.StringBody(_)  => implicitly[FromEntityUnmarshaller[String]].apply(body).map(RawValue(_))
-      case RawBodyType.ByteArrayBody  => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(RawValue(_))
-      case RawBodyType.ByteBufferBody => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(b => RawValue(b.asByteBuffer))
+      case RawBodyType.StringBody(_)   => implicitly[FromEntityUnmarshaller[String]].apply(body).map(RawValue(_))
+      case RawBodyType.ByteArrayBody   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(RawValue(_))
+      case RawBodyType.ByteBufferBody  => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(b => RawValue(b.asByteBuffer))
       case RawBodyType.InputStreamBody =>
         Future.successful(RawValue(body.dataBytes.runWith(StreamConverters.asInputStream())))
       case RawBodyType.FileBody =>

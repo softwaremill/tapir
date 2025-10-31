@@ -38,7 +38,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
       case EndpointIO.Empty(_, _)                   => ov
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name, header.value)
-      case EndpointIO.Body(rawBodyType, codec, _) =>
+      case EndpointIO.Body(rawBodyType, codec, _)   =>
         val maybeCharset = if (codec.format.mediaType.isText) charset(rawBodyType) else None
         ov.withBody(headers => rawToResponseBody.fromRawValue(encodedC(codec), headers, codec.format, rawBodyType))
           .withDefaultContentType(codec.format, maybeCharset)
@@ -55,7 +55,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         encodedC[List[sttp.model.Header]](codec).foldLeft(ov)((ov2, h) => ov2.withHeader(h.name, h.value))
       case EndpointIO.MappedPair(wrapped, mapping) => apply(wrapped, ParamsAsAny(encodedM[Any](mapping)), ov)
       case EndpointOutput.StatusCode(_, codec, _)  => ov.withStatusCode(encodedC[StatusCode](codec))
-      case EndpointOutput.WebSocketBodyWrapper(o) =>
+      case EndpointOutput.WebSocketBodyWrapper(o)  =>
         ov.withBody(_ =>
           rawToResponseBody.fromWebSocketPipe(
             encodedC[rawToResponseBody.streams.Pipe[Any, Any]](o.codec),
