@@ -30,10 +30,10 @@ dependency:
 
 ```scala
 // used below, sttp-client v4
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.12.0"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.12.1"
 
 // for sttp-client v3
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.12.0"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.12.1"
 ```
 
 Let's assume you are using the [pekko http](server/pekkohttp.md) interpreter. Given the following server endpoint:
@@ -150,10 +150,10 @@ Similarly as when testing server interpreters, add the dependency:
 
 ```scala
 // used below, sttp-client v4
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.12.0"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.12.1"
 
 // for sttp-client v3
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.12.0"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.12.1"
 ```
 
 And the following imports:
@@ -207,7 +207,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.12.0"
+"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.12.1"
 ```
 
 Imports:
@@ -282,7 +282,7 @@ result == out
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.12.0"
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.12.1"
 ```
 
 ### Shadowed endpoints
@@ -405,7 +405,7 @@ The `OpenAPIVerifier` provides utilities for verifying that client and server en
 To use the `OpenAPIVerifier`, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-verifier" % "1.12.0"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-verifier" % "1.12.1"
 ```
 
 The `OpenAPIVerifier` supports two key verification scenarios:
