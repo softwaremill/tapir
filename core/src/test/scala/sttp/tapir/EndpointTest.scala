@@ -434,4 +434,20 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       formBody[Wrapper]
     """)
   }
+
+  "show" should "provide a compact representation of the endpoint" in {
+    endpoint.post
+      .in("p1")
+      .in(auth.apiKey(query[String]("par2")))
+      .in(path[Int]("par3").validate(Validator.min(1)))
+      .show shouldBe "POST /p1 /[par3] ?par2 -> -/-"
+  }
+
+  "showDetail" should "provide a detailed representation of the endpoint" in {
+    endpoint.post
+      .in("p1")
+      .in(auth.apiKey(query[String]("par2")))
+      .in(path[Int]("par3").validate(Validator.min(1)))
+      .showDetail shouldBe "Endpoint(securityin: -, in: POST /p1 auth(api key, via ?par2) /[par3](>=1), errout: -, out: -)"
+  }
 }
