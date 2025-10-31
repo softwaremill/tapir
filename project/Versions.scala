@@ -1,5 +1,5 @@
 object Versions {
-  val http4s = "0.23.31"
+  val http4s = "0.23.33"
   val http4sBlazeServer = "0.23.17"
   val http4sBlazeClient = "0.23.17"
   val catsCore = "2.13.0"
@@ -66,7 +66,7 @@ object Versions {
   val openTelemetrySemconvVersion = "1.37.0"
   val mockServer = "5.15.0"
   val dogstatsdClient = "4.4.5"
-  val nettyAll = "4.2.0.Final"
+  val nettyAll = "4.2.7.Final"
   val logback = "1.5.20"
   val slf4j = "2.0.17"
   val jsoniter = "2.35.3"
