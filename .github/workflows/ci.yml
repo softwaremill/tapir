@@ -17,7 +17,7 @@ jobs:
     if: |
       github.event_name == 'push' || 
       github.event.pull_request.head.repo.full_name != github.repository ||
-      github.event.pull_request.user.login == 'github-actions[bot]'
+      github.event.pull_request.user.login == 'softwaremill-ci'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -53,7 +53,7 @@ jobs:
         sam --version
     - name: Install NPM
       if: matrix.java == '11'
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: 18
     - run: npm --version
@@ -195,14 +195,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   label:
-    # only for PRs by github-actions[bot]
-    if: github.event.pull_request.user.login == 'github-actions[bot]'
+    # only for PRs by softwaremill-ci
+    if: github.event.pull_request.user.login == 'softwaremill-ci'
     uses: softwaremill/github-actions-workflows/.github/workflows/label.yml@main
     secrets: inherit
 
   auto-merge-github-actions:
-    # only for PRs by github-actions[bot]
-    if: github.event.pull_request.user.login == 'github-actions[bot]'
+    # only for PRs by softwaremill-ci
+    if: github.event.pull_request.user.login == 'softwaremill-ci'
     needs: [ ci, mima, label ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
     secrets: inherit
