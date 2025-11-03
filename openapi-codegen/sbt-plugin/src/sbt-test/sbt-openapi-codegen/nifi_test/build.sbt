@@ -5,7 +5,6 @@ lazy val root = (project in file("."))
     version := "0.1",
     openapiStreamingImplementation := "pekko",
     openapiGenerateEndpointTypes := true,
-    openapiMaxSchemasPerFile := 20,
   )
 
 val tapirVersion = "1.11.50"
