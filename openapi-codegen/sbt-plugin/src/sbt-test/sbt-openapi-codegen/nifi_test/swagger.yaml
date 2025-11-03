@@ -70,7 +70,6 @@ paths:
             text/plain:
               schema:
                 type: string
-          description:
         "400":
           description: NiFi was unable to complete the request because it was invalid.
             The request should not be retried without modification.
@@ -145,10 +144,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write Source - /{component-type}/{uuid}: [ ]
-        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
-        - Write Destination - /{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Write Source - /{component-type}/{uuid}: [ ]
+      #        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
+      #        - Write Destination - /{component-type}/{uuid}: [ ]
       summary: Deletes a connection
       tags:
         - Connections
@@ -179,9 +178,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read Source - /{component-type}/{uuid}: [ ]
-        - Read Destination - /{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Source - /{component-type}/{uuid}: [ ]
+      #        - Read Destination - /{component-type}/{uuid}: [ ]
       summary: Gets a connection
       tags:
         - Connections
@@ -219,11 +218,11 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write Source - /{component-type}/{uuid}: [ ]
-        - Write Destination - /{component-type}/{uuid}: [ ]
-        - Write New Destination - /{component-type}/{uuid} - if updating Destination: [ ]
-        - Write Process Group - /process-groups/{uuid} - if updating Destination: [ ]
+      security: [ ]
+      #        - Write Source - /{component-type}/{uuid}: [ ]
+      #        - Write Destination - /{component-type}/{uuid}: [ ]
+      #        - Write New Destination - /{component-type}/{uuid} - if updating Destination: [ ]
+      #        - Write Process Group - /process-groups/{uuid} - if updating Destination: [ ]
       summary: Updates a connection
       tags:
         - Connections
@@ -274,11 +273,11 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller-services/{uuid}: [ ]
-        - Write - Parent Process Group if scoped by Process Group - /process-groups/{uuid}: [ ]
-        - Write - Controller if scoped by Controller - /controller: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /controller-services/{uuid}: [ ]
+      #        - Write - Parent Process Group if scoped by Process Group - /process-groups/{uuid}: [ ]
+      #        - Write - Controller if scoped by Controller - /controller: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
       summary: Deletes a controller service
       tags:
         - Controller Services
@@ -319,8 +318,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /controller-services/{uuid}: [ ]
       summary: Gets a controller service
       tags:
         - Controller Services
@@ -358,9 +357,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller-services/{uuid}: [ ]
-        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /controller-services/{uuid}: [ ]
+      #        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
       summary: Updates a controller service
       tags:
         - Controller Services
@@ -399,8 +398,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /controller-services/{uuid}: [ ]
       summary: "Performs analysis of the component's configuration, providing information\
         \ about which attributes are referenced."
       tags:
@@ -448,8 +447,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /controller-services/{uuid}: [ ]
       summary: Performs verification of the Controller Service's configuration
       tags:
         - Controller Services
@@ -493,8 +492,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Verification Request with the given ID
       tags:
         - Controller Services
@@ -536,8 +535,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Verification Request with the given ID
       tags:
         - Controller Services
@@ -580,8 +579,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /controller-services/{uuid}: [ ]
       summary: Gets a controller service property descriptor
       tags:
         - Controller Services
@@ -613,8 +612,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /controller-services/{uuid}: [ ]
       summary: Gets a controller service
       tags:
         - Controller Services
@@ -652,8 +651,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /{component-type}/{uuid} or /operate/{component-type}/{uuid} - For each referencing component specified: [ ]
+      security: [ ]
+      #        - Write - /{component-type}/{uuid} or /operate/{component-type}/{uuid} - For each referencing component specified: [ ]
       summary: Updates a controller services references
       tags:
         - Controller Services
@@ -692,8 +691,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller-services/{uuid} or /operation/controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /controller-services/{uuid} or /operation/controller-services/{uuid}: [ ]
       summary: Updates run status of a controller service
       tags:
         - Controller Services
@@ -725,8 +724,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /controller-services/{uuid}: [ ]
       summary: Gets the state for a controller service
       tags:
         - Controller Services
@@ -768,8 +767,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /controller-services/{uuid}: [ ]
       summary: Clears the state for a controller service
       tags:
         - Controller Services
@@ -799,8 +798,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
       summary: Creates a new bulletin
       tags:
         - Controller
@@ -825,8 +824,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Gets the contents of the cluster
       tags:
         - Controller
@@ -858,8 +857,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
       summary: Removes a node from the cluster
       tags:
         - Controller
@@ -890,8 +889,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Gets a node in the cluster
       tags:
         - Controller
@@ -930,8 +929,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
       summary: Updates a node in the cluster
       tags:
         - Controller
@@ -954,8 +953,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Retrieves the configuration for this NiFi Controller
       tags:
         - Controller
@@ -984,8 +983,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
       summary: Retrieves the configuration for this NiFi
       tags:
         - Controller
@@ -1015,10 +1014,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
-        - Write - if the Controller Service is restricted - /restricted-components: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      #        - Write - if the Controller Service is restricted - /restricted-components: [ ]
       summary: Creates a new controller service
       tags:
         - Controller
@@ -1041,8 +1040,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets all flow analysis rules
       tags:
         - Controller
@@ -1071,10 +1070,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
-        - Write - if the Flow Analysis Rule is restricted - /restricted-components: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      #        - Write - if the Flow Analysis Rule is restricted - /restricted-components: [ ]
       summary: Creates a new flow analysis rule
       tags:
         - Controller
@@ -1125,10 +1124,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /flow-analysis-rules/{uuid}: [ ]
-        - Write - /controller: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /flow-analysis-rules/{uuid}: [ ]
+      #        - Write - /controller: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
       summary: Deletes a flow analysis rule
       tags:
         - Controller
@@ -1159,8 +1158,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow-analysis-rules/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /flow-analysis-rules/{uuid}: [ ]
       summary: Gets a flow analysis rule
       tags:
         - Controller
@@ -1198,9 +1197,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /flow-analysis-rules/{uuid}: [ ]
-        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /flow-analysis-rules/{uuid}: [ ]
+      #        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
       summary: Updates a flow analysis rule
       tags:
         - Controller
@@ -1239,8 +1238,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow-analysis-rules/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /flow-analysis-rules/{uuid}: [ ]
       summary: "Performs analysis of the component's configuration, providing information\
         \ about which attributes are referenced."
       tags:
@@ -1288,8 +1287,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow-analysis-rules/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /flow-analysis-rules/{uuid}: [ ]
       summary: Performs verification of the Flow Analysis Rule's configuration
       tags:
         - Controller
@@ -1333,8 +1332,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Verification Request with the given ID
       tags:
         - Controller
@@ -1376,8 +1375,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Verification Request with the given ID
       tags:
         - Controller
@@ -1420,8 +1419,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow-analysis-rules/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /flow-analysis-rules/{uuid}: [ ]
       summary: Gets a flow analysis rule property descriptor
       tags:
         - Controller
@@ -1460,8 +1459,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /flow-analysis-rules/{uuid} or  or /operation/flow-analysis-rules/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /flow-analysis-rules/{uuid} or  or /operation/flow-analysis-rules/{uuid}: [ ]
       summary: Updates run status of a flow analysis rule
       tags:
         - Controller
@@ -1493,8 +1492,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /flow-analysis-rules/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /flow-analysis-rules/{uuid}: [ ]
       summary: Gets the state for a flow analysis rule
       tags:
         - Controller
@@ -1536,8 +1535,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /flow-analysis-rules/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /flow-analysis-rules/{uuid}: [ ]
       summary: Clears the state for a flow analysis rule
       tags:
         - Controller
@@ -1567,8 +1566,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
       summary: Purges history
       tags:
         - Controller
@@ -1591,8 +1590,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Retrieves summary information for installed NARs
       tags:
         - Controller
@@ -1627,8 +1626,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
       summary: Uploads a NAR and requests for it to be installed
       tags:
         - Controller
@@ -1670,8 +1669,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
       summary: Deletes an installed NAR
       tags:
         - Controller
@@ -1700,8 +1699,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Retrieves the summary information for the NAR with the given identifier
       tags:
         - Controller
@@ -1732,8 +1731,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Retrieves the content of the NAR with the given id
       tags:
         - Controller
@@ -1763,8 +1762,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Retrieves the component types available from the installed NARs
       tags:
         - Controller
@@ -1794,10 +1793,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
-        - Write - if the Parameter Provider is restricted - /restricted-components: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      #        - Write - if the Parameter Provider is restricted - /restricted-components: [ ]
       summary: Creates a new parameter provider
       tags:
         - Controller
@@ -1822,8 +1821,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Gets the listing of available flow registry clients
       tags:
         - Controller
@@ -1852,9 +1851,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
-        - Write - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
+      #        - Write - /controller: [ ]
       summary: Creates a new flow registry client
       tags:
         - Controller
@@ -1905,8 +1904,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller/registry-clients/{id}: [ ]
+      security: [ ]
+      #        - Write - /controller/registry-clients/{id}: [ ]
       summary: Deletes a flow registry client
       tags:
         - Controller
@@ -1937,8 +1936,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller/registry-clients/{id}: [ ]
+      security: [ ]
+      #        - Read - /controller/registry-clients/{id}: [ ]
       summary: Gets a flow registry client
       tags:
         - Controller
@@ -1976,8 +1975,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller/registry-clients/{id}: [ ]
+      security: [ ]
+      #        - Write - /controller/registry-clients/{id}: [ ]
       summary: Updates a flow registry client
       tags:
         - Controller
@@ -2020,8 +2019,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller/registry-clients/{id}: [ ]
+      security: [ ]
+      #        - Read - /controller/registry-clients/{id}: [ ]
       summary: Gets a flow registry client property descriptor
       tags:
         - Controller
@@ -2046,8 +2045,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Retrieves the types of flow  that this NiFi supports
       tags:
         - Controller
@@ -2077,10 +2076,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
-        - Write - if the Reporting Task is restricted - /restricted-components: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      #        - Write - if the Reporting Task is restricted - /restricted-components: [ ]
       summary: Creates a new reporting task
       tags:
         - Controller
@@ -2111,8 +2110,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /controller: [ ]
+      security: [ ]
+      #        - Write - /controller: [ ]
       summary: Imports a reporting task snapshot
       tags:
         - Controller
@@ -2139,8 +2138,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /controller: [ ]
+      security: [ ]
+      #        - Read - /controller: [ ]
       summary: Gets status history for the node
       tags:
         - Controller
@@ -2178,8 +2177,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /counters: [ ]
+      security: [ ]
+      #        - Read - /counters: [ ]
       summary: Gets the current counters for this NiFi
       tags:
         - Counters
@@ -2203,8 +2202,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /counters: [ ]
+      security: [ ]
+      #        - Write - /counters: [ ]
       summary: Updates all counters. This will reset all counter values to 0
       tags:
         - Counters
@@ -2238,8 +2237,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /counters: [ ]
+      security: [ ]
+      #        - Write - /counters: [ ]
       summary: Updates the specified counter. This will reset the counter value to
         0
       tags:
@@ -2294,8 +2293,8 @@ paths:
         "503":
           description: "NiFi instance is not ready for serving request, or temporarily\
             \ overloaded. Retrying the same request later may be successful"
-      security:
-        - Write - /data-transfer/input-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /data-transfer/input-ports/{uuid}: [ ]
       summary: Commit or cancel the specified transaction
       tags:
         - DataTransfer
@@ -2335,8 +2334,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /data-transfer/input-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /data-transfer/input-ports/{uuid}: [ ]
       summary: Extend transaction TTL
       tags:
         - DataTransfer
@@ -2381,8 +2380,8 @@ paths:
         "503":
           description: "NiFi instance is not ready for serving request, or temporarily\
             \ overloaded. Retrying the same request later may be successful"
-      security:
-        - Write - /data-transfer/input-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /data-transfer/input-ports/{uuid}: [ ]
       summary: Transfer flow files to the input port
       tags:
         - DataTransfer
@@ -2445,8 +2444,8 @@ paths:
         "503":
           description: "NiFi instance is not ready for serving request, or temporarily\
             \ overloaded. Retrying the same request later may be successful"
-      security:
-        - Write - /data-transfer/output-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /data-transfer/output-ports/{uuid}: [ ]
       summary: Commit or cancel the specified transaction
       tags:
         - DataTransfer
@@ -2489,8 +2488,8 @@ paths:
         "503":
           description: "NiFi instance is not ready for serving request, or temporarily\
             \ overloaded. Retrying the same request later may be successful"
-      security:
-        - Write - /data-transfer/output-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /data-transfer/output-ports/{uuid}: [ ]
       summary: Extend transaction TTL
       tags:
         - DataTransfer
@@ -2537,8 +2536,8 @@ paths:
         "503":
           description: "NiFi instance is not ready for serving request, or temporarily\
             \ overloaded. Retrying the same request later may be successful"
-      security:
-        - Write - /data-transfer/output-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /data-transfer/output-ports/{uuid}: [ ]
       summary: Transfer flow files from the output port
       tags:
         - DataTransfer
@@ -2583,8 +2582,8 @@ paths:
         "503":
           description: "NiFi instance is not ready for serving request, or temporarily\
             \ overloaded. Retrying the same request later may be successful"
-      security:
-        - Write - /data-transfer/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /data-transfer/{component-type}/{uuid}: [ ]
       summary: Create a transaction to the specified output port or input port
       tags:
         - DataTransfer
@@ -2607,8 +2606,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves details about this NiFi to put in the About dialog
       tags:
         - Flow
@@ -2657,8 +2656,8 @@ paths:
           description: Client is not authorized to make this request.
         "404":
           description: The additional details for the coordinates could not be located.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the additional details for the specified component type.
       tags:
         - Flow
@@ -2681,8 +2680,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the banners for this NiFi
       tags:
         - Flow
@@ -2739,9 +2738,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
-        - Read - /{component-type}/{uuid} - For component specific bulletins: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
+      #        - Read - /{component-type}/{uuid} - For component specific bulletins: [ ]
       summary: Gets current bulletins
       tags:
         - Flow
@@ -2764,8 +2763,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Generates a client id.
       tags:
         - Flow
@@ -2800,8 +2799,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Searches the cluster for a node with the specified address
       tags:
         - Flow
@@ -2824,8 +2823,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: The cluster summary for this NiFi
       tags:
         - Flow
@@ -2848,8 +2847,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the configuration for this NiFi flow
       tags:
         - Flow
@@ -2893,8 +2892,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets statistics for a connection
       tags:
         - Flow
@@ -2938,8 +2937,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets status for a connection
       tags:
         - Flow
@@ -2971,8 +2970,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the status history for a connection
       tags:
         - Flow
@@ -2995,8 +2994,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the registered content viewers
       tags:
         - Flow
@@ -3046,8 +3045,8 @@ paths:
         "404":
           description: The controller service definition for the coordinates could
             not be located.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the Controller Service Definition for the specified component
         type.
       tags:
@@ -3113,8 +3112,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the types of controller services that this NiFi supports
       tags:
         - Flow
@@ -3139,11 +3138,11 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
-        - Read - /controller - For controller bulletins: [ ]
-        - Read - /controller-services/{uuid} - For controller service bulletins: [ ]
-        - Read - /reporting-tasks/{uuid} - For reporting task bulletins: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
+      #        - Read - /controller - For controller bulletins: [ ]
+      #        - Read - /controller-services/{uuid} - For controller service bulletins: [ ]
+      #        - Read - /reporting-tasks/{uuid} - For reporting task bulletins: [ ]
       summary: Retrieves Controller level bulletins
       tags:
         - Flow
@@ -3184,8 +3183,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets controller services for reporting tasks
       tags:
         - Flow
@@ -3198,8 +3197,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CurrentUserEntity"
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the user identity of the user making the request
       tags:
         - Flow
@@ -3249,8 +3248,8 @@ paths:
         "404":
           description: The flow analysis rule definition for the coordinates could
             not be located.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the Flow Analysis Rule Definition for the specified component
         type.
       tags:
@@ -3295,8 +3294,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the types of available Flow Analysis Rules
       tags:
         - Flow
@@ -3321,8 +3320,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Returns all flow analysis results currently in effect
       tags:
         - Flow
@@ -3355,8 +3354,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Returns flow analysis results produced by the analysis of a given process
         group
       tags:
@@ -3425,8 +3424,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets configuration history
       tags:
         - Flow
@@ -3460,9 +3459,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
-        - Read underlying component - /{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
+      #        - Read underlying component - /{component-type}/{uuid}: [ ]
       summary: Gets configuration history for a component
       tags:
         - Flow
@@ -3496,8 +3495,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets an action
       tags:
         - Flow
@@ -3541,8 +3540,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets status for an input port
       tags:
         - Flow
@@ -3557,9 +3556,9 @@ paths:
           required: true
           schema:
             type: string
-            enum:
-              - PROMETHEUS
-              - JSON
+        #            enum:
+        #              - PROMETHEUS
+        #              - JSON
         - description: Set of included metrics registries. Duplicate the parameter to
             include multiple registries. All registries are included by default.
           in: query
@@ -3608,8 +3607,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets all metrics for the flow from a particular node
       tags:
         - Flow
@@ -3653,8 +3652,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets status for an output port
       tags:
         - Flow
@@ -3677,8 +3676,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{id} for each Parameter Context: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{id} for each Parameter Context: [ ]
       summary: Gets all Parameter Contexts
       tags:
         - Flow
@@ -3728,8 +3727,8 @@ paths:
         "404":
           description: The reporting task definition for the coordinates could not
             be located.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the Parameter Provider Definition for the specified component
         type.
       tags:
@@ -3774,8 +3773,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the types of parameter providers that this NiFi supports
       tags:
         - Flow
@@ -3798,8 +3797,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets all parameter providers
       tags:
         - Flow
@@ -3824,8 +3823,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the types of prioritizers that this NiFi supports
       tags:
         - Flow
@@ -3867,8 +3866,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets a process group
       tags:
         - Flow
@@ -3907,9 +3906,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
-        - Write - /{component-type}/{uuid} or /operation/{component-type}/{uuid} - For every component being scheduled/unscheduled: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
+      #        - Write - /{component-type}/{uuid} or /operation/{component-type}/{uuid} - For every component being scheduled/unscheduled: [ ]
       summary: Schedule or unschedule components in the specified Process Group.
       tags:
         - Flow
@@ -3941,8 +3940,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the breadcrumbs for a process group
       tags:
         - Flow
@@ -4001,8 +4000,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets all controller services
       tags:
         - Flow
@@ -4041,9 +4040,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
-        - Write - /{component-type}/{uuid} or /operation/{component-type}/{uuid} - For every service being enabled/disabled: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
+      #        - Write - /{component-type}/{uuid} or /operation/{component-type}/{uuid} - For every service being enabled/disabled: [ ]
       summary: Enable or disable Controller Services in the specified Process Group.
       tags:
         - Flow
@@ -4097,8 +4096,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the status for a process group
       tags:
         - Flow
@@ -4130,8 +4129,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets status history for a remote process group
       tags:
         - Flow
@@ -4180,8 +4179,8 @@ paths:
           description: Client is not authorized to make this request.
         "404":
           description: The processor definition for the coordinates could not be located.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the Processor Definition for the specified component type.
       tags:
         - Flow
@@ -4225,8 +4224,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the types of processors that this NiFi supports
       tags:
         - Flow
@@ -4270,8 +4269,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets status for a processor
       tags:
         - Flow
@@ -4303,8 +4302,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets status history for a processor
       tags:
         - Flow
@@ -4329,8 +4328,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the listing of available flow registry clients
       tags:
         - Flow
@@ -4362,8 +4361,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the branches from the specified registry for the current user
       tags:
         - Flow
@@ -4401,13 +4400,12 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the buckets from the specified registry for the current user
       tags:
         - Flow
-  ? /flow/registries/{registry-id}/branches/{branch-id-a}/buckets/{bucket-id-a}/flows/{flow-id-a}/{version-a}/diff/branches/{branch-id-b}/buckets/{bucket-id-b}/flows/{flow-id-b}/{version-b}
-    :
+  /flow/registries/{registry-id}/branches/{branch-id-a}/buckets/{bucket-id-a}/flows/{flow-id-a}/{version-a}/diff/branches/{branch-id-b}/buckets/{bucket-id-b}/flows/{flow-id-b}/{version-b}:
     get:
       operationId: getVersionDifferences
       parameters:
@@ -4499,8 +4497,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: "Gets the differences between two versions of the same versioned flow,\
         \ the basis of the comparison will be the first version"
       tags:
@@ -4545,8 +4543,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the flows from the specified registry and bucket for the current
         user
       tags:
@@ -4597,8 +4595,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the details of a flow from the specified registry and bucket for
         the specified flow for the current user
       tags:
@@ -4649,8 +4647,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the flow versions from the specified registry and bucket for the
         specified flow for the current user
       tags:
@@ -4695,8 +4693,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets status for a remote process group
       tags:
         - Flow
@@ -4728,8 +4726,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the status history
       tags:
         - Flow
@@ -4779,8 +4777,8 @@ paths:
         "404":
           description: The reporting task definition for the coordinates could not
             be located.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the Reporting Task Definition for the specified component
         type.
       tags:
@@ -4825,8 +4823,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the types of reporting tasks that this NiFi supports
       tags:
         - Flow
@@ -4849,8 +4847,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets all reporting tasks
       tags:
         - Flow
@@ -4878,8 +4876,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Download a snapshot of the given reporting tasks and any controller
         services they use
       tags:
@@ -4907,8 +4905,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Get a snapshot of the given reporting tasks and any controller services
         they use
       tags:
@@ -4934,8 +4932,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Retrieves the runtime manifest for this NiFi instance.
       tags:
         - Flow
@@ -4970,8 +4968,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Performs a search against this NiFi using the specified search term
       tags:
         - Flow
@@ -4994,8 +4992,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /flow: [ ]
+      security: [ ]
+      #        - Read - /flow: [ ]
       summary: Gets the current status of this NiFi
       tags:
         - Flow
@@ -5029,8 +5027,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write Source Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Write Source Data - /data/{component-type}/{uuid}: [ ]
       summary: Creates a request to drop the contents of the queue in this connection.
       tags:
         - FlowFileQueues
@@ -5068,8 +5066,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write Source Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Write Source Data - /data/{component-type}/{uuid}: [ ]
       summary: Cancels and/or removes a request to drop the contents of this connection.
       tags:
         - FlowFileQueues
@@ -5106,8 +5104,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write Source Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Write Source Data - /data/{component-type}/{uuid}: [ ]
       summary: Gets the current status of a drop request for the specified connection.
       tags:
         - FlowFileQueues
@@ -5150,8 +5148,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read Source Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Source Data - /data/{component-type}/{uuid}: [ ]
       summary: Gets a FlowFile from a Connection.
       tags:
         - FlowFileQueues
@@ -5209,8 +5207,8 @@ paths:
             to process it.
         "416":
           description: Requested Range Not Satisfiable based on bytes requested
-      security:
-        - Read Source Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Source Data - /data/{component-type}/{uuid}: [ ]
       summary: Gets the content for a FlowFile in a Connection.
       tags:
         - FlowFileQueues
@@ -5244,8 +5242,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read Source Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Source Data - /data/{component-type}/{uuid}: [ ]
       summary: Lists the contents of the queue in this connection.
       tags:
         - FlowFileQueues
@@ -5283,8 +5281,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read Source Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Source Data - /data/{component-type}/{uuid}: [ ]
       summary: Cancels and/or removes a request to list the contents of this connection.
       tags:
         - FlowFileQueues
@@ -5321,8 +5319,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read Source Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Source Data - /data/{component-type}/{uuid}: [ ]
       summary: Gets the current status of a listing request for the specified connection.
       tags:
         - FlowFileQueues
@@ -5373,9 +5371,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /funnels/{uuid}: [ ]
-        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /funnels/{uuid}: [ ]
+      #        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
       summary: Deletes a funnel
       tags:
         - Funnels
@@ -5406,8 +5404,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /funnels/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /funnels/{uuid}: [ ]
       summary: Gets a funnel
       tags:
         - Funnels
@@ -5445,8 +5443,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /funnels/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /funnels/{uuid}: [ ]
       summary: Updates a funnel
       tags:
         - Funnels
@@ -5497,9 +5495,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /input-ports/{uuid}: [ ]
-        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /input-ports/{uuid}: [ ]
+      #        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
       summary: Deletes an input port
       tags:
         - InputPorts
@@ -5530,8 +5528,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /input-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /input-ports/{uuid}: [ ]
       summary: Gets an input port
       tags:
         - InputPorts
@@ -5569,8 +5567,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /input-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /input-ports/{uuid}: [ ]
       summary: Updates an input port
       tags:
         - InputPorts
@@ -5609,8 +5607,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /input-ports/{uuid} or /operation/input-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /input-ports/{uuid} or /operation/input-ports/{uuid}: [ ]
       summary: Updates run status of an input-port
       tags:
         - InputPorts
@@ -5661,9 +5659,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /labels/{uuid}: [ ]
-        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /labels/{uuid}: [ ]
+      #        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
       summary: Deletes a label
       tags:
         - Labels
@@ -5694,8 +5692,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /labels/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /labels/{uuid}: [ ]
       summary: Gets a label
       tags:
         - Labels
@@ -5733,8 +5731,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /labels/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /labels/{uuid}: [ ]
       summary: Updates a label
       tags:
         - Labels
@@ -5785,9 +5783,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /output-ports/{uuid}: [ ]
-        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /output-ports/{uuid}: [ ]
+      #        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
       summary: Deletes an output port
       tags:
         - OutputPorts
@@ -5818,8 +5816,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /output-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /output-ports/{uuid}: [ ]
       summary: Gets an output port
       tags:
         - OutputPorts
@@ -5857,8 +5855,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /output-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /output-ports/{uuid}: [ ]
       summary: Updates an output port
       tags:
         - OutputPorts
@@ -5897,8 +5895,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /output-ports/{uuid} or /operation/output-ports/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /output-ports/{uuid} or /operation/output-ports/{uuid}: [ ]
       summary: Updates run status of an output-port
       tags:
         - OutputPorts
@@ -5930,9 +5928,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /parameter-contexts: [ ]
-        - Read - for every inherited parameter context: [ ]
+      security: [ ]
+      #        - Write - /parameter-contexts: [ ]
+      #        - Read - for every inherited parameter context: [ ]
       summary: Create a Parameter Context
       tags:
         - ParameterContexts
@@ -5966,8 +5964,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{id}: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{id}: [ ]
       summary: Lists the assets that belong to the Parameter Context with the given
         ID
       tags:
@@ -6014,12 +6012,12 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{parameterContextId}: [ ]
-        - Write - /parameter-contexts/{parameterContextId}: [ ]
-        - Read - for every component that is affected by the update: [ ]
-        - Write - for every component that is affected by the update: [ ]
-        - Read - for every currently inherited parameter context: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{parameterContextId}: [ ]
+      #        - Write - /parameter-contexts/{parameterContextId}: [ ]
+      #        - Read - for every component that is affected by the update: [ ]
+      #        - Write - for every component that is affected by the update: [ ]
+      #        - Read - for every currently inherited parameter context: [ ]
       summary: Creates a new Asset in the given Parameter Context
       tags:
         - ParameterContexts
@@ -6067,12 +6065,12 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{parameterContextId}: [ ]
-        - Write - /parameter-contexts/{parameterContextId}: [ ]
-        - Read - for every component that is affected by the update: [ ]
-        - Write - for every component that is affected by the update: [ ]
-        - Read - for every currently inherited parameter context: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{parameterContextId}: [ ]
+      #        - Write - /parameter-contexts/{parameterContextId}: [ ]
+      #        - Read - for every component that is affected by the update: [ ]
+      #        - Write - for every component that is affected by the update: [ ]
+      #        - Read - for every currently inherited parameter context: [ ]
       summary: Deletes an Asset from the given Parameter Context
       tags:
         - ParameterContexts
@@ -6110,8 +6108,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{id}: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{id}: [ ]
       summary: Retrieves the content of the asset with the given id
       tags:
         - ParameterContexts
@@ -6159,13 +6157,13 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{parameterContextId}: [ ]
-        - Write - /parameter-contexts/{parameterContextId}: [ ]
-        - Read - for every component that is affected by the update: [ ]
-        - Write - for every component that is affected by the update: [ ]
-        - Read - for every currently inherited parameter context: [ ]
-        - Read - for any new inherited parameter context: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{parameterContextId}: [ ]
+      #        - Write - /parameter-contexts/{parameterContextId}: [ ]
+      #        - Read - for every component that is affected by the update: [ ]
+      #        - Write - for every component that is affected by the update: [ ]
+      #        - Read - for every currently inherited parameter context: [ ]
+      #        - Read - for any new inherited parameter context: [ ]
       summary: Initiate the Update Request of a Parameter Context
       tags:
         - ParameterContexts
@@ -6216,8 +6214,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Update Request with the given ID
       tags:
         - ParameterContexts
@@ -6259,8 +6257,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Update Request with the given ID
       tags:
         - ParameterContexts
@@ -6308,8 +6306,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{parameterContextId}: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{parameterContextId}: [ ]
       summary: Initiate a Validation Request to determine how the validity of components
         will change if a Parameter Context were to be updated
       tags:
@@ -6361,8 +6359,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Validation Request with the given ID
       tags:
         - ParameterContexts
@@ -6404,8 +6402,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Validation Request with the given ID
       tags:
         - ParameterContexts
@@ -6457,11 +6455,11 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{uuid}: [ ]
-        - Write - /parameter-contexts/{uuid}: [ ]
-        - Read - /process-groups/{uuid}, for any Process Group that is currently bound to the Parameter Context: [ ]
-        - Write - /process-groups/{uuid}, for any Process Group that is currently bound to the Parameter Context: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{uuid}: [ ]
+      #        - Write - /parameter-contexts/{uuid}: [ ]
+      #        - Read - /process-groups/{uuid}, for any Process Group that is currently bound to the Parameter Context: [ ]
+      #        - Write - /process-groups/{uuid}, for any Process Group that is currently bound to the Parameter Context: [ ]
       summary: Deletes the Parameter Context with the given ID
       tags:
         - ParameterContexts
@@ -6501,8 +6499,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{id}: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{id}: [ ]
       summary: Returns the Parameter Context with the given ID
       tags:
         - ParameterContexts
@@ -6545,9 +6543,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-contexts/{id}: [ ]
-        - Write - /parameter-contexts/{id}: [ ]
+      security: [ ]
+      #        - Read - /parameter-contexts/{id}: [ ]
+      #        - Write - /parameter-contexts/{id}: [ ]
       summary: Modifies a Parameter Context
       tags:
         - ParameterContexts
@@ -6598,10 +6596,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /parameter-providers/{uuid}: [ ]
-        - Write - /controller: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /parameter-providers/{uuid}: [ ]
+      #        - Write - /controller: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
       summary: Deletes a parameter provider
       tags:
         - ParameterProviders
@@ -6632,8 +6630,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-providers/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /parameter-providers/{uuid}: [ ]
       summary: Gets a parameter provider
       tags:
         - ParameterProviders
@@ -6671,9 +6669,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /parameter-providers/{uuid}: [ ]
-        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /parameter-providers/{uuid}: [ ]
+      #        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
       summary: Updates a parameter provider
       tags:
         - ParameterProviders
@@ -6712,8 +6710,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-providers/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /parameter-providers/{uuid}: [ ]
       summary: "Performs analysis of the component's configuration, providing information\
         \ about which attributes are referenced."
       tags:
@@ -6761,8 +6759,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-providers/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /parameter-providers/{uuid}: [ ]
       summary: Performs verification of the Parameter Provider's configuration
       tags:
         - ParameterProviders
@@ -6806,8 +6804,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Verification Request with the given ID
       tags:
         - ParameterProviders
@@ -6849,8 +6847,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Verification Request with the given ID
       tags:
         - ParameterProviders
@@ -6888,8 +6886,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-providers/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /parameter-providers/{uuid}: [ ]
       summary: Gets a parameter provider property descriptor
       tags:
         - ParameterProviders
@@ -6928,8 +6926,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /parameter-providers/{uuid} or  or /operation/parameter-providers/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /parameter-providers/{uuid} or  or /operation/parameter-providers/{uuid}: [ ]
       summary: Fetches and temporarily caches the parameters for a provider
       tags:
         - ParameterProviders
@@ -6961,8 +6959,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-providers/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /parameter-providers/{uuid}: [ ]
       summary: Gets all references to a parameter provider
       tags:
         - ParameterProviders
@@ -6994,8 +6992,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /parameter-providers/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /parameter-providers/{uuid}: [ ]
       summary: Gets the state for a parameter provider
       tags:
         - ParameterProviders
@@ -7037,8 +7035,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /parameter-providers/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /parameter-providers/{uuid}: [ ]
       summary: Clears the state for a parameter provider
       tags:
         - ParameterProviders
@@ -7086,11 +7084,11 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /parameter-providers/{parameterProviderId}: [ ]
-        - Write - /parameter-providers/{parameterProviderId}: [ ]
-        - Read - for every component that is affected by the update: [ ]
-        - Write - for every component that is affected by the update: [ ]
+      security: [ ]
+      #        - Read - /parameter-providers/{parameterProviderId}: [ ]
+      #        - Write - /parameter-providers/{parameterProviderId}: [ ]
+      #        - Read - for every component that is affected by the update: [ ]
+      #        - Write - for every component that is affected by the update: [ ]
       summary: Initiate a request to apply the fetched parameters of a Parameter Provider
       tags:
         - ParameterProviders
@@ -7142,8 +7140,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Apply Parameters Request with the given ID
       tags:
         - ParameterProviders
@@ -7185,8 +7183,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Apply Parameters Request with the given ID
       tags:
         - ParameterProviders
@@ -7218,8 +7216,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /policies/{resource}: [ ]
+      security: [ ]
+      #        - Write - /policies/{resource}: [ ]
       summary: Creates an access policy
       tags:
         - Policies
@@ -7268,8 +7266,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /policies/{resource}: [ ]
+      security: [ ]
+      #        - Read - /policies/{resource}: [ ]
       summary: Gets an access policy for the specified action and resource
       tags:
         - Policies
@@ -7320,9 +7318,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /policies/{resource}: [ ]
-        - Write - Policy of the parent resource - /policies/{resource}: [ ]
+      security: [ ]
+      #        - Write - /policies/{resource}: [ ]
+      #        - Write - Policy of the parent resource - /policies/{resource}: [ ]
       summary: Deletes an access policy
       tags:
         - Policies
@@ -7353,8 +7351,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /policies/{resource}: [ ]
+      security: [ ]
+      #        - Read - /policies/{resource}: [ ]
       summary: Gets an access policy
       tags:
         - Policies
@@ -7392,8 +7390,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /policies/{resource}: [ ]
+      security: [ ]
+      #        - Write - /policies/{resource}: [ ]
       summary: Updates a access policy
       tags:
         - Policies
@@ -7439,8 +7437,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Replace Request with the given ID
       tags:
         - ProcessGroups
@@ -7477,8 +7475,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Replace Request with the given ID
       tags:
         - ProcessGroups
@@ -7529,11 +7527,11 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
-        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
-        - Read - any referenced Controller Services by any encapsulated components - /controller-services/{uuid}: [ ]
-        - Write - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
+      #        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
+      #        - Read - any referenced Controller Services by any encapsulated components - /controller-services/{uuid}: [ ]
+      #        - Write - /{component-type}/{uuid} - For all encapsulated components: [ ]
       summary: Deletes a process group
       tags:
         - ProcessGroups
@@ -7564,8 +7562,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets a process group
       tags:
         - ProcessGroups
@@ -7603,8 +7601,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Updates a process group
       tags:
         - ProcessGroups
@@ -7636,8 +7634,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets all connections
       tags:
         - ProcessGroups
@@ -7675,10 +7673,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
-        - Write Source - /{component-type}/{uuid}: [ ]
-        - Write Destination - /{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
+      #        - Write Source - /{component-type}/{uuid}: [ ]
+      #        - Write Destination - /{component-type}/{uuid}: [ ]
       summary: Creates a connection
       tags:
         - ProcessGroups
@@ -7715,10 +7713,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
-        - Write - if the Controller Service is restricted - /restricted-components: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      #        - Write - if the Controller Service is restricted - /restricted-components: [ ]
       summary: Creates a new controller service
       tags:
         - ProcessGroups
@@ -7758,8 +7756,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      security: [ ]
+      #        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
       summary: Generates a copy response for the given copy request
       tags:
         - ProcessGroups
@@ -7798,8 +7796,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets a process group for download
       tags:
         - ProcessGroups
@@ -7833,9 +7831,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid} - For this and all encapsulated process groups: [ ]
-        - Write Source Data - /data/{component-type}/{uuid} - For all encapsulated connections: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid} - For this and all encapsulated process groups: [ ]
+      #        - Write Source Data - /data/{component-type}/{uuid} - For all encapsulated connections: [ ]
       summary: Creates a request to drop all flowfiles of all connection queues in
         this process group.
       tags:
@@ -7874,9 +7872,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid} - For this and all encapsulated process groups: [ ]
-        - Write Source Data - /data/{component-type}/{uuid} - For all encapsulated connections: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid} - For this and all encapsulated process groups: [ ]
+      #        - Write Source Data - /data/{component-type}/{uuid} - For all encapsulated connections: [ ]
       summary: Cancels and/or removes a request to drop all flowfiles.
       tags:
         - ProcessGroups
@@ -7913,9 +7911,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid} - For this and all encapsulated process groups: [ ]
-        - Write Source Data - /data/{component-type}/{uuid} - For all encapsulated connections: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid} - For this and all encapsulated process groups: [ ]
+      #        - Write Source Data - /data/{component-type}/{uuid} - For all encapsulated connections: [ ]
       summary: Gets the current status of a drop all flowfiles request.
       tags:
         - ProcessGroups
@@ -7959,9 +7957,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Replace Process Group contents with the given ID with the specified
         Process Group contents
       tags:
@@ -7994,8 +7992,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets all funnels
       tags:
         - ProcessGroups
@@ -8033,8 +8031,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Creates a funnel
       tags:
         - ProcessGroups
@@ -8066,8 +8064,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets all input ports
       tags:
         - ProcessGroups
@@ -8105,8 +8103,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Creates an input port
       tags:
         - ProcessGroups
@@ -8138,8 +8136,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets all labels
       tags:
         - ProcessGroups
@@ -8177,8 +8175,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Creates a label
       tags:
         - ProcessGroups
@@ -8210,9 +8208,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
-        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
+      #        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
       summary: Gets a list of local modifications to the Process Group since it was
         last synchronized with the Flow Registry
       tags:
@@ -8245,8 +8243,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets all output ports
       tags:
         - ProcessGroups
@@ -8284,8 +8282,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Creates an output port
       tags:
         - ProcessGroups
@@ -8323,8 +8321,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Pastes into the specified process group
       tags:
         - ProcessGroups
@@ -8356,8 +8354,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets all process groups
       tags:
         - ProcessGroups
@@ -8405,8 +8403,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Creates a process group
       tags:
         - ProcessGroups
@@ -8441,8 +8439,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Imports a specified process group
       tags:
         - ProcessGroups
@@ -8471,7 +8469,8 @@ paths:
                   description: Acknowledges that this node is disconnected to allow
                     for mutable requests to proceed.
                 file:
-                  type: object
+                  type: string
+                  format: binary
                 groupName:
                   type: string
                   description: The process group name.
@@ -8506,8 +8505,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Uploads a versioned flow definition and creates a process group
       tags:
         - ProcessGroups
@@ -8546,8 +8545,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets all processors
       tags:
         - ProcessGroups
@@ -8585,10 +8584,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
-        - Write - if the Processor is restricted - /restricted-components: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      #        - Write - if the Processor is restricted - /restricted-components: [ ]
       summary: Creates a new processor
       tags:
         - ProcessGroups
@@ -8620,8 +8619,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets all remote process groups
       tags:
         - ProcessGroups
@@ -8659,8 +8658,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Creates a new process group
       tags:
         - ProcessGroups
@@ -8709,15 +8708,13 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
-        - Write - /process-groups/{uuid}: [ ]
-        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
-        - Write - /{component-type}/{uuid} - For all encapsulated components: [ ]
-        - Write - if the snapshot contains any restricted components - /restricted-components: [ ]
-        - ? Read - /parameter-contexts/{uuid} - For any Parameter Context that is referenced
-            by a Property that is changed, added, or removed
-            : [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
+      #        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      #        - Write - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      #        - Write - if the snapshot contains any restricted components - /restricted-components: [ ]
+      #        - Read - /parameter-contexts/{uuid} - For any Parameter Context that is referenced by a Property that is changed, added, or removed: [ ]
       summary: Initiate the Replace Request of a Process Group with the given ID
       tags:
         - ProcessGroups
@@ -8756,10 +8753,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
-        - Read - /{component-type}/{uuid} - For each component in the snippet and their descendant components: [ ]
-        - Write - if the snippet contains any restricted Processors - /restricted-components: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
+      #        - Read - /{component-type}/{uuid} - For each component in the snippet and their descendant components: [ ]
+      #        - Write - if the snippet contains any restricted Processors - /restricted-components: [ ]
       summary: Copies a snippet and discards it.
       tags:
         - ProcessGroups
@@ -8794,8 +8791,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /processors/{uuid} for each processor whose run status information is requested: [ ]
+      security: [ ]
+      #        - Read - /processors/{uuid} for each processor whose run status information is requested: [ ]
       summary: Submits a query to retrieve the run status details of all processors
         that are in the given list of Processor IDs
       tags:
@@ -8847,10 +8844,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /processors/{uuid}: [ ]
-        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /processors/{uuid}: [ ]
+      #        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
       summary: Deletes a processor
       tags:
         - Processors
@@ -8881,8 +8878,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /processors/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /processors/{uuid}: [ ]
       summary: Gets a processor
       tags:
         - Processors
@@ -8920,9 +8917,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /processors/{uuid}: [ ]
-        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /processors/{uuid}: [ ]
+      #        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
       summary: Updates a processor
       tags:
         - Processors
@@ -8961,8 +8958,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /processors/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /processors/{uuid}: [ ]
       summary: "Performs analysis of the component's configuration, providing information\
         \ about which attributes are referenced."
       tags:
@@ -9010,8 +9007,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /processors/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /processors/{uuid}: [ ]
       summary: Performs verification of the Processor's configuration
       tags:
         - Processors
@@ -9055,8 +9052,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Verification Request with the given ID
       tags:
         - Processors
@@ -9098,8 +9095,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Verification Request with the given ID
       tags:
         - Processors
@@ -9148,8 +9145,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /processors/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /processors/{uuid}: [ ]
       summary: Gets the descriptor for a processor property
       tags:
         - Processors
@@ -9183,8 +9180,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /processors/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /processors/{uuid}: [ ]
       summary: Gets diagnostics information about a processor
       tags:
         - Processors
@@ -9223,8 +9220,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /processors/{uuid} or /operation/processors/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /processors/{uuid} or /operation/processors/{uuid}: [ ]
       summary: Updates run status of a processor
       tags:
         - Processors
@@ -9256,8 +9253,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /processors/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /processors/{uuid}: [ ]
       summary: Gets the state for a processor
       tags:
         - Processors
@@ -9299,8 +9296,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /processors/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /processors/{uuid}: [ ]
       summary: Clears the state for a processor
       tags:
         - Processors
@@ -9332,8 +9329,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /processors/{uuid} or /operation/processors/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /processors/{uuid} or /operation/processors/{uuid}: [ ]
       summary: "Terminates a processor, essentially \"deleting\" its threads and any\
         \ active tasks"
       tags:
@@ -9369,9 +9366,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /provenance: [ ]
-        - Read - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /provenance: [ ]
+      #        - Read - /data/{component-type}/{uuid}: [ ]
       summary: Submits a provenance query
       tags:
         - Provenance
@@ -9403,10 +9400,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
-        - Read Component Data - /data/{component-type}/{uuid}: [ ]
-        - Write Component Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
+      #        - Read Component Data - /data/{component-type}/{uuid}: [ ]
+      #        - Write Component Data - /data/{component-type}/{uuid}: [ ]
       summary: Replays content from a provenance event
       tags:
         - ProvenanceEvents
@@ -9446,9 +9443,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
-        - Read Component Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
+      #        - Read Component Data - /data/{component-type}/{uuid}: [ ]
       summary: Retrieves the latest cached Provenance Events for the specified component
       tags:
         - ProvenanceEvents
@@ -9480,10 +9477,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
-        - Read Component Data - /data/{component-type}/{uuid}: [ ]
-        - Write Component Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
+      #        - Read Component Data - /data/{component-type}/{uuid}: [ ]
+      #        - Write Component Data - /data/{component-type}/{uuid}: [ ]
       summary: Replays content from a provenance event
       tags:
         - ProvenanceEvents
@@ -9520,8 +9517,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
       summary: Gets a provenance event
       tags:
         - ProvenanceEvents
@@ -9567,9 +9564,9 @@ paths:
             to process it.
         "416":
           description: Requested Range Not Satisfiable based on bytes requested
-      security:
-        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
-        - Read Component Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
+      #        - Read Component Data - /data/{component-type}/{uuid}: [ ]
       summary: Gets the input content for a provenance event
       tags:
         - ProvenanceEvents
@@ -9615,9 +9612,9 @@ paths:
             to process it.
         "416":
           description: Requested Range Not Satisfiable based on bytes requested
-      security:
-        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
-        - Read Component Data - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read Component Provenance Data - /provenance-data/{component-type}/{uuid}: [ ]
+      #        - Read Component Data - /data/{component-type}/{uuid}: [ ]
       summary: Gets the output content for a provenance event
       tags:
         - ProvenanceEvents
@@ -9654,9 +9651,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /provenance: [ ]
-        - Read - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /provenance: [ ]
+      #        - Read - /data/{component-type}/{uuid}: [ ]
       summary: Submits a lineage query
       tags:
         - Provenance
@@ -9693,8 +9690,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /provenance: [ ]
+      security: [ ]
+      #        - Read - /provenance: [ ]
       summary: Deletes a lineage query
       tags:
         - Provenance
@@ -9730,9 +9727,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /provenance: [ ]
-        - Read - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /provenance: [ ]
+      #        - Read - /data/{component-type}/{uuid}: [ ]
       summary: Gets a lineage query
       tags:
         - Provenance
@@ -9755,8 +9752,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /provenance: [ ]
+      security: [ ]
+      #        - Read - /provenance: [ ]
       summary: Gets the searchable attributes for provenance events
       tags:
         - Provenance
@@ -9793,8 +9790,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /provenance: [ ]
+      security: [ ]
+      #        - Read - /provenance: [ ]
       summary: Deletes a provenance query
       tags:
         - Provenance
@@ -9845,9 +9842,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /provenance: [ ]
-        - Read - /data/{component-type}/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /provenance: [ ]
+      #        - Read - /data/{component-type}/{uuid}: [ ]
       summary: Gets a provenance query
       tags:
         - Provenance
@@ -9886,8 +9883,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /remote-process-groups/{uuid} or /operation/remote-process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /remote-process-groups/{uuid} or /operation/remote-process-groups/{uuid}: [ ]
       summary: Updates run status of all remote process groups in a process group
         (recursively)
       tags:
@@ -9939,9 +9936,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /remote-process-groups/{uuid}: [ ]
-        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /remote-process-groups/{uuid}: [ ]
+      #        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
       summary: Deletes a remote process group
       tags:
         - RemoteProcessGroups
@@ -9972,8 +9969,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /remote-process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /remote-process-groups/{uuid}: [ ]
       summary: Gets a remote process group
       tags:
         - RemoteProcessGroups
@@ -10011,8 +10008,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /remote-process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /remote-process-groups/{uuid}: [ ]
       summary: Updates a remote process group
       tags:
         - RemoteProcessGroups
@@ -10059,8 +10056,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /remote-process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /remote-process-groups/{uuid}: [ ]
       summary: Updates a remote port
       tags:
         - RemoteProcessGroups
@@ -10107,8 +10104,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /remote-process-groups/{uuid} or /operation/remote-process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /remote-process-groups/{uuid} or /operation/remote-process-groups/{uuid}: [ ]
       summary: Updates run status of a remote port
       tags:
         - RemoteProcessGroups
@@ -10155,8 +10152,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /remote-process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /remote-process-groups/{uuid}: [ ]
       summary: Updates a remote port
       tags:
         - RemoteProcessGroups
@@ -10203,8 +10200,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /remote-process-groups/{uuid} or /operation/remote-process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /remote-process-groups/{uuid} or /operation/remote-process-groups/{uuid}: [ ]
       summary: Updates run status of a remote port
       tags:
         - RemoteProcessGroups
@@ -10243,8 +10240,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /remote-process-groups/{uuid} or /operation/remote-process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /remote-process-groups/{uuid} or /operation/remote-process-groups/{uuid}: [ ]
       summary: Updates run status of a remote process group
       tags:
         - RemoteProcessGroups
@@ -10276,8 +10273,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /remote-process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /remote-process-groups/{uuid}: [ ]
       summary: Gets the state for a RemoteProcessGroup
       tags:
         - RemoteProcessGroups
@@ -10328,10 +10325,10 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /reporting-tasks/{uuid}: [ ]
-        - Write - /controller: [ ]
-        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /reporting-tasks/{uuid}: [ ]
+      #        - Write - /controller: [ ]
+      #        - Read - any referenced Controller Services - /controller-services/{uuid}: [ ]
       summary: Deletes a reporting task
       tags:
         - ReportingTasks
@@ -10362,8 +10359,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /reporting-tasks/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /reporting-tasks/{uuid}: [ ]
       summary: Gets a reporting task
       tags:
         - ReportingTasks
@@ -10401,9 +10398,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /reporting-tasks/{uuid}: [ ]
-        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /reporting-tasks/{uuid}: [ ]
+      #        - Read - any referenced Controller Services if this request changes the reference - /controller-services/{uuid}: [ ]
       summary: Updates a reporting task
       tags:
         - ReportingTasks
@@ -10442,8 +10439,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /reporting-tasks/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /reporting-tasks/{uuid}: [ ]
       summary: "Performs analysis of the component's configuration, providing information\
         \ about which attributes are referenced."
       tags:
@@ -10491,8 +10488,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /reporting-tasks/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /reporting-tasks/{uuid}: [ ]
       summary: Performs verification of the Reporting Task's configuration
       tags:
         - ReportingTasks
@@ -10536,8 +10533,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Verification Request with the given ID
       tags:
         - ReportingTasks
@@ -10579,8 +10576,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Verification Request with the given ID
       tags:
         - ReportingTasks
@@ -10623,8 +10620,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /reporting-tasks/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /reporting-tasks/{uuid}: [ ]
       summary: Gets a reporting task property descriptor
       tags:
         - ReportingTasks
@@ -10663,8 +10660,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /reporting-tasks/{uuid} or  or /operation/reporting-tasks/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /reporting-tasks/{uuid} or  or /operation/reporting-tasks/{uuid}: [ ]
       summary: Updates run status of a reporting task
       tags:
         - ReportingTasks
@@ -10696,8 +10693,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /reporting-tasks/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /reporting-tasks/{uuid}: [ ]
       summary: Gets the state for a reporting task
       tags:
         - ReportingTasks
@@ -10739,8 +10736,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /reporting-tasks/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /reporting-tasks/{uuid}: [ ]
       summary: Clears the state for a reporting task
       tags:
         - ReportingTasks
@@ -10757,8 +10754,8 @@ paths:
           description: Client could not be authenticated.
         "403":
           description: Client is not authorized to make this request.
-      security:
-        - Read - /resources: [ ]
+      security: [ ]
+      #        - Read - /resources: [ ]
       summary: Gets the available resources that support access/authorization policies
       tags:
         - Resources
@@ -10781,8 +10778,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /site-to-site: [ ]
+      security: [ ]
+      #        - Read - /site-to-site: [ ]
       summary: Returns the details about this NiFi necessary to communicate via site
         to site
       tags:
@@ -10809,8 +10806,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /site-to-site: [ ]
+      security: [ ]
+      #        - Read - /site-to-site: [ ]
       summary: Returns the available Peers and its status of this NiFi
       tags:
         - SiteToSite
@@ -10842,10 +10839,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - ? Read or Write - /{component-type}/{uuid} - For every component (all Read
-            or all Write) in the Snippet and their descendant components
-            : [ ]
+      security: [ ]
+      #        - Read or Write - /{component-type}/{uuid} - For every component (all Read or all Write) in the Snippet and their descendant components: [ ]
       summary: Creates a snippet. The snippet will be automatically discarded if not
         used in a subsequent request after 1 minute.
       tags:
@@ -10885,9 +10880,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /{component-type}/{uuid} - For each component in the Snippet and their descendant components: [ ]
-        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /{component-type}/{uuid} - For each component in the Snippet and their descendant components: [ ]
+      #        - Write - Parent Process Group - /process-groups/{uuid}: [ ]
       summary: Deletes the components in a snippet and discards the snippet
       tags:
         - Snippets
@@ -10925,9 +10920,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write Process Group - /process-groups/{uuid}: [ ]
-        - Write - /{component-type}/{uuid} - For each component in the Snippet and their descendant components: [ ]
+      security: [ ]
+      #        - Write Process Group - /process-groups/{uuid}: [ ]
+      #        - Write - /{component-type}/{uuid} - For each component in the Snippet and their descendant components: [ ]
       summary: Move's the components in this Snippet into a new Process Group and
         discards the snippet
       tags:
@@ -10968,8 +10963,8 @@ paths:
           description: Client could not be authenticated.
         "403":
           description: Client is not authorized to make this request.
-      security:
-        - Read - /system: [ ]
+      security: [ ]
+      #        - Read - /system: [ ]
       summary: Gets the diagnostics for the system NiFi is running on
       tags:
         - SystemDiagnostics
@@ -11002,8 +10997,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /system: [ ]
+      security: [ ]
+      #        - Read - /system: [ ]
       summary: Retrieve available JMX metrics
       tags:
         - SystemDiagnostics
@@ -11038,8 +11033,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /tenants: [ ]
+      security: [ ]
+      #        - Read - /tenants: [ ]
       summary: Searches for a tenant with the specified identity
       tags:
         - Tenants
@@ -11066,8 +11061,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /tenants: [ ]
+      security: [ ]
+      #        - Read - /tenants: [ ]
       summary: Gets all user groups
       tags:
         - Tenants
@@ -11100,8 +11095,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /tenants: [ ]
+      security: [ ]
+      #        - Write - /tenants: [ ]
       summary: Creates a user group
       tags:
         - Tenants
@@ -11154,8 +11149,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /tenants: [ ]
+      security: [ ]
+      #        - Write - /tenants: [ ]
       summary: Deletes a user group
       tags:
         - Tenants
@@ -11188,8 +11183,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /tenants: [ ]
+      security: [ ]
+      #        - Read - /tenants: [ ]
       summary: Gets a user group
       tags:
         - Tenants
@@ -11229,8 +11224,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /tenants: [ ]
+      security: [ ]
+      #        - Write - /tenants: [ ]
       summary: Updates a user group
       tags:
         - Tenants
@@ -11257,8 +11252,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /tenants: [ ]
+      security: [ ]
+      #        - Read - /tenants: [ ]
       summary: Gets all users
       tags:
         - Tenants
@@ -11291,8 +11286,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /tenants: [ ]
+      security: [ ]
+      #        - Write - /tenants: [ ]
       summary: Creates a user
       tags:
         - Tenants
@@ -11345,8 +11340,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /tenants: [ ]
+      security: [ ]
+      #        - Write - /tenants: [ ]
       summary: Deletes a user
       tags:
         - Tenants
@@ -11379,8 +11374,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /tenants: [ ]
+      security: [ ]
+      #        - Read - /tenants: [ ]
       summary: Gets a user
       tags:
         - Tenants
@@ -11420,8 +11415,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /tenants: [ ]
+      security: [ ]
+      #        - Write - /tenants: [ ]
       summary: Updates a user
       tags:
         - Tenants
@@ -11460,8 +11455,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Create a version control request
       tags:
         - Versions
@@ -11500,8 +11495,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the version control request with the given ID
       tags:
         - Versions
@@ -11541,8 +11536,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can update it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can update it: [ ]
       summary: Updates the request with the given ID
       tags:
         - Versions
@@ -11596,9 +11591,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Stops version controlling the Process Group with the given ID
       tags:
         - Versions
@@ -11631,8 +11626,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets the Version Control information for a process group
       tags:
         - Versions
@@ -11674,11 +11669,11 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
-        - Write - /process-groups/{uuid}: [ ]
-        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
-        - Read - any referenced Controller Services by any encapsulated components - /controller-services/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
+      #        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      #        - Read - any referenced Controller Services by any encapsulated components - /controller-services/{uuid}: [ ]
       summary: Save the Process Group with the given ID
       tags:
         - Versions
@@ -11721,9 +11716,9 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
-        - Write - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
       summary: Update the version of a Process Group with the given ID
       tags:
         - Versions
@@ -11755,8 +11750,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
       summary: Gets the latest version of a Process Group for download
       tags:
         - Versions
@@ -11807,15 +11802,13 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
-        - Write - /process-groups/{uuid}: [ ]
-        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
-        - Write - /{component-type}/{uuid} - For all encapsulated components: [ ]
-        - Write - if the template contains any restricted components - /restricted-components: [ ]
-        - ? Read - /parameter-contexts/{uuid} - For any Parameter Context that is referenced
-            by a Property that is changed, added, or removed
-            : [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
+      #        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      #        - Write - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      #        - Write - if the template contains any restricted components - /restricted-components: [ ]
+      #        - Read - /parameter-contexts/{uuid} - For any Parameter Context that is referenced by a Property that is changed, added, or removed: [ ]
       summary: Initiate the Revert Request of a Process Group with the given ID
       tags:
         - Versions
@@ -11861,8 +11854,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Revert Request with the given ID
       tags:
         - Versions
@@ -11899,8 +11892,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Revert Request with the given ID
       tags:
         - Versions
@@ -11950,15 +11943,13 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Read - /process-groups/{uuid}: [ ]
-        - Write - /process-groups/{uuid}: [ ]
-        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
-        - Write - /{component-type}/{uuid} - For all encapsulated components: [ ]
-        - Write - if the template contains any restricted components - /restricted-components: [ ]
-        - ? Read - /parameter-contexts/{uuid} - For any Parameter Context that is referenced
-            by a Property that is changed, added, or removed
-            : [ ]
+      security: [ ]
+      #        - Read - /process-groups/{uuid}: [ ]
+      #        - Write - /process-groups/{uuid}: [ ]
+      #        - Read - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      #        - Write - /{component-type}/{uuid} - For all encapsulated components: [ ]
+      #        - Write - if the template contains any restricted components - /restricted-components: [ ]
+      #        - Read - /parameter-contexts/{uuid} - For any Parameter Context that is referenced by a Property that is changed, added, or removed: [ ]
       summary: Initiate the Update Request of a Process Group with the given ID
       tags:
         - Versions
@@ -12004,8 +11995,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can remove it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can remove it: [ ]
       summary: Deletes the Update Request with the given ID
       tags:
         - Versions
@@ -12042,8 +12033,8 @@ paths:
         "409":
           description: The request was valid but NiFi was not in the appropriate state
             to process it.
-      security:
-        - Only the user that submitted the request can get it: [ ]
+      security: [ ]
+      #        - Only the user that submitted the request can get it: [ ]
       summary: Returns the Update Request with the given ID
       tags:
         - Versions
@@ -12095,7 +12086,7 @@ components:
           description: The action associated with this access policy.
           enum:
             - read
-            - write
+        #        - Write
         componentReference:
           $ref: "#/components/schemas/ComponentReferenceEntity"
         configurable:
@@ -12172,7 +12163,7 @@ components:
           description: The action associated with this access policy.
           enum:
             - read
-            - write
+        #        - Write
         componentReference:
           $ref: "#/components/schemas/ComponentReferenceEntity"
         configurable:
@@ -23042,3 +23033,4 @@ components:
       description: HTTP Bearer authentication with JSON Web Token
       scheme: Bearer
       type: http
+      flows: { }
