@@ -1,13 +1,15 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.16",
+    scalaVersion := "2.13.17",
     version := "0.1",
     openapiStreamingImplementation := "pekko",
-    openapiGenerateEndpointTypes := true
+    openapiGenerateEndpointTypes := true,
+    openapiMaxSchemasPerFile := 20,
   )
 
-val tapirVersion = "1.11.20"
+val tapirVersion = "1.11.50"
+val catsXmlVersion = "0.0.20"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
@@ -18,6 +20,8 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-generic" % "0.14.15",
   "com.beachape" %% "enumeratum" % "1.9.0",
   "com.beachape" %% "enumeratum-circe" % "1.9.0",
+  "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
+  "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
 )

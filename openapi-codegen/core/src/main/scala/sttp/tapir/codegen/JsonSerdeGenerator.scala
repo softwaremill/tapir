@@ -14,6 +14,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaObject,
   OpenapiSchemaOneOf,
   OpenapiSchemaRef,
+  OpenapiSchemaSimpleType,
   OpenapiSchemaString,
   OpenapiSchemaStringType
 }
@@ -152,6 +153,7 @@ object JsonSerdeGenerator {
           Some(genCirceAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf | _: OpenapiSchemaAny, _) =>
           None
+        case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
         case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       }
       .foldLeft(Option.empty[String]) {
@@ -333,6 +335,7 @@ object JsonSerdeGenerator {
             _
           ) =>
         Nil
+      case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => Nil
       case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
     }
     (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
@@ -492,6 +495,7 @@ object JsonSerdeGenerator {
           Some(genZioAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf, _) =>
           None
+        case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
         case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       }
       .foldLeft(Option.empty[String]) {

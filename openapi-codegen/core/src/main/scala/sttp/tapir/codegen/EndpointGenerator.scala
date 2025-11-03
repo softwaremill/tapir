@@ -119,6 +119,8 @@ class EndpointGenerator {
     case FS2(effectType) => s"fs2.Stream[$effectType, Byte]"
     case x               => s"${capabilityImpl(x)}.BinaryStream"
   }
+  // These types all use 'eager' schemas, except for '*/*', which we default to eager for convenience
+  private val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data", "*/*")
 
   def endpointDefs(
       doc: OpenapiDocument,
@@ -505,8 +507,7 @@ class EndpointGenerator {
         val d = b.description.map(s => s""".description("${JavaEscape.escapeString(s)}")""").getOrElse("")
         Some((s".in($decl$d)", tpe, maybeInlineDefn))
       } else {
-        // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
-        val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
+        // We cannot mix eager and streaming types when using oneOfBody
         val preferEager = b.content.exists(c => eagerTypes.contains(c.contentType))
         val mapped = b.content.map(mapContent(_, b.required, preferEager))
         val (decls, tpes, maybeInlineDefns) = mapped.unzip3
@@ -651,8 +652,7 @@ class EndpointGenerator {
           val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
           (s"$decl$d", Some(tpe), maybeInlineDefn)
         case seq =>
-          // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
-          val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
+          // We cannot mix eager and streaming types when using oneOfBody
           val preferEager = seq.exists(c => eagerTypes.contains(c.contentType))
           val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent(_, preferEager)).unzip3
           val distinctTypes = tpes.distinct
@@ -770,11 +770,13 @@ class EndpointGenerator {
                 if (outHeaderTypes.isEmpty) maybeBodyType
                 else if (maybeBodyType.isEmpty) ht()
                 else maybeBodyType.map(t => s"($t, ${ht(false).get})")
+              val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
               (
                 Some(resp.code match {
-                  case "200" | "default" => s"$decl$hs"
-                  case okStatus(s)       => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
-                  case errorStatus(s)    => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case "200" | "default"       => s"$decl$hs"
+                  case okStatus(s) if tpeIsBin => s"$decl.toEndpointIO$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case okStatus(s)             => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case errorStatus(s)          => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
                 }),
                 tpe,
                 inlineDefn.map(_ ++ inlineHeaderEnumDefns.getOrElse("")).orElse(inlineHeaderEnumDefns)
@@ -834,18 +836,21 @@ class EndpointGenerator {
             } else {
               def withHeaderTypes(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, ${ht(false).get})"
               def withUnderscores(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, $underscores)"
+              val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
+              // TODO: Not enough to just do this here
+              val maybeStrict = if (tpeIsBin) ".toEndpointIO" else ""
               if (contentCanBeEmpty) {
                 val (_, nonOptionalType, _) = bodyFmt(m, isErrorPosition)
                 val maybeMap = if (m.content.size > 1) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
                 (
-                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeMap$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeStrict$maybeMap$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
                   maybeBodyType,
                   inlineDefn1
                 )
               } else
                 (
-                  s"oneOfVariant${maybeBodyType.map(s => s"[${withHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$hs)",
+                  s"oneOfVariant${maybeBodyType.map(s => s"[${withHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$maybeStrict$hs)",
                   maybeBodyType,
                   inlineDefn1
                 )

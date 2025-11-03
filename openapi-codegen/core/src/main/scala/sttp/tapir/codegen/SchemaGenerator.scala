@@ -64,6 +64,8 @@ object SchemaGenerator {
           case (_, _: OpenapiSchemaAny)           => None
           case (name, schema: OpenapiSchemaOneOf) =>
             Some(name -> (genADTSchema(name, schema, _, if (fullModelPath.isEmpty) None else Some(fullModelPath))))
+          // no need to generate schemas for simple type aliases
+          case (_, schema: OpenapiSchemaSimpleType) if !schema.isInstanceOf[OpenapiSchemaRef] => None
           case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
         })
         .toSeq
@@ -84,7 +86,7 @@ object SchemaGenerator {
     // the target is scala 3
     val foldedLayers = foldLayers(maxSchemasPerFile, targetScala3)(extraSchemaRefs ++ orderedLayers)
     // Our output will now only need to import the 'earlier' files into the 'later' files, and _not_ vice verse
-    foldedLayers.map(ring => ring.map(r => openApiSchemasWithTapirSchemas(r._1)(r._2)).mkString("\n"))
+    foldedLayers.map(ring => ring.flatMap(r => openApiSchemasWithTapirSchemas.get(r._1).map(_(r._2))).mkString("\n"))
   }
   // Group files into chunks of size < maxLayerSize
   // The boolean in the return signature indicates whether the schema is part of a recursive definition or not.
@@ -94,6 +96,7 @@ object SchemaGenerator {
       isScala3: Boolean
   )(layers: Seq[Seq[(String, OpenapiSchemaType)]]): Seq[Seq[(String, Boolean, OpenapiSchemaType)]] = {
     def withRecursiveBoolean(s: Seq[(String, OpenapiSchemaType)]): Seq[(String, Boolean, OpenapiSchemaType)] = {
+      // TODO: if mutually-recursive schemas are defined for scala 2.13, we need to something more here.
       if (!isScala3) s.map { case (n, t) => (n, false, t) }
       else if (s.size != 1) s.map { case (n, t) => (n, true, t) }
       else if (isSimpleRecursive(s.head._1, s.head._2)) s.map { case (n, t) => (n, true, t) }

@@ -277,16 +277,17 @@ object OpenapiModels {
   implicit val OpenapiResponseDecoder: Decoder[Seq[OpenapiResponse]] = { (c: HCursor) =>
     implicit val InnerDecoder: Decoder[(String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])] = { (c: HCursor) =>
       for {
-        description <- c.downField("description").as[String]
+        // should be required, but is often missing in the wild
+        description <- c.downField("description").as[Option[String]]
         content <- c.downField("content").as[Option[Seq[OpenapiResponseContent]]]
         headers <- c.getOrElse[Map[String, OpenapiHeader]]("headers")(Map.empty)
       } yield {
-        (description, content, headers)
+        (description.getOrElse(""), content, headers)
       }
     }
     implicit val EitherDecoder
         : Decoder[Either[OpenapiSchemaRef, (String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])]] =
-      InnerDecoder.map(Right(_)).or(OpenapiSchemaRefDecoder.map(Left(_)))
+      OpenapiSchemaRefDecoder.map(Left(_)).or(InnerDecoder.map(Right(_)))
 
     for {
       schema <- c
