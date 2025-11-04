@@ -1,4 +1,4 @@
-import sttp.tapir.generated.TapirGeneratedEndpointsSchemas._
+import sttp.tapir.generated.TapirGeneratedEndpointsSchemas1._
 
 object Main extends App {
 

@@ -13,6 +13,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiResponseDef
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  AnyType,
   OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
@@ -282,13 +283,13 @@ class EndpointGenerator {
             .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
           val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
+            .filterNot(_ => m.tapirCodegenDirectives.contains(jsonBodyAsString))
             .collect { case (contentType, schema) if contentType == "application/json" => schema }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
-              case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _, _)                   =>
-                bail("Cannot generate schema for 'Any' with jsoniter library")
-              case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _) =>
+              case OpenapiSchemaArray(OpenapiSchemaAny(_, tpe), _, _, _)              => AnyType.toCirceTpe(tpe)
+              case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _)       =>
                 val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
                 s"List[$name]"
               case simple: OpenapiSchemaSimpleType =>

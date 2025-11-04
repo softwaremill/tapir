@@ -5,6 +5,7 @@ import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  AnyType,
   Discriminator,
   OpenapiSchemaAllOf,
   OpenapiSchemaAny,
@@ -46,18 +47,28 @@ object SchemaGenerator {
       schemasContainAny: Boolean,
       targetScala3: Boolean
   ): Seq[String] = {
-    val maybeAnySchema: Option[(String, ((Boolean, Seq[String])) => String)] =
-      if (!schemasContainAny) None
+    val anySchemas: Seq[(String, ((Boolean, Seq[String])) => String)] =
+      if (!schemasContainAny) Nil
       else if (jsonSerdeLib == JsonSerdeLib.Circe || jsonSerdeLib == JsonSerdeLib.Jsoniter)
-        Some(
+        Seq(
           "anyTapirSchema" -> ((_: (Boolean, Seq[String])) =>
             "implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]"
+          ),
+          "anyObjTapirSchema" -> ((_: (Boolean, Seq[String])) =>
+            "implicit lazy val anyObjTapirSchema: sttp.tapir.Schema[io.circe.JsonObject] = sttp.tapir.Schema.any[io.circe.JsonObject]"
+          ),
+          "anyArrTapirSchema" -> ((_: (Boolean, Seq[String])) =>
+            "implicit lazy val anyArrTapirSchema: sttp.tapir.Schema[Vector[io.circe.Json]] = sttp.tapir.Schema.any[Vector[io.circe.Json]]"
           )
         )
       else throw new NotImplementedError("any not implemented for json libs other than circe and jsoniter")
     val extraSchemaRefs: Seq[Seq[(String, OpenapiSchemaType)]] = Seq(
       Seq("byteStringSchema" -> OpenapiSchemaByte(false)),
-      maybeAnySchema.map { case (_, _) => "anyTapirSchema" -> OpenapiSchemaAny(false) }.toSeq
+      anySchemas.map {
+        case ("anyTapirSchema", _)    => "anyTapirSchema" -> OpenapiSchemaAny(false, AnyType.Any)
+        case ("anyObjTapirSchema", _) => "anyObjTapirSchema" -> OpenapiSchemaAny(false, AnyType.Object)
+        case ("anyArrTapirSchema", _) => "anyArrTapirSchema" -> OpenapiSchemaAny(false, AnyType.Array)
+      }
     )
     val openApiSchemasWithTapirSchemas: Map[String, ((Boolean, Seq[String])) => String] =
       doc.components
@@ -77,7 +88,7 @@ object SchemaGenerator {
           case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
         })
         .toSeq
-        .flatMap(maybeAnySchema.toSeq ++ _)
+        .flatMap(anySchemas ++ _)
         .toMap + ("byteStringSchema" -> { (_: (Boolean, Seq[String])) =>
         "implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)"
       })
