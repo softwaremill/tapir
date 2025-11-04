@@ -1,11 +1,14 @@
 package sttp.tapir.generated
 
-object TapirGeneratedEndpointsSchemas {
+object TapirGeneratedEndpointsSchemas1 {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
+
   implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)
+  implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]
+  implicit lazy val anyObjTapirSchema: sttp.tapir.Schema[io.circe.JsonObject] = sttp.tapir.Schema.any[io.circe.JsonObject]
+  implicit lazy val anyArrTapirSchema: sttp.tapir.Schema[Vector[io.circe.Json]] = sttp.tapir.Schema.any[Vector[io.circe.Json]]
   implicit lazy val aboutDTOTapirSchema: sttp.tapir.Schema[AboutDTO] = sttp.tapir.Schema.derived
-  implicit lazy val actionDetailsDTOTapirSchema: sttp.tapir.Schema[ActionDetailsDTO] = sttp.tapir.Schema.derived
   implicit lazy val additionalDetailsEntityTapirSchema: sttp.tapir.Schema[AdditionalDetailsEntity] = sttp.tapir.Schema.derived
   implicit lazy val affectedComponentDTOReferenceTypeTapirSchema: sttp.tapir.Schema[AffectedComponentDTOReferenceType] = sttp.tapir.Schema.derived
   implicit lazy val affectedComponentDTOTapirSchema: sttp.tapir.Schema[AffectedComponentDTO] = sttp.tapir.Schema.derived
@@ -19,14 +22,12 @@ object TapirGeneratedEndpointsSchemas {
   implicit lazy val batchSettingsDTOTapirSchema: sttp.tapir.Schema[BatchSettingsDTO] = sttp.tapir.Schema.derived
   implicit lazy val batchSizeTapirSchema: sttp.tapir.Schema[BatchSize] = sttp.tapir.Schema.derived
   implicit lazy val buildInfoTapirSchema: sttp.tapir.Schema[BuildInfo] = sttp.tapir.Schema.derived
-  implicit lazy val bulletinBoardPatternParameterPatternTapirSchema: sttp.tapir.Schema[BulletinBoardPatternParameterPattern] = sttp.tapir.Schema.derived
   implicit lazy val bulletinBoardPatternParameterTapirSchema: sttp.tapir.Schema[BulletinBoardPatternParameter] = sttp.tapir.Schema.derived
   implicit lazy val bulletinDTOTapirSchema: sttp.tapir.Schema[BulletinDTO] = sttp.tapir.Schema.derived
   implicit lazy val bundleTapirSchema: sttp.tapir.Schema[Bundle] = sttp.tapir.Schema.derived
   implicit lazy val bundleDTOTapirSchema: sttp.tapir.Schema[BundleDTO] = sttp.tapir.Schema.derived
   implicit lazy val clientIdParameterTapirSchema: sttp.tapir.Schema[ClientIdParameter] = sttp.tapir.Schema.derived
   implicit lazy val clusterSummaryDTOTapirSchema: sttp.tapir.Schema[ClusterSummaryDTO] = sttp.tapir.Schema.derived
-  implicit lazy val componentDetailsDTOTapirSchema: sttp.tapir.Schema[ComponentDetailsDTO] = sttp.tapir.Schema.derived
   implicit lazy val componentValidationResultDTOReferenceTypeTapirSchema: sttp.tapir.Schema[ComponentValidationResultDTOReferenceType] = sttp.tapir.Schema.derived
   implicit lazy val componentValidationResultDTOTapirSchema: sttp.tapir.Schema[ComponentValidationResultDTO] = sttp.tapir.Schema.derived
   implicit lazy val configVerificationResultDTOOutcomeTapirSchema: sttp.tapir.Schema[ConfigVerificationResultDTOOutcome] = sttp.tapir.Schema.derived
@@ -67,7 +68,6 @@ object TapirGeneratedEndpointsSchemas {
   implicit lazy val flowRegistryPermissionsTapirSchema: sttp.tapir.Schema[FlowRegistryPermissions] = sttp.tapir.Schema.derived
   implicit lazy val garbageCollectionDTOTapirSchema: sttp.tapir.Schema[GarbageCollectionDTO] = sttp.tapir.Schema.derived
   implicit lazy val integerParameterTapirSchema: sttp.tapir.Schema[IntegerParameter] = sttp.tapir.Schema.derived
-  implicit lazy val jmxMetricsResultDTOAttributeValueTapirSchema: sttp.tapir.Schema[JmxMetricsResultDTOAttributeValue] = sttp.tapir.Schema.derived
   implicit lazy val jmxMetricsResultDTOTapirSchema: sttp.tapir.Schema[JmxMetricsResultDTO] = sttp.tapir.Schema.derived
   implicit lazy val lineageRequestDTOLineageRequestTypeTapirSchema: sttp.tapir.Schema[LineageRequestDTOLineageRequestType] = sttp.tapir.Schema.derived
   implicit lazy val lineageRequestDTOTapirSchema: sttp.tapir.Schema[LineageRequestDTO] = sttp.tapir.Schema.derived
@@ -134,7 +134,6 @@ object TapirGeneratedEndpointsSchemas {
   implicit lazy val statusDescriptorDTOTapirSchema: sttp.tapir.Schema[StatusDescriptorDTO] = sttp.tapir.Schema.derived
   implicit lazy val statusSnapshotDTOTapirSchema: sttp.tapir.Schema[StatusSnapshotDTO] = sttp.tapir.Schema.derived
   implicit lazy val storageUsageDTOTapirSchema: sttp.tapir.Schema[StorageUsageDTO] = sttp.tapir.Schema.derived
-  implicit lazy val streamingOutputTapirSchema: sttp.tapir.Schema[StreamingOutput] = sttp.tapir.Schema.derived
   implicit lazy val submitReplayRequestEntityTapirSchema: sttp.tapir.Schema[SubmitReplayRequestEntity] = sttp.tapir.Schema.derived
   implicit lazy val supportedMimeTypesDTOTapirSchema: sttp.tapir.Schema[SupportedMimeTypesDTO] = sttp.tapir.Schema.derived
   implicit lazy val systemResourceConsiderationTapirSchema: sttp.tapir.Schema[SystemResourceConsideration] = sttp.tapir.Schema.derived
@@ -507,6 +506,4 @@ object TapirGeneratedEndpointsSchemas {
   implicit lazy val parameterContextValidationRequestEntityTapirSchema: sttp.tapir.Schema[ParameterContextValidationRequestEntity] = sttp.tapir.Schema.derived
   implicit lazy val parameterContextsEntityTapirSchema: sttp.tapir.Schema[ParameterContextsEntity] = sttp.tapir.Schema.derived
   implicit lazy val parameterProviderApplyParametersRequestDTOTapirSchema: sttp.tapir.Schema[ParameterProviderApplyParametersRequestDTO] = sttp.tapir.Schema.derived
-  implicit lazy val processGroupFlowEntityTapirSchema: sttp.tapir.Schema[ProcessGroupFlowEntity] = sttp.tapir.Schema.derived
-  implicit lazy val parameterProviderApplyParametersRequestEntityTapirSchema: sttp.tapir.Schema[ParameterProviderApplyParametersRequestEntity] = sttp.tapir.Schema.derived
 }

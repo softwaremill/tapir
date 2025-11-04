@@ -45,7 +45,7 @@ TaskKey[Unit]("check") := {
   Seq(
     "TapirGeneratedEndpoints.scala" -> "Expected.scala.txt",
     "TapirGeneratedEndpointsJsonSerdes.scala" -> "ExpectedJsonSerdes.scala.txt",
-    "TapirGeneratedEndpointsSchemas.scala" -> "ExpectedSchemas.scala.txt",
+    "TapirGeneratedEndpointsSchemas1.scala" -> "ExpectedSchemas.scala.txt",
     "TapirGeneratedEndpointsXmlSerdes.scala" -> "ExpectedXmlSerdes.scala.txt",
   ).foreach { case (generated, expected) => check(generated, expected) }
   ()
