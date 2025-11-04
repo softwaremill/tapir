@@ -46,7 +46,7 @@ TaskKey[Unit]("check") := {
     "TapirGeneratedEndpoints.scala" -> "Expected.scala.txt",
     "TapirGeneratedEndpointsJsonSerdes.scala" -> "ExpectedJsonSerdes.scala.txt",
     "TapirGeneratedEndpointsSchemas.scala" -> "ExpectedSchemas.scala.txt",
-    "TapirGeneratedEndpointsValidators.scala" -> "ExpectedValidators.scala.txt"
+    "TapirGeneratedEndpointsXmlSerdes.scala" -> "ExpectedJsonSerdes.scala.txt",
   ).foreach { case (generated, expected) => check(generated, expected) }
   ()
 }
