@@ -2,6 +2,7 @@ package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiResponseContent
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  AnyType,
   NumericRestrictions,
   OpenapiSchemaAny,
   OpenapiSchemaArray,
@@ -116,7 +117,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       OpenapiComponent(
         Map(
           "User" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap("anyValue" -> OpenapiSchemaField(OpenapiSchemaAny(false), None)),
+            mutable.LinkedHashMap("anyValue" -> OpenapiSchemaField(OpenapiSchemaAny(false, AnyType.Any), None)),
             Seq("anyValue"),
             false
           )
@@ -203,7 +204,7 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       Seq(
         OpenapiResponseContent(
           "application/json",
-          OpenapiSchemaArray(OpenapiSchemaObject(mutable.LinkedHashMap.empty, Seq.empty, false), false)
+          OpenapiSchemaArray(OpenapiSchemaAny(false, AnyType.Object), false)
         )
       )
     )

@@ -132,7 +132,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("anyType" -> noDefault(OpenapiSchemaAny(false))), Seq("anyType"), false)
+            "Test" -> OpenapiSchemaObject(
+              mutable.LinkedHashMap("anyType" -> noDefault(OpenapiSchemaAny(false, AnyType.Any))),
+              Seq("anyType"),
+              false
+            )
           )
         )
       ),

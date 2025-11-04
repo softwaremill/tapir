@@ -14,6 +14,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaObject,
   OpenapiSchemaOneOf,
   OpenapiSchemaRef,
+  OpenapiSchemaSimpleType,
   OpenapiSchemaString,
   OpenapiSchemaStringType
 }
@@ -152,6 +153,7 @@ object JsonSerdeGenerator {
           Some(genCirceAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf | _: OpenapiSchemaAny, _) =>
           None
+        case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
         case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       }
       .foldLeft(Option.empty[String]) {
@@ -276,7 +278,13 @@ object JsonSerdeGenerator {
     val maybeAnySerde =
       if (schemasContainAny)
         Some(
-          "implicit lazy val anyJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.Json] = com.github.plokhotnyuk.jsoniter_scala.circe.JsoniterScalaCodec.jsonCodec()"
+          """implicit lazy val anyJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.Json] = com.github.plokhotnyuk.jsoniter_scala.circe.JsoniterScalaCodec.jsonCodec()
+            |implicit lazy val anyObjJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.JsonObject] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.JsonObject] {
+            |  import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonWriter}
+            |  override def decodeValue(in: JsonReader, default: io.circe.JsonObject): io.circe.JsonObject = anyJsonSupport.decodeValue(in, io.circe.Json.fromJsonObject(default)).asObject.getOrElse(throw new RuntimeException(s"${default.getClass.getSimpleName} is not an object"))
+            |  override def encodeValue(x: io.circe.JsonObject, out: JsonWriter): Unit = anyJsonSupport.encodeValue(io.circe.Json.fromJsonObject(x), out)
+            |  override def nullValue: io.circe.JsonObject = null
+            |}""".stripMargin
         )
       else None
     // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
@@ -333,6 +341,7 @@ object JsonSerdeGenerator {
             _
           ) =>
         Nil
+      case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => Nil
       case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
     }
     (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
@@ -492,6 +501,7 @@ object JsonSerdeGenerator {
           Some(genZioAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf, _) =>
           None
+        case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
         case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       }
       .foldLeft(Option.empty[String]) {
