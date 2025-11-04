@@ -119,7 +119,7 @@ class EndpointGenerator {
     case FS2(effectType) => s"fs2.Stream[$effectType, Byte]"
     case x               => s"${capabilityImpl(x)}.BinaryStream"
   }
-  // These types all use 'eager' schemas, except for '*/*', which we default to eager for convenience
+  // These types all use 'eager' schemas, except for '*/*', which we default to eager for convenience but which has no schema mappings
   private val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data", "*/*")
 
   def endpointDefs(
