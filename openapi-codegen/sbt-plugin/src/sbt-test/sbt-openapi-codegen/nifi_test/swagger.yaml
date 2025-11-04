@@ -106,14 +106,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -236,14 +235,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -1088,14 +1086,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -1552,8 +1549,7 @@ paths:
           name: endDate
           required: true
           schema:
-            type: string
-            format: date-time
+            $ref: "#/components/schemas/DateTimeParameterDT"
       responses:
         "200":
           content:
@@ -1870,14 +1866,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -2519,9 +2514,8 @@ paths:
             schema:
               type: object
       responses:
-        # Commented out for now because of some issue generating code for optional stream response.
-        #        "200":
-        #          description: There is no flow file to return.
+        "200":
+          description: There is no flow file to return.
         "202":
           content:
             application/octet-stream:
@@ -2691,67 +2685,65 @@ paths:
       summary: Retrieves the banners for this NiFi
       tags:
         - Flow
-    /flow/bulletin-board:
-      get:
-        operationId: getBulletinBoard
-        parameters:
-          - description: Includes bulletins with an id after this value.
-            in: query
-            name: after
-            schema:
-              type: integer
-              format: int64
-          - description: Includes bulletins originating from this sources whose name match
-              this regular expression.
-            in: query
-            name: sourceName
-            schema:
-              $ref: "#/components/schemas/BulletinBoardPatternParameterStr"
-          - description: Includes bulletins whose message that match this regular expression.
-            in: query
-            name: message
-            schema:
-              $ref: "#/components/schemas/BulletinBoardPatternParameterStr"
-          - description: Includes bulletins originating from this sources whose id match
-              this regular expression.
-            in: query
-            name: sourceId
-            schema:
-              $ref: "#/components/schemas/BulletinBoardPatternParameterStr"
-          - description: Includes bulletins originating from this sources whose group
-              id match this regular expression.
-            in: query
-            name: groupId
-            schema:
-              $ref: "#/components/schemas/BulletinBoardPatternParameterStr"
-          - description: The number of bulletins to limit the response to.
-            in: query
-            name: limit
-            schema:
-              type: integer
-              format: int32
-        responses:
-          "200":
-            content:
-              application/json:
-                schema:
-                  $ref: "#/components/schemas/BulletinBoardEntity"
-          "400":
-            description: NiFi was unable to complete the request because it was invalid.
-              The request should not be retried without modification.
-          "401":
-            description: Client could not be authenticated.
-          "403":
-            description: Client is not authorized to make this request.
-          "409":
-            description: The request was valid but NiFi was not in the appropriate state
-              to process it.
-        security: [ ]
-        #        - Read - /flow: [ ]
-        #        - Read - /{component-type}/{uuid} - For component specific bulletins: [ ]
-        summary: Gets current bulletins
-        tags:
-          - Flow
+  /flow/bulletin-board:
+    get:
+      operationId: getBulletinBoard
+      parameters:
+        - description: Includes bulletins with an id after this value.
+          in: query
+          name: after
+          schema:
+            $ref: "#/components/schemas/LongParameterInt"
+        - description: Includes bulletins originating from this sources whose name match
+            this regular expression.
+          in: query
+          name: sourceName
+          schema:
+            $ref: "#/components/schemas/BulletinBoardPatternParameterStr"
+        - description: Includes bulletins whose message that match this regular expression.
+          in: query
+          name: message
+          schema:
+            $ref: "#/components/schemas/BulletinBoardPatternParameterStr"
+        - description: Includes bulletins originating from this sources whose id match
+            this regular expression.
+          in: query
+          name: sourceId
+          schema:
+            $ref: "#/components/schemas/BulletinBoardPatternParameterStr"
+        - description: Includes bulletins originating from this sources whose group
+            id match this regular expression.
+          in: query
+          name: groupId
+          schema:
+            $ref: "#/components/schemas/BulletinBoardPatternParameterStr"
+        - description: The number of bulletins to limit the response to.
+          in: query
+          name: limit
+          schema:
+            $ref: "#/components/schemas/IntegerParameterInt"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulletinBoardEntity"
+        "400":
+          description: NiFi was unable to complete the request because it was invalid.
+            The request should not be retried without modification.
+        "401":
+          description: Client could not be authenticated.
+        "403":
+          description: Client is not authorized to make this request.
+        "409":
+          description: The request was valid but NiFi was not in the appropriate state
+            to process it.
+      security: [ ]
+      #        - Read - /flow: [ ]
+      #        - Read - /{component-type}/{uuid} - For component specific bulletins: [ ]
+      summary: Gets current bulletins
+      tags:
+        - Flow
   /flow/client-id:
     get:
       operationId: generateClientId
@@ -3379,15 +3371,13 @@ paths:
           name: offset
           required: true
           schema:
-            type: integer
-            format: int32
+            $ref: "#/components/schemas/IntegerParameterInt"
         - description: The number of actions to return.
           in: query
           name: count
           required: true
           schema:
-            type: integer
-            format: int32
+            $ref: "#/components/schemas/IntegerParameterInt"
         - description: The field to sort on.
           in: query
           name: sortColumn
@@ -3402,14 +3392,12 @@ paths:
           in: query
           name: startDate
           schema:
-            type: string
-            format: date-time
+            $ref: "#/components/schemas/DateTimeParameterDT"
         - description: Include actions before this date.
           in: query
           name: endDate
           schema:
-            type: string
-            format: date-time
+            $ref: "#/components/schemas/DateTimeParameterDT"
         - description: Include actions performed by this user.
           in: query
           name: userIdentity
@@ -3488,8 +3476,7 @@ paths:
           name: id
           required: true
           schema:
-            type: integer
-            format: int32
+            $ref: "#/components/schemas/IntegerParameterInt"
       responses:
         "200":
           content:
@@ -5180,7 +5167,7 @@ paths:
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: The connection id.
           in: path
           name: id
@@ -5201,8 +5188,7 @@ paths:
       responses:
         "200":
           content:
-            #            '*/*':
-            application/json:
+            '*/*':
               schema:
                 $ref: "#/components/schemas/StreamingOutput"
         "206":
@@ -5347,14 +5333,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -5472,14 +5457,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -5637,14 +5621,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -5762,14 +5745,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -6435,14 +6417,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, a new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -6577,14 +6558,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -7300,14 +7280,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -7510,14 +7489,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -8828,14 +8806,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -9132,7 +9109,7 @@ paths:
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: The processor id.
           in: path
           name: id
@@ -9521,8 +9498,7 @@ paths:
           name: id
           required: true
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
       responses:
         "200":
           content:
@@ -9565,13 +9541,11 @@ paths:
           name: id
           required: true
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
       responses:
         "200":
           content:
-            #            '*/*':
-            application/json:
+            '*/*':
               schema:
                 $ref: "#/components/schemas/StreamingOutput"
         "206":
@@ -9615,13 +9589,11 @@ paths:
           name: id
           required: true
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
       responses:
         "200":
           content:
-            application/json:
-              #            '*/*':
+            '*/*':
               schema:
                 $ref: "#/components/schemas/StreamingOutput"
         "206":
@@ -9926,14 +9898,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -10316,14 +10287,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -11141,14 +11111,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -11333,14 +11302,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -11585,14 +11553,13 @@ paths:
           in: query
           name: version
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/LongParameterInt"
         - description: "If the client id is not specified, a new one will be generated.\
           \ This value (whether specified or generated) is included in the response."
           in: query
           name: clientId
           schema:
-            type: string
+            $ref: "#/components/schemas/ClientIdParameterStr"
         - description: Acknowledges that this node is disconnected to allow for mutable
             requests to proceed.
           in: query
@@ -12721,6 +12688,8 @@ components:
       properties:
         clientId:
           type: string
+    ClientIdParameterStr:
+      type: string
     ClusterDTO:
       type: object
       properties:
@@ -14615,6 +14584,9 @@ components:
         dateTime:
           type: string
           format: date-time
+    DateTimeParameterDT:
+      type: string
+      format: date-time
     DefinedType:
       type: object
       description: Indicates that this property is for selecting a controller service
@@ -15807,6 +15779,9 @@ components:
         integer:
           type: integer
           format: int32
+    IntegerParameterInt:
+      type: integer
+      format: int32
     JmxMetricsResultDTO:
       type: object
       properties:
@@ -16070,6 +16045,9 @@ components:
         long:
           type: integer
           format: int64
+    LongParameterInt:
+      type: integer
+      format: int64
     MultiProcessorUseCase:
       type: object
       description: A list of use cases that have been documented that involve this

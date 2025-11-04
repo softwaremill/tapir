@@ -837,11 +837,10 @@ class EndpointGenerator {
               def withHeaderTypes(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, ${ht(false).get})"
               def withUnderscores(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, $underscores)"
               val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
-              // TODO: Not enough to just do this here
               val maybeStrict = if (tpeIsBin) ".toEndpointIO" else ""
               if (contentCanBeEmpty) {
                 val (_, nonOptionalType, _) = bodyFmt(m, isErrorPosition)
-                val maybeMap = if (m.content.size > 1) ".map(Some(_))(_.orNull)" else ""
+                val maybeMap = if (m.content.size > 1 || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
                 (
                   s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeStrict$maybeMap$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
