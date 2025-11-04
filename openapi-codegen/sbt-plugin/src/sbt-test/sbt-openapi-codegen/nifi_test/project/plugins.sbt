@@ -1,5 +1,5 @@
 {
-  val pluginVersion = Option(System.getProperty("plugin.version")).getOrElse("1.11.50.19-LOCAL")
+  val pluginVersion = System.getProperty("plugin.version")
   if (pluginVersion == null)
     throw new RuntimeException("""|
                                   |
