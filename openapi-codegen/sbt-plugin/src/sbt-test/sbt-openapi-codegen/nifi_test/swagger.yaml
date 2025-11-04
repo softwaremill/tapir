@@ -3556,9 +3556,9 @@ paths:
           required: true
           schema:
             type: string
-        #            enum:
-        #              - PROMETHEUS
-        #              - JSON
+            enum:
+              - PROMETHEUS
+              - JSON
         - description: Set of included metrics registries. Duplicate the parameter to
             include multiple registries. All registries are included by default.
           in: query

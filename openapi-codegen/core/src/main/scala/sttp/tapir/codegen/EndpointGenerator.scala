@@ -100,6 +100,13 @@ case class EndpointDefs(
     details: EndpointDetails
 )
 
+case class UrlMapResponse(
+    pathDecl: String,
+    pathTypes: Seq[String],
+    maybeSecurityPath: Option[(String, Seq[String])],
+    inlineUrlDefs: Seq[String]
+)
+
 class EndpointGenerator {
   private def combine(inlineDefn1: Option[String], inlineDefn2: Option[String], separator: String = "\n") =
     (inlineDefn1, inlineDefn2) match {
@@ -214,8 +221,11 @@ class EndpointGenerator {
 
           val name = m.name(p.url)
           val maybeName = m.operationId.map(n => s"""\n  .name("${JavaEscape.escapeString(n)}")""").getOrElse("")
-          val (pathDecl, pathTypes, maybeSecurityPath) = urlMapper(
+          val UrlMapResponse(pathDecl, pathTypes, maybeSecurityPath, inlineUrlDefs) = urlMapper(
             p.url,
+            name,
+            targetScala3,
+            jsonSerdeLib,
             m.resolvedParameters,
             doc.pathsExtensions.get(securityPrefixKey).flatMap(_.asArray).toSeq.flatMap(_.flatMap(_.asString)),
             doc,
@@ -256,7 +266,8 @@ class EndpointGenerator {
             errTypes.toSeq,
             outTypes.toSeq
           )
-          val inlineDefn = combine(inlineInDefns, inlineDefns)
+          val maybeInlineUrlDefs = if (inlineUrlDefs.isEmpty) None else Some(inlineUrlDefs.mkString("\n"))
+          val inlineDefn = combine(maybeInlineUrlDefs, combine(inlineInDefns, inlineDefns))
           val sec = securityDecl.map(indent(2)(_) + "\n").getOrElse("")
           val securityPathDecl = maybeSecurityPath.map("\n  " + _._1).getOrElse("")
           val definition =
@@ -331,18 +342,21 @@ class EndpointGenerator {
 
   private def urlMapper(
       url: String,
+      endpointName: String,
+      targetScala3: Boolean,
+      jsonSerdeLib: JsonSerdeLib,
       parameters: Seq[OpenapiParameter],
       securityPathPrefixes: Seq[String],
       doc: OpenapiDocument,
       generateValidators: Boolean
   )(implicit
       location: Location
-  ): (String, Seq[String], Option[(String, Seq[String])]) = {
+  ): UrlMapResponse = {
     val securityPrefixes = securityPathPrefixes.filter(url.startsWith)
     // .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     val maxSecurityPrefix = if (securityPrefixes.nonEmpty) Some(securityPrefixes.maxBy(_.length)) else None
     val inUrl = maxSecurityPrefix.fold(url)(url.stripPrefix)
-    def toPathDecl(url: String) = url
+    def toPathDecl(url: String): (Array[String], Array[Option[String]], Array[Option[String]]) = url
       .split('/')
       .filter(_.nonEmpty)
       .map { segment =>
@@ -355,20 +369,26 @@ class EndpointGenerator {
                 val (t, _) = mapSchemaSimpleTypeToType(st)
                 val desc = p.description.fold("")(d => s""".description("$d")""")
                 val validations = if (generateValidators) ValidationGenerator.mkValidations(doc, st, true) else ""
-                s"""path[$t]("$name")$validations$desc""" -> Some(t)
+                (s"""path[$t]("$name")$validations$desc""", Some(t), None)
+              case e: OpenapiSchemaEnum =>
+                val (param, inlineDefn, tpe) = getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, p, e, false)
+                (param, Some(tpe), inlineDefn.map(_.mkString("\n")))
               case _ => bail("Can't create non-simple params to url yet")
             }
           }
         } else {
-          '"' + segment + '"' -> None
+          ('"' + segment + '"', None, None)
         }
       }
-      .unzip
-    val (inPath, tpes) = toPathDecl(inUrl)
+      .unzip3
+    val (inPath, tpes, inlineDefns) = toPathDecl(inUrl)
     val inPathDecl = if (inPath.nonEmpty) ".in((" + inPath.mkString(" / ") + "))" else ""
-    val secPathDecl =
-      maxSecurityPrefix.map(toPathDecl).map { case (ds, ts) => ".prependSecurityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten }
-    (inPathDecl, tpes.toSeq.flatten, secPathDecl)
+    val (secPathDecl, secInlineDefs) =
+      maxSecurityPrefix
+        .map(toPathDecl)
+        .map { case (ds, ts, inline) => (".prependSecurityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten) -> inline }
+        .unzip
+    UrlMapResponse(inPathDecl, tpes.toSeq.flatten, secPathDecl.headOption, secInlineDefs.flatten.flatten.toSeq ++ inlineDefns.toSeq.flatten)
   }
 
   private def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
@@ -385,7 +405,7 @@ class EndpointGenerator {
       param: OpenapiParameter,
       e: OpenapiSchemaEnum,
       isArray: Boolean
-  ) = {
+  ): (String, Some[Seq[String]], String) = {
     val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
     val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
     val enumDefn = EnumGenerator.generateEnum(

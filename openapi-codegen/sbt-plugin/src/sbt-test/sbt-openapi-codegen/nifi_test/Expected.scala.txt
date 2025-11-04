@@ -4119,6 +4119,15 @@ object TapirGeneratedEndpoints {
   case class ClearStateBodyOption_ComponentStateEntity_In(value: Option[ComponentStateEntity]) extends ClearStateBodyIn
 
 
+  sealed trait GetFlowMetricsProducer extends enumeratum.EnumEntry
+  object GetFlowMetricsProducer extends enumeratum.Enum[GetFlowMetricsProducer] with enumeratum.CirceEnum[GetFlowMetricsProducer] {
+    val values = findValues
+    case object PROMETHEUS extends GetFlowMetricsProducer
+    case object JSON extends GetFlowMetricsProducer
+    implicit val enumCodecSupportGetFlowMetricsProducer: ExtraParamSupport[GetFlowMetricsProducer] =
+      extraCodecSupport[GetFlowMetricsProducer]("GetFlowMetricsProducer", GetFlowMetricsProducer)
+  }
+
   sealed trait ClearState_2BodyIn extends Product with java.io.Serializable
   case class ClearState_2Body0In(value: Array[Byte]) extends ClearState_2BodyIn
   case class ClearState_2BodyOption_ComponentStateEntity_In(value: Option[ComponentStateEntity]) extends ClearState_2BodyIn
@@ -5610,12 +5619,12 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[PortStatusEntity].description(""))
       .tags(List("Flow"))
 
-  type GetFlowMetricsEndpoint = Endpoint[Unit, (String, Option[GetFlowMetricsIncludedRegistries], Option[String], Option[String], Option[String]), Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
+  type GetFlowMetricsEndpoint = Endpoint[Unit, (GetFlowMetricsProducer, Option[GetFlowMetricsIncludedRegistries], Option[String], Option[String], Option[String]), Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
   lazy val getFlowMetrics: GetFlowMetricsEndpoint =
     endpoint
       .name("getFlowMetrics")
       .get
-      .in(("flow" / "metrics" / path[String]("producer").description("The producer for flow file metrics. Each producer may have its own output format.")))
+      .in(("flow" / "metrics" / path[GetFlowMetricsProducer]("producer").description("The producer for flow file metrics. Each producer may have its own output format.")))
       .in(query[Option[GetFlowMetricsIncludedRegistries]]("includedRegistries").description("Set of included metrics registries. Duplicate the parameter to include multiple registries. All registries are included by default."))
       .in(query[Option[String]]("sampleName").description("Regular Expression Pattern to be applied against the sample name field"))
       .in(query[Option[String]]("sampleLabelValue").description("Regular Expression Pattern to be applied against the sample label value field"))
