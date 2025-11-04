@@ -165,9 +165,7 @@ object TapirGeneratedEndpoints {
     name: Option[String] = None
   )
   type ListType = List[ByteString]
-  case class SomeBinaryType (
-
-  )
+  type SomeBinaryType = io.circe.JsonObject
   case class PutInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
