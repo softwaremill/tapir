@@ -16,6 +16,11 @@ class AkkaBodyListener(implicit ec: ExecutionContext) extends BodyListener[Futur
       case ws @ Left(_)               => cb(Success(())).map(_ => ws)
       case Right(e) if e.isKnownEmpty =>
         Future.successful(Right(e)).andThen { case _ => cb(Success(())) }
+      case Right(e: HttpEntity.Strict) =>
+        // The advantage of HttpEntity.Strict is that it has the data available in a ByteString, which makes it easier
+        // to implement custom directives that work with the data, such as custom response logging. Using the case
+        // below, the entity would be converted to HttpEntity.Default, which has the data available in a Stream.
+        Future.successful(Right(e)).andThen { case _ => cb(Success(())) }
       case Right(e: UniversalEntity) =>
         Future.successful(
           Right(
