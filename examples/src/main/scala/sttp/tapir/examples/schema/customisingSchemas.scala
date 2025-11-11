@@ -1,9 +1,9 @@
 // {cat=Schemas; effects=Future; server=Netty; json=circe; docs=Swagger UI}: Customising a derived schema, using annotations, and using implicits
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.2
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.12.2
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.12.2
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.12.2
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.3
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.12.3
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.12.3
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.12.3
 
 package sttp.tapir.examples.schema
 
