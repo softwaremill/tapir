@@ -107,7 +107,7 @@ private[openapi] class EndpointToOperationResponse(
   }
 
   private def mergeMediaTypesToAnyOf(bodies: Vector[MediaType]): MediaType =
-    bodies.toSet.toList match {
+    bodies.distinctBy(_.schema).toList match {
       case List(body) => body
       case bodies     =>
         MediaType(
