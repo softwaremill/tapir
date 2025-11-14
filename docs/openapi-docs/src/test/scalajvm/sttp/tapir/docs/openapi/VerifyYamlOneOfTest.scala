@@ -32,7 +32,8 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
     val e = endpoint.errorOut(
       sttp.tapir.oneOf(
         oneOfVariant(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
-        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
+        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found").example(NotFound("not found"))),
+        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("404").example(NotFound("404"))),
         oneOfDefaultVariant(jsonBody[Unknown].description("unknown"))
       )
     )
@@ -50,7 +51,8 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
       .errorOut(jsonBody[Unknown].description("unknown"))
       .errorOutVariants[ErrorInfo](
         oneOfVariant(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
-        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found"))
+        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("not found").example(NotFound("not found"))),
+        oneOfVariant(StatusCode.NotFound, jsonBody[NotFound].description("404").example(NotFound("404")))
       )
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Fruits", "1.0")).toYaml

@@ -21,6 +21,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFound'
+            example:
+              what: notfound
         default:
           description: unknown
           content:
