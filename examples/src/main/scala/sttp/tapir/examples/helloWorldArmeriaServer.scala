@@ -40,4 +40,4 @@ import scala.concurrent.Future
   println("Got result: " + result)
 
   assert(result == "Hello, Frodo!")
-  server.stop().join()
+  server.stop().join(): Unit
