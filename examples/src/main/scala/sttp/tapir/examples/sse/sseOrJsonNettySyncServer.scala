@@ -1,4 +1,4 @@
-// {cat=Server Sent Events; effects=Direct; server=Netty}: Describe and implement an endpoint which emits SSE
+// {cat=Server Sent Events; effects=Direct; server=Netty}: Respond with either SSE or JSON
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.3
 //> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.12.3
