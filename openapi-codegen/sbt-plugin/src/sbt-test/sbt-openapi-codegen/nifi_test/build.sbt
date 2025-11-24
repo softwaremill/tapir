@@ -4,7 +4,7 @@ lazy val root = (project in file("."))
     scalaVersion := "2.13.17",
     version := "0.1",
     openapiStreamingImplementation := "pekko",
-    openapiGenerateEndpointTypes := true,
+    openapiGenerateEndpointTypes := true
   )
 
 val tapirVersion = "1.11.50"
@@ -17,7 +17,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
   "com.softwaremill.sttp.client3" %% "http4s-backend" % "3.11.0",
   "io.circe" %% "circe-generic" % "0.14.15",
-  "com.beachape" %% "enumeratum" % "1.9.0",
+  "com.beachape" %% "enumeratum" % "1.9.1",
   "com.beachape" %% "enumeratum-circe" % "1.9.0",
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
   "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
@@ -46,7 +46,7 @@ TaskKey[Unit]("check") := {
     "TapirGeneratedEndpoints.scala" -> "Expected.scala.txt",
     "TapirGeneratedEndpointsJsonSerdes.scala" -> "ExpectedJsonSerdes.scala.txt",
     "TapirGeneratedEndpointsSchemas1.scala" -> "ExpectedSchemas.scala.txt",
-    "TapirGeneratedEndpointsXmlSerdes.scala" -> "ExpectedXmlSerdes.scala.txt",
+    "TapirGeneratedEndpointsXmlSerdes.scala" -> "ExpectedXmlSerdes.scala.txt"
   ).foreach { case (generated, expected) => check(generated, expected) }
   ()
 }
