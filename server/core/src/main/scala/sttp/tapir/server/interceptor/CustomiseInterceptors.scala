@@ -111,13 +111,20 @@ case class CustomiseInterceptors[F[_], O](
 
   //
 
+  /*
+  Notes on interceptor ordering:
+  - we want to log rejection responses, hence the log interceptor must be before the reject one
+  - we want to log exceptions during endpoint invocation, hence the exception interceptor must be before the log one
+    (the exception interceptor "consumes" exceptions and generates 500 responses)
+   */
+
   /** Creates the default interceptor stack */
   def interceptors: List[Interceptor[F]] = prependedInterceptors ++
     metricsInterceptor.toList ++
     corsInterceptor.toList ++
-    rejectHandler.map(new RejectInterceptor[F](_)).toList ++
     exceptionHandler.map(new ExceptionInterceptor[F](_)).toList ++
     serverLog.map(new ServerLogInterceptor[F](_)).toList ++
+    rejectHandler.map(new RejectInterceptor[F](_)).toList ++
     notAcceptableInterceptor.toList ++
     additionalInterceptors ++
     List(new DecodeFailureInterceptor[F](decodeFailureHandler)) ++

@@ -43,8 +43,8 @@ trait NettyCatsServerInterpreter[F[_]] {
     val handler: Route[F] = { (request: NettyServerRequest) =>
       serverInterpreter(request)
         .map {
-          case RequestResult.Response(response) => Some(response)
-          case RequestResult.Failure(_)         => None
+          case RequestResult.Response(response, _) => Some(response)
+          case RequestResult.Failure(_)            => None
         }
     }
 

@@ -37,7 +37,7 @@ trait JdkHttpServerInterpreter {
 
       val req = JdkHttpServerRequest(exchange)
       serverInterpreter(req) match {
-        case RequestResult.Response(response) =>
+        case RequestResult.Response(response, _) =>
           try {
             exchange.getResponseHeaders.putAll(
               response.headers.groupBy(_.name).view.mapValues(_.map(_.value).asJava).toMap.asJava

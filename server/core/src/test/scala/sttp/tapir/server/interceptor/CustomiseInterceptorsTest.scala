@@ -31,6 +31,7 @@ class CustomiseInterceptorsTest extends AnyFlatSpec with Matchers {
 
     val receivedRequests: ListBuffer[ServerRequest] = ListBuffer.empty
     val handledRequests: ListBuffer[(DecodeSuccessContext[Identity, ?, ?, ?], ServerResponse[?])] = ListBuffer.empty
+    val handledRequestsByInterceptor: ListBuffer[(ServerRequest, ServerResponse[?])] = ListBuffer.empty
     val exceptions: ListBuffer[(ExceptionContext[?, ?], Throwable)] = ListBuffer.empty
 
     override def requestToken: TOKEN = ()
@@ -58,6 +59,11 @@ class CustomiseInterceptorsTest extends AnyFlatSpec with Matchers {
 
     override def requestHandled(ctx: DecodeSuccessContext[Identity, ?, ?, ?], response: ServerResponse[?], token: TOKEN): Identity[Unit] = {
       handledRequests.append((ctx, response))
+      ()
+    }
+
+    override def requestHandledByInterceptor(request: ServerRequest, response: ServerResponse[?], token: TOKEN): Identity[Unit] = {
+      handledRequestsByInterceptor.append((request, response))
       ()
     }
 
@@ -124,7 +130,7 @@ class CustomiseInterceptorsTest extends AnyFlatSpec with Matchers {
 
     // then
     response match {
-      case RequestResult.Response(serverResponse) =>
+      case RequestResult.Response(serverResponse, _) =>
         serverResponse.code shouldBe StatusCode.InternalServerError
         serverResponse.body shouldBe Some("Internal server error")
       case _ => fail("Expected Response")
@@ -161,12 +167,51 @@ class CustomiseInterceptorsTest extends AnyFlatSpec with Matchers {
 
     // then
     response match {
-      case RequestResult.Response(serverResponse) =>
+      case RequestResult.Response(serverResponse, _) =>
         serverResponse.code shouldBe StatusCode.NotFound
         serverResponse.body shouldBe Some("Not Found")
       case _ => fail("Expected Response")
     }
     stubLog.handledRequests shouldBe empty
+  }
+
+  it should "log response when request is rejected with RejectInterceptor" in {
+    // given
+    val stubLog = new StubServerLog()
+    val customise = CustomiseInterceptors[Identity, List[Interceptor[Identity]]](
+      createOptions = _.interceptors
+    )
+      .serverLog(stubLog)
+      .rejectHandler(DefaultRejectHandler.orNotFound[Identity])
+
+    val testEndpoint = endpoint.get
+      .in("test")
+      .in(query[String]("x"))
+      .out(stringBody)
+      .serverLogic[Identity](x => Right(s"Hello $x"))
+
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(testEndpoint),
+      TestRequestBody,
+      StringToResponseBody,
+      customise.interceptors,
+      _ => ()
+    )
+
+    // when
+    val response = interpreter.apply(notFoundRequest)
+
+    // then
+    response match {
+      case RequestResult.Response(serverResponse, _) =>
+        serverResponse.code shouldBe StatusCode.NotFound
+        serverResponse.body shouldBe Some("Not Found")
+      case _ => fail("Expected Response")
+    }
+    stubLog.receivedRequests should have size 1
+    stubLog.receivedRequests.head.uri shouldBe notFoundRequest.uri
+    stubLog.handledRequestsByInterceptor should have size 1
+    stubLog.handledRequestsByInterceptor.head._2.code shouldBe StatusCode.NotFound
   }
 
   it should "apply interceptors in correct order" in {

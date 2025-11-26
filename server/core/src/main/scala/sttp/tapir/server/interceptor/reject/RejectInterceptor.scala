@@ -5,6 +5,7 @@ import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor._
+import sttp.tapir.server.interceptor.ResponseSource
 
 /** Specifies what should be done if decoding the request has failed for all endpoints, and multiple endpoints have been interpreted
   * (doesn't do anything when interpreting a single endpoint).
@@ -23,21 +24,27 @@ class RejectInterceptor[F[_]](handler: RejectHandler[F]) extends RequestIntercep
     new RequestHandler[F, R, B] {
       override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
           monad: MonadError[F]
-      ): F[RequestResult[B]] =
+      ): F[RequestResult[B]] = {
+        println("IN REJECT INTERCEPTOR")
         next(request, endpoints).flatMap {
           case r: RequestResult.Response[B] => (r: RequestResult[B]).unit
           case f: RequestResult.Failure     =>
+            println("XXX " + f)
             handler(RejectContext(f, request)).flatMap {
-              case Some(value) => responder(request, value).map(RequestResult.Response(_))
-              case None        => (f: RequestResult[B]).unit
+              case Some(value) =>
+                println("REJECT WITH " + value)
+                responder(request, value).map(RequestResult.Response(_, ResponseSource.RequestHandler))
+              case None => (f: RequestResult[B]).unit
             }
         }
+      }
     }
   }
 }
 
 object RejectInterceptor {
 
+  // TODO: remove usages? reject does more
   /** When interpreting a single endpoint, disabling the reject interceptor, as returning a method mismatch only makes sense when there are
     * more endpoints
     */

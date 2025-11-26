@@ -113,7 +113,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val response = interpreter(testRequest)
 
     // then
-    response should matchPattern { case Response(ServerResponse(_, _, Some(_), _)) => }
+    response should matchPattern { case Response(ServerResponse(_, _, Some(_), _), _) => }
   }
 
 }

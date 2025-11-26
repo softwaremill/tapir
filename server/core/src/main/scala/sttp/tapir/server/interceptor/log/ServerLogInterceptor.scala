@@ -7,7 +7,6 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.AnyEndpoint
 
 /** @tparam F The effect in which log messages are returned. */
 class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterceptor[F] {
@@ -21,7 +20,13 @@ class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterce
       override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
           monad: MonadError[F]
       ): F[RequestResult[B]] = {
-        serverLog.requestReceived(request, token).flatMap(_ => delegate(request, endpoints))
+        serverLog.requestReceived(request, token).flatMap(_ => delegate(request, endpoints)).flatTap {
+          // the request was handled by a request handler (in some interceptor), meaning no logging happened as part of the provided
+          // ServerLogEndpointInterceptor
+          case RequestResult.Response(response, ResponseSource.RequestHandler) =>
+            serverLog.requestHandledByInterceptor(request, response, token)
+          case _ => ().unit
+        }
       }
     }
   }

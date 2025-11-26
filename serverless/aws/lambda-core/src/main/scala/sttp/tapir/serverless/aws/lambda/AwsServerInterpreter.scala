@@ -33,7 +33,7 @@ private[aws] abstract class AwsServerInterpreter[F[_]: MonadError] {
       interpreter.apply(serverRequest).map {
         case RequestResult.Failure(_) =>
           AwsResponse(isBase64Encoded = awsServerOptions.encodeResponseBody, StatusCode.NotFound.code, Map.empty, "")
-        case RequestResult.Response(res) =>
+        case RequestResult.Response(res, _) =>
           val baseHeaders = res.headers.groupBy(_.name).map { case (n, v) => n -> v.map(_.value).mkString(",") }
           val allHeaders = res.body match {
             case Some((_, Some(contentLength))) if res.contentLength.isEmpty =>
