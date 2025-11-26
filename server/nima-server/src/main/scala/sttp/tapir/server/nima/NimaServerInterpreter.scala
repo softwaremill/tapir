@@ -19,7 +19,7 @@ trait NimaServerInterpreter {
     val filteredEndpoints = FilterServerEndpoints[Any, Identity](ses)
     val requestBody = new NimaRequestBody(nimaServerOptions.createFile)
     val responseBody = new NimaToResponseBody
-    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(nimaServerOptions.interceptors, ses)
+    val interceptors = nimaServerOptions.interceptors
 
     (helidonRequest: HelidonServerRequest, helidonResponse: HelidonServerResponse) => {
       implicit val bodyListener: BodyListener[Identity, InputStream] = new NimaBodyListener(helidonResponse)

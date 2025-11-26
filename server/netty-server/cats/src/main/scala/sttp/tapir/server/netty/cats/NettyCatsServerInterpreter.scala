@@ -9,7 +9,6 @@ import sttp.monad.syntax._
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync, _}
 import sttp.tapir.server.netty.cats.internal.NettyCatsRequestBody
@@ -36,7 +35,7 @@ trait NettyCatsServerInterpreter[F[_]] {
       FilterServerEndpoints(ses),
       new NettyCatsRequestBody(createFile, Fs2StreamCompatible[F](nettyServerOptions.dispatcher)),
       new NettyToStreamsResponseBody(Fs2StreamCompatible[F](nettyServerOptions.dispatcher)),
-      RejectInterceptor.disableWhenSingleEndpoint(interceptors, ses),
+      interceptors,
       deleteFile
     )
 

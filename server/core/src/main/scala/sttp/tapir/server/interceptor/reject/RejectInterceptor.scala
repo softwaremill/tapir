@@ -40,9 +40,9 @@ class RejectInterceptor[F[_]](handler: RejectHandler[F]) extends RequestIntercep
 
 object RejectInterceptor {
 
-  // TODO: remove usages? reject does more
-  /** When interpreting a single endpoint, disabling the reject interceptor, as returning a method mismatch only makes sense when there are
-    * more endpoints
+  /** When interpreting a single endpoint, can be used to disable the reject interceptor. This should be done if the Tapir interpreter is
+    * called multiple times to interpret individual endpoints, instead of interpreting them in bulk. In such cases, e.g. a method mismatch
+    * should not be returned, if the endpoint doesn't match the request.
     */
   def disableWhenSingleEndpoint[F[_]](interceptors: List[Interceptor[F]], ses: List[ServerEndpoint[?, F]]): List[Interceptor[F]] =
     if (ses.length > 1) interceptors else interceptors.filterNot(_.isInstanceOf[RejectInterceptor[F]])

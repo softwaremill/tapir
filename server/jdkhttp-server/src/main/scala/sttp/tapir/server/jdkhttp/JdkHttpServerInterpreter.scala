@@ -6,7 +6,6 @@ import sttp.shared.Identity
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.jdkhttp.internal._
 
@@ -19,7 +18,7 @@ trait JdkHttpServerInterpreter {
     val filteredEndpoints = FilterServerEndpoints[Any, Identity](ses)
     val requestBody = new JdkHttpRequestBody(jdkHttpServerOptions.createFile, jdkHttpServerOptions.multipartFileThresholdBytes)
     val responseBody = new JdkHttpToResponseBody
-    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(jdkHttpServerOptions.interceptors, ses)
+    val interceptors = jdkHttpServerOptions.interceptors
 
     implicit val bodyListener: BodyListener[Identity, JdkHttpResponseBody] = new JdkHttpBodyListener
 

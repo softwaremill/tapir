@@ -6,7 +6,6 @@ import sttp.monad.syntax._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 
 private[aws] abstract class AwsServerInterpreter[F[_]: MonadError] {
@@ -23,7 +22,7 @@ private[aws] abstract class AwsServerInterpreter[F[_]: MonadError] {
       FilterServerEndpoints(ses),
       new AwsRequestBody[F](),
       new AwsToResponseBody(awsServerOptions),
-      RejectInterceptor.disableWhenSingleEndpoint(awsServerOptions.interceptors, ses),
+      awsServerOptions.interceptors,
       deleteFile = _ => ().unit // no file support
     )
 

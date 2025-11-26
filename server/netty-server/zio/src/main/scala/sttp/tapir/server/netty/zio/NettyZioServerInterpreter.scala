@@ -2,7 +2,6 @@ package sttp.tapir.server.netty.zio
 
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync, _}
 import sttp.tapir.server.netty.zio.NettyZioServerInterpreter.ZioRunAsync
@@ -28,7 +27,7 @@ trait NettyZioServerInterpreter[R] {
         FilterServerEndpoints(widenedSes),
         new NettyZioRequestBody(widenedServerOptions.createFile, ZioStreamCompatible(runtime)),
         new NettyToStreamsResponseBody[ZioStreams](ZioStreamCompatible(runtime)),
-        RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes),
+        widenedServerOptions.interceptors,
         widenedServerOptions.deleteFile
       )
 
