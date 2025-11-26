@@ -25,16 +25,12 @@ class RejectInterceptor[F[_]](handler: RejectHandler[F]) extends RequestIntercep
       override def apply(request: ServerRequest, endpoints: List[ServerEndpoint[R, F]])(implicit
           monad: MonadError[F]
       ): F[RequestResult[B]] = {
-        println("IN REJECT INTERCEPTOR")
         next(request, endpoints).flatMap {
           case r: RequestResult.Response[B] => (r: RequestResult[B]).unit
           case f: RequestResult.Failure     =>
-            println("XXX " + f)
             handler(RejectContext(f, request)).flatMap {
-              case Some(value) =>
-                println("REJECT WITH " + value)
-                responder(request, value).map(RequestResult.Response(_, ResponseSource.RequestHandler))
-              case None => (f: RequestResult[B]).unit
+              case Some(value) => responder(request, value).map(RequestResult.Response(_, ResponseSource.RequestHandler))
+              case None        => (f: RequestResult[B]).unit
             }
         }
       }
