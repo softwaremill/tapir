@@ -129,6 +129,11 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.de
 
 ## Prometheus simpleclient metrics
 
+```{warning}
+Prometheus simpleclient is deprecated and will be removed in a future version. It's recommended to use 
+`tapir-prometheus-metrics` instead, and only use this module as a temporary migration path.
+```
+
 Add the following dependency:
 
 ```scala
@@ -280,8 +285,6 @@ By default, the following metrics are exposed:
 * `http.server.active_requests` (up-down-counter)
 * `http.server.requests.total` (counter)
 * `http.server.request.duration` (histogram)
-
-
 
 ## Datadog Metrics
 
