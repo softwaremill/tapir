@@ -118,12 +118,23 @@ case class CustomiseInterceptors[F[_], O](
     (the exception interceptor "consumes" exceptions and generates 500 responses)
    */
 
+  /** Creates the logging and exception handling interceptors based on what's defined. If both are defined, a combined interceptor is used
+    * that properly coordinates exception logging and handling. If only one is defined, use the separate interceptor for that functionality.
+    */
+  private def loggingAndExceptionInterceptors: List[Interceptor[F]] = {
+    (serverLog, exceptionHandler) match {
+      case (Some(log), Some(handler)) => List(new ServerLogAndExceptionInterceptor[F](log, handler))
+      case (Some(log), None)          => List(new ServerLogInterceptor[F](log))
+      case (None, Some(handler))      => List(new ExceptionInterceptor[F](handler))
+      case (None, None)               => Nil
+    }
+  }
+
   /** Creates the default interceptor stack */
   def interceptors: List[Interceptor[F]] = prependedInterceptors ++
     metricsInterceptor.toList ++
     corsInterceptor.toList ++
-    exceptionHandler.map(new ExceptionInterceptor[F](_)).toList ++
-    serverLog.map(new ServerLogInterceptor[F](_)).toList ++
+    loggingAndExceptionInterceptors ++
     rejectHandler.map(new RejectInterceptor[F](_)).toList ++
     notAcceptableInterceptor.toList ++
     additionalInterceptors ++

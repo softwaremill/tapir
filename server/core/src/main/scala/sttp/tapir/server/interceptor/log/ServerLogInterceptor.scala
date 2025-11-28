@@ -8,7 +8,12 @@ import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.model.ServerResponse
 
-/** @tparam F The effect in which log messages are returned. */
+/** Performs logging of requests, responses, and exceptions. Usually, the [[ServerLogAndExceptionInterceptor]] is used instead, which
+  * combines logging and exception handling.
+  *
+  * @tparam F
+  *   The effect in which log messages are returned.
+  */
 class ServerLogInterceptor[F[_]](serverLog: ServerLog[F]) extends RequestInterceptor[F] {
   override def apply[R, B](
       responder: Responder[F, B],

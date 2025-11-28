@@ -11,7 +11,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.TestUtil._
 import sttp.tapir.server.interceptor.log.{ExceptionContext, ServerLog}
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.model.ServerResponse
+import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 
 import scala.collection.mutable.ListBuffer
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
@@ -139,6 +139,40 @@ class CustomiseInterceptorsTest extends AnyFlatSpec with Matchers {
     stubLog.exceptions.head._2.getMessage shouldBe "Test exception"
   }
 
+  it should "log both exception and 500 response when server logic throws an exception" in {
+    // given
+    val stubLog = new StubServerLog()
+    val customise = CustomiseInterceptors[Identity, List[Interceptor[Identity]]](
+      createOptions = _.interceptors
+    ).serverLog(stubLog)
+
+    val testEndpoint = endpoint.get
+      .in("test")
+      .in(query[String]("x"))
+      .out(stringBody)
+      .serverLogic[Identity](_ => throw new RuntimeException("Test exception"))
+
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(testEndpoint),
+      TestRequestBody,
+      StringToResponseBody,
+      customise.interceptors,
+      _ => ()
+    )
+
+    // when
+    val _ = interpreter.apply(successRequest)
+
+    // then
+    // Verify the exception is logged
+    stubLog.exceptions should have size 1
+    stubLog.exceptions.head._2.getMessage shouldBe "Test exception"
+
+    // Verify the 500 response is logged
+    stubLog.handledRequests should have size 1
+    stubLog.handledRequests.head._2.code shouldBe StatusCode.InternalServerError
+  }
+
   it should "respect reject interceptor set to always return 404" in {
     // given
     val stubLog = new StubServerLog()
@@ -249,5 +283,74 @@ class CustomiseInterceptorsTest extends AnyFlatSpec with Matchers {
     // then
     // Prepended interceptors are called first on request, appended are called last on request
     callTrail.toList shouldBe List("prepended success", "appended success")
+  }
+
+  it should "use separate ServerLogInterceptor when only serverLog is defined" in {
+    // given
+    val stubLog = new StubServerLog()
+    val customise = CustomiseInterceptors[Identity, List[Interceptor[Identity]]](
+      createOptions = _.interceptors
+    )
+      .serverLog(stubLog)
+      .exceptionHandler(None)
+
+    val testEndpoint = endpoint.get
+      .in("test")
+      .in(query[String]("x"))
+      .out(stringBody)
+      .serverLogic[Identity](x => Right(s"Hello $x"))
+
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(testEndpoint),
+      TestRequestBody,
+      StringToResponseBody,
+      customise.interceptors,
+      _ => ()
+    )
+
+    // when
+    val _ = interpreter.apply(successRequest)
+
+    // then
+    stubLog.receivedRequests should have size 1
+    stubLog.handledRequests should have size 1
+  }
+
+  it should "use separate ExceptionInterceptor when only exceptionHandler is defined" in {
+    // given
+    val customise = CustomiseInterceptors[Identity, List[Interceptor[Identity]]](
+      createOptions = _.interceptors
+    )
+      .serverLog(None)
+      .exceptionHandler(
+        sttp.tapir.server.interceptor.exception.ExceptionHandler.pure[Identity] { _ =>
+          Some(ValuedEndpointOutput(statusCode.and(stringBody), (StatusCode.BadRequest, "Custom error")))
+        }
+      )
+
+    val testEndpoint = endpoint.get
+      .in("test")
+      .in(query[String]("x"))
+      .out(stringBody)
+      .serverLogic[Identity](_ => throw new RuntimeException("Test exception"))
+
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(testEndpoint),
+      TestRequestBody,
+      StringToResponseBody,
+      customise.interceptors,
+      _ => ()
+    )
+
+    // when
+    val response = interpreter.apply(successRequest)
+
+    // then
+    response match {
+      case RequestResult.Response(serverResponse, _) =>
+        serverResponse.code shouldBe StatusCode.BadRequest
+        serverResponse.body shouldBe Some("Custom error")
+      case _ => fail("Expected Response")
+    }
   }
 }
