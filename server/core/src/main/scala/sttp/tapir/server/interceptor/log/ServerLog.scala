@@ -40,6 +40,11 @@ trait ServerLog[F[_]] {
     */
   def requestHandled(ctx: DecodeSuccessContext[F, ?, ?, ?], response: ServerResponse[?], token: TOKEN): F[Unit]
 
+  /** Invoked when the request was handled (a response was generated) by a request handler in an interceptor, meaning no other logging
+    * methods associated with the response have been invoked. No endpoint or decode failures are associated with the response in such cases.
+    */
+  def requestHandledByInterceptor(request: ServerRequest, response: ServerResponse[?], token: TOKEN): F[Unit]
+
   /** Invoked when an exception has been thrown when running the server logic or handling decode failures. */
   def exception(ctx: ExceptionContext[?, ?], ex: Throwable, token: TOKEN): F[Unit]
 
@@ -122,6 +127,14 @@ case class DefaultServerLog[F[_]](
     if (logWhenHandled)
       doLogWhenHandled(
         s"Request: ${showRequest(ctx.request)}, handled by: ${showEndpoint(ctx.endpoint)}${took(token)}; response: ${showResponse(response)}",
+        None
+      )
+    else noLog
+
+  override def requestHandledByInterceptor(request: ServerRequest, response: ServerResponse[?], token: TOKEN): F[Unit] =
+    if (logWhenHandled)
+      doLogWhenHandled(
+        s"Request: ${showRequest(request)}, handled by interceptor${took(token)}; response: ${showResponse(response)}",
         None
       )
     else noLog

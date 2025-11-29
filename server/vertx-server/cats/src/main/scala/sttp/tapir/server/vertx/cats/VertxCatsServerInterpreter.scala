@@ -66,8 +66,8 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter with Vert
         val result = interpreter(serverRequest)
           .flatMap {
             // in vertx, endpoints are attempted to be decoded individually; if this endpoint didn't match - another one might
-            case RequestResult.Failure(_)         => Async[F].delay(rc.next())
-            case RequestResult.Response(response) => fFromVFuture(VertxOutputEncoders(response).apply(rc)).void
+            case RequestResult.Failure(_)            => Async[F].delay(rc.next())
+            case RequestResult.Response(response, _) => fFromVFuture(VertxOutputEncoders(response).apply(rc)).void
           }
           .handleErrorWith(handleError(rc, _).asF.void)
 

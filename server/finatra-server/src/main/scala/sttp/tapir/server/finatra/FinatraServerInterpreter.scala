@@ -30,8 +30,8 @@ trait FinatraServerInterpreter extends Logging {
       val serverRequest = new FinatraServerRequest(request)
 
       serverInterpreter(serverRequest).map {
-        case RequestResult.Failure(_)         => Response(Status.NotFound)
-        case RequestResult.Response(response) =>
+        case RequestResult.Failure(_)            => Response(Status.NotFound)
+        case RequestResult.Response(response, _) =>
           val status = Status(response.code.code)
           val responseWithContent = response.body match {
             case Some(fContent) =>

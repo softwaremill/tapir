@@ -16,6 +16,7 @@ import zio.test.Assertion._
 import java.nio.charset.Charset
 import scala.util.{Success, Try}
 import scala.collection.immutable.Seq
+import sttp.tapir.server.interceptor.ResponseSource
 
 object ZTapirTest extends ZIOSpecDefault with ZTapir {
 
@@ -68,7 +69,12 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
   }
 
   private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
-    ZIO.succeed(RequestResult.Response(ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None)))
+    ZIO.succeed(
+      RequestResult.Response(
+        ServerResponse[ResponseBodyType](StatusCode.InternalServerError, Nil, Some(error.getMessage), None),
+        ResponseSource.EndpointHandler
+      )
+    )
 
   final case class User(name: String)
 

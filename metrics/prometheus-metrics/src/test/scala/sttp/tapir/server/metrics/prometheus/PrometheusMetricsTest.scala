@@ -201,7 +201,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // when
     interpreter.apply(getMetricsRequest) match {
-      case RequestResult.Response(response) =>
+      case RequestResult.Response(response, _) =>
         response.body.map { b =>
           b shouldBe empty
         } getOrElse fail()
