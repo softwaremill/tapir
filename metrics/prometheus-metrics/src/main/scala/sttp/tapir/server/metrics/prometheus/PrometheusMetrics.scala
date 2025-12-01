@@ -100,7 +100,6 @@ object PrometheusMetrics {
         .labelNames(labels.namesForRequest: _*)
         .register(registry),
       onRequest = { (req, gauge, m) =>
-        // Calculate labels once upfront using only request data (no endpoint labels)
         val labelValues = labels.valuesForRequest(req)
         m.map(m.eval { gauge.labelValues(labelValues: _*).inc() }) { _ =>
           EndpointMetric()

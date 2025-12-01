@@ -54,11 +54,11 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     collectorRegistryCodec
-      .encode(metrics.registry) should include regex "tapir_request_active\\{(?=.*path=\"/person\")(?=.*method=\"GET\").*\\} 1.0"
+      .encode(metrics.registry) should include regex "tapir_request_active\\{(?=.*method=\"GET\").*\\} 1.0"
 
     ScalaFutures.whenReady(response, Timeout(Span(3, Seconds))) { _ =>
       collectorRegistryCodec
-        .encode(metrics.registry) should include regex "tapir_request_active\\{(?=.*path=\"/person\")(?=.*method=\"GET\").*\\} 0.0"
+        .encode(metrics.registry) should include regex "tapir_request_active\\{(?=.*method=\"GET\").*\\} 0.0"
     }
   }
 
@@ -147,7 +147,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "customize labels" in {
     // given
     val serverEp = PersonsApi().serverEp
-    val labels = MetricLabels(forRequest = List("key" -> { case (_, _) => "value" }), forResponse = Nil)
+    val labels = MetricLabels(forRequest = List("key" -> { case _ => "value" }), forResponse = Nil, forEndpoint = Nil)
 
     val metrics = PrometheusMetrics[Identity]("tapir", new CollectorRegistry()).addRequestsTotal(labels)
     val interpreter =
@@ -204,7 +204,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // when
     interpreter.apply(getMetricsRequest) match {
-      case RequestResult.Response(response) =>
+      case RequestResult.Response(response, _) =>
         response.body.map { b =>
           b shouldBe """# HELP tapir_request_total Total HTTP requests
                        |# TYPE tapir_request_total counter

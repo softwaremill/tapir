@@ -97,11 +97,13 @@ object PrometheusMetrics {
         .create()
         .register(registry),
       onRequest = { (req, gauge, m) =>
-        m.unit {
+        val labelValues = labels.valuesForRequest(req)
+        m.map(m.eval { gauge.labels(labelValues: _*).inc() }) { _ =>
           EndpointMetric()
-            .onEndpointRequest { ep => m.eval(gauge.labels(labels.valuesForRequest(ep, req): _*).inc()) }
-            .onResponseBody { (ep, _) => m.eval(gauge.labels(labels.valuesForRequest(ep, req): _*).dec()) }
-            .onException { (ep, _) => m.eval(gauge.labels(labels.valuesForRequest(ep, req): _*).dec()) }
+            .onResponseBody { (_, _) => m.eval(gauge.labels(labelValues: _*).dec()) }
+            .onException { (_, _) => m.eval(gauge.labels(labelValues: _*).dec()) }
+            .onInterceptorResponse { _ => m.eval(gauge.labels(labelValues: _*).dec()) }
+            .onDecodeFailure { () => m.eval(gauge.labels(labelValues: _*).dec()) }
         }
       }
     )
@@ -113,15 +115,22 @@ object PrometheusMetrics {
         .namespace(namespace)
         .name("request_total")
         .help("Total HTTP requests")
-        .labelNames(labels.namesForRequest ++ labels.namesForResponse: _*)
+        .labelNames(labels.namesForRequest ++ labels.namesForEndpoint ++ labels.namesForResponse: _*)
         .register(registry),
       onRequest = { (req, counter, m) =>
         m.unit {
           EndpointMetric()
             .onResponseBody { (ep, res) =>
-              m.eval(counter.labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res): _*).inc())
+              m.eval(
+                counter.labels(labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(res): _*).inc()
+              )
             }
-            .onException { (ep, ex) => m.eval(counter.labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex): _*).inc()) }
+            .onException { (ep, ex) =>
+              m.eval(counter.labels(labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(ex): _*).inc())
+            }
+            .onInterceptorResponse { res =>
+              m.eval(counter.labels(labels.valuesForRequest(req) ++ labels.valuesForResponse(res): _*).inc())
+            }
         }
       }
     )
@@ -138,7 +147,7 @@ object PrometheusMetrics {
         .namespace(namespace)
         .name("request_duration_seconds")
         .help("Duration of HTTP requests")
-        .labelNames(labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name): _*)
+        .labelNames(labels.namesForRequest ++ labels.namesForEndpoint ++ labels.namesForResponse ++ List(labels.forResponsePhase.name): _*)
         .register(registry),
       onRequest = { (req, histogram, m) =>
         m.eval {
@@ -149,7 +158,9 @@ object PrometheusMetrics {
               m.eval(
                 histogram
                   .labels(
-                    labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.headersValue): _*
+                    labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(res) ++ List(
+                      labels.forResponsePhase.headersValue
+                    ): _*
                   )
                   .observe(duration)
               )
@@ -157,14 +168,29 @@ object PrometheusMetrics {
             .onResponseBody { (ep, res) =>
               m.eval(
                 histogram
-                  .labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.bodyValue): _*)
+                  .labels(
+                    labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(res) ++ List(
+                      labels.forResponsePhase.bodyValue
+                    ): _*
+                  )
                   .observe(duration)
               )
             }
             .onException { (ep, ex) =>
               m.eval(
                 histogram
-                  .labels(labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex) ++ List(labels.forResponsePhase.bodyValue): _*)
+                  .labels(
+                    labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(ex) ++ List(
+                      labels.forResponsePhase.bodyValue
+                    ): _*
+                  )
+                  .observe(duration)
+              )
+            }
+            .onInterceptorResponse { res =>
+              m.eval(
+                histogram
+                  .labels(labels.valuesForRequest(req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.bodyValue): _*)
                   .observe(duration)
               )
             }
