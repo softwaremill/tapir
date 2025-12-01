@@ -54,11 +54,11 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     prometheusRegistryCodec
-      .encode(metrics.registry) should include regex "tapir_request_active\\{(?=.*path=\"/person\")(?=.*method=\"GET\").*\\} 1.0"
+      .encode(metrics.registry) should include regex "tapir_request_active\\{(?=.*method=\"GET\").*\\} 1.0"
 
     ScalaFutures.whenReady(response, Timeout(Span(3, Seconds))) { _ =>
       prometheusRegistryCodec
-        .encode(metrics.registry) should include regex "tapir_request_active\\{(?=.*path=\"/person\")(?=.*method=\"GET\").*\\} 0.0"
+        .encode(metrics.registry) should include regex "tapir_request_active\\{(?=.*method=\"GET\").*\\} 0.0"
     }
   }
 
@@ -147,7 +147,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "customize labels" in {
     // given
     val serverEp = PersonsApi().serverEp
-    val labels = MetricLabels(forRequest = List("key" -> { case (_, _) => "value" }), forResponse = Nil)
+    val labels = MetricLabels(forRequest = List("key" -> { case _ => "value" }), forResponse = Nil, forEndpoint = Nil)
 
     val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsTotal(labels)
     val interpreter =

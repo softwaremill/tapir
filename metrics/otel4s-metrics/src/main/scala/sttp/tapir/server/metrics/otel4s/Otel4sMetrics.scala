@@ -63,9 +63,11 @@ object Otel4sMetrics {
     */
   private val DefaultMetricLabels: MetricLabels = MetricLabelsTyped[Attribute[_]](
     forRequest = List(
-      { case (ep, req) => HttpAttributes.HttpRequestMethod(req.method.method) },
-      { case (_, req) => UrlAttributes.UrlScheme(req.uri.scheme.getOrElse("unknown")) },
-      { case (ep, _) => HttpAttributes.HttpRoute(ep.showPathTemplate(showQueryParam = None)) }
+      { req => HttpAttributes.HttpRequestMethod(req.method.method) },
+      { req => UrlAttributes.UrlScheme(req.uri.scheme.getOrElse("unknown")) }
+    ),
+    forEndpoint = List(
+      { ep => HttpAttributes.HttpRoute(ep.showPathTemplate(showQueryParam = None)) }
     ),
     forResponse = List(
       {
@@ -86,13 +88,19 @@ object Otel4sMetrics {
         .withDescription("Active HTTP requests")
         .withUnit("1")
         .create,
-      onRequest = (req, counterM, m) =>
-        m.map(counterM) { counter =>
-          EndpointMetric()
-            .onEndpointRequest(ep => counter.inc(requestAttrs(labels, ep, req)))
-            .onResponseBody((ep, _) => counter.dec(requestAttrs(labels, ep, req)))
-            .onException((ep, _) => counter.dec(requestAttrs(labels, ep, req)))
+      onRequest = (req, counterM, m) => {
+        // Calculate labels once upfront using only request data (no endpoint labels)
+        val attrs = requestAttrsFromRequest(labels, req)
+        m.flatMap(counterM) { counter =>
+          m.map(counter.inc(attrs)) { _ =>
+            EndpointMetric()
+              .onResponseBody((_, _) => counter.dec(attrs))
+              .onException((_, _) => counter.dec(attrs))
+              .onInterceptorResponse(_ => counter.dec(attrs))
+              .onDecodeFailure(() => counter.dec(attrs))
+          }
         }
+      }
     )
 
   private def requestTotal[F[_]](meter: Meter[F], labels: MetricLabels): Metric[F, F[Counter[F, Long]]] =
@@ -110,6 +118,9 @@ object Otel4sMetrics {
             }
             .onException { (ep, ex) =>
               counter.inc(requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex), None))
+            }
+            .onInterceptorResponse { res =>
+              counter.inc(requestAttrsFromRequest(labels, req) ++ responseAttrs(labels, Right(res), None))
             }
         }
     )
@@ -146,12 +157,25 @@ object Otel4sMetrics {
                 requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex), None)
               )
             }
+            .onInterceptorResponse { res =>
+              recorder.record(
+                duration,
+                requestAttrsFromRequest(labels, req) ++ responseAttrs(labels, Right(res), Some(labels.forResponsePhase.bodyValue))
+              )
+            }
         }
     )
 
   private[otel4s] def requestAttrs(l: MetricLabels, ep: AnyEndpoint, req: ServerRequest): Attributes =
     Attributes.newBuilder
-      .addAll(l.forRequest.map(label => label(ep, req)))
+      .addAll(l.forRequest.map(label => label(req)))
+      .addAll(l.forEndpoint.map(label => label(ep)))
+      .result()
+
+  /** Attributes for requests when we only have request data (no endpoint matched). */
+  private[otel4s] def requestAttrsFromRequest(l: MetricLabels, req: ServerRequest): Attributes =
+    Attributes.newBuilder
+      .addAll(l.forRequest.map(label => label(req)))
       .result()
 
   private[otel4s] def responseAttrs(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Attributes =
