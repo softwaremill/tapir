@@ -147,6 +147,90 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", PrometheusRegistry.de
   .addCustom(responsesTotal)
 ```
 
+## Prometheus simpleclient metrics
+
+```{warning}
+Prometheus simpleclient is deprecated and will be removed in a future version. It's recommended to use 
+`tapir-prometheus-metrics` instead, and only use this module as a temporary migration path.
+```
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-simpleclient-metrics" % "@VERSION@"
+```
+
+`PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
+well as an endpoint definition to read the metrics & expose them to the Prometheus server.
+
+For example, using `NettyFutureServerInterpreter`:
+
+```scala mdoc:compile-only
+import sttp.tapir.server.metrics.prometheus_simpleclient.PrometheusMetrics
+import sttp.tapir.server.netty.{NettyFutureServerInterpreter, NettyFutureServerOptions, FutureRoute}
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
+// an instance with default metrics; use PrometheusMetrics[Future]() for an empty one
+val prometheusMetrics = PrometheusMetrics.default[Future]()
+
+// enable metrics collection
+val serverOptions: NettyFutureServerOptions = NettyFutureServerOptions
+  .customiseInterceptors
+  .metricsInterceptor(prometheusMetrics.metricsInterceptor())
+  .options
+
+// route which exposes the current metrics values
+val routes: FutureRoute = NettyFutureServerInterpreter(serverOptions).toRoute(prometheusMetrics.metricsEndpoint)
+```
+
+By default, the following metrics are exposed:
+
+* `tapir_request_active{path, method}` (gauge)
+* `tapir_request_total{path, method, status}` (counter)
+* `tapir_request_duration_seconds{path, method, status, phase}` (histogram)
+
+The namespace and label names/values can be customised when creating the `PrometheusMetrics` instance.
+
+### Custom metrics
+
+To create and add custom metrics:
+
+```scala mdoc:compile-only
+import sttp.tapir.server.metrics.prometheus_simpleclient.PrometheusMetrics
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
+import io.prometheus.client.{CollectorRegistry, Counter}
+import scala.concurrent.Future
+
+// Metric for counting responses labeled by path, method and status code
+val responsesTotal = Metric[Future, Counter](
+  Counter
+    .build()
+    .namespace("tapir")
+    .name("responses_total")
+    .help("HTTP responses")
+    .labelNames("path", "method", "status")
+    .register(CollectorRegistry.defaultRegistry),
+  onRequest = { (req, counter, _) =>
+    Future.successful(
+      EndpointMetric()
+        .onResponseBody { (ep, res) =>
+          Future.successful {
+            val path = ep.showPathTemplate()
+            val method = req.method.method
+            val status = res.code.toString()
+            counter.labels(path, method, status).inc()
+          }
+        }
+    )
+  }
+)
+
+val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry)
+  .addCustom(responsesTotal)
+```
+
 ## OpenTelemetry metrics
 
 Add the following dependency:
