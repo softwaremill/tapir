@@ -3,11 +3,12 @@ package sttp.tapir.server.interceptor
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model._
+import sttp.model.Uri.UriContext
 import sttp.monad.{IdentityMonad, MonadError}
 import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.capabilities.NoStreams
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.TestUtil._
 import sttp.tapir.server.interceptor.log.{ExceptionContext, ServerLog}
 import sttp.tapir.server.interpreter.ServerInterpreter
@@ -15,6 +16,8 @@ import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
 
 import scala.collection.mutable.ListBuffer
 import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
+
+import scala.collection.immutable
 
 class CustomiseInterceptorsTest extends AnyFlatSpec with Matchers {
   implicit val idMonad: MonadError[Identity] = IdentityMonad
@@ -352,5 +355,64 @@ class CustomiseInterceptorsTest extends AnyFlatSpec with Matchers {
         serverResponse.body shouldBe Some("Custom error")
       case _ => fail("Expected Response")
     }
+  }
+
+  it should "log CORS preflight responses" in {
+    // given
+    val stubLog = new StubServerLog()
+    val customise = CustomiseInterceptors[Identity, List[Interceptor[Identity]]](
+      createOptions = _.interceptors
+    )
+      .serverLog(stubLog)
+      .corsInterceptor(cors.CORSInterceptor.default[Identity])
+
+    val testEndpoint = endpoint.get
+      .in("test")
+      .in(query[String]("x"))
+      .out(stringBody)
+      .serverLogic[Identity](x => Right(s"Hello $x"))
+
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(testEndpoint),
+      TestRequestBody,
+      StringToResponseBody,
+      customise.interceptors,
+      _ => ()
+    )
+
+    // Create a CORS preflight request (OPTIONS with Origin and Access-Control-Request-Method headers)
+    val corsPreflightRequest: ServerRequest = new ServerRequest {
+      override def protocol: String = "HTTP/1.1"
+      override def connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
+      override def underlying: Any = ()
+      override def pathSegments: List[String] = List("test")
+      override def queryParameters: QueryParams = QueryParams.fromSeq(List(("x", "1")))
+      override def method: Method = Method.OPTIONS
+      override def uri: Uri = uri"http://example.com/test?x=1"
+      override def headers: immutable.Seq[Header] = List(
+        Header(HeaderNames.Origin, "http://example.com"),
+        Header(HeaderNames.AccessControlRequestMethod, "GET")
+      )
+      override def attribute[T](k: AttributeKey[T]): Option[T] = None
+      override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
+      override def withUnderlying(underlying: Any): ServerRequest = this
+    }
+
+    // when
+    val response = interpreter.apply(corsPreflightRequest)
+
+    // then
+    response match {
+      case RequestResult.Response(serverResponse, _) =>
+        serverResponse.code shouldBe StatusCode.NoContent
+        serverResponse.headers should contain(Header(HeaderNames.AccessControlAllowOrigin, "*"))
+      case _ => fail("Expected Response")
+    }
+
+    // Verify the CORS preflight response is logged
+    stubLog.receivedRequests should have size 1
+    stubLog.receivedRequests.head.method shouldBe Method.OPTIONS
+    stubLog.handledRequestsByInterceptor should have size 1
+    stubLog.handledRequestsByInterceptor.head._2.code shouldBe StatusCode.NoContent
   }
 }
