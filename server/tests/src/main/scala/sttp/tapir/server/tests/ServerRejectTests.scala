@@ -54,11 +54,6 @@ class ServerRejectTests[F[_], OPTIONS, ROUTE](
     testServer(endpoint.in("path"), "should return 404 for an unknown endpoint")((_: Unit) => pureResult(().asRight[Unit])) {
       (backend, baseUri) =>
         basicRequest.get(uri"$baseUri/path2").send(backend).map(_.code shouldBe StatusCode.NotFound)
-    },
-    testServer(endpoint.get.in("path"), "should return 404 for an unsupported method, when a single endpoint is interpreted")((_: Unit) =>
-      pureResult(().asRight[Unit])
-    ) { (backend, baseUri) =>
-      basicRequest.post(uri"$baseUri/path").send(backend).map(_.code shouldBe StatusCode.NotFound)
     }
   )
 

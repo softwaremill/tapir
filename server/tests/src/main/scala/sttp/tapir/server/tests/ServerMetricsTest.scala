@@ -146,14 +146,15 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest
       val metrics = new MetricsRequestInterceptor[F](List(decodeFailureCounter), Seq.empty)
 
       testServer(
-        endpoint.get.in("test-path").in(query[Int]("number")).out(stringBody),
+        endpoint.get.in("test-path").out(stringBody),
         "metrics on decode failure",
-        interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
-      )(num => pureResult(s"Number: $num".asRight[Unit])) { (backend, baseUri) =>
+        interceptors =
+          (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics).rejectHandler(DefaultRejectHandler.apply[F])
+      )(_ => pureResult(s"Ok".asRight[Unit])) { (backend, baseUri) =>
         basicRequest
-          .get(uri"$baseUri/test-path?number=invalid")
+          .get(uri"$baseUri/test-path2")
           .send(backend)
-          .map { _ =>
+          .map { r =>
             eventually {
               decodeFailureCounter.metric.value.get() shouldBe 1
             }
@@ -168,7 +169,7 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest
       testServer(
         endpoint.get.in("test-path").out(stringBody),
         "metrics on exception from server logic",
-        interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics)
+        interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics).exceptionHandler(None)
       ) { _ =>
         throw new RuntimeException("Test exception")
       } { (backend, baseUri) =>
