@@ -15,7 +15,7 @@ class AwsLambdaStubHttpTest extends TestSuite {
     IO.pure {
       val createTestServer = new AwsLambdaCreateServerStubTest
       new ServerBasicTests(createTestServer, AwsLambdaStubHttpTest.testServerInterpreter, maxContentLength = false)(catsMonadIO).tests() ++
-        new ServerMetricsTest(createTestServer).tests()
+        new ServerMetricsTest(createTestServer, AwsLambdaStubHttpTest.testServerInterpreter).tests()
     }
   )
 }
