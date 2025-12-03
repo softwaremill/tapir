@@ -29,7 +29,8 @@ class CatsVertxServerTest extends TestSuite {
         backend,
         multipart = false,
         reject = false,
-        options = false
+        options = false,
+        metrics = false
       ).tests() ++
         new ServerMultipartTests(
           createServerTest,
@@ -47,7 +48,7 @@ class CatsVertxServerTest extends TestSuite {
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => Stream.empty
-        }.tests()
+        }.tests() ++ new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests()
     }
   }
 }

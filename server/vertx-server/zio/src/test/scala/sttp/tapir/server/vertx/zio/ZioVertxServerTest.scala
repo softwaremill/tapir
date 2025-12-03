@@ -36,7 +36,8 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
       def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
         zStream.run(ZSink.drain)
 
-      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
+      new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false, metrics = false)
+        .tests() ++
         new ServerMultipartTests(
           createServerTest,
           partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
@@ -53,7 +54,7 @@ class ZioVertxServerTest extends TestSuite with OptionValues {
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
           override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => ZStream.empty
-        }.tests()
+        }.tests() ++ new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests()
     }
   }
 }

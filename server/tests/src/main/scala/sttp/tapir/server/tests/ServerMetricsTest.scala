@@ -151,8 +151,10 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](
       }
     }
   ) ++ metricsCallbacksTests()
-
+  
   def metricsCallbacksTests(): List[Test] =
+    // these tests have to be disable for servers which perform their own path matching: then, when the path doesn't match, the
+    // Tapir code isn't called at all.
     if (supportsMetricsDecodeFailureCallbacks)
       List(
         {

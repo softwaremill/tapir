@@ -46,7 +46,8 @@ class VertxServerTest extends TestSuite {
         backend,
         multipart = false,
         reject = false,
-        options = false
+        options = false,
+        metrics = false
       ).tests() ++
         new ServerMultipartTests(
           createServerTest,
@@ -63,7 +64,7 @@ class VertxServerTest extends TestSuite {
         ) {
           override def functionToPipe[A, B](f: A => B): VertxStreams.Pipe[A, B] = in => new ReadStreamMapping(in, f)
           override def emptyPipe[A, B]: VertxStreams.Pipe[A, B] = _ => new EmptyReadStream()
-        }).tests()
+        }).tests() ++ new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests()
     }
   }
 }
