@@ -22,12 +22,14 @@ class VertxBlockingServerTest extends TestSuite {
         val interpreter = new VertxTestServerBlockingInterpreter(vertx)
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-        new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false).tests() ++
+        new AllServerTests(createServerTest, interpreter, backend, multipart = false, reject = false, options = false, metrics = false)
+          .tests() ++
           new ServerMultipartTests(
             createServerTest,
             partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
             partOtherHeaderSupport = false
-          ).tests()
+          ).tests() ++
+          new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests()
       }
     }
 }
