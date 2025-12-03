@@ -19,7 +19,6 @@ class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, ?]], ignoreEndpoin
   ): RequestHandler[F, R, B] =
     RequestHandler.from { (request, endpoints, monad) =>
       implicit val m: MonadError[F] = monad
-      println("REQUEST")
       metrics
         .foldLeft(List.empty[EndpointMetric[F]].unit) { (mAcc, metric) =>
           for {
@@ -30,16 +29,13 @@ class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, ?]], ignoreEndpoin
           } yield endpointMetric :: metrics
         }
         .flatMap { _endpointMetrics =>
-          println("XYZ")
           val endpointMetrics = _endpointMetrics.reverse
           val delegate = requestHandler(new MetricsEndpointInterceptor[F](endpointMetrics, ignoreEndpoints))
           delegate(request, endpoints).flatTap {
             case RequestResult.Response(response, ResponseSource.RequestHandler) =>
               collectRequestHandlerResponseMetrics(endpointMetrics, response)
             case RequestResult.Response(response, ResponseSource.EndpointHandler) => ().unit // already handled
-            case f @ RequestResult.Failure(_)                                     =>
-              println("ABC " + f)
-              collectDecodeFailureMetrics(endpointMetrics)
+            case RequestResult.Failure(_)                                         => collectDecodeFailureMetrics(endpointMetrics)
           }
         }
     }
