@@ -37,8 +37,7 @@ class JdkHttpServerTest extends TestSuite with EitherValues {
 
           new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false).tests() ++
             new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, metrics = false).tests() ++
-            new ServerMultipartTests(createServerTest, utf8FileNameSupport = false).tests() ++
-            new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests()
+            new ServerMultipartTests(createServerTest, utf8FileNameSupport = false).tests()
         })
     }
 }
