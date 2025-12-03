@@ -347,7 +347,8 @@ class ZioHttpServerTest extends TestSuite {
             backend,
             basic = false,
             multipart = false,
-            options = false
+            options = false,
+            metrics = false
           ).tests() ++
           new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
           new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
@@ -362,6 +363,7 @@ class ZioHttpServerTest extends TestSuite {
             override def functionToPipe[A, B](f: A => B): ZioStreams.Pipe[A, B] = in => in.map(f)
             override def emptyPipe[A, B]: ZioStreams.Pipe[A, B] = _ => ZStream.empty
           }.tests() ++
+          new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests() ++
           additionalTests()
       }
   }
