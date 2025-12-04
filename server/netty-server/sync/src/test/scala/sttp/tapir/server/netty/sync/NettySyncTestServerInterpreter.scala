@@ -1,7 +1,6 @@
 package sttp.tapir.server.netty.sync
 
 import ox.*
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import sttp.shared.Identity
@@ -55,14 +54,4 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     val options = interceptors(NettySyncServerOptions.customiseInterceptors).options
     val route = NettySyncServerInterpreter(options).toRoute(List(endpoint), inScopeRunner())
     useInScope(NettySyncServer(customizedConfig).addRoute(route).start())(_.stop())
-
-  def scopedServerWithStop(
-      endpoints: NonEmptyList[ServerEndpoint[OxStreams with WebSockets, Identity]],
-      gracefulShutdownTimeout: Option[FiniteDuration] = None
-  )(using Ox): NettySyncServerBinding =
-    val config =
-      NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
-    val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
-    val options = NettySyncServerOptions.default
-    useInScope(NettySyncServer(options, customizedConfig).addEndpoints(endpoints.toList).start())(_.stop())
 }

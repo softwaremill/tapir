@@ -1,6 +1,5 @@
 package sttp.tapir.server.netty.sync
 
-import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import io.netty.channel.nio.NioEventLoopGroup
@@ -91,7 +90,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       createServerTest.testServerLogic(
         endpoint.get.in("hello").out(stringBody).handleSuccess(_ => "ok"),
         testNameSuffix = "properly log invalid requests when the URL is malformed"
-      ) { (backend, baseUri) =>
+      ) { (_, baseUri) =>
         IO.blocking:
           val conn = new java.net.URL(s"$baseUri/hello?param=%%2G").openConnection().asInstanceOf[java.net.HttpURLConnection]
           try
@@ -167,19 +166,4 @@ class NettySyncCreateServerTest(
         Future.successful(assertion)
       }
     }
-
-  def testServer(name: String, es: NonEmptyList[ServerEndpoint[OxStreams & WebSockets, Identity]])(
-      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
-  ): Test = {
-    Test(name) {
-      supervised {
-        val binding = interpreter.scopedServerWithStop(es)
-        val assertion: Assertion =
-          runTest(backend, uri"http://localhost:${binding.port}")
-            .guarantee(IO(logger.info(s"Test completed on port ${binding.port}")))
-            .unsafeRunSync()
-        Future.successful(assertion)
-      }
-    }
-  }
 }
