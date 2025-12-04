@@ -118,7 +118,8 @@ class PlayServerTest extends TestSuite {
           backend,
           basic = false,
           multipart = false,
-          options = false
+          options = false,
+          metrics = false
         ).tests() ++
         new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
         new PlayServerWithContextTest(backend).tests() ++
@@ -132,7 +133,8 @@ class PlayServerTest extends TestSuite {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)
         }.tests() ++
-        additionalTests()
+        additionalTests() ++
+        new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests()
     }
   }
 }

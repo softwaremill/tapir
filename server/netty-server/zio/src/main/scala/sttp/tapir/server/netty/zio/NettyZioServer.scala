@@ -98,7 +98,10 @@ case class NettyZioServer[R](
 
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): RIO[R, (SA, () => RIO[R, Unit])] = for {
     runtime <- ZIO.runtime[R]
-    endpointRoute <- NettyZioServerInterpreter(options).toRoute(serverEndpoints.toList)
+    endpointRoute <- serverEndpoints match {
+      case Vector() => ZIO.succeed(Vector.empty[Route[RIO[R, *]]])
+      case _        => NettyZioServerInterpreter(options).toRoute(serverEndpoints.toList).map(Vector(_))
+    }
     routes <- ZIO.foreach(otherRoutes)(identity)
     eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     eventExecutor = new DefaultEventExecutor()
@@ -107,7 +110,12 @@ case class NettyZioServer[R](
     channelFuture = {
       implicit val monadError: RIOMonadError[R] = new RIOMonadError[R]
 
-      val route: Route[RIO[R, *]] = Route.combine(endpointRoute +: routes)
+      val allRoutes = endpointRoute ++ routes
+      val route: Route[RIO[R, *]] = allRoutes match {
+        case Vector()  => Route.empty
+        case Vector(r) => r
+        case many      => Route.combine(many)
+      }
 
       NettyBootstrap[RIO[R, *]](
         config,

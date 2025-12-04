@@ -210,12 +210,11 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
 
           val activeRequestsData = activeRequests.getData.getPoints.asScala.toList.asInstanceOf[List[LongPointData]].head
           activeRequestsData.getValue shouldBe 0
-          activeRequestsData.getAttributes.size() shouldBe 3
+          activeRequestsData.getAttributes.size() shouldBe 2
           activeRequestsData.getAttributes shouldBe
             Attributes
               .builder()
               .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-              .put(HttpAttributes.HTTP_ROUTE, "/person")
               .put(UrlAttributes.URL_SCHEME, "http")
               .build()
 
@@ -269,8 +268,9 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
   ): IO[Assertion] = {
     val labels = MetricLabelsTyped[Attribute[_]](
       forRequest = List(
-        { (_, _) => Attribute.apply("custom.request.key", "value") }
+        { _ => Attribute.apply("custom.request.key", "value") }
       ),
+      forEndpoint = Nil,
       forResponse = List(
         {
           case Right(r) => Some(Attribute.apply("custom.response.key", "value"))
