@@ -12,17 +12,12 @@ import sttp.tapir.tests.Port
 
 import scala.concurrent.duration.FiniteDuration
 import sttp.capabilities.WebSockets
+import scala.annotation.nowarn
 
+@nowarn
 class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     extends TestServerInterpreter[Identity, OxStreams with WebSockets, NettySyncServerOptions, IdRoute] {
   override def route(es: List[ServerEndpoint[OxStreams with WebSockets, Identity]], interceptors: Interceptors): IdRoute = {
-    val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
-    supervised { // not a correct way, but this method is only used in a few tests which don't test anything related to scopes
-      NettySyncServerInterpreter(serverOptions).toRoute(es, inScopeRunner())
-    }
-  }
-
-  def route(es: List[ServerEndpoint[OxStreams with WebSockets, Identity]], interceptors: Interceptors)(using Ox): IdRoute = {
     val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
     supervised { // not a correct way, but this method is only used in a few tests which don't test anything related to scopes
       NettySyncServerInterpreter(serverOptions).toRoute(es, inScopeRunner())

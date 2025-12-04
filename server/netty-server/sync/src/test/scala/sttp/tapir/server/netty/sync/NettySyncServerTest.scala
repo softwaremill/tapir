@@ -36,6 +36,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
   val (backend, stopBackend) = backendResource.allocated.unsafeRunSync()
   def testNameFilter: Option[String] = None // define to run a single test (temporarily for debugging)
   {
+    @scala.annotation.nowarn
     val eventLoopGroup = new NioEventLoopGroup()
 
     val interpreter = new NettySyncTestServerInterpreter(eventLoopGroup)
@@ -91,8 +92,9 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       createServerTest.testServerLogic(
         endpoint.get.in("hello").out(stringBody).handleSuccess(_ => "ok"),
         testNameSuffix = "properly log invalid requests when the URL is malformed"
-      ) { (backend, baseUri) =>
+      ) { (_, baseUri) =>
         IO.blocking:
+          @scala.annotation.nowarn
           val conn = new java.net.URL(s"$baseUri/hello?param=%%2G").openConnection().asInstanceOf[java.net.HttpURLConnection]
           try
             conn.getResponseCode() shouldBe 400
