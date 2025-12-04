@@ -159,7 +159,7 @@ class NettySyncCreateServerTest(
   ): Test =
     Test(name) {
       supervised {
-        val binding = interpreter.scopedServerWithRoutesStop(NonEmptyList.of(r))
+        val binding = interpreter.scopedServerWithRouteStop(r)
         val assertion: Assertion =
           runTest(backend, uri"http://localhost:${binding.port}")
             .guarantee(IO(logger.info(s"Test completed on port ${binding.port}")))

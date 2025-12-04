@@ -1,6 +1,5 @@
 package sttp.tapir.server.tests
 
-import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.implicits._
@@ -105,7 +104,7 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
       runTest: IO[Unit] => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     val resources = for {
-      portAndStop <- interpreter.serverWithStop(NonEmptyList.of(r), gracefulShutdownTimeout).onError { case e: Exception =>
+      portAndStop <- interpreter.serverWithStop(r, gracefulShutdownTimeout).onError { case e: Exception =>
         Resource.eval(IO(logger.error(s"Starting server failed because of ${e.getMessage}")))
       }
       _ <- Resource.eval(IO(logger.info(s"Bound server on port: ${portAndStop._1}")))
@@ -123,7 +122,7 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
       runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     val resources = for {
-      port <- interpreter.server(NonEmptyList.of(r)).onError { case e: Exception =>
+      port <- interpreter.server(r).onError { case e: Exception =>
         Resource.eval(IO(logger.error(s"Starting server failed because of ${e.getMessage}")))
       }
       _ <- Resource.eval(IO(logger.info(s"Bound server on port: $port")))

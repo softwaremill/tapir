@@ -1,14 +1,12 @@
 package sttp.tapir.server.jdkhttp
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer}
+import com.sun.net.httpserver.{HttpHandler, HttpServer}
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
 
 import java.net.InetSocketAddress
-import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
 
 class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Identity, Any, JdkHttpServerOptions, HttpHandler] {
@@ -19,30 +17,12 @@ class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Identity, Any
   }
 
   override def server(
-      routes: NonEmptyList[HttpHandler],
+      route: HttpHandler,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
     val server = IO.blocking {
       val server = HttpServer.create(new InetSocketAddress(0), 0)
-
-      // some tests return multiple handlers for the same context path; hence, we need to manually manage this case
-      val combinedHandler = new HttpHandler {
-        override def handle(exchange: HttpExchange): Unit = {
-          @tailrec
-          def doCombine(rs: List[HttpHandler]): Unit = rs match {
-            case Nil =>
-              try exchange.sendResponseHeaders(404, -1)
-              finally exchange.close()
-            case head :: tail =>
-              head.handle(exchange)
-              if (!JdkHttpServerInterpreter.isRequestHandled(exchange)) doCombine(tail)
-          }
-
-          doCombine(routes.toList)
-        }
-      }
-
-      server.createContext("/", combinedHandler)
+      server.createContext("/", route)
       server.start()
       server
     }

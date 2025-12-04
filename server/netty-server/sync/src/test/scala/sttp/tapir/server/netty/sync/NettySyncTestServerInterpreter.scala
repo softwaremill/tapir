@@ -6,7 +6,7 @@ import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.{NettyConfig, Route}
+import sttp.tapir.server.netty.NettyConfig
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -30,19 +30,19 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
   }
 
   override def server(
-      routes: NonEmptyList[IdRoute],
+      route: IdRoute,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, Port] = throw new UnsupportedOperationException // instead, scoped* variants are used by NettySyncCreateServerTest
 
-  def scopedServerWithRoutesStop(
-      routes: NonEmptyList[IdRoute],
+  def scopedServerWithRouteStop(
+      route: IdRoute,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(using Ox): NettySyncServerBinding =
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettySyncServerOptions.default
-    useInScope(NettySyncServer(options, customizedConfig).addRoute(Route.combine(routes.toList)).start())(_.stop())
+    useInScope(NettySyncServer(options, customizedConfig).addRoute(route).start())(_.stop())
 
   def scopedServerWithInterceptorsStop(
       endpoint: ServerEndpoint[OxStreams with WebSockets, Identity],
