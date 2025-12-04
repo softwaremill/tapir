@@ -1,6 +1,5 @@
 package sttp.tapir.server.tests
 
-import cats.data.NonEmptyList
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers._
 import sttp.client4._
@@ -24,28 +23,26 @@ class ServerRejectTests[F[_], OPTIONS, ROUTE](
   def tests(): List[Test] = List(
     testServer(
       "given a list of endpoints, should return 405 for unsupported methods",
-      NonEmptyList.of(route(samePathEndpoints))
+      route(samePathEndpoints)
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/path").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.delete(uri"$baseUri/path").send(backend).map(_.code shouldBe StatusCode.MethodNotAllowed)
     },
     testServer(
       "given a list of endpoints with different paths, should return 405 for unsupported methods",
-      NonEmptyList.of(route(differentPathEndpoints))
+      route(differentPathEndpoints)
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/path1").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.delete(uri"$baseUri/path1").send(backend).map(_.code shouldBe StatusCode.MethodNotAllowed)
     },
     testServer(
       "given a list of endpoints and a customized reject handler, should return a custom response for unsupported methods",
-      NonEmptyList.of(
-        route(
-          samePathEndpoints,
-          (ci: CustomiseInterceptors[F, OPTIONS]) =>
-            ci.rejectHandler(
-              DefaultRejectHandler((_, _) => ValuedEndpointOutput(statusCode, StatusCode.BadRequest), None): DefaultRejectHandler[F]
-            )
-        )
+      route(
+        samePathEndpoints,
+        (ci: CustomiseInterceptors[F, OPTIONS]) =>
+          ci.rejectHandler(
+            DefaultRejectHandler((_, _) => ValuedEndpointOutput(statusCode, StatusCode.BadRequest), None): DefaultRejectHandler[F]
+          )
       )
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/path").send(backend).map(_.code shouldBe StatusCode.Ok) >>

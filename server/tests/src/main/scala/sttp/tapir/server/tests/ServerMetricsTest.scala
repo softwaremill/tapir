@@ -20,7 +20,6 @@ import sttp.tapir.tests.TestUtil.inputStreamToByteArray
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.util.concurrent.atomic.AtomicInteger
-import cats.data.NonEmptyList
 import sttp.tapir.server.ServerEndpoint
 
 class ServerMetricsTest[F[_], OPTIONS, ROUTE](
@@ -169,17 +168,15 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](
 
           testServer(
             "metrics on request handler response (404 from RejectInterceptor)",
-            NonEmptyList.of(
-              route(
-                // multiple endpoints so that the reject interceptor is not disabled
-                List[ServerEndpoint[Any, F]](
-                  endpoint.get.in("test-path1").out(stringBody).serverLogic((_: Unit) => pureResult("ok1".asRight[Unit])),
-                  endpoint.get.in("test-path2").out(stringBody).serverLogic((_: Unit) => pureResult("ok2".asRight[Unit]))
-                ),
-                // when all endpoints fail to decode the request, the reject interceptor returns 404
-                interceptors = (ci: CustomiseInterceptors[F, OPTIONS]) =>
-                  ci.metricsInterceptor(metrics).rejectHandler(DefaultRejectHandler.orNotFound[F])
-              )
+            route(
+              // multiple endpoints so that the reject interceptor is not disabled
+              List[ServerEndpoint[Any, F]](
+                endpoint.get.in("test-path1").out(stringBody).serverLogic((_: Unit) => pureResult("ok1".asRight[Unit])),
+                endpoint.get.in("test-path2").out(stringBody).serverLogic((_: Unit) => pureResult("ok2".asRight[Unit]))
+              ),
+              // when all endpoints fail to decode the request, the reject interceptor returns 404
+              interceptors =
+                (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics).rejectHandler(DefaultRejectHandler.orNotFound[F])
             )
           ) { (backend, baseUri) =>
             basicRequest
@@ -199,17 +196,15 @@ class ServerMetricsTest[F[_], OPTIONS, ROUTE](
 
           testServer(
             "metrics on decode failure",
-            NonEmptyList.of(
-              route(
-                // multiple endpoints so that the reject interceptor is not disabled
-                List[ServerEndpoint[Any, F]](
-                  endpoint.get.in("test-path").out(stringBody).serverLogic((_: Unit) => pureResult("ok1".asRight[Unit])),
-                  endpoint.get.in("test-path2").out(stringBody).serverLogic((_: Unit) => pureResult("ok2".asRight[Unit]))
-                ),
-                // when all endpoints fail to decode the request, the reject interceptor doesn't do anything
-                interceptors =
-                  (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics).rejectHandler(DefaultRejectHandler.apply[F])
-              )
+            route(
+              // multiple endpoints so that the reject interceptor is not disabled
+              List[ServerEndpoint[Any, F]](
+                endpoint.get.in("test-path").out(stringBody).serverLogic((_: Unit) => pureResult("ok1".asRight[Unit])),
+                endpoint.get.in("test-path2").out(stringBody).serverLogic((_: Unit) => pureResult("ok2".asRight[Unit]))
+              ),
+              // when all endpoints fail to decode the request, the reject interceptor doesn't do anything
+              interceptors =
+                (ci: CustomiseInterceptors[F, OPTIONS]) => ci.metricsInterceptor(metrics).rejectHandler(DefaultRejectHandler.apply[F])
             )
           ) { (backend, baseUri) =>
             basicRequest

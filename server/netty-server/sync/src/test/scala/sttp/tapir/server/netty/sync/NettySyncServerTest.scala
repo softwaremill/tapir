@@ -150,16 +150,16 @@ class NettySyncCreateServerTest(
     }
   }
 
-  override def testServerWithStop(name: String, rs: => NonEmptyList[IdRoute], gracefulShutdownTimeout: Option[FiniteDuration])(
+  override def testServerWithStop(name: String, r: => IdRoute, gracefulShutdownTimeout: Option[FiniteDuration])(
       runTest: IO[Unit] => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = throw new UnsupportedOperationException
 
-  override def testServer(name: String, rs: => NonEmptyList[IdRoute])(
+  override def testServer(name: String, r: => IdRoute)(
       runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test =
     Test(name) {
       supervised {
-        val binding = interpreter.scopedServerWithRoutesStop(rs)
+        val binding = interpreter.scopedServerWithRoutesStop(NonEmptyList.of(r))
         val assertion: Assertion =
           runTest(backend, uri"http://localhost:${binding.port}")
             .guarantee(IO(logger.info(s"Test completed on port ${binding.port}")))
