@@ -9,7 +9,7 @@ permissions:
   pull-requests: write   # labeler, auto-merge requirement    
 env:
   # .sbtopts specifies 8g, which is needed to import into IntelliJ, but on GH that exceeds the maximum available memory
-  SBT_JAVA_OPTS: -J-Xms4g -J-Xmx4g
+  SBT_JAVA_OPTS: -J-Xms5g -J-Xmx5g
 jobs:
   ci:
     # run on 1) push, 2) external PRs, 3) github-actions PRs
@@ -88,7 +88,7 @@ jobs:
       if: matrix.target-platform != 'JS'
       uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3, specifically v3.0.2
       with:
-        timeout_minutes: 10
+        timeout_minutes: 12
         max_attempts: 2
         # the netty server interpreter tests include some which run a large number of requests, to detect potential leaks
         # storing the output to verify it in the next step
