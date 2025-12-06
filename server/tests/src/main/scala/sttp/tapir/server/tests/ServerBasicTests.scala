@@ -583,8 +583,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testServer(
       "two endpoints with increasingly specific path inputs: should match path exactly",
       NonEmptyList.of(
-        route(endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit]))),
-        route(endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit])))
+        route(
+          List[ServerEndpoint[Any, F]](
+            endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])),
+            endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit]))
+          )
+        )
       )
     ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/p1").send(backend).map(_.body shouldBe "e1") >>
@@ -607,8 +611,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testServer(
       "two endpoints with decreasingly specific path inputs: should match path exactly",
       NonEmptyList.of(
-        route(endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit]))),
-        route(endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])))
+        route(
+          List[ServerEndpoint[Any, F]](
+            endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit])),
+            endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit]))
+          )
+        )
       )
     ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/p1").send(backend).map(_.body shouldBe "e1") >>
@@ -618,18 +626,18 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       "two endpoints with a body defined as the first input: should only consume body when the path matches",
       NonEmptyList.of(
         route(
-          endpoint.post
-            .in(byteArrayBody)
-            .in("p1")
-            .out(stringBody)
-            .serverLogic((s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit]))
-        ),
-        route(
-          endpoint.post
-            .in(byteArrayBody)
-            .in("p2")
-            .out(stringBody)
-            .serverLogic((s: Array[Byte]) => pureResult(s"p2 ${s.length}".asRight[Unit]))
+          List[ServerEndpoint[Any, F]](
+            endpoint.post
+              .in(byteArrayBody)
+              .in("p1")
+              .out(stringBody)
+              .serverLogic((s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit])),
+            endpoint.post
+              .in(byteArrayBody)
+              .in("p2")
+              .out(stringBody)
+              .serverLogic((s: Array[Byte]) => pureResult(s"p2 ${s.length}".asRight[Unit]))
+          )
         )
       )
     ) { (backend, baseUri) =>
@@ -642,8 +650,12 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testServer(
       "two endpoints with query defined as the first input, path segments as second input: should try the second endpoint if the path doesn't match",
       NonEmptyList.of(
-        route(endpoint.get.in(query[String]("q1")).in("p1").serverLogic((_: String) => pureResult(().asRight[Unit]))),
-        route(endpoint.get.in(query[String]("q2")).in("p2").serverLogic((_: String) => pureResult(().asRight[Unit])))
+        route(
+          List[ServerEndpoint[Any, F]](
+            endpoint.get.in(query[String]("q1")).in("p1").serverLogic((_: String) => pureResult(().asRight[Unit])),
+            endpoint.get.in(query[String]("q2")).in("p2").serverLogic((_: String) => pureResult(().asRight[Unit]))
+          )
+        )
       )
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/p1?q1=10").send(backend).map(_.code shouldBe StatusCode.Ok) >>
@@ -654,17 +666,23 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testServer(
       "two endpoints with increasingly specific path inputs, first with a required query parameter: should match path exactly",
       NonEmptyList.of(
-        route(endpoint.get.in("p1").in(query[String]("q1")).out(stringBody).serverLogic((_: String) => pureResult("e1".asRight[Unit]))),
-        route(endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit])))
+        route(
+          List[ServerEndpoint[Any, F]](
+            endpoint.get.in("p1").in(query[String]("q1")).out(stringBody).serverLogic((_: String) => pureResult("e1".asRight[Unit])),
+            endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit]))
+          )
+        )
       )
     ) { (backend, baseUri) => basicStringRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe "e2") },
     testServer(
       "two endpoints with validation: should not try the second one if validation fails",
       NonEmptyList.of(
         route(
-          endpoint.get.in("p1" / path[String].validate(Validator.minLength(5))).serverLogic((_: String) => pureResult(().asRight[Unit]))
-        ),
-        route(endpoint.get.in("p2").serverLogic((_: Unit) => pureResult(().asRight[Unit])))
+          List[ServerEndpoint[Any, F]](
+            endpoint.get.in("p1" / path[String].validate(Validator.minLength(5))).serverLogic((_: String) => pureResult(().asRight[Unit])),
+            endpoint.get.in("p2").serverLogic((_: Unit) => pureResult(().asRight[Unit]))
+          )
+        )
       )
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/p1/abcde").send(backend).map(_.code shouldBe StatusCode.Ok) >>
@@ -675,18 +693,18 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       "endpoint with a security input and regular path input shouldn't shadow other endpoints",
       NonEmptyList.of(
         route(
-          endpoint.get
-            .in("p1")
-            .securityIn(auth.bearer[String]())
-            .out(stringBody)
-            .serverSecurityLogicSuccess(_ => pureResult(()))
-            .serverLogicSuccess(_ => _ => pureResult("ok1"))
-        ),
-        route(
-          endpoint.get
-            .in("p2")
-            .out(stringBody)
-            .serverLogicSuccess(_ => pureResult("ok2"))
+          List[ServerEndpoint[Any, F]](
+            endpoint.get
+              .in("p1")
+              .securityIn(auth.bearer[String]())
+              .out(stringBody)
+              .serverSecurityLogicSuccess(_ => pureResult(()))
+              .serverLogicSuccess(_ => _ => pureResult("ok1")),
+            endpoint.get
+              .in("p2")
+              .out(stringBody)
+              .serverLogicSuccess(_ => pureResult("ok2"))
+          )
         )
       )
     ) { (backend, baseUri) =>
