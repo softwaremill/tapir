@@ -1,6 +1,6 @@
 package sttp.tapir.server.jdkhttp
 import cats.effect.{IO, Resource}
-import com.sun.net.httpserver.{HttpHandler, HttpServer}
+import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer}
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
@@ -22,7 +22,20 @@ class JdkHttpTestServerInterpreter() extends TestServerInterpreter[Identity, Any
   ): Resource[IO, Port] = {
     val server = IO.blocking {
       val server = HttpServer.create(new InetSocketAddress(0), 0)
-      server.createContext("/", route)
+
+      // some tests return multiple handlers for the same context path; hence, we need to manually manage this case
+      val handlerWith404Fallback = new HttpHandler {
+        override def handle(exchange: HttpExchange): Unit = {
+          route.handle(exchange)
+          if (!JdkHttpServerInterpreter.isRequestHandled(exchange)) {
+            try exchange.sendResponseHeaders(404, -1)
+            finally exchange.close()
+          }
+        }
+      }
+
+      server.createContext("/", handlerWith404Fallback)
+
       server.start()
       server
     }
