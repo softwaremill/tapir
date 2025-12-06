@@ -48,9 +48,11 @@ object OpenTelemetryMetrics {
     */
   lazy val OpenTelemetryAttributes: MetricLabels = MetricLabels(
     forRequest = List(
-      HttpAttributes.HTTP_REQUEST_METHOD.getKey -> { case (_, req) => req.method.method },
-      UrlAttributes.URL_SCHEME.getKey -> { case (_, req) => req.uri.scheme.getOrElse("unknown") },
-      HttpAttributes.HTTP_ROUTE.getKey -> { case (ep, _) => ep.showPathTemplate(showQueryParam = None) }
+      HttpAttributes.HTTP_REQUEST_METHOD.getKey -> { req => req.method.method },
+      UrlAttributes.URL_SCHEME.getKey -> { req => req.uri.scheme.getOrElse("unknown") }
+    ),
+    forEndpoint = List(
+      HttpAttributes.HTTP_ROUTE.getKey -> { ep => ep.showPathTemplate(showQueryParam = None) }
     ),
     forResponse = List(
       HttpAttributes.HTTP_RESPONSE_STATUS_CODE.getKey -> {
@@ -114,11 +116,13 @@ object OpenTelemetryMetrics {
         .setUnit("1")
         .build(),
       onRequest = (req, counter, m) => {
-        m.unit {
+        val attrs = asOpenTelemetryAttributesFromRequest(labels, req)
+        m.map(m.eval(counter.add(1, attrs))) { _ =>
           EndpointMetric()
-            .onEndpointRequest { ep => m.eval(counter.add(1, asOpenTelemetryAttributes(labels, ep, req))) }
-            .onResponseBody { (ep, _) => m.eval(counter.add(-1, asOpenTelemetryAttributes(labels, ep, req))) }
-            .onException { (ep, _) => m.eval(counter.add(-1, asOpenTelemetryAttributes(labels, ep, req))) }
+            .onResponseBody { (_, _) => m.eval(counter.add(-1, attrs)) }
+            .onException { (_, _) => m.eval(counter.add(-1, attrs)) }
+            .onInterceptorResponse { _ => m.eval(counter.add(-1, attrs)) }
+            .onDecodeFailure { () => m.eval(counter.add(-1, attrs)) }
         }
       }
     )
@@ -145,6 +149,13 @@ object OpenTelemetryMetrics {
               m.eval {
                 val otLabels =
                   merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Left(ex), None))
+                counter.add(1, otLabels)
+              }
+            }
+            .onInterceptorResponse { res =>
+              m.eval {
+                val otLabels =
+                  merge(asOpenTelemetryAttributesFromRequest(labels, req), asOpenTelemetryAttributes(labels, Right(res), None))
                 counter.add(1, otLabels)
               }
             }
@@ -191,13 +202,30 @@ object OpenTelemetryMetrics {
                 recorder.record(duration, otLabels)
               }
             }
+            .onInterceptorResponse { res =>
+              m.eval {
+                val otLabels =
+                  merge(
+                    asOpenTelemetryAttributesFromRequest(labels, req),
+                    asOpenTelemetryAttributes(labels, Right(res), Some(labels.forResponsePhase.bodyValue))
+                  )
+                recorder.record(duration, otLabels)
+              }
+            }
         }
     )
 
   private def defaultMeter(otel: OpenTelemetry): Meter = otel.meterBuilder("tapir").setInstrumentationVersion("1.0.0").build()
 
-  private def asOpenTelemetryAttributes(l: MetricLabels, ep: AnyEndpoint, req: ServerRequest): Attributes =
-    l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(ep, req)) }).build()
+  /** Attributes for requests when we only have request data (no endpoint matched). */
+  private def asOpenTelemetryAttributesFromRequest(l: MetricLabels, req: ServerRequest): Attributes =
+    l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(req)) }).build()
+
+  /** Attributes for requests when we have both endpoint and request data. */
+  private def asOpenTelemetryAttributes(l: MetricLabels, ep: AnyEndpoint, req: ServerRequest): Attributes = {
+    val builder = l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(req)) })
+    l.forEndpoint.foldLeft(builder)((b, label) => { b.put(label._1, label._2(ep)) }).build()
+  }
 
   private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Attributes = {
     val builder = Attributes.builder()

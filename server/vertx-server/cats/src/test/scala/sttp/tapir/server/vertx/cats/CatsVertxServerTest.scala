@@ -17,37 +17,42 @@ class CatsVertxServerTest extends TestSuite {
   def drainFs2(stream: Fs2Streams[IO]#BinaryStream): IO[Unit] =
     stream.compile.drain.void
 
-  override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
-    vertxResource.map { implicit vertx =>
-      implicit val m: MonadError[IO] = VertxCatsServerInterpreter.monadError[IO]
-      val interpreter = new CatsVertxTestServerInterpreter(vertx, dispatcher)
-      val createServerTest = new DefaultCreateServerTest(backend, interpreter)
+  override def tests: Resource[IO, List[Test]] = backendResource
+    // for streaming requests, vertx responds with transfer-encoding header, which is not supported by http2
+    // however, connections are negotiated with http2; hence, forcing http1 for these tests to work
+    .map(backend => new ForceHttp1BackendWrapper(backend))
+    .flatMap { backend =>
+      vertxResource.map { implicit vertx =>
+        implicit val m: MonadError[IO] = VertxCatsServerInterpreter.monadError[IO]
+        val interpreter = new CatsVertxTestServerInterpreter(vertx, dispatcher)
+        val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new AllServerTests(
-        createServerTest,
-        interpreter,
-        backend,
-        multipart = false,
-        reject = false,
-        options = false
-      ).tests() ++
-        new ServerMultipartTests(
+        new AllServerTests(
           createServerTest,
-          partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
-          partOtherHeaderSupport = false
+          interpreter,
+          backend,
+          multipart = false,
+          reject = false,
+          options = false,
+          metrics = false
         ).tests() ++
-        new ServerStreamingTests(createServerTest).tests(Fs2Streams.apply[IO])(drainFs2) ++
-        new ServerWebSocketTests(
-          createServerTest,
-          Fs2Streams.apply[IO],
-          autoPing = false,
-          handlePong = true,
-          expectCloseResponse = false,
-          frameConcatenation = false
-        ) {
-          override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
-          override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => Stream.empty
-        }.tests()
+          new ServerMultipartTests(
+            createServerTest,
+            partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
+            partOtherHeaderSupport = false
+          ).tests() ++
+          new ServerStreamingTests(createServerTest).tests(Fs2Streams.apply[IO])(drainFs2) ++
+          new ServerWebSocketTests(
+            createServerTest,
+            Fs2Streams.apply[IO],
+            autoPing = false,
+            handlePong = true,
+            expectCloseResponse = false,
+            frameConcatenation = false
+          ) {
+            override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
+            override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => Stream.empty
+          }.tests() ++ new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests()
+      }
     }
-  }
 }

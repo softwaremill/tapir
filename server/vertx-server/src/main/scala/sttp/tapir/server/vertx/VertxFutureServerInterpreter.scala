@@ -67,8 +67,8 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
     interpreter(serverRequest)
       .flatMap {
         // in vertx, endpoints are attempted to be decoded individually; if this endpoint didn't match - another one might
-        case RequestResult.Failure(_)         => Future.successful(rc.next())
-        case RequestResult.Response(response) => FutureFromVFuture(VertxOutputEncoders(response).apply(rc))
+        case RequestResult.Failure(_)            => Future.successful(rc.next())
+        case RequestResult.Response(response, _) => FutureFromVFuture(VertxOutputEncoders(response).apply(rc))
       }
       .recoverWith { case t => handleError(rc, t).asScala }
   }

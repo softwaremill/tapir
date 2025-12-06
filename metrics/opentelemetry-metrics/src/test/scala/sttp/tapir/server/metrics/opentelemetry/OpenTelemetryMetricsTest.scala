@@ -54,8 +54,6 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     point.getAttributes shouldBe Attributes.of(
       AttributeKey.stringKey("http.request.method"),
       "GET",
-      AttributeKey.stringKey("http.route"),
-      "/person",
       AttributeKey.stringKey("url.scheme"),
       "http"
     )
@@ -66,8 +64,6 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
       point.getAttributes shouldBe Attributes.of(
         AttributeKey.stringKey("http.request.method"),
         "GET",
-        AttributeKey.stringKey("http.route"),
-        "/person",
         AttributeKey.stringKey("url.scheme"),
         "http"
       )
@@ -175,7 +171,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "customize labels" in {
     // given
     val serverEp = PersonsApi().serverEp
-    val labels = MetricLabels(forRequest = List("key" -> { case (_, _) => "value" }), forResponse = Nil)
+    val labels = MetricLabels(forRequest = List("key" -> { case _ => "value" }), forResponse = Nil, forEndpoint = Nil)
     val reader = InMemoryMetricReader.create()
     val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
     val meter = provider.get("tapir-instrumentation")

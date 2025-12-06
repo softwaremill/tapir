@@ -1,14 +1,19 @@
 package sttp.tapir.server
 
 import sttp.capabilities.Streams
+import sttp.model.Uri._
 import sttp.model._
+import sttp.monad.{IdentityMonad, MonadError}
 import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.capabilities.NoStreams
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ToResponseBody}
+import sttp.tapir.server.model.ServerResponse
 
 import java.nio.charset.Charset
+import scala.collection.immutable
 import scala.util.{Success, Try}
 
 object TestUtil {
@@ -56,5 +61,61 @@ object TestUtil {
       cb(Success(()))
       body
     }
+  }
+
+  def createTestRequest(
+      path: List[String],
+      queryParams: Seq[(String, String)] = Nil,
+      _method: Method = Method.GET
+  ): ServerRequest = {
+    val queryString = if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
+    val pathString = if (path.nonEmpty) s"/${path.mkString("/")}" else ""
+
+    new ServerRequest {
+      override def protocol: String = "HTTP/1.1"
+      override def connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
+      override def underlying: Any = ()
+      override def pathSegments: List[String] = path
+      override def queryParameters: QueryParams = QueryParams.fromSeq(queryParams)
+      override def method: Method = _method
+      override def uri: Uri = uri"http://example.com$pathString$queryString"
+      override def headers: immutable.Seq[Header] = Nil
+      override def attribute[T](k: AttributeKey[T]): Option[T] = None
+      override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
+      override def withUnderlying(underlying: Any): ServerRequest = this
+    }
+  }
+
+  /** A test interceptor that appends messages to a call trail, useful for testing interceptor ordering.
+    * @param addCallTrail
+    *   Function to append a message to the trail
+    * @param prefix
+    *   Prefix to add to each message
+    */
+  class AddToTrailInterceptor(addCallTrail: String => Unit, prefix: String) extends EndpointInterceptor[Identity] {
+    override def apply[B](responder: Responder[Identity, B], endpointHandler: EndpointHandler[Identity, B]): EndpointHandler[Identity, B] =
+      new EndpointHandler[Identity, B] {
+        override def onDecodeSuccess[A, U, I](
+            ctx: DecodeSuccessContext[Identity, A, U, I]
+        )(implicit monad: MonadError[Identity], bodyListener: BodyListener[Identity, B]): Identity[ServerResponse[B]] = {
+          addCallTrail(s"$prefix success")
+          endpointHandler.onDecodeSuccess(ctx)(monad, bodyListener)
+        }
+
+        override def onSecurityFailure[A](ctx: SecurityFailureContext[Identity, A])(implicit
+            monad: MonadError[Identity],
+            bodyListener: BodyListener[Identity, B]
+        ): Identity[ServerResponse[B]] = {
+          addCallTrail(s"$prefix security failure")
+          endpointHandler.onSecurityFailure(ctx)(monad, bodyListener)
+        }
+
+        override def onDecodeFailure(
+            ctx: DecodeFailureContext
+        )(implicit monad: MonadError[Identity], bodyListener: BodyListener[Identity, B]): Identity[Option[ServerResponse[B]]] = {
+          addCallTrail(s"$prefix failure")
+          endpointHandler.onDecodeFailure(ctx)(monad, bodyListener)
+        }
+      }
   }
 }

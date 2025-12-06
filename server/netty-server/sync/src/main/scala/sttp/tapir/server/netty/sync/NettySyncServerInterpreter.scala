@@ -2,11 +2,9 @@ package sttp.tapir.server.netty.sync
 
 import ox.InScopeRunner
 import sttp.capabilities.WebSockets
-import sttp.monad.syntax.*
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync}
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
@@ -29,15 +27,15 @@ trait NettySyncServerInterpreter:
         nettyServerOptions.multipartMinSizeForDisk
       ),
       new NettySyncToResponseBody(RunAsync.Id, inScopeRunner),
-      RejectInterceptor.disableWhenSingleEndpoint(nettyServerOptions.interceptors, ses),
+      // not using RejectInterceptor.disableWhenSingleEndpoint, as the typical use-case for the netty server is to run it exclusively with Tapir-managed endpoints
+      nettyServerOptions.interceptors,
       nettyServerOptions.deleteFile
     )
     val handler: Route[Identity] = { (request: NettyServerRequest) =>
-      serverInterpreter(request)
-        .map {
-          case RequestResult.Response(response) => Some(response)
-          case RequestResult.Failure(_)         => None
-        }
+      serverInterpreter(request) match {
+        case RequestResult.Response(response, _) => Some(response)
+        case RequestResult.Failure(_)            => None
+      }
     }
     handler
 
