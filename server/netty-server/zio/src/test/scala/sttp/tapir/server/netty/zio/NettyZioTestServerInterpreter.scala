@@ -1,6 +1,5 @@
 package sttp.tapir.server.netty.zio
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import sttp.capabilities.zio.ZioStreams
@@ -22,7 +21,7 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
   }
 
   override def server(
-      routes: NonEmptyList[Task[Route[Task]]],
+      route: Task[Route[Task]],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, Port] = {
     val config = NettyConfig.default
@@ -39,9 +38,7 @@ class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
     val bind: IO[NettyZioServerBinding[R]] =
       IO.fromFuture(
         IO.delay(
-          Unsafe.unsafe(implicit u =>
-            runtime.unsafe.runToFuture(NettyZioServer(options, customizedConfig).addRoutes(routes.toList).start())
-          )
+          Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(NettyZioServer(options, customizedConfig).addRoute(route).start()))
         )
       )
 

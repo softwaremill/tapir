@@ -1,6 +1,5 @@
 package sttp.tapir.server.tests
 
-import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
@@ -590,7 +589,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
         withTestFilesDirectory { testDir =>
           val headAndGetEndpoint = staticFilesServerEndpoints[F]("test")(testDir.getAbsolutePath)
           serverInterpreter
-            .server(NonEmptyList.of(serverInterpreter.route(headAndGetEndpoint)))
+            .server(serverInterpreter.route(headAndGetEndpoint))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=3-6"))
@@ -621,7 +620,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       Test("should create both head and get endpoints for resources") {
         val headAndGetEndpoint = staticResourcesServerEndpoints[F](emptyInput)(classLoader, "test")
         serverInterpreter
-          .server(NonEmptyList.of(serverInterpreter.route(headAndGetEndpoint)))
+          .server(serverInterpreter.route(headAndGetEndpoint))
           .use { port =>
             basicRequest
               .headers(Header(HeaderNames.Range, "bytes=6-9"))
@@ -652,7 +651,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
         withTestFilesDirectory { testDir =>
           val headAndGetEndpoint = staticFilesServerEndpoints[F](emptyInput)(testDir.getAbsolutePath)
           serverInterpreter
-            .server(NonEmptyList.of(serverInterpreter.route(headAndGetEndpoint)))
+            .server(serverInterpreter.route(headAndGetEndpoint))
             .use { port =>
               def testHttpMethod(method: Request[Either[String, String]]) = {
                 def send(etag: Option[String]) =
@@ -695,9 +694,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
 
   def serveRoute(e: ServerEndpoint[Any, F]): Resource[IO, Port] =
     serverInterpreter.server(
-      NonEmptyList.of(
-        serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler[F]))
-      )
+      serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler[F]))
     )
 
   def gzipCompress(input: String): Array[Byte] = {

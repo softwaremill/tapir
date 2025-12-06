@@ -1,7 +1,6 @@
 package sttp.tapir.serverless.aws.ziolambda.tests
 
 import _root_.zio.{Runtime, Task, Unsafe}
-import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import org.scalatest.Assertion
@@ -38,7 +37,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[Task, Any, AwsServe
     Test(name)(runTest(stubBackend(transformMonad(route)), uri"http://localhost:3002").unsafeToFuture())
   }
 
-  def testServerWithStop(name: String, rs: => NonEmptyList[Route[Task]], gracefulShutdownTimeout: Option[FiniteDuration])(
+  def testServerWithStop(name: String, rs: => Route[Task], gracefulShutdownTimeout: Option[FiniteDuration])(
       runTest: KillSwitch => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = throw new UnsupportedOperationException
 
@@ -62,15 +61,14 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[Task, Any, AwsServe
       runTest: KillSwitch => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = throw new java.lang.UnsupportedOperationException
 
-  override def testServer(name: String, rs: => NonEmptyList[Route[Task]])(
+  override def testServer(name: String, r: => Route[Task])(
       runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     val backend = WebSocketStreamBackendStub[IO, Fs2Streams[IO]](AwsLambdaCreateServerStubTest.catsMonadIO).whenAnyRequest
       .thenRespondF { request =>
-        val responses: NonEmptyList[Response[StubBody]] = rs.map { route =>
-          transformMonad(route)(sttpToAwsRequest(request)).map(awsToSttpResponse).unsafeRunSync()
-        }
-        IO.pure(responses.find(_.code != StatusCode.NotFound).getOrElse(ResponseStub.adjust("", StatusCode.NotFound)))
+        val response: Response[StubBody] =
+          transformMonad(r)(sttpToAwsRequest(request)).map(awsToSttpResponse).unsafeRunSync()
+        IO.pure(if (response.code != StatusCode.NotFound) response else ResponseStub.adjust("", StatusCode.NotFound))
       }
     Test(name)(runTest(backend, uri"http://localhost:3002").unsafeToFuture())
   }
