@@ -55,12 +55,12 @@ class SchemasForEndpoints(
 
   private def forOutput(output: EndpointOutput[_]): List[KeyedSchema] = {
     output match {
-      case EndpointOutput.OneOf(variants, _)       => variants.flatMap(variant => forOutput(variant.output)).toList
-      case EndpointOutput.StatusCode(_, _, _)      => List.empty
-      case EndpointOutput.FixedStatusCode(_, _, _) => List.empty
-      case EndpointOutput.MappedPair(wrapped, _)   => forOutput(wrapped)
-      case EndpointOutput.Void()                   => List.empty
-      case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
+      case EndpointOutput.OneOf(variants, _)            => variants.flatMap(variant => forOutput(variant.output)).toList
+      case EndpointOutput.StatusCode(_, _, _)           => List.empty
+      case EndpointOutput.FixedStatusCode(_, _, _)      => List.empty
+      case EndpointOutput.MappedPair(wrapped, _)        => forOutput(wrapped)
+      case EndpointOutput.Void()                        => List.empty
+      case EndpointOutput.Pair(left, right, _, _)       => forOutput(left) ++ forOutput(right)
       case EndpointOutput.WebSocketBodyWrapper(wrapped) =>
         ToKeyedSchemas(wrapped.codec) ++ ToKeyedSchemas(wrapped.requests) ++ ToKeyedSchemas(wrapped.responses)
       case op: EndpointIO[_] => forIO(op)

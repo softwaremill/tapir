@@ -83,8 +83,8 @@ trait Http4sServerInterpreter[F[_]] {
       webSocketBuilder: Option[WebSocketBuilder2[F]]
   ): OptionT[F, Response[F]] =
     OptionT(interpreter(serverRequest).flatMap {
-      case _: RequestResult.Failure         => none.pure[F]
-      case RequestResult.Response(response) => serverResponseToHttp4s(response, webSocketBuilder).map(_.some)
+      case _: RequestResult.Failure            => none.pure[F]
+      case RequestResult.Response(response, _) => serverResponseToHttp4s(response, webSocketBuilder).map(_.some)
     })
 
   private def toRoutes(
@@ -129,7 +129,7 @@ trait Http4sServerInterpreter[F[_]] {
         pipeF.flatMap { pipe =>
           webSocketBuilder match {
             case Some(wsb) => wsb.withHeaders(headers).build(pipe)
-            case None =>
+            case None      =>
               monad.error(
                 new Http4sInvalidWebSocketUse(
                   "Invalid usage of web socket endpoint without WebSocketBuilder2. " +

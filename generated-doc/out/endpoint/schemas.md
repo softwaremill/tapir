@@ -132,7 +132,7 @@ final case class SomeInt(int: Int) derives Schema
 
 val nameBad = summon[Schema[PaginatedBad[SomeInt]]].name
 // nameBad: Option[SName] = Some(
-//   value = SName(
+//   SName(
 //     fullName = "repl.MdocSession.MdocApp2.PaginatedBad",
 //     typeParameterShortNames = List(
 //       "repl.MdocSession.MdocApp2.PaginatedBad.derived$Schema.T"
@@ -155,7 +155,7 @@ object Paginated:
 
 val name = summon[Schema[Paginated[SomeInt]]].name
 // name: Option[SName] = Some(
-//   value = SName(
+//   SName(
 //     fullName = "repl.MdocSession.MdocApp2.Paginated",
 //     typeParameterShortNames = List("repl.MdocSession.MdocApp2.SomeInt")
 //   )
@@ -174,7 +174,7 @@ object Paginated2:
 
 val name2 = summon[Schema[Paginated2[SomeInt]]].name
 // name2: Option[SName] = Some(
-//   value = SName(
+//   SName(
 //     fullName = "repl.MdocSession.MdocApp2.Paginated2",
 //     typeParameterShortNames = List("repl.MdocSession.MdocApp2.SomeInt")
 //   )

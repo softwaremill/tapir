@@ -6,11 +6,11 @@ labels:
       - "build.sbt"
       - "project/Versions.scala"
       - "project/plugins.sbt"
-      - "examples/src/main/scala/.*"
+      - "examples\\/.*\\.scala"
   - label: "dependency"
     authors: ["softwaremill-ci"]
     files:
       - "build.sbt"
       - "project/Versions.scala"
       - "project/plugins.sbt"
-      - "examples/src/main/scala/.*"
+      - "examples\\/.*\\.scala"

@@ -2,6 +2,7 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  AnyType,
   OpenapiSchemaAny,
   OpenapiSchemaBinary,
   OpenapiSchemaBoolean,
@@ -26,10 +27,11 @@ object XmlSerdeLib extends Enumeration {
   val CatsXml, NoSupport = Value
   type XmlSerdeLib = Value
 }
-object StreamingImplementation extends Enumeration {
-  val Akka, FS2, Pekko, Zio = Value
-  type StreamingImplementation = Value
-}
+sealed trait StreamingImplementation
+object Akka extends StreamingImplementation
+case class FS2(effectType: String = "cats.effect.IO") extends StreamingImplementation
+object Pekko extends StreamingImplementation
+object Zio extends StreamingImplementation
 
 object RootGenerator {
 
@@ -56,7 +58,7 @@ object RootGenerator {
       case "circe"    => JsonSerdeLib.Circe
       case "jsoniter" => JsonSerdeLib.Jsoniter
       case "zio"      => JsonSerdeLib.Zio
-      case _ =>
+      case _          =>
         System.err.println(
           s"!!! Unrecognised value $jsonSerdeLib for json serde lib -- should be one of circe, jsoniter, zio. Defaulting to circe !!!"
         )
@@ -65,22 +67,28 @@ object RootGenerator {
     val normalisedXmlLib = xmlSerdeLib.toLowerCase match {
       case "cats-xml" => XmlSerdeLib.CatsXml
       case "none"     => XmlSerdeLib.NoSupport
-      case _ =>
+      case _          =>
         System.err.println(
           s"!!! Unrecognised value $xmlSerdeLib for xml serde lib -- should be one of cats-xml, none. Defaulting to none !!!"
         )
         XmlSerdeLib.NoSupport
     }
-    val normalisedStreamingImplementation = streamingImplementation.toLowerCase match {
-      case "akka"  => StreamingImplementation.Akka
-      case "fs2"   => StreamingImplementation.FS2
-      case "pekko" => StreamingImplementation.Pekko
-      case "zio"   => StreamingImplementation.Zio
-      case _ =>
-        System.err.println(
-          s"!!! Unrecognised value $streamingImplementation for streaming impl -- should be one of akka, fs2, pekko or zio. Defaulting to fs2 !!!"
-        )
-        StreamingImplementation.FS2
+    val fs2WithEffect = """fs2-(.+)""".r
+    val normalisedStreamingImplementation: StreamingImplementation = streamingImplementation.toLowerCase match {
+      case "akka"  => Akka
+      case "fs2"   => FS2()
+      case "pekko" => Pekko
+      case "zio"   => Zio
+      case _       =>
+        streamingImplementation match {
+          case fs2WithEffect(effectType) =>
+            FS2(effectType)
+          case _ =>
+            System.err.println(
+              s"!!! Unrecognised value $streamingImplementation for streaming impl -- should be one of akka, fs2, pekko or zio. Defaulting to fs2 !!!"
+            )
+            FS2()
+        }
     }
 
     val validators = if (generateValidators) ValidationGenerator.mkValidators(doc) else ValidationDefns.empty
@@ -353,8 +361,8 @@ object RootGenerator {
         ("Array[Byte]", nb)
       case OpenapiSchemaByte(nb) =>
         ("ByteString", nb)
-      case OpenapiSchemaAny(nb) =>
-        ("io.circe.Json", nb)
+      case OpenapiSchemaAny(nb, t) =>
+        (AnyType.toCirceTpe(t), nb)
       case OpenapiSchemaRef(t) =>
         (t.split('/').last, false)
       case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")

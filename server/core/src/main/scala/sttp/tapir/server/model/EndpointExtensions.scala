@@ -17,7 +17,7 @@ object MaxContentLength {
 
 object EndpointExtensions {
 
-  implicit class RichServerEndpoint[E <: EndpointInfoOps[_]](e: E) {
+  implicit class RichServerEndpoint[E <: EndpointInfoOps[?]](e: E) {
 
     /** Enables checks that prevent loading full request body into memory if it exceeds given limit. Otherwise causes endpoint to reply with
       * HTTP 413 Payload Too Loarge.

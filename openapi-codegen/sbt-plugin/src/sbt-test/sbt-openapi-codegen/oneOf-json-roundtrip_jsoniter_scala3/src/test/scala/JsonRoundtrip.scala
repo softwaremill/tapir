@@ -8,9 +8,6 @@ import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJso
 import sttp.tapir.generated.TapirGeneratedEndpoints.*
 import sttp.tapir.generated.TapirGeneratedEndpointsSchemas.*
 import TapirGeneratedEndpointsJsonSerdes.*
-import org.apache.pekko.stream.scaladsl.Source
-import org.apache.pekko.util.ByteString
-import sttp.capabilities.pekko.PekkoStreams
 import sttp.monad.FutureMonad
 import sttp.tapir.DecodeResult
 import sttp.tapir.client.sttp.{SttpClientInterpreter, SttpClientOptions, WebSocketToPipe}
@@ -164,7 +161,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     val resp = Await.result(stub.send(req), 1.second)
     resp.body match {
       case DecodeResult.Value(v) => v shouldEqual Right(Node("parent", Some(Seq(Node("leaf", None)))))
-      case err => fail(s"unexpected response: $err")
+      case err                   => fail(s"unexpected response: $err")
     }
   }
 }

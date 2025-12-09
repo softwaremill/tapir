@@ -115,7 +115,7 @@ object FinatraCatsServerInterpreter {
           original.onDecodeSuccess(
             ctx.copy(serverEndpoint =
               convertEndpoint[G, F, Any](ctx.serverEndpoint.asInstanceOf[ServerEndpoint[Any, G]], gToF)(monad)
-                .asInstanceOf[ServerEndpoint.Full[A, U, I, _, _, _, F]]
+                .asInstanceOf[ServerEndpoint.Full[A, U, I, ?, ?, ?, F]]
             )
           )
         )
@@ -128,7 +128,7 @@ object FinatraCatsServerInterpreter {
           original.onSecurityFailure(
             ctx.copy(serverEndpoint =
               convertEndpoint[G, F, Any](ctx.serverEndpoint.asInstanceOf[ServerEndpoint[Any, G]], gToF)(monad)
-                .asInstanceOf[ServerEndpoint.Full[A, _, _, _, _, _, F]]
+                .asInstanceOf[ServerEndpoint.Full[A, ?, ?, ?, ?, ?, F]]
             )
           )
         )

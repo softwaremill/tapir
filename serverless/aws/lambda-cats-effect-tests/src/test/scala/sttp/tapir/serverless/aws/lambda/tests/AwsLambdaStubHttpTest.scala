@@ -1,6 +1,5 @@
 package sttp.tapir.serverless.aws.lambda.tests
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.{ServerBasicTests, ServerMetricsTest, TestServerInterpreter}
@@ -15,7 +14,8 @@ class AwsLambdaStubHttpTest extends TestSuite {
     IO.pure {
       val createTestServer = new AwsLambdaCreateServerStubTest
       new ServerBasicTests(createTestServer, AwsLambdaStubHttpTest.testServerInterpreter, maxContentLength = false)(catsMonadIO).tests() ++
-        new ServerMetricsTest(createTestServer).tests()
+        new ServerMetricsTest(createTestServer, AwsLambdaStubHttpTest.testServerInterpreter, supportsMetricsDecodeFailureCallbacks = false)
+          .tests()
     }
   )
 }
@@ -30,7 +30,7 @@ object AwsLambdaStubHttpTest {
     }
 
     override def server(
-        routes: NonEmptyList[Route[IO]],
+        routes: Route[IO],
         gracefulShutdownTimeout: Option[FiniteDuration]
     ): Resource[IO, Port] = throw new UnsupportedOperationException
 

@@ -65,8 +65,8 @@ trait PekkoHttpServerInterpreter {
         extractRequestContext { ctx =>
           val serverRequest = PekkoServerRequest(ctx)
           onSuccess(interpreter(serverRequest)) {
-            case RequestResult.Failure(_)         => reject
-            case RequestResult.Response(response) => serverResponseToPekko(response, serverRequest.method)
+            case RequestResult.Failure(_)            => reject
+            case RequestResult.Response(response, _) => serverResponseToPekko(response, serverRequest.method)
           }
         }
       }

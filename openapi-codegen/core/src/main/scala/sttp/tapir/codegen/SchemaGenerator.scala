@@ -5,6 +5,7 @@ import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  AnyType,
   Discriminator,
   OpenapiSchemaAllOf,
   OpenapiSchemaAny,
@@ -26,6 +27,16 @@ import scala.collection.mutable
 
 object SchemaGenerator {
   def decl(isRecursive: Boolean): String = if (isRecursive) "def" else "lazy val"
+  def blockingMutualRefs(mutualRefs: Seq[String])(s: String): String = if (mutualRefs.isEmpty) s
+  else {
+    val shadows = mutualRefs
+      .map(r => s"  val ${RootGenerator.uncapitalise(r)}TapirSchema = null // shadow mutually-recursive schema")
+      .mkString("\n")
+    s"""{
+       |$shadows
+       |  $s
+       |}""".stripMargin
+  }
 
   def generateSchemas(
       doc: OpenapiDocument,
@@ -36,41 +47,51 @@ object SchemaGenerator {
       schemasContainAny: Boolean,
       targetScala3: Boolean
   ): Seq[String] = {
-    val maybeAnySchema: Option[(String, Boolean => String)] =
-      if (!schemasContainAny) None
+    val anySchemas: Seq[(String, ((Boolean, Seq[String])) => String)] =
+      if (!schemasContainAny) Nil
       else if (jsonSerdeLib == JsonSerdeLib.Circe || jsonSerdeLib == JsonSerdeLib.Jsoniter)
-        Some(
-          "anyTapirSchema" -> (_ =>
+        Seq(
+          "anyTapirSchema" -> ((_: (Boolean, Seq[String])) =>
             "implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]"
+          ),
+          "anyObjTapirSchema" -> ((_: (Boolean, Seq[String])) =>
+            "implicit lazy val anyObjTapirSchema: sttp.tapir.Schema[io.circe.JsonObject] = sttp.tapir.Schema.any[io.circe.JsonObject]"
+          ),
+          "anyArrTapirSchema" -> ((_: (Boolean, Seq[String])) =>
+            "implicit lazy val anyArrTapirSchema: sttp.tapir.Schema[Vector[io.circe.Json]] = sttp.tapir.Schema.any[Vector[io.circe.Json]]"
           )
         )
       else throw new NotImplementedError("any not implemented for json libs other than circe and jsoniter")
     val extraSchemaRefs: Seq[Seq[(String, OpenapiSchemaType)]] = Seq(
       Seq("byteStringSchema" -> OpenapiSchemaByte(false)),
-      maybeAnySchema.map { case (_, _) => "anyTapirSchema" -> OpenapiSchemaAny(false) }.toSeq
+      anySchemas.map {
+        case ("anyTapirSchema", _)    => "anyTapirSchema" -> OpenapiSchemaAny(false, AnyType.Any)
+        case ("anyObjTapirSchema", _) => "anyObjTapirSchema" -> OpenapiSchemaAny(false, AnyType.Object)
+        case ("anyArrTapirSchema", _) => "anyArrTapirSchema" -> OpenapiSchemaAny(false, AnyType.Array)
+      }
     )
-    val openApiSchemasWithTapirSchemas: Map[String, Boolean => String] =
+    val openApiSchemasWithTapirSchemas: Map[String, ((Boolean, Seq[String])) => String] =
       doc.components
-        .map(_.schemas.toSeq.flatMap {
+        .map(_.schemas.toSeq.flatMap[(String, ((Boolean, Seq[String])) => String), Seq[(String, ((Boolean, Seq[String])) => String)]] {
           case (name, _: OpenapiSchemaEnum) =>
-            Some(
-              name -> ((_: Boolean) =>
-                s"implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
-              )
-            )
+            Some(name -> { (_: (Boolean, Seq[String])) =>
+              s"implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
+            })
           case (name, obj: OpenapiSchemaObject)   => Some(name -> (schemaForObject(name, _, obj)))
           case (name, schema: OpenapiSchemaMap)   => Some(name -> (schemaForMapOrArray(name, _, schema.items)))
           case (name, schema: OpenapiSchemaArray) => Some(name -> (schemaForMapOrArray(name, _, schema.items)))
           case (_, _: OpenapiSchemaAny)           => None
           case (name, schema: OpenapiSchemaOneOf) =>
             Some(name -> (genADTSchema(name, schema, _, if (fullModelPath.isEmpty) None else Some(fullModelPath))))
+          // no need to generate schemas for simple type aliases
+          case (_, schema: OpenapiSchemaSimpleType) if !schema.isInstanceOf[OpenapiSchemaRef] => None
           case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
         })
         .toSeq
-        .flatMap(maybeAnySchema.toSeq ++ _)
-        .toMap + ("byteStringSchema" -> (_ =>
+        .flatMap(anySchemas ++ _)
+        .toMap + ("byteStringSchema" -> { (_: (Boolean, Seq[String])) =>
         "implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)"
-      ))
+      })
 
     // The algorithm here is to avoid mutually references between objects. It goes like this:
     // 1) Find all 'rings' -- that is, sets of mutually-recursive object references that will need to be defined in the same object
@@ -84,23 +105,25 @@ object SchemaGenerator {
     // the target is scala 3
     val foldedLayers = foldLayers(maxSchemasPerFile, targetScala3)(extraSchemaRefs ++ orderedLayers)
     // Our output will now only need to import the 'earlier' files into the 'later' files, and _not_ vice verse
-    foldedLayers.map(ring => ring.map(r => openApiSchemasWithTapirSchemas(r._1)(r._2)).mkString("\n"))
+    foldedLayers.map(ring => ring.flatMap(r => openApiSchemasWithTapirSchemas.get(r._1).map(_((r._2, r._4)))).mkString("\n"))
   }
   // Group files into chunks of size < maxLayerSize
   // The boolean in the return signature indicates whether the schema is part of a recursive definition or not.
-  // This is required since for scala 3, these schemas must be declared with `def` rather than `lazy val`
+  // This is required since for scala 3, these schemas must be declared with `def` rather than `lazy val`.
+  // The Seq[String] indicates other mutually-recursive refs.
+  // This is required since for scala 2.13, these schemas will otherwise stackoverflow at runtime.
   private def foldLayers(
       maxLayerSize: Int,
       isScala3: Boolean
-  )(layers: Seq[Seq[(String, OpenapiSchemaType)]]): Seq[Seq[(String, Boolean, OpenapiSchemaType)]] = {
-    def withRecursiveBoolean(s: Seq[(String, OpenapiSchemaType)]): Seq[(String, Boolean, OpenapiSchemaType)] = {
-      if (!isScala3) s.map { case (n, t) => (n, false, t) }
-      else if (s.size != 1) s.map { case (n, t) => (n, true, t) }
-      else if (isSimpleRecursive(s.head._1, s.head._2)) s.map { case (n, t) => (n, true, t) }
-      else s.map { case (n, t) => (n, false, t) }
+  )(layers: Seq[Seq[(String, OpenapiSchemaType)]]): Seq[Seq[(String, Boolean, OpenapiSchemaType, Seq[String])]] = {
+    def withRecursiveBoolean(s: Seq[(String, OpenapiSchemaType)]): Seq[(String, Boolean, OpenapiSchemaType, Seq[String])] = {
+      if (!isScala3) s.map { case (n, t) => (n, false, t, s.map(_._1).filterNot(_ == n)) }
+      else if (s.size != 1) s.map { case (n, t) => (n, true, t, Nil) }
+      else if (isSimpleRecursive(s.head._1, s.head._2)) s.map { case (n, t) => (n, true, t, Nil) }
+      else s.map { case (n, t) => (n, false, t, Nil) }
     }
 
-    layers.foldLeft(Seq.empty[Seq[(String, Boolean, OpenapiSchemaType)]]) { (acc, next) =>
+    layers.foldLeft(Seq.empty[Seq[(String, Boolean, OpenapiSchemaType, Seq[String])]]) { (acc, next) =>
       val mappedNext = withRecursiveBoolean(next)
       if (acc.isEmpty) Seq(mappedNext)
       else if (acc.last.size + next.size >= maxLayerSize) acc :+ mappedNext
@@ -216,21 +239,21 @@ object SchemaGenerator {
     case OpenapiSchemaNot(items)            => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
     case OpenapiSchemaMap(items, _, _)      => getReferencesToXInY(allSchemas, referent, items, checked, maybeRefs)
     // descend into all child types
-    case OpenapiSchemaOneOf(items, _) => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
-    case OpenapiSchemaAllOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
-    case OpenapiSchemaAnyOf(items)    => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
+    case OpenapiSchemaOneOf(items, _)      => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
+    case OpenapiSchemaAllOf(items)         => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
+    case OpenapiSchemaAnyOf(items)         => items.flatMap(getReferencesToXInY(allSchemas, referent, _, checked, maybeRefs)).toSet
     case OpenapiSchemaObject(kvs, _, _, _) =>
       kvs.values.flatMap(v => getReferencesToXInY(allSchemas, referent, v.`type`, checked, maybeRefs)).toSet
   }
 
-  private def schemaForObject(name: String, isRecursive: Boolean, schema: OpenapiSchemaObject): String = {
+  private def schemaForObject(name: String, recursionParams: (Boolean, Seq[String]), schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => schemaForObject(s"$name${k.capitalize}", isRecursive, `type`)
+      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => schemaForObject(s"$name${k.capitalize}", recursionParams, `type`)
       case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
-        schemaForObject(s"$name${k.capitalize}Item", isRecursive, `type`)
+        schemaForObject(s"$name${k.capitalize}Item", recursionParams, `type`)
       case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
-        schemaForObject(s"$name${k.capitalize}Item", isRecursive, `type`)
-      case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _)) => schemaForEnum(s"$name${k.capitalize}")
+        schemaForObject(s"$name${k.capitalize}Item", recursionParams, `type`)
+      case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _))                              => schemaForEnum(s"$name${k.capitalize}")
       case (k, OpenapiSchemaField(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _, _), _, _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
       case (k, OpenapiSchemaField(OpenapiSchemaMap(_: OpenapiSchemaEnum, _, _), _, _)) =>
@@ -239,11 +262,12 @@ object SchemaGenerator {
       case s if s.isEmpty => ""
       case s              => s.mkString("", "\n", "\n")
     }
-    s"${subs}implicit ${decl(isRecursive)} ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
+    val (isRecursive, mutualRefs) = recursionParams
+    s"${subs}implicit ${decl(isRecursive)} ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = ${blockingMutualRefs(mutualRefs)("sttp.tapir.Schema.derived")}"
   }
-  private def schemaForMapOrArray(name: String, isRecursive: Boolean, schema: OpenapiSchemaType): String = {
+  private def schemaForMapOrArray(name: String, recursionParams: (Boolean, Seq[String]), schema: OpenapiSchemaType): String = {
     val subs = schema match {
-      case `type`: OpenapiSchemaObject => Some(schemaForObject(s"${name}ObjectsItem", isRecursive, `type`))
+      case `type`: OpenapiSchemaObject => Some(schemaForObject(s"${name}ObjectsItem", recursionParams, `type`))
       case _                           => None
     }
     subs.fold("")("\n" + _)
@@ -251,15 +275,20 @@ object SchemaGenerator {
   private def schemaForEnum(name: String): String =
     s"""implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"""
 
-  private def genADTSchema(name: String, schema: OpenapiSchemaOneOf, isRecursive: Boolean, fullModelPath: Option[String]): String = {
+  private def genADTSchema(
+      name: String,
+      schema: OpenapiSchemaOneOf,
+      recursionParams: (Boolean, Seq[String]),
+      fullModelPath: Option[String]
+  ): String = {
     val schemaImpl = schema match {
-      case OpenapiSchemaOneOf(_, None) => "sttp.tapir.Schema.derived"
+      case OpenapiSchemaOneOf(_, None)                                            => "sttp.tapir.Schema.derived"
       case OpenapiSchemaOneOf(_, Some(Discriminator(propertyName, maybeMapping))) =>
         val mapping =
           maybeMapping.map(_.map { case (propName, fullRef) => propName -> fullRef.stripPrefix("#/components/schemas/") }).getOrElse {
             schema.types.map {
               case ref: OpenapiSchemaRef => ref.stripped -> ref.stripped
-              case other =>
+              case other                 =>
                 throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
             }.toMap
           }
@@ -285,6 +314,7 @@ object SchemaGenerator {
            |}""".stripMargin
     }
 
-    s"implicit ${decl(isRecursive)} ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = ${schemaImpl}"
+    val (isRecursive, mutualRefs) = recursionParams
+    s"implicit ${decl(isRecursive)} ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = ${blockingMutualRefs(mutualRefs)(schemaImpl)}"
   }
 }

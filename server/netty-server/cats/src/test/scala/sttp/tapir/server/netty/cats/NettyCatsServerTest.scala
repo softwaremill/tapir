@@ -53,7 +53,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
-          IO.fromFuture(IO.delay(FutureUtil.nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[_])).void
+          IO.fromFuture(IO.delay(FutureUtil.nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[?])).void
         }
         .map { case (tests, _) => tests }
     }

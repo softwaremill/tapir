@@ -136,13 +136,13 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
-  type PostXmlEndpointEndpoint = Endpoint[Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
+  type PostXmlEndpointEndpoint = Endpoint[Unit, fs2.Stream[injections.Types.A, Byte], Unit, fs2.Stream[injections.Types.A, Byte], sttp.capabilities.fs2.Fs2Streams[injections.Types.A]]
   lazy val postXmlEndpoint: PostXmlEndpointEndpoint =
     endpoint
       .post
       .in(("xml" / "endpoint"))
-      .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Pet], CodecFormat.Xml()))
-      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Pet], CodecFormat.Xml()).description("An object"))
+      .in(streamBody(sttp.capabilities.fs2.Fs2Streams[injections.Types.A])(Schema.binary[Pet], CodecFormat.Xml()))
+      .out(streamBody(sttp.capabilities.fs2.Fs2Streams[injections.Types.A])(Schema.binary[Pet], CodecFormat.Xml()).description("An object"))
 
   type PostRecursiveSchemaEndpointEndpoint = Endpoint[Unit, Node, Unit, Node, Any]
   lazy val postRecursiveSchemaEndpoint: PostRecursiveSchemaEndpointEndpoint =

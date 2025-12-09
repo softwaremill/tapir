@@ -19,10 +19,20 @@ class ArmeriaZioServerTest extends TestSuite {
     def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
       zStream.run(ZSink.drain)
 
-    new AllServerTests(createServerTest, interpreter, backend, basic = false, options = false, maxContentLength = false, multipart = false)
+    new AllServerTests(
+      createServerTest,
+      interpreter,
+      backend,
+      basic = false,
+      options = false,
+      maxContentLength = false,
+      multipart = false,
+      metrics = false
+    )
       .tests() ++
       new ServerBasicTests(createServerTest, interpreter, supportsUrlEncodedPathSegments = false, maxContentLength = false).tests() ++
       new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
-      new ServerMultipartTests(createServerTest, utf8FileNameSupport = false, maxContentLengthSupport = false).tests()
+      new ServerMultipartTests(createServerTest, utf8FileNameSupport = false, maxContentLengthSupport = false).tests() ++
+      new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests()
   }
 }

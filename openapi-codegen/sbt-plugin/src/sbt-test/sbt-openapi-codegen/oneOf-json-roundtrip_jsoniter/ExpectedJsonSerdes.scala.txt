@@ -16,6 +16,12 @@ object TapirGeneratedEndpointsJsonSerdes {
   implicit def optionCodec[T: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec]: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Option[T]] =
     com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make[Option[T]]
   implicit lazy val anyJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.Json] = com.github.plokhotnyuk.jsoniter_scala.circe.JsoniterScalaCodec.jsonCodec()
+  implicit lazy val anyObjJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.JsonObject] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.JsonObject] {
+    import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonWriter}
+    override def decodeValue(in: JsonReader, default: io.circe.JsonObject): io.circe.JsonObject = anyJsonSupport.decodeValue(in, io.circe.Json.fromJsonObject(default)).asObject.getOrElse(throw new RuntimeException(s"${default.getClass.getSimpleName} is not an object"))
+    override def encodeValue(x: io.circe.JsonObject, out: JsonWriter): Unit = anyJsonSupport.encodeValue(io.circe.Json.fromJsonObject(x), out)
+    override def nullValue: io.circe.JsonObject = null
+  }
   implicit lazy val aDTWithDiscriminatorCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithDiscriminator] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type", {
     case "SubtypeWithD1" => "SubA"
     case "SubtypeWithD2" => "SubB"})
