@@ -36,7 +36,7 @@ jobs:
             java: "21"
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - uses: sbt/setup-sbt@3e125ece5c3e5248e18da9ed8d2cce3d335ec8dd # v1, specifically v1.1.14
     - name: Set up JDK 
       uses: actions/setup-java@v4
@@ -70,7 +70,7 @@ jobs:
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Install scala-cli
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
-      uses: VirtusLab/scala-cli-setup@5fe8d5c007deb7903956fef29a715a0b0d5339f4 # main, specifically v1.10.0
+      uses: VirtusLab/scala-cli-setup@68bd9c30954d20e6cb6ddaf01b3b38336f25df4b # main, specifically v1.10.1
       with:
         jvm: '' # needed because scala-cli-setup otherwise forces the installation of their default JVM (17)
     - name: Enable Loom-specific modules
@@ -88,11 +88,13 @@ jobs:
       if: matrix.target-platform != 'JS'
       uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3, specifically v3.0.2
       with:
-        timeout_minutes: 8
-        max_attempts: 4
+        timeout_minutes: 10
+        max_attempts: 2
         # the netty server interpreter tests include some which run a large number of requests, to detect potential leaks
         # storing the output to verify it in the next step
-        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}" 2>&1 | tee output.log
+        command: |
+          sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}" 2>&1 | tee output.log
+          exit ${PIPESTATUS[0]}
     - name: Check for reported leaks
       if: matrix.target-platform != 'JS'
       run: |
@@ -147,7 +149,7 @@ jobs:
         java: [ "11", "21" ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - uses: sbt/setup-sbt@3e125ece5c3e5248e18da9ed8d2cce3d335ec8dd # v1, specifically v1.1.14
       - name: Set up JDK
         uses: actions/setup-java@v4

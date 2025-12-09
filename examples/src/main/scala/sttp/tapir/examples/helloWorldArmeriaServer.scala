@@ -1,7 +1,7 @@
 // {cat=Hello, World!; effects=Future; server=Armeria}: Exposing an endpoint using the Armeria server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.3
-//> using dep com.softwaremill.sttp.tapir::tapir-armeria-server:1.12.3
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.0
+//> using dep com.softwaremill.sttp.tapir::tapir-armeria-server:1.13.0
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples
@@ -40,4 +40,4 @@ import scala.concurrent.Future
   println("Got result: " + result)
 
   assert(result == "Hello, Frodo!")
-  server.stop().join()
+  server.stop().join(): Unit

@@ -47,7 +47,7 @@ trait ZioHttpInterpreter[R] {
           .foldCauseZIO(
             cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
             {
-              case RequestResult.Response(resp) =>
+              case RequestResult.Response(resp, _) =>
                 resp.body match {
                   case None              => handleHttpResponse(resp, None)
                   case Some(Right(body)) => handleHttpResponse(resp, Some(body))

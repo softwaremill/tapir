@@ -25,5 +25,7 @@ package object netty {
 
       run(routes.toList)
     }
+
+    def empty[F[_]](implicit me: MonadError[F]): Route[F] = { req => me.unit(None) }
   }
 }

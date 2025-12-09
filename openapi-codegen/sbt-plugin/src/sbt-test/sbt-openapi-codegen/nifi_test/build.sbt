@@ -4,7 +4,7 @@ lazy val root = (project in file("."))
     scalaVersion := "2.13.17",
     version := "0.1",
     openapiStreamingImplementation := "pekko",
-    openapiGenerateEndpointTypes := true,
+    openapiGenerateEndpointTypes := true
   )
 
 val tapirVersion = "1.11.50"
@@ -46,7 +46,7 @@ TaskKey[Unit]("check") := {
     "TapirGeneratedEndpoints.scala" -> "Expected.scala.txt",
     "TapirGeneratedEndpointsJsonSerdes.scala" -> "ExpectedJsonSerdes.scala.txt",
     "TapirGeneratedEndpointsSchemas1.scala" -> "ExpectedSchemas.scala.txt",
-    "TapirGeneratedEndpointsXmlSerdes.scala" -> "ExpectedXmlSerdes.scala.txt",
+    "TapirGeneratedEndpointsXmlSerdes.scala" -> "ExpectedXmlSerdes.scala.txt"
   ).foreach { case (generated, expected) => check(generated, expected) }
   ()
 }
