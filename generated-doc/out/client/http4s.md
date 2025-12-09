@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-client" % "1.11.43"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-client" % "1.13.0"
 ```
 
 To interpret an endpoint definition as an `org.http4s.Request[F]`, import:

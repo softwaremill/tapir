@@ -11,6 +11,8 @@ import sttp.monad.FutureMonad
 import sttp.tapir.generated.TapirGeneratedEndpoints
 import sttp.tapir.server.stub.TapirStubInterpreter
 
+import java.nio.charset.StandardCharsets
+
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -28,7 +30,7 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
       def next(): ByteString = {
         val nxt = Random.alphanumeric.take(40).mkString
         linesToGo -= 1
-        ByteString.fromString(nxt, "utf-8")
+        ByteString.fromString(nxt, StandardCharsets.UTF_8)
       }
     }
     val route1 =

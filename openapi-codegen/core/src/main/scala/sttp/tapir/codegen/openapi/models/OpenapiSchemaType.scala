@@ -115,8 +115,18 @@ object OpenapiSchemaType {
     def stripped: String = name.stripPrefix("#/components/schemas/")
   }
 
+  object AnyType extends Enumeration {
+    val Any, Object, Array = Value
+    type AnyType = Value
+    def toCirceTpe(t: AnyType): String = t match {
+      case AnyType.Any    => "io.circe.Json"
+      case AnyType.Object => "io.circe.JsonObject"
+      case AnyType.Array  => "Vector[io.circe.Json]"
+    }
+  }
   case class OpenapiSchemaAny(
-      nullable: Boolean
+      nullable: Boolean,
+      tpe: AnyType.AnyType
   ) extends OpenapiSchemaSimpleType
 
   case class OpenapiSchemaConstantString(
@@ -346,10 +356,10 @@ object OpenapiSchemaType {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
       fieldsWithDefaults <- c
         .downField("properties")
-        .as[Option[mutable.LinkedHashMap[String, (OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)]]]
+        .as[mutable.LinkedHashMap[String, (OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)]]
       r <- c.downField("required").as[Option[Seq[String]]]
       (_, nb) = p
-      fields = fieldsWithDefaults.getOrElse(mutable.LinkedHashMap.empty).map { case (k, (f, d, r)) => k -> OpenapiSchemaField(f, d, r) }
+      fields = fieldsWithDefaults.map { case (k, (f, d, r)) => k -> OpenapiSchemaField(f, d, r) }
     } yield {
       OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb)
     }
@@ -396,10 +406,16 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaAnyDecoder: Decoder[OpenapiSchemaAny] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[Option[String]].ensure(DecodingFailure("Type must not be defined!", c.history))(_.isEmpty)
+      t <- c.downField("type").as[Option[String]]
+      p <- t match {
+        case None           => Right(AnyType.Any)
+        case Some("object") => Right(AnyType.Object)
+        case Some("array")  => Right(AnyType.Array)
+        case Some(t)        => Left(DecodingFailure(s"Fell back to any type; type $t is not handled", c.history))
+      }
       nb <- c.downField("nullable").as[Option[Boolean]]
     } yield {
-      OpenapiSchemaAny(nb.getOrElse(false))
+      OpenapiSchemaAny(nb.getOrElse(false), p)
     }
   }
 

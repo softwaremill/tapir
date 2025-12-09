@@ -11,7 +11,7 @@ import sttp.tapir.server.model.ServerResponse
 
 import scala.util.{Failure, Success, Try}
 
-class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[AnyEndpoint]) extends RequestInterceptor[F] {
+class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, ?]], ignoreEndpoints: Seq[AnyEndpoint]) extends RequestInterceptor[F] {
 
   override def apply[R, B](
       responder: Responder[F, B],
@@ -28,10 +28,44 @@ class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, _]], ignoreEndpoin
             }
           } yield endpointMetric :: metrics
         }
-        .flatMap { endpointMetrics =>
-          requestHandler(new MetricsEndpointInterceptor[F](endpointMetrics.reverse, ignoreEndpoints)).apply(request, endpoints)
+        .flatMap { _endpointMetrics =>
+          val endpointMetrics = _endpointMetrics.reverse
+          val delegate = requestHandler(new MetricsEndpointInterceptor[F](endpointMetrics, ignoreEndpoints))
+          delegate(request, endpoints).flatTap {
+            case RequestResult.Response(response, ResponseSource.RequestHandler) =>
+              collectRequestHandlerResponseMetrics(endpointMetrics, response)
+            case RequestResult.Response(response, ResponseSource.EndpointHandler) => ().unit // already handled
+            case RequestResult.Failure(_)                                         => collectDecodeFailureMetrics(endpointMetrics)
+          }
         }
     }
+
+  private def collectRequestHandlerResponseMetrics[B](
+      endpointMetrics: List[EndpointMetric[F]],
+      response: ServerResponse[B]
+  )(implicit monad: MonadError[F]): F[Unit] = {
+    def sequence(metrics: List[EndpointMetric[F]]): F[Unit] = {
+      metrics match {
+        case Nil                                                        => ().unit
+        case EndpointMetric(_, _, _, _, Some(onInterceptor), _) :: tail => onInterceptor(response).flatMap(_ => sequence(tail))
+        case _ :: tail                                                  => sequence(tail)
+      }
+    }
+    sequence(endpointMetrics)
+  }
+
+  private def collectDecodeFailureMetrics(
+      endpointMetrics: List[EndpointMetric[F]]
+  )(implicit monad: MonadError[F]): F[Unit] = {
+    def sequence(metrics: List[EndpointMetric[F]]): F[Unit] = {
+      metrics match {
+        case Nil                                                    => ().unit
+        case EndpointMetric(_, _, _, _, _, Some(onFailure)) :: tail => onFailure().flatMap(_ => sequence(tail))
+        case _ :: tail                                              => sequence(tail)
+      }
+    }
+    sequence(endpointMetrics)
+  }
 }
 
 private[metrics] class MetricsEndpointInterceptor[F[_]](
@@ -118,7 +152,7 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
   ): F[ServerResponse[B]] = {
     val cb: Try[Unit] => F[Unit] = {
       case Success(_) =>
-        collectMetrics { case EndpointMetric(_, _, Some(onResponseBody), _) => onResponseBody(endpoint, sr) }
+        collectMetrics { case EndpointMetric(_, _, Some(onResponseBody), _, _, _) => onResponseBody(endpoint, sr) }
       case Failure(ex) =>
         collectExceptionMetrics(endpoint, ex)
     }
@@ -134,11 +168,11 @@ private[metrics] class MetricsEndpointInterceptor[F[_]](
     r.handleError { case ex: Exception => collectExceptionMetrics(e, ex).flatMap(_ => monad.error(ex)) }
 
   private def collectExceptionMetrics[T](e: AnyEndpoint, ex: Throwable)(implicit monad: MonadError[F]): F[Unit] =
-    collectMetrics { case EndpointMetric(_, _, _, Some(onException)) => onException(e, ex) }
+    collectMetrics { case EndpointMetric(_, _, _, Some(onException), _, _) => onException(e, ex) }
 
   private def collectRequestMetrics(endpoint: AnyEndpoint)(implicit monad: MonadError[F]): F[Unit] =
-    collectMetrics { case EndpointMetric(Some(onRequest), _, _, _) => onRequest(endpoint) }
+    collectMetrics { case EndpointMetric(Some(onRequest), _, _, _, _, _) => onRequest(endpoint) }
 
   private def collectResponseHeadersMetrics[B](endpoint: AnyEndpoint, sr: ServerResponse[B])(implicit monad: MonadError[F]): F[Unit] =
-    collectMetrics { case EndpointMetric(_, Some(onResponseHeaders), _, _) => onResponseHeaders(endpoint, sr) }
+    collectMetrics { case EndpointMetric(_, Some(onResponseHeaders), _, _, _, _) => onResponseHeaders(endpoint, sr) }
 }

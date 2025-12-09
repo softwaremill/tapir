@@ -61,7 +61,7 @@ object Pickler:
     }
     summonFrom {
       case schema: Schema[T] => fromExistingSchemaAndRw[T](schema)
-      case _ =>
+      case _                 =>
         inline m match {
           case p: Mirror.ProductOf[T] =>
             error(
@@ -108,14 +108,14 @@ object Pickler:
           new TapirPickle[T] {
             override lazy val reader = summonFrom {
               case r: Reader[T] => r
-              case _ =>
+              case _            =>
                 errorForType[T](
                   "Use Pickler.derive[%s] instead of nonMirrorPickler. This method has to be in scope to resolve predefined picklers."
                 )
             }
             override lazy val writer = summonFrom {
               case w: Writer[T] => w
-              case _ =>
+              case _            =>
                 errorForType[T](
                   "Use Pickler.derive[%s] instead of nonMirrorPickler. This method has to be in scope to resolve predefined picklers."
                 )
@@ -319,10 +319,10 @@ object Pickler:
   private inline def deriveOrSummon[T, FieldType](using PicklerConfiguration): Pickler[FieldType] =
     inline erasedValue[FieldType] match
       case _: T => deriveRec[T, FieldType]
-      case _ =>
+      case _    =>
         summonFrom {
           case p: Pickler[FieldType] => p
-          case _ =>
+          case _                     =>
             errorForType[FieldType](
               "Failed to summon Pickler[%s]. Try using Pickler.derived or importing sttp.tapir.json.pickler.generic.auto.*"
             )

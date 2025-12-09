@@ -1,13 +1,14 @@
 package sttp.tapir.server.armeria
 
 import com.linecorp.armeria.common.HttpData
-import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, Multipart}
+import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, MimeParsingException, Multipart}
 import com.linecorp.armeria.common.stream.{StreamMessage, StreamMessages}
 import com.linecorp.armeria.server.ServiceRequestContext
 import sttp.capabilities.Streams
 import sttp.model.Part
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType}
 
 import java.io.ByteArrayInputStream
@@ -77,6 +78,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
               .sequence(rawParts)
               .map(RawValue.fromParts(_))
           })
+          .recoverWith { case e: MimeParsingException => Future.failed(InvalidMultipartBodyException(e)) }
           .asInstanceOf[Future[RawValue[R]]]
     })
   }
@@ -88,7 +90,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       case RawBodyType.ByteBufferBody       => Future.successful(RawValue(body.byteBuf().nioBuffer()))
       case RawBodyType.InputStreamBody      => Future.successful(RawValue(new ByteArrayInputStream(body.array())))
       case RawBodyType.InputStreamRangeBody => Future.successful(RawValue(InputStreamRange(() => new ByteArrayInputStream(body.array()))))
-      case RawBodyType.FileBody =>
+      case RawBodyType.FileBody             =>
         for {
           file <- futureConversion.to(serverOptions.createFile())
           _ <- StreamMessages.writeTo(StreamMessage.of(Array(body): _*), file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).toScala

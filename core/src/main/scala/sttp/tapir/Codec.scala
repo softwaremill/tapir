@@ -221,9 +221,11 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
   implicit lazy val instant: Codec[String, Instant, TextPlain] =
     string.map(Instant.parse(_))(DateTimeFormatter.ISO_INSTANT.format).schema(Schema.schemaForInstant)
   implicit lazy val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant).schema(Schema.schemaForDate)
-  implicit lazy val zoneOffset: Codec[String, ZoneOffset, TextPlain] = parsedString[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
+  implicit lazy val zoneOffset: Codec[String, ZoneOffset, TextPlain] =
+    parsedString[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
   implicit lazy val zoneId: Codec[String, ZoneId, TextPlain] = parsedString[ZoneId](ZoneId.of).schema(Schema.schemaForZoneId)
-  implicit lazy val duration: Codec[String, Duration, TextPlain] = parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
+  implicit lazy val duration: Codec[String, Duration, TextPlain] =
+    parsedString[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
   implicit lazy val offsetTime: Codec[String, OffsetTime, TextPlain] =
     string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format).schema(Schema.schemaForOffsetTime)
   implicit lazy val localDateTime: Codec[String, LocalDateTime, TextPlain] = string
@@ -273,17 +275,17 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     formSeq(charset).map(_.toMap)(_.toSeq)
 
   def rawPart(
-      partCodecs: Map[String, PartCodec[_, _]],
-      defaultCodec: Option[PartCodec[_, _]]
-  ): Codec[Seq[RawPart], ListMap[String, _], MultipartFormData] =
-    new Codec[Seq[RawPart], ListMap[String, _], MultipartFormData] {
+      partCodecs: Map[String, PartCodec[?, ?]],
+      defaultCodec: Option[PartCodec[?, ?]]
+  ): Codec[Seq[RawPart], ListMap[String, ?], MultipartFormData] =
+    new Codec[Seq[RawPart], ListMap[String, ?], MultipartFormData] {
 
-      private def partCodec(name: String): Option[PartCodec[_, _]] = partCodecs.get(name).orElse(defaultCodec)
+      private def partCodec(name: String): Option[PartCodec[?, ?]] = partCodecs.get(name).orElse(defaultCodec)
 
-      override def encode(t: ListMap[String, _]): Seq[RawPart] = {
+      override def encode(t: ListMap[String, ?]): Seq[RawPart] = {
         t.toList.flatMap { case (name, body) =>
           partCodec(name).toList.flatMap { case PartCodec(rawBodyType, codec) =>
-            val partList: List[Part[Any]] = codec.asInstanceOf[Codec[List[Part[Any]], Any, _]].encode(body)
+            val partList: List[Part[Any]] = codec.asInstanceOf[Codec[List[Part[Any]], Any, ?]].encode(body)
             partList.map { part =>
               val partWithContentType = withContentType(part.copy(name = name), rawBodyType, codec.format.mediaType)
 
@@ -300,7 +302,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
         }
       }
 
-      override def rawDecode(l: Seq[RawPart]): DecodeResult[ListMap[String, _]] = {
+      override def rawDecode(l: Seq[RawPart]): DecodeResult[ListMap[String, ?]] = {
         val rawPartsByName = l.groupBy(_.name)
 
         // we need to decode all parts for which there's a codec defined (even if that part is missing a value -
@@ -317,7 +319,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
         val anyParts: List[(String, DecodeResult[Any])] = partNamesToDecode.map { name =>
           val codec = partCodec(name).get.codec
           val rawParts = rawPartsByName.get(name).toList.flatten
-          name -> codec.asInstanceOf[Codec[List[AnyPart], Any, _]].rawDecode(rawParts)
+          name -> codec.asInstanceOf[Codec[List[AnyPart], Any, ?]].rawDecode(rawParts)
         }
 
         val partFailures = anyParts.collect { case (partName, partDecodeFailure: DecodeResult.Failure) =>
@@ -332,7 +334,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
           }.toListMap)
       }
 
-      override def schema: Schema[ListMap[String, _]] = Schema.binary
+      override def schema: Schema[ListMap[String, ?]] = Schema.binary
       override def format: MultipartFormData = CodecFormat.MultipartFormData()
     }
 
@@ -356,9 +358,9 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     *   Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra parts should be discarded.
     */
   def multipart(
-      partCodecs: Map[String, PartCodec[_, _]],
-      defaultPartCodec: Option[PartCodec[_, _]]
-  ): MultipartCodec[ListMap[String, _]] =
+      partCodecs: Map[String, PartCodec[?, ?]],
+      defaultPartCodec: Option[PartCodec[?, ?]]
+  ): MultipartCodec[ListMap[String, ?]] =
     MultipartCodec(
       RawBodyType.MultipartBody(partCodecs.map(t => (t._1, t._2.rawBodyType)).toMap, defaultPartCodec.map(_.rawBodyType)),
       rawPart(partCodecs, defaultPartCodec)
@@ -381,7 +383,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
       }
 
     def encode(up: UsernamePassword): String =
-      Base64.getEncoder.encodeToString(s"${up.username}:${up.password.getOrElse("")}".getBytes("UTF-8"))
+      Base64.getEncoder.encodeToString(s"${up.username}:${up.password.getOrElse("")}".getBytes(StandardCharsets.UTF_8))
 
     Codec.string.mapDecode(decode)(encode)
   }
@@ -709,7 +711,7 @@ trait LowPriorityCodec { this: Codec.type =>
 }
 
 /** Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec which further decodes it. */
-case class PartCodec[R, T](rawBodyType: RawBodyType[R], codec: Codec[List[Part[R]], T, _ <: CodecFormat])
+case class PartCodec[R, T](rawBodyType: RawBodyType[R], codec: Codec[List[Part[R]], T, ? <: CodecFormat])
 object PartCodec {
 
   /** Create a part codec which reads the raw part as `R` and later decodes to type `T`. Usage examples:
@@ -724,7 +726,7 @@ object PartCodec {
   def apply[R](rbt: RawBodyType[R]): PartCodecPartiallyApplied[R] = new PartCodecPartiallyApplied(rbt)
 
   class PartCodecPartiallyApplied[R](rbt: RawBodyType[R]) {
-    def apply[T](implicit c: Codec[List[Part[R]], T, _ <: CodecFormat]): PartCodec[R, T] = PartCodec(rbt, c)
+    def apply[T](implicit c: Codec[List[Part[R]], T, ? <: CodecFormat]): PartCodec[R, T] = PartCodec(rbt, c)
   }
 }
 
@@ -765,7 +767,7 @@ object RawBodyType {
   case object FileBody extends Binary[FileRange]
   case object InputStreamRangeBody extends Binary[InputStreamRange]
 
-  case class MultipartBody(partTypes: Map[String, RawBodyType[_]], defaultType: Option[RawBodyType[_]]) extends RawBodyType[Seq[RawPart]] {
-    def partType(name: String): Option[RawBodyType[_]] = partTypes.get(name).orElse(defaultType)
+  case class MultipartBody(partTypes: Map[String, RawBodyType[?]], defaultType: Option[RawBodyType[?]]) extends RawBodyType[Seq[RawPart]] {
+    def partType(name: String): Option[RawBodyType[?]] = partTypes.get(name).orElse(defaultType)
   }
 }

@@ -1,9 +1,32 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiPathMethod, OpenapiRequestBody, OpenapiRequestBodyContent, OpenapiRequestBodyDefn, OpenapiResponse, OpenapiResponseContent, OpenapiResponseDef, Resolved}
-import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeBasicType, OpenapiSecuritySchemeBearerType}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaBinary, OpenapiSchemaField, OpenapiSchemaObject, OpenapiSchemaRef, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
+  OpenapiDocument,
+  OpenapiParameter,
+  OpenapiPath,
+  OpenapiPathMethod,
+  OpenapiRequestBody,
+  OpenapiRequestBodyContent,
+  OpenapiRequestBodyDefn,
+  OpenapiResponse,
+  OpenapiResponseContent,
+  OpenapiResponseDef,
+  Resolved
+}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
+  OpenapiSecuritySchemeApiKeyType,
+  OpenapiSecuritySchemeBasicType,
+  OpenapiSecuritySchemeBearerType
+}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaBinary,
+  OpenapiSchemaField,
+  OpenapiSchemaObject,
+  OpenapiSchemaRef,
+  OpenapiSchemaString
+}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 import scala.collection.mutable
@@ -52,7 +75,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
-          streamingImplementation = StreamingImplementation.FS2,
+          streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
           generateValidators = true
@@ -143,7 +166,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
-          streamingImplementation = StreamingImplementation.FS2,
+          streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
           generateValidators = true
@@ -201,7 +224,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           targetScala3 = false,
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
-          streamingImplementation = StreamingImplementation.FS2,
+          streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
           generateValidators = true

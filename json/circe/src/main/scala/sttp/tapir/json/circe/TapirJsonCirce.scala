@@ -22,10 +22,10 @@ trait TapirJsonCirce {
   implicit def circeCodec[T: Encoder: Decoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>
       io.circe.parser.decodeAccumulating[T](s) match {
-        case Validated.Valid(v) => Value(v)
+        case Validated.Valid(v)               => Value(v)
         case Validated.Invalid(circeFailures) =>
           val tapirJsonErrors = circeFailures.map {
-            case ParsingFailure(msg, _) => JsonError(msg, path = List.empty)
+            case ParsingFailure(msg, _)   => JsonError(msg, path = List.empty)
             case failure: DecodingFailure =>
               val path = CursorOp.opsToPath(failure.history)
               val fields = path.split("\\.").toList.filter(_.nonEmpty).map(FieldName.apply)

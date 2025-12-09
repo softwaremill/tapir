@@ -4,7 +4,6 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.model.HttpEntity
 import org.apache.pekko.http.scaladsl.server.{Directives, RequestContext}
 import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
-import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.implicits._
@@ -51,7 +50,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
           val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
             }
@@ -67,7 +66,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
             })
           val route = PekkoHttpServerInterpreter().toRoute(e)
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               IO.fromFuture {
                 IO(
@@ -101,7 +100,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           ).toRoute(e)
 
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.post(uri"http://localhost:$port").body("test123").send(backend).map(_.body shouldBe Right("replaced"))
             }
@@ -142,7 +141,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           ).toRoute(e)
 
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.post(uri"http://localhost:$port").body("").send(backend).map { response =>
                 response.body shouldBe Right("")
@@ -158,9 +157,30 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           val e = endpoint.get.in("custom_code").errorOut(statusCode).serverLogic(_ => (StatusCode(800).asLeft[Unit]).unit)
           val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/custom_code").send(backend).map(_.code shouldBe StatusCode(800))
+            }
+            .unsafeToFuture()
+        },
+        Test("Server reads remote address and secure from connectionInfo") {
+          val e = endpoint.get
+            .in("test")
+            .in(extractFromRequest(req => req.connectionInfo))
+            .out(stringBody)
+            .serverLogic { connectionInfo =>
+              val remote = connectionInfo.remote
+              val secure = connectionInfo.secure
+              s"$remote $secure".asRight[Unit].unit
+            }
+          val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
+          interpreter
+            .server(route)
+            .use { port =>
+              basicRequest
+                .get(uri"http://localhost:$port/api/test")
+                .send(backend)
+                .map(_.body.value should fullyMatch regex """Some\(/127\.0\.0\.1:\d+\) Some\(false\)""")
             }
             .unsafeToFuture()
         }

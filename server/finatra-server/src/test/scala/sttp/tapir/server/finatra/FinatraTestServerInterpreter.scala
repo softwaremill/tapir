@@ -1,6 +1,5 @@
 package sttp.tapir.server.finatra
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
@@ -21,7 +20,7 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
   }
 
   override def server(
-      routes: NonEmptyList[FinatraRoute],
+      route: FinatraRoute,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, Port] = {
 
@@ -32,7 +31,7 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
 
     val bind = IO {
       class TestController extends Controller with TapirController {
-        routes.toList.foreach(addTapirRoute)
+        addTapirRoute(route)
       }
 
       class TestServer extends HttpServer {

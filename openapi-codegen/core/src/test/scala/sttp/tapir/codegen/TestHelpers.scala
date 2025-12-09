@@ -423,7 +423,11 @@ object TestHelpers {
     Some(
       OpenapiComponent(
         Map(
-          "Author" -> OpenapiSchemaObject(mutable.LinkedHashMap("name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("name"), false),
+          "Author" -> OpenapiSchemaObject(
+            mutable.LinkedHashMap("name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+            List("name"),
+            false
+          ),
           "Book" -> OpenapiSchemaObject(
             properties = mutable.LinkedHashMap(
               "title" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
@@ -1152,9 +1156,21 @@ object TestHelpers {
             List("foo"),
             false
           ),
-          "ReqSubtype2" -> OpenapiSchemaObject(mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("foo"), false),
-          "ReqSubtype3" -> OpenapiSchemaObject(mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("foo"), false),
-          "ReqSubtype4" -> OpenapiSchemaObject(mutable.LinkedHashMap("bar" -> OpenapiSchemaField(OpenapiSchemaString(false), None)), List("bar"), false)
+          "ReqSubtype2" -> OpenapiSchemaObject(
+            mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+            List("foo"),
+            false
+          ),
+          "ReqSubtype3" -> OpenapiSchemaObject(
+            mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+            List("foo"),
+            false
+          ),
+          "ReqSubtype4" -> OpenapiSchemaObject(
+            mutable.LinkedHashMap("bar" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+            List("bar"),
+            false
+          )
         ),
         Map(),
         Map()
