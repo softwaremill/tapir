@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - master
+      - testing_dependency_graph
 
 permissions:
   contents: write # needed to submit the dependency graph
