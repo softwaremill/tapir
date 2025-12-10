@@ -274,6 +274,49 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val encoded = prometheusRegistryCodec.encode(metrics.registry)
     encoded should include regex "tapir_request_duration_seconds_bucket\\{(?=.*path=\"/__interceptor__\")(?=.*method=\"POST\")(?=.*status=\"4xx\")(?=.*phase=\"body\")(?=.*le=\"0.25\").*\\} 1"
   }
+
+  "metrics" should "decrement active requests on interceptor response" in {
+    // given
+    val serverEp = PersonsApi().serverEp
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsActive()
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(serverEp),
+      TestRequestBody,
+      StringToResponseBody,
+      List(metrics.metricsInterceptor(), new RejectInterceptor(DefaultRejectHandler[Identity])),
+      _ => ()
+    )
+
+    // when
+    interpreter.apply(serverRequestFromUri(uri"http://example.com/person?name=Adam", _method = Method.POST))
+
+    // then
+    prometheusRegistryCodec.encode(
+      metrics.registry
+    ) should include regex "tapir_request_active\\{(?=.*method=\"POST\").*\\} 0.0"
+  }
+
+  "metrics" should "record request duration on exception" in {
+    // given
+    val serverEp = PersonsApi { _ => throw new RuntimeException("Ups") }.serverEp
+    val clock = new TestClock()
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsDuration(clock = clock)
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(serverEp),
+      TestRequestBody,
+      StringToResponseBody,
+      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler[Identity])),
+      _ => ()
+    )
+
+    // when
+    clock.forward(150)
+    interpreter.apply(PersonsApi.request("Jacob"))
+
+    // then
+    val encoded = prometheusRegistryCodec.encode(metrics.registry)
+    encoded should include regex "tapir_request_duration_seconds_bucket\\{(?=.*path=\"/person\")(?=.*method=\"GET\")(?=.*status=\"5xx\")(?=.*phase=\"body\")(?=.*le=\"0.25\").*\\} 1"
+  }
 }
 
 object PrometheusMetricsTest {
