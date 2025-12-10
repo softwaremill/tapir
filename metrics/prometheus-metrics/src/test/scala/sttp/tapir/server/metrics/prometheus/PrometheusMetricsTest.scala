@@ -252,6 +252,28 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       metrics.registry
     ) should include regex "tapir_request_total\\{(?=.*path=\"/__interceptor__\")(?=.*method=\"POST\")(?=.*status=\"4xx\").*\\} 1.0"
   }
+
+  "metrics" should "record request duration for interceptor response" in {
+    // given
+    val serverEp = PersonsApi().serverEp
+    val clock = new TestClock()
+    val metrics = PrometheusMetrics[Identity]("tapir", new PrometheusRegistry()).addRequestsDuration(clock = clock)
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(serverEp),
+      TestRequestBody,
+      StringToResponseBody,
+      List(metrics.metricsInterceptor(), new RejectInterceptor(DefaultRejectHandler[Identity])),
+      _ => ()
+    )
+
+    // when
+    clock.forward(150)
+    interpreter.apply(serverRequestFromUri(uri"http://example.com/person?name=Adam", _method = Method.POST))
+
+    // then
+    val encoded = prometheusRegistryCodec.encode(metrics.registry)
+    encoded should include regex "tapir_request_duration_seconds_bucket\\{(?=.*path=\"/__interceptor__\")(?=.*method=\"POST\")(?=.*status=\"4xx\")(?=.*phase=\"body\")(?=.*le=\"0.25\").*\\} 1"
+  }
 }
 
 object PrometheusMetricsTest {

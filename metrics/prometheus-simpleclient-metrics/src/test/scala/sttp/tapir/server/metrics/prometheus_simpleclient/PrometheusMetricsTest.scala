@@ -28,6 +28,8 @@ import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Success, Try}
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 
 class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
@@ -233,6 +235,49 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     collectorRegistryCodec.encode(
       metrics.registry
     ) should include regex "tapir_request_total\\{(?=.*path=\"/person\")(?=.*method=\"GET\")(?=.*status=\"5xx\").*\\} 1.0"
+  }
+
+  "metrics" should "record a method not allowed response" in {
+    // given
+    val serverEp = PersonsApi().serverEp
+    val metrics = PrometheusMetrics[Identity]("tapir", new CollectorRegistry()).addRequestsTotal()
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(serverEp),
+      TestRequestBody,
+      StringToResponseBody,
+      List(metrics.metricsInterceptor(), new RejectInterceptor(DefaultRejectHandler[Identity])),
+      _ => ()
+    )
+
+    // when
+    interpreter.apply(serverRequestFromUri(uri"http://example.com/person?name=Adam", _method = Method.POST))
+
+    // then
+    collectorRegistryCodec.encode(
+      metrics.registry
+    ) should include regex "tapir_request_total\\{(?=.*path=\"/__interceptor__\")(?=.*method=\"POST\")(?=.*status=\"4xx\").*\\} 1.0"
+  }
+
+  "metrics" should "record request duration for interceptor response" in {
+    // given
+    val serverEp = PersonsApi().serverEp
+    val clock = new TestClock()
+    val metrics = PrometheusMetrics[Identity]("tapir", new CollectorRegistry()).addRequestsDuration(clock = clock)
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(serverEp),
+      TestRequestBody,
+      StringToResponseBody,
+      List(metrics.metricsInterceptor(), new RejectInterceptor(DefaultRejectHandler[Identity])),
+      _ => ()
+    )
+
+    // when
+    clock.forward(150)
+    interpreter.apply(serverRequestFromUri(uri"http://example.com/person?name=Adam", _method = Method.POST))
+
+    // then
+    val encoded = collectorRegistryCodec.encode(metrics.registry)
+    encoded should include regex "tapir_request_duration_seconds_bucket\\{(?=.*path=\"/__interceptor__\")(?=.*method=\"POST\")(?=.*status=\"4xx\")(?=.*phase=\"body\")(?=.*le=\"0.25\").*\\} 1.0"
   }
 }
 

@@ -151,12 +151,17 @@ object PrometheusMetrics {
       }
     )
 
+  /** @param placeholderInterceptorEndpoint
+    *   When the response is created by an interceptor (request handler), there's no endpoint with which the metrics might be associated. In
+    *   such case, using the placeholder endpoint to generate the labels (all labels must always be generated for all requests).
+    */
   def requestDuration[F[_]](
       registry: CollectorRegistry,
       namespace: String,
       labels: MetricLabels,
       clock: Clock = Clock.systemUTC(),
-      bucketsOverride: List[Double] = List.empty
+      bucketsOverride: List[Double] = List.empty,
+      placeholderInterceptorEndpoint: AnyEndpoint = endpoint.in("__interceptor__") // #4966
   ): Metric[F, Histogram] =
     Metric[F, Histogram](
       (if (bucketsOverride.nonEmpty) Histogram.build().buckets(bucketsOverride: _*) else Histogram.build())
@@ -206,7 +211,10 @@ object PrometheusMetrics {
             .onInterceptorResponse { res =>
               m.eval(
                 histogram
-                  .labels(labels.valuesForRequest(req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.bodyValue): _*)
+                  .labels(
+                    labels.valuesForRequest(req) ++ labels.valuesForEndpoint(placeholderInterceptorEndpoint) ++ labels
+                      .valuesForResponse(res) ++ List(labels.forResponsePhase.bodyValue): _*
+                  )
                   .observe(duration)
               )
             }
