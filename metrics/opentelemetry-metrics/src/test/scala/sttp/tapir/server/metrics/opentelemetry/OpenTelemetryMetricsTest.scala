@@ -260,6 +260,40 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     point.getValue shouldBe 1
   }
 
+  "metrics" should "record request duration for interceptor response" in {
+    // given
+    val serverEp = PersonsApi().serverEp
+    val reader = InMemoryMetricReader.create()
+    val provider = SdkMeterProvider.builder().registerMetricReader(reader).build()
+    val meter = provider.get("tapir-instrumentation")
+    val metrics = OpenTelemetryMetrics[Identity](meter).addRequestsDuration()
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(serverEp),
+      TestRequestBody,
+      StringToResponseBody,
+      List(metrics.metricsInterceptor(), new RejectInterceptor(DefaultRejectHandler[Identity])),
+      _ => ()
+    )
+
+    // when
+    interpreter.apply(serverRequestFromUri(uri"http://example.com/person?name=Adam", _method = Method.POST))
+
+    // then
+    val points = reader.collectAllMetrics().asScala.head.getHistogramData.getPoints.asScala
+    points.map(_.getAttributes) should contain(
+      Attributes.of(
+        AttributeKey.stringKey("http.request.method"),
+        "POST",
+        AttributeKey.stringKey("url.scheme"),
+        "http",
+        AttributeKey.stringKey("http.response.status_code"),
+        "405",
+        AttributeKey.stringKey("phase"),
+        "body"
+      )
+    )
+  }
+
   private def longSumData(reader: InMemoryMetricReader): List[LongPointData] =
     reader.collectAllMetrics().asScala.head.getLongSumData.getPoints.asScala.toList
 }
