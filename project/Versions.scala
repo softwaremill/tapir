@@ -36,7 +36,7 @@ object Versions {
   val scalaTestPlusScalaCheck = "3.2.19.0"
   val refined = "0.11.3"
   val iron = "3.0.3"
-  val enumeratum = "1.9.0"
+  val enumeratum = "1.9.1"
   val zio = "2.1.23"
   val zioHttp = "3.7.1"
   val zioInteropCats = "23.1.0.11"
