@@ -1,7 +1,7 @@
 // {cat=Security; effects=Future; server=Pekko HTTP}: HTTP basic authentication
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.1
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.12.1
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.13.2
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.security

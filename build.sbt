@@ -14,8 +14,8 @@ import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
-val scala2_12 = "2.12.20"
-val scala2_13 = "2.13.16"
+val scala2_12 = "2.12.21"
+val scala2_13 = "2.13.18"
 val scala3 = "3.3.7"
 
 val scala2Versions = List(scala2_12, scala2_13)
@@ -184,6 +184,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   files.projectRefs ++
   jsoniterScala.projectRefs ++
   prometheusMetrics.projectRefs ++
+  prometheusSimpleclientMetrics.projectRefs ++
   opentelemetryMetrics.projectRefs ++
   datadogMetrics.projectRefs ++
   zioMetrics.projectRefs ++
@@ -558,7 +559,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.0",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.184",
@@ -1049,8 +1050,20 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.4.2",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.4.2",
+      "io.prometheus" % "prometheus-metrics-core" % "1.4.3",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.4.3",
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest)
+
+lazy val prometheusSimpleclientMetrics: ProjectMatrix = (projectMatrix in file("metrics/prometheus-simpleclient-metrics"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-prometheus-simpleclient-metrics",
+    libraryDependencies ++= Seq(
+      "io.prometheus" % "simpleclient_common" % "0.16.0",
       scalaTest.value % Test
     )
   )
@@ -2252,6 +2265,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     pekkoHttpServer,
     picklerJson,
     prometheusMetrics,
+    prometheusSimpleclientMetrics,
     sttpClient4,
     sttpMockServer,
     sttpStub4Server,
@@ -2323,6 +2337,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     playJson,
     playServer,
     prometheusMetrics,
+    prometheusSimpleclientMetrics,
     sprayJson,
     sttpClient,
     sttpClient4,

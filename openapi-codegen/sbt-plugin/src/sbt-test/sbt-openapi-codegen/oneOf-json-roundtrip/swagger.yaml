@@ -1135,6 +1135,7 @@ components:
         quux:
           type: string
           maxLength: 128
+          nullable: true
         map:
           type: object
           additionalProperties:

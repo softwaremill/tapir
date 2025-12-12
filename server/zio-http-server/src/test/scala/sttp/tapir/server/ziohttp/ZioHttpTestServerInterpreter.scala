@@ -1,6 +1,5 @@
 package sttp.tapir.server.ziohttp
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
@@ -29,7 +28,7 @@ class ZioHttpTestServerInterpreter(
   }
 
   override def server(
-      routes: NonEmptyList[Routes[Any, Response]],
+      route: Routes[Any, Response],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
@@ -37,7 +36,7 @@ class ZioHttpTestServerInterpreter(
       (for {
         driver <- ZIO.service[Driver]
         result <- driver.start
-        _ <- driver.addApp[Any](routes.toList.reduce(_ ++ _), ZEnvironment())
+        _ <- driver.addApp[Any](route, ZEnvironment())
       } yield result.port)
         .provideSome[Scope](
           zio.test.driver,

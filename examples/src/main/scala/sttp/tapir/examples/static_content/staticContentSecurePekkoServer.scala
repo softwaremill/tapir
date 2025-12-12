@@ -1,8 +1,8 @@
 // {cat=Static content; effects=Future; server=Pekko HTTP}: Serving static files secured with a bearer token
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.12.1
-//> using dep com.softwaremill.sttp.tapir::tapir-files:1.12.1
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.12.1
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-files:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.13.2
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.static_content
