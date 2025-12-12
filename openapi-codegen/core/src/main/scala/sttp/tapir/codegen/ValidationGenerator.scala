@@ -55,7 +55,7 @@ object ValidationGenerator {
     val allSchemas = doc.components.map(_.schemas).getOrElse(Map.empty)
 
     // All schemas that have explicit validation _or_ refer to a ref, which _may_ have.
-    // We need to filter this, because we may have trivial
+    // We need to filter this, because we may have recursive references that don't contain any 'real' validation
     val unfiltered = {
       val mapped = allSchemas.flatMap { case (k, v) => genValidationDefn(allSchemas, ignoreRefs = false)(k, v).filterNot(_.refOnly) }
       if (mapped.isEmpty) ValidationDefns.empty
@@ -272,7 +272,8 @@ object ValidationGenerator {
               fn,
               (
                 defn,
-                f.`type`.nullable || !rs.contains(fn),
+                // exclude non-required 'nullable' here because the field validators will already treat the value as optional
+                !rs.contains(fn) && !f.`type`.nullable,
                 f.`type`
               )
             )

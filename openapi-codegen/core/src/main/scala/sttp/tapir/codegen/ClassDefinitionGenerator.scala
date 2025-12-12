@@ -85,6 +85,7 @@ class ClassDefinitionGenerator {
         case (name, OpenapiSchemaMap(valueSchema, _, _))       => generateMap(name, valueSchema)
         case (name, OpenapiSchemaArray(valueSchema, _, _, rs)) => generateArray(name, valueSchema, rs)
         case (_, _: OpenapiSchemaOneOf)                        => Nil
+        case (name, r: OpenapiSchemaSimpleType)                => generateAlias(name, r)
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
       .map(_.mkString("\n"))
@@ -194,6 +195,13 @@ class ClassDefinitionGenerator {
     }
     if (rs.uniqueItems.contains(true)) Seq(s"""type $name = Set[$valueSchemaName]""")
     else Seq(s"""type $name = List[$valueSchemaName]""")
+  }
+
+  private[codegen] def generateAlias(name: String, valueSchema: OpenapiSchemaSimpleType): Seq[String] = valueSchema match {
+    case r: OpenapiSchemaRef        => Seq(s"""type $name = ${r.stripped}""")
+    case r: OpenapiSchemaSimpleType =>
+      val simpleType = mapSchemaSimpleTypeToType(r)._1
+      Seq(s"""type $name = $simpleType""")
   }
 
   private[codegen] def generateClass(

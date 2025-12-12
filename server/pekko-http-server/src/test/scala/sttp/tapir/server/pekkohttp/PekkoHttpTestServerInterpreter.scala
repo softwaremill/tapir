@@ -2,9 +2,7 @@ package sttp.tapir.server.pekkohttp
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
-import org.apache.pekko.http.scaladsl.server.Directives.concat
 import org.apache.pekko.http.scaladsl.server.Route
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.pekko.PekkoStreams
@@ -24,7 +22,7 @@ class PekkoHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
   }
 
   override def server(
-      routes: NonEmptyList[Route],
+      route: Route,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
     val bind = IO.fromFuture(
@@ -32,7 +30,7 @@ class PekkoHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
         Http()
           .newServerAt("localhost", 0)
           .adaptSettings(setts => setts.withRemoteAddressAttribute(true))
-          .bind(concat(routes.toList: _*))
+          .bind(route)
       )
     )
 

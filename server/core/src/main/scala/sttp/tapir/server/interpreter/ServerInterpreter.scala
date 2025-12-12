@@ -92,7 +92,7 @@ class ServerInterpreter[R, F[_], B, S](
         endpointHandler(defaultSecurityFailureResponse, endpointInterceptors)
           .onDecodeFailure(decodeFailureContext)
           .map {
-            case Some(response) => RequestResult.Response(response)
+            case Some(response) => RequestResult.Response(response, ResponseSource.EndpointHandler)
             case None           => RequestResult.Failure(List(decodeFailureContext))
           }
       }
@@ -125,7 +125,7 @@ class ServerInterpreter[R, F[_], B, S](
         se.securityLogic(monad)(a).map(Right(_): Either[RequestResult[B], Either[E, U]]).handleError { case t: Throwable =>
           endpointHandler(monad.error(t), endpointInterceptors)
             .onSecurityFailure(SecurityFailureContext(se, a, request))
-            .map(r => Left(RequestResult.Response(r)): Either[RequestResult[B], Either[E, U]])
+            .map(r => Left(RequestResult.Response(r, ResponseSource.EndpointHandler)): Either[RequestResult[B], Either[E, U]])
         }
       )
       response <- securityLogicResult match {
@@ -136,7 +136,7 @@ class ServerInterpreter[R, F[_], B, S](
               endpointInterceptors
             )
               .onSecurityFailure(SecurityFailureContext(se, a, request))
-              .map(r => RequestResult.Response(r): RequestResult[B])
+              .map(r => RequestResult.Response(r, ResponseSource.EndpointHandler): RequestResult[B])
           )
 
         case Right(u) =>
@@ -147,7 +147,7 @@ class ServerInterpreter[R, F[_], B, S](
             response <- resultOrValueFrom.value(
               endpointHandler(defaultSecurityFailureResponse, endpointInterceptors)
                 .onDecodeSuccess(interceptor.DecodeSuccessContext(se, a, u, params.asAny.asInstanceOf[I], request))
-                .map(r => RequestResult.Response(r): RequestResult[B])
+                .map(r => RequestResult.Response(r, ResponseSource.EndpointHandler): RequestResult[B])
             )
           } yield response
       }
@@ -155,10 +155,10 @@ class ServerInterpreter[R, F[_], B, S](
       // 6. #4886: when the request is fully processed, delete any temporary files and run cleanup functions
       .handleError { case t: Throwable => cleanupRawValues(rawValues.asScala).flatMap(_ => monad.error(t)) }
       .flatMap {
-        case RequestResult.Response(s @ ServerResponse(_, _, Some(body), _)) =>
+        case RequestResult.Response(s @ ServerResponse(_, _, Some(body), _), source) =>
           bodyListener
             .onComplete(body)(_ => cleanupRawValues(rawValues.asScala))
-            .map(bodyWithCleanup => RequestResult.Response(s.copy(body = Some(bodyWithCleanup))))
+            .map(bodyWithCleanup => RequestResult.Response(s.copy(body = Some(bodyWithCleanup)), source))
         case other => cleanupRawValues(rawValues.asScala).map(_ => other)
       }
   }

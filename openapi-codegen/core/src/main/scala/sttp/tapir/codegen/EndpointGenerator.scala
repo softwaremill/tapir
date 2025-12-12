@@ -13,6 +13,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiResponseDef
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  AnyType,
   OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
@@ -99,6 +100,13 @@ case class EndpointDefs(
     details: EndpointDetails
 )
 
+case class UrlMapResponse(
+    pathDecl: String,
+    pathTypes: Seq[String],
+    maybeSecurityPath: Option[(String, Seq[String])],
+    inlineUrlDefs: Seq[String]
+)
+
 class EndpointGenerator {
   private def combine(inlineDefn1: Option[String], inlineDefn2: Option[String], separator: String = "\n") =
     (inlineDefn1, inlineDefn2) match {
@@ -119,6 +127,8 @@ class EndpointGenerator {
     case FS2(effectType) => s"fs2.Stream[$effectType, Byte]"
     case x               => s"${capabilityImpl(x)}.BinaryStream"
   }
+  // These types all use 'eager' schemas, except for '*/*', which we default to eager for convenience but which has no schema mappings
+  private val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data", "*/*")
 
   def endpointDefs(
       doc: OpenapiDocument,
@@ -211,8 +221,11 @@ class EndpointGenerator {
 
           val name = m.name(p.url)
           val maybeName = m.operationId.map(n => s"""\n  .name("${JavaEscape.escapeString(n)}")""").getOrElse("")
-          val (pathDecl, pathTypes, maybeSecurityPath) = urlMapper(
+          val UrlMapResponse(pathDecl, pathTypes, maybeSecurityPath, inlineUrlDefs) = urlMapper(
             p.url,
+            name,
+            targetScala3,
+            jsonSerdeLib,
             m.resolvedParameters,
             doc.pathsExtensions.get(securityPrefixKey).flatMap(_.asArray).toSeq.flatMap(_.flatMap(_.asString)),
             doc,
@@ -253,7 +266,8 @@ class EndpointGenerator {
             errTypes.toSeq,
             outTypes.toSeq
           )
-          val inlineDefn = combine(inlineInDefns, inlineDefns)
+          val maybeInlineUrlDefs = if (inlineUrlDefs.isEmpty) None else Some(inlineUrlDefs.mkString("\n"))
+          val inlineDefn = combine(maybeInlineUrlDefs, combine(inlineInDefns, inlineDefns))
           val sec = securityDecl.map(indent(2)(_) + "\n").getOrElse("")
           val securityPathDecl = maybeSecurityPath.map("\n  " + _._1).getOrElse("")
           val definition =
@@ -280,13 +294,13 @@ class EndpointGenerator {
             .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
           val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
+            .filterNot(_ => m.tapirCodegenDirectives.contains(jsonBodyAsString))
             .collect { case (contentType, schema) if contentType == "application/json" => schema }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
-              case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _, _)                   =>
-                bail("Cannot generate schema for 'Any' with jsoniter library")
-              case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _) =>
+              case OpenapiSchemaArray(OpenapiSchemaAny(_, tpe), _, _, _)              => AnyType.toCirceTpe(tpe)
+              case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _)       =>
                 val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
                 s"List[$name]"
               case simple: OpenapiSchemaSimpleType =>
@@ -328,18 +342,21 @@ class EndpointGenerator {
 
   private def urlMapper(
       url: String,
+      endpointName: String,
+      targetScala3: Boolean,
+      jsonSerdeLib: JsonSerdeLib,
       parameters: Seq[OpenapiParameter],
       securityPathPrefixes: Seq[String],
       doc: OpenapiDocument,
       generateValidators: Boolean
   )(implicit
       location: Location
-  ): (String, Seq[String], Option[(String, Seq[String])]) = {
+  ): UrlMapResponse = {
     val securityPrefixes = securityPathPrefixes.filter(url.startsWith)
     // .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     val maxSecurityPrefix = if (securityPrefixes.nonEmpty) Some(securityPrefixes.maxBy(_.length)) else None
     val inUrl = maxSecurityPrefix.fold(url)(url.stripPrefix)
-    def toPathDecl(url: String) = url
+    def toPathDecl(url: String): (Array[String], Array[Option[String]], Array[Option[String]]) = url
       .split('/')
       .filter(_.nonEmpty)
       .map { segment =>
@@ -352,20 +369,26 @@ class EndpointGenerator {
                 val (t, _) = mapSchemaSimpleTypeToType(st)
                 val desc = p.description.fold("")(d => s""".description("$d")""")
                 val validations = if (generateValidators) ValidationGenerator.mkValidations(doc, st, true) else ""
-                s"""path[$t]("$name")$validations$desc""" -> Some(t)
+                (s"""path[$t]("$name")$validations$desc""", Some(t), None)
+              case e: OpenapiSchemaEnum =>
+                val (param, inlineDefn, tpe) = getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, p, e, false)
+                (param, Some(tpe), inlineDefn.map(_.mkString("\n")))
               case _ => bail("Can't create non-simple params to url yet")
             }
           }
         } else {
-          '"' + segment + '"' -> None
+          ('"' + segment + '"', None, None)
         }
       }
-      .unzip
-    val (inPath, tpes) = toPathDecl(inUrl)
+      .unzip3
+    val (inPath, tpes, inlineDefns) = toPathDecl(inUrl)
     val inPathDecl = if (inPath.nonEmpty) ".in((" + inPath.mkString(" / ") + "))" else ""
-    val secPathDecl =
-      maxSecurityPrefix.map(toPathDecl).map { case (ds, ts) => ".prependSecurityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten }
-    (inPathDecl, tpes.toSeq.flatten, secPathDecl)
+    val (secPathDecl, secInlineDefs) =
+      maxSecurityPrefix
+        .map(toPathDecl)
+        .map { case (ds, ts, inline) => (".prependSecurityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten) -> inline }
+        .unzip
+    UrlMapResponse(inPathDecl, tpes.toSeq.flatten, secPathDecl.headOption, secInlineDefs.flatten.flatten.toSeq ++ inlineDefns.toSeq.flatten)
   }
 
   private def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
@@ -382,7 +405,7 @@ class EndpointGenerator {
       param: OpenapiParameter,
       e: OpenapiSchemaEnum,
       isArray: Boolean
-  ) = {
+  ): (String, Some[Seq[String]], String) = {
     val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
     val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
     val enumDefn = EnumGenerator.generateEnum(
@@ -505,8 +528,7 @@ class EndpointGenerator {
         val d = b.description.map(s => s""".description("${JavaEscape.escapeString(s)}")""").getOrElse("")
         Some((s".in($decl$d)", tpe, maybeInlineDefn))
       } else {
-        // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
-        val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
+        // We cannot mix eager and streaming types when using oneOfBody
         val preferEager = b.content.exists(c => eagerTypes.contains(c.contentType))
         val mapped = b.content.map(mapContent(_, b.required, preferEager))
         val (decls, tpes, maybeInlineDefns) = mapped.unzip3
@@ -651,8 +673,7 @@ class EndpointGenerator {
           val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
           (s"$decl$d", Some(tpe), maybeInlineDefn)
         case seq =>
-          // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
-          val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
+          // We cannot mix eager and streaming types when using oneOfBody
           val preferEager = seq.exists(c => eagerTypes.contains(c.contentType))
           val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent(_, preferEager)).unzip3
           val distinctTypes = tpes.distinct
@@ -770,11 +791,13 @@ class EndpointGenerator {
                 if (outHeaderTypes.isEmpty) maybeBodyType
                 else if (maybeBodyType.isEmpty) ht()
                 else maybeBodyType.map(t => s"($t, ${ht(false).get})")
+              val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
               (
                 Some(resp.code match {
-                  case "200" | "default" => s"$decl$hs"
-                  case okStatus(s)       => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
-                  case errorStatus(s)    => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case "200" | "default"       => s"$decl$hs"
+                  case okStatus(s) if tpeIsBin => s"$decl.toEndpointIO$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case okStatus(s)             => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case errorStatus(s)          => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
                 }),
                 tpe,
                 inlineDefn.map(_ ++ inlineHeaderEnumDefns.getOrElse("")).orElse(inlineHeaderEnumDefns)
@@ -834,18 +857,20 @@ class EndpointGenerator {
             } else {
               def withHeaderTypes(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, ${ht(false).get})"
               def withUnderscores(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, $underscores)"
+              val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
+              val maybeStrict = if (tpeIsBin) ".toEndpointIO" else ""
               if (contentCanBeEmpty) {
                 val (_, nonOptionalType, _) = bodyFmt(m, isErrorPosition)
-                val maybeMap = if (m.content.size > 1) ".map(Some(_))(_.orNull)" else ""
+                val maybeMap = if (m.content.size > 1 || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
                 (
-                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeMap$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeStrict$maybeMap$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
                   maybeBodyType,
                   inlineDefn1
                 )
               } else
                 (
-                  s"oneOfVariant${maybeBodyType.map(s => s"[${withHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$hs)",
+                  s"oneOfVariant${maybeBodyType.map(s => s"[${withHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$maybeStrict$hs)",
                   maybeBodyType,
                   inlineDefn1
                 )
