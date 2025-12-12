@@ -97,7 +97,7 @@ trait PlayServerInterpreter {
                   s"response. Play requires that if the path shape matches some endpoints, the request " +
                   s"should be handled by tapir."
               )
-            case RequestResult.Response(response: ServerResponse[PlayResponseBody]) =>
+            case RequestResult.Response(response: ServerResponse[PlayResponseBody], _) =>
               val headers: Map[String, String] = response.headers
                 .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
                   if (a.contains(b.name)) a + (b.name -> (a(b.name) :+ b.value)) else a + (b.name -> List(b.value))

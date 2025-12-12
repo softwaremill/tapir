@@ -66,17 +66,13 @@ object DatadogMetrics {
         (if (namespace.isBlank) "" else namespace + ".") + "request_active.count"
       )(client),
       onRequest = (req, counter, m) => {
-        m.unit {
+        val tags = mergeTags(labels.namesForRequest, labels.valuesForRequest(req))
+        m.map(m.eval(counter.increment(tags))) { _ =>
           EndpointMetric()
-            .onEndpointRequest { ep =>
-              m.eval(counter.increment(mergeTags(labels.namesForRequest, labels.valuesForRequest(ep, req))))
-            }
-            .onResponseBody { (ep, _) =>
-              m.eval(counter.decrement(mergeTags(labels.namesForRequest, labels.valuesForRequest(ep, req))))
-            }
-            .onException { (ep, _) =>
-              m.eval(counter.decrement(mergeTags(labels.namesForRequest, labels.valuesForRequest(ep, req))))
-            }
+            .onResponseBody { (_, _) => m.eval(counter.decrement(tags)) }
+            .onException { (_, _) => m.eval(counter.decrement(tags)) }
+            .onInterceptorResponse { _ => m.eval(counter.decrement(tags)) }
+            .onDecodeFailure { () => m.eval(counter.decrement(tags)) }
         }
       }
     )
@@ -93,8 +89,8 @@ object DatadogMetrics {
               m.eval {
                 counter.increment(
                   mergeTags(
-                    labels.namesForRequest ++ labels.namesForResponse,
-                    labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res)
+                    labels.namesForRequest ++ labels.namesForEndpoint ++ labels.namesForResponse,
+                    labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(res)
                   )
                 )
               }
@@ -103,8 +99,18 @@ object DatadogMetrics {
               m.eval {
                 counter.increment(
                   mergeTags(
+                    labels.namesForRequest ++ labels.namesForEndpoint ++ labels.namesForResponse,
+                    labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(ex)
+                  )
+                )
+              }
+            }
+            .onInterceptorResponse { res =>
+              m.eval {
+                counter.increment(
+                  mergeTags(
                     labels.namesForRequest ++ labels.namesForResponse,
-                    labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex)
+                    labels.valuesForRequest(req) ++ labels.valuesForResponse(res)
                   )
                 )
               }
@@ -133,8 +139,10 @@ object DatadogMetrics {
                 recoder.record(
                   duration,
                   mergeTags(
-                    labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name),
-                    labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.headersValue)
+                    labels.namesForRequest ++ labels.namesForEndpoint ++ labels.namesForResponse ++ List(labels.forResponsePhase.name),
+                    labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(res) ++ List(
+                      labels.forResponsePhase.headersValue
+                    )
                   )
                 )
               }
@@ -144,8 +152,10 @@ object DatadogMetrics {
                 recoder.record(
                   duration,
                   mergeTags(
-                    labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name),
-                    labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.bodyValue)
+                    labels.namesForRequest ++ labels.namesForEndpoint ++ labels.namesForResponse ++ List(labels.forResponsePhase.name),
+                    labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(res) ++ List(
+                      labels.forResponsePhase.bodyValue
+                    )
                   )
                 )
               }
@@ -155,8 +165,21 @@ object DatadogMetrics {
                 recoder.record(
                   duration,
                   mergeTags(
+                    labels.namesForRequest ++ labels.namesForEndpoint ++ labels.namesForResponse ++ List(labels.forResponsePhase.name),
+                    labels.valuesForRequest(req) ++ labels.valuesForEndpoint(ep) ++ labels.valuesForResponse(ex) ++ List(
+                      labels.forResponsePhase.bodyValue
+                    )
+                  )
+                )
+              }
+            }
+            .onInterceptorResponse { res =>
+              m.eval {
+                recoder.record(
+                  duration,
+                  mergeTags(
                     labels.namesForRequest ++ labels.namesForResponse ++ List(labels.forResponsePhase.name),
-                    labels.valuesForRequest(ep, req) ++ labels.valuesForResponse(ex)
+                    labels.valuesForRequest(req) ++ labels.valuesForResponse(res) ++ List(labels.forResponsePhase.bodyValue)
                   )
                 )
               }

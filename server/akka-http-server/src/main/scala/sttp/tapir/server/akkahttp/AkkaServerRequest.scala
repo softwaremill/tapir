@@ -16,16 +16,18 @@ private[akkahttp] case class AkkaServerRequest(ctx: RequestContext, attributes: 
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
   override def underlying: Any = ctx
 
-  override lazy val pathSegments: List[String] = {
+  private def akkaPathToSegments(p: AkkaUri.Path): List[String] = {
     @tailrec
     def run(p: AkkaUri.Path, acc: List[String]): List[String] = p match {
       case AkkaUri.Path.Slash(pathTail)      => run(pathTail, acc)
       case AkkaUri.Path.Segment(s, pathTail) => run(pathTail, s :: acc)
       case _                                 => acc.reverse
     }
-
-    run(ctx.unmatchedPath, Nil)
+    run(p, Nil)
   }
+
+  override lazy val pathSegments: List[String] = akkaPathToSegments(ctx.unmatchedPath)
+
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(ctx.request.uri.query().toMultiMap)
   override lazy val method: Method = Method(ctx.request.method.value.toUpperCase)
 
@@ -46,13 +48,16 @@ private[akkahttp] case class AkkaServerRequest(ctx: RequestContext, attributes: 
   }
 
   override lazy val showShort: String = s"$method ${ctx.request.uri.path}${ctx.request.uri.rawQueryString.getOrElse("")}"
+
   override lazy val uri: Uri = {
-    val pekkoUri = ctx.request.uri
+    val akkaUri = ctx.request.uri
+    // Use the full path from the original request, not the unconsumed path
+    val fullPathSegments = akkaPathToSegments(akkaUri.path)
     Uri(
-      Some(pekkoUri.scheme),
+      Some(akkaUri.scheme),
       // UserInfo is available only as a raw string, but we can skip it as it's not needed
-      Some(Authority(userInfo = None, HostSegment(pekkoUri.authority.host.address), Some(pekkoUri.effectivePort))),
-      PathSegments.absoluteOrEmptyS(pathSegments ++ (if (pekkoUri.path.endsWithSlash) Seq("") else Nil)),
+      Some(Authority(userInfo = None, HostSegment(akkaUri.authority.host.address), Some(akkaUri.effectivePort))),
+      PathSegments.absoluteOrEmptyS(fullPathSegments ++ (if (akkaUri.path.endsWithSlash) Seq("") else Nil)),
       queryToSegments(ctx.request.uri.query()),
       ctx.request.uri.fragment.map(f => FragmentSegment(f))
     )
