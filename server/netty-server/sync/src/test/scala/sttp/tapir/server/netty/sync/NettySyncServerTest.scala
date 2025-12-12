@@ -1,6 +1,5 @@
 package sttp.tapir.server.netty.sync
 
-import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import io.netty.channel.nio.NioEventLoopGroup
@@ -152,16 +151,16 @@ class NettySyncCreateServerTest(
     }
   }
 
-  override def testServerWithStop(name: String, rs: => NonEmptyList[IdRoute], gracefulShutdownTimeout: Option[FiniteDuration])(
+  override def testServerWithStop(name: String, r: => IdRoute, gracefulShutdownTimeout: Option[FiniteDuration])(
       runTest: IO[Unit] => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = throw new UnsupportedOperationException
 
-  override def testServer(name: String, rs: => NonEmptyList[IdRoute])(
+  override def testServer(name: String, r: => IdRoute)(
       runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test =
     Test(name) {
       supervised {
-        val binding = interpreter.scopedServerWithRoutesStop(rs)
+        val binding = interpreter.scopedServerWithRouteStop(r)
         val assertion: Assertion =
           runTest(backend, uri"http://localhost:${binding.port}")
             .guarantee(IO(logger.info(s"Test completed on port ${binding.port}")))
@@ -169,19 +168,4 @@ class NettySyncCreateServerTest(
         Future.successful(assertion)
       }
     }
-
-  def testServer(name: String, es: NonEmptyList[ServerEndpoint[OxStreams & WebSockets, Identity]])(
-      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
-  ): Test = {
-    Test(name) {
-      supervised {
-        val binding = interpreter.scopedServerWithStop(es)
-        val assertion: Assertion =
-          runTest(backend, uri"http://localhost:${binding.port}")
-            .guarantee(IO(logger.info(s"Test completed on port ${binding.port}")))
-            .unsafeRunSync()
-        Future.successful(assertion)
-      }
-    }
-  }
 }

@@ -1,6 +1,5 @@
 package sttp.tapir.serverless.aws.ziolambda.tests
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.{ServerBasicTests, ServerMetricsTest, TestServerInterpreter}
@@ -37,7 +36,7 @@ object AwsLambdaStubHttpTest {
     }
 
     override def server(
-        routes: NonEmptyList[Route[Task]],
+        routes: Route[Task],
         gracefulShutdownTimeout: Option[FiniteDuration]
     ): Resource[IO, Port] = throw new UnsupportedOperationException
 

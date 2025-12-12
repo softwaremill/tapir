@@ -4,7 +4,6 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.HttpEntity
 import akka.http.scaladsl.server.{Directives, RequestContext}
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.implicits._
@@ -50,7 +49,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
           val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter().toRoute(e))
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
             }
@@ -66,7 +65,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             })
           val route = AkkaHttpServerInterpreter().toRoute(e)
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               IO.fromFuture {
                 IO(
@@ -100,7 +99,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           ).toRoute(e)
 
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.post(uri"http://localhost:$port").body("test123").send(backend).map(_.body shouldBe Right("replaced"))
             }
@@ -119,7 +118,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
 
           // when
           val result = interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.get(uri"http://localhost:$port").send(backend)
             }
@@ -144,7 +143,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
 
           // when
           val result = interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.get(uri"http://localhost:$port").send(backend)
             }
@@ -192,7 +191,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           ).toRoute(e)
 
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.post(uri"http://localhost:$port").body("").send(backend).map { response =>
                 response.body shouldBe Right("")
@@ -201,6 +200,33 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
                 metric.onResponseHeadersCnt.get() shouldBe 1
                 metric.onResponseBodyCnt.get() shouldBe 1
               }
+            }
+            .unsafeToFuture()
+        },
+        Test("extractFromRequest(_.uri) returns full URI when nested in path directive") {
+          // Given: an endpoint that extracts the URI from the request
+          val e = endpoint.get
+            .in("test" / "path")
+            .in(extractFromRequest(_.uri))
+            .out(stringBody)
+            .serverLogic { requestUri =>
+              requestUri.toString.asRight[Unit].unit
+            }
+
+          // When: the route is nested inside a pathPrefix directive
+          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter().toRoute(e))
+
+          interpreter
+            .server(route)
+            .use { port =>
+              // Then: the extracted URI should contain the full path including the prefix
+              basicRequest
+                .get(uri"http://localhost:$port/api/test/path?query=value")
+                .send(backend)
+                .map { response =>
+                  response.body.value should include("/api/test/path")
+                  response.body.value should include("query=value")
+                }
             }
             .unsafeToFuture()
         }
