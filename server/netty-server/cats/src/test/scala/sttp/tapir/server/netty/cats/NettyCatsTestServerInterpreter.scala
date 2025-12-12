@@ -1,6 +1,5 @@
 package sttp.tapir.server.netty.cats
 
-import cats.data.NonEmptyList
 import cats.effect.std.Dispatcher
 import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
@@ -22,7 +21,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
   }
 
   override def server(
-      routes: NonEmptyList[Route[IO]],
+      route: Route[IO],
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, Port] = {
     val config = NettyConfig.default
@@ -33,7 +32,7 @@ class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatch
 
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = NettyCatsServerOptions.default[IO](dispatcher)
-    val bind: IO[NettyCatsServerBinding[IO]] = NettyCatsServer(options, customizedConfig).addRoutes(routes.toList).start()
+    val bind: IO[NettyCatsServerBinding[IO]] = NettyCatsServer(options, customizedConfig).addRoute(route).start()
 
     Resource
       .make(bind)(_.stop())
