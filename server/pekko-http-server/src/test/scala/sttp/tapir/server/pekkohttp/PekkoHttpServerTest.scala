@@ -4,18 +4,18 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.model.HttpEntity
 import org.apache.pekko.http.scaladsl.server.{Directives, RequestContext}
 import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
-import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.client3._
-import sttp.client3.pekkohttp.PekkoHttpBackend
+import sttp.client4._
+import sttp.client4.pekkohttp.PekkoHttpBackend
 import sttp.model.sse.ServerSentEvent
 import sttp.model.Header
 import sttp.model.MediaType
+import sttp.model.StatusCode
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
@@ -50,7 +50,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
           val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
             }
@@ -66,15 +66,17 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
             })
           val route = PekkoHttpServerInterpreter().toRoute(e)
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               IO.fromFuture {
                 IO(
                   basicRequest
                     .get(uri"http://localhost:$port/sse")
                     .response(
-                      asStreamUnsafe(PekkoStreams).mapRight(stream =>
-                        PekkoServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                      asStreamUnsafe(PekkoStreams).map(errorOrStream =>
+                        errorOrStream.map(stream =>
+                          PekkoServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                        )
                       )
                     )
                     .send(PekkoHttpBackend.usingActorSystem(actorSystem))
@@ -98,14 +100,15 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           ).toRoute(e)
 
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.post(uri"http://localhost:$port").body("test123").send(backend).map(_.body shouldBe Right("replaced"))
             }
             .unsafeToFuture()
         },
         Test("execute metrics interceptors for empty body and json content type") {
-          val e = endpoint.post.in(stringBody)
+          val e = endpoint.post
+            .in(stringBody)
             .out(stringBody)
             .out(header(Header.contentType(MediaType.ApplicationJson)))
             .serverLogicSuccess[Future](body => Future.successful(body))
@@ -124,18 +127,12 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
                 me.eval {
                   metric.onRequestCnt.incrementAndGet()
                   EndpointMetric(
-                    onEndpointRequest = Some((_) =>
-                      me.eval(metric.onEndpointRequestCnt.incrementAndGet()),
-                    ),
-                    onResponseHeaders = Some((_, _) =>
-                      me.eval(metric.onResponseHeadersCnt.incrementAndGet()),
-                    ),
-                    onResponseBody = Some((_, _) =>
-                      me.eval(metric.onResponseBodyCnt.incrementAndGet()),
-                    ),
-                    onException = None,
+                    onEndpointRequest = Some((_) => me.eval(metric.onEndpointRequestCnt.incrementAndGet())),
+                    onResponseHeaders = Some((_, _) => me.eval(metric.onResponseHeadersCnt.incrementAndGet())),
+                    onResponseBody = Some((_, _) => me.eval(metric.onResponseBodyCnt.incrementAndGet())),
+                    onException = None
                   )
-                },
+                }
             )
           val route = PekkoHttpServerInterpreter(
             PekkoHttpServerOptions.customiseInterceptors
@@ -144,7 +141,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           ).toRoute(e)
 
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.post(uri"http://localhost:$port").body("").send(backend).map { response =>
                 response.body shouldBe Right("")
@@ -153,6 +150,64 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
                 metric.onResponseHeadersCnt.get() shouldBe 1
                 metric.onResponseBodyCnt.get() shouldBe 1
               }
+            }
+            .unsafeToFuture()
+        },
+        Test("handle status codes >=600") {
+          val e = endpoint.get.in("custom_code").errorOut(statusCode).serverLogic(_ => (StatusCode(800).asLeft[Unit]).unit)
+          val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
+          interpreter
+            .server(route)
+            .use { port =>
+              basicRequest.get(uri"http://localhost:$port/api/custom_code").send(backend).map(_.code shouldBe StatusCode(800))
+            }
+            .unsafeToFuture()
+        },
+        Test("Server reads remote address and secure from connectionInfo") {
+          val e = endpoint.get
+            .in("test")
+            .in(extractFromRequest(req => req.connectionInfo))
+            .out(stringBody)
+            .serverLogic { connectionInfo =>
+              val remote = connectionInfo.remote
+              val secure = connectionInfo.secure
+              s"$remote $secure".asRight[Unit].unit
+            }
+          val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
+          interpreter
+            .server(route)
+            .use { port =>
+              basicRequest
+                .get(uri"http://localhost:$port/api/test")
+                .send(backend)
+                .map(_.body.value should fullyMatch regex """Some\(/127\.0\.0\.1:\d+\) Some\(false\)""")
+            }
+            .unsafeToFuture()
+        },
+        Test("extractFromRequest(_.uri) returns full URI when nested in path directive") {
+          // Given: an endpoint that extracts the URI from the request
+          val e = endpoint.get
+            .in("test" / "path")
+            .in(extractFromRequest(_.uri))
+            .out(stringBody)
+            .serverLogic { requestUri =>
+              requestUri.toString.asRight[Unit].unit
+            }
+
+          // When: the route is nested inside a pathPrefix directive
+          val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
+
+          interpreter
+            .server(route)
+            .use { port =>
+              // Then: the extracted URI should contain the full path including the prefix
+              basicRequest
+                .get(uri"http://localhost:$port/api/test/path?query=value")
+                .send(backend)
+                .map { response =>
+                  response.body.value should include("/api/test/path")
+                  response.body.value should include("query=value")
+                }
             }
             .unsafeToFuture()
         }
@@ -166,8 +221,8 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
           createServerTest,
           PekkoStreams,
           autoPing = false,
-          failingPipe = true,
-          handlePong = false
+          handlePong = false,
+          decodeCloseRequests = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)

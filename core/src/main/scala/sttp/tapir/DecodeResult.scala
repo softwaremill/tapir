@@ -37,7 +37,7 @@ object DecodeResult {
   case class Mismatch(expected: String, actual: String) extends Failure
 
   /** A validation error that occurred when decoding the value, that is, when some `Validator` failed. */
-  case class InvalidValue(errors: List[ValidationError[_]]) extends Failure
+  case class InvalidValue(errors: List[ValidationError[?]]) extends Failure
 
   def sequence[T](results: Seq[DecodeResult[T]]): DecodeResult[Seq[T]] = {
     results.foldRight(Value(List.empty[T]): DecodeResult[Seq[T]]) { case (result, acc) =>

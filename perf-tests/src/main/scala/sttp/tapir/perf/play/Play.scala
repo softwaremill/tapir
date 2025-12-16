@@ -1,6 +1,6 @@
 package sttp.tapir.perf.play
 
-import cats.effect.IO
+import cats.effect.{IO, Resource}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.util.ByteString
 import play.api.Mode
@@ -87,28 +87,36 @@ object Tapir extends Endpoints {
 
 object Play {
 
-  def runServer(routes: ActorSystem => Routes): IO[ServerRunner.KillSwitch] = {
-    implicit lazy val perfActorSystem: ActorSystem = ActorSystem(s"tapir-play")
-    val playRouter =
-      Router.from(
-        List(routes(perfActorSystem)).reduce((a: Routes, b: Routes) => {
+  private val actorSystem = Resource.make(
+    IO(ActorSystem("tapir-play"))
+  )(aSystem => IO.fromFuture(IO(aSystem.terminate())).void)
+
+  private def httpServer(routes: Routes, actSys: ActorSystem) = Resource.make(IO {
+    val server = new DefaultPekkoHttpServerComponents {
+      override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(Port), address = "127.0.0.1", mode = Mode.Test)
+      override lazy val actorSystem: ActorSystem = actSys
+      override def router: Router = Router.from(routes)
+    }
+    server.server
+  })(server => IO(server.stop()))
+
+  def runServer(routes: ActorSystem => Routes): Resource[IO, Unit] = actorSystem
+    .flatMap { aSystem =>
+      httpServer(
+        List(routes(aSystem)).reduce((a: Routes, b: Routes) => {
           val handler: PartialFunction[RequestHeader, Handler] = { case request =>
             a.applyOrElse(request, b)
           }
           handler
-        })
+        }),
+        aSystem
       )
-    val components = new DefaultPekkoHttpServerComponents {
-      override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(Port), address = "127.0.0.1", mode = Mode.Test)
-      override lazy val actorSystem: ActorSystem = perfActorSystem
-      override def router: Router = playRouter
     }
-    IO(components.server).map(server => IO(server.stop()))
-  }
+    .map(_ => ())
 }
 
-object TapirServer extends ServerRunner { override def start = Play.runServer(Tapir.router(1)) }
-object TapirMultiServer extends ServerRunner { override def start = Play.runServer(Tapir.router(128)) }
-object TapirInterceptorMultiServer extends ServerRunner { override def start = Play.runServer(Tapir.router(128, withServerLog = true)) }
-object VanillaServer extends ServerRunner { override def start = Play.runServer(Vanilla.router(1)) }
-object VanillaMultiServer extends ServerRunner { override def start = Play.runServer(Vanilla.router(128)) }
+object TapirServer extends ServerRunner { override def runServer = Play.runServer(Tapir.router(1)) }
+object TapirMultiServer extends ServerRunner { override def runServer = Play.runServer(Tapir.router(128)) }
+object TapirInterceptorMultiServer extends ServerRunner { override def runServer = Play.runServer(Tapir.router(128, withServerLog = true)) }
+object VanillaServer extends ServerRunner { override def runServer = Play.runServer(Vanilla.router(1)) }
+object VanillaMultiServer extends ServerRunner { override def runServer = Play.runServer(Vanilla.router(128)) }

@@ -11,6 +11,8 @@ import sttp.monad.FutureMonad
 import sttp.tapir.generated.TapirGeneratedEndpoints
 import sttp.tapir.server.stub.TapirStubInterpreter
 
+import java.nio.charset.StandardCharsets
+
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -28,22 +30,26 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
       def next(): ByteString = {
         val nxt = Random.alphanumeric.take(40).mkString
         linesToGo -= 1
-        ByteString.fromString(nxt, "utf-8")
+        ByteString.fromString(nxt, StandardCharsets.UTF_8)
       }
     }
     val route1 =
-      TapirGeneratedEndpoints.postBinaryTest.serverLogicSuccess[Future]({ source: Source[ByteString, Any] =>
-        source
-          .map(bs => respQueue.append(bs.utf8String.reverse))
-          .run()
-          .map(_ => "ok")
-      })
+      TapirGeneratedEndpoints.postBinaryTest
+        .serverSecurityLogicSuccess(_ => Future.successful(()))
+        .serverLogicSuccess({ _ => source: Source[ByteString, Any] =>
+          source
+            .map(bs => respQueue.append(bs.utf8String.reverse))
+            .run()
+            .map(_ => "ok")
+        })
     val route2 =
-      TapirGeneratedEndpoints.getBinaryTest.serverLogicSuccess[Future]({ _ =>
-        Future.successful(org.apache.pekko.stream.scaladsl.Source[ByteString]({
-          respQueue.map(ByteString.fromString).toSeq
-        }))
-      })
+      TapirGeneratedEndpoints.getBinaryTest
+        .serverSecurityLogicSuccess(_ => Future.successful(()))
+        .serverLogicSuccess({ _ => _ =>
+          Future.successful(org.apache.pekko.stream.scaladsl.Source[ByteString]({
+            respQueue.map(ByteString.fromString).toSeq
+          }))
+        })
 
     val stub1 = TapirStubInterpreter(SttpBackendStub[Future, PekkoStreams](new FutureMonad()))
       .whenServerEndpoint(route1)
@@ -58,6 +64,7 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
 
     def doPost = sttp.client3.basicRequest
       .post(uri"http://test.com/binary/test")
+      .header("Authorization", "Bearer 123")
       .response(asStringAlways)
       .streamBody(PekkoStreams)(genSomeLines)
       .send(stub1)
@@ -68,6 +75,7 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
 
     def doGet: Future[Response[Source[ByteString, Any]]] = sttp.client3.basicRequest
       .get(uri"http://test.com/binary/test")
+      .header("Authorization", "Bearer 123")
       .response(sttp.client3.asStreamUnsafe(PekkoStreams).map { case Right(s) => s })
       .send[Future, PekkoStreams](stub2)
 

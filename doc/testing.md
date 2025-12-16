@@ -16,13 +16,23 @@ You can define the sttp requests by hand, to see how an arbitrary request will b
 Or, you can interpret an endpoint as a [client](client/sttp.md), to test both how the client & server interpreters
 interact with your endpoints.
 
-The special backend that is described above is based on a `SttpBackendStub`, which can be used to stub arbitrary
-behaviors. See the [sttp documentation](https://sttp.softwaremill.com/en/latest/testing.html) for details.
+The special backend that is described above is based on a `BackendStub`, which can be used to stub arbitrary
+behaviors. See the [sttp documentation](https://sttp.softwaremill.com/en/latest/testing/stub.html) for details.
 
-Tapir builds upon the `SttpBackendStub` to enable stubbing using `Endpoint`s or `ServerEndpoint`s. To start, add the 
+```{note}
+The following example code uses sttp-client v4. The same functionality is available using sttp-client v3, but using
+a different dependency and import (from the `sttp.tapir.server.stub` package). Moreover, some names might differ,
+e.g. `SttpBackendStub` instead of `BackendStub`.
+```
+
+Tapir builds upon the `BackendStub` to enable stubbing using `Endpoint`s or `ServerEndpoint`s. To start, add the 
 dependency:
 
 ```scala
+// used below, sttp-client v4
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "@VERSION@"
+
+// for sttp-client v3
 "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "@VERSION@"
 ```
 
@@ -53,14 +63,14 @@ A test which verifies how this endpoint behaves when interpreter as a server mig
 ```scala mdoc:silent
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.client3.*
-import sttp.client3.testing.SttpBackendStub
-import sttp.tapir.server.stub.TapirStubInterpreter
+import sttp.client4.*
+import sttp.client4.testing.BackendStub
+import sttp.tapir.server.stub4.TapirStubInterpreter
 
 class MySpec extends AsyncFlatSpec with Matchers:
   it should "work" in {
     // given
-    val backendStub: SttpBackend[Future, Any] = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+    val backendStub: Backend[Future] = TapirStubInterpreter(BackendStub.asynchronousFuture)
       .whenServerEndpoint(someServerEndpoint)
       .thenRunLogic()
       .backend()
@@ -76,15 +86,15 @@ class MySpec extends AsyncFlatSpec with Matchers:
   }
 ```
 
-The `.backend` method creates the enriched `SttpBackendStub`, using the provided server endpoints and their
+The `.backend` method creates the enriched `BackendStub`, using the provided server endpoints and their
 behaviors. Any requests will be handled by a stub server interpreter, using the complete request handling logic.
 
 Projects generated using [adopt-tapir](https://adopt-tapir.softwaremill.com) include a test which uses the above approach.
 
-### Custom interpreters
+### Custom interceptors
 
-Custom interpreters can be provided to the stub. For example, to test custom exception handling, we might have the
-following customised pekko http options:
+Custom interceptors can be provided to the stub. For example, to test custom exception handling, we might have the
+following customized pekko http options:
 
 ```scala mdoc:silent
 import sttp.tapir.server.interceptor.exception.ExceptionHandler
@@ -113,13 +123,13 @@ Testing such an interceptor requires simulating an exception being thrown in the
 class MySpec2 extends AsyncFlatSpec with Matchers:
   it should "use my custom exception handler" in {
     // given
-    val stub = TapirStubInterpreter(customOptions, SttpBackendStub.asynchronousFuture)
+    val stub = TapirStubInterpreter(customOptions, BackendStub.asynchronousFuture)
       .whenEndpoint(someEndpoint)
       .thenThrowException(new RuntimeException("error"))
       .backend()
       
     // when  
-    sttp.client3.basicRequest
+    basicRequest
       .get(uri"http://test.com/api")
       .send(stub)
       // then
@@ -133,20 +143,24 @@ using the full type information, that is using the `ServerEndpoint.Full` alias.
 ## External APIs
 
 If you are integrating with an external API, which is described using tapir's `Endpoint`s, or if you'd like to create
-an [sttp client stub backend](https://sttp.softwaremill.com/en/latest/testing.html), with arbitrary behavior for 
+an [sttp client stub backend](https://sttp.softwaremill.com/en/latest/testing/stub.html), with arbitrary behavior for 
 requests matching an endpoint, you can use the tapir `SttpBackendStub` extension methods.
 
 Similarly as when testing server interpreters, add the dependency:
 
 ```scala
+// used below, sttp-client v4
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "@VERSION@"
+
+// for sttp-client v3
 "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "@VERSION@"
 ```
 
 And the following imports:
 
 ```scala mdoc:silent
-import sttp.client3.testing.SttpBackendStub
-import sttp.tapir.server.stub.*
+import sttp.client4.testing.{BackendStub, SyncBackendStub}
+import sttp.tapir.server.stub4.*
 ``` 
 
 Then, given the following endpoint:
@@ -159,19 +173,17 @@ import io.circe.generic.auto.*
 
 case class ResponseWrapper(value: Double)
 
-val e = sttp.tapir.endpoint
+val e = endpoint
   .in("api" / "sometest4")
   .in(query[Int]("amount"))
   .post
   .out(jsonBody[ResponseWrapper])
 ```
 
-Any endpoint can be converted to `SttpBackendStub`:
+Any endpoint can be converted to `BackendStub`:
 
 ```scala mdoc:silent
-import sttp.client3.Identity
-
-val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
+val backend: SyncBackendStub = BackendStub
   .synchronous
   .whenRequestMatchesEndpoint(e)
   .thenSuccess(ResponseWrapper(1.0))
@@ -179,11 +191,12 @@ val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
 
 ## Black box testing
 
-When testing an application as a whole component, running for example in docker, you might want to stub external services
-with which your application interacts. 
+When testing an application as a whole component, running for example in docker, you might want to stub external 
+services with which your application interacts. 
 
-To do that you might want to use well-known solutions like e.g. [wiremock](http://wiremock.org/) or [mock-server](https://www.mock-server.com/), 
-but if their api is described using tapir you might want to use [livestub](https://github.com/softwaremill/livestub), which combines nicely with the rest of the sttp ecosystem.
+To do that you might want to use well-known solutions like e.g. [wiremock](http://wiremock.org/) or 
+[mock-server](https://www.mock-server.com/), but if their api is described using tapir you might want to use 
+[livestub](https://github.com/softwaremill/livestub), which combines nicely with the rest of the sttp ecosystem.
 
 ### Black box testing with mock-server integration
 
@@ -227,9 +240,11 @@ and having any `SttpBackend` instance (for example, `TryHttpURLConnectionBackend
 `F[_]` type), convert any endpoint to a **mock-server** expectation:
 
 ```scala mdoc:compile-only
-import sttp.client3.{TryHttpURLConnectionBackend, UriContext}
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
+import sttp.client4.wrappers.TryBackend
 
-val testingBackend = TryHttpURLConnectionBackend()
+val testingBackend = TryBackend(HttpClientSyncBackend())
 val mockServerClient = SttpMockServerClient(baseUri = uri"http://localhost:1080", testingBackend)
 
 val in = "request-id-123" -> SampleIn("John", 23)
@@ -244,10 +259,12 @@ val expectation = mockServerClient
 Then you can try to send requests to the mock-server as you would do with live integration:
 
 ```scala mdoc:compile-only
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3.{TryHttpURLConnectionBackend, UriContext}
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
+import sttp.client4.wrappers.TryBackend
 
-val testingBackend = TryHttpURLConnectionBackend()
+val testingBackend = TryBackend(HttpClientSyncBackend())
 val in = "request-id-123" -> SampleIn("John", 23)
 val out = SampleOut("Hello, John!")
 
@@ -311,7 +328,7 @@ res.toString
 
 Note that the above takes into account only the method & the shape of the path. It does *not* take into account possible
 decoding failures: these might impact request-endpoint matching, and the exact behavior is determined by the
-[`DecodeFailureHandler`](server/errors.html#decode-failures) used.
+[`DecodeFailureHandler`](server/errors.md#decode-failures) used.
 
 ### Incorrect path at endpoint
 

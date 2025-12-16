@@ -3,6 +3,32 @@ package sttp.tapir.generated
 object TapirGeneratedEndpointsJsonSerdes {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
+  implicit val byteStringJsonDecoder: io.circe.Decoder[ByteString] =
+    io.circe.Decoder.decodeString
+      .map(java.util.Base64.getDecoder.decode)
+      .map(toByteString)
+  implicit val byteStringJsonEncoder: io.circe.Encoder[ByteString] =
+    io.circe.Encoder.encodeString
+      .contramap(java.util.Base64.getEncoder.encodeToString)
+  implicit lazy val validatedObjJsonDecoder: io.circe.Decoder[ValidatedObj] = io.circe.generic.semiauto.deriveDecoder[ValidatedObj]
+  implicit lazy val validatedObjJsonEncoder: io.circe.Encoder[ValidatedObj] = io.circe.generic.semiauto.deriveEncoder[ValidatedObj]
+  implicit lazy val validatedOneOfJsonEncoder: io.circe.Encoder[ValidatedOneOf] = io.circe.Encoder.instance {
+    case x: ValidatedOneOfA => io.circe.Encoder[ValidatedOneOfA].apply(x).mapObject(_.add("type", io.circe.Json.fromString("ValidatedOneOfA")))
+    case x: ValidatedOneOfB => io.circe.Encoder[ValidatedOneOfB].apply(x).mapObject(_.add("type", io.circe.Json.fromString("ValidatedOneOfB")))
+    case x: ValidatedOneOfC => io.circe.Encoder[ValidatedOneOfC].apply(x).mapObject(_.add("type", io.circe.Json.fromString("ValidatedOneOfC")))
+  }
+  implicit lazy val validatedOneOfJsonDecoder: io.circe.Decoder[ValidatedOneOf] = io.circe.Decoder { (c: io.circe.HCursor) =>
+    for {
+      discriminator <- c.downField("type").as[String]
+      res <- discriminator match {
+        case "ValidatedOneOfA" => c.as[ValidatedOneOfA]
+        case "ValidatedOneOfB" => c.as[ValidatedOneOfB]
+        case "ValidatedOneOfC" => c.as[ValidatedOneOfC]
+      }
+    } yield res
+  }
+  implicit lazy val validatedOneOfAJsonDecoder: io.circe.Decoder[ValidatedOneOfA] = io.circe.generic.semiauto.deriveDecoder[ValidatedOneOfA]
+  implicit lazy val validatedOneOfAJsonEncoder: io.circe.Encoder[ValidatedOneOfA] = io.circe.generic.semiauto.deriveEncoder[ValidatedOneOfA]
   implicit lazy val aDTWithDiscriminatorJsonEncoder: io.circe.Encoder[ADTWithDiscriminator] = io.circe.Encoder.instance {
     case x: SubtypeWithD1 => io.circe.Encoder[SubtypeWithD1].apply(x).mapObject(_.add("type", io.circe.Json.fromString("SubA")))
     case x: SubtypeWithD2 => io.circe.Encoder[SubtypeWithD2].apply(x).mapObject(_.add("type", io.circe.Json.fromString("SubB")))
@@ -16,12 +42,18 @@ object TapirGeneratedEndpointsJsonSerdes {
       }
     } yield res
   }
+  implicit lazy val notNullableThingyJsonDecoder: io.circe.Decoder[NotNullableThingy] = io.circe.generic.semiauto.deriveDecoder[NotNullableThingy]
+  implicit lazy val notNullableThingyJsonEncoder: io.circe.Encoder[NotNullableThingy] = io.circe.generic.semiauto.deriveEncoder[NotNullableThingy]
+  implicit lazy val objectWithInlineEnum2JsonDecoder: io.circe.Decoder[ObjectWithInlineEnum2] = io.circe.generic.semiauto.deriveDecoder[ObjectWithInlineEnum2]
+  implicit lazy val objectWithInlineEnum2JsonEncoder: io.circe.Encoder[ObjectWithInlineEnum2] = io.circe.generic.semiauto.deriveEncoder[ObjectWithInlineEnum2]
   implicit lazy val simpleErrorJsonDecoder: io.circe.Decoder[SimpleError] = io.circe.generic.semiauto.deriveDecoder[SimpleError]
   implicit lazy val simpleErrorJsonEncoder: io.circe.Encoder[SimpleError] = io.circe.generic.semiauto.deriveEncoder[SimpleError]
   implicit lazy val notFoundErrorJsonDecoder: io.circe.Decoder[NotFoundError] = io.circe.generic.semiauto.deriveDecoder[NotFoundError]
   implicit lazy val notFoundErrorJsonEncoder: io.circe.Encoder[NotFoundError] = io.circe.generic.semiauto.deriveEncoder[NotFoundError]
   implicit lazy val subtypeWithoutD1JsonDecoder: io.circe.Decoder[SubtypeWithoutD1] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithoutD1]
   implicit lazy val subtypeWithoutD1JsonEncoder: io.circe.Encoder[SubtypeWithoutD1] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithoutD1]
+  implicit lazy val validatedSubObjJsonDecoder: io.circe.Decoder[ValidatedSubObj] = io.circe.generic.semiauto.deriveDecoder[ValidatedSubObj]
+  implicit lazy val validatedSubObjJsonEncoder: io.circe.Encoder[ValidatedSubObj] = io.circe.generic.semiauto.deriveEncoder[ValidatedSubObj]
   implicit lazy val subtypeWithD1JsonDecoder: io.circe.Decoder[SubtypeWithD1] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithD1]
   implicit lazy val subtypeWithD1JsonEncoder: io.circe.Encoder[SubtypeWithD1] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithD1]
   implicit lazy val aDTWithDiscriminatorNoMappingJsonEncoder: io.circe.Encoder[ADTWithDiscriminatorNoMapping] = io.circe.Encoder.instance {
@@ -37,14 +69,25 @@ object TapirGeneratedEndpointsJsonSerdes {
       }
     } yield res
   }
+  implicit lazy val validatedOneOfBJsonDecoder: io.circe.Decoder[ValidatedOneOfB] = io.circe.generic.semiauto.deriveDecoder[ValidatedOneOfB]
+  implicit lazy val validatedOneOfBJsonEncoder: io.circe.Encoder[ValidatedOneOfB] = io.circe.generic.semiauto.deriveEncoder[ValidatedOneOfB]
   implicit lazy val subtypeWithoutD3JsonDecoder: io.circe.Decoder[SubtypeWithoutD3] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithoutD3]
   implicit lazy val subtypeWithoutD3JsonEncoder: io.circe.Encoder[SubtypeWithoutD3] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithoutD3]
+  implicit lazy val nullableThingy2JsonDecoder: io.circe.Decoder[NullableThingy2] = io.circe.generic.semiauto.deriveDecoder[NullableThingy2]
+  implicit lazy val nullableThingy2JsonEncoder: io.circe.Encoder[NullableThingy2] = io.circe.generic.semiauto.deriveEncoder[NullableThingy2]
   implicit lazy val objectWithInlineEnumJsonDecoder: io.circe.Decoder[ObjectWithInlineEnum] = io.circe.generic.semiauto.deriveDecoder[ObjectWithInlineEnum]
   implicit lazy val objectWithInlineEnumJsonEncoder: io.circe.Encoder[ObjectWithInlineEnum] = io.circe.generic.semiauto.deriveEncoder[ObjectWithInlineEnum]
+  implicit lazy val validatedRecursiveJsonDecoder: io.circe.Decoder[ValidatedRecursive] = io.circe.generic.semiauto.deriveDecoder[ValidatedRecursive]
+  implicit lazy val validatedRecursiveJsonEncoder: io.circe.Encoder[ValidatedRecursive] = io.circe.generic.semiauto.deriveEncoder[ValidatedRecursive]
   implicit lazy val subtypeWithoutD2JsonDecoder: io.circe.Decoder[SubtypeWithoutD2] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithoutD2]
   implicit lazy val subtypeWithoutD2JsonEncoder: io.circe.Encoder[SubtypeWithoutD2] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithoutD2]
+  implicit lazy val hasFooBarBazQuuxJsonDecoder: io.circe.Decoder[HasFooBarBazQuux] = io.circe.generic.semiauto.deriveDecoder[HasFooBarBazQuux]
+  implicit lazy val hasFooBarBazQuuxJsonEncoder: io.circe.Encoder[HasFooBarBazQuux] = io.circe.generic.semiauto.deriveEncoder[HasFooBarBazQuux]
   implicit lazy val subtypeWithD2JsonDecoder: io.circe.Decoder[SubtypeWithD2] = io.circe.generic.semiauto.deriveDecoder[SubtypeWithD2]
   implicit lazy val subtypeWithD2JsonEncoder: io.circe.Encoder[SubtypeWithD2] = io.circe.generic.semiauto.deriveEncoder[SubtypeWithD2]
+  implicit lazy val validatedOneOfCJsonDecoder: io.circe.Decoder[ValidatedOneOfC] = io.circe.generic.semiauto.deriveDecoder[ValidatedOneOfC]
+  implicit lazy val validatedOneOfCJsonEncoder: io.circe.Encoder[ValidatedOneOfC] = io.circe.generic.semiauto.deriveEncoder[ValidatedOneOfC]
+
   implicit lazy val aDTWithoutDiscriminatorJsonEncoder: io.circe.Encoder[ADTWithoutDiscriminator] = io.circe.Encoder.instance {
     case x: SubtypeWithoutD1 => io.circe.Encoder[SubtypeWithoutD1].apply(x)
     case x: SubtypeWithoutD2 => io.circe.Encoder[SubtypeWithoutD2].apply(x)
@@ -56,4 +99,26 @@ object TapirGeneratedEndpointsJsonSerdes {
       io.circe.Decoder[SubtypeWithoutD2].asInstanceOf[io.circe.Decoder[ADTWithoutDiscriminator]],
       io.circe.Decoder[SubtypeWithoutD3].asInstanceOf[io.circe.Decoder[ADTWithoutDiscriminator]]
     ).reduceLeft(_ or _)
+  implicit lazy val nullableThingyJsonDecoder: io.circe.Decoder[NullableThingy] = io.circe.generic.semiauto.deriveDecoder[NullableThingy]
+  implicit lazy val nullableThingyJsonEncoder: io.circe.Encoder[NullableThingy] = io.circe.generic.semiauto.deriveEncoder[NullableThingy]
+  implicit lazy val postForceEagerResponseJsonDecoder: io.circe.Decoder[PostForceEagerResponse] = io.circe.generic.semiauto.deriveDecoder[PostForceEagerResponse]
+  implicit lazy val postForceEagerResponseJsonEncoder: io.circe.Encoder[PostForceEagerResponse] = io.circe.generic.semiauto.deriveEncoder[PostForceEagerResponse]
+  implicit lazy val postForceEagerRequestJsonDecoder: io.circe.Decoder[PostForceEagerRequest] = io.circe.generic.semiauto.deriveDecoder[PostForceEagerRequest]
+  implicit lazy val postForceEagerRequestJsonEncoder: io.circe.Encoder[PostForceEagerRequest] = io.circe.generic.semiauto.deriveEncoder[PostForceEagerRequest]
+  implicit lazy val getForceStreamingResponseJsonDecoder: io.circe.Decoder[GetForceStreamingResponse] = io.circe.generic.semiauto.deriveDecoder[GetForceStreamingResponse]
+  implicit lazy val getForceStreamingResponseJsonEncoder: io.circe.Encoder[GetForceStreamingResponse] = io.circe.generic.semiauto.deriveEncoder[GetForceStreamingResponse]
+  implicit lazy val getForceStreamingRequestJsonDecoder: io.circe.Decoder[GetForceStreamingRequest] = io.circe.generic.semiauto.deriveDecoder[GetForceStreamingRequest]
+  implicit lazy val getForceStreamingRequestJsonEncoder: io.circe.Encoder[GetForceStreamingRequest] = io.circe.generic.semiauto.deriveEncoder[GetForceStreamingRequest]
+  implicit lazy val postForceStreamingResponseJsonDecoder: io.circe.Decoder[PostForceStreamingResponse] = io.circe.generic.semiauto.deriveDecoder[PostForceStreamingResponse]
+  implicit lazy val postForceStreamingResponseJsonEncoder: io.circe.Encoder[PostForceStreamingResponse] = io.circe.generic.semiauto.deriveEncoder[PostForceStreamingResponse]
+  implicit lazy val postForceStreamingRequestJsonDecoder: io.circe.Decoder[PostForceStreamingRequest] = io.circe.generic.semiauto.deriveDecoder[PostForceStreamingRequest]
+  implicit lazy val postForceStreamingRequestJsonEncoder: io.circe.Encoder[PostForceStreamingRequest] = io.circe.generic.semiauto.deriveEncoder[PostForceStreamingRequest]
+  implicit lazy val patchForceStreamingResponseJsonDecoder: io.circe.Decoder[PatchForceStreamingResponse] = io.circe.generic.semiauto.deriveDecoder[PatchForceStreamingResponse]
+  implicit lazy val patchForceStreamingResponseJsonEncoder: io.circe.Encoder[PatchForceStreamingResponse] = io.circe.generic.semiauto.deriveEncoder[PatchForceStreamingResponse]
+  implicit lazy val patchForceStreamingRequestJsonDecoder: io.circe.Decoder[PatchForceStreamingRequest] = io.circe.generic.semiauto.deriveDecoder[PatchForceStreamingRequest]
+  implicit lazy val patchForceStreamingRequestJsonEncoder: io.circe.Encoder[PatchForceStreamingRequest] = io.circe.generic.semiauto.deriveEncoder[PatchForceStreamingRequest]
+  implicit lazy val postInlineSimpleObjectResponseJsonDecoder: io.circe.Decoder[PostInlineSimpleObjectResponse] = io.circe.generic.semiauto.deriveDecoder[PostInlineSimpleObjectResponse]
+  implicit lazy val postInlineSimpleObjectResponseJsonEncoder: io.circe.Encoder[PostInlineSimpleObjectResponse] = io.circe.generic.semiauto.deriveEncoder[PostInlineSimpleObjectResponse]
+  implicit lazy val postInlineSimpleObjectRequestJsonDecoder: io.circe.Decoder[PostInlineSimpleObjectRequest] = io.circe.generic.semiauto.deriveDecoder[PostInlineSimpleObjectRequest]
+  implicit lazy val postInlineSimpleObjectRequestJsonEncoder: io.circe.Encoder[PostInlineSimpleObjectRequest] = io.circe.generic.semiauto.deriveEncoder[PostInlineSimpleObjectRequest]
 }

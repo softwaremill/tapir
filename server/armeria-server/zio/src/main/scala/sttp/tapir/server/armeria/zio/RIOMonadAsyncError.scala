@@ -34,4 +34,6 @@ private class RIOMonadAsyncError[R] extends MonadAsyncError[RIO[R, *]] {
   override def flatten[T](ffa: RIO[R, RIO[R, T]]): RIO[R, T] = ffa.flatten
 
   override def ensure[T](f: RIO[R, T], e: => RIO[R, Unit]): RIO[R, T] = f.ensuring(e.ignore)
+
+  override def ensure2[T](f: => RIO[R, T], e: => RIO[R, Unit]): RIO[R, T] = ZIO.suspend(f).ensuring(e.ignore)
 }

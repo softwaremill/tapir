@@ -4,15 +4,14 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.HttpEntity
 import akka.http.scaladsl.server.{Directives, RequestContext}
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.akka.AkkaStreams
-import sttp.client3._
-import sttp.client3.akkahttp.AkkaHttpBackend
+import sttp.client4._
+import sttp.client4.akkahttp.AkkaHttpBackend
 import sttp.model.sse.ServerSentEvent
 import sttp.model.Header
 import sttp.model.MediaType
@@ -50,7 +49,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
           val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter().toRoute(e))
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
             }
@@ -66,15 +65,17 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             })
           val route = AkkaHttpServerInterpreter().toRoute(e)
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               IO.fromFuture {
                 IO(
                   basicRequest
                     .get(uri"http://localhost:$port/sse")
                     .response(
-                      asStreamUnsafe(AkkaStreams).mapRight(stream =>
-                        AkkaServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                      asStreamUnsafe(AkkaStreams).map(errorOrStream =>
+                        errorOrStream.map(stream =>
+                          AkkaServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                        )
                       )
                     )
                     .send(AkkaHttpBackend.usingActorSystem(actorSystem))
@@ -98,7 +99,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           ).toRoute(e)
 
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.post(uri"http://localhost:$port").body("test123").send(backend).map(_.body shouldBe Right("replaced"))
             }
@@ -117,7 +118,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
 
           // when
           val result = interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.get(uri"http://localhost:$port").send(backend)
             }
@@ -142,7 +143,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
 
           // when
           val result = interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.get(uri"http://localhost:$port").send(backend)
             }
@@ -156,7 +157,8 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           }
         },
         Test("execute metrics interceptors for empty body and json content type") {
-          val e = endpoint.post.in(stringBody)
+          val e = endpoint.post
+            .in(stringBody)
             .out(stringBody)
             .out(header(Header.contentType(MediaType.ApplicationJson)))
             .serverLogicSuccess[Future](body => Future.successful(body))
@@ -175,18 +177,12 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
                 me.eval {
                   metric.onRequestCnt.incrementAndGet()
                   EndpointMetric(
-                    onEndpointRequest = Some((_) =>
-                      me.eval(metric.onEndpointRequestCnt.incrementAndGet()),
-                    ),
-                    onResponseHeaders = Some((_, _) =>
-                      me.eval(metric.onResponseHeadersCnt.incrementAndGet()),
-                    ),
-                    onResponseBody = Some((_, _) =>
-                      me.eval(metric.onResponseBodyCnt.incrementAndGet()),
-                    ),
-                    onException = None,
+                    onEndpointRequest = Some((_) => me.eval(metric.onEndpointRequestCnt.incrementAndGet())),
+                    onResponseHeaders = Some((_, _) => me.eval(metric.onResponseHeadersCnt.incrementAndGet())),
+                    onResponseBody = Some((_, _) => me.eval(metric.onResponseBodyCnt.incrementAndGet())),
+                    onException = None
                   )
-                },
+                }
             )
           val route = AkkaHttpServerInterpreter(
             AkkaHttpServerOptions.customiseInterceptors
@@ -195,7 +191,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           ).toRoute(e)
 
           interpreter
-            .server(NonEmptyList.of(route))
+            .server(route)
             .use { port =>
               basicRequest.post(uri"http://localhost:$port").body("").send(backend).map { response =>
                 response.body shouldBe Right("")
@@ -206,19 +202,47 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
               }
             }
             .unsafeToFuture()
+        },
+        Test("extractFromRequest(_.uri) returns full URI when nested in path directive") {
+          // Given: an endpoint that extracts the URI from the request
+          val e = endpoint.get
+            .in("test" / "path")
+            .in(extractFromRequest(_.uri))
+            .out(stringBody)
+            .serverLogic { requestUri =>
+              requestUri.toString.asRight[Unit].unit
+            }
+
+          // When: the route is nested inside a pathPrefix directive
+          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter().toRoute(e))
+
+          interpreter
+            .server(route)
+            .use { port =>
+              // Then: the extracted URI should contain the full path including the prefix
+              basicRequest
+                .get(uri"http://localhost:$port/api/test/path?query=value")
+                .send(backend)
+                .map { response =>
+                  response.body.value should include("/api/test/path")
+                  response.body.value should include("query=value")
+                }
+            }
+            .unsafeToFuture()
         }
       )
       def drainAkka(stream: AkkaStreams.BinaryStream): Future[Unit] =
         stream.runWith(Sink.ignore).map(_ => ())
 
-      new AllServerTests(createServerTest, interpreter, backend).tests() ++
+      new AllServerTests(createServerTest, interpreter, backend, staticContent = false).tests() ++
+        new ServerFilesTests(interpreter, backend, supportContentLengthInHeadRequests = false).tests() ++
         new ServerStreamingTests(createServerTest).tests(AkkaStreams)(drainAkka) ++
         new ServerWebSocketTests(
           createServerTest,
           AkkaStreams,
           autoPing = false,
-          failingPipe = true,
-          handlePong = false
+          handlePong = false,
+          decodeCloseRequests = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)

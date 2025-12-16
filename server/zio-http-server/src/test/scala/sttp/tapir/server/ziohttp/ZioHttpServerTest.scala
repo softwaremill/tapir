@@ -10,13 +10,13 @@ import org.scalatest.Exceptional
 import org.scalatest.FutureOutcome
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
-import sttp.client3._
-import sttp.client3.testing.SttpBackendStub
+import sttp.client4._
+import sttp.client4.testing.StreamBackendStub
+import sttp.client4.ws.async._
 import sttp.model.MediaType
 import sttp.monad.MonadError
-import sttp.tapir.PublicEndpoint
 import sttp.tapir._
-import sttp.tapir.server.stub.TapirStubInterpreter
+import sttp.tapir.server.stub4.TapirStreamStubInterpreter
 import sttp.tapir.server.tests._
 import sttp.tapir.tests.Test
 import sttp.tapir.tests.TestSuite
@@ -27,8 +27,10 @@ import sttp.ws.WebSocketFrame
 import zio.Promise
 import zio.Ref
 import zio.Runtime
+import zio.Scope
 import zio.Task
 import zio.UIO
+import zio.URIO
 import zio.Unsafe
 import zio.ZEnvironment
 import zio.ZIO
@@ -42,7 +44,7 @@ import zio.stream
 import zio.stream.ZPipeline
 import zio.stream.ZStream
 
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.time
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
@@ -103,11 +105,14 @@ class ZioHttpServerTest extends TestSuite {
           Test("zio http route can be called with runZIO") {
             val ep = endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ZIO.succeed("response"))
             val route = ZioHttpInterpreter().toHttp(ep)
-            val test: UIO[Assertion] = route
-              .runZIO(Request.get(url = URL.apply(Path.empty / "p1")))
-              .flatMap(response => response.body.asString)
-              .map(_ shouldBe "response")
-              .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+            val test: UIO[Assertion] =
+              ZIO.scoped {
+                route
+                  .runZIO(Request.get(url = URL.apply(Path.empty / "p1")))
+                  .flatMap(response => response.body.asString)
+                  .map(_ shouldBe "response")
+                  .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+              }
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
           Test("zio http middlewares run before the handler") {
@@ -119,8 +124,8 @@ class ZioHttpServerTest extends TestSuite {
                 .zServerLogic[Any](_ => p.await.timeout(time.Duration.ofSeconds(1)) *> ZIO.succeed("Ok"))
               int = ZioHttpInterpreter().toHttp(ep)
               route = int @@ Middleware.allowZIO((_: Request) => p.succeed(()).as(true))
-              result <- route
-                .runZIO(Request.get(url = URL(Path.empty / "p1")))
+              result <- ZIO
+                .scoped(route.runZIO(Request.get(url = URL(Path.empty / "p1"))))
                 .flatMap(response => response.body.asString)
                 .map(_ shouldBe "Ok")
                 .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
@@ -137,8 +142,8 @@ class ZioHttpServerTest extends TestSuite {
                 .zServerLogic[Any](_ => ref.updateAndGet(_ + 1).map(_.toString))
               route = ZioHttpInterpreter()
                 .toHttp(ep) @@ Middleware.allowZIO((_: Request) => ref.update(_ + 1).as(true))
-              result <- route
-                .runZIO(Request.get(url = URL(Path.empty / "p1")))
+              result <- ZIO
+                .scoped(route.runZIO(Request.get(url = URL(Path.empty / "p1"))))
                 .flatMap(response => response.body.asString)
                 .map(_ shouldBe "2")
                 .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
@@ -147,7 +152,7 @@ class ZioHttpServerTest extends TestSuite {
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
           Test("zio http middlewares only run once, with two endpoints") {
-            val test: UIO[Assertion] = for {
+            val test: URIO[Scope, Assertion] = for {
               ref <- Ref.make("")
               ep1 = endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ref.updateAndGet(_ + "1"))
               ep2 = endpoint.get.in("p2").out(stringBody).zServerLogic[Any](_ => ref.updateAndGet(_ + "2"))
@@ -166,7 +171,7 @@ class ZioHttpServerTest extends TestSuite {
                 .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
             } yield result
 
-            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(ZIO.scoped(test)))
           },
           // https://github.com/softwaremill/tapir/issues/3907
           Test("extractFromRequest in the middle") {
@@ -178,8 +183,8 @@ class ZioHttpServerTest extends TestSuite {
               .zServerLogic[Any](_ => ZIO.succeed("works"))
             val route = ZioHttpInterpreter().toHttp(ep)
 
-            val test: UIO[Assertion] = route
-              .runZIO(Request.get(url = URL(Path.empty / "p1" / "test" / "p2")))
+            val test: UIO[Assertion] = ZIO
+              .scoped(route.runZIO(Request.get(url = URL(Path.empty / "p1" / "test" / "p2"))))
               .flatMap(response => response.body.asString)
               .map(_ shouldBe "works")
               .catchAll(_ => ZIO.succeed[Assertion](fail("Unable to extract body from Http response")))
@@ -193,8 +198,8 @@ class ZioHttpServerTest extends TestSuite {
               override def mediaType: MediaType = MediaType.TextCsv
             }
 
-            val backendStub: TapirStubInterpreter[Task, ZioStreams, Unit] =
-              TapirStubInterpreter[Task, ZioStreams](SttpBackendStub[Task, ZioStreams](new RIOMonadError[Any]))
+            val backendStub: TapirStreamStubInterpreter[Task, ZioStreams, Unit] =
+              TapirStreamStubInterpreter[Task, ZioStreams](StreamBackendStub[Task, ZioStreams](new RIOMonadError[Any]))
 
             val endpointModel: PublicEndpoint[ZStream[Any, Throwable, Byte], Unit, ZStream[Any, Throwable, Byte], ZioStreams] =
               endpoint.post
@@ -217,11 +222,11 @@ class ZioHttpServerTest extends TestSuite {
             val input: ZStream[Any, Nothing, Byte] =
               ZStream(inputStrings: _*)
                 .via(ZPipeline.intersperse(java.lang.System.lineSeparator()))
-                .mapConcat(_.getBytes(Charset.forName("UTF-8")))
+                .mapConcat(_.getBytes(StandardCharsets.UTF_8))
 
-            val makeRequest = sttp.client3.basicRequest
-              .streamBody(ZioStreams)(input)
+            val makeRequest = basicRequest
               .post(uri"/hello")
+              .streamBody(ZioStreams)(input)
               .response(asStreamAlwaysUnsafe(ZioStreams))
 
             val backend = backendStub.whenServerEndpointRunLogic(streamingEndpoint).backend()
@@ -245,6 +250,43 @@ class ZioHttpServerTest extends TestSuite {
 
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
+          Test("Streaming works through the stub backend, when decoded as an either") {
+            // given
+            val backendStub: TapirStreamStubInterpreter[Task, ZioStreams, Unit] =
+              TapirStreamStubInterpreter[Task, ZioStreams](StreamBackendStub[Task, ZioStreams](new RIOMonadError[Any]))
+
+            val streamingEndpoint: sttp.tapir.ztapir.ZServerEndpoint[Any, ZioStreams] =
+              endpoint.post
+                .in("hello")
+                .in(streamBinaryBody(ZioStreams)(CodecFormat.TextPlain()))
+                .out(streamBinaryBody(ZioStreams)(CodecFormat.TextPlain()))
+                .zServerLogic(stream => ZIO.succeed(stream))
+
+            val testString = "Hello, world!" * 100
+            val input: ZStream[Any, Nothing, Byte] = ZStream(testString.getBytes(): _*)
+
+            val makeRequest = basicRequest
+              .post(uri"/hello")
+              .streamBody(ZioStreams)(input)
+              .response(asStreamUnsafe(ZioStreams))
+
+            val backend = backendStub.whenServerEndpointRunLogic(streamingEndpoint).backend()
+
+            // when
+            val test: ZIO[Any, Throwable, Assertion] =
+              makeRequest
+                .send(backend)
+                .flatMap(response =>
+                  response.body.right.get
+                    .via(ZPipeline.utf8Decode)
+                    .runCollect
+                    .map(_.toList.mkString(""))
+                )
+                // then
+                .map(_ shouldBe testString)
+
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
           createServerTest.testServer(
             endpoint
               .out(
@@ -255,10 +297,10 @@ class ZioHttpServerTest extends TestSuite {
             "auto pings"
           )((_: Unit) => ZIO.right((in: stream.Stream[Throwable, String]) => in.map(v => s"echo $v"))) { (backend, baseUri) =>
             basicRequest
+              .get(baseUri.scheme("ws"))
               .response(asWebSocket { (ws: WebSocket[IO]) =>
                 List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
               })
-              .get(baseUri.scheme("ws"))
               .send(backend)
               .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
           },
@@ -272,13 +314,13 @@ class ZioHttpServerTest extends TestSuite {
             "ping-pong echo"
           )((_: Unit) => ZIO.right((in: stream.Stream[Throwable, String]) => in.map(v => s"echo $v"))) { (backend, baseUri) =>
             basicRequest
+              .get(baseUri.scheme("ws"))
               .response(asWebSocket { (ws: WebSocket[IO]) =>
                 for {
                   _ <- ws.send(WebSocketFrame.ping)
                   m2 <- ws.receive()
                 } yield List(m2)
               })
-              .get(baseUri.scheme("ws"))
               .send(backend)
               .map { response =>
                 response.body should matchPattern { case Right(List(_: WebSocketFrame.Pong)) => }
@@ -305,7 +347,8 @@ class ZioHttpServerTest extends TestSuite {
             backend,
             basic = false,
             multipart = false,
-            options = false
+            options = false,
+            metrics = false
           ).tests() ++
           new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
           new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
@@ -314,13 +357,13 @@ class ZioHttpServerTest extends TestSuite {
             createServerTest,
             ZioStreams,
             autoPing = true,
-            failingPipe = false,
             handlePong = false,
             frameConcatenation = false
           ) {
             override def functionToPipe[A, B](f: A => B): ZioStreams.Pipe[A, B] = in => in.map(f)
             override def emptyPipe[A, B]: ZioStreams.Pipe[A, B] = _ => ZStream.empty
           }.tests() ++
+          new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests() ++
           additionalTests()
       }
   }

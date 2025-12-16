@@ -28,7 +28,7 @@ trait ZioHttpInterpreter[R] {
     val widenedSes = ses.map(_.widen[R & R2])
     val widenedServerOptions = zioHttpServerOptions.widen[R & R2]
     val zioHttpRequestBody = new ZioHttpRequestBody(widenedServerOptions)
-    val zioHttpResponseBody = new ZioHttpToResponseBody
+    val zioHttpResponseBody = new ZioHttpToResponseBody(zioHttpServerOptions.inputStreamChunkSize)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes)
 
     def handleRequest(req: Request, filteredEndpoints: List[ZServerEndpoint[R & R2, ZioStreams with WebSockets]]) =
@@ -47,7 +47,7 @@ trait ZioHttpInterpreter[R] {
           .foldCauseZIO(
             cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
             {
-              case RequestResult.Response(resp) =>
+              case RequestResult.Response(resp, _) =>
                 resp.body match {
                   case None              => handleHttpResponse(resp, None)
                   case Some(Right(body)) => handleHttpResponse(resp, Some(body))
@@ -190,7 +190,16 @@ trait ZioHttpInterpreter[R] {
         channelEventsQueue <- zio.Queue.unbounded[WebSocketChannelEvent]
         messageReceptionFiber <- channel.receiveAll { message => channelEventsQueue.offer(message) }.fork
         webSocketStream <- webSocketHandler(stream.ZStream.fromQueue(channelEventsQueue))
-        _ <- webSocketStream.mapZIO(channel.send).runDrain
+        _ <- webSocketStream
+          .mapZIO(channel.send)
+          .runDrain
+          .resurrect
+          .catchAll { e =>
+            channel.send(ChannelEvent.Read(WebSocketFrame.Close(1011, Some("Internal server error")))) *> ZIO.logErrorCause(
+              "Exception when handling a WebSocket",
+              Cause.fail(e)
+            )
+          }
       } yield messageReceptionFiber.join
     }
     webSocketConfig.fold(app)(app.withConfig).toResponse

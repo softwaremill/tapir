@@ -1,10 +1,10 @@
 // {cat=Error handling; effects=cats-effect; server=http4s; JSON=circe}: Extending a base secured endpoint with error variants, using union types
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.2
 //> using dep org.http4s::http4s-blaze-server:0.23.16
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.errors
 
@@ -13,9 +13,9 @@ import io.circe.generic.auto.*
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
-import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
@@ -78,7 +78,7 @@ object ErrorUnionTypesHttp4sServer extends IOApp:
       .resource
       .use { _ =>
         IO {
-          val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+          val backend: SyncBackend = HttpClientSyncBackend()
 
           def request(name: String, token: String) =
             val result = basicRequest

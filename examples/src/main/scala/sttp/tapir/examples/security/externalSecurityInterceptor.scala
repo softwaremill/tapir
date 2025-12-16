@@ -1,15 +1,15 @@
 // {cat=Security; effects=Future; server=Netty}: Interceptor verifying externally added security credentials
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.11
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.13.2
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.security
 
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
 import sttp.monad.MonadError
-import sttp.shared.Identity
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding, NettyFutureServerOptions}
 import sttp.tapir.*
 import sttp.tapir.server.interceptor.{
@@ -96,7 +96,7 @@ import scala.concurrent.duration.Duration
     val host = serverBinding.hostName
     println(s"Server started at port = ${serverBinding.port}")
 
-    val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
 
     def secretRequest(endpoint: String) = basicRequest.response(asStringAlways).get(uri"http://$host:$port/secret/$endpoint")
 

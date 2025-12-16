@@ -1,12 +1,11 @@
 // {cat=WebSocket; effects=Direct; server=Netty}: A WebSocket chat across multiple clients connected to the same server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.18
 
 package sttp.tapir.examples.websocket
 
 import ox.channels.{Actor, ActorRef, Channel, ChannelClosed, Default, DefaultResult, selectOrClosed}
-import ox.{ExitCode, Ox, OxApp, fork, never, releaseAfterScope, supervised}
+import ox.{ExitCode, Ox, OxApp, forkDiscard, never, releaseAfterScope, supervised}
 import sttp.tapir.*
 import sttp.tapir.CodecFormat.*
 import sttp.tapir.server.netty.sync.{NettySyncServer, OxStreams}
@@ -37,7 +36,7 @@ class ChatRoom:
     members = members.flatMap: (id, member) =>
       selectOrClosed(member.channel.sendClause(message), Default(())) match
         case member.channel.Sent() => Some((id, member))
-        case _: ChannelClosed =>
+        case _: ChannelClosed      =>
           println(s"Channel of member $id closed, removing from members")
           None
         case DefaultResult(_) =>
@@ -61,7 +60,7 @@ def chatProcessor(a: ActorRef[ChatRoom]): OxStreams.Pipe[Message, Message] = inc
 
       a.tell(_.connected(member))
 
-      fork:
+      forkDiscard:
         incoming.runForeach: msg =>
           a.tell(_.incoming(msg))
         // all incoming messages are processed (= client closed), completing the outgoing channel as well

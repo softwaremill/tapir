@@ -103,10 +103,10 @@ The default reject interceptor can be customised by providing your own reject ha
 
 Two default implementations of the reject handler are provided by the `DefaultRejectHandler`:
 
-- `default` - which returns a `405 Method Not Allowed` when the HTTP method was rejected, and otherwise propagates
-  the rejection to the server interpreter library,
-- `defaultOrNotFound` - similar, but returns a `404 Not Found` instead of propagating when the rejected input
-  was not the HTTP method.
+- `DefaultRejectHandler` - which returns a `405 Method Not Allowed` when the HTTP method was rejected, and otherwise 
+  propagates the rejection to the server interpreter library,
+- `DefaultRejectHandler.orNotFound` - similar, but returns a `404 Not Found` instead of propagating when the rejected 
+  input was not the HTTP method.
 
 ### Default failure handler
 
@@ -169,3 +169,9 @@ val myServerOptions: NettyFutureServerOptions = NettyFutureServerOptions
 
 If you want to customise anything beyond the rendering of the error message, or use non-default implementations of the
 exception handler / decode failure handler, you'll still have to customise each by hand.
+
+## Endpoints which cannot fail
+
+In some cases, you can have endpoints which "cannot fail", that is which do not have any "expected" errors. For these scenarios, you can use `infallibleEndpoint` as a starting point (instead of `endpoint`). When using `infallibleEndpoint`, the error type is fixed to `Nothing`.
+
+Of course, the server logic for such endpoints might still throw exceptions / return failed effects. Such failures are logged & intercepted in the usual way, as described above.

@@ -17,20 +17,38 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
-case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureServerOptions, config: NettyConfig)(implicit
+case class NettyFutureServer(
+    serverEndpoints: Vector[ServerEndpoint[Any, Future]],
+    otherRoutes: Vector[FutureRoute],
+    options: NettyFutureServerOptions,
+    config: NettyConfig
+)(implicit
     ec: ExecutionContext
 ) {
   def addEndpoint(se: ServerEndpoint[Any, Future]): NettyFutureServer = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[Any, Future], overrideOptions: NettyFutureServerOptions): NettyFutureServer =
-    addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[Any, Future]]): NettyFutureServer = addRoute(
-    NettyFutureServerInterpreter(options).toRoute(ses)
-  )
-  def addEndpoints(ses: List[ServerEndpoint[Any, Future]], overrideOptions: NettyFutureServerOptions): NettyFutureServer =
-    addRoute(NettyFutureServerInterpreter(overrideOptions).toRoute(ses))
+  def addEndpoints(ses: List[ServerEndpoint[Any, Future]]): NettyFutureServer = copy(serverEndpoints = serverEndpoints ++ ses)
 
-  def addRoute(r: FutureRoute): NettyFutureServer = copy(routes = routes :+ r)
-  def addRoutes(r: Iterable[FutureRoute]): NettyFutureServer = copy(routes = routes ++ r)
+  /** Adds a custom route to the server. When a request is received, it is first processed by routes generated from the defined endpoints
+    * (see [[addEndpoint]] and [[addEndpoints]] for the primary methods of defining server behavior). If none of these endpoints match the
+    * request, and the [[RejectHandler]] is configured to allow fallback handling (see below), the request will then be processed by the
+    * custom routes added using this method, in the order they were added.
+    *
+    * By default, the [[NettyFutureServerOptions]] are configured to return a `404` response when no endpoints match a request. This
+    * behavior is controlled by the [[RejectHandler]]. If you intend to handle unmatched requests using custom routes, ensure that the
+    * [[RejectHandler]] is configured appropriately to allow such fallback handling.
+    */
+  def addRoute(r: FutureRoute): NettyFutureServer = copy(otherRoutes = otherRoutes :+ r)
+
+  /** Adds custom routes to the server. When a request is received, it is first processed by routes generated from the defined endpoints
+    * (see [[addEndpoint]] and [[addEndpoints]] for the primary methods of defining server behavior). If none of these endpoints match the
+    * request, and the [[RejectHandler]] is configured to allow fallback handling (see below), the request will then be processed by the
+    * custom routes added using this method, in the order they were added.
+    *
+    * By default, the [[NettyFutureServerOptions]] are configured to return a `404` response when no endpoints match a request. This
+    * behavior is controlled by the [[RejectHandler]]. If you intend to handle unmatched requests using custom routes, ensure that the
+    * [[RejectHandler]] is configured appropriately to allow such fallback handling.
+    */
+  def addRoutes(r: Iterable[FutureRoute]): NettyFutureServer = copy(otherRoutes = otherRoutes ++ r)
 
   def options(o: NettyFutureServerOptions): NettyFutureServer = copy(options = o)
 
@@ -63,7 +81,16 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): Future[(SA, () => Future[Unit])] = {
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[Future] = new FutureMonad()
-    val route = Route.combine(routes)
+    val endpointRoute = serverEndpoints match {
+      case Vector() => Vector.empty
+      case _        => Vector(NettyFutureServerInterpreter(options).toRoute(serverEndpoints.toList))
+    }
+    val allRoutes = endpointRoute ++ otherRoutes
+    val route = allRoutes match {
+      case Vector()  => Route.empty
+      case Vector(r) => r
+      case many      => Route.combine(many)
+    }
     val eventExecutor = new DefaultEventExecutor()
     val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
@@ -150,16 +177,16 @@ case class NettyFutureServer(routes: Vector[FutureRoute], options: NettyFutureSe
 
 object NettyFutureServer {
   def apply()(implicit ec: ExecutionContext): NettyFutureServer =
-    NettyFutureServer(Vector.empty, NettyFutureServerOptions.default, NettyConfig.default)
+    NettyFutureServer(Vector.empty, Vector.empty, NettyFutureServerOptions.default, NettyConfig.default)
 
   def apply(serverOptions: NettyFutureServerOptions)(implicit ec: ExecutionContext): NettyFutureServer =
-    NettyFutureServer(Vector.empty, serverOptions, NettyConfig.default)
+    NettyFutureServer(Vector.empty, Vector.empty, serverOptions, NettyConfig.default)
 
   def apply(config: NettyConfig)(implicit ec: ExecutionContext): NettyFutureServer =
-    NettyFutureServer(Vector.empty, NettyFutureServerOptions.default, config)
+    NettyFutureServer(Vector.empty, Vector.empty, NettyFutureServerOptions.default, config)
 
   def apply(serverOptions: NettyFutureServerOptions, config: NettyConfig)(implicit ec: ExecutionContext): NettyFutureServer =
-    NettyFutureServer(Vector.empty, serverOptions, config)
+    NettyFutureServer(Vector.empty, Vector.empty, serverOptions, config)
 }
 
 case class NettyFutureServerBinding(localSocket: InetSocketAddress, stop: () => Future[Unit]) {

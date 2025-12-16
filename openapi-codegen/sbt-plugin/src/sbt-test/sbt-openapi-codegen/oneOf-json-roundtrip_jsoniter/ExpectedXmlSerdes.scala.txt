@@ -1,0 +1,160 @@
+package sttp.tapir.generated
+
+object TapirGeneratedEndpointsXmlSerdes {
+  import sttp.tapir.generated.TapirGeneratedEndpoints._
+  import sttp.tapir.generic.auto._
+  import cats.data.NonEmptyList
+  import cats.xml.{NodeContent, Xml, XmlData, XmlNode}
+  import cats.xml.codec.{Decoder, Encoder}
+  import cats.xml.cursor.Cursor
+  import cats.xml.generic.{XmlElemType, XmlTypeInterpreter}
+  import cats.xml.syntax._
+  import cats.xml.generic.decoder.configured.semiauto._
+  import cats.xml.generic.encoder.configured.semiauto._
+
+  private type XmlParseResult[T] = Either[Throwable, T]
+  implicit val config: cats.xml.generic.Configuration = cats.xml.generic.Configuration.default.withUseLabelsForNodes(true)
+  implicit val mkOptionXmlTypeInterpreter: XmlTypeInterpreter[Option[?]] = XmlTypeInterpreter.auto[Option[?]](
+    (_, _) => false, (_, _) => false)
+  def enumDecoder[T <: enumeratum.EnumEntry: scala.reflect.ClassTag](e: enumeratum.Enum[T]): Decoder[T] =
+    Decoder.instance { case x: XmlNode.Node =>
+      x.content match {
+        case NodeContent.Text(t) =>
+          scala.util.Try(e.withName(t.asString)) match {
+            case scala.util.Success(v) => cats.data.Validated.Valid(v)
+            case scala.util.Failure(f) =>
+              cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.UnableToDecodeType(f)))
+          }
+        case _ => cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.NoTextAvailable(x)))
+      }
+    }
+  def enumEncoder[T <: enumeratum.EnumEntry](label: String): Encoder[T] =
+    cats.xml.codec.Encoder.of(x => XmlNode(label, Nil, content = NodeContent.text(x.entryName)))
+  implicit val instantDecoder: Decoder[java.time.Instant] = Decoder.decodeString.map(java.time.Instant.parse)
+  implicit val instantEncoder: Encoder[java.time.Instant] = Encoder.encodeString.contramap(_.toString)
+  implicit def xmlSerdeFromCodecs[T: Decoder: Encoder: sttp.tapir.Schema]: sttp.tapir.Codec.XmlCodec[T] =
+    sttp.tapir.Codec.xml(xmlToDecodeResult[T])(_.toXml.toString)
+  implicit def optionDecoder[T: Decoder]: Decoder[Option[T]] = new Decoder[Option[T]] {
+    private val delegate = implicitly[Decoder[T]]
+
+    override def decodeCursorResult(cursorResult: Cursor.Result[Xml]): Decoder.Result[Option[T]] = cursorResult match {
+      case Right(x) if x.isNull => cats.data.Validated.Valid(None)
+      case Left(e) if e.isMissing => cats.data.Validated.Valid(None)
+      case o => delegate.decodeCursorResult(o).map(Some(_))
+    }
+  }
+  implicit def optionEncoder[T: Encoder]: Encoder[Option[T]] = new Encoder[Option[T]] {
+    private val delegate = implicitly[Encoder[T]]
+
+    override def encode(t: Option[T]): Xml = t match {
+      case None => Xml.Null
+      case Some(t) => delegate.encode(t)
+    }
+  }
+  def seqDecoder[T: Decoder](nodeName: String, isWrapped: Boolean = true): Decoder[Seq[T]] = new Decoder[Seq[T]] {
+    private val delegate = implicitly[Decoder[T]]
+
+    def decodeCursorResult(cursorResult: Cursor.Result[Xml]): Decoder.Result[Seq[T]] = cursorResult match {
+      case Right(x: XmlNode) if isWrapped =>
+        x.content match {
+          case NodeContent.Children(c) => c.traverse(delegate.decode).map(_.toList)
+          case NodeContent.Empty       => cats.data.Validated.Valid(Nil)
+        }
+      case Right(x: XmlNode.Group) if !isWrapped =>
+       NonEmptyList.fromList(x.children).map(_.traverse(delegate.decode).map(_.toList)).getOrElse(cats.data.Validated.Valid(Nil))
+      case Right(x: XmlNode.Node) if !isWrapped =>
+       delegate.decode(x).map(List(_))
+      case Left(errs) => cats.data.Validated.Invalid(NonEmptyList.one(cats.xml.codec.DecoderFailure.CursorFailed(errs)))
+    }
+  }
+  def seqEncoder[T: Encoder](nodeName: String, isWrapped: Boolean = true, itemName: String = "item"): Encoder[Seq[T]] =
+    new Encoder[Seq[T]] {
+      private val delegate = implicitly[Encoder[T]]
+
+      override def encode(t: Seq[T]): Xml = if (isWrapped) {
+        val content: NodeContent = NonEmptyList.fromList(t.map(delegate.encode).toList) match {
+          case None => NodeContent.empty
+          case Some(nel) =>
+            nel.map(_.asNode) match {
+              case n if n.forall(_.isDefined) => new NodeContent.Children(n.map(_.get.withLabel(itemName)))
+              case n if n.forall(_.isEmpty) =>
+                nel.map(_.asData) match {
+                  case n if n.forall(_.isDefined) =>
+                    NodeContent.children(n.map(_.get).toList.map(d => XmlNode(itemName, content = NodeContent.text(d))))
+                  case n if n.exists(_.isDefined) => throw new IllegalStateException("Unable to encode heterogeneous lists")
+                  case _ => throw new IllegalStateException(s"Unable to encode list with elements like: ${nel.head}")
+                }
+              case _ => throw new IllegalStateException("Unable to encode heterogeneous lists")
+            }
+        }
+        XmlNode(nodeName, content = content)
+      } else {
+        NonEmptyList.fromList(t.map(delegate.encode).toList) match {
+          case None => Xml.Null
+          case Some(nel) =>
+            nel.map(_.asNode) match {
+              case n if n.forall(_.isDefined) =>
+                XmlNode.group(n.toList.map(_.get.withLabel(nodeName)))
+              case n if n.forall(_.isEmpty) =>
+                nel.map(_.asData) match {
+                  case n if n.forall(_.isDefined) =>
+                    XmlNode.group(n.map(_.get).toList.map(d => XmlNode(nodeName, content = NodeContent.text(d))))
+                  case n if n.exists(_.isDefined) => throw new IllegalStateException("Unable to encode heterogeneous lists")
+                  case _ => throw new IllegalStateException(s"Unable to encode list with elements like: ${nel.head}")
+                }
+              case _ => throw new IllegalStateException("Unable to encode heterogeneous lists")
+            }
+        }
+
+      }
+    }
+  def xmlToDecodeResult[T: Decoder](s: String): sttp.tapir.DecodeResult[T] = s.parseXml[XmlParseResult] match {
+    case Right(xml: XmlNode) => xml.as[T] match {
+      case cats.data.Validated.Invalid(e) => sttp.tapir.DecodeResult.Multiple(e.toList)
+      case cats.data.Validated.Valid(v) => sttp.tapir.DecodeResult.Value(v)
+    }
+    case Left(t) => sttp.tapir.DecodeResult.Error(s, t)
+  }
+
+  implicit lazy val TagXmlTypeInterpreter: XmlTypeInterpreter[Tag] = XmlTypeInterpreter.auto[Tag]((_, _) => false, (_, _) => false)
+  implicit lazy val TagXmlDecoder: Decoder[Tag] = deriveConfiguredDecoder[Tag]
+  implicit lazy val TagXmlEncoder: Encoder[Tag] = deriveConfiguredEncoder[Tag]
+
+  implicit lazy val Tag2XmlTypeInterpreter: XmlTypeInterpreter[Tag2] = XmlTypeInterpreter.auto[Tag2]((_, _) => false, (_, _) => false)
+  implicit lazy val Tag2XmlDecoder: Decoder[Tag2] = deriveConfiguredDecoder[Tag2]
+  implicit lazy val Tag2XmlEncoder: Encoder[Tag2] = deriveConfiguredEncoder[Tag2]
+
+  implicit lazy val PetStatusXmlTypeInterpreter: XmlTypeInterpreter[PetStatus] = XmlTypeInterpreter.auto[PetStatus]((_, _) => false, (_, _) => false)
+  implicit lazy val PetStatusXmlDecoder: Decoder[PetStatus] = deriveConfiguredDecoder[PetStatus]
+  implicit lazy val PetStatusXmlEncoder: Encoder[PetStatus] = deriveConfiguredEncoder[PetStatus]
+
+  implicit lazy val PetXmlTypeInterpreter: XmlTypeInterpreter[Pet] = XmlTypeInterpreter.fullOf[Pet]{
+      case (cats.xml.utils.generic.ParamName("tags2"), _) =>
+        (XmlElemType.Child, { case "tags2" => "extra-tags"; case "extra-tags" => "tags2"; case x => x})
+      case (_, _) => (XmlElemType.Child, identity)
+    }
+  implicit lazy val PetXmlDecoder: Decoder[Pet] = {
+    // implicit val PetCategoryDecoder: Decoder[Option[Category]] = deriveConfiguredDecoder[Option[Category]]
+    implicit val PetPhotoUrlsSeqDecoder: Decoder[Seq[String]] = seqDecoder[String]("photoUrls", isWrapped = true)
+    implicit val PetTagsSeqDecoder: Decoder[Seq[Tag]] = seqDecoder[Tag]("tags", isWrapped = true)
+    implicit val PetTags2SeqDecoder: Decoder[Seq[Tag2]] = seqDecoder[Tag2]("extra-tags", isWrapped = false)
+    implicit val PetStatusOptionDecoder: Decoder[Option[PetStatus]] = optionDecoder[PetStatus](enumDecoder[PetStatus](PetStatus))
+    deriveConfiguredDecoder[Pet]
+  }
+  implicit lazy val PetXmlEncoder: Encoder[Pet] = {
+    implicit val PetCategoryEncoder: Encoder[Option[Category]] = deriveConfiguredEncoder[Option[Category]]
+    implicit val PetPhotoUrlsSeqEncoder: Encoder[Seq[String]] =
+      seqEncoder[String]("photoUrls", isWrapped = true, itemName = "photoUrl")
+    implicit val PetTagsSeqEncoder: Encoder[Seq[Tag]] =
+      seqEncoder[Tag]("tags", isWrapped = true, itemName = "tag")
+    implicit val PetTags2SeqEncoder: Encoder[Seq[Tag2]] =
+      seqEncoder[Tag2]("extra-tags", isWrapped = false, itemName = "tags2")
+    implicit val PetStatusEncoder: Encoder[PetStatus] = enumEncoder[PetStatus]("status")
+    implicit val PetStatusOptionEncoder: Encoder[Option[PetStatus]] = optionEncoder[PetStatus](PetStatusEncoder)
+    deriveConfiguredEncoder[Pet]
+  }
+
+  implicit lazy val CategoryXmlTypeInterpreter: XmlTypeInterpreter[Category] = XmlTypeInterpreter.auto[Category]((_, _) => false, (_, _) => false)
+  implicit lazy val CategoryXmlDecoder: Decoder[Category] = deriveConfiguredDecoder[Category]
+  implicit lazy val CategoryXmlEncoder: Encoder[Category] = deriveConfiguredEncoder[Category]
+}

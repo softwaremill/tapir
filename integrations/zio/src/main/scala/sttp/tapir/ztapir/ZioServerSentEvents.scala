@@ -1,5 +1,7 @@
 package sttp.tapir.ztapir
 
+import java.nio.charset.StandardCharsets
+
 import zio.stream.{Stream, ZPipeline}
 import sttp.model.sse.ServerSentEvent
 import zio.Chunk
@@ -10,7 +12,7 @@ object ZioServerSentEvents {
       .map(sse => {
         s"${sse.toString()}\n\n"
       })
-      .mapConcatChunk(s => Chunk.fromArray(s.getBytes("UTF-8")))
+      .mapConcatChunk(s => Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8)))
   }
 
   def parseBytesToSSE: Stream[Throwable, Byte] => Stream[Throwable, ServerSentEvent] = stream => {

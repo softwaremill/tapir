@@ -3,15 +3,28 @@ package sttp.tapir.server.netty.sync
 import org.slf4j.LoggerFactory
 import sttp.shared.Identity
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
-import sttp.tapir.server.netty.internal.NettyDefaults
+import sttp.tapir.server.interceptor.log.DefaultServerLog
+import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.{Defaults, TapirFile}
 
 case class NettySyncServerOptions(
     interceptors: List[Interceptor[Identity]],
+    /** Used to create temporary files to store file bodies, as well as small multipart attributes (smaller than `multipartMinSizeForDisk`)
+      * that are specified to be stored as a file.
+      */
     createFile: ServerRequest => TapirFile,
-    deleteFile: TapirFile => Unit
+    deleteFile: TapirFile => Unit,
+    /** Used to configure Netty's multipart parser. Large parts and file uploads will be stored in this directory. */
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long],
+    /** When a request is cancelled (due to client closing the connection or a timeout), should the server's logic be interrupted (using
+      * `Thread.interrupt`)? This might be useful for long-running requests. However, if all requests are fast, it might have a net negative
+      * impact: for example, when a database query is interrupted, the db connection becomes marked as broken, and will have to be
+      * re-established.
+      */
+    interruptServerLogicWhenRequestCancelled: Boolean
 ):
   def prependInterceptor(i: Interceptor[Identity]): NettySyncServerOptions = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[Identity]): NettySyncServerOptions = copy(interceptors = interceptors :+ i)
@@ -29,20 +42,21 @@ object NettySyncServerOptions:
     NettySyncServerOptions(
       interceptors,
       _ => Defaults.createTempFile(),
-      Defaults.deleteFile()
+      Defaults.deleteFile(),
+      None,
+      None,
+      interruptServerLogicWhenRequestCancelled = true
     )
 
-  /** Customise the interceptors that are being used when exposing endpoints as a server. By default uses TCP sockets (the most common
-    * case), but this can be later customised using [[NettySyncServerOptions#nettyOptions()]].
-    */
+  /** Customise the interceptors that are being used when exposing endpoints as a server. */
   def customiseInterceptors: CustomiseInterceptors[Identity, NettySyncServerOptions] =
     CustomiseInterceptors(
       createOptions = (ci: CustomiseInterceptors[Identity, NettySyncServerOptions]) => default(ci.interceptors)
-    ).serverLog(defaultServerLog)
+    ).serverLog(defaultServerLog).rejectHandler(DefaultRejectHandler.orNotFound)
 
   private val log = LoggerFactory.getLogger(getClass.getName)
 
-  lazy val defaultServerLog: ServerLog[Identity] =
+  lazy val defaultServerLog: DefaultServerLog[Identity] =
     DefaultServerLog[Identity](
       doLogWhenReceived = debugLog(_, None),
       doLogWhenHandled = debugLog,

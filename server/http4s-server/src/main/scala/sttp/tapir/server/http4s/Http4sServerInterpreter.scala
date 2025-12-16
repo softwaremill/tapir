@@ -52,6 +52,16 @@ trait Http4sServerInterpreter[F[_]] {
   def toContextRoutes[T: ClassTag](ses: List[ServerEndpoint[Fs2Streams[F] with Context[T], F]]): ContextRoutes[T, F] =
     toContextRoutes(contextAttributeKey[T], ses, None)
 
+  def toContextWebSocketRoutes[T: ClassTag](
+      se: ServerEndpoint[Fs2Streams[F] with Context[T] with WebSockets, F]
+  ): WebSocketBuilder2[F] => ContextRoutes[T, F] =
+    wsb => toContextRoutes(contextAttributeKey[T], List(se), Some(wsb))
+
+  def toContextWebSocketRoutes[T: ClassTag](
+      ses: List[ServerEndpoint[Fs2Streams[F] with Context[T] with WebSockets, F]]
+  ): WebSocketBuilder2[F] => ContextRoutes[T, F] =
+    wsb => toContextRoutes(contextAttributeKey[T], ses, Some(wsb))
+
   private def createInterpreter[T](
       serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets with Context[T], F]]
   ): ServerInterpreter[Fs2Streams[F] with WebSockets with Context[T], F, Http4sResponseBody[F], Fs2Streams[F]] = {
@@ -73,8 +83,8 @@ trait Http4sServerInterpreter[F[_]] {
       webSocketBuilder: Option[WebSocketBuilder2[F]]
   ): OptionT[F, Response[F]] =
     OptionT(interpreter(serverRequest).flatMap {
-      case _: RequestResult.Failure         => none.pure[F]
-      case RequestResult.Response(response) => serverResponseToHttp4s(response, webSocketBuilder).map(_.some)
+      case _: RequestResult.Failure            => none.pure[F]
+      case RequestResult.Response(response, _) => serverResponseToHttp4s(response, webSocketBuilder).map(_.some)
     })
 
   private def toRoutes(
@@ -119,7 +129,7 @@ trait Http4sServerInterpreter[F[_]] {
         pipeF.flatMap { pipe =>
           webSocketBuilder match {
             case Some(wsb) => wsb.withHeaders(headers).build(pipe)
-            case None =>
+            case None      =>
               monad.error(
                 new Http4sInvalidWebSocketUse(
                   "Invalid usage of web socket endpoint without WebSocketBuilder2. " +

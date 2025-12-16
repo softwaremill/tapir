@@ -26,35 +26,34 @@ trait FinatraServerInterpreter extends Logging {
       finatraServerOptions.deleteFile
     )(FutureMonadError, new FinatraBodyListener[Future]())
 
-    val handler = {
-      request: Request =>
-        val serverRequest = new FinatraServerRequest(request)
+    val handler = { request: Request =>
+      val serverRequest = new FinatraServerRequest(request)
 
-        serverInterpreter(serverRequest).map {
-          case RequestResult.Failure(_) => Response(Status.NotFound)
-          case RequestResult.Response(response) =>
-            val status = Status(response.code.code)
-            val responseWithContent = response.body match {
-              case Some(fContent) =>
-                val response = fContent match {
-                  case FinatraContentBuf(buf) =>
-                    val r = Response(Version.Http11, status)
-                    r.content = buf
-                    r
-                  case FinatraContentReader(reader) => Response(Version.Http11, status, reader)
-                }
-                response
-              case None =>
-                Response(Version.Http11, status)
-            }
+      serverInterpreter(serverRequest).map {
+        case RequestResult.Failure(_)            => Response(Status.NotFound)
+        case RequestResult.Response(response, _) =>
+          val status = Status(response.code.code)
+          val responseWithContent = response.body match {
+            case Some(fContent) =>
+              val response = fContent match {
+                case FinatraContentBuf(buf) =>
+                  val r = Response(Version.Http11, status)
+                  r.content = buf
+                  r
+                case FinatraContentReader(reader) => Response(Version.Http11, status, reader)
+              }
+              response
+            case None =>
+              Response(Version.Http11, status)
+          }
 
-            response.headers.foreach(header => responseWithContent.headerMap.add(header.name, header.value))
+          response.headers.foreach(header => responseWithContent.headerMap.add(header.name, header.value))
 
-            // If there's a content-type header in headers, override the content-type.
-            response.contentType.foreach(ct => responseWithContent.contentType = ct)
+          // If there's a content-type header in headers, override the content-type.
+          response.contentType.foreach(ct => responseWithContent.contentType = ct)
 
-            responseWithContent
-        }
+          responseWithContent
+      }
     }
 
     FinatraRoute(handler, httpMethod(se.endpoint), path(se.securityInput.and(se.input)))

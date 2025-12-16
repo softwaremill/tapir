@@ -25,6 +25,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
 import java.nio.charset.StandardCharsets
 import java.time._
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Success, Try}
@@ -92,13 +93,13 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     waitReceiveMessage(statsdServer)
 
     // then
-    statsdServer.getReceivedMessages should contain("""tapir.request_active.count:1|c|#method:GET,path:/person""")
+    statsdServer.getReceivedMessages should contain("""tapir.request_active.count:1|c|#method:GET""")
 
     statsdServer.clear()
 
     ScalaFutures.whenReady(response, Timeout(Span(3, Seconds))) { _ =>
       waitReceiveMessage(statsdServer)
-      statsdServer.getReceivedMessages should contain("""tapir.request_active.count:-1|c|#method:GET,path:/person""")
+      statsdServer.getReceivedMessages should contain("""tapir.request_active.count:-1|c|#method:GET""")
     }
   }
 
@@ -127,11 +128,11 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     interpreter.apply(PersonsApi.request("Mike"))
     interpreter.apply(PersonsApi.request(""))
 
-    waitReceiveMessage(statsdServer)
+    waitReceiveMessage(statsdServer, "4xx")
 
     // then
-    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:2xx,method:GET,path:/person""")
-    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:4xx,method:GET,path:/person""")
+    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:2xx,path:/person,method:GET""")
+    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:4xx,path:/person,method:GET""")
   }
 
   "default metrics" should "collect requests duration" taggedAs Retryable in {
@@ -173,36 +174,37 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     interpret(200, 2000)
     interpret(300, 3000)
 
-    waitReceiveMessage(statsdServer)
+    waitReceiveMessage(statsdServer, "0.3")
 
     // then
     // headers
+
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.1|h|#phase:headers,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:0.1|h|#phase:headers,status:2xx,path:/person,method:GET"""
     )
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.2|h|#phase:headers,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:0.2|h|#phase:headers,status:2xx,path:/person,method:GET"""
     )
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.3|h|#phase:headers,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:0.3|h|#phase:headers,status:2xx,path:/person,method:GET"""
     )
 
     // body
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:1.1|h|#phase:body,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:1.1|h|#phase:body,status:2xx,path:/person,method:GET"""
     )
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:2.2|h|#phase:body,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:2.2|h|#phase:body,status:2xx,path:/person,method:GET"""
     )
     statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:3.3|h|#phase:body,status:2xx,method:GET,path:/person"""
+      """tapir.request_duration_seconds:3.3|h|#phase:body,status:2xx,path:/person,method:GET"""
     )
   }
 
   "default metrics" should "customize labels" taggedAs Retryable in {
     // given
     val serverEp = PersonsApi().serverEp
-    val labels = MetricLabels(forRequest = List("key" -> { case (_, _) => "value" }), forResponse = Nil)
+    val labels = MetricLabels(forRequest = List("key" -> { case _ => "value" }), forResponse = Nil, forEndpoint = Nil)
     val client =
       new NonBlockingStatsDClientBuilder()
         .hostname("localhost")
@@ -252,14 +254,22 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     waitReceiveMessage(statsdServer)
 
     // then
-    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:1|c|#status:5xx,method:GET,path:/person""")
+    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:1|c|#status:5xx,path:/person,method:GET""")
   }
 }
 
 object DatadogMetricsTest {
-  private def waitReceiveMessage(statsdServer: MockStatsDServer): Unit = {
-    while (statsdServer.getReceivedMessages.count(m => !m.startsWith("datadog")) == 0) {
+  val Tries = 5
+
+  @tailrec
+  private def waitReceiveMessage(statsdServer: MockStatsDServer, expected: String = "method", tries: Int = Tries): Unit = {
+    if (
+      statsdServer.getReceivedMessages
+        .count(m => !m.startsWith("datadog")) == 0 || (tries > 0 && statsdServer.getReceivedMessages
+        .count(m => m.startsWith(expected)) > 0)
+    ) {
       Thread.sleep(100)
+      waitReceiveMessage(statsdServer, expected, tries - 1)
     }
   }
 

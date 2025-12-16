@@ -1,6 +1,5 @@
 package sttp.tapir.server.nima
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import io.helidon.webserver.WebServer
 import io.helidon.webserver.http.{Handler, HttpRouting}
@@ -19,15 +18,14 @@ class NimaTestServerInterpreter() extends TestServerInterpreter[Identity, Any, N
   }
 
   override def server(
-      nimaRoutes: NonEmptyList[Handler],
+      route: Handler,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
     val bind = IO.blocking {
       WebServer
         .builder()
         .routing { (builder: HttpRouting.Builder) =>
-          nimaRoutes.iterator
-            .foreach(nimaHandler => builder.any(nimaHandler))
+          builder.any(route): Unit
         }
         .shutdownGracePeriod(Duration.ofMillis(gracefulShutdownTimeout.map(_.toMillis).getOrElse(0L)))
         .build()

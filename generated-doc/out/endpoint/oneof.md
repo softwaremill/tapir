@@ -7,11 +7,10 @@ There are two kind of one-of inputs/outputs:
 
 ```{note}
 `oneOf` and `oneOfBody` outputs are not related to `oneOf:` schemas when 
-[generating](https://tapir.softwaremill.com/en/latest/docs/openapi.html) OpenAPI documentation.
+[generating](../docs/openapi.md) OpenAPI documentation.
 
 Such schemas are generated for coproducts - e.g. `sealed trait` families - given an appropriate codec. See the
-documentation on [coproducts](https://tapir.softwaremill.com/en/latest/endpoint/schemas.html#sealed-traits-coproducts) 
-for details.
+documentation on [coproducts](schemas.md#sealed-traits--coproducts) for details.
 ```
 
 ## `oneOf` outputs
@@ -100,7 +99,7 @@ val baseEndpoint = endpoint.errorOut(
 // error:
 // Type scala.util.Left[repl.MdocSession.MdocApp.ServerError, repl.MdocSession.MdocApp.UserError], AppliedType(TypeRef(ThisType(TypeRef(NoPrefix,module class util)),class Left),List(TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),class ServerError), TypeRef(ThisType(TypeRef(ThisType(TypeRef(ThisType(TypeRef(NoPrefix,module class repl)),module class MdocSession$)),module class MdocApp$)),trait UserError))) is not the same as its erasure. Using a runtime-class-based check it won't be possible to verify that the input matches the desired type. Use other methods to match the input to the appropriate variant instead.
 //     oneOfVariant(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
-//                                                                                                                      ^
+//                                                                                                                     ^
 ```
 
 The solution is therefore to handwrite a function checking that a value (of type `Any`) is of the correct type:
@@ -152,9 +151,9 @@ There are two methods which allows working with multiple or single specific valu
 Error outputs can be extended with new variants, which is especially useful for partial server endpoints, when the
 [security logic](../server/logic.md) is already provided. There are some specialised functions for this purpose.
 
-The `.errorOutVariant` functions allow appending an alternative error outputs; the result is typed as the common supertype 
-of the existing and new outputs; hence usually this should be different from `Any`. At runtime, a class check is performed
-to choose the variant to use.
+The `.errorOutVariant` and `.errorOutVariants` functions allow appending alternative error outputs; the result is typed
+as the common supertype of the existing and new outputs; hence usually this should be different from `Any`. At runtime,
+a class check is performed to choose the variant to use.
 
 The `.errorOutVariantPrepend` function allows prepending an error out variant, leaving the current error output as
 a default. This is useful e.g. when providing a more specific error output, than the current one. For example:

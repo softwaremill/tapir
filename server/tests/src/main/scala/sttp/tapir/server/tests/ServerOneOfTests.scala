@@ -4,7 +4,7 @@ import cats.implicits._
 import io.circe.generic.auto._
 import org.scalatest.EitherValues._
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir.generic.auto._

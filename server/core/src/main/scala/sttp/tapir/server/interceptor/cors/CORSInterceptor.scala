@@ -9,6 +9,7 @@ import sttp.tapir.server.interceptor.RequestResult.Response
 import sttp.tapir.server.interceptor.cors.CORSConfig._
 import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, RequestResult, Responder}
 import sttp.tapir.server.model.ServerResponse
+import sttp.tapir.server.interceptor.ResponseSource
 
 class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestInterceptor[F] {
   override def apply[R, B](
@@ -43,7 +44,9 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
             ResponseHeaders.varyPreflight
           ).flatten
 
-          me.unit(Response(ServerResponse(config.preflightResponseStatusCode, responseHeaders, None, None)))
+          me.unit(
+            Response(ServerResponse(config.preflightResponseStatusCode, responseHeaders, None, None), ResponseSource.RequestHandler)
+          )
         }
 
         def nonPreflight: F[RequestResult[B]] = {
@@ -55,8 +58,8 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
           ).flatten
 
           next(request, endpoints).map {
-            case Response(serverResponse) => Response(serverResponse.addHeaders(responseHeaders))
-            case failure                  => failure
+            case Response(serverResponse, source) => Response(serverResponse.addHeaders(responseHeaders), source)
+            case failure                          => failure
           }
         }
 
@@ -86,7 +89,7 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
     private val ExposeAllHeaders = Header.accessControlExposeHeaders(Wildcard)
 
     def allowOrigin(origin: String): Option[Header] = config.allowedOrigin match {
-      case AllowedOrigin.All => Some(AllowAnyOrigin)
+      case AllowedOrigin.All                                                                      => Some(AllowAnyOrigin)
       case AllowedOrigin.Single(allowedOrigin) if origin.equalsIgnoreCase(allowedOrigin.toString) =>
         Some(Header.accessControlAllowOrigin(origin))
       case AllowedOrigin.Matching(predicate) if predicate(origin) =>

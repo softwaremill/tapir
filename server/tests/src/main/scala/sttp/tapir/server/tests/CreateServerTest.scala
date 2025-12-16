@@ -1,13 +1,11 @@
 package sttp.tapir.server.tests
 
-import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.implicits._
 import org.scalatest.Assertion
-import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client4._
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
@@ -24,14 +22,14 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
       e: PublicEndpoint[I, E, O, R],
       testNameSuffix: String = "",
       interceptors: Interceptors = identity
-  )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
+  )(fn: I => F[Either[E, O]])(runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]): Test
 
   def testServerLogic(
       e: ServerEndpoint[R, F],
       testNameSuffix: String = "",
       interceptors: Interceptors = identity
   )(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test
 
   def testServerLogicWithStop(
@@ -40,23 +38,23 @@ trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
       interceptors: Interceptors = identity,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(
-      runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+      runTest: KillSwitch => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test
 
-  def testServer(name: String, rs: => NonEmptyList[ROUTE])(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  def testServer(name: String, r: => ROUTE)(
+      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test
 
   /** Override for a server to allow running tests which have access to a stop() effect, allowing shutting down the server within the test.
     * By default, this method just uses a no-op IO.unit.
     */
-  def testServerWithStop(name: String, rs: => NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration])(
-      runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  def testServerWithStop(name: String, r: => ROUTE, gracefulShutdownTimeout: Option[FiniteDuration])(
+      runTest: KillSwitch => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test
 }
 
 class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
-    backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
+    backend: WebSocketStreamBackend[IO, Fs2Streams[IO]],
     interpreter: TestServerInterpreter[F, R, OPTIONS, ROUTE]
 ) extends CreateServerTest[F, R, OPTIONS, ROUTE] {
 
@@ -68,10 +66,10 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
       interceptors: Interceptors = identity
   )(
       fn: I => F[Either[E, O]]
-  )(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
+  )(runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(interpreter.route(e.serverLogic(fn), interceptors))
+      interpreter.route(e.serverLogic(fn), interceptors)
     )(runTest)
   }
 
@@ -81,11 +79,11 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
       interceptors: Interceptors = identity,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(
-      runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+      runTest: IO[Unit] => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     testServerWithStop(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(interpreter.route(e, interceptors)),
+      interpreter.route(e, interceptors),
       gracefulShutdownTimeout
     )(runTest)
   }
@@ -94,19 +92,19 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
       testNameSuffix: String = "",
       interceptors: Interceptors = identity
   )(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(interpreter.route(e, interceptors))
+      interpreter.route(e, interceptors)
     )(runTest)
   }
 
-  override def testServerWithStop(name: String, rs: => NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration])(
-      runTest: IO[Unit] => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  override def testServerWithStop(name: String, r: => ROUTE, gracefulShutdownTimeout: Option[FiniteDuration])(
+      runTest: IO[Unit] => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     val resources = for {
-      portAndStop <- interpreter.serverWithStop(rs, gracefulShutdownTimeout).onError { case e: Exception =>
+      portAndStop <- interpreter.serverWithStop(r, gracefulShutdownTimeout).onError { case e: Exception =>
         Resource.eval(IO(logger.error(s"Starting server failed because of ${e.getMessage}")))
       }
       _ <- Resource.eval(IO(logger.info(s"Bound server on port: ${portAndStop._1}")))
@@ -120,11 +118,11 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
         .unsafeToFuture()
     )
   }
-  override def testServer(name: String, rs: => NonEmptyList[ROUTE])(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  override def testServer(name: String, r: => ROUTE)(
+      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     val resources = for {
-      port <- interpreter.server(rs).onError { case e: Exception =>
+      port <- interpreter.server(r).onError { case e: Exception =>
         Resource.eval(IO(logger.error(s"Starting server failed because of ${e.getMessage}")))
       }
       _ <- Resource.eval(IO(logger.info(s"Bound server on port: $port")))
@@ -133,7 +131,8 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
     Test(name)(
       resources
         .use { port =>
-          runTest(backend, uri"http://localhost:$port").guarantee(IO(logger.info(s"Tests completed on port $port")))
+          runTest(backend, uri"http://localhost:$port")
+            .guaranteeCase(exitCase => IO(logger.info(s"Test on port $port: ${exitCase.getClass.getSimpleName}")))
         }
         .unsafeToFuture()
     )

@@ -26,8 +26,7 @@ paths:
         '200':
           description: ''
         '400':
-          description: 'Invalid value for: query parameter foo, Invalid value for:
-                        query parameter bar'
+          description: 'Invalid value for: query parameter bar'
           content:
             text/plain:
               schema:

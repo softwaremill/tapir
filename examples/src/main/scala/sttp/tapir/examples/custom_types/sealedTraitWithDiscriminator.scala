@@ -1,9 +1,9 @@
 // {cat=Custom types; effects=Direct; server=Netty; JSON=circe; docs=Swagger UI}: Mapping a sealed trait hierarchy to JSON using a discriminator
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.2
 
 package sttp.tapir.examples.custom_types
 
@@ -53,7 +53,7 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
     println(s"Go to: http://${binding.hostName}:${binding.port}/docs")
     println("Press any key to exit ...")
-    scala.io.StdIn.readLine()
+    val _ = scala.io.StdIn.readLine()
 
     binding.stop()
   }

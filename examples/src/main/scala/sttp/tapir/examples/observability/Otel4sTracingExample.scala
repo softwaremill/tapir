@@ -1,23 +1,25 @@
 // {cat=Observability; effects=cats-effect; server=Netty; json=circe}: Otel4s collecting traces
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.11
-//> using dep "org.typelevel::otel4s-oteljava:0.11.2"
-//> using dep "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.45.0"
-//> using dep org.slf4j:slf4j-api:2.0.16
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.20
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.20
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.20
+//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-otel4s-tracing:1.13.2
+//> using dep "org.typelevel::otel4s-oteljava:0.12.0-RC3"
+//> using dep "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.47.0"
+//> using dep ch.qos.logback:logback-classic:1.5.17
 
 package sttp.tapir.examples.observability
 
 import cats.effect
-import cats.effect.std.{Console, Random}
+import cats.effect.std.{Console, Dispatcher, Random}
 import cats.effect.{Async, IO, IOApp}
 import io.circe.generic.auto.*
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.jsonBody
-import sttp.tapir.server.netty.cats.NettyCatsServer
+import sttp.tapir.server.netty.cats.{NettyCatsServer, NettyCatsServerOptions}
+import sttp.tapir.server.tracing.otel4s.Otel4sTracing
 import org.slf4j.{Logger, LoggerFactory}
 import org.typelevel.otel4s.Attribute
 import org.typelevel.otel4s.trace.Tracer
@@ -52,9 +54,16 @@ object Otel4sTracingExample extends IOApp.Simple:
         .flatMap { case given Tracer[IO] => server(HttpApi[IO](Service[IO])) }
     }
 
-  private def server(httpApi: HttpApi[IO]): IO[Unit] =
-    NettyCatsServer
-      .io()
+  private def server(httpApi: HttpApi[IO])(using tracer: Tracer[IO]): IO[Unit] =
+    Dispatcher
+      .parallel[IO]
+      .map(dispatcher =>
+        NettyCatsServer(
+          NettyCatsServerOptions
+            .default[IO](dispatcher)
+            .prependInterceptor(Otel4sTracing(tracer))
+        )
+      )
       .use { server =>
         for {
           bind <- server

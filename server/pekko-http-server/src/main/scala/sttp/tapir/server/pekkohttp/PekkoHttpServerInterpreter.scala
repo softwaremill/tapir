@@ -65,8 +65,8 @@ trait PekkoHttpServerInterpreter {
         extractRequestContext { ctx =>
           val serverRequest = PekkoServerRequest(ctx)
           onSuccess(interpreter(serverRequest)) {
-            case RequestResult.Failure(_)         => reject
-            case RequestResult.Response(response) => serverResponseToPekko(response, serverRequest.method)
+            case RequestResult.Failure(_)            => reject
+            case RequestResult.Response(response, _) => serverResponseToPekko(response, serverRequest.method)
           }
         }
       }
@@ -74,7 +74,9 @@ trait PekkoHttpServerInterpreter {
   }
 
   private def serverResponseToPekko(response: ServerResponse[PekkoResponseBody], requestMethod: Method): Route = {
-    val statusCode = StatusCodes.getForKey(response.code.code).getOrElse(StatusCodes.custom(response.code.code, ""))
+    val statusCode = StatusCodes
+      .getForKey(response.code.code)
+      .getOrElse(StatusCodes.custom(response.code.code, "", "", 200 to 299 contains response.code.code, true))
     val pekkoHeaders = parseHeadersOrThrowWithoutContentHeaders(response)
 
     response.body match {

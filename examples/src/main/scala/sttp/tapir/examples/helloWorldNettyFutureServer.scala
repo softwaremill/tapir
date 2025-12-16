@@ -1,15 +1,15 @@
 // {cat=Hello, World!; effects=Future; server=Netty}: Exposing an endpoint using the Netty server (Future variant)
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.11
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.13.2
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 //> using dep ch.qos.logback:logback-classic:1.5.8
 
 package sttp.tapir.examples
 
-import sttp.client3.{HttpURLConnectionBackend, SttpBackend, UriContext, asStringAlways, basicRequest}
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
-import sttp.shared.Identity
 import sttp.tapir.server.netty.{NettyFutureServer, NettyFutureServerBinding}
 import sttp.tapir.*
 
@@ -45,7 +45,7 @@ import scala.concurrent.{Await, Future}
   val host = serverBinding.hostName
   println(s"Server started at port = ${serverBinding.port}")
 
-  val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+  val backend: SyncBackend = HttpClientSyncBackend()
   val badUrl = uri"http://$host:$port/bad_url"
   assert(basicRequest.response(asStringAlways).get(badUrl).send(backend).code == StatusCode(404))
 

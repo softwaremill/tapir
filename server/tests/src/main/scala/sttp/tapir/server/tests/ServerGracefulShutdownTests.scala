@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.syntax.all._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.monad.syntax._

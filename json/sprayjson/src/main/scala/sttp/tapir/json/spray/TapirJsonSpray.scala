@@ -23,7 +23,7 @@ trait TapirJsonSpray {
   implicit def jsonFormatCodec[T: JsonFormat: Schema]: JsonCodec[T] =
     Codec.json { s =>
       Try(s.parseJson.convertTo[T]) match {
-        case Success(v) => Value(v)
+        case Success(v)                                                => Value(v)
         case Failure(e @ DeserializationException(msg, _, fieldNames)) =>
           val path = fieldNames.map(FieldName.apply)
           Error(s, JsonDecodeException(List(JsonError(msg, path)), e))

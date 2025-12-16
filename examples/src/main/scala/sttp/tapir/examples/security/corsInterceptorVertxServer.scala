@@ -1,13 +1,14 @@
 // {cat=Security; effects=Future; server=Vert.x}: CORS interceptor
 
-//> using dep com.softwaremill.sttp.tapir::tapir-vertx-server:1.11.11
-//> using dep com.softwaremill.sttp.client3::core:3.10.2
+//> using dep com.softwaremill.sttp.tapir::tapir-vertx-server:1.13.2
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.security
 
 import io.vertx.core.Vertx
 import io.vertx.ext.web.*
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.headers.Origin
 import sttp.model.{Header, HeaderNames, Method, StatusCode}
 import sttp.tapir.*
@@ -41,7 +42,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
     .options
 
   val attach = VertxFutureServerInterpreter(corsInterceptor).route(myEndpoint)
-  attach(router)
+  val _ = attach(router)
 
   // starting the server
   val bindAndCheck = server.requestHandler(router).listen(9000).asScala.map { binding =>
@@ -94,4 +95,4 @@ import scala.concurrent.{Await, ExecutionContext, Future}
     binding
   }
 
-  Await.result(bindAndCheck.flatMap(_.close().asScala), 1.minute)
+  val _ = Await.result(bindAndCheck.flatMap(_.close().asScala), 1.minute)

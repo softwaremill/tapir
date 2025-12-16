@@ -1,23 +1,23 @@
 // {cat=Error handling; effects=Future; server=Pekko HTTP}: Customising errors that are reported on decode failures (e.g. invalid or missing query parameter)
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.13.2
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.errors
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Route
-import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.pekkohttp.{PekkoHttpServerInterpreter, PekkoHttpServerOptions}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.*
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.monad.FutureMonad
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 
@@ -54,7 +54,7 @@ import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, Defaul
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(amountRoute).map { binding =>
     // testing
-    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SyncBackend = HttpClientSyncBackend()
 
     // correct request, parameter parses as an int, no errors
     val result1: Either[String, String] = basicRequest.get(uri"http://localhost:8080/?amount=10").send(backend).body

@@ -1,10 +1,10 @@
 // {cat=Observability; effects=Future; server=Netty; json=circe}: Reporting Prometheus metrics
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-prometheus-metrics:1.11.11
-//> using dep org.slf4j:slf4j-api:2.0.13
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-prometheus-metrics:1.13.2
+//> using dep ch.qos.logback:logback-classic:1.5.17
 
 package sttp.tapir.examples.observability
 
@@ -52,7 +52,7 @@ import scala.io.StdIn
     )
 
   val program = for {
-    binding <- NettyFutureServer().port(8080).addEndpoints(endpoints, serverOptions).start()
+    binding <- NettyFutureServer(serverOptions).port(8080).addEndpoints(endpoints).start()
     _ <- Future {
       logger.info(s"""Server started. Try it with: curl -X POST localhost:8080/person -d '{"name": "Jacob"}'""")
       logger.info("The metrics are available at http://localhost:8080/metrics")

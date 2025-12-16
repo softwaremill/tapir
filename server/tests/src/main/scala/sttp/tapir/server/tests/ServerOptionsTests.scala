@@ -1,9 +1,8 @@
 package sttp.tapir.server.tests
 
-import cats.data.NonEmptyList
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir._
@@ -27,15 +26,13 @@ class ServerOptionsTests[F[_], OPTIONS, ROUTE](
     // we need at least two endpoints for the reject interceptor to be enabled
     testServer(
       "returns tapir-generated 404 when defaultHandlers(notFoundWhenRejected = true) is used",
-      NonEmptyList.of(
-        route(
-          List(
-            endpoint.in("p1").out(stringBody).serverLogic(_ => pureResult(s"ok1".asRight[Unit])),
-            endpoint.in("p2").out(stringBody).serverLogic(_ => pureResult(s"ok2".asRight[Unit]))
-          ),
-          (_: CustomiseInterceptors[F, OPTIONS])
-            .defaultHandlers(e => ValuedEndpointOutput(stringBody, "ERROR: " + e), notFoundWhenRejected = true)
-        )
+      route(
+        List(
+          endpoint.in("p1").out(stringBody).serverLogic(_ => pureResult(s"ok1".asRight[Unit])),
+          endpoint.in("p2").out(stringBody).serverLogic(_ => pureResult(s"ok2".asRight[Unit]))
+        ),
+        (_: CustomiseInterceptors[F, OPTIONS])
+          .defaultHandlers(e => ValuedEndpointOutput(stringBody, "ERROR: " + e), notFoundWhenRejected = true)
       )
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/incorrect").send(backend).map { response =>
@@ -72,21 +69,19 @@ class ServerOptionsTests[F[_], OPTIONS, ROUTE](
         .ignoreEndpoints(Seq(silentEndpoint1, silentEndpoint2))
       testServer(
         "Log events with provided functions, skipping certain endpoints",
-        NonEmptyList.of(
-          route(
-            List(
-              endpoint.get
-                .in("hello_2827")
-                .out(stringBody)
-                .serverLogic[F](_ => pureResult("result-hello".asRight[Unit])),
-              silentEndpoint1
-                .serverLogic[F](_ => pureResult("result-silent_hello".asRight[Unit])),
-              silentEndpoint2
-                .serverLogic[F](_ => m.error(new Exception("Boom!")))
-            ),
-            (_: CustomiseInterceptors[F, OPTIONS])
-              .serverLog(serverLog)
-          )
+        route(
+          List(
+            endpoint.get
+              .in("hello_2827")
+              .out(stringBody)
+              .serverLogic[F](_ => pureResult("result-hello".asRight[Unit])),
+            silentEndpoint1
+              .serverLogic[F](_ => pureResult("result-silent_hello".asRight[Unit])),
+            silentEndpoint2
+              .serverLogic[F](_ => m.error(new Exception("Boom!")))
+          ),
+          (_: CustomiseInterceptors[F, OPTIONS])
+            .serverLog(serverLog)
         )
       ) { (backend, baseUri) =>
         basicStringRequest.get(uri"$baseUri/hello_2827").send(backend).map { _ =>

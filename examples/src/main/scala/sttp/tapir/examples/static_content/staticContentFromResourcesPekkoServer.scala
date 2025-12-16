@@ -1,8 +1,8 @@
 // {cat=Static content; effects=Future; server=Pekko HTTP}: Serving static files from resources
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-files:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.11
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-files:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.13.2
 
 package sttp.tapir.examples.static_content
 
@@ -31,8 +31,8 @@ import scala.io.StdIn
 
   // starting the server
   val bind = Http().newServerAt("localhost", 8080).bindFlow(route)
-  Await.result(bind, 1.minute)
+  val _ = Await.result(bind, 1.minute)
   println("Open: http://localhost:8080 and experiment with various paths.")
   println("Press any key to exit ...")
-  StdIn.readLine()
-  Await.result(actorSystem.terminate(), 1.minute)
+  val _ = StdIn.readLine()
+  val _ = Await.result(actorSystem.terminate(), 1.minute)

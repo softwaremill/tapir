@@ -5,8 +5,8 @@ import cats.effect.{Async, Sync}
 import org.slf4j.LoggerFactory
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.DefaultServerLog
+import sttp.tapir.server.interceptor.reject.DefaultRejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
-import sttp.tapir.server.netty.NettyFutureServerOptions.getClass
 import sttp.tapir.server.netty.internal.NettyDefaults
 import sttp.tapir.{Defaults, TapirFile}
 
@@ -45,7 +45,7 @@ object NettyCatsServerOptions {
   ): CustomiseInterceptors[F, NettyCatsServerOptions[F]] =
     CustomiseInterceptors(
       createOptions = (ci: CustomiseInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
-    ).serverLog(defaultServerLog)
+    ).serverLog(defaultServerLog).rejectHandler(DefaultRejectHandler.orNotFound[F])
 
   private val log = LoggerFactory.getLogger(classOf[NettyCatsServerInterpreter[cats.Id]].getName)
 

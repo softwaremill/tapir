@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /api1:
+    get:
+      operationId: getApi1
+      responses:
+        '200':
+          description: ''
+      security:
+        - sec1: []
+        - sec2: []
+  /api2:
+    get:
+      operationId: getApi2
+      responses:
+        '200':
+          description: ''
+      security:
+        - {}
+        - sec1: []
+        - sec2: []
+components:
+  securitySchemes:
+    sec1:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://example.com/token
+          refreshUrl: https://example.com/token/refresh
+          scopes:
+            client: scope for clients
+            admin: administration scope
+    sec2:
+      type: apiKey
+      name: apikey2
+      in: header

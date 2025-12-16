@@ -280,7 +280,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
             field(FieldName("name"), Schema(SString())),
             field(
               FieldName("who_am_i"),
-              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Organization"))
+              Schema(SString()).encodedDiscriminatorValue("Organization")
             )
           )
         ),
@@ -293,7 +293,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
             field(FieldName("age"), Schema(SInteger(), format = Some("int32"))),
             field(
               FieldName("who_am_i"),
-              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Person"))
+              Schema(SString()).encodedDiscriminatorValue("Person")
             )
           )
         ),
@@ -304,7 +304,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
           List(
             field(
               FieldName("who_am_i"),
-              Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("UnknownEntity"))
+              Schema(SString()).encodedDiscriminatorValue("UnknownEntity")
             )
           )
         ),
@@ -437,7 +437,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
           field(FieldName("catFood"), stringSchema.copy(description = Some("cat food"))),
           field(
             FieldName("$type"),
-            Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Cat"))
+            Schema(SString()).encodedDiscriminatorValue("Cat")
           )
         )
       ),
@@ -451,7 +451,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
           field(FieldName("dogFood"), stringSchema.copy(description = Some("dog food"))),
           field(
             FieldName("$type"),
-            Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Dog"))
+            Schema(SString()).encodedDiscriminatorValue("Dog")
           )
         )
       ),
@@ -465,7 +465,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
           field(FieldName("likesNuts"), booleanSchema.copy(description = Some("likes nuts?"))),
           field(
             FieldName("$type"),
-            Schema(SString()).attribute(Schema.EncodedDiscriminatorValue.Attribute, Schema.EncodedDiscriminatorValue("Hamster"))
+            Schema(SString()).encodedDiscriminatorValue("Hamster")
           )
         )
       ),
@@ -505,7 +505,7 @@ object SchemaDerivationTest {
 
   // comparing recursive schemas without validators
   private[json] def removeValidators[T](s: Schema[T]): Schema[T] = (s.schemaType match {
-    case SProduct(fields) => s.copy(schemaType = SProduct(convertToSProductField(fields)))
+    case SProduct(fields)                         => s.copy(schemaType = SProduct(convertToSProductField(fields)))
     case st @ SCoproduct(subtypes, discriminator) =>
       s.copy(schemaType =
         SCoproduct(

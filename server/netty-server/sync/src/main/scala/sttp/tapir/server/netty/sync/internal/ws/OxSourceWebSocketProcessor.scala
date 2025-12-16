@@ -6,26 +6,24 @@ import org.reactivestreams.{Processor, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import ox.*
 import ox.channels.ChannelClosedException
+import ox.flow.Flow
 import sttp.tapir.model.WebSocketFrameDecodeFailure
 import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters.*
 import sttp.tapir.server.netty.sync.OxStreams
-import sttp.tapir.server.netty.sync.internal.ox.OxDispatcher
 import sttp.tapir.server.netty.sync.internal.reactivestreams.OxProcessor
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
 
 import java.io.IOException
 import java.util.concurrent.Semaphore
-
 import scala.concurrent.duration.*
-import ox.flow.Flow
 
 private[sync] object OxSourceWebSocketProcessor:
   private val logger = LoggerFactory.getLogger(getClass.getName)
   private val outgoingCloseAfterCloseTimeout = 1.second
 
   def apply[REQ, RESP](
-      oxDispatcher: OxDispatcher,
+      inScopeRunner: InScopeRunner,
       processingPipe: OxStreams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
       ctx: ChannelHandlerContext
@@ -67,12 +65,11 @@ private[sync] object OxSourceWebSocketProcessor:
         val _ = ctx.writeAndFlush(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE, "normal closure"))
         sub.onComplete()
     }
-    new OxProcessor(oxDispatcher, frame2FramePipe, wrapSubscriberWithNettyCallback)
+    new OxProcessor(inScopeRunner, frame2FramePipe, wrapSubscriberWithNettyCallback)
   end apply
 
   private def optionallyConcatenateFrames(doConcatenate: Boolean)(f: Flow[WebSocketFrame]): Flow[WebSocketFrame] =
-    if doConcatenate then f.mapStateful(() => None: Accumulator)(accumulateFrameState).collect { case Some(f: WebSocketFrame) => f }
-    else f
+    if doConcatenate then f.mapStateful(None: Accumulator)(accumulateFrameState).collect { case Some(f: WebSocketFrame) => f } else f
 
   private def takeUntilCloseFrame(passAlongCloseFrame: Boolean, closeSignal: Semaphore)(f: Flow[WebSocketFrame]): Flow[WebSocketFrame] =
     f.takeWhile(
@@ -99,7 +96,7 @@ private[sync] object OxSourceWebSocketProcessor:
               s"Make sure to complete the outgoing flow in your pipeline, once the incoming " +
               s"flow is done!"
           )
-        }
+        }.discard
 
         outgoing.runToEmit(emit)
       }

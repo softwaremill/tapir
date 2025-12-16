@@ -1,7 +1,7 @@
 package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.TestHelpers
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiResponse, OpenapiResponseContent}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiResponse, OpenapiResponseContent, OpenapiResponseDef}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaConstantString,
@@ -43,12 +43,12 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
 
     res shouldBe Right(
       Seq(
-        OpenapiResponse(
+        OpenapiResponseDef(
           "200",
           "",
           Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
         ),
-        OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
+        OpenapiResponseDef("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
       )
     )
 
@@ -141,12 +141,12 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
 
     res shouldBe Right(
       Seq(
-        OpenapiResponse(
+        OpenapiResponseDef(
           "200",
           "",
           Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/Book"), false)))
         ),
-        OpenapiResponse("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaUUID(false))))
+        OpenapiResponseDef("default", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaUUID(false))))
       )
     )
   }

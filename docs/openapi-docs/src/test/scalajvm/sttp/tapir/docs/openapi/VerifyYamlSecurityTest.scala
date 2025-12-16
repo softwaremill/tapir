@@ -63,6 +63,42 @@ class VerifyYamlSecurityTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should support optional oauth2 and other optional authentications as alternative authentication methods") {
+    val expectedYaml = load("security/expected_multiple_optional_auth_oauth2.yml")
+
+    val e1 = endpoint
+      .securityIn("api1")
+      .securityIn(
+        auth.oauth2
+          .clientCredentialsFlowOptional(
+            "https://example.com/token",
+            Some("https://example.com/token/refresh"),
+            ListMap("client" -> "scope for clients", "admin" -> "administration scope")
+          )
+          .securitySchemeName("sec1")
+      )
+      .securityIn(auth.apiKey(header[Option[String]]("apikey2")).securitySchemeName("sec2"))
+
+    val e2 = endpoint
+      .securityIn("api2")
+      .securityIn(
+        auth.oauth2
+          .clientCredentialsFlowOptional(
+            "https://example.com/token",
+            Some("https://example.com/token/refresh"),
+            ListMap("client" -> "scope for clients", "admin" -> "administration scope")
+          )
+          .securitySchemeName("sec1")
+      )
+      .securityIn(auth.apiKey(header[Option[String]]("apikey2")).securitySchemeName("sec2"))
+      .securityIn(emptyAuth)
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2), Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should support groups of optional authentications") {
     val expectedYaml = load("security/expected_multiple_optional_grouped_auth.yml")
 

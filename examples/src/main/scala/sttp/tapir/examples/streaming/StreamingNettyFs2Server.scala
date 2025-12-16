@@ -1,8 +1,8 @@
 // {cat=Streaming; effects=cats-effect; server=Netty}: Stream response as an fs2 stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.11
-//> using dep com.softwaremill.sttp.client3::core:3.9.8
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.13.2
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.streaming
 
@@ -10,9 +10,9 @@ import cats.effect.{ExitCode, IO, IOApp}
 import cats.implicits.*
 import fs2.{Chunk, Stream}
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.HeaderNames
-import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.cats.{NettyCatsServer, NettyCatsServerBinding}
@@ -61,10 +61,9 @@ object StreamingNettyFs2Server extends IOApp:
 
         startServer
           .map { binding =>
-
             println(s"Server started at port = ${binding.port}")
 
-            val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
+            val backend: SyncBackend = HttpClientSyncBackend()
             val result: String =
               basicRequest.response(asStringAlways).get(uri"http://$declaredHost:$declaredPort/receive").send(backend).body
             println("Got result: " + result)

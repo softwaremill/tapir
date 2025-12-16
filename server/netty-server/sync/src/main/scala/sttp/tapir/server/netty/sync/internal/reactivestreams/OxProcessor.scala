@@ -4,18 +4,17 @@ import org.reactivestreams.{Processor, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import ox.*
 import ox.channels.*
+import ox.flow.Flow
 import sttp.tapir.server.netty.sync.OxStreams
-import sttp.tapir.server.netty.sync.internal.ox.OxDispatcher
 
 import scala.concurrent.duration.*
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, Future, Promise}
 import scala.util.control.NonFatal
-import ox.flow.Flow
 
 /** A reactive Processor, which is both a Publisher and a Subscriber
   *
-  * @param oxDispatcher
-  *   a dispatcher to which async tasks can be submitted (reading from a channel)
+  * @param inScopeRunner
+  *   a dispatcher to which async tasks can be submitted to be run with an Ox concurrency scope
   * @param pipeline
   *   user-defined processing pipeline expressed as an Ox Source => Source transformation
   * @param wrapSubscriber
@@ -23,7 +22,7 @@ import ox.flow.Flow
   *   handling. Can be just identity.
   */
 private[sync] class OxProcessor[A, B](
-    oxDispatcher: OxDispatcher,
+    inScopeRunner: InScopeRunner,
     pipeline: OxStreams.Pipe[A, B],
     wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B]
 ) extends Processor[A, B]:
@@ -33,7 +32,7 @@ private[sync] class OxProcessor[A, B](
   // An internal channel for holding incoming requests (`A`), will be wrapped with user's pipeline to produce responses (`B`)
   private val channel = Channel.buffered[A](1)
 
-  private val pipelineCancelationTimeout = 5.seconds
+  private val pipelineCancellationTimeout = 5.seconds
   @volatile private var pipelineForkFuture: Future[CancellableFork[Unit]] = _
 
   override def onError(reason: Throwable): Unit =
@@ -46,7 +45,7 @@ private[sync] class OxProcessor[A, B](
     if a == null then throw new NullPointerException("Element cannot be null") // Rule 2.13
     else
       channel.sendOrClosed(a) match
-        case () => ()
+        case ()               => ()
         case _: ChannelClosed =>
           cancelSubscription()
           onError(new IllegalStateException("onNext called when the channel is closed"))
@@ -62,34 +61,57 @@ private[sync] class OxProcessor[A, B](
     channel.doneOrClosed().discard
     cancelPipelineFork()
 
-  override def subscribe(subscriber: Subscriber[? >: B]): Unit =
+  override def subscribe(subscriber: Subscriber[? >: B]): Unit = {
     if subscriber == null then throw new NullPointerException("Subscriber cannot be null")
     val wrappedSubscriber = wrapSubscriber(subscriber)
-    pipelineForkFuture = oxDispatcher.runAsync {
+
+    def runPipeline(): Unit = unsupervised {
       val outgoingResponses: Source[B] = pipeline(Flow.fromSource(channel).tap(_ => requestsSubscription.request(1))).runToChannel()
       val channelSubscription = new ChannelSubscription(wrappedSubscriber, outgoingResponses)
       subscriber.onSubscribe(channelSubscription)
       channelSubscription.runBlocking() // run the main loop which reads from the channel if there's demand
-    } { error =>
-      wrappedSubscriber.onError(error)
-      onError(error)
     }
+
+    // Used for capturing the fork that runs the pipeline, once it is created, so that it can be cancelled if needed.
+    // Normally should be completed almost immediately, after scheduling the function using the external runner.
+    val forkPromise = Promise[CancellableFork[Unit]]()
+
+    inScopeRunner.async {
+      forkPromise.success(forkCancellable {
+        try runPipeline()
+        catch {
+          case NonFatal(e) =>
+            wrappedSubscriber.onError(e)
+            onError(e)
+        }
+      })
+    }
+
+    pipelineForkFuture = forkPromise.future
+  }
 
   private def cancelPipelineFork(): Unit =
     if (pipelineForkFuture != null) try {
-      val pipelineFork = Await.result(pipelineForkFuture, pipelineCancelationTimeout)
-      oxDispatcher.runAsync {
-        raceSuccess(
-          {
-            ox.sleep(pipelineCancelationTimeout)
-            logger.error(s"Pipeline fork cancelation did not complete in time ($pipelineCancelationTimeout).")
-          },
-          pipelineFork.cancel()
-        ) match {
-          case Left(NonFatal(e)) => logger.error("Error when canceling pipeline fork", e)
-          case _                 => ()
+      val pipelineFork = Await.result(pipelineForkFuture, pipelineCancellationTimeout)
+      inScopeRunner.async {
+        forkDiscard {
+          try {
+            raceSuccess(
+              {
+                ox.sleep(pipelineCancellationTimeout)
+                logger.error(s"Pipeline fork cancellation did not complete in time ($pipelineCancellationTimeout).")
+              },
+              pipelineFork.cancel()
+            ) match {
+              case Left(NonFatal(e)) => logger.error("Error when canceling pipeline fork", e)
+              case _                 => ()
+            }
+          } catch {
+            case NonFatal(e) =>
+              logger.error("Error when canceling pipeline fork", e)
+          }
         }
-      } { e => logger.error("Error when canceling pipeline fork", e) }.discard
+      }
     } catch case NonFatal(e) => logger.error("Error when waiting for pipeline fork to start", e)
 
   private def cancelSubscription() =

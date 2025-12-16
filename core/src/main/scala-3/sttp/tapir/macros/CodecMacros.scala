@@ -7,7 +7,7 @@ import sttp.tapir.internal.CodecValueClassMacro
 trait CodecMacros:
 
   /** Creates a codec for an enumeration, where the validator is derived using [[sttp.tapir.Validator.derivedEnumeration]]. This requires
-    * that all subtypes of the sealed hierarchy `T` must be `object`s.
+    * that all subtypes of the sealed hierarchy `T` must be `object` s.
     *
     * This method cannot be implicit, as there's no way to constraint the type `T` to be a sealed trait / class enumeration, so that this
     * would be invoked only when necessary.

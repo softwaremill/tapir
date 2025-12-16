@@ -106,10 +106,10 @@ val booksListingRoute: Route = PekkoHttpServerInterpreter()
 
 // Convert to sttp Request
 
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3.*
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] =
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]]] =
   SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
@@ -212,6 +212,7 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
    :caption: Client interpreters
 
    client/sttp
+   client/sttp4
    client/play
    client/http4s
 
@@ -245,6 +246,7 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
    other/grpc
    other/troubleshooting
    other/migrating
+   other/adr
    other/goals
    other/contributing
 

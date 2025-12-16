@@ -2,7 +2,7 @@ package sttp.tapir.server.tests
 
 import cats.implicits.catsSyntaxEitherId
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.model.headers.Origin
 import sttp.model.{Header, HeaderNames, Method, StatusCode, Uri}
 import sttp.monad.MonadError

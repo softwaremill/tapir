@@ -1,11 +1,11 @@
 package sttp.tapir.server.netty.sync
 
-import ox.*
-import internal.ox.OxDispatcher
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.unix.DomainSocketAddress
 import io.netty.channel.{Channel, EventLoopGroup}
 import io.netty.util.concurrent.DefaultEventExecutor
+import org.slf4j.LoggerFactory
+import ox.*
 import sttp.capabilities.WebSockets
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
@@ -16,37 +16,44 @@ import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{Executors, Future => JFuture}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
-import org.slf4j.LoggerFactory
-
-/** Unlike with most typical Tapir backends, adding endpoints doesn't immediatly convert them to a Route, because creating a Route requires
-  * providing an Ox concurrency scope. Instead, it stores Endpoints and defers route creation until server.start() is called. This internal
-  * [[NettySyncServerEndpointListOverriddenOptions]] is an intermediary helper type representing added endpoints, which have custom server
-  * options.
-  */
-private[sync] case class NettySyncServerEndpointListOverridenOptions(
-    ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
-    overridenOptions: NettySyncServerOptions
-)
+import java.util.concurrent.atomic.AtomicReference
 
 case class NettySyncServer(
-    endpoints: List[ServerEndpoint[OxStreams & WebSockets, Identity]],
-    endpointsWithOptions: List[NettySyncServerEndpointListOverridenOptions],
+    serverEndpoints: Vector[ServerEndpoint[OxStreams & WebSockets, Identity]],
+    otherRoutes: Vector[IdRoute],
     options: NettySyncServerOptions,
     config: NettyConfig
 ):
-  private val executor = Executors.newVirtualThreadPerTaskExecutor()
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
   def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Identity]): NettySyncServer = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Identity], overrideOptions: NettySyncServerOptions): NettySyncServer =
-    addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]]): NettySyncServer = copy(endpoints = endpoints ++ ses)
-  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]], overrideOptions: NettySyncServerOptions): NettySyncServer =
-    copy(endpointsWithOptions = endpointsWithOptions :+ NettySyncServerEndpointListOverridenOptions(ses, overrideOptions))
+  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]]): NettySyncServer =
+    copy(serverEndpoints = serverEndpoints ++ ses)
+
+  /** Adds a custom route to the server. When a request is received, it is first processed by routes generated from the defined endpoints
+    * (see [[addEndpoint]] and [[addEndpoints]] for the primary methods of defining server behavior). If none of these endpoints match the
+    * request, and the [[RejectHandler]] is configured to allow fallback handling (see below), the request will then be processed by the
+    * custom routes added using this method, in the order they were added.
+    *
+    * By default, the [[NettySyncServerOptions]] are configured to return a `404` response when no endpoints match a request. This behavior
+    * is controlled by the [[RejectHandler]]. If you intend to handle unmatched requests using custom routes, ensure that the
+    * [[RejectHandler]] is configured appropriately to allow such fallback handling.
+    */
+  def addRoute(r: IdRoute): NettySyncServer = copy(otherRoutes = otherRoutes :+ r)
+
+  /** Adds custom routes to the server. When a request is received, it is first processed by routes generated from the defined endpoints
+    * (see [[addEndpoint]] and [[addEndpoints]] for the primary methods of defining server behavior). If none of these endpoints match the
+    * request, and the [[RejectHandler]] is configured to allow fallback handling (see below), the request will then be processed by the
+    * custom routes added using this method, in the order they were added.
+    *
+    * By default, the [[NettySyncServerOptions]] are configured to return a `404` response when no endpoints match a request. This behavior
+    * is controlled by the [[RejectHandler]]. If you intend to handle unmatched requests using custom routes, ensure that the
+    * [[RejectHandler]] is configured appropriately to allow such fallback handling.
+    */
+  def addRoutes(r: Iterable[IdRoute]): NettySyncServer = copy(otherRoutes = otherRoutes ++ r)
 
   def options(o: NettySyncServerOptions): NettySyncServer = copy(options = o)
   def config(c: NettyConfig): NettySyncServer = copy(config = c)
@@ -71,7 +78,7 @@ case class NettySyncServer(
     *   server binding, to be used to control stopping of the server or obtaining metadata like port.
     */
   def start()(using Ox): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](None, OxDispatcher.create) match
+    startUsingSocketOverride[InetSocketAddress](None, inScopeRunner()) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop).tap: binding =>
           logger.info(s"Tapir Netty server started on ${binding.hostName}:${binding.port}")
@@ -85,43 +92,71 @@ case class NettySyncServer(
       never
     }
 
-  private[netty] def start(routes: List[Route[Identity]]): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](routes, None) match
-      case (socket, stop) =>
-        NettySyncServerBinding(socket, stop)
-
   def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
-    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), OxDispatcher.create) match
+    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), inScopeRunner()) match
       case (socket, stop) =>
         NettySyncDomainSocketBinding(socket, stop)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA], oxDispatcher: OxDispatcher): (SA, () => Unit) =
-    val routes = NettySyncServerInterpreter(options).toRoute(endpoints, oxDispatcher) :: endpointsWithOptions.map(e =>
-      NettySyncServerInterpreter(e.overridenOptions).toRoute(e.ses, oxDispatcher)
-    )
-    startUsingSocketOverride(routes, socketOverride)
+  private def startUsingSocketOverride[SA <: SocketAddress](
+      socketOverride: Option[SA],
+      inScopeRunner: InScopeRunner
+  ): (SA, () => Unit) =
+    val endpointRoute = serverEndpoints match {
+      case Vector() => Vector.empty
+      case _        => Vector(NettySyncServerInterpreter(options).toRoute(serverEndpoints.toList, inScopeRunner))
+    }
+    val allRoutes = endpointRoute ++ otherRoutes
+    val route = allRoutes match {
+      case Vector()  => Route.empty
+      case Vector(r) => r
+      case many      => Route.combine(many)
+    }
+    startUsingSocketOverride(route, socketOverride, inScopeRunner)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](routes: List[Route[Identity]], socketOverride: Option[SA]): (SA, () => Unit) =
+  private def startUsingSocketOverride[SA <: SocketAddress](
+      route: Route[Identity],
+      socketOverride: Option[SA],
+      inScopeRunner: InScopeRunner
+  ): (SA, () => Unit) =
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
-    val route = Route.combine(routes)
 
     def unsafeRunF(
         callToExecute: () => Identity[ServerResponse[NettyResponse]]
     ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
       val scalaPromise = Promise[ServerResponse[NettyResponse]]()
-      val jFuture: JFuture[?] = executor.submit(new Runnable {
-        override def run(): Unit = try {
-          val result = callToExecute()
-          scalaPromise.success(result)
-        } catch {
-          case NonFatal(e) => scalaPromise.failure(e)
-        }
-      })
+
+      // used to cancel the fork, possible states:
+      // - Cancelled: needed if cancellation happens after the fork starts, but before it is set in the atomic reference
+      // - CancellableFork: used when cancellation using interruption is enabled
+      // - None: means that the fork was not set yet
+      object Cancelled
+      val runningFork = new AtomicReference[None.type | CancellableFork[Unit] | Cancelled.type](None)
+      // #4747: we are creating forks using the concurrency scope within which the netty server is running
+      // however, this is called on a Netty-managed thread, hence we need to use the inScopeRunner
+      inScopeRunner.async {
+        def run(): Unit =
+          if runningFork.get() != Cancelled then
+            try scalaPromise.success(callToExecute())
+            catch case NonFatal(e) => scalaPromise.failure(e)
+
+        if options.interruptServerLogicWhenRequestCancelled then
+          val forked = forkCancellable(run())
+          // we only update the state if it's not cancelled already
+          runningFork.getAndAccumulate(forked, (cur, giv) => if cur != Cancelled then giv else cur) match {
+            case None                     => // common "happy path" case
+            case _: CancellableFork[Unit] => throw new IllegalStateException("Another fork was already set")
+            case Cancelled                => forked.cancelNow() // cancellation happened before the fork was set
+          }
+        else forkDiscard(run())
+      }
 
       (
         scalaPromise.future,
         () => {
-          jFuture.cancel(true)
+          runningFork.getAndSet(Cancelled) match {
+            case fork: CancellableFork[Unit] => fork.cancelNow()
+            case _                           => // skip - fork not yet set
+          }
           Future.unit
         }
       )
@@ -200,16 +235,16 @@ case class NettySyncServer(
       val _ = eventExecutor.shutdownGracefully().get()
 
 object NettySyncServer:
-  def apply(): NettySyncServer = NettySyncServer(List.empty, List.empty, NettySyncServerOptions.default, NettyConfig.default)
+  def apply(): NettySyncServer = NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, NettyConfig.default)
 
   def apply(serverOptions: NettySyncServerOptions): NettySyncServer =
-    NettySyncServer(List.empty, List.empty, serverOptions, NettyConfig.default)
+    NettySyncServer(Vector.empty, Vector.empty, serverOptions, NettyConfig.default)
 
   def apply(config: NettyConfig): NettySyncServer =
-    NettySyncServer(List.empty, List.empty, NettySyncServerOptions.default, config)
+    NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, config)
 
   def apply(serverOptions: NettySyncServerOptions, config: NettyConfig): NettySyncServer =
-    NettySyncServer(List.empty, List.empty, serverOptions, config)
+    NettySyncServer(Vector.empty, Vector.empty, serverOptions, config)
 
 case class NettySyncServerBinding(localSocket: InetSocketAddress, stop: () => Unit):
   def hostName: String = localSocket.getHostName

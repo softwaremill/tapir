@@ -1,0 +1,27 @@
+{
+    "$schema": "https://context7.com/schema/context7.json",
+    "projectTitle": "Tapir",
+    "description": "Rapid development of self-documenting APIs",
+    "folders": [
+        "generated-doc"
+    ],
+    "rules": [
+        "When defining Tapir endpoints, always start with the base `endpoint` value and chain methods to build input/output specifications.",
+        "Import `sttp.tapir.*` to bring all necessary Tapir functionality into scope for endpoint definitions.",
+        "Use `PublicEndpoint[I, E, O, R]` type alias for endpoints without security inputs instead of the full `Endpoint[Unit, I, E, O, R]` type.",
+        "Always provide both success and error outputs for endpoints, with error outputs defined using `.errorOut()` methods.",
+        "For JSON endpoints, add the appropriate JSON library dependency (circe, play-json, etc.) and import the corresponding package like `sttp.tapir.json.circe.*`.",
+        "Use `jsonBody[T]` for JSON request/response bodies, ensuring both a JSON codec (Encoder/Decoder) and Schema[T] are in scope.",
+        "Server logic functions should return `F[Either[E, O]]` where F is the effect type, E is the error type, and O is the success type.",
+        "When using direct-style, server logic functions should return `Either[E, O]`, and the logic should be provided using .handle methods.",
+        "When using `.serverLogicRecoverErrors()`, the error type E must extend Throwable to automatically recover from failed effects.",
+        "Status codes default to 200 for success and 400 for errors, but can be customized using status code outputs like `.out(statusCode(StatusCode.Created))`.",
+        "Use `.serverSecurityLogic()` followed by `.serverLogic()` for endpoints with authentication, where security logic returns Either[E, User] and main logic uses the User type.",
+        "Tapir mappings are always bidirectional, so use `.mapTo[CaseClass]` to automatically map tuples to case classes for both input and output.",
+        "Import `sttp.tapir.generic.auto.*` to enable automatic schema derivation for case classes used in endpoint definitions.",
+        "Use `infallibleEndpoint` instead of `endpoint` when you want to indicate that no errors can occur in the endpoint.",
+        "For file uploads and multipart forms, use specific inputs like `multipartBody` and ensure proper codecs are defined.",
+        "When generating OpenAPI documentation, use `SwaggerInterpreter()` or `OpenAPIDocsInterpreter()` to create documentation from endpoint definitions.",
+        "Use validation methods like `.validate()` on inputs to add custom validation logic that will be reflected in generated documentation."
+    ]
+}

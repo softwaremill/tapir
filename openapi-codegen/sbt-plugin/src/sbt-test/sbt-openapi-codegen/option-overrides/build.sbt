@@ -1,11 +1,12 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.15",
+    scalaVersion := "2.13.18",
     version := "0.1",
     openapiPackage := "com.example.generated.apis",
     openapiObject := "MyExampleEndpoints",
-    openapiSwaggerFile := baseDirectory.value / "example_swagger.yaml"
+    openapiSwaggerFile := baseDirectory.value / "example_swagger.yaml",
+    openapiGenerateEndpointTypes := true
   )
 
 libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.10.0"

@@ -31,6 +31,47 @@ object SwaggerUI {
     r
   }
 
+  private[swagger] def optionsInjection(swaggerInitializerJs: String, options: SwaggerUIOptions): String = {
+    val swaggerInitializerJsWithExtensions = swaggerInitializerJs.replace(
+      "window.ui = SwaggerUIBundle({",
+      s"""window.ui = SwaggerUIBundle({
+         |    showExtensions: ${options.showExtensions},""".stripMargin
+    )
+
+    val swaggerInitializerJsWithOptions = options.initializerOptions
+      .map(_.foldRight(swaggerInitializerJsWithExtensions)({ (option, accumulator) =>
+        accumulator.replace(
+          "window.ui = SwaggerUIBundle({",
+          s"""window.ui = SwaggerUIBundle({
+             |    ${option._1}: ${option._2},""".stripMargin
+        )
+      }))
+      .getOrElse(swaggerInitializerJsWithExtensions)
+
+    val swaggerInitializerJsWithOAuthInit = options.oAuthInitOptions
+      .map(
+        _.foldRight(
+          // injecting initOAuth call
+          swaggerInitializerJsWithOptions.replace(
+            "});",
+            s"""});
+               |window.ui.initOAuth({
+               |});
+               |""".stripMargin
+          )
+        )({ (option, accumulator) =>
+          accumulator.replace(
+            // injecting options for initOAuth call
+            "window.ui.initOAuth({",
+            s"""window.ui.initOAuth({
+               |${option._1}: ${option._2},""".stripMargin
+          )
+        })
+      )
+      .getOrElse(swaggerInitializerJsWithOptions)
+    swaggerInitializerJsWithOAuthInit
+  }
+
   /** Usage: pass `SwaggerUI[F](yaml)` endpoints to your server interpreter. Docs will be available using the `/docs` path.
     *
     * @param yaml
@@ -50,8 +91,7 @@ object SwaggerUI {
     val yamlEndpoint = baseEndpoint
       .in(options.yamlName)
       .out(stringBodyUtf8AnyFormat(Codec.string.format(new CodecFormat {
-        // #2396: although application/yaml is not official, that's what swagger ui sends in the accept header
-        override def mediaType: MediaType = MediaType("application", "yaml")
+        override def mediaType: MediaType = MediaType.ApplicationYaml
       })))
       .serverLogicSuccessPure[F](_ => yaml)
 
@@ -60,12 +100,7 @@ object SwaggerUI {
     val swaggerInitializerJsWithReplacedUrl =
       swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"${concat(fullPathPrefix, options.yamlName)}")
 
-    val swaggerInitializerJsWithOptions =
-      swaggerInitializerJsWithReplacedUrl.replace(
-        "window.ui = SwaggerUIBundle({",
-        s"""window.ui = SwaggerUIBundle({
-           |    showExtensions: ${options.showExtensions},""".stripMargin
-      )
+    val swaggerInitializerJsWithOptions = optionsInjection(swaggerInitializerJsWithReplacedUrl, options)
 
     val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =

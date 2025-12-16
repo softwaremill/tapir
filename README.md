@@ -70,15 +70,15 @@ Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from 
 | <a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a> | <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a> | <a href="https://www.hunters.security/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hunters.png" alt="hunters" width="160"/></a> | 
 | <a href="https://www.moia.io/en"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moia.png" alt="moia" width="160"/></a> | <a href="https://www.pitsdatarecovery.net"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/pits.svg" alt="pits" width="100"/></a> | <a href="https://www.hootsuite.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hootsuite.png" alt="hootsuite" width="160"/></a> |
 | <a href="https://www.ematiq.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ematiq.png" alt="ematiq" width="100"/></a> | <a href="https://www.fugo.ai/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/fugo.png" alt="fugo" width="100"/></a> | <a href="https://budgetbakers.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/budgetbakers.svg" alt="budgetbakers" width="100"/></a> |
-| | <a href="https://flo.health"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/flo.svg" alt="flo" width="100"/></a> | |
+| <a href="https://flo.health"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/flo.svg" alt="flo" width="100"/></a> | | <a href="https://www.xing.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/xing.png" alt="xing" width="100"/></a> |
 
 ## Teaser
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 type Limit = Int
 type AuthToken = String
@@ -100,7 +100,7 @@ val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Bo
 
 // Generate OpenAPI documentation
 
-import sttp.apispec.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
@@ -125,10 +125,10 @@ val booksListingRoute: Route = AkkaHttpServerInterpreter()
 
 // Convert to sttp Request
 
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3._
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]]] = 
   SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
@@ -139,7 +139,7 @@ val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] 
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.11.11"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.13.3"
 ```
 
 Then, import:

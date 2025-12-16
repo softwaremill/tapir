@@ -1,11 +1,11 @@
 // {cat=Observability; effects=Future; server=Netty; json=circe}: Reporting OpenTelemetry metrics
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.11
-//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.11.11
-//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.45.0
-//> using dep org.slf4j:slf4j-api:2.0.13
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-metrics:1.13.2
+//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.47.0
+//> using dep ch.qos.logback:logback-classic:1.5.17
 
 package sttp.tapir.examples.observability
 
@@ -104,7 +104,7 @@ import scala.io.StdIn
       .options
 
   val program = for {
-    binding <- NettyFutureServer().port(8080).addEndpoint(personEndpoint, serverOptions).start()
+    binding <- NettyFutureServer(serverOptions).port(8080).addEndpoint(personEndpoint).start()
     _ <- Future {
       logger.info(s"""Server started. Try it with: curl -X POST localhost:8080/person -d '{"name": "Jacob"}'""")
       logger.info("Press ENTER key to exit.")

@@ -1,11 +1,36 @@
 openapi: 3.0.3
 servers:
-  - url: /v3
+  - url: 'https://{environment}.my-co.org:{port}/api/{customer}/prefix'
+    description: |
+      These are the main endpoints.
+      The environments are self-documenting!
+    variables:
+      environment:
+        enum:
+          - dev
+          - staging
+          - prod
+        default: prod
+      port:
+        default: 1234
+      customer:
+        default: big-dogs
+  - url: 'http://testing.my-co.org:{port}/api/{scoped}/prefix'
+    description: |
+      Legacy endpoint that doesn't require TLS
+      Doesn't work, retained for completely mysterious reasons lost to the winds of time
+    variables:
+      port:
+        default: 4321
+      scoped:
+        default: false
+  - description: Locally
+    url: /
 info:
   description: File for testing json roundtripping of oneOf defns in scala 3 with circe
   version: 1.0.20-SNAPSHOT
   title: OneOf Json test for scala 3
-tags: []
+tags: [ ]
 paths:
   '/adt/test':
     post:
@@ -98,6 +123,145 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ObjectWithInlineEnum'
+  '/oneof/option/test':
+    get:
+      responses:
+        "204":
+          description: "No response"
+        "200":
+          description: An object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+        "201":
+          description: Another object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum2'
+  '/inline/simple/object':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+    put:
+      security:
+        - basic: [ ]
+        - bearer: [ ]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+        "400":
+          description: application/octet-stream in error position
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+        "401":
+          description: application/octet-stream in error position 2
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+    get:
+      responses:
+        "200":
+          description: empty response 1
+        "201":
+          description: empty response 2
+        "400":
+          description: application/something-unrecognised in error position
+          content:
+            application/something-unrecognised:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+        "401":
+          description: application/something-unrecognised in error position 2
+          content:
+            application/something-unrecognised:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+    delete:
+      responses:
+        "200":
+          description: empty response 1
+        "201":
+          description: empty response 2
+        "401":
+          description: empty response 3
+        "402":
+          description: empty response 4
+    patch:
+      requestBody:
+        description: list type in
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListType'
+      responses:
+        "200":
+          description: list type out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListType'
+        "400":
+          description: list type error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListType'
 externalDocs:
   description: Find out more about Swagger
   url: 'http://swagger.io'
@@ -215,3 +379,40 @@ components:
             - foo2
             - foo3
             - foo4
+    ObjectWithInlineEnum2:
+      title: ObjectWithInlineEnum2
+      required:
+        - inlineEnum
+      type: object
+      properties:
+        inlineEnum:
+          type: string
+          enum:
+            - bar1
+            - bar2
+    AnyObjectWithInlineEnum:
+      title: AnyObjectWithInlineEnum
+      oneOf:
+        - $ref: '#/components/schemas/ObjectWithInlineEnum'
+        - $ref: '#/components/schemas/ObjectWithInlineEnum2'
+    NotNullableThingy:
+      title: NotNullableThingy
+      type: object
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
+    ListType:
+      title: ListType
+      type: array
+      items:
+        type: string
+  securitySchemes:
+    basic:
+      type: http
+      scheme: basic
+    bearer:
+      type: http
+      scheme: bearer

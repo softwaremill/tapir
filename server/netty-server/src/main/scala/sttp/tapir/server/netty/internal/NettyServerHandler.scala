@@ -8,8 +8,9 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import io.netty.handler.timeout.{IdleState, IdleStateEvent, IdleStateHandler}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, DefaultWebSocketHttpResponse, StreamedHttpRequest}
-import org.reactivestreams.Publisher
+import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
+import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
@@ -20,6 +21,7 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ReactivePublisherNettyResponseContent,
   ReactiveWebSocketProcessorNettyResponseContent
 }
+import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, SubscribeTrackingStreamedHttpRequest}
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
@@ -30,9 +32,6 @@ import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
-import java.util.concurrent.TimeoutException
-import org.reactivestreams.Subscriber
-import org.reactivestreams.Subscription
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
@@ -95,7 +94,7 @@ class NettyServerHandler[F[_]](
           logger.debug("Http channel to {} closed. Cancelling {} responses.", ctx.channel.remoteAddress, pendingResponses.length)
         }
         while (pendingResponses.nonEmpty) {
-          pendingResponses.dequeue().apply()
+          pendingResponses.dequeue().apply(): Unit // running the cancellation for background side-effects only (best-effort)
         }
       }
     }
@@ -143,27 +142,37 @@ class NettyServerHandler[F[_]](
       }
       requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
-        route(NettyServerRequest(req))
-          .map {
-            case Some(response) => response
-            case None           => ServerResponse.notFound
+        try {
+          route(NettyServerRequest(req, ctx))
+            .map {
+              case Some(response) => response
+              case None           => ServerResponse.notFound
+            }
+        } catch {
+          case e: IllegalArgumentException if e.getMessage.startsWith("URLDecoder:") => {
+            logger.debug(s"Invalid request URL: ${req.uri()}", e)
+            me.unit(ServerResponse[NettyResponse](StatusCode.BadRequest, Nil, None, None))
           }
+        }
       }
       pendingResponses.enqueue(cancellationSwitch)
       lastResponseSent = lastResponseSent.flatMap { _ =>
         runningFuture
           .transform { result =>
+            // keeping track of the response-completed promise (which is available if a response with a body was provided), to
+            // properly cleanup the request body if needed later
+            var responseCompletedPromise: Option[ChannelPromise] = None
             try {
               // #4131: the channel might be closed if the request timed out
-              // both timeout & response-ready events (i.e., comleting this future) are handled on the event loop's executor,
+              // both timeout & response-ready events (i.e., completing this future) are handled on the event loop's executor,
               // so they won't be handled concurrently
               if (ctx.channel().isOpen()) {
                 requestTimeoutHandler.foreach(ctx.pipeline().remove)
                 result match {
                   case Success(serverResponse) =>
-                    pendingResponses.dequeue()
+                    val _ = pendingResponses.dequeue()
                     try {
-                      handleResponse(ctx, req, serverResponse)
+                      responseCompletedPromise = Some(handleResponse(ctx, req, serverResponse))
                       Success(())
                     } catch {
                       case NonFatal(ex) =>
@@ -179,14 +188,33 @@ class NettyServerHandler[F[_]](
                 // pendingResponses is already dequeued because the channel is closed
                 result match {
                   case Success(serverResponse) =>
-                    val e = new TimeoutException("Request timed out")
-                    handleResponseAfterTimeout(ctx, serverResponse, e)
-                    Failure(e)
+                    val e = new RuntimeException("Client disconnected, request timed out, or request cancelled")
+                    responseCompletedPromise = Some(handleResponseWhenChannelClosed(ctx, serverResponse, e))
+                    logger.debug(
+                      "Response created but not sent, as the channel is closed (due to client disconnect, timeout, or cancellation)."
+                    )
+                    Success(())
                   case Failure(e) => Failure(e)
                 }
               }
             } finally {
               val _ = releaseReq()
+
+              // #4539: if the request body was never subscribed to, we need to discard it safely
+              // Doing so by subscribing & immediately cancelling the subscription.
+              // If a response was created, we should check the subscription status only after the response body is
+              // fully produced, as creating the response might at some point use the request body.
+              req match {
+                case r: SubscribeTrackingStreamedHttpRequest =>
+                  responseCompletedPromise match {
+                    case Some(p) =>
+                      val _ = p.addListener({ (_: ChannelFuture) =>
+                        if (!r.wasSubscribed) r.subscribe(new CancellingSubscriber)
+                      })
+                    case None => if (!r.wasSubscribed) r.subscribe(new CancellingSubscriber)
+                  }
+                case _ => // non-streaming type of request - do nothing - request body is already read in full
+              }
             }
           }(eventLoopContext)
       }(eventLoopContext)
@@ -204,7 +232,8 @@ class NettyServerHandler[F[_]](
           val req = full.retain()
           runRoute(req, () => req.release())
         case req: StreamedHttpRequest =>
-          runRoute(req)
+          // tracking the request body subscription status to discard of it safely, if it's never used
+          runRoute(new SubscribeTrackingStreamedHttpRequest(req))
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
       }
 
@@ -212,7 +241,7 @@ class NettyServerHandler[F[_]](
     }
   }
 
-  private def handleResponse(ctx: ChannelHandlerContext, req: HttpRequest, serverResponse: ServerResponse[NettyResponse]): Unit =
+  private def handleResponse(ctx: ChannelHandlerContext, req: HttpRequest, serverResponse: ServerResponse[NettyResponse]): ChannelPromise =
     serverResponse.handle(
       ctx = ctx,
       byteBufHandler = (channelPromise, byteBuf) => {
@@ -287,27 +316,27 @@ class NettyServerHandler[F[_]](
       }
     )
 
-  private def handleResponseAfterTimeout(
+  private def handleResponseWhenChannelClosed(
       ctx: ChannelHandlerContext,
       serverResponse: ServerResponse[NettyResponse],
-      timeoutException: Exception
-  ): Unit =
+      channelPromiseFailure: Exception
+  ): ChannelPromise =
     serverResponse.handle(
       ctx = ctx,
-      byteBufHandler = (channelPromise, byteBuf) => { val _ = channelPromise.setFailure(timeoutException) },
+      byteBufHandler = (channelPromise, byteBuf) => { val _ = channelPromise.setFailure(channelPromiseFailure) },
       chunkedStreamHandler = (channelPromise, chunkedStream) => {
         chunkedStream.close()
-        val _ = channelPromise.setFailure(timeoutException)
+        val _ = channelPromise.setFailure(channelPromiseFailure)
       },
       chunkedFileHandler = (channelPromise, chunkedFile) => {
         chunkedFile.close()
-        val _ = channelPromise.setFailure(timeoutException)
+        val _ = channelPromise.setFailure(channelPromiseFailure)
       },
       reactiveStreamHandler = (channelPromise, publisher) => {
         publisher.subscribe(new Subscriber[HttpContent] {
           override def onSubscribe(s: Subscription): Unit = {
             s.cancel()
-            val _ = channelPromise.setFailure(timeoutException)
+            val _ = channelPromise.setFailure(channelPromiseFailure)
           }
           override def onNext(t: HttpContent): Unit = ()
           override def onError(t: Throwable): Unit = ()
@@ -315,7 +344,7 @@ class NettyServerHandler[F[_]](
         })
       },
       wsHandler = (responseContent) => {
-        val _ = responseContent.channelPromise.setFailure(timeoutException)
+        val _ = responseContent.channelPromise.setFailure(channelPromiseFailure)
       },
       noBodyHandler = () => ()
     )
@@ -369,6 +398,10 @@ class NettyServerHandler[F[_]](
     s"$scheme://${req.headers().get(HttpHeaderNames.HOST)}${req.uri()}"
   }
   private implicit class RichServerNettyResponse(r: ServerResponse[NettyResponse]) {
+
+    /** @return
+      *   a promise which is completed when the body is completely sent
+      */
     def handle(
         ctx: ChannelHandlerContext,
         byteBufHandler: (ChannelPromise, ByteBuf) => Unit,
@@ -377,7 +410,7 @@ class NettyServerHandler[F[_]](
         reactiveStreamHandler: (ChannelPromise, Publisher[HttpContent]) => Unit,
         wsHandler: ReactiveWebSocketProcessorNettyResponseContent => Unit,
         noBodyHandler: () => Unit
-    ): Unit = {
+    ): ChannelPromise = {
       r.body match {
         case Some(function) => {
           val values = function(ctx)
@@ -389,8 +422,12 @@ class NettyServerHandler[F[_]](
             case r: ReactivePublisherNettyResponseContent          => reactiveStreamHandler(r.channelPromise, r.publisher)
             case r: ReactiveWebSocketProcessorNettyResponseContent => wsHandler(r)
           }
+
+          values.channelPromise
         }
-        case None => noBodyHandler()
+        case None =>
+          noBodyHandler()
+          ctx.newPromise().setSuccess() // no body - means that it's already sent
       }
     }
   }

@@ -12,7 +12,6 @@ import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.EndpointExtensions.*
 import sttp.tapir.server.netty.sync.OxStreams
-import sttp.tapir.Endpoint
 import sttp.capabilities.WebSockets
 import scala.concurrent.duration._
 
@@ -75,7 +74,7 @@ object NettySyncServerRunner {
     )
   val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe)
 
-  val endpoints = genEndpointsId(1)
+  val endpoints = genEndpointsId(128)
 
   def main(args: Array[String]): Unit = {
     val declaredPort = 8080

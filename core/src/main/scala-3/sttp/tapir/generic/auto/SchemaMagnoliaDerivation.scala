@@ -28,7 +28,7 @@ trait SchemaMagnoliaDerivation {
               Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeInfo, ctx.annotations)))
             }
           if (ctx.typeInfo.full.startsWith("scala.Tuple")) {
-            result = result.attribute(Schema.Tuple.Attribute, Schema.Tuple(true))
+            result = result.tuple
           }
           enrichSchema(result, mergeAnnotations(ctx.annotations, ctx.inheritedAnnotations))
         }
@@ -64,10 +64,10 @@ trait SchemaMagnoliaDerivation {
 
       private def enrichSchema[X](schema: Schema[X], annotations: Seq[Any]): Schema[X] = {
         annotations.foldLeft(schema) {
-          case (schema, ann: Schema.annotations.description)            => schema.description(ann.text)
-          case (schema, ann: Schema.annotations.encodedExample)         => schema.encodedExample(ann.example)
-          case (schema, ann: Schema.annotations.default[X @unchecked])  => schema.default(ann.default, ann.encoded)
-          case (schema, ann: Schema.annotations.validate[X @unchecked]) => schema.validate(ann.v)
+          case (schema, ann: Schema.annotations.description)                => schema.description(ann.text)
+          case (schema, ann: Schema.annotations.encodedExample)             => schema.encodedExample(ann.example)
+          case (schema, ann: Schema.annotations.default[X @unchecked])      => schema.default(ann.default, ann.encoded)
+          case (schema, ann: Schema.annotations.validate[X @unchecked])     => schema.validate(ann.v)
           case (schema, ann: Schema.annotations.validateEach[X @unchecked]) =>
             schema.modifyUnsafe(Schema.ModifyCollectionElements)((_: Schema[X]).validate(ann.v))
           case (schema, ann: Schema.annotations.format)    => schema.format(ann.format)
