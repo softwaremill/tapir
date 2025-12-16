@@ -14,6 +14,7 @@ import sttp.model.Method
 import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
+import sttp.tapir.server.interceptor.cors.CORSInterceptor
 import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
@@ -53,6 +54,8 @@ trait PlayServerInterpreter {
       playServerOptions.deleteFile
     )
 
+    val isCORSInterceptorDefined = playServerOptions.interceptors.exists(_.isInstanceOf[CORSInterceptor[Future]])
+
     new PartialFunction[RequestHeader, Handler] {
       override def isDefinedAt(request: RequestHeader): Boolean = {
         val filtered = filterServerEndpoints(PlayServerRequest(request, request))
@@ -62,7 +65,16 @@ trait PlayServerInterpreter {
           // doesn't match, this will be handled by the RejectInterceptor
           filtered.exists { e =>
             val m = e.endpoint.method
-            m.isEmpty || m.contains(Method(request.method))
+            val requestMethod = Method(request.method)
+            val methodMatches = m.isEmpty || m.contains(requestMethod)
+
+            // When CORS interceptor is defined, also accept OPTIONS requests for non-OPTIONS endpoints
+            // to handle CORS preflight requests
+            val acceptOptionsForCORS = isCORSInterceptorDefined &&
+              requestMethod == Method.OPTIONS &&
+              m.exists(em => em != Method.OPTIONS)
+
+            methodMatches || acceptOptionsForCORS
           }
         } else {
           filtered.nonEmpty
