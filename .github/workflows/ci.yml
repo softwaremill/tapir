@@ -70,7 +70,7 @@ jobs:
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Install scala-cli
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
-      uses: VirtusLab/scala-cli-setup@68bd9c30954d20e6cb6ddaf01b3b38336f25df4b # main, specifically v1.10.1
+      uses: VirtusLab/scala-cli-setup@89a48599f871d08573707e82bdcefbce839de436 # main, specifically v1.11.0
       with:
         jvm: '' # needed because scala-cli-setup otherwise forces the installation of their default JVM (17)
     - name: Enable Loom-specific modules
@@ -120,7 +120,7 @@ jobs:
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test
-    - uses: actions/upload-artifact@v5  # upload test results
+    - uses: actions/upload-artifact@v6  # upload test results
       if: success() || failure()        # run this step even if previous step failed
       with:
         name: 'tests-results-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'

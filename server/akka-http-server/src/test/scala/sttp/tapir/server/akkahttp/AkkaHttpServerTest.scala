@@ -202,6 +202,33 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
               }
             }
             .unsafeToFuture()
+        },
+        Test("extractFromRequest(_.uri) returns full URI when nested in path directive") {
+          // Given: an endpoint that extracts the URI from the request
+          val e = endpoint.get
+            .in("test" / "path")
+            .in(extractFromRequest(_.uri))
+            .out(stringBody)
+            .serverLogic { requestUri =>
+              requestUri.toString.asRight[Unit].unit
+            }
+
+          // When: the route is nested inside a pathPrefix directive
+          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter().toRoute(e))
+
+          interpreter
+            .server(route)
+            .use { port =>
+              // Then: the extracted URI should contain the full path including the prefix
+              basicRequest
+                .get(uri"http://localhost:$port/api/test/path?query=value")
+                .send(backend)
+                .map { response =>
+                  response.body.value should include("/api/test/path")
+                  response.body.value should include("query=value")
+                }
+            }
+            .unsafeToFuture()
         }
       )
       def drainAkka(stream: AkkaStreams.BinaryStream): Future[Unit] =

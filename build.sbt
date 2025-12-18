@@ -14,8 +14,8 @@ import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
-val scala2_12 = "2.12.20"
-val scala2_13 = "2.13.16"
+val scala2_12 = "2.12.21"
+val scala2_13 = "2.13.18"
 val scala3 = "3.3.7"
 
 val scala2Versions = List(scala2_12, scala2_13)
@@ -2168,8 +2168,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.9.0" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.2" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.2" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.6" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.6" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
