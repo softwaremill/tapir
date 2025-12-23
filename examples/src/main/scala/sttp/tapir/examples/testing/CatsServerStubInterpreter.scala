@@ -1,8 +1,8 @@
 // {cat=Testing; effects=cats-effect}: Test endpoints using the TapirStubInterpreter
 
-//> using dep com.softwaremill.sttp.tapir::tapir-cats-effect:1.13.2
-//> using dep com.softwaremill.sttp.tapir::tapir-sttp-stub4-server:1.13.2
-//> using dep com.softwaremill.sttp.tapir::tapir-cats:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-cats-effect:1.13.3
+//> using dep com.softwaremill.sttp.tapir::tapir-sttp-stub4-server:1.13.3
+//> using dep com.softwaremill.sttp.tapir::tapir-cats:1.13.3
 //> using dep com.softwaremill.sttp.client4::core:4.0.0-RC4
 //> using dep org.scalatest::scalatest:3.2.19
 
