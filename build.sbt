@@ -2300,6 +2300,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     mdocExtraArguments := Seq("--clean-target"),
     publishArtifact := false,
     name := "doc",
+    // Force upickle3 to match picklerJson's dependency and avoid version conflict
+    dependencyOverrides += "com.lihaoyi" %% "upickle" % Versions.upickle3,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play-netty-server" % Versions.playServer,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
