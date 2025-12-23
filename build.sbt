@@ -926,7 +926,7 @@ lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
   .settings(
     name := "tapir-json-pickler",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "upickle" % Versions.upickle,
+      "com.lihaoyi" %%% "upickle" % Versions.upickle3,
       scalaTest.value % Test
     )
   )
