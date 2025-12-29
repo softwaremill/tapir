@@ -926,7 +926,7 @@ lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
   .settings(
     name := "tapir-json-pickler",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "upickle" % Versions.upickle,
+      "com.lihaoyi" %%% "upickle" % Versions.upickle3,
       scalaTest.value % Test
     )
   )
@@ -2300,6 +2300,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     mdocExtraArguments := Seq("--clean-target"),
     publishArtifact := false,
     name := "doc",
+    // Force upickle3 to match picklerJson's dependency and avoid version conflict
+    dependencyOverrides += "com.lihaoyi" %% "upickle" % Versions.upickle3,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play-netty-server" % Versions.playServer,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
