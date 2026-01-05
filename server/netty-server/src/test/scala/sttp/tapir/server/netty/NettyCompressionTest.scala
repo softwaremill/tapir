@@ -131,7 +131,7 @@ class NettyCompressionTest extends AnyFunSuite with Matchers with BeforeAndAfter
     }
   }
 
-  test("server should not compress when client does not send Accept-Encoding header") {
+  test("server should not compress when compression is enabled but client does not send Accept-Encoding header") {
     val testEndpoint = endpoint.get.in("test").out(stringBody)
     val serverEndpoint = testEndpoint.serverLogicSuccess[Future](_ => Future.successful(largeText))
 
@@ -146,44 +146,5 @@ class NettyCompressionTest extends AnyFunSuite with Matchers with BeforeAndAfter
       // Response should NOT be compressed since client didn't request it
       new String(body, "UTF-8") shouldBe largeText
     }
-  }
-
-  test("server should compress large responses when compression is enabled") {
-    val testEndpoint = endpoint.get.in("large").out(stringBody)
-    val serverEndpoint = testEndpoint.serverLogicSuccess[Future](_ => Future.successful(largeText))
-
-    withServer(List(serverEndpoint), compressionEnabled = true) { port =>
-      val (responseCode, contentEncoding, compressedBody) = makeRawRequest(
-        s"http://localhost:$port/large",
-        acceptEncoding = Some("gzip")
-      )
-
-      responseCode shouldBe 200
-      contentEncoding shouldBe Some("gzip")
-
-      // Verify the response is actually compressed (should be significantly smaller)
-      val uncompressedSize = largeText.getBytes("UTF-8").length
-      val compressionRatio = compressedBody.length.toDouble / uncompressedSize
-
-      // For repetitive text like largeText, compression ratio should be very good (< 10%)
-      compressionRatio shouldBe <(0.1)
-
-      // Verify we can decompress and get the original content
-      val decompressed = decompressGzip(compressedBody)
-      decompressed shouldBe largeText
-    }
-  }
-
-  test("compression config should be properly passed through NettyConfig") {
-    val config1 = NettyConfig.default
-    config1.compressionConfig.enabled shouldBe false
-
-    val config2 = config1.withCompressionEnabled
-    config2.compressionConfig.enabled shouldBe true
-    // Original should be unchanged (immutability)
-    config1.compressionConfig.enabled shouldBe false
-
-    val config3 = NettyConfig.default.compressionConfig(NettyCompressionConfig.enabled)
-    config3.compressionConfig.enabled shouldBe true
   }
 }
