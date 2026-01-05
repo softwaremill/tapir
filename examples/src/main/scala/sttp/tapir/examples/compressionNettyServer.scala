@@ -61,7 +61,7 @@ import scala.concurrent.{Await, Future}
   val backend: SyncBackend = HttpClientSyncBackend()
 
   // Test: Request the large text endpoint
-  // Note: HttpURLConnectionBackend automatically handles gzip decompression,
+  // Note: HttpClientSyncBackend automatically handles gzip decompression,
   // so the response body will be the original uncompressed text
   println("\n=== Testing compression ===")
   val response = basicRequest
