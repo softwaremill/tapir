@@ -23,11 +23,12 @@ private[docs] class TSchemaToASchema(
     *   the definitions are infinitely recursive)
     */
   def apply[T](schema: TSchema[T], allowReference: Boolean, isOptionElement: Boolean = false): ASchema = {
-    val nullable = markOptionsAsNullable && isOptionElement
+    val nullableAttribute = schema.attribute(TSchema.Nullable.Attribute).isDefined
+    val nullable = (markOptionsAsNullable && isOptionElement) || nullableAttribute
 
     val result = schema.name match {
       case Some(name) if allowReference => toSchemaReference.map(schema, name)
-      case _ =>
+      case _                            =>
         schema.schemaType match {
           case TSchemaType.SInteger() => ASchema(SchemaType.Integer)
           case TSchemaType.SNumber()  => ASchema(SchemaType.Number)
@@ -50,11 +51,11 @@ private[docs] class TSchemaToASchema(
             val propagated = propagateMetadataForOption(schema, opt).element
             val ref = toSchemaReference.map(propagated, name)
             if (!markOptionsAsNullable) ref else ref.nullable
-          case TSchemaType.SOption(el)    => apply(el, allowReference = true, isOptionElement = true)
-          case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary))
-          case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Date))
-          case TSchemaType.SDateTime()    => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime))
-          case TSchemaType.SRef(fullName) => toSchemaReference.mapDirect(fullName)
+          case TSchemaType.SOption(el)            => apply(el, allowReference = true, isOptionElement = true)
+          case TSchemaType.SBinary()              => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary))
+          case TSchemaType.SDate()                => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Date))
+          case TSchemaType.SDateTime()            => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime))
+          case TSchemaType.SRef(fullName)         => toSchemaReference.mapDirect(fullName)
           case TSchemaType.SCoproduct(schemas, d) =>
             ASchema.oneOf(
               schemas
@@ -62,7 +63,7 @@ private[docs] class TSchemaToASchema(
                 .map(apply(_, allowReference = true))
                 .sortBy {
                   case schema if schema.$ref.isDefined => schema.$ref.get
-                  case schema =>
+                  case schema                          =>
                     schema.`type`
                       .collect {
                         case List(t)                  => t.value
@@ -112,9 +113,9 @@ private[docs] class TSchemaToASchema(
     // The primary motivation for using schema name as fallback title is to improve Swagger UX with
     // `oneOf` schemas in OpenAPI 3.1. See https://github.com/softwaremill/tapir/issues/3447 for details.
     def fallbackTitle = tschema.name.map(fallbackSchemaTitle)
-    
+
     val const = tschema.attribute(TSchema.EncodedDiscriminatorValue.Attribute).map(_.v).map(v => ExampleSingleValue(v))
-    
+
     oschema
       .copy(title = titleFromAttr.orElse(fallbackTitle))
       .copy(uniqueItems = tschema.attribute(UniqueItems.Attribute).map(_.uniqueItems))

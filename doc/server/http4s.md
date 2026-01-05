@@ -95,6 +95,13 @@ BlazeServerBuilder[IO]
   .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)        
 ```
 
+```{note}
+When a close frame is received by http4s, the server seems to cancel the stream that is processing the web socket frames.
+This means that the `.decodeCloseRequests(true)` setting (also effective when the decoded type is optional, e.g. `Option`)
+is not reliable: values corresponding to close frames will not always be processed by the stream. Hence, it's recommended
+to avoid using this option with the http4s interpreter.
+```
+
 ## Server Sent Events
 
 The interpreter supports [SSE (Server Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).

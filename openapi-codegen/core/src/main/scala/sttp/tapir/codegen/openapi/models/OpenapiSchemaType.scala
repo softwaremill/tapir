@@ -1,6 +1,8 @@
 package sttp.tapir.codegen.openapi.models
 
-import io.circe.Json
+import io.circe.{Json, JsonNumber}
+
+import scala.collection.mutable
 
 sealed trait OpenapiSchemaType {
   def nullable: Boolean
@@ -30,7 +32,7 @@ object OpenapiSchemaType {
   }
 
   case class OpenapiSchemaAllOf(
-      types: Seq[OpenapiSchemaSimpleType]
+      types: Seq[OpenapiSchemaType]
   ) extends OpenapiSchemaMixedType {
     val nullable: Boolean = false
   }
@@ -42,29 +44,49 @@ object OpenapiSchemaType {
   }
 
   // https://swagger.io/docs/specification/data-models/data-types/#numbers
-  // no min/max, exclusiveMin/exclusiveMax, multipleOf support
-  sealed trait OpenapiSchemaNumericType extends OpenapiSchemaSimpleType
+  case class NumericRestrictions(
+      min: Option[JsonNumber] = None,
+      max: Option[JsonNumber] = None,
+      exclusiveMinimum: Option[Boolean] = None,
+      exclusiveMaximum: Option[Boolean] = None,
+      multipleOf: Option[JsonNumber] = None
+  ) {
+    def hasRestriction: Boolean = min.isDefined || max.isDefined || multipleOf.isDefined
+  }
+  sealed trait OpenapiSchemaNumericType extends OpenapiSchemaSimpleType {
+    def restrictions: NumericRestrictions
+    def scalaType: String
+  }
 
   case class OpenapiSchemaDouble(
-      nullable: Boolean
-  ) extends OpenapiSchemaNumericType
+      nullable: Boolean,
+      restrictions: NumericRestrictions
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Double" }
   case class OpenapiSchemaFloat(
-      nullable: Boolean
-  ) extends OpenapiSchemaNumericType
+      nullable: Boolean,
+      restrictions: NumericRestrictions
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Float" }
   case class OpenapiSchemaLong(
-      nullable: Boolean
-  ) extends OpenapiSchemaNumericType
+      nullable: Boolean,
+      restrictions: NumericRestrictions
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Long" }
   case class OpenapiSchemaInt(
-      nullable: Boolean
-  ) extends OpenapiSchemaNumericType
+      nullable: Boolean,
+      restrictions: NumericRestrictions
+  ) extends OpenapiSchemaNumericType { def scalaType: String = "Int" }
 
   // https://swagger.io/docs/specification/data-models/data-types/#string
-  // no minLength/maxLength, pattern support
+  // no minLength/maxLength, pattern support on 'formatted' subtypes.
   sealed trait OpenapiSchemaStringType extends OpenapiSchemaSimpleType
 
   case class OpenapiSchemaString(
-      nullable: Boolean
-  ) extends OpenapiSchemaStringType
+      nullable: Boolean,
+      pattern: Option[String] = None,
+      minLength: Option[Int] = None,
+      maxLength: Option[Int] = None
+  ) extends OpenapiSchemaStringType {
+    def hasRestriction: Boolean = pattern.isDefined || minLength.isDefined || maxLength.isDefined
+  }
   case class OpenapiSchemaDate(
       nullable: Boolean
   ) extends OpenapiSchemaStringType
@@ -93,8 +115,18 @@ object OpenapiSchemaType {
     def stripped: String = name.stripPrefix("#/components/schemas/")
   }
 
+  object AnyType extends Enumeration {
+    val Any, Object, Array = Value
+    type AnyType = Value
+    def toCirceTpe(t: AnyType): String = t match {
+      case AnyType.Any    => "io.circe.Json"
+      case AnyType.Object => "io.circe.JsonObject"
+      case AnyType.Array  => "Vector[io.circe.Json]"
+    }
+  }
   case class OpenapiSchemaAny(
-      nullable: Boolean
+      nullable: Boolean,
+      tpe: AnyType.AnyType
   ) extends OpenapiSchemaSimpleType
 
   case class OpenapiSchemaConstantString(
@@ -110,27 +142,45 @@ object OpenapiSchemaType {
       nullable: Boolean
   ) extends OpenapiSchemaType
 
-  // no minItems/maxItems, uniqueItems support
+  case class ArrayRestrictions(minItems: Option[Int] = None, maxItems: Option[Int] = None, uniqueItems: Option[Boolean] = None) {
+    // We exclude 'uniqueItems' from this check because we don't use it to construct a validator -- rather, it results in us defining a Set instead of a Seq
+    def hasRestriction: Boolean = minItems.isDefined || maxItems.isDefined
+  }
   case class OpenapiSchemaArray(
       items: OpenapiSchemaType,
-      nullable: Boolean
+      nullable: Boolean,
+      xml: Option[OpenapiXml.XmlArrayConfiguration] = None,
+      restrictions: ArrayRestrictions = ArrayRestrictions()
   ) extends OpenapiSchemaType
 
+  case class ObjectFieldRestrictions(
+      readOnly: Option[Boolean] = None,
+      writeOnly: Option[Boolean] = None
+  )
   case class OpenapiSchemaField(
       `type`: OpenapiSchemaType,
-      default: Option[Json]
+      default: Option[Json],
+      restrictions: ObjectFieldRestrictions = ObjectFieldRestrictions()
   )
+  case class ObjectRestrictions(
+      minProperties: Option[Int] = None,
+      maxProperties: Option[Int] = None
+  ) {
+    def hasRestriction: Boolean = minProperties.isDefined || maxProperties.isDefined
+  }
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaObject(
-      properties: Map[String, OpenapiSchemaField],
+      properties: mutable.LinkedHashMap[String, OpenapiSchemaField],
       required: Seq[String],
-      nullable: Boolean
+      nullable: Boolean,
+      xml: Option[OpenapiXml.XmlObjectConfiguration] = None
   ) extends OpenapiSchemaType
 
-  // no readOnly/writeOnly, minProperties/maxProperties support
+  // no readOnly/writeOnly support
   case class OpenapiSchemaMap(
       items: OpenapiSchemaType,
-      nullable: Boolean
+      nullable: Boolean,
+      restrictions: ObjectRestrictions = ObjectRestrictions()
   ) extends OpenapiSchemaType
 
   // ///////////////////////////////////////////////////////
@@ -148,60 +198,78 @@ object OpenapiSchemaType {
     }
   }
 
+  def typeAndNullable(c: HCursor): Decoder.Result[(String, Boolean)] = {
+    val typeField = c.downField("type")
+    for {
+      tf <- typeField.as[String].map(Seq(_)).orElse(typeField.as[Seq[String]])
+      (t: String, nullableByType: Boolean) = tf match {
+        case Seq(t)                                       => t -> false
+        case seq if seq.size == 2 && seq.contains("null") => seq.find(_ != "null").getOrElse("null") -> true
+        case _ => DecodingFailure("Type lists are only supported for lists of length two where one type is 'null'", c.history)
+      }
+      nb <- c.downField("nullable").as[Option[Boolean]]
+    } yield (t, nullableByType || nb.contains(true))
+  }
+
   implicit val OpenapiSchemaBooleanDecoder: Decoder[OpenapiSchemaBoolean] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not boolean!", c.history))(_ == "boolean")
-      nb <- c.downField("nullable").as[Option[Boolean]]
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not boolean!", c.history))(_._1 == "boolean")
     } yield {
-      OpenapiSchemaBoolean(nb.getOrElse(false))
+      OpenapiSchemaBoolean(p._2)
     }
   }
 
   implicit val OpenapiSchemaStringTypeDecoder: Decoder[OpenapiSchemaStringType] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not string!", c.history))(_ == "string")
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not string!", c.history))(_._1 == "string")
       f <- c.downField("format").as[Option[String]]
-      nb <- c.downField("nullable").as[Option[Boolean]]
+      pattern <- c.downField("pattern").as[Option[String]]
+      min <- c.downField("minLength").as[Option[Int]]
+      max <- c.downField("maxLength").as[Option[Int]]
     } yield {
       f.fold[OpenapiSchemaStringType](
-        OpenapiSchemaString(nb.getOrElse(false))
+        OpenapiSchemaString(p._2, pattern, min, max)
       ) {
-        case "date"      => OpenapiSchemaDate(nb.getOrElse(false))
-        case "date-time" => OpenapiSchemaDateTime(nb.getOrElse(false))
-        case "byte"      => OpenapiSchemaByte(nb.getOrElse(false))
-        case "binary"    => OpenapiSchemaBinary(nb.getOrElse(false))
-        case "uuid"      => OpenapiSchemaUUID(nb.getOrElse(false))
-        case _           => OpenapiSchemaString(nb.getOrElse(false))
+        case "date"      => OpenapiSchemaDate(p._2)
+        case "date-time" => OpenapiSchemaDateTime(p._2)
+        case "byte"      => OpenapiSchemaByte(p._2)
+        case "binary"    => OpenapiSchemaBinary(p._2)
+        case "uuid"      => OpenapiSchemaUUID(p._2)
+        case _           => OpenapiSchemaString(p._2, pattern, min, max)
       }
     }
   }
 
   implicit val OpenapiSchemaNumericTypeDecoder: Decoder[OpenapiSchemaNumericType] = { (c: HCursor) =>
     for {
-      t <- c
-        .downField("type")
-        .as[String]
-        .ensure(DecodingFailure("Given type is not number/integer!", c.history))(v => v == "number" || v == "integer")
+      p <- typeAndNullable(c)
+        .ensure(DecodingFailure("Given type is not number/integer!", c.history))(v => v._1 == "number" || v._1 == "integer")
+      (t, nb) = p
       f <- c.downField("format").as[Option[String]]
-      nb <- c.downField("nullable").as[Option[Boolean]]
+      min <- c.downField("minimum").as[Option[JsonNumber]]
+      max <- c.downField("maximum").as[Option[JsonNumber]]
+      exclusiveMinimum <- c.downField("exclusiveMinimum").as[Option[Boolean]]
+      exclusiveMaximum <- c.downField("exclusiveMaximum").as[Option[Boolean]]
+      multipleOf <- c.downField("multipleOf").as[Option[JsonNumber]]
+      restrictions = NumericRestrictions(min, max, exclusiveMinimum, exclusiveMaximum, multipleOf)
     } yield {
       if (t == "number") {
         f.fold[OpenapiSchemaNumericType](
-          OpenapiSchemaDouble(nb.getOrElse(false))
+          OpenapiSchemaDouble(nb, restrictions)
         ) {
-          case "int64"  => OpenapiSchemaLong(nb.getOrElse(false))
-          case "int32"  => OpenapiSchemaInt(nb.getOrElse(false))
-          case "float"  => OpenapiSchemaFloat(nb.getOrElse(false))
-          case "double" => OpenapiSchemaDouble(nb.getOrElse(false))
-          case _        => OpenapiSchemaDouble(nb.getOrElse(false))
+          case "int64"  => OpenapiSchemaLong(nb, restrictions)
+          case "int32"  => OpenapiSchemaInt(nb, restrictions)
+          case "float"  => OpenapiSchemaFloat(nb, restrictions)
+          case "double" => OpenapiSchemaDouble(nb, restrictions)
+          case _        => OpenapiSchemaDouble(nb, restrictions)
         }
       } else {
         f.fold[OpenapiSchemaNumericType](
-          OpenapiSchemaInt(nb.getOrElse(false))
+          OpenapiSchemaInt(nb, restrictions)
         ) {
-          case "int64" => OpenapiSchemaLong(nb.getOrElse(false))
-          case "int32" => OpenapiSchemaInt(nb.getOrElse(false))
-          case _       => OpenapiSchemaInt(nb.getOrElse(false))
+          case "int64" => OpenapiSchemaLong(nb, restrictions)
+          case "int32" => OpenapiSchemaInt(nb, restrictions)
+          case _       => OpenapiSchemaInt(nb, restrictions)
         }
       }
     }
@@ -233,7 +301,7 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaAllOfDecoder: Decoder[OpenapiSchemaAllOf] = { (c: HCursor) =>
     for {
-      d <- c.downField("allOf").as[Seq[OpenapiSchemaSimpleType]]
+      d <- c.downField("allOf").as[Seq[OpenapiSchemaType]]
     } yield {
       OpenapiSchemaAllOf(d)
     }
@@ -268,57 +336,86 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaEnumDecoder: Decoder[OpenapiSchemaEnum] = { (c: HCursor) =>
     for {
-      tpe <- c.downField("type").as[String]
+      p <- typeAndNullable(c)
+      (tpe, nb) = p
       _ <- Either.cond(tpe == "string", (), DecodingFailure("only string enums are supported", c.history))
       items <- c.downField("enum").as[Seq[OpenapiSchemaConstantString]]
-      nb <- c.downField("nullable").as[Option[Boolean]]
-    } yield OpenapiSchemaEnum(tpe, items, nb.getOrElse(false))
+    } yield OpenapiSchemaEnum(tpe, items, nb)
   }
 
-  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json])] = { (c: HCursor) =>
+  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)] = { (c: HCursor) =>
     for {
       schemaType <- c.as[OpenapiSchemaType]
       maybeDefault <- c.downField("default").as[Option[Json]]
-    } yield (schemaType, maybeDefault)
+      readOnly <- c.downField("readOnly").as[Option[Boolean]]
+      writeOnly <- c.downField("writeOnly").as[Option[Boolean]]
+    } yield (schemaType, maybeDefault, ObjectFieldRestrictions(readOnly, writeOnly))
   }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not object!", c.history))(v => v == "object")
-      fieldsWithDefaults <- c.downField("properties").as[Option[Map[String, (OpenapiSchemaType, Option[Json])]]]
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
+      fieldsWithDefaults <- c
+        .downField("properties")
+        .as[mutable.LinkedHashMap[String, (OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)]]
       r <- c.downField("required").as[Option[Seq[String]]]
-      nb <- c.downField("nullable").as[Option[Boolean]]
-      fields = fieldsWithDefaults.getOrElse(Map.empty).map { case (k, (f, d)) => k -> OpenapiSchemaField(f, d) }
+      (_, nb) = p
+      fields = fieldsWithDefaults.map { case (k, (f, d, r)) => k -> OpenapiSchemaField(f, d, r) }
     } yield {
-      OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb.getOrElse(false))
+      OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb)
     }
   }
 
   implicit val OpenapiSchemaMapDecoder: Decoder[OpenapiSchemaMap] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not object!", c.history))(v => v == "object")
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
       t <- c.downField("additionalProperties").as[OpenapiSchemaType]
-      nb <- c.downField("nullable").as[Option[Boolean]]
+      mi <- c.downField("minProperties").as[Option[Int]]
+      ma <- c.downField("maxProperties").as[Option[Int]]
+      (_, nb) = p
     } yield {
-      OpenapiSchemaMap(t, nb.getOrElse(false))
+      OpenapiSchemaMap(t, nb, ObjectRestrictions(mi, ma))
     }
+  }
+
+  implicit val xmlArrayConfigurationDecoder: Decoder[OpenapiXml.XmlArrayConfiguration] = { (c: HCursor) =>
+    for {
+      name <- c.downField("name").as[Option[String]]
+      wrapped <- c.downField("wrapped").as[Option[Boolean]]
+    } yield OpenapiXml.XmlArrayConfiguration(name, wrapped, None)
   }
 
   implicit val OpenapiSchemaArrayDecoder: Decoder[OpenapiSchemaArray] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not array!", c.history))(v => v == "array" || v == "object")
+      p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not array!", c.history))(v => v._1 == "array" || v._1 == "object")
       f <- c.downField("items").as[OpenapiSchemaType]
-      nb <- c.downField("nullable").as[Option[Boolean]]
+      xmlItemName <- c.downField("items").downField("xml").downField("name").as[Option[String]]
+      (_, nb) = p
+      xmlArray <- c.downField("xml").as[Option[OpenapiXml.XmlArrayConfiguration]]
+      xml = xmlArray match {
+        case Some(some) => Some(some.copy(itemName = xmlItemName))
+        case None       => xmlItemName.map(n => OpenapiXml.XmlArrayConfiguration(itemName = Some(n)))
+      }
+      minItems <- c.downField("minItems").as[Option[Int]]
+      maxItems <- c.downField("maxItems").as[Option[Int]]
+      uniqueItems <- c.downField("uniqueItems").as[Option[Boolean]]
+      restrictions = ArrayRestrictions(minItems, maxItems, uniqueItems)
     } yield {
-      OpenapiSchemaArray(f, nb.getOrElse(false))
+      OpenapiSchemaArray(f, nb, xml, restrictions)
     }
   }
 
   implicit val OpenapiSchemaAnyDecoder: Decoder[OpenapiSchemaAny] = { (c: HCursor) =>
     for {
-      _ <- c.downField("type").as[Option[String]].ensure(DecodingFailure("Type must not be defined!", c.history))(_.isEmpty)
+      t <- c.downField("type").as[Option[String]]
+      p <- t match {
+        case None           => Right(AnyType.Any)
+        case Some("object") => Right(AnyType.Object)
+        case Some("array")  => Right(AnyType.Array)
+        case Some(t)        => Left(DecodingFailure(s"Fell back to any type; type $t is not handled", c.history))
+      }
       nb <- c.downField("nullable").as[Option[Boolean]]
     } yield {
-      OpenapiSchemaAny(nb.getOrElse(false))
+      OpenapiSchemaAny(nb.getOrElse(false), p)
     }
   }
 

@@ -1,10 +1,13 @@
 // {cat=Error handling; effects=cats-effect; server=Netty; JSON=circe}: Error reporting provided by Iron type refinements
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.11.4
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+// scala 3.6.+ is required for tapir-iron:1.13.2
+//> using scala 3.6.4
+
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-iron:1.13.2
+//> using dep com.softwaremill.sttp.client4::core:4.0.9
 
 package sttp.tapir.examples.errors
 
@@ -12,12 +15,12 @@ import cats.effect.{IO, IOApp}
 import io.github.iltotore.iron.constraint.string.Match
 import io.github.iltotore.iron.constraint.numeric.Positive
 import io.github.iltotore.iron.:|
-import io.github.iltotore.iron.autoRefine
-import io.github.iltotore.iron.{Constraint, refineEither}
+import io.github.iltotore.iron.RefinedType
+import io.github.iltotore.iron.RuntimeConstraint
 import io.circe.generic.auto.*
 import io.circe.{Decoder, Encoder}
-import sttp.client3.*
-import sttp.shared.Identity
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.tapir.*
 import sttp.tapir.DecodeResult.Error
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
@@ -25,37 +28,36 @@ import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.FailureMessages
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 
-import sttp.client3.{HttpURLConnectionBackend, SttpBackend, UriContext, asStringAlways, basicRequest}
 import sttp.model.StatusCode
 import sttp.tapir.server.netty.cats.NettyCatsServer
 import sttp.tapir.json.circe.*
 import sttp.tapir.codec.iron.given
-import sttp.tapir.generic.auto.*
 
 object IronRefinementErrorsNettyServer extends IOApp.Simple:
 
   case class IronException(error: String) extends Exception(error)
 
   type Guard = Match["^[A-Z][a-z]+$"]
-  type Age = Int :| Positive
+  object Age extends RefinedType[Int, Positive]
+  type Age = Age.T
 
-  case class Person(name: String, age: Age)
-
-  inline given Encoder[Age] = summon[Encoder[Int]].contramap(_.asInstanceOf[Int])
+  given Encoder[Age] = summon[Encoder[Int]].contramap[Age](identity[Int])
 
   // Decoder throwing custom exception when refinement fails
-  inline given (using inline constraint: Constraint[Int, Positive]): Decoder[Age] = summon[Decoder[Int]].map(unrefinedValue =>
-    unrefinedValue.refineEither[Positive] match
+  given decAge: Decoder[Age] = summon[Decoder[Int]].map(unrefinedValue =>
+    Age.either(unrefinedValue) match
       case Right(value)       => value
       case Left(errorMessage) => throw IronException(s"Could not refine value $unrefinedValue: $errorMessage")
   )
+
+  case class Person(name: String, age: Age) derives Encoder.AsObject, Decoder, Schema
 
   val addPerson: PublicEndpoint[Person, String, String, Any] = endpoint.post
     .in("add")
     .in(
       jsonBody[Person]
         .description("The person to add")
-        .example(Person("Warski", 30))
+        .example(Person("Warski", Age(30)))
     )
     .errorOut(stringBody)
     .out(stringBody)
@@ -112,7 +114,7 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple:
             assert(port == declaredPort, "Ports don't match")
             assert(host == declaredHost, "Hosts don't match")
 
-            val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+            val backend: SyncBackend = HttpClientSyncBackend()
 
             println("Sending valid request")
 

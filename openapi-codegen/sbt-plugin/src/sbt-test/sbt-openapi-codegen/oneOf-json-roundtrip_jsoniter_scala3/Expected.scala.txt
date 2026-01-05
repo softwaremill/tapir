@@ -1,3 +1,4 @@
+
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -11,6 +12,7 @@ object TapirGeneratedEndpoints {
 
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
+
 
 
   case class CommaSeparatedValues[T](values: List[T])
@@ -44,17 +46,45 @@ object TapirGeneratedEndpoints {
   implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
     support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
   }
-
+  implicit class RichBody[A, T](bod: EndpointIO.Body[A, T]) {
+    def widenBody[TT >: T]: EndpointIO.Body[A, TT] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
+    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
+  }
+  type ByteString <: Array[Byte]
+  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
   sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
+
+  enum PetStatus {
+    case available, pending, sold
+  }
+  case class Pet (
+    id: Option[Long] = None,
+    name: String,
+    category: Option[Category] = None,
+    photoUrls: Seq[String],
+    tags: Option[Seq[Tag]] = None,
+    tags2: Option[Seq[Tag2]] = None,
+    status: Option[PetStatus] = None
+  )
+  case class Category (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  case class Node (
+    value: String,
+    children: Option[Seq[Node]] = None
+  )
   case class SubtypeWithD1 (
     s: String,
     i: Option[Int] = None,
@@ -74,28 +104,61 @@ object TapirGeneratedEndpoints {
     s: String,
     a: Option[Seq[String]] = None
   ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class Tag (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
 
   enum AnEnum {
     case Foo, Bar, Baz
   }
+  case class Tag2 (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
 
 
 
-  lazy val putAdtTest =
+
+  type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
+  lazy val putAdtTest: PutAdtTestEndpoint =
     endpoint
       .put
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithoutDiscriminator])
+      .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
 
-  lazy val postAdtTest =
+  type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
+  lazy val postAdtTest: PostAdtTestEndpoint =
     endpoint
       .post
       .in(("adt" / "test"))
-      .in(jsonBody[ADTWithDiscriminatorNoMapping])
+      .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
+  type PostXmlEndpointEndpoint = Endpoint[Unit, fs2.Stream[injections.Types.A, Byte], Unit, fs2.Stream[injections.Types.A, Byte], sttp.capabilities.fs2.Fs2Streams[injections.Types.A]]
+  lazy val postXmlEndpoint: PostXmlEndpointEndpoint =
+    endpoint
+      .post
+      .in(("xml" / "endpoint"))
+      .in(streamBody(sttp.capabilities.fs2.Fs2Streams[injections.Types.A])(Schema.binary[Pet], CodecFormat.Xml()))
+      .out(streamBody(sttp.capabilities.fs2.Fs2Streams[injections.Types.A])(Schema.binary[Pet], CodecFormat.Xml()).description("An object"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest)
+  type PostRecursiveSchemaEndpointEndpoint = Endpoint[Unit, Node, Unit, Node, Any]
+  lazy val postRecursiveSchemaEndpoint: PostRecursiveSchemaEndpointEndpoint =
+    endpoint
+      .post
+      .in(("recursive" / "schema" / "endpoint"))
+      .in(jsonBody[Node])
+      .out(jsonBody[Node].description("An object"))
 
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postXmlEndpoint, postRecursiveSchemaEndpoint)
+
+
+  object Servers {
+    import sttp.model.Uri.UriContext
+
+    val `/v3`: sttp.model.Uri = uri"/v3"
+
+  }
 }

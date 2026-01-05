@@ -45,7 +45,6 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
               createServerTest,
               Fs2Streams[IO],
               autoPing = true,
-              failingPipe = true,
               handlePong = true
             ) {
               override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
@@ -54,7 +53,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
-          IO.fromFuture(IO.delay(FutureUtil.nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[_])).void
+          IO.fromFuture(IO.delay(FutureUtil.nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[?])).void
         }
         .map { case (tests, _) => tests }
     }

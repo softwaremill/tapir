@@ -1,7 +1,8 @@
 // {cat=Hello, World!; effects=Direct; server=Netty}: Exposing an endpoint using the Netty server (Direct-style variant)
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.4
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.13.2
+//> using dep ch.qos.logback:logback-classic:1.5.8
 
 package sttp.tapir.examples
 
@@ -29,6 +30,6 @@ import sttp.tapir.server.netty.sync.NettySyncServer
 
   supervised {
     val serverBinding = useInScope(NettySyncServer().addEndpoint(helloWorld).start())(_.stop())
-    println(s"Tapir is running on port ${serverBinding.port}")
+    println(s"You can now make requests to http://${serverBinding.hostName}:${serverBinding.port}/hello?name=...!")
     never
   }

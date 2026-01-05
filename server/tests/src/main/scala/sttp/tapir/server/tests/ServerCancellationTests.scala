@@ -5,7 +5,7 @@ import cats.effect.kernel.Async
 import cats.effect.syntax.all._
 import cats.syntax.all._
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.tests._
@@ -35,9 +35,7 @@ class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServ
       val resp: IO[_] = basicRequest.get(uri"$baseUri").readTimeout(300.millis).send(backend)
 
       resp
-        .map { case result =>
-          fail(s"Expected cancellation, but received a result: $result")
-        }
+        .map(result => fail(s"Expected cancellation, but received a result: $result"))
         .handleErrorWith {
           case _: SttpClientException.TimeoutException => // expected, this is how we trigged client-side cancellation
             IO(

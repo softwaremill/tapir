@@ -1,21 +1,21 @@
 package sttp.tapir.server.http4s
 
-import cats.data._
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
 import fs2.Pipe
-import fs2.Stream
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.ContextMiddleware
+import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.ContextRoutes
 import org.http4s.HttpRoutes
 import org.scalatest.{Assertion, OptionValues}
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client4._
+import sttp.client4.ws.async._
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.integ.cats.effect.CatsMonadError
@@ -98,10 +98,10 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         "automatic pings"
       )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { (backend, baseUri) =>
         basicRequest
+          .get(baseUri.scheme("ws"))
           .response(asWebSocket { (ws: WebSocket[IO]) =>
             List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
           })
-          .get(baseUri.scheme("ws"))
           .send(backend)
           .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
       },
@@ -109,15 +109,15 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         endpoint.out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream())),
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
-        IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8Encode).interruptAfter(10.seconds)))
+        IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8.encode).interruptAfter(10.seconds)))
       ) { (backend, baseUri) =>
         basicRequest
+          .get(baseUri)
           .response(
             asStream(Fs2Streams[IO])(bs => {
-              bs.through(fs2.text.utf8Decode).mapAccumulate(0)((pings, currentTime) => (pings + 1, currentTime)).compile.last
+              bs.through(fs2.text.utf8.decode).mapAccumulate(0)((pings, currentTime) => (pings + 1, currentTime)).compile.last
             })
           )
-          .get(baseUri)
           .send(backend)
           .map(_.body match {
             case Right(Some((pings, _))) => pings should be >= 2
@@ -129,6 +129,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         "Send and receive SSE"
       )((_: Unit) => IO(Right(fs2.Stream(sse1, sse2)))) { (backend, baseUri) =>
         basicRequest
+          .get(baseUri)
           .response(asStream[IO, List[ServerSentEvent], Fs2Streams[IO]](Fs2Streams[IO]) { stream =>
             Http4sServerSentEvents
               .parseBytesToSSE[IO]
@@ -136,9 +137,47 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
               .compile
               .toList
           })
-          .get(baseUri)
           .send(backend)
           .map(_.body.right.toOption.value shouldBe List(sse1, sse2))
+      },
+      Test("should work with a router and context web socket routes in a context") {
+        val expectedContext: String = "[PREFIX]" // the context we expect http4s to provide to the endpoint
+
+        val e: Endpoint[Unit, String, Unit, Pipe[IO, String, String], Context[String] with WebSockets with Fs2Streams[IO]] =
+          endpoint.get
+            .in("test" / "ws")
+            .contextIn[String]()
+            .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](Fs2Streams[IO]))
+
+        val routesWithContext: WebSocketBuilder2[IO] => ContextRoutes[String, IO] =
+          Http4sServerInterpreter[IO]()
+            // server logic is to return the context as is
+            .toContextWebSocketRoutes(e.serverLogicSuccess(ctx => IO.pure((in: fs2.Stream[IO, String]) => in.map(s => s"$ctx: $s"))))
+
+        // middleware to add the context to each request (so here string constant)
+        val middleware: ContextMiddleware[IO, String] = ContextMiddleware.const(expectedContext)
+
+        BlazeServerBuilder[IO]
+          .withExecutionContext(ExecutionContext.global)
+          .bindHttp(0, "localhost")
+          .withHttpWebSocketApp(wsb => middleware(routesWithContext(wsb)).orNotFound)
+          .resource
+          .use { server =>
+            val port = server.address.getPort
+            basicRequest
+              .get(uri"ws://localhost:$port/test/ws")
+              .response(asWebSocket { (ws: WebSocket[IO]) =>
+                for {
+                  _ <- ws.sendText("test1")
+                  m1 <- ws.receiveText()
+                } yield m1
+              })
+              .send(backend)
+              .map { r =>
+                r.body shouldBe Right("[PREFIX]: test1")
+              }
+          }
+          .unsafeRunSync()
       }
     )
 
@@ -151,8 +190,9 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         createServerTest,
         Fs2Streams[IO],
         autoPing = true,
-        failingPipe = true,
-        handlePong = false
+        handlePong = false,
+        decodeCloseRequests =
+          false // when a close frame is received, http4s cancels the stream, so sometimes the close frames are never processed
       ) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
         override def emptyPipe[A, B]: Pipe[IO, A, B] = _ => fs2.Stream.empty

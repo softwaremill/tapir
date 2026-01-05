@@ -69,14 +69,16 @@ Please email us at [tapir@softwaremill.com](mailto:tapir@softwaremill.com) from 
 | <a href="https://www.broad.app"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/broad.png" alt="Broad" width="160"/></a> | <a href="https://www.kensu.io?utm_source=github&utm_campaign=tapir"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/kensu.png" alt="Kensu" width="160"/></a> | <a href="https://www.colisweb.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/colisweb.png" alt="Colisweb" width="160"/></a> |
 | <a href="http://www.iceo.co/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/iceo.png" alt="iceo" width="160"/></a> | <a href="http://www.dpgrecruitment.nl/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/dpg-recruitment.svg" alt="dpg" width="160"/></a> | <a href="https://www.hunters.security/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hunters.png" alt="hunters" width="160"/></a> | 
 | <a href="https://www.moia.io/en"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/moia.png" alt="moia" width="160"/></a> | <a href="https://www.pitsdatarecovery.net"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/pits.svg" alt="pits" width="100"/></a> | <a href="https://www.hootsuite.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hootsuite.png" alt="hootsuite" width="160"/></a> |
+| <a href="https://www.ematiq.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ematiq.png" alt="ematiq" width="100"/></a> | <a href="https://www.fugo.ai/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/fugo.png" alt="fugo" width="100"/></a> | <a href="https://budgetbakers.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/budgetbakers.svg" alt="budgetbakers" width="100"/></a> |
+| <a href="https://flo.health"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/flo.svg" alt="flo" width="100"/></a> | | <a href="https://www.xing.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/xing.png" alt="xing" width="100"/></a> |
 
 ## Teaser
 
 ```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.generic.auto._
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
 
 type Limit = Int
 type AuthToken = String
@@ -98,7 +100,7 @@ val booksListing: PublicEndpoint[(BooksQuery, Limit, AuthToken), String, List[Bo
 
 // Generate OpenAPI documentation
 
-import sttp.apispec.openapi.circe.yaml._
+import sttp.apispec.openapi.circe.yaml.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
@@ -123,10 +125,10 @@ val booksListingRoute: Route = AkkaHttpServerInterpreter()
 
 // Convert to sttp Request
 
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3._
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]]] = 
   SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksQuery("SF", 2016), 20, "xyz-abc-123"))
@@ -137,7 +139,7 @@ val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] 
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.11.4"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "1.13.4"
 ```
 
 Then, import:
@@ -204,6 +206,8 @@ Fetch the tags from the upstream:
 git fetch --tags upstream
 ```
 
+When you have a PR ready, take a look at our ["How to prepare a good PR" guide](https://softwaremill.community/t/how-to-prepare-a-good-pr-to-a-library/448). Thanks! :)
+
 ## Scoping which projects are included by `sbt`
 
 * when `STTP_NATIVE` is set, Scala native projects are included in the build (when running `sbt`)
@@ -247,4 +251,4 @@ We offer commercial support for tapir and related technologies, as well as devel
 
 ## Copyright
 
-Copyright (C) 2018-2024 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2018-2025 SoftwareMill [https://softwaremill.com](https://softwaremill.com).

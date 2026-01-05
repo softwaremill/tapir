@@ -2,9 +2,9 @@ package sttp.tapir.server.mockserver
 
 import io.circe.{JsonObject, Printer}
 import io.circe.syntax._
-import sttp.client3._
-import sttp.client3.testing._
-import sttp.model.Uri.UriContext
+import sttp.client4._
+import sttp.client4.testing._
+import sttp.model.Uri.{QuerySegment, UriContext}
 import sttp.model.{ContentTypeRange, HasHeaders, Header, HeaderNames, Headers, MediaType, StatusCode, Uri}
 import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, RawBodyType, WebSocketBodyOutput}
@@ -14,16 +14,16 @@ import cats.syntax.either._
 import java.nio.charset.Charset
 import io.circe.parser._
 import sttp.tapir.capabilities.NoStreams
-import sttp.tapir.client.sttp.SttpClientInterpreter
+import sttp.tapir.client.sttp4.SttpClientInterpreter
 import sttp.tapir.server.interpreter.{EncodeOutputs, OutputValues, ToResponseBody}
 
 import scala.collection.immutable.Seq
 
-class SttpMockServerClient[F[_]] private[mockserver] (baseUri: Uri, backend: SttpBackend[F, Any]) {
+class SttpMockServerClient[F[_]] private[mockserver] (baseUri: Uri, backend: Backend[F]) {
 
   import SttpMockServerClient._
 
-  private val F = backend.responseMonad
+  private val F = backend.monad
 
   def whenInputMatches[A, E, I, O](
       endpoint: Endpoint[A, I, E, O, Any]
@@ -77,7 +77,7 @@ class SttpMockServerClient[F[_]] private[mockserver] (baseUri: Uri, backend: Stt
 }
 
 object SttpMockServerClient {
-  def apply[F[_]](baseUri: Uri, backend: SttpBackend[F, Any]): SttpMockServerClient[F] =
+  def apply[F[_]](baseUri: Uri, backend: Backend[F]): SttpMockServerClient[F] =
     new SttpMockServerClient[F](baseUri, backend)
 
   class TypeAwareWhenRequest[F[_], A, I, E, O] private[mockserver] (
@@ -86,10 +86,10 @@ object SttpMockServerClient {
       input: I,
       baseUri: Uri
   )(
-      backend: SttpBackend[F, Any]
+      backend: Backend[F]
   ) {
 
-    private val F = backend.responseMonad
+    private val F = backend.monad
 
     def thenSuccess(response: O): F[List[Expectation]] =
       thenRespondWithOutput(Right(response), StatusCode.Ok)
@@ -134,7 +134,8 @@ object SttpMockServerClient {
     val request = SttpClientInterpreter().toSecureRequest(endpoint, None).apply(securityInput).apply(input)
     ExpectationRequestDefinition(
       method = request.method,
-      path = request.uri,
+      path = request.uri.copy(querySegments = Seq()),
+      queryStringParameters = querySegmentsToMultiMapOpt(request.uri.querySegments),
       body = toExpectationBody(request),
       headers = headersToMultiMapOpt(request.headers)
     )
@@ -148,7 +149,7 @@ object SttpMockServerClient {
     )
   }
 
-  private def toExpectationBody[E, O](request: Request[DecodeResult[Either[E, O]], Any]): Option[ExpectationBodyDefinition] = {
+  private def toExpectationBody[E, O](request: Request[DecodeResult[Either[E, O]]]): Option[ExpectationBodyDefinition] = {
     for {
       body <- Option(new String(request.forceBodyAsByteArray))
       if body.nonEmpty
@@ -205,6 +206,16 @@ object SttpMockServerClient {
   private def headersToMultiMapOpt(headers: Seq[Header]): Option[Map[String, List[String]]] =
     if (headers.isEmpty) None
     else Some(headers.groupBy(_.name).map { case (name, values) => name -> values.map(_.value).toList })
+
+  private def querySegmentsToMultiMapOpt(querySegments: Seq[QuerySegment]): Option[Map[String, List[String]]] =
+    if (querySegments.isEmpty) None
+    else
+      Some(
+        querySegments
+          .collect { case kv: QuerySegment.KeyValue => kv }
+          .groupBy(x => x.k)
+          .map { case (key, values) => key -> values.map(_.v).toList }
+      )
 
   private val printer = Printer.noSpaces
 

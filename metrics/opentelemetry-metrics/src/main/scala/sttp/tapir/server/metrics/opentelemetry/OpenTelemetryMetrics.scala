@@ -1,10 +1,10 @@
 package sttp.tapir.server.metrics.opentelemetry
 
+import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.metrics.{DoubleHistogram, LongCounter, LongUpDownCounter, Meter}
+import io.opentelemetry.semconv.{ErrorAttributes, HttpAttributes, UrlAttributes}
 import sttp.tapir.AnyEndpoint
-import OpenTelemetryMetrics._
-import io.opentelemetry.api.OpenTelemetry
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabels}
@@ -12,18 +12,20 @@ import sttp.tapir.server.model.ServerResponse
 
 import java.time.{Duration, Instant}
 
+import OpenTelemetryMetrics._
+
 case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]]) {
 
   /** Registers a `request_active{path, method}` up-down-counter (assuming default labels). */
-  def addRequestsActive(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def addRequestsActive(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestActive(meter, labels))
 
   /** Registers a `request_total{path, method, status}` counter (assuming default labels). */
-  def addRequestsTotal(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def addRequestsTotal(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestTotal(meter, labels))
 
   /** Registers a `request_duration_seconds{path, method, status, phase}` histogram (assuming default labels). */
-  def addRequestsDuration(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def addRequestsDuration(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestDuration(meter, labels))
 
   /** Registers a custom metric. */
@@ -35,6 +37,35 @@ case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]])
 }
 
 object OpenTelemetryMetrics {
+
+  /** Default labels for OpenTelemetry-compliant metrics, as recommended here:
+    * https://opentelemetry.io/docs/specs/semconv/http/http-metrics/#http-server
+    *
+    *   - `http.request.method` - HTTP request method (e.g., GET, POST).
+    *   - `url.scheme` - the scheme of the request URL (e.g., http, https).
+    *   - `http.route` - the request path or route template.
+    *   - `http.response.status_code` - HTTP response status code (200, 404, etc.).
+    */
+  lazy val OpenTelemetryAttributes: MetricLabels = MetricLabels(
+    forRequest = List(
+      HttpAttributes.HTTP_REQUEST_METHOD.getKey -> { req => req.method.method },
+      UrlAttributes.URL_SCHEME.getKey -> { req => req.uri.scheme.getOrElse("unknown") }
+    ),
+    forEndpoint = List(
+      HttpAttributes.HTTP_ROUTE.getKey -> { ep => ep.showPathTemplate(showQueryParam = None) }
+    ),
+    forResponse = List(
+      HttpAttributes.HTTP_RESPONSE_STATUS_CODE.getKey -> {
+        case Right(r) => Some(r.code.code.toString)
+        // Default to 500 for exceptions
+        case Left(_) => Some("500")
+      },
+      ErrorAttributes.ERROR_TYPE.getKey -> {
+        case Left(ex) => Some(ex.getClass.getName) // Exception class name for errors
+        case Right(_) => None
+      }
+    )
+  )
 
   def apply[F[_]](meter: Meter): OpenTelemetryMetrics[F] = apply(meter, Nil)
   def apply[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] = apply(defaultMeter(otel), Nil)
@@ -50,7 +81,7 @@ object OpenTelemetryMetrics {
     * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
   def default[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] =
-    default(defaultMeter(otel), MetricLabels.Default)
+    default(defaultMeter(otel), OpenTelemetryAttributes)
 
   /** Registers default metrics (see other variants) using custom labels. */
   def default[F[_]](otel: OpenTelemetry, labels: MetricLabels): OpenTelemetryMetrics[F] = default(defaultMeter(otel), labels)
@@ -64,10 +95,10 @@ object OpenTelemetryMetrics {
     * Status is by default the status code class (1xx, 2xx, etc.), and phase can be either `headers` or `body` - request duration is
     * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
-  def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, MetricLabels.Default)
+  def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, OpenTelemetryAttributes)
 
   /** Registers default metrics (see other variants) using custom labels. */
-  def default[F[_]](meter: Meter, labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
+  def default[F[_]](meter: Meter, labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     OpenTelemetryMetrics(
       meter,
       List[Metric[F, _]](
@@ -80,16 +111,18 @@ object OpenTelemetryMetrics {
   def requestActive[F[_]](meter: Meter, labels: MetricLabels): Metric[F, LongUpDownCounter] =
     Metric[F, LongUpDownCounter](
       meter
-        .upDownCounterBuilder("request_active")
+        .upDownCounterBuilder("http.server.active_requests")
         .setDescription("Active HTTP requests")
         .setUnit("1")
         .build(),
       onRequest = (req, counter, m) => {
-        m.unit {
+        val attrs = asOpenTelemetryAttributesFromRequest(labels, req)
+        m.map(m.eval(counter.add(1, attrs))) { _ =>
           EndpointMetric()
-            .onEndpointRequest { ep => m.eval(counter.add(1, asOpenTelemetryAttributes(labels, ep, req))) }
-            .onResponseBody { (ep, _) => m.eval(counter.add(-1, asOpenTelemetryAttributes(labels, ep, req))) }
-            .onException { (ep, _) => m.eval(counter.add(-1, asOpenTelemetryAttributes(labels, ep, req))) }
+            .onResponseBody { (_, _) => m.eval(counter.add(-1, attrs)) }
+            .onException { (_, _) => m.eval(counter.add(-1, attrs)) }
+            .onInterceptorResponse { _ => m.eval(counter.add(-1, attrs)) }
+            .onDecodeFailure { () => m.eval(counter.add(-1, attrs)) }
         }
       }
     )
@@ -97,7 +130,7 @@ object OpenTelemetryMetrics {
   def requestTotal[F[_]](meter: Meter, labels: MetricLabels): Metric[F, LongCounter] =
     Metric[F, LongCounter](
       meter
-        .counterBuilder("request_total")
+        .counterBuilder("http.server.request.total")
         .setDescription("Total HTTP requests")
         .setUnit("1")
         .build(),
@@ -108,6 +141,7 @@ object OpenTelemetryMetrics {
               m.eval {
                 val otLabels =
                   merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Right(res), None))
+
                 counter.add(1, otLabels)
               }
             }
@@ -118,6 +152,13 @@ object OpenTelemetryMetrics {
                 counter.add(1, otLabels)
               }
             }
+            .onInterceptorResponse { res =>
+              m.eval {
+                val otLabels =
+                  merge(asOpenTelemetryAttributesFromRequest(labels, req), asOpenTelemetryAttributes(labels, Right(res), None))
+                counter.add(1, otLabels)
+              }
+            }
         }
       }
     )
@@ -125,7 +166,7 @@ object OpenTelemetryMetrics {
   def requestDuration[F[_]](meter: Meter, labels: MetricLabels): Metric[F, DoubleHistogram] =
     Metric[F, DoubleHistogram](
       meter
-        .histogramBuilder("request_duration")
+        .histogramBuilder("http.server.request.duration")
         .setDescription("Duration of HTTP requests")
         .setUnit("ms")
         .build(),
@@ -161,16 +202,36 @@ object OpenTelemetryMetrics {
                 recorder.record(duration, otLabels)
               }
             }
+            .onInterceptorResponse { res =>
+              m.eval {
+                val otLabels =
+                  merge(
+                    asOpenTelemetryAttributesFromRequest(labels, req),
+                    asOpenTelemetryAttributes(labels, Right(res), Some(labels.forResponsePhase.bodyValue))
+                  )
+                recorder.record(duration, otLabels)
+              }
+            }
         }
     )
 
   private def defaultMeter(otel: OpenTelemetry): Meter = otel.meterBuilder("tapir").setInstrumentationVersion("1.0.0").build()
 
-  private def asOpenTelemetryAttributes(l: MetricLabels, ep: AnyEndpoint, req: ServerRequest): Attributes =
-    l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(ep, req)) }).build()
+  /** Attributes for requests when we only have request data (no endpoint matched). */
+  private def asOpenTelemetryAttributesFromRequest(l: MetricLabels, req: ServerRequest): Attributes =
+    l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(req)) }).build()
+
+  /** Attributes for requests when we have both endpoint and request data. */
+  private def asOpenTelemetryAttributes(l: MetricLabels, ep: AnyEndpoint, req: ServerRequest): Attributes = {
+    val builder = l.forRequest.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(req)) })
+    l.forEndpoint.foldLeft(builder)((b, label) => { b.put(label._1, label._2(ep)) }).build()
+  }
 
   private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Attributes = {
-    val builder = l.forResponse.foldLeft(Attributes.builder())((b, label) => { b.put(label._1, label._2(res)) })
+    val builder = Attributes.builder()
+    l.forResponse.foreach { case (key, valueFn) =>
+      valueFn(res).foreach(value => builder.put(key, value))
+    }
     phase.foreach(v => builder.put(l.forResponsePhase.name, v))
     builder.build()
   }

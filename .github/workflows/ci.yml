@@ -4,18 +4,21 @@ on:
   push:
     branches: ['**']
     tags: [v*]
+permissions:
+  contents: write        # release-drafter, auto-merge requirement
+  pull-requests: write   # labeler, auto-merge requirement    
 env:
   # .sbtopts specifies 8g, which is needed to import into IntelliJ, but on GH that exceeds the maximum available memory
   SBT_JAVA_OPTS: -J-Xms4g -J-Xmx4g
 jobs:
   ci:
-    # run on 1) push, 2) external PRs, 3) softwaremill-ci PRs
+    # run on 1) push, 2) external PRs, 3) github-actions PRs
     # do not run on internal, non-steward PRs since those will be run by push to branch
     if: |
       github.event_name == 'push' || 
       github.event.pull_request.head.repo.full_name != github.repository ||
       github.event.pull_request.user.login == 'softwaremill-ci'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -33,7 +36,8 @@ jobs:
             java: "21"
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
+    - uses: sbt/setup-sbt@3e125ece5c3e5248e18da9ed8d2cce3d335ec8dd # v1, specifically v1.1.14
     - name: Set up JDK 
       uses: actions/setup-java@v4
       with:
@@ -49,7 +53,7 @@ jobs:
         sam --version
     - name: Install NPM
       if: matrix.java == '11'
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: 18
     - run: npm --version
@@ -66,7 +70,7 @@ jobs:
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Install scala-cli
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
-      uses: VirtusLab/scala-cli-setup@main
+      uses: VirtusLab/scala-cli-setup@89a48599f871d08573707e82bdcefbce839de436 # main, specifically v1.11.0
       with:
         jvm: '' # needed because scala-cli-setup otherwise forces the installation of their default JVM (17)
     - name: Enable Loom-specific modules
@@ -81,19 +85,26 @@ jobs:
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS -v "project examples3" verifyExamplesCompileUsingScalaCli
     - name: Test
+      if: matrix.target-platform != 'JS'
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3, specifically v3.0.2
+      with:
+        timeout_minutes: 10
+        max_attempts: 2
+        # the netty server interpreter tests include some which run a large number of requests, to detect potential leaks
+        # storing the output to verify it in the next step
+        command: |
+          sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}" 2>&1 | tee output.log
+          exit ${PIPESTATUS[0]}
+    - name: Check for reported leaks
+      if: matrix.target-platform != 'JS'
+      run: |
+          if grep -q "LEAK" output.log; then
+            echo "Leak detected!"
+            exit 1
+          fi
+    - name: Test OpenAPI codegen
       if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
-      uses: nick-fields/retry@v2
-      with:
-        timeout_minutes: 15
-        max_attempts: 4
-        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}; openapiCodegenSbt2_12/scripted"
-    - name: Test
-      if: matrix.target-platform != 'JS' && !(matrix.target-platform == 'JVM' && matrix.scala-version == '2.12')
-      uses: nick-fields/retry@v2
-      with:
-        timeout_minutes: 15
-        max_attempts: 4
-        command: sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
+      run: sbt $SBT_JAVA_OPTS -v "openapiCodegenSbt2_12/scripted"                
     # The finatra tests take a really long time (1/3 of the build duration); hence, they are disabled and need to be run separately
     #- name: Test finatra
     #  if: matrix.target-platform != 'JS'
@@ -109,13 +120,13 @@ jobs:
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test
-    - uses: actions/upload-artifact@v3  # upload test results
+    - uses: actions/upload-artifact@v6  # upload test results
       if: success() || failure()        # run this step even if previous step failed
       with:
         name: 'tests-results-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'
         path: '**/test-reports/TEST*.xml'
     - name: Prepare release notes
-      uses: release-drafter/release-drafter@v5
+      uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5 # v6, specifically v6.1.0
       with:
         config-name: release-drafter.yml
       env:
@@ -123,38 +134,23 @@ jobs:
 
   # identify binary incompatibilities (check build.sbt for details)
   mima:
-    # run on 1) push, 2) external PRs, 3) softwaremill-ci PRs
-    # do not run on internal, non-steward PRs since those will be run by push to branch
-    if: |
-      github.event_name == 'push' || 
-      github.event.pull_request.head.repo.full_name != github.repository ||
-      github.event.pull_request.user.login == 'softwaremill-ci'
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # checkout tags so that dynver works properly (we need the version for MiMa)
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: 21
-          cache: 'sbt'
-      - name: Check MiMa
-        run: sbt $SBT_JAVA_OPTS -v mimaReportBinaryIssues
+    uses: softwaremill/github-actions-workflows/.github/workflows/mima.yml@main
+    with:
+      java-version: '21'
+      java-opts: '-Xms4g -Xmx4g' # SBT_JAVA_OPTS env parameter adapted for JVM
 
   publish:
     name: Publish release
     needs: [ci]
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v'))
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix: 
         java: [ "11", "21" ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+      - uses: sbt/setup-sbt@3e125ece5c3e5248e18da9ed8d2cce3d335ec8dd # v1, specifically v1.1.14
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -190,7 +186,7 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - name: Publish release notes
         if: matrix.java == '11'
-        uses: release-drafter/release-drafter@v5
+        uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5 # v6, specifically v6.1.0
         with:
           config-name: release-drafter.yml
           publish: true
@@ -200,33 +196,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
-  # `automerge` label is attached iff there is exactly one file changed by steward and this file belongs to a
-  # whitelist specified by `labeler.yml`
   label:
-    name: Attach automerge label
     # only for PRs by softwaremill-ci
     if: github.event.pull_request.user.login == 'softwaremill-ci'
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      - name: Launch labeler
-        uses: srvaroa/labeler@master
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+    uses: softwaremill/github-actions-workflows/.github/workflows/label.yml@main
+    secrets: inherit
 
-  auto-merge:
-    name: Auto merge
+  auto-merge-github-actions:
     # only for PRs by softwaremill-ci
     if: github.event.pull_request.user.login == 'softwaremill-ci'
     needs: [ ci, mima, label ]
-    runs-on: ubuntu-22.04
-    steps:
-      - id: automerge
-        name: automerge
-        uses: "pascalgn/automerge-action@v0.15.6"
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          MERGE_METHOD: "squash"
+    uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
+    secrets: inherit
+
+  auto-merge-dependabot:
+    # only for PRs by dependabot[bot]
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    needs: [ ci, mima ]
+    uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
+    secrets: inherit

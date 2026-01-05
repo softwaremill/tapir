@@ -1,14 +1,15 @@
 // {cat=Hello, World!; effects=Future; server=Armeria}: Exposing an endpoint using the Armeria server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-armeria-server:1.11.4
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-armeria-server:1.13.2
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples
 
 import com.linecorp.armeria.server.Server
 import sttp.capabilities.armeria.ArmeriaStreams
-import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.tapir.server.armeria.{ArmeriaFutureServerInterpreter, TapirService}
 import sttp.tapir.*
 
@@ -34,9 +35,9 @@ import scala.concurrent.Future
 
   server.start().join()
   // testing
-  val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+  val backend: SyncBackend = HttpClientSyncBackend()
   val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send(backend).body
   println("Got result: " + result)
 
   assert(result == "Hello, Frodo!")
-  server.stop().join()
+  server.stop().join(): Unit

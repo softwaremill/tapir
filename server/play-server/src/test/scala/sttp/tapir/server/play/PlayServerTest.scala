@@ -2,13 +2,12 @@ package sttp.tapir.server.play
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.effect.unsafe.implicits.global
 import org.scalatest.matchers.should.Matchers._
 import play.api.http.ParserConfiguration
 import sttp.capabilities.pekko.PekkoStreams
-import sttp.client3._
+import sttp.client4._
 import sttp.model.{MediaType, Part, StatusCode}
 import sttp.monad.FutureMonad
 import sttp.tapir._
@@ -36,7 +35,7 @@ class PlayServerTest extends TestSuite {
           val e = endpoint.post.in("hello").in(multipartBody[A]).out(stringBody).serverLogicSuccess(_ => Future.successful("world"))
           val routes = PlayServerInterpreter().toRoutes(e)
           interpreter
-            .server(NonEmptyList.of(routes))
+            .server(routes)
             .use { port =>
               basicRequest
                 .post(uri"http://localhost:$port/hello")
@@ -55,7 +54,7 @@ class PlayServerTest extends TestSuite {
           val e = endpoint.post.in("hello").in(stringBody).out(stringBody).serverLogicSuccess(_ => Future.successful("world"))
           val routes = PlayServerInterpreter().toRoutes(e)
           interpreter
-            .server(NonEmptyList.of(routes))
+            .server(routes)
             .use { port =>
               basicRequest
                 .post(uri"http://localhost:$port/hello")
@@ -76,7 +75,7 @@ class PlayServerTest extends TestSuite {
           val e = endpoint.post.in("hello").in(multipartBody[A]).out(stringBody).serverLogicSuccess(_ => Future.successful("world"))
           val routes = PlayServerInterpreter().toRoutes(e)
           interpreter
-            .server(NonEmptyList.of(routes))
+            .server(routes)
             .use { port =>
               basicRequest
                 .post(uri"http://localhost:$port/hello")
@@ -118,7 +117,8 @@ class PlayServerTest extends TestSuite {
           backend,
           basic = false,
           multipart = false,
-          options = false
+          options = false,
+          metrics = false
         ).tests() ++
         new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
         new PlayServerWithContextTest(backend).tests() ++
@@ -126,13 +126,14 @@ class PlayServerTest extends TestSuite {
           createServerTest,
           PekkoStreams,
           autoPing = false,
-          failingPipe = true,
-          handlePong = false
+          handlePong = false,
+          decodeCloseRequests = false
         ) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
           override def emptyPipe[A, B]: Flow[A, B, Any] = Flow.fromSinkAndSource(Sink.ignore, Source.empty)
         }.tests() ++
-        additionalTests()
+        additionalTests() ++
+        new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests()
     }
   }
 }

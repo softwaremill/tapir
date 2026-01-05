@@ -41,3 +41,13 @@ Thank you!
 <a href="https://www.pitsdatarecovery.net"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/pits.svg" alt="pits" width="100"/></a>
 <a href="https://www.hootsuite.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/hootsuite.png" alt="hootsuite" width="160"/></a>
 </div>
+<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+<a href="https://www.ematiq.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/ematiq.png" alt="ematiq" width="100"/></a>
+<a href="https://www.fugo.ai/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/fugo.png" alt="fugo" width="100"/></a>
+<a href="https://budgetbakers.com/"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/budgetbakers.svg" alt="budgetbakers" width="100"/></a>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; height: 100px;">
+<a href="https://flo.health"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/flo.svg" alt="flo" width="100"/></a>
+&nbsp;
+<a href="https://www.xing.com"><img src="https://github.com/softwaremill/tapir/raw/master/doc/adopters/xing.png" alt="xing" width="100"/></a>
+</div>

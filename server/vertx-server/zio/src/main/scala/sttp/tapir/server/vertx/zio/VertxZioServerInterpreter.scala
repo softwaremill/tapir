@@ -25,7 +25,10 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
   def route[R2](e: ZServerEndpoint[R2, ZioStreams with WebSockets])(implicit
       runtime: Runtime[R & R2]
   ): Router => Route = { router =>
-    mountWithDefaultHandlers(e.widen)(router, extractRouteDefinition(e.endpoint), vertxZioServerOptions)
+    val routeDef = extractRouteDefinition(e.endpoint)
+    optionsRouteIfCORSDefined(e.widen)(router, routeDef, vertxZioServerOptions)
+      .foreach(_.handler(endpointHandler(e)))
+    mountWithDefaultHandlers(e.widen)(router, routeDef, vertxZioServerOptions)
       .handler(endpointHandler(e))
   }
 
@@ -52,8 +55,8 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
           interpreter(serverRequest)
             .flatMap {
               // in vertx, endpoints are attempted to be decoded individually; if this endpoint didn't match - another one might
-              case RequestResult.Failure(_) => ZIO.succeed(rc.next())
-              case RequestResult.Response(response) =>
+              case RequestResult.Failure(_)            => ZIO.succeed(rc.next())
+              case RequestResult.Response(response, _) =>
                 ZIO.async((k: Task[Unit] => Unit) => {
                   VertxOutputEncoders(response)
                     .apply(rc)

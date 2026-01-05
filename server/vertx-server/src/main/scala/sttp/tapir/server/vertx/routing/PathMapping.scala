@@ -2,9 +2,9 @@ package sttp.tapir.server.vertx.routing
 
 import io.vertx.core.http.HttpMethod
 import io.vertx.ext.web.{Route, Router}
-import sttp.tapir.{AnyEndpoint, EndpointInput}
 import sttp.tapir.EndpointInput.PathCapture
 import sttp.tapir.internal._
+import sttp.tapir.{AnyEndpoint, EndpointInput}
 
 object PathMapping {
 
@@ -41,7 +41,7 @@ object PathMapping {
       .collect {
         case segment: EndpointInput.FixedPath[_] => segment.show
         case PathCapture(Some(name), _, _)       => s"/:$name"
-        case PathCapture(_, _, _) =>
+        case PathCapture(_, _, _)                =>
           idxUsed += 1
           s"/:param$idxUsed"
         case EndpointInput.PathsCapture(_, _) => "/*"
@@ -49,5 +49,4 @@ object PathMapping {
       .mkString
     if (path.isEmpty) "/*" else path
   }
-
 }

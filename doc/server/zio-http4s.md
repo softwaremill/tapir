@@ -178,4 +178,4 @@ val routes: HttpRoutes[Task] =
 
 ## Examples
 
-There's a couple of [examples](../examples.md) of using the ZIO integration available.\
+There's a couple of [examples](../examples.md) of using the ZIO integration available.

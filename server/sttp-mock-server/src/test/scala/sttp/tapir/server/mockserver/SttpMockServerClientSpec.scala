@@ -4,12 +4,13 @@ import org.mockserver.integration.ClientAndServer.startClientAndServer
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import sttp.client3.TryHttpURLConnectionBackend
+import sttp.client4.httpclient.HttpClientSyncBackend
+import sttp.client4.wrappers.TryBackend
 import sttp.model.StatusCode
 import sttp.model.Uri.UriContext
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir._
-import sttp.tapir.client.sttp.SttpClientInterpreter
+import sttp.tapir.client.sttp4.SttpClientInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe
 import sttp.tapir.server.mockserver.fixture._
@@ -22,7 +23,7 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
 
   private val baseUri = uri"http://localhost:1080"
 
-  private val backend = TryHttpURLConnectionBackend()
+  private val backend = TryBackend(HttpClientSyncBackend())
 
   private val mockServer = startClientAndServer(1080)
 
@@ -46,6 +47,13 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
     .errorOut(circe.jsonBody[ApiError])
     .out(circe.jsonBody[PersonView])
 
+  private val queryParameterEndpoint = endpoint
+    .in("api" / "v1" / "person")
+    .in(query[String]("name").and(query[Int]("age")).mapTo[CreatePersonCommand])
+    .put
+    .errorOut(circe.jsonBody[ApiError])
+    .out(circe.jsonBody[PersonView])
+
   it should "create plain text expectation correctly" in {
     val sampleIn = "Hello, world!"
     val sampleOut = "Hello to you!"
@@ -62,6 +70,27 @@ class SttpMockServerClientSpec extends AnyFlatSpec with Matchers with BeforeAndA
 
       _ <- mockServerClient
         .verifyRequest(plainEndpoint, VerificationTimes.exactlyOnce)((), sampleIn)
+    } yield resp.body
+
+    actual shouldEqual Success(Value(Right(sampleOut)))
+  }
+
+  it should "create query parameters in expectation correctly" in {
+    val sampleIn = CreatePersonCommand("John", 23)
+    val sampleOut = PersonView(uuid(), "John", 23)
+
+    val actual = for {
+      _ <- mockServerClient
+        .whenInputMatches(queryParameterEndpoint)((), sampleIn)
+        .thenSuccess(sampleOut)
+
+      resp <- SttpClientInterpreter()
+        .toRequest(queryParameterEndpoint, baseUri = Some(baseUri))
+        .apply(sampleIn)
+        .send(backend)
+
+      _ <- mockServerClient
+        .verifyRequest(queryParameterEndpoint, VerificationTimes.exactlyOnce)((), sampleIn)
     } yield resp.body
 
     actual shouldEqual Success(Value(Right(sampleOut)))

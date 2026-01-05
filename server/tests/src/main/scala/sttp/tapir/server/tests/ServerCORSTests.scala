@@ -2,7 +2,7 @@ package sttp.tapir.server.tests
 
 import cats.implicits.catsSyntaxEitherId
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.model.headers.Origin
 import sttp.model.{Header, HeaderNames, Method, StatusCode, Uri}
 import sttp.monad.MonadError
@@ -22,7 +22,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
 
   val preflightTests = List(
     testServer(
-      endpoint.options.in("path").out(stringBody),
+      endpoint.post.in("path").out(stringBody),
       "CORS with default config; valid preflight request",
       _.corsInterceptor(CORSInterceptor.default[F])
     )(_ => pureResult("foo".asRight[Unit])) { (backend, baseUri) =>
@@ -45,7 +45,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         }
     },
     testServer(
-      endpoint.options.in("path"),
+      endpoint.post.in("path"),
       "CORS with specific allowed origin, method, headers, allowed credentials and max age; preflight request with matching origin, method and headers",
       _.corsInterceptor(
         CORSInterceptor.customOrThrow[F](
@@ -74,7 +74,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         }
     },
     testServer(
-      endpoint.options.in("path"),
+      endpoint.post.in("path"),
       "CORS with multiple allowed origins, method, headers, allowed credentials and max age; preflight request with matching origin, method and headers",
       _.corsInterceptor(
         CORSInterceptor.customOrThrow[F](
@@ -103,7 +103,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         }
     },
     testServer(
-      endpoint.options.in("path"),
+      endpoint.post.in("path"),
       "CORS with specific allowed origin; preflight request with unsupported origin",
       _.corsInterceptor(CORSInterceptor.customOrThrow[F](CORSConfig.default.allowOrigin(Origin.Host("https", "example.com"))))
     )(noop) { (backend, baseUri) =>
@@ -115,7 +115,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         }
     },
     testServer(
-      endpoint.options.in("path"),
+      endpoint.post.in("path"),
       "CORS with multiple allowed origins; preflight request with unsupported origin",
       _.corsInterceptor(
         CORSInterceptor.customOrThrow[F](CORSConfig.default.allowMatchingOrigins(Set("https://example1.com", "https://example2.com")))
@@ -129,7 +129,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         }
     },
     testServer(
-      endpoint.options.in("path"),
+      endpoint.post.in("path"),
       "CORS with specific allowed method; preflight request with unsupported method",
       _.corsInterceptor(CORSInterceptor.customOrThrow[F](CORSConfig.default.allowMethods(Method.PUT)))
     )(noop) { (backend, baseUri) =>
@@ -141,7 +141,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         }
     },
     testServer(
-      endpoint.options.in("path"),
+      endpoint.post.in("path"),
       "CORS with specific allowed headers; preflight request with unsupported header",
       _.corsInterceptor(CORSInterceptor.customOrThrow[F](CORSConfig.default.allowHeaders("X-Bar")))
     )(noop) { (backend, baseUri) =>
@@ -153,7 +153,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         }
     },
     testServer(
-      endpoint.options.in("path"),
+      endpoint.post.in("path"),
       "CORS with reflected allowed headers; preflight request",
       _.corsInterceptor(CORSInterceptor.customOrThrow[F](CORSConfig.default.reflectHeaders))
     )(noop) { (backend, baseUri) =>
@@ -165,7 +165,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
         }
     },
     testServer(
-      endpoint.options.in("path"),
+      endpoint.post.in("path"),
       "CORS with custom response code for preflight requests; valid preflight request",
       _.corsInterceptor(CORSInterceptor.customOrThrow[F](CORSConfig.default.preflightResponseStatusCode(StatusCode.Ok)))
     )(noop) { (backend, baseUri) =>

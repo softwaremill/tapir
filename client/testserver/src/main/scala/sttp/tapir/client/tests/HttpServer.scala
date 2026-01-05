@@ -2,7 +2,6 @@ package sttp.tapir.client.tests
 
 import cats.effect._
 import cats.effect.std.Queue
-import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import fs2.{Pipe, Stream}
 import org.http4s.dsl.io._
@@ -16,24 +15,21 @@ import org.http4s._
 import org.slf4j.LoggerFactory
 import org.typelevel.ci.CIString
 import scodec.bits.ByteVector
-import sttp.tapir.client.tests.HttpServer._
 
 import scala.concurrent.ExecutionContext
 
-object HttpServer {
+object HttpServer extends ResourceApp.Forever {
   type Port = Int
 
-  def main(args: Array[String]): Unit = {
+  def run(args: List[String]): Resource[IO, Unit] = {
     val port = args.headOption.map(_.toInt).getOrElse(51823)
-    new HttpServer(port).start()
+    new HttpServer(port).build.void
   }
 }
 
-class HttpServer(port: Port) {
+class HttpServer(port: HttpServer.Port) {
 
   private val logger = LoggerFactory.getLogger(getClass)
-
-  private var stopServer: IO[Unit] = _
 
   //
 
@@ -43,6 +39,7 @@ class HttpServer(port: Port) {
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
   private object apiKeyOptParam extends OptionalQueryParamDecoderMatcher[String]("api-key")
   private object statusOutParam extends QueryParamDecoderMatcher[Int]("statusOut")
+  private object errorParam extends QueryParamDecoderMatcher[Boolean]("error")
 
   private def service(wsb: WebSocketBuilder2[IO]) = HttpRoutes.of[IO] {
     case GET -> Root :? fruitParam(f) +& amountOptParam(amount) =>
@@ -68,6 +65,12 @@ class HttpServer(port: Port) {
       okOnlyHeaders(List(filteredHeaders2))
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
       okOnlyHeaders(r.uri.multiParams.getOrElse("qq", Nil).reverse.map("hh" -> _: Header.ToRaw))
+    case r @ POST -> Root / "api" / "echo" / "param-to-header" =>
+      r.as[String].flatMap { body =>
+        val headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map("hh" -> _: Header.ToRaw)
+        Ok(body, headers = Headers(headers))
+      }
+
     case r @ GET -> Root / "api" / "echo" / "param-to-upper-header" =>
       okOnlyHeaders(r.uri.multiParams.map { case (k, v) =>
         k -> v.headOption.getOrElse("?"): Header.ToRaw
@@ -75,14 +78,14 @@ class HttpServer(port: Port) {
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
       r.decode[multipart.Multipart[IO]] { mp =>
         val parts: Vector[multipart.Part[IO]] = mp.parts
-        def toString(s: fs2.Stream[IO, Byte]): IO[String] = s.through(fs2.text.utf8Decode).compile.foldMonoid
+        def toString(s: fs2.Stream[IO, Byte]): IO[String] = s.through(fs2.text.utf8.decode).compile.foldMonoid
         def partToString(name: String): IO[String] = parts.find(_.name.contains(name)).map(p => toString(p.body)).getOrElse(IO.pure(""))
         partToString("fruit").product(partToString("amount")).flatMap { case (fruit, amount) =>
           Ok(s"$fruit=$amount")
         }
       }
     case r @ POST -> Root / "api" / "echo" => r.as[String].flatMap(Ok(_))
-    case r @ GET -> Root =>
+    case r @ GET -> Root                   =>
       r.headers.get(CIString("X-Role")) match {
         case None     => Ok()
         case Some(hs) => Ok("Role: " + hs.head.value)
@@ -111,23 +114,7 @@ class HttpServer(port: Port) {
         case _   => BadRequest()
       }
 
-    case GET -> Root / "ws" / "echo" =>
-      val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
-        _.collect { case WebSocketFrame.Text(msg, _) =>
-          if (msg.contains("\"f\"")) {
-            WebSocketFrame.Text(msg.replace("\"f\":\"", "\"f\":\"echo: ")) // json echo
-          } else {
-            WebSocketFrame.Text("echo: " + msg) // string echo
-          }
-        }
-
-      Queue
-        .unbounded[IO, WebSocketFrame]
-        .flatMap { q =>
-          val d = Stream.repeatEval(q.take).through(echoReply)
-          val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
-          wsb.build(d, e)
-        }
+    case GET -> Root / "ws" / "echo" => wsEcho(wsb)
 
     case GET -> Root / "ws" / "echo" / "fragmented" =>
       val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
@@ -163,6 +150,9 @@ class HttpServer(port: Port) {
             .build(d, e)
         }
 
+    case GET -> Root / "ws" / "error-or-echo" :? errorParam(e) =>
+      if (e) BadRequest("error as requested") else wsEcho(wsb)
+
     case GET -> Root / "entity" / entityType =>
       if (entityType == "person") Created("""{"name":"mary","age":20}""")
       else Ok("""{"name":"work"}""")
@@ -193,6 +183,34 @@ class HttpServer(port: Port) {
           case "application/xml"  => Ok(s"<f>$body (xml)</f>", `Content-Type`(MediaType.application.xml, Charset.`UTF-8`))
         }
       }
+
+    case r @ POST -> Root / "api" / "error_or_echo" :? errorParam(e) =>
+      r.as[String].flatMap { body =>
+        if (e) {
+          BadRequest("error as requested")
+        } else {
+          Ok(body)
+        }
+      }
+  }
+
+  private def wsEcho(wsb: WebSocketBuilder2[IO]) = {
+    val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
+      _.collect { case WebSocketFrame.Text(msg, _) =>
+        if (msg.contains("\"f\"")) {
+          WebSocketFrame.Text(msg.replace("\"f\":\"", "\"f\":\"echo: ")) // json echo
+        } else {
+          WebSocketFrame.Text("echo: " + msg) // string echo
+        }
+      }
+
+    Queue
+      .unbounded[IO, WebSocketFrame]
+      .flatMap { q =>
+        val d = Stream.repeatEval(q.take).through(echoReply)
+        val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
+        wsb.build(d, e)
+      }
   }
 
   private def okOnlyHeaders(headers: Seq[Header.ToRaw]): IO[Response[IO]] = IO.pure(Response(headers = Headers(headers)))
@@ -212,23 +230,11 @@ class HttpServer(port: Port) {
 
   //
 
-  def start(): Unit = {
-    val (_, _stopServer) = BlazeServerBuilder[IO]
-      .withExecutionContext(ExecutionContext.global)
-      .bindHttp(port)
-      .withHttpWebSocketApp(app)
-      .resource
-      .map(_.address.getPort)
-      .allocated
-      .unsafeRunSync()
-
-    stopServer = _stopServer
-
-    logger.info(s"Server on port $port started")
-  }
-
-  def close(): Unit = {
-    stopServer.unsafeRunSync()
-    logger.info(s"Server on port $port stopped")
-  }
+  def build: Resource[IO, server.Server] = BlazeServerBuilder[IO]
+    .withExecutionContext(ExecutionContext.global)
+    .bindHttp(port)
+    .withHttpWebSocketApp(app)
+    .resource
+    .evalTap(_ => IO(logger.info(s"Server on port $port started")))
+    .onFinalize(IO(logger.info(s"Server on port $port stopped")))
 }

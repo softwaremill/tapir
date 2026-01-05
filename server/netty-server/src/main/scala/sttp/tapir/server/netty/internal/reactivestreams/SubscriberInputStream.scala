@@ -9,7 +9,6 @@ import java.io.{IOException, InputStream}
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantLock
 import scala.annotation.tailrec
-import scala.concurrent.Promise
 
 /** A blocking input stream that reads from a reactive streams publisher of [[HttpContent]].
   * @param maxBufferedChunks

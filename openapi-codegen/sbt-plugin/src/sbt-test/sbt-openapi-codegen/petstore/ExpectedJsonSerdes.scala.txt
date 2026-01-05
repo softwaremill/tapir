@@ -1,0 +1,25 @@
+package sttp.tapir.generated
+
+object TapirGeneratedEndpointsJsonSerdes {
+  import sttp.tapir.generated.TapirGeneratedEndpoints._
+  import sttp.tapir.generic.auto._
+  implicit val byteStringJsonDecoder: io.circe.Decoder[ByteString] =
+    io.circe.Decoder.decodeString
+      .map(java.util.Base64.getDecoder.decode)
+      .map(toByteString)
+  implicit val byteStringJsonEncoder: io.circe.Encoder[ByteString] =
+    io.circe.Encoder.encodeString
+      .contramap(java.util.Base64.getEncoder.encodeToString)
+  implicit lazy val petJsonDecoder: io.circe.Decoder[Pet] = io.circe.generic.semiauto.deriveDecoder[Pet]
+  implicit lazy val petJsonEncoder: io.circe.Encoder[Pet] = io.circe.generic.semiauto.deriveEncoder[Pet]
+  implicit lazy val categoryJsonDecoder: io.circe.Decoder[Category] = io.circe.generic.semiauto.deriveDecoder[Category]
+  implicit lazy val categoryJsonEncoder: io.circe.Encoder[Category] = io.circe.generic.semiauto.deriveEncoder[Category]
+  implicit lazy val tagJsonDecoder: io.circe.Decoder[Tag] = io.circe.generic.semiauto.deriveDecoder[Tag]
+  implicit lazy val tagJsonEncoder: io.circe.Encoder[Tag] = io.circe.generic.semiauto.deriveEncoder[Tag]
+  implicit lazy val userJsonDecoder: io.circe.Decoder[User] = io.circe.generic.semiauto.deriveDecoder[User]
+  implicit lazy val userJsonEncoder: io.circe.Encoder[User] = io.circe.generic.semiauto.deriveEncoder[User]
+  implicit lazy val orderJsonDecoder: io.circe.Decoder[Order] = io.circe.generic.semiauto.deriveDecoder[Order]
+  implicit lazy val orderJsonEncoder: io.circe.Encoder[Order] = io.circe.generic.semiauto.deriveEncoder[Order]
+  implicit lazy val apiResponseJsonDecoder: io.circe.Decoder[ApiResponse] = io.circe.generic.semiauto.deriveDecoder[ApiResponse]
+  implicit lazy val apiResponseJsonEncoder: io.circe.Encoder[ApiResponse] = io.circe.generic.semiauto.deriveEncoder[ApiResponse]
+}

@@ -90,7 +90,7 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
     }
   }
 
-  override def subscribe(s: Subscriber[_ >: NettyWebSocketFrame]): Unit = {
+  override def subscribe(s: Subscriber[? >: NettyWebSocketFrame]): Unit = {
     // A subscriber may come to read from our internal Publisher. It has to wait for the Publisher to be initialized.
     publisher.future.onComplete {
       case Success(p) =>

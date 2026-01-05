@@ -1,18 +1,18 @@
 // {cat=WebSocket; effects=Direct; server=Netty}: A WebSocket chat across multiple clients connected to the same server
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.4
-//> using dep com.softwaremill.ox::core:0.3.9
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.18
 
 package sttp.tapir.examples.websocket
 
 import ox.channels.{Actor, ActorRef, Channel, ChannelClosed, Default, DefaultResult, selectOrClosed}
-import ox.{ExitCode, IO, Ox, OxApp, fork, never, releaseAfterScope}
+import ox.{ExitCode, Ox, OxApp, forkDiscard, never, releaseAfterScope, supervised}
 import sttp.tapir.*
 import sttp.tapir.CodecFormat.*
 import sttp.tapir.server.netty.sync.{NettySyncServer, OxStreams}
 
 import java.util.UUID
+import ox.flow.Flow
+import ox.flow.FlowEmit
 
 type ChatMemberId = UUID
 
@@ -33,16 +33,15 @@ class ChatRoom:
 
   def incoming(message: Message): Unit =
     println(s"Broadcasting: ${message.v}")
-    members = members.flatMap { (id, member) =>
+    members = members.flatMap: (id, member) =>
       selectOrClosed(member.channel.sendClause(message), Default(())) match
         case member.channel.Sent() => Some((id, member))
-        case _: ChannelClosed =>
+        case _: ChannelClosed      =>
           println(s"Channel of member $id closed, removing from members")
           None
         case DefaultResult(_) =>
           println(s"Buffer for member $id full, not sending message")
           Some((id, member))
-    }
 
 //
 
@@ -53,30 +52,28 @@ val chatEndpoint = endpoint.get
   .in("chat")
   .out(webSocketBody[Message, TextPlain, Message, TextPlain](OxStreams))
 
-def chatProcessor(a: ActorRef[ChatRoom]): OxStreams.Pipe[Message, Message] =
-  incoming => {
-    val member = ChatMember.create
+def chatProcessor(a: ActorRef[ChatRoom]): OxStreams.Pipe[Message, Message] = incoming =>
+  // returning a flow which, when run, creates a scope to handle the incoming & outgoing messages
+  Flow.usingEmit: emit =>
+    supervised:
+      val member = ChatMember.create
 
-    a.tell(_.connected(member))
+      a.tell(_.connected(member))
 
-    fork {
-      incoming.foreach { msg =>
-        a.tell(_.incoming(msg))
-      }
-      // all incoming messages are processed (= client closed), completing the outgoing channel as well
-      member.channel.done()
-    }
+      forkDiscard:
+        incoming.runForeach: msg =>
+          a.tell(_.incoming(msg))
+        // all incoming messages are processed (= client closed), completing the outgoing channel as well
+        member.channel.done()
 
-    // however the scope ends (client close or error), we need to notify the chat room
-    releaseAfterScope {
-      a.tell(_.disconnected(member))
-    }
+      // however the scope ends (client close or error), we need to notify the chat room
+      releaseAfterScope:
+        a.tell(_.disconnected(member))
 
-    member.channel
-  }
+      FlowEmit.channelToEmit(member.channel, emit)
 
 object WebSocketChatNettySyncServer extends OxApp:
-  override def run(args: Vector[String])(using Ox, IO): ExitCode =
+  override def run(args: Vector[String])(using Ox): ExitCode =
     val chatActor = Actor.create(new ChatRoom)
     val chatServerEndpoint = chatEndpoint.handleSuccess(_ => chatProcessor(chatActor))
     val binding = NettySyncServer().addEndpoint(chatServerEndpoint).start()

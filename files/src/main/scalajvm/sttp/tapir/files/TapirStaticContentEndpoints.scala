@@ -7,13 +7,10 @@ import sttp.model.StatusCode
 import sttp.model.headers.ETag
 import sttp.model.headers.Range
 import sttp.monad.MonadError
-import sttp.tapir.FileRange
 import sttp.tapir._
-import sttp.tapir.files.FilesOptions
 import sttp.tapir.server.ServerEndpoint
 
 import java.time.Instant
-import sttp.tapir.files.StaticInput
 
 /** Static content endpoints, including files and resources. */
 trait TapirStaticContentEndpoints {
@@ -142,6 +139,15 @@ trait TapirStaticContentEndpoints {
   ): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[InputStreamRange], Any] =
     staticResourcesGetEndpoint.prependIn(prefix)
 
+  @scala.annotation.tailrec
+  private def addHeaders[O](
+      ep: PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[O], Any],
+      headers: List[Header]
+  ): PublicEndpoint[StaticInput, StaticErrorOutput, StaticOutput[O], Any] = headers match {
+    case Nil     => ep
+    case h :: hs => addHeaders(ep.out(header(h)), hs)
+  }
+
   /** A server endpoint, which exposes files from local storage found at `systemPath`, using the given `prefix`. Typically, the prefix is a
     * path, but it can also contain other inputs. For example:
     *
@@ -151,10 +157,12 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
-  def staticFilesGetServerEndpoint[F[_]](
-      prefix: EndpointInput[Unit]
-  )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(staticFilesGetEndpoint.prependIn(prefix), Files.get(systemPath, options))
+  def staticFilesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
+      systemPath: String,
+      options: FilesOptions[F] = FilesOptions.default[F],
+      extraHeaders: List[Header] = Nil
+  ): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(addHeaders(staticFilesGetEndpoint.prependIn(prefix), extraHeaders), Files.get(systemPath, options))
 
   /** A server endpoint, which exposes a single file from local storage found at `systemPath`, using the given `path`.
     *
@@ -162,16 +170,24 @@ trait TapirStaticContentEndpoints {
     * staticFileGetServerEndpoint("static" / "hello.html")("/home/app/static/data.html")
     * }}}
     */
-  def staticFileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(removePath(staticFilesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
+  def staticFileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
+      systemPath: String,
+      extraHeaders: List[Header] = Nil
+  ): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(
+      removePath(addHeaders(staticFilesGetEndpoint(prefix), extraHeaders)),
+      (m: MonadError[F]) => Files.get(systemPath)(m)
+    )
 
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file
     * existence and returns its size
     */
-  def staticFilesHeadServerEndpoint[F[_]](
-      prefix: EndpointInput[Unit]
-  )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(staticHeadEndpoint.prependIn(prefix), Files.head(systemPath, options))
+  def staticFilesHeadServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
+      systemPath: String,
+      options: FilesOptions[F] = FilesOptions.default[F],
+      extraHeaders: List[Header] = Nil
+  ): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(addHeaders(staticHeadEndpoint.prependIn(prefix), extraHeaders), Files.head(systemPath, options))
 
   /** Create a pair of endpoints (head, get) for exposing files from local storage found at `systemPath`, using the given `prefix`.
     * Typically, the prefix is a path, but it can also contain other inputs. For example:
@@ -182,10 +198,15 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/home/app/static/css/styles.css` file.
     */
-  def staticFilesServerEndpoints[F[_]](
-      prefix: EndpointInput[Unit]
-  )(systemPath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
-    List(staticFilesHeadServerEndpoint(prefix)(systemPath, options), staticFilesGetServerEndpoint(prefix)(systemPath, options))
+  def staticFilesServerEndpoints[F[_]](prefix: EndpointInput[Unit])(
+      systemPath: String,
+      options: FilesOptions[F] = FilesOptions.default[F],
+      extraHeaders: List[Header] = Nil
+  ): List[ServerEndpoint[Any, F]] =
+    List(
+      staticFilesHeadServerEndpoint(prefix)(systemPath, options, extraHeaders),
+      staticFilesGetServerEndpoint(prefix)(systemPath, options, extraHeaders)
+    )
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`. Typically, the prefix is
     * a path, but it can also contain other inputs. For example:
@@ -199,10 +220,11 @@ trait TapirStaticContentEndpoints {
   def staticResourcesGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePrefix: String,
-      options: FilesOptions[F] = FilesOptions.default[F]
+      options: FilesOptions[F] = FilesOptions.default[F],
+      extraHeaders: List[Header] = Nil
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public[StaticInput, StaticErrorOutput, StaticOutput[InputStreamRange], Any, F](
-      staticResourcesGetEndpoint(prefix),
+      addHeaders(staticResourcesGetEndpoint(prefix), extraHeaders),
       (m: MonadError[F]) => Resources.get(classLoader, resourcePrefix, options)(m)
     )
 
@@ -215,19 +237,26 @@ trait TapirStaticContentEndpoints {
   def staticResourceGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
       classLoader: ClassLoader,
       resourcePath: String,
-      options: FilesOptions[F] = FilesOptions.default[F]
+      options: FilesOptions[F] = FilesOptions.default[F],
+      extraHeaders: List[Header] = Nil
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
-      removePath(staticResourcesGetEndpoint(prefix)),
+      removePath(addHeaders(staticResourcesGetEndpoint(prefix), extraHeaders)),
       (m: MonadError[F]) => Resources.get(classLoader, resourcePath, options)(m)
     )
 
   /** A server endpoint, which can be used to verify the existence of a resource under given path.
     */
-  def staticResourcesHeadServerEndpoint[F[_]](
-      prefix: EndpointInput[Unit]
-  )(classLoader: ClassLoader, resourcePath: String, options: FilesOptions[F] = FilesOptions.default[F]): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(staticHeadEndpoint.prependIn(prefix), Resources.head(classLoader, resourcePath, options))
+  def staticResourcesHeadServerEndpoint[F[_]](prefix: EndpointInput[Unit])(
+      classLoader: ClassLoader,
+      resourcePath: String,
+      options: FilesOptions[F] = FilesOptions.default[F],
+      extraHeaders: List[Header] = Nil
+  ): ServerEndpoint[Any, F] =
+    ServerEndpoint.public(
+      addHeaders(staticHeadEndpoint.prependIn(prefix), extraHeaders),
+      Resources.head(classLoader, resourcePath, options)
+    )
 
   private def removePath[T](e: Endpoint[Unit, StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =
     e.mapIn(i => i.copy(path = Nil))(i => i.copy(path = Nil))
@@ -241,11 +270,14 @@ trait TapirStaticContentEndpoints {
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
     */
-  def staticResourcesServerEndpoints[F[_]](
-      prefix: EndpointInput[Unit]
-  )(classLoader: ClassLoader, resourcePath: String, options: FilesOptions[F] = FilesOptions.default[F]): List[ServerEndpoint[Any, F]] =
+  def staticResourcesServerEndpoints[F[_]](prefix: EndpointInput[Unit])(
+      classLoader: ClassLoader,
+      resourcePath: String,
+      options: FilesOptions[F] = FilesOptions.default[F],
+      extraHeaders: List[Header] = Nil
+  ): List[ServerEndpoint[Any, F]] =
     List(
-      staticResourcesHeadServerEndpoint(prefix)(classLoader, resourcePath, options),
-      staticResourcesGetServerEndpoint(prefix)(classLoader, resourcePath, options)
+      staticResourcesHeadServerEndpoint(prefix)(classLoader, resourcePath, options, extraHeaders),
+      staticResourcesGetServerEndpoint(prefix)(classLoader, resourcePath, options, extraHeaders)
     )
 }

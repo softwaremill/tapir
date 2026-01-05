@@ -1,19 +1,18 @@
 // {cat=Streaming; effects=ZIO; server=Netty}: Stream response as a ZIO stream
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-zio:1.11.4
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-zio:1.13.2
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-RC3
 
 package sttp.tapir.examples.streaming
 
 import sttp.capabilities.zio.ZioStreams
-import sttp.client3.*
+import sttp.client4.*
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.HeaderNames
-import sttp.shared.Identity
 import sttp.tapir.{CodecFormat, PublicEndpoint}
 import sttp.tapir.server.netty.zio.NettyZioServer
 import sttp.tapir.ztapir.*
-import zio.interop.catz.*
 import zio.*
 import zio.stream.*
 
@@ -54,7 +53,7 @@ object StreamingNettyZioServer extends ZIOAppDefault:
       _ = {
         println(s"Server started at port = ${binding.port}")
 
-        val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
+        val backend: SyncBackend = HttpClientSyncBackend()
         val result: String =
           basicRequest.response(asStringAlways).get(uri"http://$declaredHost:$declaredPort/receive").send(backend).body
         println("Got result: " + result)

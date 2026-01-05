@@ -6,6 +6,12 @@ The modules are categorised using the following levels:
 * **stabilising**: the API is mostly stable, with rare binary-incompatible changes possible in minor releases (only if necessary)
 * **experimental**: API can change significantly even in patch releases
 
+The major version is increased when there are binary-incompatible changes in **stable** modules.
+
+The minor version is increased when there are significant new features in **stable** modules (keeping compatibility), or binary-incompatible changes in **stabilising** modules.
+
+The patch version is increased when there are binary-compatible changes in **stable** / **stabilising** modules, any changes in **exeperimental** modules, or when a new module is added (e.g. a new integration).
+
 ## Main modules 
 
 | Module         | Level       |

@@ -1,9 +1,10 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.BasicGenerator.indent
+import sttp.tapir.codegen.RootGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaBoolean,
   OpenapiSchemaEnum,
@@ -13,6 +14,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaObject,
   OpenapiSchemaOneOf,
   OpenapiSchemaRef,
+  OpenapiSchemaSimpleType,
   OpenapiSchemaString,
   OpenapiSchemaStringType
 }
@@ -27,12 +29,14 @@ object JsonSerdeGenerator {
       allTransitiveJsonParamRefs: Set[String],
       validateNonDiscriminatedOneOfs: Boolean,
       adtInheritanceMap: Map[String, Seq[String]],
-      targetScala3: Boolean
+      targetScala3: Boolean,
+      schemasContainAny: Boolean,
+      useCustomJsoniterSerdes: Boolean
   ): Option[String] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
 
     jsonSerdeLib match {
-      case JsonSerdeLib.Circe => genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs)
+      case JsonSerdeLib.Circe    => genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs)
       case JsonSerdeLib.Jsoniter =>
         genJsoniterSerdes(
           doc,
@@ -40,7 +44,9 @@ object JsonSerdeGenerator {
           jsonParamRefs,
           allTransitiveJsonParamRefs,
           adtInheritanceMap,
-          validateNonDiscriminatedOneOfs
+          validateNonDiscriminatedOneOfs,
+          schemasContainAny,
+          useCustomJsoniterSerdes
         )
       case JsonSerdeLib.Zio => genZioSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs, targetScala3)
     }
@@ -105,6 +111,22 @@ object JsonSerdeGenerator {
     if (problems.nonEmpty)
       throw new IllegalArgumentException(problems.mkString("Problems in non-discriminated oneOf declaration (", "; ", ")"))
   }
+
+  private def inlineEndpointSchemas(doc: OpenapiDocument): Seq[(String, OpenapiSchemaType, Boolean)] =
+    doc.paths.flatMap(p =>
+      p.methods.flatMap(m =>
+        m.responses
+          .map(_.resolve(doc))
+          .flatMap(_.content)
+          .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
+          .map(c => (m.name(p.url).capitalize + "Response", c.schema, true)) ++
+          m.requestBody.toSeq
+            .map(_.resolve(doc))
+            .flatMap(_.content)
+            .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
+            .map(c => (m.name(p.url).capitalize + "Request", c.schema, true))
+      )
+    )
   ///
   /// Circe
   ///
@@ -114,40 +136,57 @@ object JsonSerdeGenerator {
       allTransitiveJsonParamRefs: Set[String],
       validateNonDiscriminatedOneOfs: Boolean
   ): Option[String] = {
-    doc.components
-      .map(_.schemas.flatMap {
+    val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
+    val pathSchemas = inlineEndpointSchemas(doc)
+    (docSchemas ++ pathSchemas)
+      .flatMap {
         // Enum serdes are generated at the declaration site
-        case (_, _: OpenapiSchemaEnum) => None
+        case (_, _: OpenapiSchemaEnum, _) => None
         // We generate the serde if it's referenced in any json model
-        case (name, schema: OpenapiSchemaObject) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaObject, true) =>
           Some(genCirceObjectSerde(name, schema))
-        case (name, schema: OpenapiSchemaMap) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(genCirceMapSerde(name, schema))
-        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaMap, true) =>
+          Some(genCirceMapOrArraySerde(name, schema.items))
+        case (name, schema: OpenapiSchemaArray, true) =>
+          Some(genCirceMapOrArraySerde(name, schema.items))
+        case (name, schema: OpenapiSchemaOneOf, true) =>
           Some(genCirceAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
-        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
-        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
-      })
-      .map(_.mkString("\n"))
+        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf | _: OpenapiSchemaAny, _) =>
+          None
+        case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
+        case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
+      }
+      .foldLeft(Option.empty[String]) {
+        case (Some(a), b) => Some(a + "\n" + b)
+        case (None, a)    => Some(a)
+      }
+      .map(s => s"""implicit val byteStringJsonDecoder: io.circe.Decoder[ByteString] =
+           |  io.circe.Decoder.decodeString
+           |    .map(java.util.Base64.getDecoder.decode)
+           |    .map(toByteString)
+           |implicit val byteStringJsonEncoder: io.circe.Encoder[ByteString] =
+           |  io.circe.Encoder.encodeString
+           |    .contramap(java.util.Base64.getEncoder.encodeToString)
+           |$s""".stripMargin)
   }
 
   private def genCirceObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => genCirceObjectSerde(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _), _)) =>
+      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => genCirceObjectSerde(s"$name${k.capitalize}", `type`)
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genCirceObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
-      case Nil => ""
-      case s   => s.mkString("", "\n", "\n")
+      case s if s.isEmpty => ""
+      case s              => s.mkString("", "\n", "\n")
     }
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.generic.semiauto.deriveDecoder[$name]
        |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.generic.semiauto.deriveEncoder[$name]""".stripMargin
   }
-  private def genCirceMapSerde(name: String, schema: OpenapiSchemaMap): String = {
-    val subs = schema.items match {
+  private def genCirceMapOrArraySerde(name: String, schema: OpenapiSchemaType): String = {
+    val subs = schema match {
       case `type`: OpenapiSchemaObject => Some(genCirceObjectSerde(s"${name}ObjectsItem", `type`))
       case _                           => None
     }
@@ -160,7 +199,7 @@ object JsonSerdeGenerator {
       name: String,
       validateNonDiscriminatedOneOfs: Boolean
   ): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
 
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
@@ -224,24 +263,39 @@ object JsonSerdeGenerator {
   // - require presence of collections when decoding if 'required'
   private val jsoniterBaseConfig =
     s"$jsoniterPkgMacros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true)"
-  private val jsoniteEnumConfig = s"$jsoniterBaseConfig.withDiscriminatorFieldName(scala.None)"
+  private val jsoniterEnumConfig = s"$jsoniterBaseConfig.withDiscriminatorFieldName(scala.None)"
   private def genJsoniterSerdes(
       doc: OpenapiDocument,
       allSchemas: Map[String, OpenapiSchemaType],
       jsonParamRefs: Set[String],
       allTransitiveJsonParamRefs: Set[String],
       adtInheritanceMap: Map[String, Seq[String]],
-      validateNonDiscriminatedOneOfs: Boolean
+      validateNonDiscriminatedOneOfs: Boolean,
+      schemasContainAny: Boolean,
+      useCustomJsoniterSerdes: Boolean
   ): Option[String] = {
+    // if schemas contain an 'any' (i.e. any json), we assume jsoniter-scala-circe is a dependency
+    val maybeAnySerde =
+      if (schemasContainAny)
+        Some(
+          """implicit lazy val anyJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.Json] = com.github.plokhotnyuk.jsoniter_scala.circe.JsoniterScalaCodec.jsonCodec()
+            |implicit lazy val anyObjJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.JsonObject] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.JsonObject] {
+            |  import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonWriter}
+            |  override def decodeValue(in: JsonReader, default: io.circe.JsonObject): io.circe.JsonObject = anyJsonSupport.decodeValue(in, io.circe.Json.fromJsonObject(default)).asObject.getOrElse(throw new RuntimeException(s"${default.getClass.getSimpleName} is not an object"))
+            |  override def encodeValue(x: io.circe.JsonObject, out: JsonWriter): Unit = anyJsonSupport.encodeValue(io.circe.Json.fromJsonObject(x), out)
+            |  override def nullValue: io.circe.JsonObject = null
+            |}""".stripMargin
+        )
+      else None
     // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
     // This should be the set of all json param refs not included in our schema definitions
-    val additionalExplicitSerdes = jsonParamRefs.toSeq
-      .filter(x => !allSchemas.contains(x))
+    val additionalExplicitSerdes = (jsonParamRefs.toSeq
+      .filter(x => !allSchemas.contains(x) && x != "io.circe.Json")
       .map { s =>
         val name = s.replace(" ", "").replace(",", "_").replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
         s"""implicit lazy val $name: $jsoniterPkgCore.JsonValueCodec[$s] =
            |  $jsoniterPkgMacros.JsonCodecMaker.make[$s]""".stripMargin
-      }
+      } ++ maybeAnySerde)
       .mkString("", "\n", "\n")
 
     // Permits usage of Option/Seq wrapped classes at top level without having to be explicit
@@ -252,58 +306,103 @@ object JsonSerdeGenerator {
            |implicit def optionCodec[T: $jsoniterPkgCore.JsonValueCodec]: $jsoniterPkgCore.JsonValueCodec[Option[T]] =
            |  $jsoniterPkgMacros.JsonCodecMaker.make[Option[T]]
            |""".stripMargin
-    doc.components
-      .map(_.schemas.flatMap {
-        // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
-        case (name, _: OpenapiSchemaObject) =>
-          val supertypes =
-            adtInheritanceMap.get(name).getOrElse(Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
-          if (jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty)) Some(genJsoniterClassSerde(supertypes)(name))
-          else None
-        // For named maps, only generate the schema if it's a 'top level' json schema
-        case (name, _: OpenapiSchemaMap) if jsonParamRefs.contains(name) =>
-          Some(genJsoniterNamedSerde(name))
-        // For enums, generate the serde if it's referenced in any json model
-        case (name, _: OpenapiSchemaEnum) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(genJsoniterEnumSerde(name))
-        // For ADTs, generate the serde if it's referenced in any json model
-        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs))
-        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
-        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
-      })
-      .map(jsonSerdeHelpers + additionalExplicitSerdes + _.mkString("\n"))
+    val docSchemas = doc.components.toSeq.flatMap(_.schemas)
+    val pathSchemas = inlineEndpointSchemas(doc)
+    def getSerdeString(name: String, t: OpenapiSchemaType, isJson: Boolean): Seq[String] = (name, t, isJson) match {
+      // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
+      case (name, o: OpenapiSchemaObject, isJson) =>
+        val inlinedEnumDefns = if (allTransitiveJsonParamRefs.contains(name)) {
+          o.properties.collect { case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _)) =>
+            genJsoniterEnumSerde(useCustomJsoniterSerdes, name + en.capitalize)
+          }
+        } else Nil
+        val supertypes =
+          adtInheritanceMap.getOrElse(name, Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
+        val topLevelDefn =
+          if (isJson || jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty))
+            Seq(genJsoniterClassSerde(useCustomJsoniterSerdes, supertypes)(name))
+          else Nil
+        topLevelDefn ++ inlinedEnumDefns
+      // For named maps and arrays, only generate the schema if it's a 'top level' json schema
+      case (name, _: OpenapiSchemaMap, isJson) if jsonParamRefs.contains(name) || isJson =>
+        Seq(genJsoniterNamedSerde(useCustomJsoniterSerdes, name))
+      case (name, _: OpenapiSchemaArray, isJson) if jsonParamRefs.contains(name) || isJson =>
+        Seq(genJsoniterNamedSerde(useCustomJsoniterSerdes, name))
+      // For enums, generate the serde if it's referenced in any json model
+      case (name, _: OpenapiSchemaEnum, _) if allTransitiveJsonParamRefs.contains(name) =>
+        Seq(genJsoniterEnumSerde(useCustomJsoniterSerdes, name))
+      // For ADTs, generate the serde if it's referenced in any json model
+      case (name, schema: OpenapiSchemaOneOf, _) if allTransitiveJsonParamRefs.contains(name) =>
+        Seq(generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs, useCustomJsoniterSerdes))
+      case (
+            _,
+            _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf |
+            _: OpenapiSchemaAny,
+            _
+          ) =>
+        Nil
+      case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => Nil
+      case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
+    }
+    (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
+      .flatMap { (getSerdeString _).tupled }
+      .foldLeft(Option.empty[String]) {
+        case (Some(a), b) => Some(a + "\n" + b)
+        case (None, a)    => Some(a)
+      }
+      .map(jsonSerdeHelpers + additionalExplicitSerdes + _)
+      .map(s =>
+        s"""implicit val byteStringJsonCodec: $jsoniterPkgCore.JsonValueCodec[ByteString] = new $jsoniterPkgCore.JsonValueCodec[ByteString] {
+           |  def nullValue: ByteString = Array.empty[Byte]
+           |  def decodeValue(in: $jsoniterPkgCore.JsonReader, default: ByteString): ByteString =
+           |    toByteString(java.util.Base64.getDecoder.decode(in.readString("")))
+           |  def encodeValue(x: ByteString, out: $jsoniterPkgCore.JsonWriter): _root_.scala.Unit =
+           |    out.writeVal(java.util.Base64.getEncoder.encodeToString(x))
+           |}
+           |$s""".stripMargin
+      )
   }
 
-  private def genJsoniterClassSerde(supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+  private def genJsoniterClassSerde(useCustomJsoniterSerdes: Boolean, supertypes: Seq[OpenapiSchemaOneOf])(name: String): String = {
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     if (supertypes.exists(_.discriminator.isDefined))
       throw new NotImplementedError(
         s"A class cannot be used both in a oneOf with discriminator and at the top level when using jsoniter serdes at $name"
       )
-    else
-      s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterBaseConfig)"""
+    else {
+      if (useCustomJsoniterSerdes)
+        s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike"""
+      else
+        s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterBaseConfig)"""
+    }
   }
 
-  private def genJsoniterEnumSerde(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
-    s"""
-       |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[${name}] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniteEnumConfig.withDiscriminatorFieldName(scala.None))""".stripMargin
+  private def genJsoniterEnumSerde(useCustomJsoniterSerdes: Boolean, name: String): String = {
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
+    if (useCustomJsoniterSerdes)
+      s"""
+         |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLikeWithoutDiscriminator""".stripMargin
+    else s"""
+            |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[${name}] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniterEnumConfig)""".stripMargin
   }
 
-  private def genJsoniterNamedSerde(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
-    s"""
-       |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniterBaseConfig)""".stripMargin
+  private def genJsoniterNamedSerde(useCustomJsoniterSerdes: Boolean, name: String): String = {
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
+    if (useCustomJsoniterSerdes)
+      s"""
+         |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike""".stripMargin
+    else s"""
+            |implicit lazy val ${uncapitalisedName}JsonCodec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($jsoniterBaseConfig)""".stripMargin
   }
 
   private def generateJsoniterAdtSerde(
       allSchemas: Map[String, OpenapiSchemaType],
       name: String,
       schema: OpenapiSchemaOneOf,
-      validateNonDiscriminatedOneOfs: Boolean
+      validateNonDiscriminatedOneOfs: Boolean,
+      useCustomJsoniterSerdes: Boolean
   ): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>
         def subtypeNames = schema.types.map {
@@ -321,17 +420,25 @@ object JsonSerdeGenerator {
               .map { case (k, v) => s"""case "$k" => "$v"""" }
               .mkString("\n", "\n", "\n")
           )
-          val config =
-            s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {$discriminatorMap})"""
           val serde =
-            s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
+            if (useCustomJsoniterSerdes)
+              s"""implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${discriminator.propertyName}", {$discriminatorMap})"""
+            else {
+              val config =
+                s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {$discriminatorMap})"""
+              s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
+            }
 
           s"""$serde
              |""".stripMargin
         } else {
-          val config =
-            s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}"))"""
-          s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
+          if (useCustomJsoniterSerdes)
+            s"""implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${discriminator.propertyName}")"""
+          else {
+            val config =
+              s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}"))"""
+            s"implicit lazy val ${uncapitalisedName}Codec: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
+          }
         }
         body
 
@@ -339,7 +446,7 @@ object JsonSerdeGenerator {
         if (validateNonDiscriminatedOneOfs) checkForSoundness(allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
         val childNameAndSerde = schemas.collect { case ref: OpenapiSchemaRef =>
           val name = ref.stripped
-          name -> s"${BasicGenerator.uncapitalise(name)}JsonCodec"
+          name -> s"${RootGenerator.uncapitalise(name)}JsonCodec"
         }
         val childSerdes = childNameAndSerde.map(_._2)
         val doDecode = childSerdes.mkString("List(\n  ", ",\n  ", ")\n") +
@@ -376,42 +483,58 @@ object JsonSerdeGenerator {
       validateNonDiscriminatedOneOfs: Boolean,
       targetScala3: Boolean
   ): Option[String] = {
-    doc.components
-      .map(_.schemas.flatMap {
+    val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
+    val pathSchemas = inlineEndpointSchemas(doc)
+    (docSchemas ++ pathSchemas)
+      .flatMap {
         // Only enumeratum (scala 2) enum types currently supported for zio-json
-        case (name, _: OpenapiSchemaEnum) if !targetScala3 && allTransitiveJsonParamRefs.contains(name) =>
+        case (name, _: OpenapiSchemaEnum, true) if !targetScala3 =>
           Some(genZioEnumSerde(name))
         // We generate the serde if it's referenced in any json model
-        case (name, schema: OpenapiSchemaObject) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaObject, true) =>
           Some(genZioObjectSerde(name, schema))
-        case (name, schema: OpenapiSchemaMap) if allTransitiveJsonParamRefs.contains(name) =>
-          Some(genZioMapSerde(name, schema))
-        case (name, schema: OpenapiSchemaOneOf) if allTransitiveJsonParamRefs.contains(name) =>
+        case (name, schema: OpenapiSchemaMap, true) =>
+          Some(genZioMapOrArraySerde(name, schema.items))
+        case (name, schema: OpenapiSchemaArray, true) =>
+          Some(genZioMapOrArraySerde(name, schema.items))
+        case (name, schema: OpenapiSchemaOneOf, true) =>
           Some(genZioAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
-        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf) => None
-        case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps and oneOf supported! (for $n found ${x})")
-      })
-      .map(_.mkString("\n"))
+        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf, _) =>
+          None
+        case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
+        case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
+      }
+      .foldLeft(Option.empty[String]) {
+        case (Some(a), b) => Some(a + "\n" + b)
+        case (None, a)    => Some(a)
+      }
+      .map(s =>
+        s"""implicit lazy val byteStringJsonCodec: zio.json.JsonCodec[ByteString] = zio.json.JsonCodec[ByteString](
+         |  zio.json.JsonEncoder[String].contramap[ByteString](java.util.Base64.getEncoder.encodeToString),
+         |  zio.json.JsonDecoder[String].mapOrFail(s => scala.util.Try(java.util.Base64.getDecoder.decode(s)).toEither.map(toByteString).left.map(error => error.getMessage)),
+         |)
+         |$s""".stripMargin
+      )
   }
 
   private def genZioObjectSerde(name: String, schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _)) => genZioObjectSerde(s"$name${k.capitalize}", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _), _)) =>
+      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => genZioObjectSerde(s"$name${k.capitalize}", `type`)
+      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _), _)) =>
+      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         genZioObjectSerde(s"$name${k.capitalize}Item", `type`)
     } match {
-      case Nil => ""
-      case s   => s.mkString("", "\n", "\n")
+      case s if s.isEmpty => ""
+      case s              => s.mkString("", "\n", "\n")
     }
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: zio.json.JsonDecoder[$name] = zio.json.DeriveJsonDecoder.gen[$name]
        |implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = zio.json.DeriveJsonEncoder.gen[$name]""".stripMargin
   }
 
-  private def genZioMapSerde(name: String, schema: OpenapiSchemaMap): String = {
-    val subs = schema.items match {
+  private def genZioMapOrArraySerde(name: String, schema: OpenapiSchemaType): String = {
+    val subs = schema match {
       case `type`: OpenapiSchemaObject => Some(genZioObjectSerde(s"${name}ObjectsItem", `type`))
       case _                           => None
     }
@@ -419,7 +542,7 @@ object JsonSerdeGenerator {
   }
 
   private def genZioEnumSerde(name: String): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
     s"""
        |implicit lazy val ${uncapitalisedName}JsonCodec: zio.json.JsonCodec[$name] = zio.json.JsonCodec[$name](
        |  zio.json.JsonEncoder[String].contramap[$name](_.entryName),
@@ -433,7 +556,7 @@ object JsonSerdeGenerator {
       name: String,
       validateNonDiscriminatedOneOfs: Boolean
   ): String = {
-    val uncapitalisedName = BasicGenerator.uncapitalise(name)
+    val uncapitalisedName = RootGenerator.uncapitalise(name)
 
     schema match {
       case OpenapiSchemaOneOf(_, Some(discriminator)) =>

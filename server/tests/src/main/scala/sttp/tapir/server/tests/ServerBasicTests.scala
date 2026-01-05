@@ -1,12 +1,11 @@
 package sttp.tapir.server.tests
 
-import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
 import enumeratum._
 import io.circe.generic.auto._
 import org.scalatest.matchers.should.Matchers._
-import sttp.client3._
+import sttp.client4._
 import sttp.model._
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
 import sttp.monad.MonadError
@@ -134,6 +133,38 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .body("""{"fruit":"banana","amount":12}""")
         .send(backend)
         .map(_.contentType shouldBe Some(sttp.model.MediaType.ApplicationJson.toString))
+    },
+    testServer(in_string_out_string_media_type_json, s"With ${HeaderNames.Accept}: ${MediaType.ApplicationJson}")((b: String) =>
+      pureResult(s"""{"$b":"$b"}""".asRight[Unit])
+    ) { (backend, baseUri) =>
+      basicRequest
+        .header(Header.accept(MediaType.ApplicationJson))
+        .post(uri"$baseUri/api/json")
+        .body("Sweet")
+        .send(backend)
+        .map { r =>
+          r.body shouldBe Right("""{"Sweet":"Sweet"}""")
+        }
+    },
+    testServer(in_string_out_string_media_type_json)((b: String) => pureResult(s"""{"$b":"$b"}""".asRight[Unit])) { (backend, baseUri) =>
+      basicRequest
+        .post(uri"$baseUri/api/json")
+        .body("Sweet")
+        .send(backend)
+        .map { r =>
+          r.body shouldBe Right("""{"Sweet":"Sweet"}""")
+        }
+    },
+    testServer(in_string_out_string_media_type_json_body)((b: String) => pureResult(s"""{"$b":"$b"}""".asRight[Unit])) {
+      (backend, baseUri) =>
+        basicRequest
+          .header(Header.accept(MediaType.ApplicationJson))
+          .post(uri"$baseUri/api/json_body")
+          .body("Sweet")
+          .send(backend)
+          .map { r =>
+            r.body shouldBe Right("""{"Sweet":"Sweet"}""")
+          }
     },
     testServer(in_byte_array_out_byte_array)((b: Array[Byte]) => pureResult(b.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.post(uri"$baseUri/api/echo").body("banana kiwi".getBytes).send(backend).map(_.body shouldBe Right("banana kiwi"))
@@ -416,6 +447,38 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       pureResult(s"fruit: $fruit".asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.contentLength shouldBe Some(13))
+    },
+    // #4194: large payloads where released too soon in the netty server interpreters, corrupting the json and resulting in parse errors
+    {
+      val largePayloadSize = 1024 * 1024 * 5
+      testServer(
+        endpoint.post.in("api" / "echo").in(stringBody).out(stringBody).maxRequestBodyLength(largePayloadSize + 100L),
+        "multiple large requests parsing & serialising JSON"
+      )((s: String) => pureResult(s.asRight[Unit])) { (backend, baseUri) =>
+        val largePayload = Iterator.continually('A' to 'Z').flatten.take(largePayloadSize).mkString
+        (1 to 100).toList
+          .traverse { i =>
+            basicRequest
+              .post(uri"$baseUri/api/echo")
+              .body(largePayload)
+              .send(backend)
+              .map { response =>
+                if (response.code != StatusCode.Ok || response.body != Right(largePayload)) {
+                  val detail = response.body match {
+                    case Left(e)                                     => fail(s"error response: $e")
+                    case Right(b) if b.length != largePayload.length => s"body length: ${b.length}, expected: ${largePayload.length}"
+                    case Right(b)                                    =>
+                      val original = largePayload.getBytes()
+                      val received = b.getBytes()
+                      val firstDifference = original.zip(received).indexWhere { case (a, b) => a != b }
+                      s"first difference on byte $firstDifference, expected: ${original(firstDifference)}, received: ${received(firstDifference)}"
+                  }
+                  fail(s"Failed on iteration $i, got response code: ${response.code}; $detail")
+                }
+              }
+          }
+          .map(_ => succeed)
+      }
     }
   )
 
@@ -460,6 +523,11 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testServer(in_single_path, "single path should match single path")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) {
       (backend, baseUri) =>
         basicRequest.get(uri"$baseUri/api").send(backend).map(_.code shouldBe StatusCode.Ok)
+    },
+    testServer(in_path_paths_out_header_body, "Encoded path should be decoded") { case (i, paths) =>
+      pureResult(Right((i, paths.last)))
+    } { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/api/15/and/MIN%2FMAX").send(backend).map(_.body shouldBe Right("MIN/MAX"))
     },
     testServer(in_single_path, "single path should match single/ path")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) {
       (backend, baseUri) =>
@@ -513,9 +581,11 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
   def pathMatchingMultipleEndpoints(): List[Test] = List(
     testServer(
       "two endpoints with increasingly specific path inputs: should match path exactly",
-      NonEmptyList.of(
-        route(endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit]))),
-        route(endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit])))
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])),
+          endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit]))
+        )
       )
     ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/p1").send(backend).map(_.body shouldBe "e1") >>
@@ -523,12 +593,10 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "two endpoints with increasingly specific path inputs (w/ path capture): should match path exactly",
-      NonEmptyList.of(
-        route(
-          List[ServerEndpoint[Any, F]](
-            endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])),
-            endpoint.get.in("p1" / path[String]).out(stringBody).serverLogic((_: String) => pureResult("e2".asRight[Unit]))
-          )
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])),
+          endpoint.get.in("p1" / path[String]).out(stringBody).serverLogic((_: String) => pureResult("e2".asRight[Unit]))
         )
       )
     ) { (backend, baseUri) =>
@@ -537,9 +605,11 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "two endpoints with decreasingly specific path inputs: should match path exactly",
-      NonEmptyList.of(
-        route(endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit]))),
-        route(endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])))
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit])),
+          endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit]))
+        )
       )
     ) { (backend, baseUri) =>
       basicStringRequest.get(uri"$baseUri/p1").send(backend).map(_.body shouldBe "e1") >>
@@ -547,15 +617,13 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "two endpoints with a body defined as the first input: should only consume body when the path matches",
-      NonEmptyList.of(
-        route(
+      route(
+        List[ServerEndpoint[Any, F]](
           endpoint.post
             .in(byteArrayBody)
             .in("p1")
             .out(stringBody)
-            .serverLogic((s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit]))
-        ),
-        route(
+            .serverLogic((s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit])),
           endpoint.post
             .in(byteArrayBody)
             .in("p2")
@@ -572,9 +640,11 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "two endpoints with query defined as the first input, path segments as second input: should try the second endpoint if the path doesn't match",
-      NonEmptyList.of(
-        route(endpoint.get.in(query[String]("q1")).in("p1").serverLogic((_: String) => pureResult(().asRight[Unit]))),
-        route(endpoint.get.in(query[String]("q2")).in("p2").serverLogic((_: String) => pureResult(().asRight[Unit])))
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in(query[String]("q1")).in("p1").serverLogic((_: String) => pureResult(().asRight[Unit])),
+          endpoint.get.in(query[String]("q2")).in("p2").serverLogic((_: String) => pureResult(().asRight[Unit]))
+        )
       )
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/p1?q1=10").send(backend).map(_.code shouldBe StatusCode.Ok) >>
@@ -584,18 +654,20 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "two endpoints with increasingly specific path inputs, first with a required query parameter: should match path exactly",
-      NonEmptyList.of(
-        route(endpoint.get.in("p1").in(query[String]("q1")).out(stringBody).serverLogic((_: String) => pureResult("e1".asRight[Unit]))),
-        route(endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit])))
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in("p1").in(query[String]("q1")).out(stringBody).serverLogic((_: String) => pureResult("e1".asRight[Unit])),
+          endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit]))
+        )
       )
     ) { (backend, baseUri) => basicStringRequest.get(uri"$baseUri/p1/p2").send(backend).map(_.body shouldBe "e2") },
     testServer(
       "two endpoints with validation: should not try the second one if validation fails",
-      NonEmptyList.of(
-        route(
-          endpoint.get.in("p1" / path[String].validate(Validator.minLength(5))).serverLogic((_: String) => pureResult(().asRight[Unit]))
-        ),
-        route(endpoint.get.in("p2").serverLogic((_: Unit) => pureResult(().asRight[Unit])))
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in("p1" / path[String].validate(Validator.minLength(5))).serverLogic((_: String) => pureResult(().asRight[Unit])),
+          endpoint.get.in("p2").serverLogic((_: Unit) => pureResult(().asRight[Unit]))
+        )
       )
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/p1/abcde").send(backend).map(_.code shouldBe StatusCode.Ok) >>
@@ -604,16 +676,14 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "endpoint with a security input and regular path input shouldn't shadow other endpoints",
-      NonEmptyList.of(
-        route(
+      route(
+        List[ServerEndpoint[Any, F]](
           endpoint.get
             .in("p1")
             .securityIn(auth.bearer[String]())
             .out(stringBody)
             .serverSecurityLogicSuccess(_ => pureResult(()))
-            .serverLogicSuccess(_ => _ => pureResult("ok1"))
-        ),
-        route(
+            .serverLogicSuccess(_ => _ => pureResult("ok1")),
           endpoint.get
             .in("p2")
             .out(stringBody)
@@ -633,12 +703,10 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "two endpoints, same path prefix, one without trailing slashes, second accepting trailing slashes",
-      NonEmptyList.of(
-        route(
-          List[ServerEndpoint[Any, F]](
-            endpoint.get.in("p1" / "p2").in(noTrailingSlash).out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])),
-            endpoint.get.in("p1" / "p2").in(paths).out(stringBody).serverLogic((_: List[String]) => pureResult("e2".asRight[Unit]))
-          )
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in("p1" / "p2").in(noTrailingSlash).out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit])),
+          endpoint.get.in("p1" / "p2").in(paths).out(stringBody).serverLogic((_: List[String]) => pureResult("e2".asRight[Unit]))
         )
       )
     ) { (backend, baseUri) =>
@@ -650,25 +718,23 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler.OnDecodeFailure._
       testServer(
         "try other paths on decode failure if onDecodeFailureNextEndpoint",
-        NonEmptyList.of(
-          route(
-            List[ServerEndpoint[Any, F]](
-              endpoint.get
-                .in("animal")
-                .in(path[Animal]("animal").onDecodeFailureNextEndpoint)
-                .out(stringBody)
-                .serverLogicSuccess[F] {
-                  case Animal.Dog => m.unit("This is a dog")
-                  case Animal.Cat => m.unit("This is a cat")
-                },
-              endpoint.post
-                .in("animal")
-                .in("bird")
-                .out(stringBody)
-                .serverLogicSuccess[F] { _ =>
-                  m.unit("This is a bird")
-                }
-            )
+        route(
+          List[ServerEndpoint[Any, F]](
+            endpoint.get
+              .in("animal")
+              .in(path[Animal]("animal").onDecodeFailureNextEndpoint)
+              .out(stringBody)
+              .serverLogicSuccess[F] {
+                case Animal.Dog => m.unit("This is a dog")
+                case Animal.Cat => m.unit("This is a cat")
+              },
+            endpoint.post
+              .in("animal")
+              .in("bird")
+              .out(stringBody)
+              .serverLogicSuccess[F] { _ =>
+                m.unit("This is a bird")
+              }
           )
         )
       ) { (backend, baseUri) =>
@@ -677,12 +743,10 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "two endpoints with different methods, first one with path parsing",
-      NonEmptyList.of(
-        route(
-          List[ServerEndpoint[Any, F]](
-            endpoint.get.in("p1" / path[Int]("id")).serverLogic((_: Int) => pureResult(().asRight[Unit])),
-            endpoint.post.in("p1" / path[String]("id")).serverLogic((_: String) => pureResult(().asRight[Unit]))
-          )
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in("p1" / path[Int]("id")).serverLogic((_: Int) => pureResult(().asRight[Unit])),
+          endpoint.post.in("p1" / path[String]("id")).serverLogic((_: String) => pureResult(().asRight[Unit]))
         )
       )
     ) { (backend, baseUri) =>
@@ -693,12 +757,10 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "two endpoints with fixed path & path capture as the middle component",
-      NonEmptyList.of(
-        route(
-          List[ServerEndpoint[Any, F]](
-            endpoint.get.in("p1" / "p2" / "p3").out(stringBody).serverLogic(_ => pureResult("1".asRight[Unit])),
-            endpoint.get.in("p1" / path[String]("p") / "p3").out(stringBody).serverLogic((v: String) => pureResult(s"2: $v".asRight[Unit]))
-          )
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in("p1" / "p2" / "p3").out(stringBody).serverLogic(_ => pureResult("1".asRight[Unit])),
+          endpoint.get.in("p1" / path[String]("p") / "p3").out(stringBody).serverLogic((v: String) => pureResult(s"2: $v".asRight[Unit]))
         )
       )
     ) { (backend, baseUri) =>
@@ -710,12 +772,10 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     // #4050
     testServer(
       "two endpoints with fixed path & path capture as the middle component, different methods",
-      NonEmptyList.of(
-        route(
-          List[ServerEndpoint[Any, F]](
-            endpoint.get.in("p1" / "p2").out(stringBody).serverLogic(_ => pureResult("1".asRight[Unit])),
-            endpoint.delete.in("p1" / path[String]("p")).out(stringBody).serverLogic((v: String) => pureResult(s"2: $v".asRight[Unit]))
-          )
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.get.in("p1" / "p2").out(stringBody).serverLogic(_ => pureResult("1".asRight[Unit])),
+          endpoint.delete.in("p1" / path[String]("p")).out(stringBody).serverLogic((v: String) => pureResult(s"2: $v".asRight[Unit]))
         )
       )
     ) { (backend, baseUri) =>
@@ -762,18 +822,16 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       import DefaultDecodeFailureHandler.OnDecodeFailure._
       testServer(
         "Tries next endpoint if path 'shape' matches, but validation fails, using .onDecodeFailureNextEndpoint",
-        NonEmptyList.of(
-          route(
-            List(
-              endpoint.get
-                .in("customer" / path[Int]("customer_id").validate(Validator.min(10)).onDecodeFailureNextEndpoint)
-                .out(stringBody)
-                .serverLogic[F]((_: Int) => pureResult("e1".asRight[Unit])),
-              endpoint.get
-                .in("customer" / path[String]("customer_id"))
-                .out(stringBody)
-                .serverLogic[F]((_: String) => pureResult("e2".asRight[Unit]))
-            )
+        route(
+          List(
+            endpoint.get
+              .in("customer" / path[Int]("customer_id").validate(Validator.min(10)).onDecodeFailureNextEndpoint)
+              .out(stringBody)
+              .serverLogic[F]((_: Int) => pureResult("e1".asRight[Unit])),
+            endpoint.get
+              .in("customer" / path[String]("customer_id"))
+              .out(stringBody)
+              .serverLogic[F]((_: String) => pureResult("e2".asRight[Unit]))
           )
         )
       ) { (backend, baseUri) =>
@@ -840,7 +898,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       maxLength: Int
   ) = testServer(
     testedEndpoint.attribute(AttributeKey[MaxContentLength], MaxContentLength(maxLength.toLong)),
-    "checks payload limit and returns OK on content length  below or equal max (request)"
+    "checks payload limit and returns OK on content length below or equal max (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
     val fineBody: String = List.fill(maxLength)('x').mkString
     basicRequest.post(uri"$baseUri/api/echo").body(fineBody).send(backend).map(_.code shouldBe StatusCode.Ok)
@@ -868,7 +926,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       testPayloadWithinLimit(in_string_out_string, maxLength),
       testServer(
         in_input_stream_out_input_stream.maxRequestBodyLength(maxLength.toLong),
-        "checks payload limit and returns OK on content length  below or equal max (request)"
+        "checks payload limit and returns OK on content length below or equal max (request)"
       )(i => {
         // Forcing server logic to drain the InputStream
         blockingResult(i.readAllBytes()).map(_ => new ByteArrayInputStream(Array.empty[Byte]).asRight[Unit])
@@ -890,9 +948,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(
       "recover errors from exceptions",
-      NonEmptyList.of(
-        route(endpoint.in(query[String]("name")).errorOut(jsonBody[FruitError]).out(stringBody).serverLogicRecoverErrors(throwFruits))
-      )
+      route(endpoint.in(query[String]("name")).errorOut(jsonBody[FruitError]).out(stringBody).serverLogicRecoverErrors(throwFruits))
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?name=apple").send(backend).map(_.body shouldBe Right("ok")) >>
         basicRequest.get(uri"$baseUri?name=banana").send(backend).map { r =>

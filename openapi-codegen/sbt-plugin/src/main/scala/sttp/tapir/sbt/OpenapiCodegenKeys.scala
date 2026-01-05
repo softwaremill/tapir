@@ -8,9 +8,13 @@ case class OpenApiConfiguration(
     objectName: String,
     useHeadTagForObjectName: Boolean,
     jsonSerdeLib: String,
+    xmlSerdeLib: String,
     streamingImplementation: String,
     validateNonDiscriminatedOneOfs: Boolean,
     maxSchemasPerFile: Int,
+    generateEndpointTypes: Boolean,
+    disableValidatorGeneration: Boolean,
+    useCustomJsoniterSerdes: Boolean,
     additionalPackages: List[(String, File)]
 )
 
@@ -22,11 +26,18 @@ trait OpenapiCodegenKeys {
     "If true, any tagged endpoints will be defined in an object with a name based on the first tag, instead of on the default generated object."
   )
   lazy val openapiJsonSerdeLib = settingKey[String]("The lib to use for json serdes. Supports 'circe' and 'jsoniter'.")
+  lazy val openapiXmlSerdeLib = settingKey[String]("The lib to use for json serdes. Supports 'cats-xml' and 'none'.")
   lazy val openapiValidateNonDiscriminatedOneOfs =
     settingKey[Boolean]("Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated..")
   lazy val openapiMaxSchemasPerFile = settingKey[Int]("Maximum number of schemas to generate for a single file")
   lazy val openapiAdditionalPackages = settingKey[List[(String, File)]]("Addition package -> spec mappings to generate.")
-  lazy val openapiStreamingImplementation = settingKey[String]("Implementation for streamTextBody. Supports: akka, fs2, pekko, zio.")
+  lazy val openapiStreamingImplementation =
+    settingKey[String]("Implementation for streamTextBody. Supports: akka, fs2(-EffectType)?, pekko, zio.")
+  lazy val openapiGenerateEndpointTypes = settingKey[Boolean]("Whether to emit explicit types for endpoint defns")
+  lazy val openapiDisableValidatorGeneration = settingKey[Boolean]("Set to true to disable validator generation")
+  lazy val openapiUseCustomJsoniterSerdes = settingKey[Boolean](
+    "Set to true to enable usage of custom jsoniter macros (decreases compilation flakiness, compatible with jsoniter-scala versions >= 2.36.x)"
+  )
   lazy val openapiOpenApiConfiguration =
     settingKey[OpenApiConfiguration]("Aggregation of other settings. Manually set value will be disregarded.")
 

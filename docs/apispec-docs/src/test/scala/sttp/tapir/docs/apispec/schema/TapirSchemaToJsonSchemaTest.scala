@@ -26,7 +26,7 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     val result: ASchema = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true)
 
     // then
-    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft/2020-12/schema#","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"Child","required":["childId"],"type":"object","properties":{"childId":{"type":"string"},"childNames":{"type":"array","items":{"type":"string"}}}}}}"""
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft/2020-12/schema","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"Child","required":["childId"],"type":"object","properties":{"childId":{"type":"string"},"childNames":{"type":"array","items":{"type":"string"}}}}}}"""
 
   }
 
@@ -38,7 +38,7 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true)
 
     // then
-    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft/2020-12/schema#","type":"array","items":{"type":"integer","format":"int32"}}"""
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft/2020-12/schema","type":"array","items":{"type":"integer","format":"int32"}}"""
   }
 
   it should "handle repeated type names" in {
@@ -54,7 +54,7 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true)
 
     // then
-    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft/2020-12/schema#","title":"Parent","required":["innerChildField","childDetails"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"},"childDetails":{"$$ref":"#/$$defs/Child1"}},"$$defs":{"Child":{"title":"Child","required":["childName"],"type":"object","properties":{"childName":{"type":"string"}}},"Child1":{"title":"Child","required":["age"],"type":"object","properties":{"age":{"type":"integer","format":"int32"},"height":{"type":["integer", "null"],"format":"int32"}}}}}"""
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft/2020-12/schema","title":"Parent","required":["innerChildField","childDetails"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"},"childDetails":{"$$ref":"#/$$defs/Child1"}},"$$defs":{"Child":{"title":"Child","required":["childName"],"type":"object","properties":{"childName":{"type":"string"}}},"Child1":{"title":"Child","required":["age"],"type":"object","properties":{"age":{"type":"integer","format":"int32"},"height":{"type":["integer", "null"],"format":"int32"}}}}}"""
   }
 
   it should "handle options as not nullable" in {
@@ -67,7 +67,7 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = false)
 
     // then
-    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft/2020-12/schema#","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"Child","type":"object","properties":{"childName":{"type":"string"}}}}}"""
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft/2020-12/schema","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"Child","type":"object","properties":{"childName":{"type":"string"}}}}}"""
 
   }
 
@@ -81,7 +81,7 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true)
 
     // then
-    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft/2020-12/schema#","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"Child","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft/2020-12/schema","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"Child","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
   }
 
   it should "use title from annotation or ref name" in {
@@ -100,7 +100,7 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true)
 
     // then
-    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft/2020-12/schema#","title":"MyOwnTitle1","required":["inner"],"type":"object","properties":{"inner":{"$$ref":"#/$$defs/Parent"}},"$$defs":{"Parent":{"title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}}},"Child":{"title":"MyOwnTitle3","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft/2020-12/schema","title":"MyOwnTitle1","required":["inner"],"type":"object","properties":{"inner":{"$$ref":"#/$$defs/Parent"}},"$$defs":{"Parent":{"title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}}},"Child":{"title":"MyOwnTitle3","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
   }
 
   it should "NOT use generate default titles if disabled" in {
@@ -116,7 +116,7 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true)
 
     // then
-    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"http://json-schema.org/draft/2020-12/schema#","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"MyChild","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft/2020-12/schema","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"MyChild","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
   }
 
   it should "Generate correct names for Eithers with parameterized types" in {
@@ -158,6 +158,148 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
 
     // then
     result.asJson.deepDropNullValues shouldBe
-      json"""{"$$schema" : "http://json-schema.org/draft/2020-12/schema#", "title" : "Tuple2_Int_String", "type" : "array", "prefixItems" : [{"type" : "integer", "format" : "int32"}, {"type" : "string"}]}"""
+      json"""{"$$schema" : "https://json-schema.org/draft/2020-12/schema", "title" : "Tuple2_Int_String", "type" : "array", "prefixItems" : [{"type" : "integer", "format" : "int32"}, {"type" : "string"}]}"""
+  }
+
+  it should "handle as nullable if marked with Nullable attribute" in {
+    // given
+    case class Parent(innerChildField: Child, nullableInnerChild: Child)
+    case class Child(childName: Option[String])
+
+    val tSchema =
+      implicitly[Schema[Parent]]
+        .modify(_.innerChildField.childName)(_.nullable)
+        .modify(_.nullableInnerChild)(_.nullable)
+
+    // when
+    val result = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = false)
+
+    // then
+    result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft/2020-12/schema","title":"Parent","required":["innerChildField","nullableInnerChild"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"},"nullableInnerChild":{"title":"Child","anyOf":[{"$$ref":"#/$$defs/Child"},{"type":"null"}]}},"$$defs":{"Child":{"title":"Child","type":"object","properties":{"childName":{"type":["string","null"]}}}}}"""
+  }
+
+  it should "generate a top-level array schema" in {
+    // given
+    case class Test(i: Int)
+
+    // when
+    val result: ASchema = TapirSchemaToJsonSchema(implicitly[Schema[List[Test]]], markOptionsAsNullable = true)
+
+    // then
+    result.asJson shouldBe json"""{
+      "$$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "$$defs" : {
+        "Test" : {
+          "title" : "Test",
+          "type" : "object",
+          "required" : [
+            "i"
+          ],
+          "properties" : {
+            "i" : {
+              "type" : "integer",
+              "format" : "int32"
+            }
+          }
+        }
+      },
+      "type" : "array",
+      "items" : {
+        "$$ref" : "#/$$defs/Test"
+      }
+    }"""
+  }
+
+  it should "generate a top-level recursive schema" in {
+    // given
+    case class Test(i: Int, children: List[Test])
+    implicit lazy val schema: Schema[Test] = Schema.derived[Test]
+
+    // when
+    val result: ASchema = TapirSchemaToJsonSchema(implicitly[Schema[Test]], markOptionsAsNullable = true)
+
+    // then
+    result.asJson shouldBe json"""{
+      "$$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "$$defs" : {
+        "Test" : {
+          "title" : "Test",
+          "type" : "object",
+          "required" : [
+            "i"
+          ],
+          "properties" : {
+            "i" : {
+              "type" : "integer",
+              "format" : "int32"
+            },
+            "children" : {
+              "type" : "array",
+              "items" : {
+                "$$ref" : "#/$$defs/Test"
+              }
+            }
+          }
+        }
+      },
+      "$$ref" : "#/$$defs/Test"
+    }"""
+  }
+
+  it should "generate a top-level recursive schema with coproducts" in {
+    // given
+    sealed trait Model
+    final case class SetModel(set: Set[Model]) extends Model
+    final case class LeafModel(num: Int) extends Model
+
+    implicit lazy val schema: Schema[Model] = Schema.derived[Model]
+
+    // when
+    val result: ASchema = TapirSchemaToJsonSchema(implicitly[Schema[Model]], markOptionsAsNullable = true)
+
+    // then
+    result.asJson shouldBe json"""{
+      "$$schema" : "https://json-schema.org/draft/2020-12/schema",
+      "$$ref" : "#/$$defs/Model",
+      "$$defs" : {
+        "Model" : {
+          "title" : "Model",
+          "oneOf" : [
+            {
+              "$$ref" : "#/$$defs/LeafModel"
+            },
+            {
+              "$$ref" : "#/$$defs/SetModel"
+            }
+          ]
+        },
+        "LeafModel" : {
+          "title" : "LeafModel",
+          "type" : "object",
+          "required" : [
+            "num"
+          ],
+          "properties" : {
+            "num" : {
+              "type" : "integer",
+              "format" : "int32"
+            }
+          }
+        },
+        "SetModel" : {
+          "title" : "SetModel",
+          "type" : "object",
+          "properties" : {
+            "set" : {
+              "type" : "array",
+              "uniqueItems" : true,
+              "items" : {
+                "$$ref" : "#/$$defs/Model"
+              }
+            }
+          }
+        }
+      }
+    }"""
   }
 }

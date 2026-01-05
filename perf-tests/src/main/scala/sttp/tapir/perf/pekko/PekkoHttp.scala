@@ -1,6 +1,6 @@
 package sttp.tapir.perf.pekko
 
-import cats.effect.IO
+import cats.effect.{IO, Resource}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.model.HttpEntity
@@ -14,7 +14,7 @@ import sttp.tapir.perf.apis._
 import sttp.tapir.server.pekkohttp.{PekkoHttpServerInterpreter, PekkoHttpServerOptions}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 object PekkoCommon {
   // Define a source that emits the current timestamp every 100 milliseconds
@@ -103,27 +103,21 @@ object Tapir extends Endpoints {
 }
 
 object PekkoHttp {
-  def runServer(router: ActorSystem => Route): IO[ServerRunner.KillSwitch] = {
-    // We need to create a new actor system each time server is run
-    implicit val actorSystem: ActorSystem = ActorSystem("tapir-pekko-http")
-    implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
-    IO.fromFuture(
-      IO(
-        Http()
-          .newServerAt("127.0.0.1", Port)
-          .bind(router(actorSystem))
-          .map { binding =>
-            IO.fromFuture(IO(binding.unbind().flatMap(_ => actorSystem.terminate()))).void
-          }
-      )
-    )
-  }
+  private val actorSystem = Resource.make(IO(ActorSystem("tapir-pekko-http")))(aSystem => IO.fromFuture(IO(aSystem.terminate())).void)
+
+  private def http(route: Route)(implicit aSystem: ActorSystem) = Resource.make(
+    IO.fromFuture(IO(Http().newServerAt("127.0.0.1", Port).bind(route)))
+  )(binding => IO.fromFuture(IO(binding.unbind())).void)
+
+  // We need to create a new actor system each time server is run
+  def runServer(router: ActorSystem => Route): Resource[IO, Unit] =
+    actorSystem.flatMap { implicit aSystem: ActorSystem => http(router(aSystem)) }.map(_ => ())
 }
 
-object TapirServer extends ServerRunner { override def start = PekkoHttp.runServer(Tapir.router(1)) }
-object TapirMultiServer extends ServerRunner { override def start = PekkoHttp.runServer(Tapir.router(128)) }
+object TapirServer extends ServerRunner { override def runServer = PekkoHttp.runServer(Tapir.router(1)) }
+object TapirMultiServer extends ServerRunner { override def runServer = PekkoHttp.runServer(Tapir.router(128)) }
 object TapirInterceptorMultiServer extends ServerRunner {
-  override def start = PekkoHttp.runServer(Tapir.router(128, withServerLog = true))
+  override def runServer = PekkoHttp.runServer(Tapir.router(128, withServerLog = true))
 }
-object VanillaServer extends ServerRunner { override def start = PekkoHttp.runServer(Vanilla.router(1)) }
-object VanillaMultiServer extends ServerRunner { override def start = PekkoHttp.runServer(Vanilla.router(128)) }
+object VanillaServer extends ServerRunner { override def runServer = PekkoHttp.runServer(Vanilla.router(1)) }
+object VanillaMultiServer extends ServerRunner { override def runServer = PekkoHttp.runServer(Vanilla.router(128)) }

@@ -11,14 +11,5 @@ permissions:
   checks: write
 
 jobs:
-  report:
-    runs-on: ubuntu-latest
-    # If the workflow run was skipped or cancelled this action would fail, generating a test report is unnecessary.
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' }}
-    steps:
-      - uses: dorny/test-reporter@v1
-        with:
-          artifact: '/tests-results-(.*)/'
-          name: 'Test report for $1'
-          path: '**/test-reports/TEST*.xml'
-          reporter: java-junit
+  test-report:
+    uses: softwaremill/github-actions-workflows/.github/workflows/test-report.yml@main

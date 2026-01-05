@@ -107,4 +107,18 @@ class PicklerEnumTest extends AnyFlatSpec with Matchers {
           18 -> picklerMagenta
         )""")
   }
+
+  it should "encode and decode an enum where the cases are not alphabetically sorted" in {
+    // given
+    import generic.auto.* // for Pickler auto-derivation
+
+    // when
+    val testPickler = Pickler.derived[NotAlphabetical]
+    val codec = testPickler.toCodec
+    val encoded = codec.encode(NotAlphabetical.Xyz)
+
+    // then
+    encoded shouldBe """"Xyz""""
+    codec.decode(encoded) shouldBe Value(NotAlphabetical.Xyz)
+  }
 }

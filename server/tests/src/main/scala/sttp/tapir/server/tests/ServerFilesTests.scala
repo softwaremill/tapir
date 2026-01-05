@@ -1,13 +1,11 @@
 package sttp.tapir.server.tests
 
-import cats.data.NonEmptyList
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
 import org.scalatest.matchers.should.Matchers._
-import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3._
+import sttp.client4._
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.files._
@@ -28,8 +26,9 @@ import java.io.ByteArrayInputStream
 
 class ServerFilesTests[F[_], OPTIONS, ROUTE](
     serverInterpreter: TestServerInterpreter[F, Any, OPTIONS, ROUTE],
-    backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
-    supportSettingContentLength: Boolean = true
+    backend: WebSocketStreamBackend[IO, Fs2Streams[IO]],
+    supportSettingContentLength: Boolean = true,
+    supportContentLengthInHeadRequests: Boolean = true
 ) {
 
   private def get(port: Int, path: List[String]): IO[Response[String]] = basicRequest
@@ -43,6 +42,17 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
     .send(backend)
 
   private val classLoader = classOf[ServerFilesTests[F, OPTIONS, ROUTE]].getClassLoader
+
+  private def checkContentLengthInHeadResponse(headers: Seq[Header], expectedLength: String) = {
+    // https://github.com/softwaremill/tapir/issues/4702
+    // According to RFC 9110, server MAY send Content-Length header in response to HEAD request.
+    // For backends that follow the RFC strictly, we validate that the header has expected value only if it is present.
+    if (supportContentLengthInHeadRequests) {
+      headers contains Header(HeaderNames.ContentLength, expectedLength) shouldBe true
+    } else {
+      headers find (_.name == HeaderNames.ContentLength) forall (_.value == expectedLength) shouldBe true
+    }
+  }
 
   def tests(): List[Test] = {
     val baseTests = List(
@@ -100,7 +110,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
                 .map { r =>
                   r.code shouldBe StatusCode.Ok
                   r.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true
-                  r.headers contains Header(HeaderNames.ContentLength, file.length().toString) shouldBe true
+                  checkContentLengthInHeadResponse(headers = r.headers, expectedLength = file.length().toString)
                 }
             }
             .unsafeToFuture()
@@ -115,7 +125,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
                 .map { r =>
                   r.code shouldBe StatusCode.Ok
                   r.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true
-                  r.headers contains Header(HeaderNames.ContentLength, file.length().toString) shouldBe true
+                  checkContentLengthInHeadResponse(headers = r.headers, expectedLength = file.length().toString)
                 }
             }
             .unsafeToFuture()
@@ -128,7 +138,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
               .map { r =>
                 r.code shouldBe StatusCode.Ok
                 r.headers contains Header(HeaderNames.AcceptRanges, ContentRangeUnits.Bytes) shouldBe true
-                r.headers contains Header(HeaderNames.ContentLength, "10") shouldBe true
+                checkContentLengthInHeadResponse(headers = r.headers, expectedLength = "10")
               }
           }
           .unsafeToFuture()
@@ -496,6 +506,23 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
             .unsafeToFuture()
         }
       },
+      Test("should serve a single file from the given relative system path") {
+        withTestFilesDirectory { testDir =>
+          val cwd = System.getProperty("user.dir")
+          val relativePath = java.nio.file.Paths.get(cwd).relativize(testDir.toPath.resolve("f1")).toString
+
+          serveRoute(staticFileGetServerEndpoint[F]("test")(relativePath))
+            .use { port => get(port, List("test")).map(_.body shouldBe "f1 content") }
+            .unsafeToFuture()
+        }
+      },
+      Test("should return a 404 when the single file from the given system path does not exist") {
+        withTestFilesDirectory { testDir =>
+          serveRoute(staticFileGetServerEndpoint[F]("test")(testDir.toPath.resolve("f_not_there").toFile.getAbsolutePath))
+            .use { port => get(port, List("test")).map(_.code shouldBe StatusCode.NotFound) }
+            .unsafeToFuture()
+        }
+      },
       Test("if an etag is present, should only return the resource if it doesn't match the etag") {
         serveRoute(staticResourcesGetServerEndpoint[F](emptyInput)(classLoader, "test"))
           .use { port =>
@@ -562,7 +589,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
         withTestFilesDirectory { testDir =>
           val headAndGetEndpoint = staticFilesServerEndpoints[F]("test")(testDir.getAbsolutePath)
           serverInterpreter
-            .server(NonEmptyList.of(serverInterpreter.route(headAndGetEndpoint)))
+            .server(serverInterpreter.route(headAndGetEndpoint))
             .use { port =>
               basicRequest
                 .headers(Header(HeaderNames.Range, "bytes=3-6"))
@@ -593,7 +620,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       Test("should create both head and get endpoints for resources") {
         val headAndGetEndpoint = staticResourcesServerEndpoints[F](emptyInput)(classLoader, "test")
         serverInterpreter
-          .server(NonEmptyList.of(serverInterpreter.route(headAndGetEndpoint)))
+          .server(serverInterpreter.route(headAndGetEndpoint))
           .use { port =>
             basicRequest
               .headers(Header(HeaderNames.Range, "bytes=6-9"))
@@ -622,12 +649,11 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
       },
       Test("if an etag is present, should only return the file if it doesn't match the etag") {
         withTestFilesDirectory { testDir =>
-
           val headAndGetEndpoint = staticFilesServerEndpoints[F](emptyInput)(testDir.getAbsolutePath)
           serverInterpreter
-            .server(NonEmptyList.of(serverInterpreter.route(headAndGetEndpoint)))
+            .server(serverInterpreter.route(headAndGetEndpoint))
             .use { port =>
-              def testHttpMethod(method: Request[Either[String, String], Any]) = {
+              def testHttpMethod(method: Request[Either[String, String]]) = {
                 def send(etag: Option[String]) =
                   method
                     .header(HeaderNames.IfNoneMatch, etag)
@@ -668,9 +694,7 @@ class ServerFilesTests[F[_], OPTIONS, ROUTE](
 
   def serveRoute(e: ServerEndpoint[Any, F]): Resource[IO, Port] =
     serverInterpreter.server(
-      NonEmptyList.of(
-        serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler[F]))
-      )
+      serverInterpreter.route(e, (ci: CustomiseInterceptors[F, OPTIONS]) => ci.decodeFailureHandler(DefaultDecodeFailureHandler[F]))
     )
 
   def gzipCompress(input: String): Array[Byte] = {

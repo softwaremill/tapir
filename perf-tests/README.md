@@ -12,9 +12,9 @@ perfTests/runMain sttp.tapir.perf.apis.ServerRunner http4s.TapirMulti
 Run it without server name to see a list of all available names. 
 Exception: If you're testing `NettySyncServer` (tapir-server-netty-sync), its server runner is located elsewhere:
 ```
-nettyServerSync3/Test/runMain sttp.tapir.netty.sync.perf.NettySyncServerRunner
+nettyServerSync3/Test/runMain sttp.tapir.server.netty.sync.perf.NettySyncServerRunner
 ```
-This is caused by `perf-tests` using Scala 2.13 forced by Gatling, while `NettySyncServer` is written excluisively for Scala 3.
+This is caused by `perf-tests` using Scala 2.13 forced by Gatling, while `NettySyncServer` is written exclusively for Scala 3.
 
 ## Configuring and running simulations
 
@@ -37,7 +37,7 @@ If not set, default values will be used (see `sttp.tapir.perf.CommonSimulations`
 
 ## Profiling 
 
-To atach the profiler to a running server, it is recommended to use [async-profiler](https://github.com/async-profiler/async-profiler).
+To attach the profiler to a running server, it is recommended to use [async-profiler](https://github.com/async-profiler/async-profiler).
 Start the profiler by calling:
 ```
 asprof -e cpu,alloc,lock -f profile.jfr <PID>

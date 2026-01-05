@@ -45,7 +45,7 @@ If you have a case class which contains some non-standard types (other than stri
 collections), you only need to provide implicit schemas for them. Using these, the rest will be derived automatically.
 
 Note that when using [datatypes integrations](integrations.md), respective schemas & codecs must also be imported to 
-enable the derivation, e.g. for [newtype](integrations.html#newtype-integration) you'll have to add
+enable the derivation, e.g. for [newtype](integrations.md#newtype-integration) you'll have to add
 `import sttp.tapir.codec.newtype.*` or extend `TapirCodecNewType`.
 
 ## Semi-automatic derivation
@@ -119,7 +119,47 @@ the union type, as it's not possible to generate a runtime check for the generic
 ### Derivation for string-based constant union types
 e.g. `type AorB = "a" | "b"`
 
-See [enumerations](enumerations.html#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
+See [enumerations](enumerations.md#scala-3-string-based-constant-union-types-to-enum) on how to use string-based unions of constant types as enums.
+
+### Derivation for generic case classes
+
+Semi-automatic derivation with `derives Schema` or `given ... = Schema.derived` does not work well with generic case
+classes. For example, an application exposing a paginated REST API could use:
+
+```scala mdoc
+final case class PaginatedBad[T](data: List[T], nextPage: Option[Int]) derives Schema
+final case class SomeInt(int: Int) derives Schema
+
+val nameBad = summon[Schema[PaginatedBad[SomeInt]]].name
+```
+
+Due to the way semi-automatic derivation works, the name of `Schema[PaginatedBad[SomeInt]]` uses `T` instead of 
+`SomeInt`. This leads to generating inconsistent OpenAPI specifications (as explained in
+[GitHub issues #3922](https://github.com/softwaremill/tapir/issues/3922) and
+[#4549](https://github.com/softwaremill/tapir/issues/4549)).
+
+To fix this, the `given` (or `implicit def`) statement can be made `inline`:
+
+```scala mdoc
+final case class Paginated[T](data: List[T], nextPage: Option[Int])
+object Paginated:
+  inline given [T: Schema]: Schema[Paginated[T]] = Schema.derived
+
+val name = summon[Schema[Paginated[SomeInt]]].name
+```
+
+If using `inline given` is not possible, or if the inline itself is part of a generic method, the name of the `Schema`
+can be adjusted after the derivation:
+
+```scala mdoc
+final case class Paginated2[T](data: List[T], nextPage: Option[Int])
+object Paginated2:
+  given [T: Schema]: Schema[Paginated2[T]] = Schema.derivedWithTypeParameter
+    // Or Schema.derivedWithTypeParameter[Paginated2, T]
+    // Or Schema.derived[Paginated2[T]].renameWithTypeParameter[T]
+
+val name2 = summon[Schema[Paginated2[SomeInt]]].name
+```
 
 ## Configuring derivation
 
@@ -158,8 +198,8 @@ encoded and decoded by the codec. E.g. when the schema is for a json body, the d
 configured in the json library, matching the configuration of the schema.
 
 Alternatively, instead of deriving schemas and json codecs separately, you can use the experimental
-[pickler](https://tapir.softwaremill.com/en/latest/endpoint/pickler.html) 
-module, which provides a higher level `Pickler` concept, which takes care of consistent derivation.  
+[pickler](pickler.md) module, which provides a higher level `Pickler` concept, which takes care of consistent
+derivation.
 ```
 
 ### Field discriminators

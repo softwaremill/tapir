@@ -81,44 +81,38 @@ object ZioMetrics {
     runtime.unsafe.run(effect).getOrThrowFiberFailure()
   }
 
-  /** Convert into zio metric labels */
-  private def asZioLabel(l: MetricLabels, ep: AnyEndpoint, req: ServerRequest): Set[MetricLabel] =
-    l.forRequest.map(label => zio.metrics.MetricLabel(label._1, label._2(ep, req))).toSet
+  /** Convert into zio metric labels (request only) */
+  private def asZioLabelFromRequest(l: MetricLabels, req: ServerRequest): Set[MetricLabel] =
+    l.forRequest.map(label => zio.metrics.MetricLabel(label._1, label._2(req))).toSet
+
+  /** Convert into zio metric labels (request + endpoint) */
+  private def asZioLabel(l: MetricLabels, ep: AnyEndpoint, req: ServerRequest): Set[MetricLabel] = {
+    val requestLabels = l.forRequest.map(label => zio.metrics.MetricLabel(label._1, label._2(req)))
+    val endpointLabels = l.forEndpoint.map(label => zio.metrics.MetricLabel(label._1, label._2(ep)))
+    (requestLabels ++ endpointLabels).toSet
+  }
 
   /** Convert into zio metric labels */
   private def asZioLabel(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Set[MetricLabel] = {
-    l.forResponse.map(label => zio.metrics.MetricLabel(label._1, label._2(res))) ++
-      phase.map(v => MetricLabel(l.forResponsePhase.name, v))
-  }.toSet
+    val responseLabels = l.forResponse.map { case (key, valueFn) =>
+      MetricLabel(key, valueFn(res).getOrElse("unknown"))
+    }
+    val phaseLabel = phase.map(v => MetricLabel(l.forResponsePhase.name, v))
+    (responseLabels ++ phaseLabel).toSet
+  }
 
   /** Requests active metric collector. */
   def requestActive[F[_]](namespace: String, labels: MetricLabels): Metric[F, Gauge[Long]] = {
     Metric[F, Gauge[Long]](
       getActiveRequestGauge(namespace),
       onRequest = (req, gauge, m) => {
-        m.unit {
+        val zioLabels = asZioLabelFromRequest(labels, req)
+        m.map(m.eval(unsafeRun(gauge.tagged(zioLabels).increment))) { _ =>
           EndpointMetric()
-            .onEndpointRequest { ep =>
-              m.eval {
-                unsafeRun(
-                  gauge.tagged(asZioLabel(labels, ep, req)).increment
-                )
-              }
-            }
-            .onResponseBody { (ep, _) =>
-              m.eval {
-                unsafeRun(
-                  gauge.tagged(asZioLabel(labels, ep, req)).decrement
-                )
-              }
-            }
-            .onException { (ep, _) =>
-              m.eval {
-                unsafeRun(
-                  gauge.tagged(asZioLabel(labels, ep, req)).decrement
-                )
-              }
-            }
+            .onResponseBody { (_, _) => m.eval(unsafeRun(gauge.tagged(zioLabels).decrement)) }
+            .onException { (_, _) => m.eval(unsafeRun(gauge.tagged(zioLabels).decrement)) }
+            .onInterceptorResponse { _ => m.eval(unsafeRun(gauge.tagged(zioLabels).decrement)) }
+            .onDecodeFailure { () => m.eval(unsafeRun(gauge.tagged(zioLabels).decrement)) }
         }
       }
     )
@@ -142,6 +136,13 @@ object ZioMetrics {
               m.eval {
                 unsafeRun(
                   counter.tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Left(ex), None)).increment
+                )
+              }
+            }
+            .onInterceptorResponse { res =>
+              m.eval {
+                unsafeRun(
+                  counter.tagged(asZioLabelFromRequest(labels, req) ++ asZioLabel(labels, Right(res), None)).increment
                 )
               }
             }
@@ -185,6 +186,15 @@ object ZioMetrics {
               m.eval {
                 unsafeRun(
                   histogram.tagged(asZioLabel(labels, ep, req) ++ asZioLabel(labels, Left(ex), None)).update(duration)
+                )
+              }
+            }
+            .onInterceptorResponse { res =>
+              m.eval {
+                unsafeRun(
+                  histogram
+                    .tagged(asZioLabelFromRequest(labels, req) ++ asZioLabel(labels, Right(res), Some(labels.forResponsePhase.bodyValue)))
+                    .update(duration)
                 )
               }
             }

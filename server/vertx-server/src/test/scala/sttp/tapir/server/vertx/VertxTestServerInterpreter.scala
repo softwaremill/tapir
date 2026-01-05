@@ -1,6 +1,5 @@
 package sttp.tapir.server.vertx
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.{Vertx, Future => VFuture}
@@ -26,13 +25,14 @@ class VertxTestServerInterpreter(vertx: Vertx)
   }
 
   override def server(
-      routes: NonEmptyList[Router => Route],
+      route: Router => Route,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
     val router = Router.router(vertx)
-    val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
+    // the maxFormAttributeSize must be higher than in ServerMultipartTests.maxContentLengthTests
+    val server = vertx.createHttpServer(new HttpServerOptions().setPort(0).setMaxFormAttributeSize(100000)).requestHandler(router)
     val listenIO = vertxFutureToIo(server.listen(0))
-    routes.toList.foreach(_.apply(router))
+    route(router)
     // Vertx doesn't offer graceful shutdown with timeout OOTB
     Resource.make(listenIO)(s => vertxFutureToIo(s.close()).void).map(s => s.actualPort())
   }

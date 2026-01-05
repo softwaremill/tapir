@@ -66,7 +66,7 @@ private[mockserver] object JsonCodecs {
           .map {
             case ExpectationBodyDefinition.PlainType => plainBodyDefnDecoder.decodeJson(json.asJson)
             case ExpectationBodyDefinition.JsonType  => jsonBodyDefnDecoder.decodeJson(json.asJson)
-            case other =>
+            case other                               =>
               Left(
                 DecodingFailure(
                   message = s"Unexpected body type: `$other`, expected one of ${ExpectationBodyDefinition.KnownTypesString}",

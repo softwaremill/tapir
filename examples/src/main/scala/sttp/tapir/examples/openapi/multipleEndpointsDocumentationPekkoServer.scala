@@ -1,9 +1,9 @@
 // {cat=OpenAPI documentation; effects=Future; server=Pekko HTTP; docs=Swagger UI; json=circe}: Documenting multiple endpoints
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.4
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.13.2
 
 package sttp.tapir.examples.openapi
 
@@ -76,7 +76,7 @@ import scala.concurrent.{Await, Future}
     // testing
     println("Go to: http://localhost:8080/docs")
     println("Press any key to exit ...")
-    scala.io.StdIn.readLine()
+    val _ = scala.io.StdIn.readLine()
 
     binding
   }

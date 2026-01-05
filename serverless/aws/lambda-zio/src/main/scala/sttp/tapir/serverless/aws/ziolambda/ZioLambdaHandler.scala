@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets
   *
   * @tparam Env
   *   The Environment type of the handler .
-  * @tparam options
+  * @param options
   *   Server options of type AwsServerOptions.
   */
 abstract class ZioLambdaHandler[Env: RIOMonadError](options: AwsServerOptions[RIO[Env, *]]) {
@@ -36,7 +36,7 @@ abstract class ZioLambdaHandler[Env: RIOMonadError](options: AwsServerOptions[RI
         case Left(e)                => ZIO.succeed(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
         case Right(r: AwsRequestV1) => server.toRoute(getAllEndpoints)(r.toV2)
         case Right(r: AwsRequest)   => server.toRoute(getAllEndpoints)(r)
-        case Right(r) =>
+        case Right(r)               =>
           val message = s"Request of type ${r.getClass.getCanonicalName} is not supported"
           ZIO.fail(new IllegalArgumentException(message))
       }

@@ -1,10 +1,10 @@
-// {cat=Custom types; effects=Future; server=Pekko HTTP; client=sttp3; JSON=circe; docs=Swagger UI}: A demo of Tapir's capabilities using semi-auto derivation
+// {cat=Custom types; effects=Future; server=Pekko HTTP; client=sttp4; JSON=circe; docs=Swagger UI}: A demo of Tapir's capabilities using semi-auto derivation
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-sttp-client:1.11.4
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.22
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.22
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.22
+//> using dep com.softwaremill.sttp.tapir::tapir-sttp-client4:1.13.2
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
 
@@ -159,16 +159,16 @@ import sttp.tapir.Schema
     implicit val actorSystem: ActorSystem = ActorSystem()
     import actorSystem.dispatcher
     val routes = PekkoHttpServerInterpreter().toRoute(serverEndpoints)
-    Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
+    val _ = Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 
     logger.info("Server started")
   end startServer
 
   def makeClientRequest(): Unit =
-    import sttp.client3.*
-    import sttp.tapir.client.sttp.SttpClientInterpreter
+    import sttp.client4.quick.*
+    import sttp.tapir.client.sttp4.SttpClientInterpreter
 
-    val client = SttpClientInterpreter().toQuickClient(booksListing, Some(uri"http://localhost:8080"))
+    val client = SttpClientInterpreter().toClientThrowDecodeFailures(booksListing, Some(uri"http://localhost:8080"), backend)
 
     val result: Either[String, Vector[Book]] = client(Some(3))
 

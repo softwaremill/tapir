@@ -1,4 +1,4 @@
-# Using as an sttp client
+# Using as an sttp client (v3)
 
 Add the dependency:
 
@@ -12,7 +12,7 @@ To make requests using an endpoint definition using the [sttp client](https://gi
 import sttp.tapir.client.sttp.SttpClientInterpreter
 ```
 
-This objects contains a number of variants for creating a client call, where the first parameter is the endpoint description.
+This object contains a number of variants for creating a client call, where the first parameter is the endpoint description.
 The second is an optional URI - if this is `None`, the request will be relative.
 
 Here's a summary of the available method variants; `R` are the requirements of the endpoint, such as streaming or websockets:
@@ -55,7 +55,7 @@ A => I => Request[DecodeResult[Either[E, O]], R]
 A => I => F[DecodeResult[Either[E, O]]]
 ```
 
-See  the [runnable example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExample.scala)
+See  the [runnable example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/booksExample.scala)
 for example usage.
 
 ## Web sockets
@@ -86,8 +86,8 @@ description, for example:
 
 ```scala :compile-only
 import sttp.tapir.*
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.client3.*
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import sttp.client4.*
 
 SttpClientInterpreter()
   .toRequest(endpoint.get.in("hello").in(query[String]("name")), Some(uri"http://localhost:8080"))

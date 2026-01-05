@@ -2,6 +2,7 @@ package sttp.tapir.server.netty.sync.perf
 
 import ox.*
 import ox.channels.*
+import ox.flow.Flow
 import sttp.shared.Identity
 import sttp.tapir.server.netty.sync.NettySyncServerOptions
 import sttp.tapir.server.netty.sync.NettySyncServerBinding
@@ -11,7 +12,6 @@ import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.EndpointExtensions.*
 import sttp.tapir.server.netty.sync.OxStreams
-import sttp.tapir.Endpoint
 import sttp.capabilities.WebSockets
 import scala.concurrent.duration._
 
@@ -57,12 +57,12 @@ object NettySyncServerRunner {
 
   val wsBaseEndpoint = endpoint.get.in("ws" / "ts")
 
-  val wsPipe: OxStreams.Pipe[Long, Long] = { in =>
-    fork {
-      in.drain()
-    }
-    Source.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis())
-  }
+  val wsPipe: OxStreams.Pipe[Long, Long] = in =>
+    in.drain()
+      .merge(
+        Flow.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis()),
+        propagateDoneLeft = true
+      )
 
   val wsEndpoint: Endpoint[Unit, Unit, Unit, OxStreams.Pipe[Long, Long], OxStreams with WebSockets] = wsBaseEndpoint
     .out(
@@ -74,7 +74,7 @@ object NettySyncServerRunner {
     )
   val wsServerEndpoint = wsEndpoint.handleSuccess(_ => wsPipe)
 
-  val endpoints = genEndpointsId(1)
+  val endpoints = genEndpointsId(128)
 
   def main(args: Array[String]): Unit = {
     val declaredPort = 8080

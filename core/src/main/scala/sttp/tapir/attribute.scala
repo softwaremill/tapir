@@ -2,6 +2,8 @@ package sttp.tapir
 
 import sttp.tapir.macros.AttributeKeyMacros
 
+// TODO: use AttributeKey & AttributeMap from sttp-shared in Tapir2
+
 /** @param typeName
   *   The fully qualified name of `T`.
   * @tparam T
@@ -9,7 +11,7 @@ import sttp.tapir.macros.AttributeKeyMacros
   */
 class AttributeKey[T](val typeName: String) {
   override def equals(other: Any): Boolean = other match {
-    case that: AttributeKey[_] => typeName == that.typeName
+    case that: AttributeKey[?] => typeName == that.typeName
     case _                     => false
   }
 

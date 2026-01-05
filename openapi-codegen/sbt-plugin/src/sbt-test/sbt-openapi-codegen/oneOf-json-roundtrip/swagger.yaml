@@ -1,14 +1,65 @@
 openapi: 3.0.3
 servers:
-  - url: /v3
+  - url: 'https://{environment}.my-co.org:{port}/api/{customer}/prefix'
+    description: |
+      These are the main endpoints.
+      The environments are self-documenting!
+    variables:
+      environment:
+        enum:
+          - dev
+          - staging
+          - prod
+        default: prod
+      port:
+        default: 1234
+      customer:
+        default: big-dogs
+  - url: 'http://testing.my-co.org:{port}/api/{scoped}/prefix'
+    description: |
+      Legacy endpoint that doesn't require TLS
+      Doesn't work, retained for completely mysterious reasons lost to the winds of time
+    variables:
+      port:
+        default: 4321
+      scoped:
+        default: false
+  - description: Locally
+    url: /
 info:
   description: File for testing json roundtripping of oneOf defns in scala 2.x with circe
   version: 1.0.20-SNAPSHOT
   title: OneOf Json test for scala 2
 tags: [ ]
+security: # Default security on all endpoints without explicit declarations
+  - petstore_auth:
+      - write:pets
+      - read:pets
 paths:
+  x-tapir-codegen-security-path-prefixes:
+    - /security-group/{securityGroupName}
+    - /oneof/error/{secParam}
+  '/security-group/{securityGroupName}':
+    parameters:
+      - $ref: '#/components/parameters/securityGroupName'
+    get:
+      responses:
+        204:
+          description: OK
+  '/security-group/{securityGroupName}/more-path':
+    parameters:
+      - $ref: '#/components/parameters/securityGroupName'
+    get:
+      responses:
+        204:
+          description: OK
   '/binary/test':
     get:
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+        - BearerAuth: [ ]
       responses:
         "200":
           description: "Response CSV body"
@@ -35,8 +86,52 @@ paths:
               description: "csv file"
               type: string
               format: binary
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+  '/optional/test':
+    post:
+      security:
+        # Requires _both_
+        - petstore_auth:
+            - write:pets
+            - read:pets
+          api_key: [ ]
+        - { }
+      responses:
+        '200':
+          description: an optional response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NullableThingy'
+      requestBody:
+        required: true
+        description: an optional request body (nullable)
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NullableThingy2'
+    put:
+      security:
+        # Requires two or one
+        - petstore_auth: [ ]
+        - api_key: [ ]
+        - BearerAuth: [ ]
+        - petstore_auth:
+            - write:pets
+            - read:pets
+          api_key: [ ]
+      responses:
+        '200':
+          $ref: '#/components/responses/optionalityTest'
+      requestBody:
+        $ref: '#/components/requestBodies/optionalityTest'
   '/adt/test':
     post:
+      security:
+        - api_key: [ ]
       responses:
         '200':
           description: successful operation
@@ -52,6 +147,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ADTWithDiscriminatorNoMapping'
     put:
+      security: # overriding default security on this endpoint to permit anonymous access via list containing empty map
+        - { }
       responses:
         '200':
           description: successful operation
@@ -68,6 +165,7 @@ paths:
               $ref: '#/components/schemas/ADTWithoutDiscriminator'
   '/inline/enum/test':
     post:
+      security: [ ] # overriding default security on this endpoint to permit anonymous access via empty list
       parameters:
         - name: query-enum
           in: query
@@ -75,6 +173,7 @@ paths:
           required: true
           schema:
             type: string
+            default: bar1
             enum:
               - bar1
               - bar2
@@ -127,8 +226,613 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ObjectWithInlineEnum'
+  '/oneof/error/{secParam}/test':
+    parameters:
+      - name: secParam
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      security: # Requires two or one or none
+        - { }
+        - petstore_auth: [ ]
+        - api_key: [ ]
+        - BearerAuth: [ ]
+        - petstore_auth:
+            - write:pets
+            - read:pets
+          api_key: [ ]
+      responses:
+        "204":
+          description: "No response"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        default:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+  '/json/stringJsonBody':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+      security:
+        - { }
+        - petstore_auth:
+            - write:pets
+            - read:pets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+          application/zip:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+      responses:
+        "200":
+          description: "Possibly-invalid json"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+            application/zip:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+        "204":
+          description: "No response"
+  '/json/stringJsonBody/simple':
+    post:
+      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectWithInlineEnum'
+      responses:
+        "200":
+          description: "Possibly-invalid json"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+  '/oneof/option/test':
+    get:
+      responses:
+        "204":
+          description: "No response"
+          headers:
+            common-response-header:
+              $ref: '#/components/parameters/common-response-header'
+        "200":
+          description: An object
+          headers:
+            common-response-header:
+              $ref: '#/components/parameters/common-response-header'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum'
+        "201":
+          description: Another object
+          headers:
+            common-response-header:
+              $ref: '#/components/parameters/common-response-header'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithInlineEnum2'
+
+  '/headers/tests':
+    get:
+      responses:
+        "302":
+          description: response
+          headers:
+            foo:
+              description: a description
+              schema:
+                type: string
+
+  '/pattern/{restricted}/object':
+    parameters:
+      - name: restricted
+        in: path
+        description: used by security logic
+        required: true
+        schema:
+          type: string
+          minLength: 3
+          maxLength: 10
+          pattern: "[a-z]+"
+      - name: q1
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: "[a-z_].+"
+      - name: q2
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 3
+      - name: h1
+        in: header
+        required: false
+        schema:
+          type: string
+          pattern: "[a-z_].+"
+          minLength: 3
+      - name: h2
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 3
+    get:
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: string
+  '/force/eager':
+    post:
+      x-tapir-codegen-directives:
+        - force-eager
+      description: force-eager does nothing to types that would already be eager
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+    put:
+      x-tapir-codegen-directives:
+        - force-eager
+      description: force-eager ensures that types that would ordinarily be considered 'streaming' are treated as eager
+      requestBody:
+        content:
+          text/csv:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            text/csv:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+    patch:
+      x-tapir-codegen-directives:
+        - force-req-body-eager
+      description: force-req-body-eager applies to req body but not resp
+      requestBody:
+        content:
+          text/csv:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            text/csv:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+    get:
+      x-tapir-codegen-directives:
+        - force-resp-body-eager
+      description: force-resp-body-eager applies to resp body but not req
+      requestBody:
+        content:
+          text/csv:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            text/csv:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+  '/force/streaming':
+    post:
+      x-tapir-codegen-directives:
+        - force-streaming
+      description: force-streaming ensures that types that would ordinarily be considered 'eager' are treated as streaming
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ValidatedObj'
+    put:
+      x-tapir-codegen-directives:
+        - force-streaming
+      description: force-streaming does nothing to types that would already be eager, or to error position
+      requestBody:
+        content:
+          text/csv:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            text/csv:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+        "404":
+          description: An object
+          content:
+            text/plain:
+              schema:
+                type: string
+    patch:
+      x-tapir-codegen-directives:
+        - force-resp-body-streaming
+      description: force-resp-body-streaming applies to resp but not req
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ValidatedObj'
+    get:
+      x-tapir-codegen-directives:
+        - force-req-body-streaming
+      description: force-req-body-streaming applies to req but not resp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ValidatedObj'
+  '/inline/simple/object':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          headers:
+            x-combat-status:
+              description: "a response header"
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+    put:
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: An object
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+                required:
+                  - foo
+                properties:
+                  foo:
+                    type: string
+                  bar:
+                    type: string
+                    format: uuid
+        "400":
+          description: application/octet-stream in error position
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+        "401":
+          description: application/octet-stream in error position 2
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/NotNullableThingy'
+    delete:
+      responses:
+        "200":
+          description: empty response 1
+        "201":
+          description: empty response 2
+        "401":
+          description: empty response 3
+        "402":
+          description: empty response 4
+    patch:
+      requestBody:
+        description: list type in
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListType'
+      responses:
+        "200":
+          description: list type out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListType'
+        "400":
+          description: list type error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListType'
+  '/allOf':
+    post:
+      requestBody:
+        description: list type in
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HasFooBarBazQuux'
+      responses:
+        "204":
+          description: fine
+
+  '/validation/test':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidatedObj'
+      responses:
+        "204":
+          description: ok
 
 components:
+  parameters:
+    common-response-header:
+      in: header
+      name: x-common
+      schema:
+        type: string
+    securityGroupName:
+      name: securityGroupName
+      in: path
+      description: used by security logic
+      required: true
+      schema:
+        type: string
+  responses:
+    optionalityTest:
+      description: a non-optional response body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotNullableThingy'
+  requestBodies:
+    optionalityTest:
+      required: false
+      description: an optional request body (not required)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotNullableThingy'
+  securitySchemes:
+    petstore_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://petstore3.swagger.io/oauth/authorize
+          scopes:
+            "write:pets": modify pets in your account
+            "read:pets": read your pets
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     ADTWithDiscriminator:
       type: object
@@ -158,6 +862,7 @@ components:
           type: string
         s:
           type: string
+          format: byte
         i:
           type: integer
         d:
@@ -222,11 +927,14 @@ components:
         i:
           type: integer
         e:
-          $ref: '#/components/schemas/AnEnum'
+          allOf:
+            - $ref: '#/components/schemas/AnEnum'
+          default: Foo
         absent:
           type: string
     AnEnum:
       type: string
+      default: Foo
       enum:
         - Foo
         - Bar
@@ -243,8 +951,216 @@ components:
           format: uuid
         inlineEnum:
           type: string
+          default: foo3
           enum:
             - foo1
             - foo2
             - foo3
             - foo4
+    ObjectWithInlineEnum2:
+      title: ObjectWithInlineEnum2
+      required:
+        - inlineEnum
+      type: object
+      properties:
+        inlineEnum:
+          type: string
+          enum:
+            - bar1
+            - bar2
+    AnyObjectWithInlineEnum:
+      title: AnyObjectWithInlineEnum
+      oneOf:
+        - $ref: '#/components/schemas/ObjectWithInlineEnum'
+        - $ref: '#/components/schemas/ObjectWithInlineEnum2'
+    Error:
+      title: Error
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/NotFoundError'
+        - $ref: '#/components/schemas/SimpleError'
+    NotNullableThingy:
+      title: NotNullableThingy
+      type: object
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
+    NullableThingy:
+      title: NullableThingy
+      type: object
+      nullable: true
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
+    NullableThingy2:
+      title: NullableThingy2
+      type:
+        - object
+        - "null"
+      required:
+        - uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
+    NotFoundError:
+      title: NotFoundError
+      required:
+        - reason
+      type: object
+      properties:
+        reason:
+          type: string
+    SimpleError:
+      title: SimpleError
+      required:
+        - message
+      type: object
+      properties:
+        message:
+          type: string
+    ListType:
+      title: ListType
+      type: array
+      items:
+        type: string
+    HasFoo:
+      title: HasFoo
+      type: object
+      properties:
+        foo:
+          type: string
+    HasBar:
+      title: HasBar
+      type: object
+      required:
+        - bar
+      properties:
+        bar:
+          type: string
+    HasBaz:
+      title: HasBaz
+      type: object
+      required:
+        - baz
+      properties:
+        baz:
+          type: integer
+    HasFooBarBazQuux:
+      title: HasFooBarBazQuux
+      allOf:
+        - $ref: '#/components/schemas/HasFoo'
+        - $ref: '#/components/schemas/HasBar'
+        - $ref: '#/components/schemas/HasBaz'
+        - title: HasQuux
+          type: object
+          properties:
+            quux:
+              type: integer
+    ValidatedOneOfA:
+      title: ValidatedOneOfA
+      type: object
+      required:
+        - s
+      properties:
+        s:
+          type: string
+          pattern: 'i+.+'
+    ValidatedOneOfB:
+      title: ValidatedOneOfB
+      type: object
+      properties:
+        i:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: false
+    ValidatedOneOfC:
+      title: ValidatedOneOfC
+      type: object
+      properties:
+        j:
+          type: integer
+    ValidatedOneOf:
+      title: ValidatedOneOf
+      oneOf:
+        - $ref: '#/components/schemas/ValidatedOneOfA'
+        - $ref: '#/components/schemas/ValidatedOneOfB'
+        - $ref: '#/components/schemas/ValidatedOneOfC'
+      discriminator:
+        propertyName: type
+    ValidatedRecursive:
+      title: ValidatedRecursive
+      type: object
+      properties:
+        self:
+          allOf:
+            - type: array
+              maxItems: 3
+              items:
+                $ref: '#/components/schemas/ValidatedRecursive'
+          default:
+            - self: [ ]
+    ValidatedSubObj:
+      title: ValidatedSubObj
+      type: object
+      required:
+        - i
+      properties:
+        i:
+          type: string
+          pattern: 'i+.+'
+    ValidatedObj:
+      title: ValidatedObj
+      type: object
+      required:
+        - foo
+        - bar
+      properties:
+        foo:
+          type: string
+          maxLength: 128
+        bar:
+          allOf:
+            - $ref: '#/components/schemas/ValidatedSubObj'
+          default:
+            i: "i..."
+        baz:
+          $ref: '#/components/schemas/ValidatedSubObj'
+        quux:
+          type: string
+          maxLength: 128
+          nullable: true
+        map:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+            maximum: 900
+            exclusiveMaximum: true
+          minProperties: 3
+          maxProperties: 12
+        arr:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 12
+            exclusiveMinimum: true
+            multipleOf: 3
+          maxItems: 9
+        set:
+          type: array
+          items:
+            type: string
+          maxItems: 9
+          uniqueItems: true
+        oneOf:
+          $ref: '#/components/schemas/ValidatedOneOf'
+        rec:
+          $ref: '#/components/schemas/ValidatedRecursive'

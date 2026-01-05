@@ -22,18 +22,15 @@ abstract class SttpClientPekkoTests[R >: WebSockets with PekkoStreams] extends C
       securityArgs: A,
       args: I,
       scheme: String = "http"
-  ): IO[Either[E, O]] = {
+  ): Future[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    IO.fromFuture(
-      IO(
-        SttpClientInterpreter()
-          .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
-          .apply(securityArgs)
-          .apply(args)
-          .send(backend)
-          .map(_.body)
-      )
-    )
+    SttpClientInterpreter()
+      .toSecureRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
+
   }
 
   override def safeSend[A, I, E, O](
@@ -41,17 +38,13 @@ abstract class SttpClientPekkoTests[R >: WebSockets with PekkoStreams] extends C
       port: Port,
       securityArgs: A,
       args: I
-  ): IO[DecodeResult[Either[E, O]]] = {
+  ): Future[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    IO.fromFuture(
-      IO(
-        SttpClientInterpreter()
-          .toSecureRequest(e, Some(uri"http://localhost:$port"))
-          .apply(securityArgs)
-          .apply(args)
-          .send(backend)
-          .map(_.body)
-      )
-    )
+    SttpClientInterpreter()
+      .toSecureRequest(e, Some(uri"http://localhost:$port"))
+      .apply(securityArgs)
+      .apply(args)
+      .send(backend)
+      .map(_.body)
   }
 }

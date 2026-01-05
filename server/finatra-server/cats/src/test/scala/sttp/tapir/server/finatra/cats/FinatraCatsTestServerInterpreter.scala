@@ -1,6 +1,5 @@
 package sttp.tapir.server.finatra.cats
 
-import cats.data.NonEmptyList
 import cats.effect.std.Dispatcher
 import cats.effect.{IO, Resource}
 import sttp.tapir.server.ServerEndpoint
@@ -21,8 +20,8 @@ class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO])
     es.map(interpreter.toRoute).last
   }
 
-  override def serverWithStop(
-      routes: NonEmptyList[FinatraRoute],
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Resource[IO, (Port, KillSwitch)] = FinatraTestServerInterpreter.serverWithStop(routes, gracefulShutdownTimeout)
+  override def server(
+      route: FinatraRoute,
+      gracefulShutdownTimeout: Option[FiniteDuration] = None
+  ): Resource[IO, Port] = new FinatraTestServerInterpreter().server(route, gracefulShutdownTimeout)
 }

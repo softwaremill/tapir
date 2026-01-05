@@ -34,8 +34,8 @@ class ModifyFunctorInstancesTest extends AnyFlatSpec with Matchers with ModifyFu
     def shouldContainACollectionElementWithSchema[B](fieldName: String, elemSchema: Schema[B]): Assertion =
       inside(schema.schemaType) {
         case SProduct(List(f)) if f.name.name == fieldName =>
-          f.schema.schemaType shouldBe a[SArray[_, _]]
-          f.schema.schemaType.asInstanceOf[SArray[_, _]].element shouldBe elemSchema
+          f.schema.schemaType shouldBe a[SArray[?, ?]]
+          f.schema.schemaType.asInstanceOf[SArray[?, ?]].element shouldBe elemSchema
       }
   }
 }

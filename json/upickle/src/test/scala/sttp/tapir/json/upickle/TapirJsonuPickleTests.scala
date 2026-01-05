@@ -8,7 +8,7 @@ import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import sttp.tapir.DecodeResult._
 import sttp.tapir._
 import sttp.tapir.generic.auto._
-import upickle.core.AbortException
+import upickle.core.TraceVisitor
 import upickle.default._
 
 object TapirJsonuPickleCodec extends TapirJsonuPickle
@@ -65,6 +65,6 @@ class TapirJsonuPickleTests extends AnyFlatSpec with TapirJsonuPickleTestExtensi
 
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual List.empty
-    error.underlying shouldBe an[AbortException]
+    error.underlying shouldBe an[TraceVisitor.TraceException]
   }
 }

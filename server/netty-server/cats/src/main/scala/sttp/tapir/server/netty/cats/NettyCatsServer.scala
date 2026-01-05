@@ -25,22 +25,37 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: NettyCatsServerOptions[F], config: NettyConfig) {
+case class NettyCatsServer[F[_]: Async](
+    serverEndpoints: Vector[ServerEndpoint[Fs2Streams[F] with WebSockets, F]],
+    otherRoutes: Vector[Route[F]],
+    options: NettyCatsServerOptions[F],
+    config: NettyConfig
+) {
   def addEndpoint(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): NettyCatsServer[F] = addEndpoints(List(se))
-  def addEndpoint(se: ServerEndpoint[Fs2Streams[F], F] with WebSockets, overrideOptions: NettyCatsServerOptions[F]): NettyCatsServer[F] =
-    addEndpoints(List(se), overrideOptions)
-  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): NettyCatsServer[F] = addRoute(
-    NettyCatsServerInterpreter(options).toRoute(ses)
-  )
-  def addEndpoints(
-      ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]],
-      overrideOptions: NettyCatsServerOptions[F]
-  ): NettyCatsServer[F] = addRoute(
-    NettyCatsServerInterpreter(overrideOptions).toRoute(ses)
-  )
+  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): NettyCatsServer[F] =
+    copy(serverEndpoints = serverEndpoints ++ ses)
 
-  def addRoute(r: Route[F]): NettyCatsServer[F] = copy(routes = routes :+ r)
-  def addRoutes(r: Iterable[Route[F]]): NettyCatsServer[F] = copy(routes = routes ++ r)
+  /** Adds a custom route to the server. When a request is received, it is first processed by routes generated from the defined endpoints
+    * (see [[addEndpoint]] and [[addEndpoints]] for the primary methods of defining server behavior). If none of these endpoints match the
+    * request, and the [[RejectHandler]] is configured to allow fallback handling (see below), the request will then be processed by the
+    * custom routes added using this method, in the order they were added.
+    *
+    * By default, the [[NettyCatsServerOptions]] are configured to return a `404` response when no endpoints match a request. This behavior
+    * is controlled by the [[RejectHandler]]. If you intend to handle unmatched requests using custom routes, ensure that the
+    * [[RejectHandler]] is configured appropriately to allow such fallback handling.
+    */
+  def addRoute(r: Route[F]): NettyCatsServer[F] = copy(otherRoutes = otherRoutes :+ r)
+
+  /** Adds custom routes to the server. When a request is received, it is first processed by routes generated from the defined endpoints
+    * (see [[addEndpoint]] and [[addEndpoints]] for the primary methods of defining server behavior). If none of these endpoints match the
+    * request, and the [[RejectHandler]] is configured to allow fallback handling (see below), the request will then be processed by the
+    * custom routes added using this method, in the order they were added.
+    *
+    * By default, the [[NettyCatsServerOptions]] are configured to return a `404` response when no endpoints match a request. This behavior
+    * is controlled by the [[RejectHandler]]. If you intend to handle unmatched requests using custom routes, ensure that the
+    * [[RejectHandler]] is configured appropriately to allow such fallback handling.
+    */
+  def addRoutes(r: Iterable[Route[F]]): NettyCatsServer[F] = copy(otherRoutes = otherRoutes ++ r)
 
   def options(o: NettyCatsServerOptions[F]): NettyCatsServer[F] = copy(options = o)
 
@@ -70,7 +85,16 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): F[(SA, () => F[Unit])] = {
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[F] = new CatsMonadError[F]()
-    val route: Route[F] = Route.combine(routes)
+    val endpointRoute = serverEndpoints match {
+      case Vector() => Vector.empty
+      case _        => Vector(NettyCatsServerInterpreter(options).toRoute(serverEndpoints.toList))
+    }
+    val allRoutes = endpointRoute ++ otherRoutes
+    val route = allRoutes match {
+      case Vector()  => Route.empty
+      case Vector(r) => r
+      case many      => Route.combine(many)
+    }
     val eventExecutor = new DefaultEventExecutor()
     val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
@@ -156,13 +180,13 @@ case class NettyCatsServer[F[_]: Async](routes: Vector[Route[F]], options: Netty
 
 object NettyCatsServer {
   def apply[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), NettyConfig.default)
+    NettyCatsServer(Vector.empty, Vector.empty, NettyCatsServerOptions.default(dispatcher), NettyConfig.default)
   def apply[F[_]: Async](options: NettyCatsServerOptions[F]): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, options, NettyConfig.default)
+    NettyCatsServer(Vector.empty, Vector.empty, options, NettyConfig.default)
   def apply[F[_]: Async](dispatcher: Dispatcher[F], config: NettyConfig): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, NettyCatsServerOptions.default(dispatcher), config)
+    NettyCatsServer(Vector.empty, Vector.empty, NettyCatsServerOptions.default(dispatcher), config)
   def apply[F[_]: Async](options: NettyCatsServerOptions[F], config: NettyConfig): NettyCatsServer[F] =
-    NettyCatsServer(Vector.empty, options, config)
+    NettyCatsServer(Vector.empty, Vector.empty, options, config)
 
   def io(): Resource[IO, NettyCatsServer[IO]] = Dispatcher.parallel[IO].map(apply[IO](_))
   def io(config: NettyConfig): Resource[IO, NettyCatsServer[IO]] = Dispatcher.parallel[IO].map(apply[IO](_, config))

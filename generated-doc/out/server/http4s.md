@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.11.4"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.13.4"
 ```
 
 and import the object:
@@ -93,6 +93,13 @@ BlazeServerBuilder[IO]
   .withExecutionContext(summon[ExecutionContext])
   .bindHttp(8080, "localhost")
   .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
+```
+
+```{note}
+When a close frame is received by http4s, the server seems to cancel the stream that is processing the web socket frames.
+This means that the `.decodeCloseRequests(true)` setting (also effective when the decoded type is optional, e.g. `Option`)
+is not reliable: values corresponding to close frames will not always be processed by the stream. Hence, it's recommended
+to avoid using this option with the http4s interpreter.
 ```
 
 ## Server Sent Events

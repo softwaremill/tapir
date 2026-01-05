@@ -1,8 +1,8 @@
 // {cat=Custom types; effects=Direct; server=Netty; docs=Swagger UI}: Handling comma-separated query parameters
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.4
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.4
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.13.2
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.2
 
 package sttp.tapir.examples.custom_types
 
@@ -73,7 +73,7 @@ enum TapirBreeds(val name: String):
 
     println(s"Go to: http://${binding.hostName}:${binding.port}/docs")
     println("Press any key to exit ...")
-    scala.io.StdIn.readLine()
+    val _ = scala.io.StdIn.readLine()
 
     binding.stop()
   }

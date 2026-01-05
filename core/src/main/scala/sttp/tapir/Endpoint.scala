@@ -32,7 +32,7 @@ import scala.reflect.ClassTag
   * regular inputs. This allows short-circuiting further processing in case security checks fail. Server logic can be provided using
   * [[EndpointServerLogicOps.serverSecurityLogic]] variants for secure endpoints, and [[EndpointServerLogicOps.serverLogic]] variants for
   * public endpoints; when using a synchronous server, you can also use the more concise [[EndpointServerLogicOps.handle]] methods, which
-  * work the save as above, but have the "effect" type fixed to [[Identity]].
+  * work the same as above, but have the "effect" type fixed to [[Identity]].
   *
   * A concise description of an endpoint can be generated using the [[EndpointMetaOps.show]] method.
   *
@@ -206,7 +206,7 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
     *   A common supertype of the new variant and the current output `E`.
     */
   def errorOutVariant[E2 >: E](
-      o: OneOfVariant[_ <: E2]
+      o: OneOfVariant[? <: E2]
   )(implicit ct: ClassTag[E], eEqualToErasure: ErasureSameAsType[E]): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(oneOf[E2](oneOfVariant[E](errorOutput), o), identity)
 
@@ -226,15 +226,15 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
     * @tparam E2
     *   A common supertype of the new variant and the current output `E`.
     */
-  def errorOutVariantPrepend[E2 >: E](o: OneOfVariant[_ <: E2]): EndpointType[A, I, E2, O, R] =
+  def errorOutVariantPrepend[E2 >: E](o: OneOfVariant[? <: E2]): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(oneOf[E2](o, oneOfDefaultVariant(errorOutput)), identity)
 
   /** Same as [[errorOutVariantPrepend]], but allows appending multiple variants in one go. */
-  def errorOutVariantsPrepend[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*): EndpointType[A, I, E2, O, R] =
+  def errorOutVariantsPrepend[E2 >: E](first: OneOfVariant[? <: E2], other: OneOfVariant[? <: E2]*): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(oneOf[E2](first, other :+ oneOfDefaultVariant(errorOutput): _*), identity)
 
   /** Same as [[errorOutVariant]], but allows appending multiple variants in one go. */
-  def errorOutVariants[E2 >: E](first: OneOfVariant[_ <: E2], other: OneOfVariant[_ <: E2]*)(implicit
+  def errorOutVariants[E2 >: E](first: OneOfVariant[? <: E2], other: OneOfVariant[? <: E2]*)(implicit
       ct: ClassTag[E],
       eEqualToErasure: ErasureSameAsType[E]
   ): EndpointType[A, I, E2, O, R] =
@@ -252,10 +252,15 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
     * @tparam E2
     *   A common supertype of the new variant and the current output `E`.
     */
-  def errorOutVariantsFromCurrent[E2 >: E](variants: EndpointOutput[E] => List[OneOfVariant[_ <: E2]]): EndpointType[A, I, E2, O, R] =
+  def errorOutVariantsFromCurrent[E2 >: E](variants: EndpointOutput[E] => List[OneOfVariant[? <: E2]]): EndpointType[A, I, E2, O, R] =
     withErrorOutputVariant(EndpointOutput.OneOf[E2, E2](variants(errorOutput), Mapping.id), identity)
 
-  /** Adds a new error variant, where the current error output is represented as a `Left`, and the given one as a `Right`. */
+  /** Adds a new error variant, where the current error output is represented as a `Left`, and the given one as a `Right`.
+    *
+    * The `Right`-variant (corresponding to the parameter of this method, `o`) is matched first, which might be significant for client
+    * interpreters, when there is no upfront way to discriminate which branch to decode, except for attempting to decode the inputs
+    * (including the body).
+    */
   def errorOutEither[E2](o: EndpointOutput[E2]): EndpointType[A, I, Either[E, E2], O, R] =
     withErrorOutputVariant(
       oneOf(
@@ -290,11 +295,11 @@ trait EndpointOutputsOps[A, I, E, O, -R] extends EndpointOutputsMacros[A, I, E, 
   def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[A, I, E, PO, R with R2] =
     withOutput(i.toEndpointIO.and(output))
 
-  def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
+  def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, ?, ?, P, R2])(implicit
       ts: ParamConcat.Aux[O, P, OP]
   ): EndpointType[A, I, E, OP, R with R2 with WebSockets] = withOutput(output.and(i.toEndpointOutput))
 
-  def prependOut[PIPE_REQ_RESP, P, PO, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
+  def prependOut[PIPE_REQ_RESP, P, PO, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, ?, ?, P, R2])(implicit
       ts: ParamConcat.Aux[P, O, PO]
   ): EndpointType[A, I, E, PO, R with R2 with WebSockets] = withOutput(i.toEndpointOutput.and(output))
 
@@ -339,10 +344,10 @@ trait EndpointInfoOps[-R] {
 }
 
 trait EndpointMetaOps {
-  def securityInput: EndpointInput[_]
-  def input: EndpointInput[_]
-  def errorOutput: EndpointOutput[_]
-  def output: EndpointOutput[_]
+  def securityInput: EndpointInput[?]
+  def input: EndpointInput[?]
+  def errorOutput: EndpointOutput[?]
+  def output: EndpointOutput[?]
   def info: EndpointInfo
 
   /** Shortened information about the endpoint. If the endpoint is named, returns the name, e.g. `[my endpoint]`. Otherwise, returns the
@@ -357,11 +362,12 @@ trait EndpointMetaOps {
     * `POST /books /add {header Authorization} {body as application/json (UTF-8)} -> {body as text/plain (UTF-8)}/-`
     */
   lazy val show: String = {
-    def showOutputs(o: EndpointOutput[_]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType)))
+    def showOutputs(o: EndpointOutput[?]): String = showOneOf(o.asBasicOutputsList.map(os => showMultiple(os.sortByType, _.show)))
 
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
     val showInputs = showMultiple(
-      (securityInput.asVectorOfBasicInputs() ++ input.asVectorOfBasicInputs()).sortBy(basicInputSortIndex)
+      (securityInput.asVectorOfBasicInputs() ++ input.asVectorOfBasicInputs()).sortBy(basicInputSortIndex),
+      _.show
     )
     val showSuccessOutputs = showOutputs(output)
     val showErrorOutputs = showOutputs(errorOutput)
@@ -377,7 +383,7 @@ trait EndpointMetaOps {
     * }}}
     */
   lazy val showDetail: String =
-    s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.show}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
+    s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(securityin: ${securityInput.showDetail}, in: ${input.showDetail}, errout: ${errorOutput.showDetail}, out: ${output.showDetail})"
   protected def showType: String
 
   /** Equivalent to `.toString`, shows the whole case class structure. */
@@ -399,8 +405,8 @@ trait EndpointMetaOps {
     *   How to show [[Tapir.queryParams]] inputs (if at all), which capture multiple query parameters
     */
   def showPathTemplate(
-      showPathParam: (Int, PathCapture[_]) => String = (index, pc) => pc.name.map(name => s"{$name}").getOrElse(s"{param$index}"),
-      showQueryParam: Option[(Int, Query[_]) => String] = Some((_, q) => s"${q.name}={${q.name}}"),
+      showPathParam: (Int, PathCapture[?]) => String = (index, pc) => pc.name.map(name => s"{$name}").getOrElse(s"{param$index}"),
+      showQueryParam: Option[(Int, Query[?]) => String] = Some((_, q) => s"${q.name}={${q.name}}"),
       includeAuth: Boolean = true,
       showNoPathAs: String = "*",
       showPathsAs: Option[String] = Some("*"),

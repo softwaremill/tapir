@@ -1,14 +1,11 @@
 package sttp.tapir.serverless.aws.lambda.tests
 
-import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import org.scalatest.Assertion
-import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.client3
-import sttp.client3.testing.SttpBackendStub
-import sttp.client3.{ByteArrayBody, ByteBufferBody, InputStreamBody, NoBody, Request, Response, StringBody, SttpBackend, _}
+import sttp.client4.testing.{ResponseStub, StubBody, WebSocketStreamBackendStub}
+import sttp.client4._
 import sttp.model.{Header, StatusCode, Uri}
 import sttp.tapir.PublicEndpoint
 import sttp.tapir.integ.cats.effect.CatsMonadError
@@ -24,7 +21,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerO
 
   override def testServer[I, E, O](e: PublicEndpoint[I, E, O, Any], testNameSuffix: String, interceptors: Interceptors = identity)(
       fn: I => IO[Either[E, O]]
-  )(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
+  )(runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]): Test = {
     val serverOptions: AwsServerOptions[IO] = interceptors(AwsCatsEffectServerOptions.customiseInterceptors[IO]).options
       .copy(encodeResponseBody = false)
     val se: ServerEndpoint[Any, IO] = e.serverLogic(fn)
@@ -33,12 +30,12 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerO
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3001").unsafeToFuture())
   }
 
-  def testServerWithStop(name: String, rs: => NonEmptyList[Route[IO]], gracefulShutdownTimeout: Option[FiniteDuration])(
-      runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  def testServerWithStop(name: String, r: => Route[IO], gracefulShutdownTimeout: Option[FiniteDuration])(
+      runTest: KillSwitch => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = throw new UnsupportedOperationException
 
   override def testServerLogic(e: ServerEndpoint[Any, IO], testNameSuffix: String, interceptors: Interceptors = identity)(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     val serverOptions: AwsServerOptions[IO] = interceptors(AwsCatsEffectServerOptions.customiseInterceptors[IO]).options
       .copy(encodeResponseBody = false)
@@ -53,24 +50,23 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerO
       interceptors: Interceptors = identity,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(
-      runTest: KillSwitch => (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+      runTest: KillSwitch => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = throw new java.lang.UnsupportedOperationException
 
-  override def testServer(name: String, rs: => NonEmptyList[Route[IO]])(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  override def testServer(name: String, r: => Route[IO])(
+      runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
-    val backend = SttpBackendStub[IO, Fs2Streams[IO] with WebSockets](catsMonadIO).whenAnyRequest
+    val backend = WebSocketStreamBackendStub[IO, Fs2Streams[IO]](catsMonadIO).whenAnyRequest
       .thenRespondF { request =>
-        val responses: NonEmptyList[Response[String]] = rs.map { route =>
-          route(sttpToAwsRequest(request)).map(awsToSttpResponse).unsafeRunSync()
-        }
-        IO.pure(responses.find(_.code != StatusCode.NotFound).getOrElse(Response("", StatusCode.NotFound)))
+        val response: Response[StubBody] =
+          r(sttpToAwsRequest(request)).map(awsToSttpResponse).unsafeRunSync()
+        IO.pure(if (response.code != StatusCode.NotFound) response else ResponseStub.adjust("", StatusCode.NotFound))
       }
     Test(name)(runTest(backend, uri"http://localhost:3001").unsafeToFuture())
   }
 
-  private def stubBackend(route: Route[IO]): SttpBackend[IO, Fs2Streams[IO] with WebSockets] =
-    SttpBackendStub[IO, Fs2Streams[IO] with WebSockets](catsMonadIO).whenAnyRequest.thenRespondF { request =>
+  private def stubBackend(route: Route[IO]): WebSocketStreamBackend[IO, Fs2Streams[IO]] =
+    WebSocketStreamBackendStub[IO, Fs2Streams[IO]](catsMonadIO).whenAnyRequest.thenRespondF { request =>
       route(sttpToAwsRequest(request)).map(awsToSttpResponse)
     }
 }
@@ -78,7 +74,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerO
 object AwsLambdaCreateServerStubTest {
   implicit val catsMonadIO: CatsMonadError[IO] = new CatsMonadError[IO]
 
-  def sttpToAwsRequest(request: Request[_, _]): AwsRequest = {
+  def sttpToAwsRequest(request: GenericRequest[_, _]): AwsRequest = {
     AwsRequest(
       rawPath = request.uri.pathSegments.toString,
       rawQueryString = request.uri.params.toMultiSeq.foldLeft("") { case (q, (name, values)) =>
@@ -107,11 +103,10 @@ object AwsLambdaCreateServerStubTest {
     )
   }
 
-  def awsToSttpResponse(response: AwsResponse): Response[String] =
-    client3.Response(
+  def awsToSttpResponse(response: AwsResponse): Response[StubBody] =
+    ResponseStub.adjust(
       new String(response.body),
       new StatusCode(response.statusCode),
-      "",
       response.headers
         .map { case (n, v) => v.split(",").map(Header(n, _)) }
         .flatten

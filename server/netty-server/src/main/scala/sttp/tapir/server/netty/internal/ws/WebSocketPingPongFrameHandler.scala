@@ -14,7 +14,7 @@ class WebSocketPingPongFrameHandler(ignorePong: Boolean, autoPongOnPing: Boolean
         if (autoPongOnPing) {
           val _ = ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()))
         } else {
-          val _ = ping.content().release()
+          val _ = ctx.fireChannelRead(ping)
         }
       case pong: PongWebSocketFrame =>
         if (!ignorePong) {

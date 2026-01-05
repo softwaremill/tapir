@@ -56,6 +56,14 @@ val countCharactersHttp: Routes[Any, Response] =
   ZioHttpInterpreter().toHttp(countCharactersEndpoint.zServerLogic(countCharacters))
 ```
 
+```{note}
+A single ZIO Http application can contain both Tapir-generated and ZIO-Http-native routes. However, because of the
+routing implementation in ZIO Http, the shape of the paths that Tapir and other ZIO Http routes serve should not
+overlap. The shape of the path includes exact path segments, single- and multi-wildcards. 
+
+Such overlapping routes may cause incorrect 404 (Not Found) or 405 (Method Not Allowed) responses.
+```
+
 ## Server logic
 
 When defining the business logic for an endpoint, the following methods are available, which replace the

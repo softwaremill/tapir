@@ -48,6 +48,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
     }
   }
 
+  /** Assumes the default value for the argument is "", in which case returns a `Some(None)`. */
   def extractOptStringArgFromAnnotation(field: Symbol, annotationType: c.Type): Option[Option[String]] =
     field.annotations.collectFirst {
       case a if a.tree.tpe <:< annotationType =>
@@ -55,7 +56,8 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
           case List(Select(_, name @ TermName(_))) if name.decodedName.toString.startsWith("<init>$default") =>
             None
           case List(Literal(Constant(str: String))) =>
-            Some(str)
+            // before Scala 2.13.18, the above test for a default value worked; now we need this additional condition
+            if (str == "") None else Some(str)
           case _ => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
         }
     }
