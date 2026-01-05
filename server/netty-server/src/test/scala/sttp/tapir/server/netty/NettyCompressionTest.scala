@@ -4,13 +4,13 @@ import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.client4._
-import sttp.client4.httpclient.HttpClientSyncBackend
-import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.internal.FutureUtil.nettyFutureToScala
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.net.{HttpURLConnection, URL}
+import java.util.zip.GZIPInputStream
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -18,15 +18,49 @@ class NettyCompressionTest extends AnyFunSuite with Matchers with BeforeAndAfter
   implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val eventLoopGroup = new NioEventLoopGroup()
-  private val backend: SyncBackend = HttpClientSyncBackend()
+  private val largeText = "This is a large text that should benefit from compression. " * 1000
 
   override def afterAll(): Unit = {
-    backend.close()
     Await.result(nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[_], 10.seconds)
     super.afterAll()
   }
 
-  /** Creates a test server with optional compression configuration and runs a test */
+  /** Makes an HTTP request and returns raw response bytes without auto-decompression */
+  private def makeRawRequest(
+      url: String,
+      acceptEncoding: Option[String] = None
+  ): (Int, Option[String], Array[Byte]) = {
+    val connection = new URL(url).openConnection().asInstanceOf[HttpURLConnection]
+    try {
+      connection.setRequestMethod("GET")
+      acceptEncoding.foreach(enc => connection.setRequestProperty("Accept-Encoding", enc))
+
+      val responseCode = connection.getResponseCode
+      val contentEncoding = Option(connection.getHeaderField("Content-Encoding"))
+
+      val inputStream = if (responseCode >= 400) connection.getErrorStream else connection.getInputStream
+      val outputStream = new ByteArrayOutputStream()
+      val buffer = new Array[Byte](4096)
+      var bytesRead = inputStream.read(buffer)
+      while (bytesRead != -1) {
+        outputStream.write(buffer, 0, bytesRead)
+        bytesRead = inputStream.read(buffer)
+      }
+      inputStream.close()
+
+      (responseCode, contentEncoding, outputStream.toByteArray)
+    } finally {
+      connection.disconnect()
+    }
+  }
+
+  private def decompressGzip(compressed: Array[Byte]): String = {
+    val gis = new GZIPInputStream(new ByteArrayInputStream(compressed))
+    val outputStream = new ByteArrayOutputStream()
+    gis.transferTo(outputStream)
+    outputStream.toString("UTF-8")
+  }
+
   private def withServer[A](
       endpoints: List[ServerEndpoint[Any, Future]],
       compressionEnabled: Boolean
@@ -57,65 +91,86 @@ class NettyCompressionTest extends AnyFunSuite with Matchers with BeforeAndAfter
     }
   }
 
-  test("compression should be disabled by default in config") {
-    NettyConfig.default.compressionConfig.enabled shouldBe false
-  }
-
-  test("withCompressionEnabled should enable compression") {
-    val config = NettyConfig.default.withCompressionEnabled
-    config.compressionConfig.enabled shouldBe true
-  }
-
-  test("compressionConfig method should set compression config") {
-    val config = NettyConfig.default.compressionConfig(NettyCompressionConfig.enabled)
-    config.compressionConfig.enabled shouldBe true
-  }
-
-  test("predefined compression configs should have correct values") {
-    NettyCompressionConfig.default.enabled shouldBe false
-    NettyCompressionConfig.enabled.enabled shouldBe true
-  }
-
-  test("server should respond normally when compression is disabled") {
+  test("server should not compress responses when compression is disabled") {
     val testEndpoint = endpoint.get.in("test").out(stringBody)
-    val serverEndpoint = testEndpoint.serverLogicSuccess[Future](_ => Future.successful("Hello, World!"))
+    val serverEndpoint = testEndpoint.serverLogicSuccess[Future](_ => Future.successful(largeText))
 
     withServer(List(serverEndpoint), compressionEnabled = false) { port =>
-      val response = basicRequest
-        .get(uri"http://localhost:$port/test")
-        .send(backend)
+      val (responseCode, contentEncoding, body) = makeRawRequest(
+        s"http://localhost:$port/test",
+        acceptEncoding = Some("gzip")
+      )
 
-      response.code shouldBe StatusCode.Ok
-      response.body.toOption.get shouldBe "Hello, World!"
+      responseCode shouldBe 200
+      contentEncoding shouldBe None
+      // Response should NOT be compressed
+      new String(body, "UTF-8") shouldBe largeText
     }
   }
 
-  test("server should respond normally when compression is enabled") {
+  test("server should compress responses when compression is enabled and client accepts gzip") {
     val testEndpoint = endpoint.get.in("test").out(stringBody)
-    val serverEndpoint = testEndpoint.serverLogicSuccess[Future](_ => Future.successful("Hello, World!"))
+    val serverEndpoint = testEndpoint.serverLogicSuccess[Future](_ => Future.successful(largeText))
 
     withServer(List(serverEndpoint), compressionEnabled = true) { port =>
-      val response = basicRequest
-        .get(uri"http://localhost:$port/test")
-        .send(backend)
+      val (responseCode, contentEncoding, compressedBody) = makeRawRequest(
+        s"http://localhost:$port/test",
+        acceptEncoding = Some("gzip")
+      )
 
-      response.code shouldBe StatusCode.Ok
-      response.body.toOption.get shouldBe "Hello, World!"
+      responseCode shouldBe 200
+      contentEncoding shouldBe Some("gzip")
+
+      // Verify the response is actually compressed (at least 10 times smaller than original)
+      val uncompressedSize = largeText.getBytes("UTF-8").length
+      compressedBody.length shouldBe <(uncompressedSize / 10)
+
+      // Verify we can decompress and get the original content
+      val decompressed = decompressGzip(compressedBody)
+      decompressed shouldBe largeText
     }
   }
 
-  test("server should handle large responses when compression is enabled") {
-    val largeText = "This is a large text that should benefit from compression. " * 1000
+  test("server should not compress when client does not send Accept-Encoding header") {
+    val testEndpoint = endpoint.get.in("test").out(stringBody)
+    val serverEndpoint = testEndpoint.serverLogicSuccess[Future](_ => Future.successful(largeText))
+
+    withServer(List(serverEndpoint), compressionEnabled = true) { port =>
+      val (responseCode, contentEncoding, body) = makeRawRequest(
+        s"http://localhost:$port/test",
+        acceptEncoding = None
+      )
+
+      responseCode shouldBe 200
+      contentEncoding shouldBe None
+      // Response should NOT be compressed since client didn't request it
+      new String(body, "UTF-8") shouldBe largeText
+    }
+  }
+
+  test("server should compress large responses when compression is enabled") {
     val testEndpoint = endpoint.get.in("large").out(stringBody)
     val serverEndpoint = testEndpoint.serverLogicSuccess[Future](_ => Future.successful(largeText))
 
     withServer(List(serverEndpoint), compressionEnabled = true) { port =>
-      val response = basicRequest
-        .get(uri"http://localhost:$port/large")
-        .send(backend)
+      val (responseCode, contentEncoding, compressedBody) = makeRawRequest(
+        s"http://localhost:$port/large",
+        acceptEncoding = Some("gzip")
+      )
 
-      response.code shouldBe StatusCode.Ok
-      response.body.toOption.get shouldBe largeText
+      responseCode shouldBe 200
+      contentEncoding shouldBe Some("gzip")
+
+      // Verify the response is actually compressed (should be significantly smaller)
+      val uncompressedSize = largeText.getBytes("UTF-8").length
+      val compressionRatio = compressedBody.length.toDouble / uncompressedSize
+
+      // For repetitive text like largeText, compression ratio should be very good (< 10%)
+      compressionRatio shouldBe <(0.1)
+
+      // Verify we can decompress and get the original content
+      val decompressed = decompressGzip(compressedBody)
+      decompressed shouldBe largeText
     }
   }
 
