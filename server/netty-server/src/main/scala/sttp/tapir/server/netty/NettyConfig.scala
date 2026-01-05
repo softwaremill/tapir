@@ -146,9 +146,6 @@ object NettyConfig {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(ServerCodecHandlerName, new HttpServerCodec())
     if (cfg.compressionConfig.enabled) {
-      // HttpContentCompressor automatically compresses based on Accept-Encoding header
-      // Using the default constructor which uses compression level 6
-      // Note: The constructor with compressionLevel parameter is deprecated in newer Netty versions
       pipeline.addLast(new HttpContentCompressor())
     }
     pipeline.addLast(new HttpStreamsServerHandler())
