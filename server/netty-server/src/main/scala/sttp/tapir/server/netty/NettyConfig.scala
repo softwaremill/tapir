@@ -51,12 +51,8 @@ import scala.concurrent.duration._
   * @param serverHeader
   *   If set, send this value in the 'Server' response header. If None, don't set the header.
   *
-  * @param compressionEnabled
-  *   If set to true, the server will compress responses.
-  *
-  * @param compressionContentSizeThreshold
-  *   The minimum size of the response content that will be compressed. If the response content is smaller than this value, it will not be
-  *   compressed.
+  * @param compressionConfig
+  *   Configuration for HTTP response compression. See [[NettyCompressionConfig]] for details.
   */
 case class NettyConfig(
     host: String,
@@ -76,8 +72,7 @@ case class NettyConfig(
     gracefulShutdownTimeout: Option[FiniteDuration],
     idleTimeout: Option[FiniteDuration],
     serverHeader: Option[String],
-    compressionEnabled: Boolean,
-    compressionContentSizeThreshold: Int
+    compressionConfig: NettyCompressionConfig
 ) {
   def host(h: String): NettyConfig = copy(host = h)
 
@@ -118,8 +113,8 @@ case class NettyConfig(
 
   def serverHeader(h: String): NettyConfig = copy(serverHeader = Some(h))
 
-  def withCompressionEnabled: NettyConfig = copy(compressionEnabled = true)
-  def compressionContentSizeThreshold(t: Int): NettyConfig = copy(compressionContentSizeThreshold = t)
+  def compressionConfig(config: NettyCompressionConfig): NettyConfig = copy(compressionConfig = config)
+  def withCompressionEnabled: NettyConfig = copy(compressionConfig = compressionConfig.withEnabled(true))
 
   def isSsl: Boolean = sslContext.isDefined
 }
@@ -144,14 +139,18 @@ object NettyConfig {
     socketConfig = NettySocketConfig.default,
     initPipeline = cfg => defaultInitPipeline(cfg)(_, _),
     serverHeader = Some(s"tapir/${buildinfo.BuildInfo.version}"),
-    compressionEnabled = false,
-    compressionContentSizeThreshold = 0
+    compressionConfig = NettyCompressionConfig.default
   )
 
   def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(ServerCodecHandlerName, new HttpServerCodec())
-    if (cfg.compressionEnabled) pipeline.addLast(new HttpContentCompressor(cfg.compressionContentSizeThreshold, Seq.empty: _*))
+    if (cfg.compressionConfig.enabled) {
+      // HttpContentCompressor automatically compresses based on Accept-Encoding header
+      // Using the default constructor which uses compression level 6
+      // Note: The constructor with compressionLevel parameter is deprecated in newer Netty versions
+      pipeline.addLast(new HttpContentCompressor())
+    }
     pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
