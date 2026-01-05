@@ -2,12 +2,12 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.4
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.11.4
-//> using dep com.softwaremill.sttp.client3::core:3.9.7
+//> using dep com.softwaremill.sttp.client4::core:4.0.0-M22
 
 package sttp.tapir.examples
 
-import sttp.client3.{HttpURLConnectionBackend, SttpBackend, UriContext, basicRequest}
-import sttp.shared.Identity
+import sttp.client4.{SyncBackend, UriContext, basicRequest}
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.tapir.server.netty.{NettyCompressionConfig, NettyConfig, NettyFutureServer, NettyFutureServerBinding}
 import sttp.tapir.*
 
@@ -58,7 +58,7 @@ import scala.concurrent.{Await, Future}
   println(s"Server started at http://$host:$port with compression enabled")
   println(s"Compression config: enabled=${nettyConfig.compressionConfig.enabled}")
 
-  val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+  val backend: SyncBackend = HttpClientSyncBackend()
 
   // Test: Request the large text endpoint
   // Note: HttpURLConnectionBackend automatically handles gzip decompression,

@@ -4,7 +4,8 @@ import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.client3._
+import sttp.client4._
+import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
@@ -17,7 +18,7 @@ class NettyCompressionTest extends AnyFunSuite with Matchers with BeforeAndAfter
   implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val eventLoopGroup = new NioEventLoopGroup()
-  private val backend = HttpURLConnectionBackend()
+  private val backend: SyncBackend = HttpClientSyncBackend()
 
   override def afterAll(): Unit = {
     backend.close()
