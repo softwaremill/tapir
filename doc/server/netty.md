@@ -204,6 +204,7 @@ Compression is disabled by default. To enable it:
 
 ```scala mdoc:compile-only
 import sttp.tapir.server.netty.{NettyConfig, NettyCompressionConfig, NettyFutureServer}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 // Enable compression with Netty's default settings
 val config1 = NettyConfig.default.withCompressionEnabled
