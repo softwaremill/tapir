@@ -71,12 +71,12 @@ import java.time.Instant
   // converting endpoints to server endpoints with logic
 
   // simply redirect to Google auth service
-  def loginServerEndpoint(backend: SyncBackend) = login.handleSuccess { _ =>
+  def loginServerEndpoint(backend: SyncBackend) = login.handleSuccess(_ =>
     s"$authorizationUrl?client_id=$clientId&response_type=code&redirect_uri=$callbackUrl&scope=openid profile email"
-  }
+  )
 
   // after successful authorization Google redirects you here
-  def loginGoogleServerEndpoint(backend: SyncBackend) = loginGoogle.handleSuccess { code =>
+  def loginGoogleServerEndpoint(backend: SyncBackend) = loginGoogle.handleSuccess(code =>
     val response = basicRequest
       .response(asStringAlways)
       .post(uri"$accessTokenUrl")
@@ -100,26 +100,22 @@ import java.time.Instant
       content = response.body
     )
     AccessDetails(JwtCirce.encode(claim, jwtKey, jwtAlgo))
-  }
+  )
 
   // try to decode the provided jwt
-  def authenticate(token: String): Either[String, String] = {
+  def authenticate(token: String): Either[String, String] =
     JwtCirce
       .decodeAll(token, jwtKey, Seq(jwtAlgo))
-      .toEither match {
+      .toEither match
         case Left(err) => Left("Invalid token: " + err)
         case Right(decoded) => Right(decoded._2.content)
-      }
-  }
 
   // get user details from decoded jwt
   val secretPlaceServerEndpoint = secretPlace
-    .handleSecurity(token => authenticate(token))
-    .handle { authDetails => _ =>
-      Right(s"Your details: $authDetails")
-    }
+    .handleSecurity(authenticate)
+    .handle(authDetails => _ => Right(s"Your details: $authDetails"))
 
-  supervised {
+  supervised:
     val backend = useInScope(HttpClientSyncBackend())(_.close())
     
     val binding = useInScope(
@@ -133,4 +129,3 @@ import java.time.Instant
     println(s"Go to: http://${binding.hostName}:${binding.port}/login")
     println("Press ENTER to exit ...")
     scala.io.StdIn.readLine()
-  }
