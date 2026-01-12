@@ -72,40 +72,35 @@ import java.time.Instant
   // converting endpoints to server endpoints with logic
 
   // simply redirect to Google auth service
-  val loginServerEndpoint = login.handleSuccess { _ =>
+  def loginServerEndpoint(backend: SyncBackend) = login.handleSuccess { _ =>
     s"$authorizationUrl?client_id=$clientId&response_type=code&redirect_uri=$callbackUrl&scope=openid profile email"
   }
 
   // after successful authorization Google redirects you here
-  val loginGoogleServerEndpoint = loginGoogle.handle { code =>
-    val backend: SyncBackend = HttpClientSyncBackend()
-    try {
-      val response = basicRequest
-        .response(asStringAlways)
-        .post(uri"$accessTokenUrl")
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(
-          Map(
-            "grant_type" -> "authorization_code",
-            "client_id" -> clientId,
-            "client_secret" -> clientSecret,
-            "code" -> code,
-            "redirect_uri" -> callbackUrl
-          )
+  def loginGoogleServerEndpoint(backend: SyncBackend) = loginGoogle.handle { code =>
+    val response = basicRequest
+      .response(asStringAlways)
+      .post(uri"$accessTokenUrl")
+      .header("Content-Type", "application/x-www-form-urlencoded")
+      .body(
+        Map(
+          "grant_type" -> "authorization_code",
+          "client_id" -> clientId,
+          "client_secret" -> clientSecret,
+          "code" -> code,
+          "redirect_uri" -> callbackUrl
         )
-        .send(backend)
-
-      // create jwt token, that client will use for authenticating to the app
-      val now = Instant.now
-      val claim = JwtClaim(
-        expiration = Some(now.plusSeconds(15 * 60).getEpochSecond),
-        issuedAt = Some(now.getEpochSecond),
-        content = response.body
       )
-      Right(AccessDetails(JwtCirce.encode(claim, jwtKey, jwtAlgo)))
-    } finally {
-      backend.close()
-    }
+      .send(backend)
+
+    // create jwt token, that client will use for authenticating to the app
+    val now = Instant.now
+    val claim = JwtClaim(
+      expiration = Some(now.plusSeconds(15 * 60).getEpochSecond),
+      issuedAt = Some(now.getEpochSecond),
+      content = response.body
+    )
+    Right(AccessDetails(JwtCirce.encode(claim, jwtKey, jwtAlgo)))
   }
 
   // try to decode the provided jwt
@@ -126,11 +121,13 @@ import java.time.Instant
     }
 
   supervised {
+    val backend = useInScope(HttpClientSyncBackend())(_.close())
+    
     val binding = useInScope(
       NettySyncServer()
         .host("localhost")
         .port(8080)
-        .addEndpoints(List(loginServerEndpoint, loginGoogleServerEndpoint, secretPlaceServerEndpoint))
+        .addEndpoints(List(loginServerEndpoint(backend), loginGoogleServerEndpoint(backend), secretPlaceServerEndpoint))
         .start()
     )(_.stop())
 
