@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you want to use Java 21+ Virtual Threads & direct-style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.13.4"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.13.5"
 
 // if you are using Future:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.13.4"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.13.5"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.13.4"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.13.5"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.13.4"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.13.5"
 ```
 
 Then, use:
@@ -192,6 +192,38 @@ for a full example.
 ```{note}
 The pipeline transforms a source of incoming web socket messages (received from the client), into a source of outgoing web socket messages (which will be sent to the client), within some concurrency scope. Once the incoming source is done, the client has closed the connection. In that case, remember to close the outgoing source as well: otherwise the scope will leak and won't be closed. An error will be logged if the outgoing channel is not closed within a timeout after a close frame is received.
 ```
+
+## Response compression
+
+The Netty server supports automatic HTTP response compression using gzip or deflate encoding. When enabled, the server will:
+- Inspect the client's `Accept-Encoding` header
+- Compress responses when the client supports gzip or deflate
+- Add the appropriate `Content-Encoding` header to compressed responses
+
+Compression is disabled by default. To enable it:
+
+```scala
+import sttp.tapir.server.netty.{NettyConfig, NettyCompressionConfig, NettyFutureServer}
+import scala.concurrent.ExecutionContext.Implicits.global
+
+// Enable compression with Netty's default settings
+val config1 = NettyConfig.default.withCompressionEnabled
+
+// Or use the compression config explicitly
+val config2 = NettyConfig.default.compressionConfig(NettyCompressionConfig.enabled)
+
+// Start server with compression enabled
+NettyFutureServer(config1).addEndpoints(???)
+```
+
+### When to use compression
+
+Compression is most beneficial for:
+- Large text responses (JSON, XML, HTML, etc.)
+- Responses over slow networks
+- APIs with high bandwidth usage
+
+The compression is applied automatically by Netty based on the client's `Accept-Encoding` header. All responses that match the client's accepted encodings will be compressed using Netty's default compression settings.
 
 ## Server Sent Events
 
