@@ -55,12 +55,11 @@ import java.time.Instant
       .out(statusCode(StatusCode.PermanentRedirect))
       .out(header[String]("Location"))
 
-  val loginGoogle: PublicEndpoint[String, String, AccessDetails, Any] =
+  val loginGoogle: PublicEndpoint[String, Unit, AccessDetails, Any] =
     endpoint.get
       .in("login" / "oauth2" / "google")
       .in(query[String]("code"))
       .out(jsonBody[AccessDetails])
-      .errorOut(stringBody)
 
   val secretPlace: Endpoint[String, Unit, String, String, Any] =
     endpoint.get
@@ -77,7 +76,7 @@ import java.time.Instant
   }
 
   // after successful authorization Google redirects you here
-  def loginGoogleServerEndpoint(backend: SyncBackend) = loginGoogle.handle { code =>
+  def loginGoogleServerEndpoint(backend: SyncBackend) = loginGoogle.handleSuccess { code =>
     val response = basicRequest
       .response(asStringAlways)
       .post(uri"$accessTokenUrl")
@@ -100,7 +99,7 @@ import java.time.Instant
       issuedAt = Some(now.getEpochSecond),
       content = response.body
     )
-    Right(AccessDetails(JwtCirce.encode(claim, jwtKey, jwtAlgo)))
+    AccessDetails(JwtCirce.encode(claim, jwtKey, jwtAlgo))
   }
 
   // try to decode the provided jwt
