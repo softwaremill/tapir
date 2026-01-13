@@ -1,7 +1,7 @@
 // {cat=Status code; effects=Direct; server=Netty}: Responding with fixed or dynamic status code
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.4
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.13.4
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.5
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.13.5
 
 package sttp.tapir.examples.status_code
 
