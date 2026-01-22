@@ -152,7 +152,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
       isFailure: Boolean
   ): IO[Assertion] =
     OtelJavaTestkit
-      .inMemory[IO](textMapPropagators = List(W3CTraceContextPropagator.getInstance(), W3CBaggagePropagator.getInstance()))
+      .inMemory[IO]()
       .use(testkit =>
         for {
           meter <- testkit.meterProvider.get("Test Meter")
@@ -294,7 +294,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
       )
 
     OtelJavaTestkit
-      .inMemory[IO](textMapPropagators = List(W3CTraceContextPropagator.getInstance(), W3CBaggagePropagator.getInstance()))
+      .inMemory[IO]()
       .use(testkit =>
         for {
           meter <- testkit.meterProvider.get("Test Meter Custom")

@@ -37,7 +37,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
     OtelJavaTestkit
       // these are the default propagators when no propagators are specified via env
       // https://typelevel.org/otel4s/instrumentation/tracing-cross-service-propagation.html
-      .inMemory[IO](textMapPropagators = List(W3CTraceContextPropagator.getInstance(), W3CBaggagePropagator.getInstance()))
+      .inMemory[IO](_.addTextMapPropagators(W3CTraceContextPropagator.getInstance(), W3CBaggagePropagator.getInstance()))
       .use(testkit =>
         for {
           tracer <- testkit.tracerProvider.get("Test Tracer")
