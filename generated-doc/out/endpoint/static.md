@@ -11,7 +11,7 @@ the API documentation of the old static content API, switch documentation to an 
 In order to use static content endpoints, add the module to your dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-files" % "1.13.5"
+"com.softwaremill.sttp.tapir" %% "tapir-files" % "1.13.6"
 ```
 
 ## Files
