@@ -56,7 +56,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
           case List(Select(_, name @ TermName(_))) if name.decodedName.toString.startsWith("<init>$default") =>
             None
           case List(Literal(Constant(str: String))) =>
-            // before Scala 2.13.18, the above test for a default value worked; now we need this additional condition
+            // before Scala 3.8.1, the above test for a default value worked; now we need this additional condition
             if (str == "") None else Some(str)
           case _ => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
         }
