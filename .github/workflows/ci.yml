@@ -70,7 +70,7 @@ jobs:
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Install scala-cli
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
-      uses: VirtusLab/scala-cli-setup@89a48599f871d08573707e82bdcefbce839de436 # main, specifically v1.11.0
+      uses: VirtusLab/scala-cli-setup@e5a8d00d12e680bbed6785b0ee421e8f8210cb11 # main, specifically v1.12.0
       with:
         jvm: '' # needed because scala-cli-setup otherwise forces the installation of their default JVM (17)
     - name: Enable Loom-specific modules
