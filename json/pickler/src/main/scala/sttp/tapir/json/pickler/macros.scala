@@ -56,7 +56,7 @@ private[pickler] object macros:
                     ${ select }
                   )
                 }
-                if memberTypeRepr.typeSymbol == optionSymbol then '{ if !${ transientNone } || ${ select } != None then $snippet }
+                if memberTypeRepr.typeSymbol == optionSymbol then '{ if ! ${ transientNone } || ${ select } != None then $snippet }
                 else snippet
       },
       '{ () }
