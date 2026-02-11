@@ -14,7 +14,7 @@ object TapirSchemaToJsonSchema {
   def apply(
       schema: TSchema[_],
       markOptionsAsNullable: Boolean,
-      failOnDuplicateSchemaName: Boolean,
+      failOnDuplicateSchemaName: Boolean = false,
       metaSchema: MetaSchema = MetaSchemaDraft202012,
       schemaName: TSchema.SName => String = defaultSchemaName
   ): ASchema = {
