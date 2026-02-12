@@ -1,8 +1,8 @@
 // {cat=Server Sent Events; effects=Direct; server=Netty}: Respond with either SSE or JSON
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.6
-//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.13.6
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.13.6
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.7
+//> using dep com.softwaremill.sttp.tapir::tapir-jsoniter-scala:1.13.7
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.13.7
 //> using dep ch.qos.logback:logback-classic:1.5.8
 //> using dep com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.30.15
 
