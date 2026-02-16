@@ -1,7 +1,7 @@
 // {cat=Server Sent Events; effects=Direct; server=Netty}: Describe and implement an endpoint which emits SSE
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.7
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.13.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.13.8
 
 package sttp.tapir.examples.sse
 

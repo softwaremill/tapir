@@ -1,9 +1,9 @@
 // {cat=OpenAPI documentation; effects=Future; server=Pekko HTTP; docs=Swagger UI; json=circe}: Documenting multiple endpoints
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.7
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.7
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.7
-//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.13.7
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-pekko-http-server:1.13.8
 
 package sttp.tapir.examples.openapi
 
