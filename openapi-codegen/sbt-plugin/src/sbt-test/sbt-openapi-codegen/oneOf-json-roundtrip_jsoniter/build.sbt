@@ -1,7 +1,7 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.16",
+    scalaVersion := "2.13.18",
     version := "0.1",
     openapiJsonSerdeLib := "jsoniter",
     openapiStreamingImplementation := "pekko",
@@ -10,7 +10,7 @@ lazy val root = (project in file("."))
   )
 
 val catsXmlVersion = "0.0.20"
-val jsoniterScalaVersion = "2.38.2"
+val jsoniterScalaVersion = "2.38.7"
 val tapirVersion = "1.11.18"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,

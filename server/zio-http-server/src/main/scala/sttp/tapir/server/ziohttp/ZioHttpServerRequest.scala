@@ -25,7 +25,12 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
   override lazy val method: SttpMethod = SttpMethod(req.method.name.toUpperCase)
   override lazy val showShort: String = s"$method ${encodeQueryParams(req.url.path.encode, req.url.queryParams.normalize, Charsets.Http)}"
 
-  override lazy val uri: Uri = Uri.unsafeParse(req.url.encode)
+  override lazy val uri: Uri = {
+    // work-around fo zio-http not decoding path segments properly
+    Uri.unsafeParse(
+      s"/${req.url.path.segments.toList.mkString("/")}${if (req.url.path.hasTrailingSlash) "/" else ""}${req.url.fragment.map(f => s"#$f").getOrElse("")}${req.url.queryParams.encode}"
+    )
+  }
   override lazy val headers: Seq[SttpHeader] = req.headers.toList.map { h => SttpHeader(h.headerName, h.renderedValue) }
   override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
   override def attribute[T](k: AttributeKey[T], v: T): ZioHttpServerRequest = copy(attributes = attributes.put(k, v))

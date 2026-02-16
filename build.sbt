@@ -14,8 +14,8 @@ import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
-val scala2_12 = "2.12.20"
-val scala2_13 = "2.13.16"
+val scala2_12 = "2.12.21"
+val scala2_13 = "2.13.18"
 val scala3 = "3.3.7"
 
 val scala2Versions = List(scala2_12, scala2_13)
@@ -184,6 +184,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   files.projectRefs ++
   jsoniterScala.projectRefs ++
   prometheusMetrics.projectRefs ++
+  prometheusSimpleclientMetrics.projectRefs ++
   opentelemetryMetrics.projectRefs ++
   datadogMetrics.projectRefs ++
   zioMetrics.projectRefs ++
@@ -558,7 +559,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.0",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.0",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.184",
@@ -925,7 +926,7 @@ lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
   .settings(
     name := "tapir-json-pickler",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "upickle" % Versions.upickle,
+      "com.lihaoyi" %%% "upickle" % Versions.upickle3,
       scalaTest.value % Test
     )
   )
@@ -1049,8 +1050,20 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.4.1",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.4.1",
+      "io.prometheus" % "prometheus-metrics-core" % "1.4.3",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.4.3",
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest)
+
+lazy val prometheusSimpleclientMetrics: ProjectMatrix = (projectMatrix in file("metrics/prometheus-simpleclient-metrics"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-prometheus-simpleclient-metrics",
+    libraryDependencies ++= Seq(
+      "io.prometheus" % "simpleclient_common" % "0.16.0",
       scalaTest.value % Test
     )
   )
@@ -1166,6 +1179,10 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = commonNativeSettings
   )
   .dependsOn(core, tests % Test)
 
@@ -1558,9 +1575,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
       "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams,
       "org.apache.httpcomponents" % "httpmime" % "4.5.14",
       slf4j
-    ),
-    // needed because of https://github.com/coursier/coursier/issues/2016
-    useCoursier := false
+    )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore, serverTests % Test)
@@ -1570,8 +1585,6 @@ lazy val nettyServerSync: ProjectMatrix =
     .settings(commonSettings)
     .settings(
       name := "tapir-netty-server-sync",
-      // needed because of https://github.com/coursier/coursier/issues/2016
-      useCoursier := false,
       Test / run / fork := true,
       libraryDependencies ++= Seq(
         "com.softwaremill.ox" %% "core" % Versions.ox,
@@ -1602,9 +1615,7 @@ def nettyServerProject(proj: String, dependency: ProjectMatrix): ProjectMatrix =
   ProjectMatrix(s"nettyServer${proj.capitalize}", file(s"server/netty-server/$proj"))
     .settings(commonSettings)
     .settings(
-      name := s"tapir-netty-server-$proj",
-      // needed because of https://github.com/coursier/coursier/issues/2016
-      useCoursier := false
+      name := s"tapir-netty-server-$proj"
     )
     .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
     .dependsOn(nettyServer, dependency, serverTests % Test)
@@ -2161,8 +2172,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.9.0" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.2" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.2" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.7" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.7" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
@@ -2258,6 +2269,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     pekkoHttpServer,
     picklerJson,
     prometheusMetrics,
+    prometheusSimpleclientMetrics,
     sttpClient4,
     sttpMockServer,
     sttpStub4Server,
@@ -2292,14 +2304,14 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     mdocExtraArguments := Seq("--clean-target"),
     publishArtifact := false,
     name := "doc",
+    // Force upickle3 to match picklerJson's dependency and avoid version conflict
+    dependencyOverrides += "com.lihaoyi" %% "upickle" % Versions.upickle3,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play-netty-server" % Versions.playServer,
       "org.http4s" %% "http4s-ember-server" % Versions.http4s,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
-    ),
-    // needed because of https://github.com/coursier/coursier/issues/2016
-    useCoursier := false
+    )
   )
   .jvmPlatform(scalaVersions = List(documentationScalaVersion), settings = commonJvmSettings)
   .dependsOn(
@@ -2331,6 +2343,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     playJson,
     playServer,
     prometheusMetrics,
+    prometheusSimpleclientMetrics,
     sprayJson,
     sttpClient,
     sttpClient4,

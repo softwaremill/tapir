@@ -101,8 +101,16 @@ case class NettySyncServer(
       socketOverride: Option[SA],
       inScopeRunner: InScopeRunner
   ): (SA, () => Unit) =
-    val endpointRoute = NettySyncServerInterpreter(options).toRoute(serverEndpoints.toList, inScopeRunner)
-    val route = Route.combine(endpointRoute +: otherRoutes)
+    val endpointRoute = serverEndpoints match {
+      case Vector() => Vector.empty
+      case _        => Vector(NettySyncServerInterpreter(options).toRoute(serverEndpoints.toList, inScopeRunner))
+    }
+    val allRoutes = endpointRoute ++ otherRoutes
+    val route = allRoutes match {
+      case Vector()  => Route.empty
+      case Vector(r) => r
+      case many      => Route.combine(many)
+    }
     startUsingSocketOverride(route, socketOverride, inScopeRunner)
 
   private def startUsingSocketOverride[SA <: SocketAddress](

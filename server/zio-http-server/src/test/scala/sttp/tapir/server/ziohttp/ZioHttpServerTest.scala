@@ -11,7 +11,7 @@ import org.scalatest.FutureOutcome
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
 import sttp.client4._
-import sttp.client4.testing.{BackendStub, StreamBackendStub}
+import sttp.client4.testing.StreamBackendStub
 import sttp.client4.ws.async._
 import sttp.model.MediaType
 import sttp.monad.MonadError
@@ -347,7 +347,8 @@ class ZioHttpServerTest extends TestSuite {
             backend,
             basic = false,
             multipart = false,
-            options = false
+            options = false,
+            metrics = false
           ).tests() ++
           new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
           new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
@@ -362,6 +363,7 @@ class ZioHttpServerTest extends TestSuite {
             override def functionToPipe[A, B](f: A => B): ZioStreams.Pipe[A, B] = in => in.map(f)
             override def emptyPipe[A, B]: ZioStreams.Pipe[A, B] = _ => ZStream.empty
           }.tests() ++
+          new ServerMetricsTest(createServerTest, interpreter, supportsMetricsDecodeFailureCallbacks = false).tests() ++
           additionalTests()
       }
   }

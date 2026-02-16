@@ -1,9 +1,9 @@
 // {cat=Hello, World!; effects=ZIO; server=http4s}: Extending a base endpoint (which has the security logic provided), with server logic
 
 //> using option -Ykind-projector
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.50
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.11.50
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.50
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.8
 //> using dep org.http4s::http4s-ember-server:0.23.32
 //> using dep com.softwaremill.sttp.client4::zio:4.0.0-RC3
 

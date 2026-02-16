@@ -81,8 +81,16 @@ case class NettyFutureServer(
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): Future[(SA, () => Future[Unit])] = {
     val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
     implicit val monadError: MonadError[Future] = new FutureMonad()
-    val endpointRoute = NettyFutureServerInterpreter(options).toRoute(serverEndpoints.toList)
-    val route = Route.combine(endpointRoute +: otherRoutes)
+    val endpointRoute = serverEndpoints match {
+      case Vector() => Vector.empty
+      case _        => Vector(NettyFutureServerInterpreter(options).toRoute(serverEndpoints.toList))
+    }
+    val allRoutes = endpointRoute ++ otherRoutes
+    val route = allRoutes match {
+      case Vector()  => Route.empty
+      case Vector(r) => r
+      case many      => Route.combine(many)
+    }
     val eventExecutor = new DefaultEventExecutor()
     val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
     val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)

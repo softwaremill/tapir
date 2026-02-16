@@ -233,12 +233,12 @@ package object internal {
     case Some(sv) => s"$s($sv)"
   }
 
-  private[tapir] def showMultiple(et: Vector[EndpointTransput[?]]): String = {
+  private[tapir] def showMultiple(et: Vector[EndpointTransput[?]], doShow: EndpointTransput[?] => String): String = {
     val et2 = et.filter {
       case _: EndpointIO.Empty[?] => false
       case _                      => true
     }
-    if (et2.isEmpty) "-" else et2.map(_.show).mkString(" ")
+    if (et2.isEmpty) "-" else et2.map(doShow).mkString(" ")
   }
 
   private[tapir] def showOneOf(mappings: List[String]): String = mappings.distinct match {

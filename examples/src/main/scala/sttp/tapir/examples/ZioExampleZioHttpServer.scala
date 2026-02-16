@@ -1,11 +1,11 @@
 // {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=circe; docs=Swagger UI}: Exposing an endpoint using the ZIO HTTP server
 
 //> using option -Ykind-projector
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.50
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.50
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.11.50
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.50
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.11.50
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.8
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.8
 
 package sttp.tapir.examples
 

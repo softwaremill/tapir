@@ -80,6 +80,7 @@
 * [CORS interceptor](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/corsInterceptorVertxServer.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Vert.x</span>
 * [HTTP basic authentication](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/basicAuthenticationPekkoServer.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Pekko HTTP</span>
 * [Interceptor verifying externally added security credentials](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/externalSecurityInterceptor.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Netty</span>
+* [Login using OAuth2 with Google, authorization code flow](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/OAuth2GoogleNettySyncServer.scala) <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
 * [Login using OAuth2, authorization code flow](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/OAuth2GithubHttp4sServer.scala) <span class="example-tag example-effects">cats-effect</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">http4s</span>
 * [Securing endpoint with CSRF tokens example](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/csrfTokens.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Netty</span>
 * [Separating security and server logic, with a reusable base endpoint](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/security/serverSecurityLogicPekko.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-server">Pekko HTTP</span>
@@ -89,6 +90,7 @@
 ## Server Sent Events
 
 * [Describe and implement an endpoint which emits SSE](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/sse/sseNettySyncServer.scala) <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
+* [Respond with either SSE or JSON](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/sse/sseOrJsonNettySyncServer.scala) <span class="example-tag example-effects">Direct</span> <span class="example-tag example-server">Netty</span>
 
 ## Static content
 

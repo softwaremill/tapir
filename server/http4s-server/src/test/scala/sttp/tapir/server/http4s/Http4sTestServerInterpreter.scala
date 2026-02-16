@@ -1,8 +1,6 @@
 package sttp.tapir.server.http4s
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import cats.syntax.all._
 import com.comcast.ip4s
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Server
@@ -48,9 +46,9 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
       .build
 
   override def server(
-      routes: NonEmptyList[Routes],
+      route: Routes,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] =
-    buildServer(wsb => routes.map(_.apply(wsb)).reduceK.orNotFound, gracefulShutdownTimeout)
+    buildServer(wsb => route(wsb).orNotFound, gracefulShutdownTimeout)
       .map(_.address.getPort)
 }

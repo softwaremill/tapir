@@ -37,7 +37,7 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
       (if (contentNegotiation) new ServerContentNegotiationTests(createServerTest).tests() else Nil) ++
       (if (file) new ServerFileTests(createServerTest).tests() else Nil) ++
       (if (mapping) new ServerMappingTests(createServerTest).tests() else Nil) ++
-      (if (metrics) new ServerMetricsTest(createServerTest).tests() else Nil) ++
+      (if (metrics) new ServerMetricsTest(createServerTest, serverInterpreter).tests() else Nil) ++
       (if (multipart) new ServerMultipartTests(createServerTest, maxContentLengthSupport = maxContentLength).tests() else Nil) ++
       (if (oneOf) new ServerOneOfTests(createServerTest).tests() else Nil) ++
       (if (reject) new ServerRejectTests(createServerTest, serverInterpreter).tests() else Nil) ++

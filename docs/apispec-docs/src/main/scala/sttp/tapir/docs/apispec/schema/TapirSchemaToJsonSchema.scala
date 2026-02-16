@@ -14,6 +14,7 @@ object TapirSchemaToJsonSchema {
   def apply(
       schema: TSchema[_],
       markOptionsAsNullable: Boolean,
+      failOnDuplicateSchemaName: Boolean = false,
       metaSchema: MetaSchema = MetaSchemaDraft202012,
       schemaName: TSchema.SName => String = defaultSchemaName
   ): ASchema = {
@@ -32,7 +33,7 @@ object TapirSchemaToJsonSchema {
 
     val keyedSchemas = ToKeyedSchemas.uniqueCombined(asKeyedSchemas)
 
-    val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
+    val keysToIds = calculateUniqueIds(keyedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name), failOnDuplicateSchemaName)
     val toSchemaReference = new ToSchemaReference(keysToIds, keyedSchemas.toMap, refRoot = "#/$defs/")
     val tschemaToASchema = new TSchemaToASchema(schemaName, toSchemaReference, markOptionsAsNullable)
     val keysToSchemas = keyedSchemas.map(td => (td._1, tschemaToASchema(td._2, allowReference = false))).toListMap
