@@ -2,7 +2,6 @@ package sttp.tapir.server.tests
 
 import cats.effect.IO
 import cats.implicits._
-import cats.effect.IO
 import org.scalatest.matchers.should.Matchers._
 import org.scalatest.concurrent.Eventually.eventually
 import sttp.client4.{multipartFile, _}
