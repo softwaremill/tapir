@@ -6,7 +6,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.8
 //> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
 //> using dep com.softwaremill.sttp.client4::fs2:4.0.0-RC3
-//> using dep org.http4s::http4s-ember-server:0.23.32
+//> using dep org.http4s::http4s-ember-server:0.23.33
 
 package sttp.tapir.examples.websocket
 

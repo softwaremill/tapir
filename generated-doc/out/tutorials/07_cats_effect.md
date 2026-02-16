@@ -132,7 +132,7 @@ standard code to start a server and handle requests until the application is int
 ```scala
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.8
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.8
-//> using dep org.http4s::http4s-ember-server:0.23.32
+//> using dep org.http4s::http4s-ember-server:0.23.33
 import cats.effect.{ExitCode, IO, IOApp}
 import org.http4s.HttpRoutes
 import org.http4s.ember.server.EmberServerBuilder
@@ -193,7 +193,7 @@ the second step that we need to perform:
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.8
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.8
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.8
-//> using dep org.http4s::http4s-ember-server:0.23.32
+//> using dep org.http4s::http4s-ember-server:0.23.33
 
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.syntax.all.*

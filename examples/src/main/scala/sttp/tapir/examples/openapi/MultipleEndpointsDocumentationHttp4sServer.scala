@@ -4,7 +4,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.8
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.8
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.8
-//> using dep org.http4s::http4s-ember-server:0.23.32
+//> using dep org.http4s::http4s-ember-server:0.23.33
 
 package sttp.tapir.examples.openapi
 
