@@ -81,14 +81,12 @@ import org.http4s.server.websocket.WebSocketBuilder2
 import fs2.*
 import scala.concurrent.ExecutionContext
 
-given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-
 val wsEndpoint: PublicEndpoint[Unit, Unit, Pipe[IO, String, String], Fs2Streams[IO] with WebSockets] =
   endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](Fs2Streams[IO]))
     
 val wsRoutes: WebSocketBuilder2[IO] => HttpRoutes[IO] =
   Http4sServerInterpreter[IO]().toWebSocketRoutes(wsEndpoint.serverLogicSuccess[IO](_ => ???))
-    
+
 EmberServerBuilder
   .default[IO]
   .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)

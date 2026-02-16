@@ -131,8 +131,6 @@ import zio.stream.Stream
 
 def runtime: Runtime[Any] = ??? // provided by ZIOAppDefault
 
-given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-
 val wsEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, String] => Stream[Throwable, String], ZioStreams with WebSockets] =
   endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](ZioStreams))
 
@@ -140,11 +138,11 @@ val wsRoutes: WebSocketBuilder2[Task] => HttpRoutes[Task] =
   ZHttp4sServerInterpreter().fromWebSocket(wsEndpoint.zServerLogic(_ => ???)).toRoutes
 
 val serve: Task[Unit] =
-    EmberServerBuilder
-      .default[Task]
-      .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
-      .build
-      .useForever
+  EmberServerBuilder
+    .default[Task]
+    .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
+    .build
+    .useForever
 ```
 
 ## Server Sent Events

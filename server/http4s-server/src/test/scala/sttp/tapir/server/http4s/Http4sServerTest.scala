@@ -1,6 +1,5 @@
 package sttp.tapir.server.http4s
 
-import cats.data.NonEmptyList
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
@@ -40,7 +39,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
 
     def assert_get_apiTestRouter_respondsWithExpectedContent[T](routes: HttpRoutes[IO], expectedContext: T): IO[Assertion] =
       interpreter
-        .server(NonEmptyList.of(_ => Router("/api" -> routes)))
+        .server(_ => Router("/api" -> routes))
         .use { port =>
           basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend)
         }
