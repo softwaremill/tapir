@@ -29,7 +29,7 @@ object ZHttp4sTestServerInterpreter {
 class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams with WebSockets, ServerOptions, Routes] {
 
   private val anyAvailablePort = ip4s.Port.fromInt(0).get
-  private val serverBuilder = EmberServerBuilder.default[Task].withPort(anyAvailablePort)
+  private val serverBuilder = EmberServerBuilder.default[Task].withPort(anyAvailablePort).withIdleTimeout(5.seconds)
 
   override def route(es: List[ZServerEndpoint[Any, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
     val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors[Task]).options

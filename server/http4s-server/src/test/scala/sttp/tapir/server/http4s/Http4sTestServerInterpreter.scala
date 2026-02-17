@@ -30,6 +30,7 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   private val serverBuilder = EmberServerBuilder
     .default[IO]
     .withPort(anyAvailablePort)
+    .withIdleTimeout(5.seconds)
     .withAdditionalSocketOptions(
       List(fs2.io.net.SocketOption.noDelay(true)) // https://github.com/http4s/http4s/issues/7668
     )

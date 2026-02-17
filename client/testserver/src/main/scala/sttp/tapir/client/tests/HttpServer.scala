@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory
 import org.typelevel.ci.CIString
 import scodec.bits.ByteVector
 
+import scala.concurrent.duration._
+
 object HttpServer extends ResourceApp.Forever {
 
   private val defaultPort = Port.fromInt(51823).get
@@ -232,6 +234,7 @@ class HttpServer(port: Port) {
     .default[IO]
     .withPort(port)
     .withHttpWebSocketApp(app)
+    .withIdleTimeout(5.seconds)
     .build
     .evalTap(_ => IO(logger.info(s"Server on port $port started")))
     .onFinalize(IO(logger.info(s"Server on port $port stopped")))
