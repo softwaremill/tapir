@@ -55,14 +55,14 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
         .post(uri"$baseUri/api/echo/multipart")
         .multipartBody(multipart("fruitA", "pineapple".repeat(1100)), multipart("fruitB", "maracuja".repeat(1200)))
         .send(backend)
-        .map { r =>
-          r.code shouldBe StatusCode.PayloadTooLarge
+        .flatMap { r =>
+          IO(r.code shouldBe StatusCode.PayloadTooLarge)
         } >> basicStringRequest
         .post(uri"$baseUri/api/echo/multipart")
         .multipartBody(multipart("fruitA", "pineapple".repeat(850)), multipart("fruitB", "maracuja".repeat(850)))
         .send(backend)
-        .map { r =>
-          r.code shouldBe StatusCode.Ok
+        .flatMap { r =>
+          IO(r.code shouldBe StatusCode.Ok)
         }
     }
   )

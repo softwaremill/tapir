@@ -3,11 +3,12 @@ package sttp.tapir.client.tests
 import cats.effect._
 import cats.effect.std.Queue
 import cats.implicits._
+import com.comcast.ip4s.Port
 import fs2.{Pipe, Stream}
 import org.http4s.dsl.io._
 import org.http4s.headers.{Accept, `Content-Type`}
 import org.http4s.server.Router
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware._
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.websocket.WebSocketFrame
@@ -16,18 +17,19 @@ import org.slf4j.LoggerFactory
 import org.typelevel.ci.CIString
 import scodec.bits.ByteVector
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 object HttpServer extends ResourceApp.Forever {
-  type Port = Int
+
+  private val defaultPort = Port.fromInt(51823).get
 
   def run(args: List[String]): Resource[IO, Unit] = {
-    val port = args.headOption.map(_.toInt).getOrElse(51823)
+    val port = args.headOption.flatMap(Port.fromString).getOrElse(defaultPort)
     new HttpServer(port).build.void
   }
 }
 
-class HttpServer(port: HttpServer.Port) {
+class HttpServer(port: Port) {
 
   private val logger = LoggerFactory.getLogger(getClass)
 
@@ -228,13 +230,12 @@ class HttpServer(port: HttpServer.Port) {
     Router("/" -> corsService).orNotFound
   }
 
-  //
-
-  def build: Resource[IO, server.Server] = BlazeServerBuilder[IO]
-    .withExecutionContext(ExecutionContext.global)
-    .bindHttp(port)
+  def build: Resource[IO, server.Server] = EmberServerBuilder
+    .default[IO]
+    .withPort(port)
     .withHttpWebSocketApp(app)
-    .resource
+    .withIdleTimeout(5.seconds)
+    .build
     .evalTap(_ => IO(logger.info(s"Server on port $port started")))
     .onFinalize(IO(logger.info(s"Server on port $port stopped")))
 }

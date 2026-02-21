@@ -12,6 +12,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 
 private[http4s] class Http4sRequestBody[F[_]: Async](
@@ -58,7 +59,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
           .decode(limitedMedia(http4sRequest(serverRequest), maxBytes), strict = false)
           .value
           .flatMap {
-            case Left(failure) => Sync[F].raiseError(failure)
+            case Left(failure) => Sync[F].raiseError(InvalidMultipartBodyException(failure))
             case Right(mp)     =>
               val rawPartsF: Vector[F[RawPart]] = mp.parts
                 .flatMap(part => part.name.flatMap(name => m.partType(name)).map((part, _)).toList)

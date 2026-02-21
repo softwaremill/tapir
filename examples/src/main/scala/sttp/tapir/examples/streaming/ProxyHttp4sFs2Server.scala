@@ -3,14 +3,14 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.8
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.8
 //> using dep com.softwaremill.sttp.client4::fs2:4.0.0-RC3
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.33
 
 package sttp.tapir.examples.streaming
 
 import cats.effect.{ExitCode, IO, IOApp}
 import fs2.Stream
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client4.*
@@ -58,8 +58,8 @@ object ProxyHttp4sFs2Server extends IOApp:
     (for {
       backend <- HttpClientFs2Backend.resource[IO]()
       routes = proxyRoutes(backend)
-      _ <- BlazeServerBuilder[IO]
-        .bindHttp(8080, "localhost")
+      _ <- EmberServerBuilder
+        .default[IO]
         .withHttpApp(Router("/" -> routes).orNotFound)
-        .resource
+        .build
     } yield ()).useForever

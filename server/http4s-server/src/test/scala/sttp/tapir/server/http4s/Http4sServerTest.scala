@@ -4,7 +4,6 @@ import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
 import fs2.Pipe
-import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.ContextMiddleware
 import org.http4s.server.websocket.WebSocketBuilder2
@@ -24,7 +23,6 @@ import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
@@ -40,15 +38,12 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
 
     def assert_get_apiTestRouter_respondsWithExpectedContent[T](routes: HttpRoutes[IO], expectedContext: T): IO[Assertion] =
-      BlazeServerBuilder[IO]
-        .withExecutionContext(ExecutionContext.global)
-        .bindHttp(0, "localhost")
-        .withHttpApp(Router("/api" -> routes).orNotFound)
-        .resource
-        .use { server =>
-          val port = server.address.getPort
-          basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContext))
+      interpreter
+        .server(_ => Router("/api" -> routes))
+        .use { port =>
+          basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend)
         }
+        .map(_.body shouldBe Right(expectedContext))
 
     def additionalTests(): List[Test] = List(
       Test("should work with a router and routes in a context") {
@@ -157,11 +152,8 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         // middleware to add the context to each request (so here string constant)
         val middleware: ContextMiddleware[IO, String] = ContextMiddleware.const(expectedContext)
 
-        BlazeServerBuilder[IO]
-          .withExecutionContext(ExecutionContext.global)
-          .bindHttp(0, "localhost")
-          .withHttpWebSocketApp(wsb => middleware(routesWithContext(wsb)).orNotFound)
-          .resource
+        interpreter
+          .buildServer(wsb => middleware(routesWithContext(wsb)).orNotFound)
           .use { server =>
             val port = server.address.getPort
             basicRequest
@@ -190,6 +182,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         createServerTest,
         Fs2Streams[IO],
         autoPing = true,
+        autoPongAtEndpoint = false,
         handlePong = false,
         decodeCloseRequests =
           false // when a close frame is received, http4s cancels the stream, so sometimes the close frames are never processed

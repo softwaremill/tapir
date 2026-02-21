@@ -99,11 +99,11 @@ The capability can be added to the classpath independently of the interpreter th
 ## Http4s backends
 
 Http4s integrates with a couple of [server backends](https://http4s.org/v1.0/integrations/), the most popular being
-Blaze and Ember. In the [examples](../examples.md) and throughout the docs we use Blaze, but other backends can be used
+Blaze and Ember. In the [examples](../examples.md) and throughout the docs we use Ember, but other backends can be used
 as well. This means adding another dependency, such as:
 
 ```scala
-"org.http4s" %% "http4s-blaze-server" % Http4sVersion
+"org.http4s" %% "http4s-ember-server" % Http4sVersion
 ```
 
 ## Web sockets
@@ -121,7 +121,7 @@ import sttp.tapir.{CodecFormat, PublicEndpoint}
 import sttp.tapir.ztapir.*
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.websocket.WebSocketBuilder2
 import scala.concurrent.ExecutionContext
@@ -131,8 +131,6 @@ import zio.stream.Stream
 
 def runtime: Runtime[Any] = ??? // provided by ZIOAppDefault
 
-given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-
 val wsEndpoint: PublicEndpoint[Unit, Unit, Stream[Throwable, String] => Stream[Throwable, String], ZioStreams with WebSockets] =
   endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](ZioStreams))
 
@@ -140,15 +138,11 @@ val wsRoutes: WebSocketBuilder2[Task] => HttpRoutes[Task] =
   ZHttp4sServerInterpreter().fromWebSocket(wsEndpoint.zServerLogic(_ => ???)).toRoutes
 
 val serve: Task[Unit] =
-  ZIO.executor.flatMap(executor =>
-    BlazeServerBuilder[Task]
-      .withExecutionContext(executor.asExecutionContext)
-      .bindHttp(8080, "localhost")
-      .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
-      .serve
-      .compile
-      .drain
-  )
+  EmberServerBuilder
+    .default[Task]
+    .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
+    .build
+    .useForever
 ```
 
 ## Server Sent Events

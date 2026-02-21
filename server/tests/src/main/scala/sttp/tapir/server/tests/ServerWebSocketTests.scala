@@ -29,6 +29,8 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
     val streams: S,
     autoPing: Boolean,
     handlePong: Boolean,
+    // some servers (e.g. http4s Ember) can pong on pings automatically without proxying them to endpoint logic
+    autoPongAtEndpoint: Boolean = true,
     // Disabled for example for vert.x, which sometimes drops connection without returning Close
     expectCloseResponse: Boolean = true,
     frameConcatenation: Boolean = true,
@@ -69,7 +71,11 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
               .map(_.last)
               .value
               .asInstanceOf[Option[Either[WebSocketFrame, String]]]
-              .forall(_ == Left(WebSocketFrame.Close(1000, "normal closure")))
+              .forall {
+                case Left(WebSocketFrame.Close(1000, "normal closure")) if decodeCloseRequests       => true
+                case Left(WebSocketFrame.Close(1000, "" | "normal closure")) if !decodeCloseRequests => true
+                case _                                                                               => false
+              }
           )
         }
     },
@@ -161,7 +167,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
       endpoint.out(
         webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](streams)
           .autoPing(None)
-          .autoPongOnPing(true)
+          .autoPongOnPing(autoPongAtEndpoint)
       ),
       "pong on ping"
     )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
@@ -177,13 +183,15 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           } yield List(m1, m2)
         })
         .send(backend)
-        .map((r: Response[Either[String, List[WebSocketFrame]]]) =>
-          assert(
-            r.body.value exists {
-              case WebSocketFrame.Pong(array) => array sameElements "test-ping-text".getBytes
-              case _                          => false
-            },
-            s"Missing Pong(test-ping-text) in ${r.body}"
+        .flatMap((r: Response[Either[String, List[WebSocketFrame]]]) =>
+          IO(
+            assert(
+              r.body.value exists {
+                case WebSocketFrame.Pong(array) => array sameElements "test-ping-text".getBytes
+                case _                          => false
+              },
+              s"Missing Pong(test-ping-text) in ${r.body}"
+            )
           )
         )
     },
@@ -197,7 +205,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
           if (expectCloseResponse) ws.eitherClose(ws.receiveText()).map(Some(_)) else IO.pure(None)
         })
         .send(backend)
-        .map(r => assert(r.body.forall(_.left.map(_.statusCode) == Left(1000))))
+        .flatMap(r => IO(assert(r.body.forall(_.left.map(_.statusCode) == Left(1000)))))
     },
     testServer(
       endpoint

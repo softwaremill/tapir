@@ -2,7 +2,8 @@ package sttp.tapir.server.http4s.ztapir
 
 import cats.effect.{IO, Resource}
 import cats._
-import org.http4s.blaze.server.BlazeServerBuilder
+import com.comcast.ip4s
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.{HttpApp, HttpRoutes}
 import sttp.capabilities.WebSockets
@@ -17,8 +18,7 @@ import zio.interop._
 import zio.interop.catz._
 import zio.interop.catz.implicits._
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object ZHttp4sTestServerInterpreter {
   type F[A] = Task[A]
@@ -27,6 +27,9 @@ object ZHttp4sTestServerInterpreter {
 }
 
 class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams with WebSockets, ServerOptions, Routes] {
+
+  private val anyAvailablePort = ip4s.Port.fromInt(0).get
+  private val serverBuilder = EmberServerBuilder.default[Task].withPort(anyAvailablePort).withIdleTimeout(5.seconds)
 
   override def route(es: List[ZServerEndpoint[Any, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
     val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors[Task]).options
@@ -39,12 +42,12 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
   ): Resource[IO, Port] = {
     val service: WebSocketBuilder2[Task] => HttpApp[Task] =
       wsb => route(wsb).orNotFound
-
-    BlazeServerBuilder[Task]
-      .withExecutionContext(ExecutionContext.global)
-      .bindHttp(0, "localhost")
+    serverBuilder
       .withHttpWebSocketApp(service)
-      .resource
+      .withShutdownTimeout(
+        gracefulShutdownTimeout.getOrElse(0.seconds) // no need to wait unless it's explicitly required by test
+      )
+      .build
       .map(_.address.getPort)
       .mapK(new ~>[Task, IO] {
         // Converting a ZIO effect to an Cats Effect IO effect

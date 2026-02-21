@@ -2,13 +2,13 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.8
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.8
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.33
 
 package sttp.tapir.examples.streaming
 
 import cats.effect.*
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.StatusCode
@@ -50,9 +50,8 @@ object StreamingHttp4sFs2ServerOrError extends IOApp:
   // curl -v http://localhost:8080/user/another_user (responds with 404)
   override def run(args: List[String]): IO[ExitCode] =
     // starting the server
-    BlazeServerBuilder[IO]
-      .withExecutionContext(scala.concurrent.ExecutionContext.global)
-      .bindHttp(8080, "localhost")
+    EmberServerBuilder
+      .default[IO]
       .withHttpApp(Router("/" -> userDataRoutes).orNotFound)
-      .resource
+      .build
       .useForever

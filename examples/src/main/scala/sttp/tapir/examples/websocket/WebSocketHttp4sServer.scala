@@ -6,7 +6,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.8
 //> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
 //> using dep com.softwaremill.sttp.client4::fs2:4.0.0-RC3
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.33
 
 package sttp.tapir.examples.websocket
 
@@ -14,7 +14,7 @@ import cats.effect.{ExitCode, IO, IOApp}
 import io.circe.generic.auto.*
 import fs2.*
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.websocket.WebSocketBuilder2
 import sttp.apispec.asyncapi.Server
@@ -82,11 +82,10 @@ object WebSocketHttp4sServer extends IOApp:
 
   override def run(args: List[String]): IO[ExitCode] =
     // Starting the server
-    BlazeServerBuilder[IO]
-      .withExecutionContext(ec)
-      .bindHttp(8080, "localhost")
+    EmberServerBuilder
+      .default[IO]
       .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(wsb)).orNotFound)
-      .resource
+      .build
       .flatMap(_ => HttpClientFs2Backend.resource[IO]())
       .use { backend =>
         // Client which interacts with the web socket

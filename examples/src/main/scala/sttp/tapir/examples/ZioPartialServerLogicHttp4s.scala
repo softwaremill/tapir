@@ -4,13 +4,13 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.8
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.13.8
 //> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.8
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.33
 //> using dep com.softwaremill.sttp.client4::zio:4.0.0-RC3
 
 package sttp.tapir.examples
 
 import org.http4s.*
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.client4.*
 import sttp.client4.httpclient.zio.HttpClientZioBackend
@@ -78,16 +78,14 @@ object ZioPartialServerLogicHttp4s extends ZIOAppDefault:
   //
 
   override def run: URIO[Any, ExitCode] =
-    ZIO.executor.flatMap(executor =>
-      BlazeServerBuilder[RIO[UserService, *]]
-        .withExecutionContext(executor.asExecutionContext)
-        .bindHttp(8080, "localhost")
-        .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
-        .resource
-        .use(_ => test)
-        .provide(UserService.live)
-        .exitCode
-    )
+    EmberServerBuilder
+      .default[RIO[UserService, *]]
+      .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
+      .build
+      .use(_ => test)
+      .provide(UserService.live)
+      .exitCode
+
 end ZioPartialServerLogicHttp4s
 
 object UserAuthenticationLayer:
