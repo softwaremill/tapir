@@ -4,7 +4,7 @@
 
 [![Ideas, suggestions, problems, questions](https://img.shields.io/badge/Discourse-ask%20question-blue)](https://softwaremill.community/c/tapir)
 [![CI](https://github.com/softwaremill/tapir/workflows/CI/badge.svg)](https://github.com/softwaremill/tapir/actions?query=workflow%3A%22CI%22)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13)
+[![Maven Central](https://maven-badges.sml.io/sonatype-central/com.softwaremill.sttp.tapir/tapir-core_3/badge.svg)](https://maven-badges.sml.io/sonatype-central/com.softwaremill.sttp.tapir/tapir-core_3/)
 
 ## Intro
 
