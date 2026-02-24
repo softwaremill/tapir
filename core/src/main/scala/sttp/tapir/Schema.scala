@@ -277,8 +277,8 @@ case class Schema[T](
     }
 
     // we avoid running validation for structures where there are no validation rules applied (recursively)
-    if (hasValidation) {
-      (if (validatorRequiresRuntimeValidation(validator)) validator(t) else Nil) ++ (schemaType match {
+    if (hasRuntimeValidation) {
+      validator(t) ++ (schemaType match {
         case s @ SOption(element)             => s.toOption(t).toList.flatMap(element.applyValidation(_, objects2))
         case s @ SArray(element)              => s.toIterable(t).flatMap(element.applyValidation(_, objects2))
         case s @ SProduct(_)                  => applyFieldsValidation(s.fieldsWithValidation)
@@ -302,6 +302,18 @@ case class Schema[T](
       case s: SProduct[T]                   => s.fieldsWithValidation.nonEmpty
       case s @ SOpenProduct(_, valueSchema) => s.fieldsWithValidation.nonEmpty || valueSchema.hasValidation
       case SCoproduct(subtypes, _)          => subtypes.exists(_.hasValidation)
+      case SRef(_)                          => true
+      case _                                => false
+    })
+  }
+
+  private lazy val hasRuntimeValidation: Boolean = {
+    (validatorRequiresRuntimeValidation(validator)) || (schemaType match {
+      case SOption(element)                 => element.hasRuntimeValidation
+      case SArray(element)                  => element.hasRuntimeValidation
+      case s: SProduct[T]                   => s.fields.exists(f => f.schema.hasRuntimeValidation)
+      case s @ SOpenProduct(_, valueSchema) => s.fields.exists(f => f.schema.hasRuntimeValidation) || valueSchema.hasRuntimeValidation
+      case SCoproduct(subtypes, _)          => subtypes.exists(_.hasRuntimeValidation)
       case SRef(_)                          => true
       case _                                => false
     })
