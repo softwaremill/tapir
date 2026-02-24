@@ -296,7 +296,7 @@ case class Schema[T](
   }
 
   private[tapir] def hasValidation: Boolean = {
-    (validator != Validator.pass) || (schemaType match {
+    (validatorRequiresRuntimeValidation(validator)) || (schemaType match {
       case SOption(element)                 => element.hasValidation
       case SArray(element)                  => element.hasValidation
       case s: SProduct[T]                   => s.fieldsWithValidation.nonEmpty
@@ -305,6 +305,14 @@ case class Schema[T](
       case SRef(_)                          => true
       case _                                => false
     })
+  }
+
+  private def validatorRequiresRuntimeValidation(v: Validator[?]): Boolean = v match {
+    case Validator.All(validators)      => validators.exists(validatorRequiresRuntimeValidation)
+    case Validator.Any(validators)      => validators.exists(validatorRequiresRuntimeValidation)
+    case _: Validator.DocumentationOnly => false
+    case Validator.Mapped(wrapped, _)   => validatorRequiresRuntimeValidation(wrapped)
+    case other                          => other != Validator.pass
   }
 
   def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)

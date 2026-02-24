@@ -4,7 +4,6 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.macros.ValidatorMacros
 
 import scala.collection.immutable
-import scala.util.matching.Regex
 
 sealed trait Validator[T] {
   def apply(t: T): List[ValidationError[?]]
@@ -217,6 +216,11 @@ object Validator extends ValidatorMacros {
     override def doValidate(t: T): ValidationResult = validationLogic(t)
   }
 
+  /** A marker trait for validators where runtime validation is not needed, because invalid values are not representable in the type system
+    * (e.g. Scala 3 enums, sealed trait hierarchies of objects). Such validators are used only for documentation purposes.
+    */
+  trait DocumentationOnly
+
   case class Enumeration[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], name: Option[SName]) extends Primitive[T] {
     override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(possibleValues.contains(t))
 
@@ -234,6 +238,29 @@ object Validator extends ValidatorMacros {
       * used when generating documentation.
       */
     def encodeWithCodec[CF <: CodecFormat](implicit c: Codec[String, T, CF]): Enumeration[T] = copy(encode = Some(v => Some(c.encode(v))))
+  }
+
+  object Enumeration {
+
+    /** Creates an [[Enumeration]] validator marked as documentation-only. Runtime validation will be skipped for such validators, as the
+      * type system already guarantees that only valid values are representable.
+      *
+      * Note: the [[DocumentationOnly]] marker is preserved through `encode`, `encodeWithPlainCodec` and `encodeWithCodec` calls. Any code
+      * that copies or deconstructs an [[Enumeration]] instance and reconstructs it (e.g. in [[inferEnumerationEncode]]) must check for the
+      * [[DocumentationOnly]] trait and use this factory method to preserve the marker.
+      */
+    def documentationOnly[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], name: Option[SName]): Enumeration[T] = {
+      val pv = possibleValues
+      val n = name
+      new Enumeration[T](pv, encode, n) with DocumentationOnly {
+        override def encode(e: T => scala.Any): Enumeration[T] =
+          Enumeration.documentationOnly(pv, Some(v => Some(e(v))), n)
+        override def encodeWithPlainCodec(implicit c: Codec.PlainCodec[T]): Enumeration[T] =
+          Enumeration.documentationOnly(pv, Some(v => Some(c.encode(v))), n)
+        override def encodeWithCodec[CF <: CodecFormat](implicit c: Codec[String, T, CF]): Enumeration[T] =
+          Enumeration.documentationOnly(pv, Some(v => Some(c.encode(v))), n)
+      }
+    }
   }
 
   //
