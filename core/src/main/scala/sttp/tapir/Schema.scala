@@ -278,7 +278,7 @@ case class Schema[T](
 
     // we avoid running validation for structures where there are no validation rules applied (recursively)
     if (hasValidation) {
-      validator(t) ++ (schemaType match {
+      (if (validatorRequiresRuntimeValidation(validator)) validator(t) else Nil) ++ (schemaType match {
         case s @ SOption(element)             => s.toOption(t).toList.flatMap(element.applyValidation(_, objects2))
         case s @ SArray(element)              => s.toIterable(t).flatMap(element.applyValidation(_, objects2))
         case s @ SProduct(_)                  => applyFieldsValidation(s.fieldsWithValidation)
@@ -296,7 +296,7 @@ case class Schema[T](
   }
 
   private[tapir] def hasValidation: Boolean = {
-    (validatorRequiresRuntimeValidation(validator)) || (schemaType match {
+    (validator != Validator.pass) || (schemaType match {
       case SOption(element)                 => element.hasValidation
       case SArray(element)                  => element.hasValidation
       case s: SProduct[T]                   => s.fieldsWithValidation.nonEmpty
