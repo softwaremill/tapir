@@ -16,7 +16,7 @@ trait ValidatorMacros {
 
   inline def derivedStringBasedUnionEnumeration[T](using IsUnionOf[String, T]): Validator.Enumeration[T] = {
     lazy val values = UnionDerivation.constValueUnionTuple[String, T]
-    Validator.Enumeration.documentationOnly(values.toList.asInstanceOf[List[T]], None, None)
+    Validator.enumeration(values.toList.asInstanceOf[List[T]])
   }
 }
 
