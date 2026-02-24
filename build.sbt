@@ -255,6 +255,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   play29Client.projectRefs ++
   tests.projectRefs ++
   perfTests.projectRefs ++
+  benchmarks.projectRefs ++
   examples.projectRefs ++
   documentation.projectRefs ++
   openapiCodegenCore.projectRefs ++
@@ -591,6 +592,20 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     vertxServerCats,
     nimaServer
   )
+
+lazy val benchmarks: ProjectMatrix = (projectMatrix in file("benchmarks"))
+  .enablePlugins(JmhPlugin)
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-benchmarks",
+    libraryDependencies ++= Seq(
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % Versions.jsoniter,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % Versions.jsoniter
+    ),
+    publishArtifact := false
+  )
+  .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
+  .dependsOn(core, jsoniterScala)
 
 // integrations
 
