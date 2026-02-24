@@ -4,7 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TARGET_DIR="$SCRIPT_DIR/target"
-RESULTS_DIR="$TARGET_DIR/results"
+TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
+RESULTS_DIR="$TARGET_DIR/results/$TIMESTAMP"
 
 AP_VERSION="4.3"
 AP_DIR="$TARGET_DIR/async-profiler-${AP_VERSION}-macos"
