@@ -5,7 +5,7 @@ import io.netty.channel.kqueue.{KQueue, KQueueEventLoopGroup, KQueueServerSocket
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.{ChannelHandler, ChannelPipeline, EventLoopGroup, ServerChannel}
-import io.netty.handler.codec.http.HttpServerCodec
+import io.netty.handler.codec.http.{HttpContentCompressor, HttpServerCodec}
 import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
 import org.playframework.netty.http.HttpStreamsServerHandler
@@ -50,6 +50,9 @@ import scala.concurrent.duration._
   *
   * @param serverHeader
   *   If set, send this value in the 'Server' response header. If None, don't set the header.
+  *
+  * @param compressionConfig
+  *   Configuration for HTTP response compression. See [[NettyCompressionConfig]] for details.
   */
 case class NettyConfig(
     host: String,
@@ -68,7 +71,8 @@ case class NettyConfig(
     initPipeline: NettyConfig => (ChannelPipeline, ChannelHandler) => Unit,
     gracefulShutdownTimeout: Option[FiniteDuration],
     idleTimeout: Option[FiniteDuration],
-    serverHeader: Option[String]
+    serverHeader: Option[String],
+    compressionConfig: NettyCompressionConfig
 ) {
   def host(h: String): NettyConfig = copy(host = h)
 
@@ -109,6 +113,9 @@ case class NettyConfig(
 
   def serverHeader(h: String): NettyConfig = copy(serverHeader = Some(h))
 
+  def compressionConfig(config: NettyCompressionConfig): NettyConfig = copy(compressionConfig = config)
+  def withCompressionEnabled: NettyConfig = copy(compressionConfig = compressionConfig.withEnabled(true))
+
   def isSsl: Boolean = sslContext.isDefined
 }
 
@@ -131,12 +138,16 @@ object NettyConfig {
     eventLoopConfig = EventLoopConfig.auto,
     socketConfig = NettySocketConfig.default,
     initPipeline = cfg => defaultInitPipeline(cfg)(_, _),
-    serverHeader = Some(s"tapir/${buildinfo.BuildInfo.version}")
+    serverHeader = Some(s"tapir/${buildinfo.BuildInfo.version}"),
+    compressionConfig = NettyCompressionConfig.default
   )
 
   def defaultInitPipeline(cfg: NettyConfig)(pipeline: ChannelPipeline, handler: ChannelHandler): Unit = {
     cfg.sslContext.foreach(s => pipeline.addLast(s.newHandler(pipeline.channel().alloc())))
     pipeline.addLast(ServerCodecHandlerName, new HttpServerCodec())
+    if (cfg.compressionConfig.enabled) {
+      pipeline.addLast(new HttpContentCompressor())
+    }
     pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())

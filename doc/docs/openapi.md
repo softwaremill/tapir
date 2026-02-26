@@ -216,6 +216,10 @@ Options can be customised by providing an instance of `OpenAPIDocsOptions` to th
 * `failOnDuplicateOperationId`: if set to `true`, the interpreter will throw an exception if it encounters two endpoints
   with the same operation id. An OpenAPI document with duplicate operation ids is not valid. Code generators can 
   silently drop duplicates. This is also verified by the [endpoint verifier](../testing.md).
+* `failOnDuplicateSchemaName`: if set to `true`, the interpreter will throw an exception if it encounters two schemas
+  which (without automatic deduplication by adding a numeric suffix) would be identical. Having automatically resolved 
+  de-duplications might result in different names depending on the order of endpoints. This might result in false 
+  positive changes in the OpenApi document.
 
 ## Inlined and referenced schemas
 

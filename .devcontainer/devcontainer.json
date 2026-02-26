@@ -1,0 +1,46 @@
+{
+    "name": "tapir",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "24"
+        },
+        "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {
+            "installDirectlyFromGitHubRelease": true,
+            "version": "latest"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "anthropic.claude-code",
+                "scalameta.metals",
+                "scala-lang.scala",
+                "github.vscode-pull-request-github"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "claudeCode.allowDangerouslySkipPermissions": true,
+                "claudeCode.initialPermissionMode": "bypassPermissions",
+                "claudeCode.selectedModel": "opus"
+            }
+        }
+    },
+    "postCreateCommand": "bash .devcontainer/post-create.sh",
+    "postStartCommand": "bash .devcontainer/post-start.sh",
+    "mounts": [
+        "type=volume,source=tapir-vscode-home,target=/home/vscode",
+        "type=bind,source=${localEnv:HOME}/.claude/CLAUDE.md,target=/home/vscode/.claude/CLAUDE.md,readonly",
+        "type=bind,source=${localEnv:HOME}/.claude/commands,target=/home/vscode/.claude/commands,readonly",
+        "type=bind,source=${localEnv:HOME}/.claude/agents,target=/home/vscode/.claude/agents,readonly"
+    ],
+    "containerEnv": {
+        "SSH_AUTH_SOCK": ""
+    },
+    "runArgs": [
+        "--env-file=${localWorkspaceFolder}/../dev-container-oss.env"
+    ]
+}

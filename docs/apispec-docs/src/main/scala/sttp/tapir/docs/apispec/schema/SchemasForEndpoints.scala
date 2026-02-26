@@ -11,6 +11,7 @@ class SchemasForEndpoints(
     es: Iterable[AnyEndpoint],
     schemaName: SName => String,
     markOptionsAsNullable: Boolean,
+    failOnDuplicateSchemaName: Boolean,
     additionalOutputs: List[EndpointOutput[_]]
 ) {
 
@@ -24,7 +25,8 @@ class SchemasForEndpoints(
         forInput(e.securityInput) ++ forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)
       ) ++ additionalOutputs.flatMap(forOutput(_))
     )
-    val keysToIds: Map[SchemaKey, SchemaId] = calculateUniqueIds(keyedCombinedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name))
+    val keysToIds: Map[SchemaKey, SchemaId] =
+      calculateUniqueIds(keyedCombinedSchemas.map(_._1), (key: SchemaKey) => schemaName(key.name), failOnDuplicateSchemaName)
 
     val toSchemaReference = new ToSchemaReference(keysToIds, keyedCombinedSchemas.toMap)
     val tschemaToASchema = new TSchemaToASchema(schemaName, toSchemaReference, markOptionsAsNullable)

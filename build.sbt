@@ -254,7 +254,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   playClient.projectRefs ++
   play29Client.projectRefs ++
   tests.projectRefs ++
-  perfTests.projectRefs ++
+  perfTestsE2e.projectRefs ++
+  perfTestsMicro.projectRefs ++
   examples.projectRefs ++
   documentation.projectRefs ++
   openapiCodegenCore.projectRefs ++
@@ -547,11 +548,11 @@ lazy val perfServerJavaOptions = List(
   "-XX:+AlwaysPreTouch"
 )
 
-lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
+lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-tests-e2e"))
   .enablePlugins(GatlingPlugin)
   .settings(commonSettings)
   .settings(
-    name := "tapir-perf-tests",
+    name := "tapir-perf-tests-e2e",
     libraryDependencies ++= Seq(
       // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
       "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.5" % "test" exclude (
@@ -559,7 +560,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.1",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.184",
@@ -591,6 +592,20 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     vertxServerCats,
     nimaServer
   )
+
+lazy val perfTestsMicro: ProjectMatrix = (projectMatrix in file("perf-tests/perf-tests-micro"))
+  .enablePlugins(JmhPlugin)
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-perf-tests-micro",
+    libraryDependencies ++= Seq(
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % Versions.jsoniter,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % Versions.jsoniter
+    ),
+    publishArtifact := false
+  )
+  .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
+  .dependsOn(core, jsoniterScala)
 
 // integrations
 
@@ -926,7 +941,7 @@ lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
   .settings(
     name := "tapir-json-pickler",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "upickle" % Versions.upickle,
+      "com.lihaoyi" %%% "upickle" % Versions.upickle3,
       scalaTest.value % Test
     )
   )
@@ -1179,6 +1194,10 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
   .jsPlatform(
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
+  )
+  .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = commonNativeSettings
   )
   .dependsOn(core, tests % Test)
 
@@ -2168,8 +2187,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
       "com.beachape" %% "enumeratum" % "1.9.0" % Test,
       "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.2" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.2" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.9" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.9" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
@@ -2300,6 +2319,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     mdocExtraArguments := Seq("--clean-target"),
     publishArtifact := false,
     name := "doc",
+    // Force upickle3 to match picklerJson's dependency and avoid version conflict
+    dependencyOverrides += "com.lihaoyi" %% "upickle" % Versions.upickle3,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play-netty-server" % Versions.playServer,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,

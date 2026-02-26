@@ -332,8 +332,14 @@ package object internal {
 
     def inferEnumerationEncode: Validator[T] = {
       v match {
-        case Validator.Enumeration(possibleValues, None, name) =>
-          if (possibleValues.forall(isBasicValue)) Validator.Enumeration(possibleValues, Some((x: T) => Some(x)), name) else v
+        case e @ Validator.Enumeration(possibleValues, None, name) =>
+          if (possibleValues.forall(isBasicValue)) {
+            val encode = Some((x: T) => Some(x))
+            e match {
+              case _: Validator.DocumentationOnly => Validator.Enumeration.documentationOnly(possibleValues, encode, name)
+              case _                              => Validator.Enumeration(possibleValues, encode, name)
+            }
+          } else v
         case Validator.Mapped(wrapped, g) => Validator.Mapped(wrapped.inferEnumerationEncode, g)
         case Validator.All(validators)    => Validator.All(validators.map(_.inferEnumerationEncode))
         case Validator.Any(validators)    => Validator.Any(validators.map(_.inferEnumerationEncode))
