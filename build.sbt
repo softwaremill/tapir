@@ -559,7 +559,7 @@ lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-t
         "com.fasterxml.jackson.core",
         "jackson-databind"
       ),
-      "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      "io.gatling" % "gatling-test-framework" % "3.15.0" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
