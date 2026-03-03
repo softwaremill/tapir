@@ -25,8 +25,12 @@ object OpenAPIVerifier {
     *   a list of `OpenAPICompatibilityIssue` instances detailing the compatibility issues found during verification, or `Nil` if no issues
     *   were found.
     */
-  def verifyClient(clientEndpoints: List[AnyEndpoint], serverSpecificationYaml: String): List[OpenAPICompatibilityIssue] = {
-    val clientOpenAPI = OpenAPIDocsInterpreter().toOpenAPI(clientEndpoints, "OpenAPIVerifier", "1.0")
+  def verifyClient(
+      clientEndpoints: List[AnyEndpoint],
+      serverSpecificationYaml: String,
+      docsOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default
+  ): List[OpenAPICompatibilityIssue] = {
+    val clientOpenAPI = OpenAPIDocsInterpreter(docsOptions).toOpenAPI(clientEndpoints, "OpenAPIVerifier", "1.0")
     val serverOpenAPI = readOpenAPIFromString(serverSpecificationYaml)
 
     OpenAPIComparator(clientOpenAPI, serverOpenAPI).compare()
@@ -42,8 +46,12 @@ object OpenAPIVerifier {
     *   a list of `OpenAPICompatibilityIssue` instances detailing the compatibility issues found during verification, or `Nil` if no issues
     *   were found.
     */
-  def verifyServer(serverEndpoints: List[AnyEndpoint], clientSpecificationYaml: String): List[OpenAPICompatibilityIssue] = {
-    val serverOpenAPI = OpenAPIDocsInterpreter().toOpenAPI(serverEndpoints, "OpenAPIVerifier", "1.0")
+  def verifyServer(
+      serverEndpoints: List[AnyEndpoint],
+      clientSpecificationYaml: String,
+      docsOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default
+  ): List[OpenAPICompatibilityIssue] = {
+    val serverOpenAPI = OpenAPIDocsInterpreter(docsOptions).toOpenAPI(serverEndpoints, "OpenAPIVerifier", "1.0")
     val clientOpenAPI = readOpenAPIFromString(clientSpecificationYaml)
 
     OpenAPIComparator(clientOpenAPI, serverOpenAPI).compare()
