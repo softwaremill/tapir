@@ -19,7 +19,7 @@ object NettySyncServerRunner {
   val LargeInputSize = 5 * 1024L * 1024L
   val WebSocketSingleResponseLag = 100.millis
 
-  type EndpointGen = Int => PublicEndpoint[_, String, String, Any]
+  type EndpointGen = Int => PublicEndpoint[?, String, String, Any]
   type ServerEndpointGen[F[_]] = Int => ServerEndpoint[Any, F]
   def serverEndpoints[F[_]](reply: String => F[String]): List[ServerEndpointGen[F]] = {
     List(
