@@ -41,7 +41,7 @@ trait OpenapiCodegenKeys {
   lazy val openapiOpenApiConfiguration =
     settingKey[OpenApiConfiguration]("Aggregation of other settings. Manually set value will be disregarded.")
 
-  lazy val generateTapirDefinitions = taskKey[Unit]("The task that generates tapir definitions based on the input swagger file.")
+  lazy val generateTapirDefinitions = taskKey[Seq[File]]("The task that generates tapir definitions based on the input swagger file.")
 }
 
 object OpenapiCodegenKeys extends OpenapiCodegenKeys
