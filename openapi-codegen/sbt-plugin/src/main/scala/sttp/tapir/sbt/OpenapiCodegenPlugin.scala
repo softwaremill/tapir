@@ -22,7 +22,11 @@ object OpenapiCodegenPlugin extends AutoPlugin {
         val sv = scalaVersion.value
         val log = sLog.value
         val cacheDir = streams.value.cacheDirectory
-        val swaggerFiles = (c.swaggerFile +: c.additionalPackages.map(_._2)).filter(_.exists()).toSet
+        val configHash = java.security.MessageDigest.getInstance("sha256").digest((version.value + c.toString).getBytes("utf-8"))
+        val hashFile = cacheDir / "tapir-config-hash"
+        hashFile.delete()
+        java.nio.file.Files.write(hashFile.toPath, configHash)
+        val swaggerFiles = (c.swaggerFile +: c.additionalPackages.map(_._2)).filter(_.exists()).toSet + hashFile
         FileFunction.cached(cacheDir / s"scala-$sv" / "openapi-inputs", FileInfo.hash) { _ =>
           log.info("Generating OpenAPI sources...")
           codegen(c, srcDir, sv).toSet
