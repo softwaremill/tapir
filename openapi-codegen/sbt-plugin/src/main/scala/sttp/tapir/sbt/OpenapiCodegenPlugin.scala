@@ -23,7 +23,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
         val log = sLog.value
         val cacheDir = streams.value.cacheDirectory
         val swaggerFiles = (c.swaggerFile +: c.additionalPackages.map(_._2)).filter(_.exists()).toSet
-        FileFunction.cached(cacheDir / "openapi-inputs", FileInfo.hash) { _ =>
+        FileFunction.cached(cacheDir / s"scala-$sv" / "openapi-inputs", FileInfo.hash) { _ =>
           log.info("Generating OpenAPI sources...")
           codegen(c, srcDir, sv).toSet
         }(swaggerFiles).toSeq
