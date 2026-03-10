@@ -299,7 +299,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   ): Expr[EndpointInput.Single[f]] =
     setSecuritySchemeName(
       '{
-        TapirAuth.bearer(${ auth.asExprOf[EndpointIO.annotations.bearer] }.challenge)(${
+        TapirAuth.bearer(${ auth.asExprOf[EndpointIO.annotations.bearer] }.challenge)(using ${
           summonCodec[List[String], f, CodecFormat.TextPlain](field)
         })
       },
@@ -313,7 +313,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   ): Expr[EndpointInput.Single[f]] =
     setSecuritySchemeName(
       '{
-        TapirAuth.basic(${ auth.asExprOf[EndpointIO.annotations.basic] }.challenge)(${
+        TapirAuth.basic(${ auth.asExprOf[EndpointIO.annotations.basic] }.challenge)(using ${
           summonCodec[List[String], f, CodecFormat.TextPlain](field)
         })
       },

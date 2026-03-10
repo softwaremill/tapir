@@ -225,7 +225,7 @@ trait TapirStaticContentEndpoints {
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       resourcesGetEndpoint(prefix),
-      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, options)(m)
+      (m: MonadError[F]) => Resources(classLoader, resourcePrefix, options)(using m)
     )
 
   /** A server endpoint, which exposes a single resource available from the given `classLoader` at `resourcePath`, using the given `path`.
@@ -242,7 +242,7 @@ trait TapirStaticContentEndpoints {
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       removePath(resourcesGetEndpoint(prefix)),
-      (m: MonadError[F]) => Resources(classLoader, resourcePath, options)(m)
+      (m: MonadError[F]) => Resources(classLoader, resourcePath, options)(using m)
     )
 
   private def removePath[T](e: Endpoint[Unit, StaticInput, StaticErrorOutput, StaticOutput[T], Any]) =
