@@ -2185,14 +2185,14 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
         )
       } else {
         Seq(
-          "com.beachape" %% "enumeratum" % "1.9.0" % Test,
-          "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
           scalaOrganization.value % "scala-reflect" % scalaVersion.value,
           scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test
         )
       }
     },
     libraryDependencies ++= Seq(
+      "com.beachape" %% "enumeratum" % "1.9.0" % Test,
+      "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
       "io.circe" %% "circe-core" % Versions.circe,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
