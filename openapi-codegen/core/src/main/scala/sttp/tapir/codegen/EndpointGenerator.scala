@@ -388,7 +388,9 @@ class EndpointGenerator {
         .map(toPathDecl)
         .map { case (ds, ts, inline) => (".prependSecurityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten) -> inline }
         .unzip
-    UrlMapResponse(inPathDecl, tpes.toSeq.flatten, secPathDecl.headOption, secInlineDefs.flatten.flatten.toSeq ++ inlineDefns.toSeq.flatten)
+    val flatInlineSecDefs: Seq[String] = secInlineDefs.toSeq.flatten.flatten
+    val flatInlineDefs: Seq[String] = inlineDefns.toSeq.flatten
+    UrlMapResponse(inPathDecl, tpes.toSeq.flatten, secPathDecl.headOption, flatInlineSecDefs ++ flatInlineDefs)
   }
 
   private def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
@@ -990,7 +992,7 @@ class EndpointGenerator {
         }
         .getOrElse("")
     }
-    def v(tpe: String, r: Boolean) = vRef(schema, r)
+    def v(r: Boolean) = vRef(schema, r)
     val streaming = (tapirCodegenDirectives.contains(forceStreaming) && position != Err) ||
       (tapirCodegenDirectives.contains(forceReqStreaming) && position == Request) ||
       (tapirCodegenDirectives.contains(forceRespStreaming) && position == Response)
@@ -1020,7 +1022,7 @@ class EndpointGenerator {
         val req = if (required) outT else s"Option[$outT]"
         def toList = if (required) ".toList" else ".map(_.toList)"
         val bodyType = maybeAlias.map(a => s"xmlBody[$a].map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(s"xmlBody[$req]")
-        MappedContentType(bodyType + v(req, required), req, maybeInline)
+        MappedContentType(bodyType + v(required), req, maybeInline)
       case "application/json" if tapirCodegenDirectives.contains(jsonBodyAsString) =>
         if (required) MappedContentType("stringJsonBody", "String", None)
         else MappedContentType("stringJsonBody.map(Option(_))(_.orNull)", "Option[String]", None)
@@ -1040,7 +1042,7 @@ class EndpointGenerator {
           case x => bail(s"Can't create non-simple or array params as output (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
-        MappedContentType(s"jsonBody[$req]" + v(req, required), req, maybeInline)
+        MappedContentType(s"jsonBody[$req]" + v(required), req, maybeInline)
 
       case "multipart/form-data" =>
         schema match {
@@ -1048,10 +1050,10 @@ class EndpointGenerator {
             MappedContentType("multipartBody", "Seq[Part[Array[Byte]]]")
           case schemaRef: OpenapiSchemaRef =>
             val (t, _) = mapSchemaSimpleTypeToType(schemaRef, multipartForm = true)
-            MappedContentType(s"multipartBody[$t]" + v(t, required), t)
+            MappedContentType(s"multipartBody[$t]" + v(required), t)
           case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]) =>
             val (inlineClassName, inlineClassDefn) = inlineDefn(endpointName, position, schemaRef)
-            MappedContentType(s"multipartBody[$inlineClassName]" + v(inlineClassName, required), inlineClassName, inlineClassDefn)
+            MappedContentType(s"multipartBody[$inlineClassName]" + v(required), inlineClassName, inlineClassDefn)
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
       case other =>

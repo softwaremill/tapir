@@ -5,7 +5,7 @@ import sttp.tapir.codegen.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.util.DocUtils
+import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
 
 case class GeneratedClassDefinitions(
     classRepr: String,
@@ -66,7 +66,7 @@ class ClassDefinitionGenerator {
       jsonParamRefs,
       allTransitiveJsonParamRefs,
       validateNonDiscriminatedOneOfs,
-      adtInheritanceMap.mapValues(_.map(_._1)),
+      adtInheritanceMap.mapValues(_.map(_._1)).toMap,
       targetScala3,
       schemasContainAny,
       useCustomJsoniterSerdes
@@ -120,7 +120,7 @@ class ClassDefinitionGenerator {
         validatedChildren.map(_ -> ((name, schema)))
       }
       .groupBy(_._1)
-      .mapValues(_.map(_._2))
+      .mapValues(_.map(_._2)).toMap
 
   private def enumSerdeHelperDefn(targetScala3: Boolean): String = {
     if (targetScala3)
@@ -349,7 +349,7 @@ class ClassDefinitionGenerator {
 
   private def addName(parentName: String, key: String) = parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
 
-  private val reservedKeys = scala.reflect.runtime.universe.asInstanceOf[scala.reflect.internal.SymbolTable].nme.keywords.map(_.toString)
+  private val reservedKeys = VersionedHelpers.reservedKeys
 
   private def fixKey(key: String) = {
     if (reservedKeys.contains(key))
