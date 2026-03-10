@@ -557,6 +557,8 @@ class EndpointGenerator {
           if (needsAliases) {
             val wrappers = declsByWrapperClassName
               .map { case (name, seq) => s"""case class ${name}(value: ${seq.head._2}) extends $traitName""" }
+              .toSeq
+              .sorted
               .mkString("\n")
             Some(s"""
                |sealed trait $traitName extends Product with java.io.Serializable
@@ -709,14 +711,18 @@ class EndpointGenerator {
                       else ","}"""
                   }
                 }
+                .toSeq
+                .sorted
                 .mkString("\n")
               val wrappers = declsByWrapperClassName
                 .map { case (name, seq) =>
-                  val defns = seq.map { case (_, t, _, ct) => s"""override def `$ct`: () => $t = () => value""" }.mkString("\n")
+                  val defns = seq.map { case (_, t, _, ct) => s"""override def `$ct`: () => $t = () => value""" }.sorted.mkString("\n")
                   s"""case class ${name}(value: ${seq.head._2}) extends $traitName{
                      |${indent(2)(defns)}
                      |}""".stripMargin
                 }
+                .toSeq
+                .sorted
                 .mkString("\n")
               Some(s"""
                       |sealed trait $traitName extends Product with java.io.Serializable {

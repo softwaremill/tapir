@@ -20,9 +20,12 @@ openapiGenerateEndpointTypes := true
 import scala.io.Source
 import scala.util.Using
 
+val isSbt2 = false
+val pathRoot = if (isSbt2) "target/out/jvm/scala-3.3.1/root/src_managed" else "target/scala-3.3.1/src_managed"
+
 TaskKey[Unit]("check") := {
   val generatedCode =
-    Using(Source.fromFile("target/scala-3.3.1/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala"))(
+    Using(Source.fromFile(s"$pathRoot/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala"))(
       _.getLines.mkString("\n")
     ).get
   val expected = Using(Source.fromFile("Expected.scala.txt"))(_.getLines.mkString("\n")).get

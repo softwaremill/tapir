@@ -47,16 +47,19 @@ def compare(name: String, genFn: String, expFn: String) = {
 
 }
 
+val isSbt2 = false
+val pathRoot = if (isSbt2) "target/out/jvm/scala-2.13.18/root/src_managed" else "target/scala-2.13/src_managed"
+
 TaskKey[Unit]("check") := {
-  compare("endpoints", "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
+  compare("endpoints", s"$pathRoot/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
   compare(
     "xml",
-    "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsXmlSerdes.scala",
+    s"$pathRoot/main/sbt-openapi-codegen/TapirGeneratedEndpointsXmlSerdes.scala",
     "ExpectedXmlSerdes.scala.txt"
   )
   compare(
     "json",
-    "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
+    s"$pathRoot/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
     "ExpectedJsonSerdes.scala.txt"
   )
   ()

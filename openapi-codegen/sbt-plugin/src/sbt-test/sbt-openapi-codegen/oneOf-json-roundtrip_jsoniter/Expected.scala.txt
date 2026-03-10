@@ -81,75 +81,9 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
-  sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
-
-  sealed trait PetStatus extends enumeratum.EnumEntry
-  object PetStatus extends enumeratum.Enum[PetStatus] {
-    val values = findValues
-    case object available extends PetStatus
-    case object pending extends PetStatus
-    case object sold extends PetStatus
-  }
-  case class Pet (
-    id: Option[Long] = None,
-    name: String,
-    category: Option[Category] = None,
-    photoUrls: Seq[String],
-    tags: Option[Seq[Tag]] = None,
-    tags2: Option[Seq[Tag2]] = None,
-    status: Option[PetStatus] = None
-  )
-  case class Category (
-    id: Option[Long] = None,
-    name: Option[String] = None
-  )
-  case class NotNullableThingy (
-    uuid: java.util.UUID
-  )
-  case class SubtypeWithoutD1 (
-    s: String,
-    i: Option[Int] = None,
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class HasASet (
-    setA: Set[String],
-    setB: Option[Set[Int]] = None
-  )
-  case class SubtypeWithD1 (
-    s: String,
-    i: Option[Int] = None,
-    d: Option[Double] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
-  case class SubtypeWithoutD3 (
-    s: String,
-    i: Option[Int] = None,
-    e: Option[AnEnum] = None,
-    e2: Option[SubtypeWithoutD3E2] = None,
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-
-  sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry
-  object SubtypeWithoutD3E2 extends enumeratum.Enum[SubtypeWithoutD3E2] {
-    val values = findValues
-    case object A extends SubtypeWithoutD3E2
-    case object B extends SubtypeWithoutD3E2
-    case object C extends SubtypeWithoutD3E2
-  }
-  case class SubtypeWithoutD2 (
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class SubtypeWithD2 (
-    s: String,
-    a: Option[Seq[String]] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
-  case class Tag (
-    id: Option[Long] = None,
-    name: Option[String] = None
-  )
+  sealed trait ADTWithoutDiscriminator
 
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] {
@@ -160,6 +94,72 @@ object TapirGeneratedEndpoints {
     implicit val enumCodecSupportAnEnum: ExtraParamSupport[AnEnum] =
       extraCodecSupport[AnEnum]("AnEnum", AnEnum)
   }
+
+  sealed trait PetStatus extends enumeratum.EnumEntry
+  object PetStatus extends enumeratum.Enum[PetStatus] {
+    val values = findValues
+    case object available extends PetStatus
+    case object pending extends PetStatus
+    case object sold extends PetStatus
+  }
+
+  sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry
+  object SubtypeWithoutD3E2 extends enumeratum.Enum[SubtypeWithoutD3E2] {
+    val values = findValues
+    case object A extends SubtypeWithoutD3E2
+    case object B extends SubtypeWithoutD3E2
+    case object C extends SubtypeWithoutD3E2
+  }
+  case class Category (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
+  case class HasASet (
+    setA: Set[String],
+    setB: Option[Set[Int]] = None
+  )
+  case class NotNullableThingy (
+    uuid: java.util.UUID
+  )
+  case class Pet (
+    id: Option[Long] = None,
+    name: String,
+    category: Option[Category] = None,
+    photoUrls: Seq[String],
+    tags: Option[Seq[Tag]] = None,
+    tags2: Option[Seq[Tag2]] = None,
+    status: Option[PetStatus] = None
+  )
+  case class SubtypeWithD1 (
+    s: String,
+    i: Option[Int] = None,
+    d: Option[Double] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithD2 (
+    s: String,
+    a: Option[Seq[String]] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithoutD1 (
+    s: String,
+    i: Option[Int] = None,
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithoutD2 (
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithoutD3 (
+    s: String,
+    i: Option[Int] = None,
+    e: Option[AnEnum] = None,
+    e2: Option[SubtypeWithoutD3E2] = None,
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class Tag (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
   case class Tag2 (
     id: Option[Long] = None,
     name: Option[String] = None
@@ -189,12 +189,12 @@ object TapirGeneratedEndpoints {
 
 
   sealed trait PostCustomContentNegotiationBodyOut extends Product with java.io.Serializable {
-    def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
+    def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
   }
   case class PostCustomContentNegotiationBodyOutFull (
-    override val `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
     override val `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+    override val `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
   ) extends PostCustomContentNegotiationBodyOut
   case class PostCustomContentNegotiationBody0Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyOut{
     override def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
@@ -205,18 +205,18 @@ object TapirGeneratedEndpoints {
 
 
   sealed trait PostCustomContentNegotiationBodyErr extends Product with java.io.Serializable {
-    def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
+    def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
   }
   case class PostCustomContentNegotiationBodyErrFull (
-    override val `text/csv`: () => String,
     override val `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte],
+    override val `text/csv`: () => String,
   ) extends PostCustomContentNegotiationBodyErr
-  case class PostCustomContentNegotiationBodyStringErr(value: String) extends PostCustomContentNegotiationBodyErr{
-    override def `text/csv`: () => String = () => value
-  }
   case class PostCustomContentNegotiationBody1Err(value: Array[Byte]) extends PostCustomContentNegotiationBodyErr{
     override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => value
+  }
+  case class PostCustomContentNegotiationBodyStringErr(value: String) extends PostCustomContentNegotiationBodyErr{
+    override def `text/csv`: () => String = () => value
   }
 
 
@@ -350,7 +350,9 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[HasASet]])
       .out(jsonBody[HasASet].description("OK"))
 
+
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
+
 
   object Servers {
     import sttp.model.Uri.UriContext

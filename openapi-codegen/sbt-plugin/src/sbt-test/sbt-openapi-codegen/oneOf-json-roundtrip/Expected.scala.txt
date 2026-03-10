@@ -91,12 +91,102 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
-  sealed trait ValidatedOneOf
   sealed trait ADTWithDiscriminator
-  sealed trait AnyObjectWithInlineEnum
-  sealed trait Error
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
+  sealed trait AnyObjectWithInlineEnum
+  sealed trait Error
+  sealed trait ValidatedOneOf
+
+  sealed trait AnEnum extends enumeratum.EnumEntry
+  object AnEnum extends enumeratum.Enum[AnEnum] with enumeratum.CirceEnum[AnEnum] {
+    val values = findValues
+    case object Foo extends AnEnum
+    case object Bar extends AnEnum
+    case object Baz extends AnEnum
+  }
+
+  sealed trait ObjectWithInlineEnum2InlineEnum extends enumeratum.EnumEntry
+  object ObjectWithInlineEnum2InlineEnum extends enumeratum.Enum[ObjectWithInlineEnum2InlineEnum] with enumeratum.CirceEnum[ObjectWithInlineEnum2InlineEnum] {
+    val values = findValues
+    case object bar1 extends ObjectWithInlineEnum2InlineEnum
+    case object bar2 extends ObjectWithInlineEnum2InlineEnum
+  }
+
+  sealed trait ObjectWithInlineEnumInlineEnum extends enumeratum.EnumEntry
+  object ObjectWithInlineEnumInlineEnum extends enumeratum.Enum[ObjectWithInlineEnumInlineEnum] with enumeratum.CirceEnum[ObjectWithInlineEnumInlineEnum] {
+    val values = findValues
+    case object foo1 extends ObjectWithInlineEnumInlineEnum
+    case object foo2 extends ObjectWithInlineEnumInlineEnum
+    case object foo3 extends ObjectWithInlineEnumInlineEnum
+    case object foo4 extends ObjectWithInlineEnumInlineEnum
+  }
+  case class HasBar (
+    bar: String
+  )
+  case class HasBaz (
+    baz: Int
+  )
+  case class HasFoo (
+    foo: Option[String] = None
+  )
+  case class HasFooBarBazQuux (
+    foo: Option[String] = None,
+    bar: String,
+    baz: Int,
+    quux: Option[Int] = None
+  )
+  case class NotFoundError (
+    reason: String
+  ) extends Error
+  case class NotNullableThingy (
+    uuid: java.util.UUID
+  )
+  case class NullableThingy (
+    uuid: java.util.UUID
+  )
+  case class NullableThingy2 (
+    uuid: java.util.UUID
+  )
+  case class ObjectWithInlineEnum (
+    id: java.util.UUID,
+    inlineEnum: ObjectWithInlineEnumInlineEnum = ObjectWithInlineEnumInlineEnum.foo3
+  ) extends AnyObjectWithInlineEnum
+  case class ObjectWithInlineEnum2 (
+    inlineEnum: ObjectWithInlineEnum2InlineEnum
+  ) extends AnyObjectWithInlineEnum
+  case class SimpleError (
+    message: String
+  ) extends Error
+  case class SubtypeWithD1 (
+    s: ByteString,
+    i: Option[Int] = None,
+    d: Option[Double] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
+    def `type`: String = "SubA"
+  }
+  case class SubtypeWithD2 (
+    s: String,
+    a: Option[Seq[String]] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
+    def `type`: String = "SubB"
+  }
+  case class SubtypeWithoutD1 (
+    s: String,
+    i: Option[Int] = None,
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithoutD2 (
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithoutD3 (
+    s: String,
+    i: Option[Int] = None,
+    e: Option[AnEnum] = Some(AnEnum.Foo),
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
   case class ValidatedObj (
     foo: String,
     bar: ValidatedSubObj = ValidatedSubObj(i = "i..."),
@@ -111,113 +201,23 @@ object TapirGeneratedEndpoints {
   case class ValidatedOneOfA (
     s: String
   ) extends ValidatedOneOf
-  case class NotNullableThingy (
-    uuid: java.util.UUID
-  )
-  case class ObjectWithInlineEnum2 (
-    inlineEnum: ObjectWithInlineEnum2InlineEnum
-  ) extends AnyObjectWithInlineEnum
-
-  sealed trait ObjectWithInlineEnum2InlineEnum extends enumeratum.EnumEntry
-  object ObjectWithInlineEnum2InlineEnum extends enumeratum.Enum[ObjectWithInlineEnum2InlineEnum] with enumeratum.CirceEnum[ObjectWithInlineEnum2InlineEnum] {
-    val values = findValues
-    case object bar1 extends ObjectWithInlineEnum2InlineEnum
-    case object bar2 extends ObjectWithInlineEnum2InlineEnum
-  }
-  case class SimpleError (
-    message: String
-  ) extends Error
-  case class NotFoundError (
-    reason: String
-  ) extends Error
-  case class HasBar (
-    bar: String
-  )
-  case class SubtypeWithoutD1 (
-    s: String,
-    i: Option[Int] = None,
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class HasBaz (
-    baz: Int
+  case class ValidatedOneOfB (
+    i: Option[Int] = None
+  ) extends ValidatedOneOf
+  case class ValidatedOneOfC (
+    j: Option[Int] = None
+  ) extends ValidatedOneOf
+  case class ValidatedRecursive (
+    self: Option[Seq[ValidatedRecursive]] = Some(Vector(ValidatedRecursive(self = Some(Vector()))))
   )
   case class ValidatedSubObj (
     i: String
   )
-  case class SubtypeWithD1 (
-    s: ByteString,
-    i: Option[Int] = None,
-    d: Option[Double] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
-    def `type`: String = "SubA"
-  }
-  case class ValidatedOneOfB (
-    i: Option[Int] = None
-  ) extends ValidatedOneOf
-  case class SubtypeWithoutD3 (
-    s: String,
-    i: Option[Int] = None,
-    e: Option[AnEnum] = Some(AnEnum.Foo),
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class NullableThingy2 (
-    uuid: java.util.UUID
-  )
-  case class ObjectWithInlineEnum (
-    id: java.util.UUID,
-    inlineEnum: ObjectWithInlineEnumInlineEnum = ObjectWithInlineEnumInlineEnum.foo3
-  ) extends AnyObjectWithInlineEnum
-
-  sealed trait ObjectWithInlineEnumInlineEnum extends enumeratum.EnumEntry
-  object ObjectWithInlineEnumInlineEnum extends enumeratum.Enum[ObjectWithInlineEnumInlineEnum] with enumeratum.CirceEnum[ObjectWithInlineEnumInlineEnum] {
-    val values = findValues
-    case object foo1 extends ObjectWithInlineEnumInlineEnum
-    case object foo2 extends ObjectWithInlineEnumInlineEnum
-    case object foo3 extends ObjectWithInlineEnumInlineEnum
-    case object foo4 extends ObjectWithInlineEnumInlineEnum
-  }
-  case class ValidatedRecursive (
-    self: Option[Seq[ValidatedRecursive]] = Some(Vector(ValidatedRecursive(self = Some(Vector()))))
-  )
-  case class SubtypeWithoutD2 (
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class HasFooBarBazQuux (
-    foo: Option[String] = None,
-    bar: String,
-    baz: Int,
-    quux: Option[Int] = None
-  )
-  case class SubtypeWithD2 (
-    s: String,
-    a: Option[Seq[String]] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping {
-    def `type`: String = "SubB"
-  }
-
-  sealed trait AnEnum extends enumeratum.EnumEntry
-  object AnEnum extends enumeratum.Enum[AnEnum] with enumeratum.CirceEnum[AnEnum] {
-    val values = findValues
-    case object Foo extends AnEnum
-    case object Bar extends AnEnum
-    case object Baz extends AnEnum
-  }
-  case class HasFoo (
-    foo: Option[String] = None
-  )
-  case class ValidatedOneOfC (
-    j: Option[Int] = None
-  ) extends ValidatedOneOf
   type ListType = List[String]
-  case class NullableThingy (
-    uuid: java.util.UUID
-  )
 
   sealed trait PostJsonStringJsonBodyBodyIn extends Product with java.io.Serializable
-  case class PostJsonStringJsonBodyBodyOption_String_In(value: Option[String]) extends PostJsonStringJsonBodyBodyIn
   case class PostJsonStringJsonBodyBody1In(value: Array[Byte]) extends PostJsonStringJsonBodyBodyIn
+  case class PostJsonStringJsonBodyBodyOption_String_In(value: Option[String]) extends PostJsonStringJsonBodyBodyIn
 
 
   sealed trait PostJsonStringJsonBodyBodyOut extends Product with java.io.Serializable {
@@ -228,11 +228,11 @@ object TapirGeneratedEndpoints {
     override val `application/json`: () => Option[String],
     override val `application/zip`: () => Array[Byte],
   ) extends PostJsonStringJsonBodyBodyOut
-  case class PostJsonStringJsonBodyBodyOption_String_Out(value: Option[String]) extends PostJsonStringJsonBodyBodyOut{
-    override def `application/json`: () => Option[String] = () => value
-  }
   case class PostJsonStringJsonBodyBody1Out(value: Array[Byte]) extends PostJsonStringJsonBodyBodyOut{
     override def `application/zip`: () => Array[Byte] = () => value
+  }
+  case class PostJsonStringJsonBodyBodyOption_String_Out(value: Option[String]) extends PostJsonStringJsonBodyBodyOut{
+    override def `application/json`: () => Option[String] = () => value
   }
 
   case class GetForceEagerRequest (

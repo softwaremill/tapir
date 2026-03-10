@@ -55,13 +55,25 @@ object TapirGeneratedEndpoints {
   type ByteString <: Array[Byte]
   implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
-  sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
+  sealed trait ADTWithoutDiscriminator
+
+  enum AnEnum {
+    case Foo, Bar, Baz
+  }
 
   enum PetStatus {
     case available, pending, sold
   }
+  case class Category (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
+  case class Node (
+    value: String,
+    children: Option[Seq[Node]] = None
+  )
   case class Pet (
     id: Option[Long] = None,
     name: String,
@@ -71,47 +83,35 @@ object TapirGeneratedEndpoints {
     tags2: Option[Seq[Tag2]] = None,
     status: Option[PetStatus] = None
   )
-  case class Category (
-    id: Option[Long] = None,
-    name: Option[String] = None
-  )
+  case class SubtypeWithD1 (
+    s: String,
+    i: Option[Int] = None,
+    d: Option[Double] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithD2 (
+    s: String,
+    a: Option[Seq[String]] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
-  case class Node (
-    value: String,
-    children: Option[Seq[Node]] = None
-  )
-  case class SubtypeWithD1 (
-    s: String,
-    i: Option[Int] = None,
-    d: Option[Double] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithoutD2 (
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
     e: Option[AnEnum] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
-  case class SubtypeWithoutD2 (
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class SubtypeWithD2 (
-    s: String,
-    a: Option[Seq[String]] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
   case class Tag (
     id: Option[Long] = None,
     name: Option[String] = None
   )
-
-  enum AnEnum {
-    case Foo, Bar, Baz
-  }
   case class Tag2 (
     id: Option[Long] = None,
     name: Option[String] = None

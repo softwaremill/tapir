@@ -50,7 +50,7 @@ class ClassDefinitionGenerator {
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
 
-    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
+    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").sorted.mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
     val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
@@ -88,7 +88,7 @@ class ClassDefinitionGenerator {
         case (name, r: OpenapiSchemaSimpleType)                => generateAlias(name, r)
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
-      .map(_.mkString("\n"))
+      .map(_.toSeq.sorted.mkString("\n"))
     val helpers = (enumSerdeHelper + adtTypes).linesIterator
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")

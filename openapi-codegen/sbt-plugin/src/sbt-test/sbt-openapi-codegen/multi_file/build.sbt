@@ -13,9 +13,12 @@ libraryDependencies += "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" %
 import scala.io.Source
 import scala.util.Using
 
+val isSbt2 = false
+val pathRoot = if (isSbt2) "target/out/jvm/scala-2.13.18/root/src_managed" else "target/scala-2.13/src_managed"
+
 def check(generatedFileName: String, expectedFileName: String) = {
   val generatedCode =
-    Using(Source.fromFile(s"target/scala-2.13/src_managed/main/sttp/tapir/generated/$generatedFileName"))(_.getLines.mkString("\n")).get
+    Using(Source.fromFile(s"$pathRoot/main/sttp/tapir/generated/$generatedFileName"))(_.getLines.mkString("\n")).get
   val expectedCode = Using(Source.fromFile(expectedFileName))(_.getLines.mkString("\n")).get
   val generatedTrimmed =
     generatedCode.linesIterator.zipWithIndex.filterNot(_._1.isBlank).map { case (a, i) => a.trim -> i }.toSeq
