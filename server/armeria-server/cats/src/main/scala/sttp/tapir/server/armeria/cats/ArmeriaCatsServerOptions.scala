@@ -33,8 +33,8 @@ object ArmeriaCatsServerOptions {
       createOptions = (ci: CustomiseInterceptors[F, ArmeriaCatsServerOptions[F]]) => {
         ArmeriaCatsServerOptions[F](
           dispatcher,
-          () => defaultCreateFile()(F),
-          file => defaultDeleteFile(file)(F),
+          () => defaultCreateFile()(using F),
+          file => defaultDeleteFile(file)(using F),
           ci.interceptors
         )
       }
