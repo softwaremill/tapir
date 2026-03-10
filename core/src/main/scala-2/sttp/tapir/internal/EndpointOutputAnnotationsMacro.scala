@@ -34,7 +34,7 @@ private[tapir] class EndpointOutputAnnotationsMacro(override val c: blackbox.Con
         .getOrElse {
           c.abort(
             c.enclosingPosition,
-            "All fields in case class must be marked with response annotation from package sttp.tapir.annotations"
+            "All fields in case class must be marked with response annotation from package sttp.tapir.EndpointIO.annotations"
           )
         }
 
