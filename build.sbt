@@ -21,7 +21,7 @@ val scala3 = "3.3.7"
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
-val codegenScalaVersions = List(scala2_12)
+val codegenScalaVersions = List(scala2_12, scala3)
 
 val examplesScalaVersion = scala3
 val documentationScalaVersion = scala3
@@ -2175,11 +2175,18 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
   .jvmPlatform(scalaVersions = codegenScalaVersions, settings = commonJvmSettings)
   .settings(
     name := "tapir-openapi-codegen-core",
+    Test / fork := true,
     libraryDependencies ++= {
       if (scalaBinaryVersion.value == "3") {
-        Nil
+        Seq(
+          "io.github.bishabosha" %% "enum-extensions" % "0.1.1" % Test,
+          "org.latestbit" %% "circe-tagged-adt-codec" % "0.11.0" % Test,
+          scalaOrganization.value %% "scala3-compiler" % scalaVersion.value % Test
+        )
       } else {
         Seq(
+          "com.beachape" %% "enumeratum" % "1.9.0" % Test,
+          "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
           scalaOrganization.value % "scala-reflect" % scalaVersion.value,
           scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test
         )
@@ -2193,8 +2200,6 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      "com.beachape" %% "enumeratum" % "1.9.0" % Test,
-      "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.9" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.9" % Provided
     )
@@ -2213,14 +2218,27 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       .filter(a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)),
     scriptedBufferLog := false,
     sbtTestDirectory := sourceDirectory.value / "sbt-test",
+    libraryDependencies ++= (if (scalaBinaryVersion.value == "3") Nil
+                             else Seq("org.scala-lang" % "scala-compiler" % scalaVersion.value % Test)),
     libraryDependencies ++= Seq(
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test
     ),
-    sbtPluginPublishLegacyMavenStyle := false // required by sonatype central
+    sbtPluginPublishLegacyMavenStyle := false, // required by sonatype central
+    (pluginCrossBuild / sbtVersion) := {
+      scalaBinaryVersion.value match {
+        case "2.12" => "1.12.4"
+        case _      => "2.0.0-RC8"
+      }
+    },
+    scriptedSbt := {
+      scalaBinaryVersion.value match {
+        case "2.12" => "1.12.4"
+        case _      => (pluginCrossBuild / sbtVersion).value
+      }
+    }
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 
