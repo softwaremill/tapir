@@ -3,8 +3,8 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-sync:1.11.18
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.11.18
 //> using dep com.softwaremill.sttp.tapir::tapir-opentelemetry-tracing:1.13.10
-//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.60.0
-//> using dep io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.60.0
+//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.60.1
+//> using dep io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.60.1
 //> using dep ch.qos.logback:logback-classic:1.5.17
 
 package sttp.tapir.examples.observability
