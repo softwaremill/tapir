@@ -287,7 +287,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    val objs = RootGenerator.generateObjects(
+    val objs: Map[String, String] = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
