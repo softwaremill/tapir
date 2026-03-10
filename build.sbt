@@ -21,7 +21,7 @@ val scala3 = "3.3.7"
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
-val codegenScalaVersions = List(scala2_12)
+val codegenScalaVersions = List(scala2_12, scala3)
 
 val examplesScalaVersion = scala3
 val documentationScalaVersion = scala3
@@ -2185,6 +2185,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
         )
       } else {
         Seq(
+          "com.beachape" %% "enumeratum" % "1.9.0" % Test,
+          "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
           scalaOrganization.value % "scala-reflect" % scalaVersion.value,
           scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test
         )
