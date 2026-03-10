@@ -17,7 +17,8 @@ jobs:
     if: |
       github.event_name == 'push' || 
       github.event.pull_request.head.repo.full_name != github.repository ||
-      github.event.pull_request.user.login == 'softwaremill-ci'
+      github.event.pull_request.user.login == 'softwaremill-ci' ||
+      github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -213,5 +214,8 @@ jobs:
     # only for PRs by dependabot[bot]
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     needs: [ ci, mima ]
+    permissions:
+      contents: write
+      pull-requests: write
+      workflows: write
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
-    secrets: inherit
