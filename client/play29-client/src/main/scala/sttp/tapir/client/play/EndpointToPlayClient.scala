@@ -185,7 +185,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case RawBodyType.StringBody(_) =>
         val defaultStringBodyWritable: BodyWritable[String] = implicitly[BodyWritable[String]]
         val bodyWritable = BodyWritable[String](defaultStringBodyWritable.transform, codec.format.mediaType.toString)
-        req.withBody(encoded.asInstanceOf[String])(bodyWritable)
+        req.withBody(encoded.asInstanceOf[String])(using bodyWritable)
       case RawBodyType.ByteArrayBody   => req.withBody(encoded.asInstanceOf[Array[Byte]])
       case RawBodyType.ByteBufferBody  => req.withBody(encoded.asInstanceOf[ByteBuffer])
       case RawBodyType.InputStreamBody =>

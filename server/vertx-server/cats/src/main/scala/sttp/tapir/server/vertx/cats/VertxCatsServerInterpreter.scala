@@ -99,7 +99,7 @@ object VertxCatsServerInterpreter {
   def apply[F[_]](dispatcher: Dispatcher[F])(implicit _fa: Async[F]): VertxCatsServerInterpreter[F] = {
     new VertxCatsServerInterpreter[F] {
       override implicit def fa: Async[F] = _fa
-      override def vertxCatsServerOptions: VertxCatsServerOptions[F] = VertxCatsServerOptions.default[F](dispatcher)(fa)
+      override def vertxCatsServerOptions: VertxCatsServerOptions[F] = VertxCatsServerOptions.default[F](dispatcher)(using fa)
     }
   }
 

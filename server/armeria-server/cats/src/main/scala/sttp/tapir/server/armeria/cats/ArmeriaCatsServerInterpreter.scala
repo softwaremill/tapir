@@ -23,7 +23,7 @@ object ArmeriaCatsServerInterpreter {
   def apply[F[_]](dispatcher: Dispatcher[F])(implicit _fa: Async[F]): ArmeriaCatsServerInterpreter[F] = {
     new ArmeriaCatsServerInterpreter[F] {
       override implicit def fa: Async[F] = _fa
-      override def armeriaServerOptions: ArmeriaCatsServerOptions[F] = ArmeriaCatsServerOptions.default[F](dispatcher)(fa)
+      override def armeriaServerOptions: ArmeriaCatsServerOptions[F] = ArmeriaCatsServerOptions.default[F](dispatcher)(using fa)
     }
   }
 
