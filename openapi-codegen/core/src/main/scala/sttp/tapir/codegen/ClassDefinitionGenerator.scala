@@ -20,7 +20,7 @@ class ClassDefinitionGenerator {
 
   def classDefs(
       doc: OpenapiDocument,
-      targetScala3: Boolean = false,
+      targetScala3: Boolean,
       queryOrPathParamRefs: Set[String] = Set.empty,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = Circe,
       xmlSerdeLib: XmlSerdeLib.XmlSerdeLib = XmlSerdeLib.CatsXml,
