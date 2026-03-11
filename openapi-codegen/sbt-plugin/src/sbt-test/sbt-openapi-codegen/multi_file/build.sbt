@@ -13,22 +13,7 @@ libraryDependencies += "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" %
 import scala.io.Source
 import scala.util.Using
 
-val isSbt2 = false
-val pathRoot = if (isSbt2) "target/out/jvm/scala-2.13.18/root/src_managed" else "target/scala-2.13/src_managed"
 
-def check(generatedFileName: String, expectedFileName: String) = {
-  val generatedCode =
-    Using(Source.fromFile(s"$pathRoot/main/sttp/tapir/generated/$generatedFileName"))(_.getLines.mkString("\n")).get
-  val expectedCode = Using(Source.fromFile(expectedFileName))(_.getLines.mkString("\n")).get
-  val generatedTrimmed =
-    generatedCode.linesIterator.zipWithIndex.filterNot(_._1.isBlank).map { case (a, i) => a.trim -> i }.toSeq
-  val expectedTrimmed = expectedCode.linesIterator.filterNot(_.isBlank).map(_.trim).toSeq
-  generatedTrimmed.zip(expectedTrimmed).foreach { case ((a, i), b) =>
-    if (a != b) sys.error(s"Generated code in file $generatedCode did not match (expected '$b' on line $i, found '$a')")
-  }
-  if (generatedTrimmed.size != expectedTrimmed.size)
-    sys.error(s"expected ${expectedTrimmed.size} non-empty lines in ${generatedFileName}, found ${generatedTrimmed.size}")
-}
 
 openapiAdditionalPackages := List(
   "sttp.tapir.generated.swagger" -> baseDirectory.value / "swagger.yaml",
@@ -36,6 +21,19 @@ openapiAdditionalPackages := List(
 )
 
 TaskKey[Unit]("check") := {
+  def check(generatedFileName: String, expectedFileName: String) = {
+    val generatedCode =
+      Using(Source.fromFile(s"${sourceManaged.value}/main/sttp/tapir/generated/$generatedFileName"))(_.getLines.mkString("\n")).get
+    val expectedCode = Using(Source.fromFile(expectedFileName))(_.getLines.mkString("\n")).get
+    val generatedTrimmed =
+      generatedCode.linesIterator.zipWithIndex.filterNot(_._1.isBlank).map { case (a, i) => a.trim -> i }.toSeq
+    val expectedTrimmed = expectedCode.linesIterator.filterNot(_.isBlank).map(_.trim).toSeq
+    generatedTrimmed.zip(expectedTrimmed).foreach { case ((a, i), b) =>
+      if (a != b) sys.error(s"Generated code in file $generatedCode did not match (expected '$b' on line $i, found '$a')")
+    }
+    if (generatedTrimmed.size != expectedTrimmed.size)
+      sys.error(s"expected ${expectedTrimmed.size} non-empty lines in ${generatedFileName}, found ${generatedTrimmed.size}")
+  }
   Seq(
     "swagger/TapirGeneratedEndpoints.scala" -> "Expected.scala.txt",
     "swagger2/TapirGeneratedEndpoints.scala" -> "Expected2.scala.txt"
