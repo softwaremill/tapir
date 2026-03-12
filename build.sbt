@@ -17,11 +17,12 @@ import scala.sys.process.Process
 val scala2_12 = "2.12.21"
 val scala2_13 = "2.13.18"
 val scala3 = "3.3.7"
+val scala3_7 = "3.7.4"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
-val codegenScalaVersions = List(scala2_12)
+val codegenScalaVersions = List(scala2_12, scala3)
 
 val examplesScalaVersion = scala3
 val documentationScalaVersion = scala3
@@ -2211,6 +2212,13 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
   .settings(commonSettings)
   .jvmPlatform(scalaVersions = codegenScalaVersions, settings = commonJvmSettings)
   .settings(
+    // This is surprising -- you would probably expect to just have 'val codegenScalaVersions = List(scala2_12, scala3_7)'
+    // If we try that, however, we get an error running `openapiCodegenSbt3/scripted` like the following:
+    // > Modules were resolved with conflicting cross-version suffixes in ProjectRef(uri("file:/..snip../tapir/"), "openapiCodegenCore3")
+    // >   io.circe:circe-parser _2.13, _3
+    // >   org.scala-lang.modules:scala-collection-compat _3, _2.13
+    // ... etc
+    scalaVersion := (if (scalaVersion.value.startsWith("3")) scala3_7 else scalaVersion.value),
     name := "sbt-openapi-codegen",
     sbtPlugin := true,
     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),

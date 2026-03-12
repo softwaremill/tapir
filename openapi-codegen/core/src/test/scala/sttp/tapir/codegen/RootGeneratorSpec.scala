@@ -1,7 +1,7 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.testutils.CompileCheckTestBase
+import sttp.tapir.codegen.testutils.{CompileCheckTestBase, VersionCheck}
 
 class RootGeneratorSpec extends CompileCheckTestBase {
   def genMap(
@@ -73,8 +73,9 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       gen(TestHelpers.enumQueryParamDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib).shouldCompile()
     }
 
-    // todo: jsoniter and zio fail this test with `Internal error: unable to find the outer accessor symbol of object TapirGeneratedEndpointsJsonSerdes`
-    if (jsonSerdeLib == "circe") it should s"compile endpoints with default params using ${jsonSerdeLib} serdes" in {
+    // For scala 2, jsoniter and zio fail this test with `Internal error: unable to find the outer accessor symbol of object TapirGeneratedEndpointsJsonSerdes`
+    // For scala 3, zio fails with `No given instance of type zio.json.JsonDecoder[Option[TapirGeneratedEndpoints.AnEnum]] was found`. This looks like a bug.
+    VersionCheck.runTest(jsonSerdeLib)(it should s"compile endpoints with default params using ${jsonSerdeLib} serdes" in {
       val genWithParams = gen(TestHelpers.withDefaultsDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
 
       val expectedDefaultDeclarations = Seq(
@@ -89,7 +90,7 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       expectedDefaultDeclarations foreach (decln => genWithParams should include(decln))
 
       genWithParams.shouldCompile()
-    }
+    })
 
   }
   Seq("circe", "jsoniter", "zio") foreach testJsonLib
