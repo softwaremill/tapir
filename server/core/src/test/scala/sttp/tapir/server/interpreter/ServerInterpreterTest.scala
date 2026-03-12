@@ -68,9 +68,9 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
         _ =>
           List(
             endpoint
-              .securityIn(query[StringWrapper]("x")(using Codec.listHead(addToTrailCodec("x"))))
-              .in(query[StringWrapper]("y")(using Codec.listHead(addToTrailCodec("y"))))
-              .in(plainBody[StringWrapper](using addToTrailCodec("z")))
+              .securityIn(query[StringWrapper]("x")(Codec.listHead(addToTrailCodec("x"))))
+              .in(query[StringWrapper]("y")(Codec.listHead(addToTrailCodec("y"))))
+              .in(plainBody[StringWrapper](addToTrailCodec("z")))
               .serverSecurityLogic[Unit, Identity](_ => Left(()))
               .serverLogic(_ => _ => Right(()))
           ),

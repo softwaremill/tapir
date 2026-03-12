@@ -51,7 +51,7 @@ object TapirAuth {
       .schema(codec.schema)
 
     EndpointInput.Auth(
-      header[T](HeaderNames.Authorization)(using authCodec),
+      header[T](HeaderNames.Authorization)(authCodec),
       challenge,
       EndpointInput.AuthType.Http(authScheme),
       EndpointInput.AuthInfo.Empty
