@@ -16,7 +16,8 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.21"
 val scala2_13 = "2.13.18"
-val scala3 = "3.7.4"
+val scala3 = "3.3.7"
+val scala3_7 = "3.7.4"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -2211,6 +2212,7 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
   .settings(commonSettings)
   .jvmPlatform(scalaVersions = codegenScalaVersions, settings = commonJvmSettings)
   .settings(
+    scalaVersion := (if (scalaVersion.value.startsWith("3")) scala3_7 else scalaVersion.value),
     name := "sbt-openapi-codegen",
     sbtPlugin := true,
     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
