@@ -116,6 +116,10 @@ object TapirGeneratedEndpointsXmlSerdes {
     case Left(t) => sttp.tapir.DecodeResult.Error(s, t)
   }
   
+  implicit lazy val PeerDTOXmlTypeInterpreter: XmlTypeInterpreter[PeerDTO] = XmlTypeInterpreter.auto[PeerDTO]((_, _) => false, (_, _) => false)
+  implicit lazy val PeerDTOXmlDecoder: Decoder[PeerDTO] = deriveConfiguredDecoder[PeerDTO]
+  implicit lazy val PeerDTOXmlEncoder: Encoder[PeerDTO] = deriveConfiguredEncoder[PeerDTO]
+
   implicit lazy val PeersEntityXmlTypeInterpreter: XmlTypeInterpreter[PeersEntity] = XmlTypeInterpreter.auto[PeersEntity]((_, _) => false, (_, _) => false)
   implicit lazy val PeersEntityXmlDecoder: Decoder[PeersEntity] = {
     implicit val PeersEntityPeersSeqDecoder: Decoder[Seq[PeerDTO]] = seqDecoder[PeerDTO]("peers", isWrapped = false)
@@ -126,8 +130,4 @@ object TapirGeneratedEndpointsXmlSerdes {
       seqEncoder[PeerDTO]("peers", isWrapped = false, itemName = "peers")
     deriveConfiguredEncoder[PeersEntity]
   }
-  
-  implicit lazy val PeerDTOXmlTypeInterpreter: XmlTypeInterpreter[PeerDTO] = XmlTypeInterpreter.auto[PeerDTO]((_, _) => false, (_, _) => false)
-  implicit lazy val PeerDTOXmlDecoder: Decoder[PeerDTO] = deriveConfiguredDecoder[PeerDTO]
-  implicit lazy val PeerDTOXmlEncoder: Encoder[PeerDTO] = deriveConfiguredEncoder[PeerDTO]
 }

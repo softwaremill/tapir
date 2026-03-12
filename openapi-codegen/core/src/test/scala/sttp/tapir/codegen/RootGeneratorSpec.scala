@@ -13,7 +13,7 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
-      targetScala3 = false,
+      targetScala3 = isScala3,
       useHeadTagForObjectNames = useHeadTagForObjectNames,
       jsonSerdeLib = jsonSerdeLib,
       xmlSerdeLib = "cats-xml",
@@ -42,7 +42,7 @@ class RootGeneratorSpec extends CompileCheckTestBase {
   }
   def testJsonLib(jsonSerdeLib: String) = {
     it should s"generate the bookshop example using ${jsonSerdeLib} serdes" in {
-      gen(TestHelpers.myBookshopDoc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib) shouldCompile ()
+      gen(TestHelpers.myBookshopDoc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib).shouldCompile()
     }
 
     it should s"split outputs by tag if useHeadTagForObjectNames = true using ${jsonSerdeLib} serdes" in {
@@ -56,21 +56,21 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       val schemas = generated("TapirGeneratedEndpointsSchemas")
       val endpoints = generated("Bookshop")
       // schema file on its own should compile
-      models shouldCompile ()
+      models.shouldCompile()
       // schema file should contain no endpoint definitions
       models.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 0
       // schema file with serde file should compile
-      (models + "\n" + serdes) shouldCompile ()
+      (models + "\n" + serdes).shouldCompile()
       // schema file with serde file & schema file should compile
-      (models + "\n" + serdes + "\n" + schemas) shouldCompile ()
+      (models + "\n" + serdes + "\n" + schemas).shouldCompile()
       // Bookshop file should contain all endpoint definitions
       endpoints.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 4
       // endpoint file depends on models, serdes & schemas
-      (models + "\n" + serdes + "\n" + schemas + "\n" + endpoints) shouldCompile ()
+      (models + "\n" + serdes + "\n" + schemas + "\n" + endpoints).shouldCompile()
     }
 
     it should s"compile endpoints with enum query params using ${jsonSerdeLib} serdes" in {
-      gen(TestHelpers.enumQueryParamDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib) shouldCompile ()
+      gen(TestHelpers.enumQueryParamDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib).shouldCompile()
     }
 
     // todo: jsoniter and zio fail this test with `Internal error: unable to find the outer accessor symbol of object TapirGeneratedEndpointsJsonSerdes`
@@ -88,7 +88,7 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       )
       expectedDefaultDeclarations foreach (decln => genWithParams should include(decln))
 
-      genWithParams shouldCompile ()
+      genWithParams.shouldCompile()
     }
 
   }

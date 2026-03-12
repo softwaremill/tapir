@@ -45,16 +45,17 @@ def compare(name: String, genFn: String, expFn: String) = {
 
 }
 
+
 TaskKey[Unit]("check") := {
-  compare("endpoints", "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
+  compare("endpoints", s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
   compare(
     "json",
-    "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
+    s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
     "ExpectedJsonSerdes.scala.txt"
   )
   compare(
     "schemas",
-    "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsSchemas.scala",
+    s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpointsSchemas.scala",
     "ExpectedSchemas.scala.txt"
   )
   ()

@@ -5,7 +5,7 @@ import sttp.tapir.codegen.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.util.DocUtils
+import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
 
 case class GeneratedClassDefinitions(
     classRepr: String,
@@ -20,7 +20,7 @@ class ClassDefinitionGenerator {
 
   def classDefs(
       doc: OpenapiDocument,
-      targetScala3: Boolean = false,
+      targetScala3: Boolean,
       queryOrPathParamRefs: Set[String] = Set.empty,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = Circe,
       xmlSerdeLib: XmlSerdeLib.XmlSerdeLib = XmlSerdeLib.CatsXml,
@@ -50,7 +50,7 @@ class ClassDefinitionGenerator {
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
 
-    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
+    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").sorted.mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
     val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
@@ -66,7 +66,7 @@ class ClassDefinitionGenerator {
       jsonParamRefs,
       allTransitiveJsonParamRefs,
       validateNonDiscriminatedOneOfs,
-      adtInheritanceMap.mapValues(_.map(_._1)),
+      adtInheritanceMap.mapValues(_.map(_._1)).toMap,
       targetScala3,
       schemasContainAny,
       useCustomJsoniterSerdes
@@ -88,7 +88,7 @@ class ClassDefinitionGenerator {
         case (name, r: OpenapiSchemaSimpleType)                => generateAlias(name, r)
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
-      .map(_.mkString("\n"))
+      .map(_.toSeq.sorted.mkString("\n"))
     val helpers = (enumSerdeHelper + adtTypes).linesIterator
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
@@ -120,7 +120,7 @@ class ClassDefinitionGenerator {
         validatedChildren.map(_ -> ((name, schema)))
       }
       .groupBy(_._1)
-      .mapValues(_.map(_._2))
+      .mapValues(_.map(_._2)).toMap
 
   private def enumSerdeHelperDefn(targetScala3: Boolean): String = {
     if (targetScala3)
@@ -349,7 +349,7 @@ class ClassDefinitionGenerator {
 
   private def addName(parentName: String, key: String) = parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
 
-  private val reservedKeys = scala.reflect.runtime.universe.asInstanceOf[scala.reflect.internal.SymbolTable].nme.keywords.map(_.toString)
+  private val reservedKeys = VersionedHelpers.reservedKeys
 
   private def fixKey(key: String) = {
     if (reservedKeys.contains(key))
