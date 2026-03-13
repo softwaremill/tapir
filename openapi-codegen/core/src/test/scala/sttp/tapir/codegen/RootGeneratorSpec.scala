@@ -73,8 +73,6 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       gen(TestHelpers.enumQueryParamDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib).shouldCompile()
     }
 
-    // For scala 2, jsoniter and zio fail this test with `Internal error: unable to find the outer accessor symbol of object TapirGeneratedEndpointsJsonSerdes`
-    // For scala 3, zio fails with `No given instance of type zio.json.JsonDecoder[Option[TapirGeneratedEndpoints.AnEnum]] was found`. This looks like a bug.
     VersionCheck.runTest(jsonSerdeLib)(it should s"compile endpoints with default params using ${jsonSerdeLib} serdes" in {
       val genWithParams = gen(TestHelpers.withDefaultsDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
 
@@ -92,7 +90,43 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       genWithParams.shouldCompile()
     })
 
-  }
-  Seq("circe", "jsoniter", "zio") foreach testJsonLib
+    VersionCheck.runTest(jsonSerdeLib)(it should s"compile endpoints with date and duration types using ${jsonSerdeLib} serdes" in {
+      val doc = TestHelpers.parseYamlDocument(TestHelpers.dateAndDurationYaml).fold(err => fail(err.getMessage), identity)
+      val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
 
+      generated should include(
+        """  case class Event (
+          |    name: String,
+          |    eventDate: java.time.LocalDate,
+          |    optionalDate: Option[java.time.LocalDate] = None,
+          |    duration: java.time.Duration,
+          |    optionalDuration: Option[java.time.Duration] = None,
+          |    scheduledAt: Option[java.time.Instant] = None
+          |  )""".stripMargin
+      )
+      generated should include(
+        """  lazy val getEventsByDate =
+          |    endpoint
+          |      .name("getEventsByDate")
+          |      .get
+          |      .in(("events" / path[java.time.LocalDate]("date")))
+          |      .in(query[Option[java.time.Duration]]("minDuration"))
+          |      .out(jsonBody[List[Event]].description(""))""".stripMargin
+      )
+
+      generated.shouldCompile()
+    })
+
+    VersionCheck.runTest(jsonSerdeLib)(it should s"compile endpoints with date and duration default values using ${jsonSerdeLib} serdes" in {
+      val doc = TestHelpers.parseYamlDocument(TestHelpers.dateAndDurationDefaultsYaml).fold(err => fail(err.getMessage), identity)
+      val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
+
+      generated should include("""java.time.LocalDate.parse("2024-01-15")""")
+      generated should include("""java.time.Duration.parse("PT1H30M")""")
+
+      generated.shouldCompile()
+    })
+  }
+
+  Seq("circe", "jsoniter", "zio") foreach testJsonLib
 }

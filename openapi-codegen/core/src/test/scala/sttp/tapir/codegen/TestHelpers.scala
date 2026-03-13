@@ -1,6 +1,8 @@
 package sttp.tapir.codegen
 
-import io.circe.Json
+import cats.implicits._
+import io.circe.{Error, Json}
+import io.circe.yaml.parser
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels._
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -685,6 +687,124 @@ object TestHelpers {
     Nil
   )
 
+  val dateAndDurationYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: date duration test
+     |  version: '1.0'
+     |paths:
+     |  /events:
+     |    post:
+     |      operationId: postEvent
+     |      requestBody:
+     |        required: true
+     |        content:
+     |          application/json:
+     |            schema:
+     |              $ref: '#/components/schemas/Event'
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/json:
+     |              schema:
+     |                $ref: '#/components/schemas/Event'
+     |  /events/{date}:
+     |    get:
+     |      operationId: getEventsByDate
+     |      parameters:
+     |      - name: date
+     |        in: path
+     |        required: true
+     |        schema:
+     |          type: string
+     |          format: date
+     |      - name: minDuration
+     |        in: query
+     |        required: false
+     |        schema:
+     |          type: string
+     |          format: duration
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/json:
+     |              schema:
+     |                type: array
+     |                items:
+     |                  $ref: '#/components/schemas/Event'
+     |components:
+     |  schemas:
+     |    Event:
+     |      required:
+     |      - name
+     |      - eventDate
+     |      - duration
+     |      type: object
+     |      properties:
+     |        name:
+     |          type: string
+     |        eventDate:
+     |          type: string
+     |          format: date
+     |        optionalDate:
+     |          type: string
+     |          format: date
+     |        duration:
+     |          type: string
+     |          format: duration
+     |        optionalDuration:
+     |          type: string
+     |          format: duration
+     |        scheduledAt:
+     |          type: string
+     |          format: date-time
+     |""".stripMargin
+
+  val dateAndDurationDefaultsYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: date defaults test
+     |  version: '1.0'
+     |paths:
+     |  /events:
+     |    post:
+     |      operationId: postEvent
+     |      requestBody:
+     |        required: true
+     |        content:
+     |          application/json:
+     |            schema:
+     |              $ref: '#/components/schemas/EventWithDefaults'
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/json:
+     |              schema:
+     |                $ref: '#/components/schemas/EventWithDefaults'
+     |components:
+     |  schemas:
+     |    EventWithDefaults:
+     |      required:
+     |      - name
+     |      type: object
+     |      properties:
+     |        name:
+     |          type: string
+     |        startDate:
+     |          type: string
+     |          format: date
+     |          default: '2024-01-15'
+     |        ttl:
+     |          type: string
+     |          format: duration
+     |          default: PT1H30M
+     |""".stripMargin
+
   val withDefaultsYaml =
     """
      |openapi: 3.1.0
@@ -1181,4 +1301,10 @@ object TestHelpers {
   val oneOfDocsWithMapping = genOneOfDocs(withDiscriminator = true, withMapping = true)
   val oneOfDocsWithDiscriminatorNoMapping = genOneOfDocs(withDiscriminator = true, withMapping = false)
   val oneOfDocsNoDiscriminator = genOneOfDocs(withDiscriminator = false, withMapping = false)
+
+  def parseYamlDocument(yaml: String): Either[Error, OpenapiDocument] =
+    parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
 }
