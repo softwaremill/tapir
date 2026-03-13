@@ -16,15 +16,14 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
   "com.softwaremill.sttp.client3" %% "http4s-backend" % "3.11.0",
   "io.circe" %% "circe-generic" % "0.14.15",
-  "com.beachape" %% "enumeratum" % "1.9.0",
-  "com.beachape" %% "enumeratum-circe" % "1.9.0",
+  "com.beachape" %% "enumeratum" % "1.9.6",
+  "com.beachape" %% "enumeratum-circe" % "1.9.6",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
 )
 
 import scala.io.Source
 import scala.util.Using
-
 
 TaskKey[Unit]("check") := {
   def check(generatedFileName: String, expectedFileName: String) = {

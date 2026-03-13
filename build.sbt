@@ -2192,8 +2192,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       }
     },
     libraryDependencies ++= Seq(
-      "com.beachape" %% "enumeratum" % "1.9.0" % Test,
-      "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
+      "com.beachape" %% "enumeratum" % "1.9.6" % Test,
+      "com.beachape" %% "enumeratum-circe" % "1.9.6" % Test,
       "io.circe" %% "circe-core" % Versions.circe,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
