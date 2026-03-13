@@ -92,12 +92,11 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         endpoint.get.in("hello").out(stringBody).handleSuccess(_ => "ok"),
         testNameSuffix = "properly log invalid requests when the URL is malformed"
       ) { (_, baseUri) =>
-        IO.blocking:
-          @scala.annotation.nowarn
-          val conn = new java.net.URL(s"$baseUri/hello?param=%%2G").openConnection().asInstanceOf[java.net.HttpURLConnection]
-          try
-            conn.getResponseCode() shouldBe 400
-          finally conn.disconnect
+        IO.blocking: @scala.annotation.nowarn
+        val conn = new java.net.URL(s"$baseUri/hello?param=%%2G").openConnection().asInstanceOf[java.net.HttpURLConnection]
+        try
+          conn.getResponseCode() shouldBe 400
+        finally conn.disconnect
       }
     )
 }
