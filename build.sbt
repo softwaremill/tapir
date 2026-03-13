@@ -556,7 +556,7 @@ lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-t
     name := "tapir-perf-tests-e2e",
     libraryDependencies ++= Seq(
       // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.5" % "test" exclude (
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.14.7" % "test" exclude (
         "com.fasterxml.jackson.core",
         "jackson-databind"
       ),
