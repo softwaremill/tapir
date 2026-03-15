@@ -35,6 +35,35 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
+  it should "generate class with date and duration fields" in {
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Nil,
+      Some(
+        OpenapiComponent(
+          Map(
+            "Event" -> OpenapiSchemaObject(
+              mutable.LinkedHashMap(
+                "name" -> noDefault(OpenapiSchemaString(false)),
+                "eventDate" -> noDefault(OpenapiSchemaDate(false)),
+                "optionalDate" -> noDefault(OpenapiSchemaDate(true)),
+                "duration" -> noDefault(OpenapiSchemaDuration(false)),
+                "optionalDuration" -> noDefault(OpenapiSchemaDuration(true))
+              ),
+              Seq("name", "eventDate", "duration"),
+              false
+            )
+          )
+        )
+      ),
+      Nil
+    )
+
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
+  }
+
   it should "generate simple enum" in {
     val doc = OpenapiDocument(
       "",
