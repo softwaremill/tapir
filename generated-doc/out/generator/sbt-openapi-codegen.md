@@ -11,7 +11,7 @@ incorrectly-implemented functionality are highly encouraged.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.13.11")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.13.12")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -194,5 +194,5 @@ We currently miss a few OpenApi features. Notable are:
 - anyOf
 - not all validation is supported (readOnly/writeOnly, and minProperties/maxProperties on heterogeneous object schemas,
   are currently unsupported)
-- missing model types (date, duration, etc)
+- some model types are not yet supported (e.g. `decimal`)
 
