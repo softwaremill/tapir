@@ -166,6 +166,18 @@ object TapirGeneratedEndpoints {
   )
   type ListType = List[ByteString]
   type SomeBinaryType = io.circe.JsonObject
+  sealed trait GetRedirectTestResponseHeader
+  case class GetRedirectTestResponseHeader307(redirectHeader: String) extends GetRedirectTestResponseHeader
+  case object GetRedirectTestResponseHeader204 extends GetRedirectTestResponseHeader
+
+  sealed trait PutRedirectTestResponseHeader
+  case class PutRedirectTestResponseHeader307(redirectHeader: String) extends PutRedirectTestResponseHeader
+  case object PutRedirectTestResponseHeader204 extends PutRedirectTestResponseHeader
+
+  sealed trait DeleteRedirectTestResponseHeader
+  case class DeleteRedirectTestResponseHeader307(redirectHeader: String,secondHeader: String) extends DeleteRedirectTestResponseHeader
+  case object DeleteRedirectTestResponseHeader204 extends DeleteRedirectTestResponseHeader
+
   case class PutInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -245,6 +257,34 @@ object TapirGeneratedEndpoints {
       .out(oneOf[Option[AnEnum]](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[AnEnum]].description("An enum")){ case Some(_: AnEnum) => true }))
+
+  type GetRedirectTestEndpoint = Endpoint[Unit, Unit, Unit, GetRedirectTestResponseHeader, Any]
+  lazy val getRedirectTest: GetRedirectTestEndpoint =
+    endpoint
+      .get
+      .in(("redirect" / "test"))
+      .out(oneOf[GetRedirectTestResponseHeader](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(GetRedirectTestResponseHeader204)){ case GetRedirectTestResponseHeader204 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(307), header[String]("redirectHeader").map(GetRedirectTestResponseHeader307(_))(_.redirectHeader)){ case (_: GetRedirectTestResponseHeader307) => true}))
+
+  type PutRedirectTestEndpoint = Endpoint[Unit, Unit, Unit, (Option[String], PutRedirectTestResponseHeader), Any]
+  lazy val putRedirectTest: PutRedirectTestEndpoint =
+    endpoint
+      .put
+      .in(("redirect" / "test"))
+      .out(oneOf[(Option[String], PutRedirectTestResponseHeader)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(None).description("No Content").and(emptyOutputAs(PutRedirectTestResponseHeader204))){ case (None, PutRedirectTestResponseHeader204) => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(307), jsonBody[Option[String]].description("Some redirect").and(header[String]("redirectHeader").map(PutRedirectTestResponseHeader307(_))(_.redirectHeader))){ case (Some(_: String), (_: PutRedirectTestResponseHeader307)) => true }))
+
+  type DeleteRedirectTestEndpoint = Endpoint[Unit, Unit, Unit, DeleteRedirectTestResponseHeader, Any]
+  lazy val deleteRedirectTest: DeleteRedirectTestEndpoint =
+    endpoint
+      .delete
+      .in(("redirect" / "test"))
+      .errorOut(statusCode(sttp.model.StatusCode(404)).description("Not found"))
+      .out(oneOf[DeleteRedirectTestResponseHeader](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(DeleteRedirectTestResponseHeader204)){ case DeleteRedirectTestResponseHeader204 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(307), (header[String]("redirectHeader").and(header[String]("secondHeader"))).map((DeleteRedirectTestResponseHeader307.apply _).tupled)(DeleteRedirectTestResponseHeader307.unapply(_).get)){ case (_: DeleteRedirectTestResponseHeader307) => true}))
 
   type PostGenericJsonEndpoint = Endpoint[Unit, (Option[List[AnEnum]], Option[io.circe.Json]), Unit, io.circe.Json, Any]
   lazy val postGenericJson: PostGenericJsonEndpoint =
@@ -351,7 +391,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[HasASet].description("OK"))
 
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
 
 
   object Servers {
