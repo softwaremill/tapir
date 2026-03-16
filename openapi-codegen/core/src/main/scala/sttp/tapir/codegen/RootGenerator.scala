@@ -7,7 +7,9 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaBinary,
   OpenapiSchemaBoolean,
   OpenapiSchemaByte,
+  OpenapiSchemaDate,
   OpenapiSchemaDateTime,
+  OpenapiSchemaDuration,
   OpenapiSchemaDouble,
   OpenapiSchemaFloat,
   OpenapiSchemaInt,
@@ -347,8 +349,12 @@ object RootGenerator {
         ("Int", nb)
       case OpenapiSchemaLong(nb, _) =>
         ("Long", nb)
+      case OpenapiSchemaDate(nb) =>
+        ("java.time.LocalDate", nb)
       case OpenapiSchemaDateTime(nb) =>
         ("java.time.Instant", nb)
+      case OpenapiSchemaDuration(nb) =>
+        ("java.time.Duration", nb)
       case OpenapiSchemaUUID(nb) =>
         ("java.util.UUID", nb)
       case OpenapiSchemaString(nb, _, _, _) =>
