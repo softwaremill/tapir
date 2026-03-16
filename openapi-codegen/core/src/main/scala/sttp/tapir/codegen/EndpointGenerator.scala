@@ -317,7 +317,7 @@ class EndpointGenerator {
           )
         } catch {
           case e: NotImplementedError => throw e
-          case e: Throwable           => bail(s"Unexpected error (${e.getMessage})")
+          case e: Throwable           => bail(s"Unexpected error (${e.getMessage})", Some(e))
         }
       }
       .unzip3
@@ -924,7 +924,7 @@ class EndpointGenerator {
             }
             .distinct
           val commmonType = {
-            if (allResponsesAreEmpty) "Unit"
+            if (allResponsesAreEmpty || allElemTypes.isEmpty) "Unit"
             else if (contentCanBeEmpty && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
             else if (allElemTypes.size == 1) allElemTypes.head
             else {
