@@ -637,6 +637,7 @@ class EndpointGenerator {
   )(implicit
       location: Location
   ) = {
+    def genHeader = headerDefns(targetScala3, jsonSerdeLib, doc, generateValidators) _
     // .errorOut(stringBody)
     // .out(oneOfBody(jsonBody[List[Book]]))
 
@@ -815,38 +816,18 @@ class EndpointGenerator {
           if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
           val contentCanBeEmpty = many.exists(_.content.isEmpty)
           val allResponsesAreEmpty = many.forall(o => o.content.isEmpty && o.headers.isEmpty)
-          val headerNamesAndTypes = many.map { m =>
-            m.headers
-              .filterNot(_._1.toLowerCase == "content-type")
-              .map { case (name, defn) =>
-                genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc, generateValidators)
-              }
-              .toSeq
-          }
-          val posn = if (isErrorPosition) "error" else "output"
-          // We can probably do better here, but it's very fiddly... For now, fail if we don't meet this condition
-          if (headerNamesAndTypes.map(_.map { case (name, _, defn) => name -> defn }.toSet).distinct.size != 1)
-            bail(s"Cannot generate code for differing response headers on $posn responses")
-          val commonResponseHeaders = headerNamesAndTypes.head
-          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = commonResponseHeaders.unzip3
-          val underscores = outHeaderDefns.map(_ => "_").mkString(", ")
-          val hs = outHeaderDefns.map(d => s".and($d)").mkString
-          def ht(wrap: Boolean = true) =
-            if (outHeaderTypes.isEmpty) None
-            else if (outHeaderTypes.size == 1) Some(outHeaderTypes.head)
-            else if (!wrap) Some(outHeaderTypes.mkString(", "))
-            else Some(s"(${outHeaderTypes.mkString(", ")})")
+          val (noHeaders, hs, outHeaderDefns, matchHeaders, headerTypes, headerTopType) = genHeader(endpointName, many, isErrorPosition)
           val (oneOfs, types, inlineDefns) = many.map { m =>
             val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = contentCanBeEmpty)
             val code = if (m.code == "default") "400" else m.code
-            if (decl == "" && allResponsesAreEmpty && commonResponseHeaders.isEmpty)
+            if (decl == "" && allResponsesAreEmpty && noHeaders)
               (
                 s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
                   s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(())""",
                 maybeBodyType,
                 inlineDefn1
               )
-            else if (decl == "" && commonResponseHeaders.isEmpty)
+            else if (decl == "" && noHeaders)
               (
                 s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
                   s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""",
@@ -858,13 +839,13 @@ class EndpointGenerator {
                 s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
                   s"""emptyOutputAs(None).description("${JavaEscape.escapeString(
                       m.description
-                    )}")$hs){ case (None, $underscores) => true}""",
+                    )}")$hs){ case (None, ${matchHeaders(m)}) => true}""",
                 maybeBodyType,
                 inlineDefn1
               )
             } else {
-              def withHeaderTypes(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, ${ht(false).get})"
-              def withUnderscores(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, $underscores)"
+              def bodyAndHeaderTypes(bodyType: String): String = if (noHeaders) bodyType else s"($bodyType, ${headerTypes(m)})"
+              def matchBodyAndHeaders(matchBody: String): String = if (noHeaders) matchBody else s"($matchBody, ${matchHeaders(m)})"
               val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
               val maybeStrict = if (tpeIsBin) ".toEndpointIO" else ""
               if (contentCanBeEmpty) {
@@ -872,13 +853,13 @@ class EndpointGenerator {
                 val maybeMap = if (m.content.size > 1 || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
                 (
-                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeStrict$maybeMap$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeStrict$maybeMap$hs){ case ${matchBodyAndHeaders(s"Some(_$someType)")} => true }",
                   maybeBodyType,
                   inlineDefn1
                 )
               } else
                 (
-                  s"oneOfVariant${maybeBodyType.map(s => s"[${withHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$maybeStrict$hs)",
+                  s"oneOfVariant${maybeBodyType.map(s => s"[${bodyAndHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$maybeStrict$hs)",
                   maybeBodyType,
                   inlineDefn1
                 )
@@ -937,11 +918,11 @@ class EndpointGenerator {
               if (contentCanBeEmpty) s"Option[$baseType]" else baseType
             }
           }
-          val oneOfType = if (commonResponseHeaders.isEmpty) commmonType else s"($commmonType, ${ht(false).get})"
+          val oneOfType = if (noHeaders) commmonType else s"($commmonType, $headerTopType)"
           (
             Some(s"oneOf[$oneOfType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
             Some(oneOfType),
-            (inlineDefns ++ outHeaderInlineEnums.map(_.map(_.mkString("\n")))).foldLeft(Option.empty[String])(combine(_, _))
+            (inlineDefns ++ outHeaderDefns).foldLeft(Option.empty[String])(combine(_, _))
           )
       }
 
@@ -951,6 +932,44 @@ class EndpointGenerator {
     val mappedErrorOuts = errDecls.map(s => s".errorOut($s)")
 
     (Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n"), outTypes, errTypes, combine(inlineOutDefns, inlineErrDefns))
+  }
+
+  private def headerDefns(targetScala3: Boolean, jsonSerdeLib: JsonSerdeLib, doc: OpenapiDocument, generateValidators: Boolean)(
+      endpointName: String,
+      many: Seq[OpenapiResponseDef],
+      isErrorPosition: Boolean
+  )(implicit
+      location: Location
+  ): (Boolean, String, Seq[Option[String]], OpenapiResponseDef => String, OpenapiResponseDef => String, String) = {
+    val headerNamesAndTypes = many.map { m =>
+      m.headers
+        .filterNot(_._1.toLowerCase == "content-type")
+        .map { case (name, defn) =>
+          genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc, generateValidators)
+        }
+        .toSeq
+    }
+    val posn = if (isErrorPosition) "error" else "output"
+    // We can probably do better here, but it's very fiddly... For now, fail if we don't meet this condition
+    if (headerNamesAndTypes.map(_.map { case (name, _, defn) => name -> defn }.toSet).distinct.size != 1) {
+      bail(s"Cannot generate code for differing response headers on $posn responses")
+    } else {
+      val commonResponseHeaders = headerNamesAndTypes.head
+      val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = commonResponseHeaders.unzip3
+      val underscores = outHeaderDefns.map(_ => "_").mkString(", ")
+      val hs = outHeaderDefns.map(d => s".and($d)").mkString
+      val noHeaders = commonResponseHeaders.isEmpty
+
+      def ht(m: OpenapiResponseDef) =
+        if (outHeaderTypes.isEmpty) bail("Should not try to construct header types if no headers are required")
+        else if (outHeaderTypes.size == 1) outHeaderTypes.head
+        else s"(${outHeaderTypes.mkString(", ")})"
+
+      val headerTopType = if (outHeaderTypes.isEmpty) "Unit" else ht(null)
+
+      val enumDefns = outHeaderInlineEnums.map(_.map(_.mkString("\n")))
+      (noHeaders, hs, enumDefns, (_: OpenapiResponseDef) => underscores, ht, headerTopType)
+    }
   }
 
   private def inlineDefn(endpointName: String, position: Position, schemaRef: OpenapiSchemaObject) = {
