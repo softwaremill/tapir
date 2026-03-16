@@ -957,6 +957,7 @@ class EndpointGenerator {
           param.name -> genParamDefn(endpointName, targetScala3, jsonSerdeLib, param, doc, generateValidators)
         }
         .toSeq
+        .sortBy(_._1)
         .unzip
     }.unzip
     val posn = if (isErrorPosition) "error" else "output"
@@ -994,7 +995,7 @@ class EndpointGenerator {
             val output =
               if (s.size == 1) s"$rawOutput.map($className(_))(_.${names.head})"
               else s"($rawOutput).map(($className.apply _).tupled)($className.unapply(_).get)"
-            val fields = names.zip(headerTypes).map { case (n, t) => s"$n: $t" }.mkString(",")
+            val fields = names.zip(headerTypes).map { case (n, t) => s"$n: $t" }.mkString(", ")
             (output, s"""case class $traitName$c($fields) extends $traitName""", headerInlineEnums.flatten.flatten)
         }
         .unzip3

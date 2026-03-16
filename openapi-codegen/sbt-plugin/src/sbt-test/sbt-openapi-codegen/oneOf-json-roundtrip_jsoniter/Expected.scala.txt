@@ -175,7 +175,7 @@ object TapirGeneratedEndpoints {
   case object PutRedirectTestResponseHeader204 extends PutRedirectTestResponseHeader
 
   sealed trait DeleteRedirectTestResponseHeader
-  case class DeleteRedirectTestResponseHeader307(redirectHeader: String,secondHeader: String) extends DeleteRedirectTestResponseHeader
+  case class DeleteRedirectTestResponseHeader307(redirectHeader: String, secondHeader: String) extends DeleteRedirectTestResponseHeader
   case object DeleteRedirectTestResponseHeader204 extends DeleteRedirectTestResponseHeader
 
   case class PutInlineSimpleObjectRequest (
