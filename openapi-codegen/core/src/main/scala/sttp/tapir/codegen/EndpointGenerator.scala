@@ -838,9 +838,9 @@ class EndpointGenerator {
             else if (decl == "") {
               val s =
                 if (allBodiesAreEmpty)
-                  // .description("${JavaEscape.escapeString(m.description)}")
                   s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
-                    s"""${hs(m)}){ case ${matchHeaders(m)} => true}"""
+                    s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}")""" +
+                    s""".and(${hs(m)})){ case ${matchHeaders(m)} => true}"""
                 else
                   s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
                     s"""emptyOutputAs(None).description("${JavaEscape.escapeString(

@@ -264,8 +264,8 @@ object TapirGeneratedEndpoints {
       .get
       .in(("redirect" / "test"))
       .out(oneOf[GetRedirectTestResponseHeader](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(GetRedirectTestResponseHeader204)){ case GetRedirectTestResponseHeader204 => true},
-        oneOfVariantValueMatcher(sttp.model.StatusCode(307), header[String]("redirectHeader").map(GetRedirectTestResponseHeader307(_))(_.redirectHeader)){ case (_: GetRedirectTestResponseHeader307) => true}))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutput.description("No Content").and(emptyOutputAs(GetRedirectTestResponseHeader204))){ case GetRedirectTestResponseHeader204 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(307), emptyOutput.description("Some redirect").and(header[String]("redirectHeader").map(GetRedirectTestResponseHeader307(_))(_.redirectHeader))){ case (_: GetRedirectTestResponseHeader307) => true}))
 
   type PutRedirectTestEndpoint = Endpoint[Unit, Unit, Unit, (Option[String], PutRedirectTestResponseHeader), Any]
   lazy val putRedirectTest: PutRedirectTestEndpoint =
@@ -283,8 +283,8 @@ object TapirGeneratedEndpoints {
       .in(("redirect" / "test"))
       .errorOut(statusCode(sttp.model.StatusCode(404)).description("Not found"))
       .out(oneOf[DeleteRedirectTestResponseHeader](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(DeleteRedirectTestResponseHeader204)){ case DeleteRedirectTestResponseHeader204 => true},
-        oneOfVariantValueMatcher(sttp.model.StatusCode(307), (header[String]("redirectHeader").and(header[String]("secondHeader"))).map((DeleteRedirectTestResponseHeader307.apply _).tupled)(DeleteRedirectTestResponseHeader307.unapply(_).get)){ case (_: DeleteRedirectTestResponseHeader307) => true}))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutput.description("No Content").and(emptyOutputAs(DeleteRedirectTestResponseHeader204))){ case DeleteRedirectTestResponseHeader204 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(307), emptyOutput.description("Some redirect").and((header[String]("redirectHeader").and(header[String]("secondHeader"))).map((DeleteRedirectTestResponseHeader307.apply _).tupled)(DeleteRedirectTestResponseHeader307.unapply(_).get))){ case (_: DeleteRedirectTestResponseHeader307) => true}))
 
   type PostGenericJsonEndpoint = Endpoint[Unit, (Option[List[AnEnum]], Option[io.circe.Json]), Unit, io.circe.Json, Any]
   lazy val postGenericJson: PostGenericJsonEndpoint =
