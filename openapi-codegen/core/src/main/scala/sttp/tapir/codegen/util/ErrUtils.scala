@@ -5,5 +5,9 @@ case class Location(path: String, method: String) {
 }
 
 object ErrUtils {
-  def bail(msg: String)(implicit location: Location): Nothing = throw new NotImplementedError(s"$msg at $location")
+  def bail(msg: String, maybeCause: Option[Throwable] = None)(implicit location: Location): Nothing = {
+    val err = new NotImplementedError(s"$msg at $location")
+    maybeCause.foreach(err.initCause)
+    throw err
+  }
 }
