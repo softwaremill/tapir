@@ -369,6 +369,9 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit lazy val schemaForLocalTime: Schema[LocalTime] = Schema(SString())
   implicit lazy val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString())
 
+  // Period represents ISO 8601 ABNF "duration" format, supported in JsonSchema
+  implicit lazy val schemaForPeriod: Schema[Period] = Schema(SString()).format("duration")
+
   implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString())
   implicit val schemaForUUID: Schema[UUID] = Schema(SString[UUID]()).format("uuid")
   implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SNumber())
