@@ -156,6 +156,8 @@ object JsonSerdeGenerator {
         case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
         case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       }
+      .toSeq
+      .sorted
       .foldLeft(Option.empty[String]) {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
@@ -295,7 +297,8 @@ object JsonSerdeGenerator {
         val name = s.replace(" ", "").replace(",", "_").replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
         s"""implicit lazy val $name: $jsoniterPkgCore.JsonValueCodec[$s] =
            |  $jsoniterPkgMacros.JsonCodecMaker.make[$s]""".stripMargin
-      } ++ maybeAnySerde)
+      }
+      .sorted ++ maybeAnySerde)
       .mkString("", "\n", "\n")
 
     // Permits usage of Option/Seq wrapped classes at top level without having to be explicit
@@ -346,6 +349,7 @@ object JsonSerdeGenerator {
     }
     (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
       .flatMap { (getSerdeString _).tupled }
+      .sorted
       .foldLeft(Option.empty[String]) {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
@@ -504,6 +508,8 @@ object JsonSerdeGenerator {
         case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
         case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       }
+      .toSeq
+      .sorted
       .foldLeft(Option.empty[String]) {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)

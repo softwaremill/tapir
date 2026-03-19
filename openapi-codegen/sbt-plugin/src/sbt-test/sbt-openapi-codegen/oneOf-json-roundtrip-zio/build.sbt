@@ -1,7 +1,7 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.13",
+    scalaVersion := "2.13.18",
     version := "0.1",
     openapiJsonSerdeLib := "zio"
   )
@@ -21,7 +21,7 @@ import scala.util.Using
 TaskKey[Unit]("check") := {
   def check(generatedFileName: String, expectedFileName: String) = {
     val generatedCode =
-      Using(Source.fromFile(s"target/scala-2.13/src_managed/main/sbt-openapi-codegen/$generatedFileName"))(_.getLines.mkString("\n")).get
+      Using(Source.fromFile(s"${sourceManaged.value}/main/sbt-openapi-codegen/$generatedFileName"))(_.getLines.mkString("\n")).get
     val expectedCode = Using(Source.fromFile(expectedFileName))(_.getLines.mkString("\n")).get
     val generatedTrimmed =
       generatedCode.linesIterator.zipWithIndex.filterNot(_._1.isBlank).map { case (a, i) => a.trim -> i }.toSeq

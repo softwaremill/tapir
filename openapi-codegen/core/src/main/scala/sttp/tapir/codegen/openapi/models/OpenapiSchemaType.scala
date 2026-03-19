@@ -93,6 +93,9 @@ object OpenapiSchemaType {
   case class OpenapiSchemaDateTime(
       nullable: Boolean
   ) extends OpenapiSchemaStringType
+  case class OpenapiSchemaDuration(
+      nullable: Boolean
+  ) extends OpenapiSchemaStringType
   case class OpenapiSchemaByte(
       nullable: Boolean
   ) extends OpenapiSchemaStringType
@@ -232,6 +235,7 @@ object OpenapiSchemaType {
       ) {
         case "date"      => OpenapiSchemaDate(p._2)
         case "date-time" => OpenapiSchemaDateTime(p._2)
+        case "duration"  => OpenapiSchemaDuration(p._2)
         case "byte"      => OpenapiSchemaByte(p._2)
         case "binary"    => OpenapiSchemaBinary(p._2)
         case "uuid"      => OpenapiSchemaUUID(p._2)

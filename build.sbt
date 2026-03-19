@@ -17,11 +17,12 @@ import scala.sys.process.Process
 val scala2_12 = "2.12.21"
 val scala2_13 = "2.13.18"
 val scala3 = "3.3.7"
+val scala3_7 = "3.7.4"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
 val scala2_13And3Versions = List(scala2_13, scala3)
-val codegenScalaVersions = List(scala2_12)
+val codegenScalaVersions = List(scala2_12, scala3)
 
 val examplesScalaVersion = scala3
 val documentationScalaVersion = scala3
@@ -254,7 +255,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   playClient.projectRefs ++
   play29Client.projectRefs ++
   tests.projectRefs ++
-  perfTests.projectRefs ++
+  perfTestsE2e.projectRefs ++
+  perfTestsMicro.projectRefs ++
   examples.projectRefs ++
   documentation.projectRefs ++
   openapiCodegenCore.projectRefs ++
@@ -451,7 +453,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
           Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.18")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.10",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.13",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -547,11 +549,11 @@ lazy val perfServerJavaOptions = List(
   "-XX:+AlwaysPreTouch"
 )
 
-lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
+lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-tests-e2e"))
   .enablePlugins(GatlingPlugin)
   .settings(commonSettings)
   .settings(
-    name := "tapir-perf-tests",
+    name := "tapir-perf-tests-e2e",
     libraryDependencies ++= Seq(
       // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
       "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.5" % "test" exclude (
@@ -559,7 +561,7 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.0",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.184",
@@ -591,6 +593,20 @@ lazy val perfTests: ProjectMatrix = (projectMatrix in file("perf-tests"))
     vertxServerCats,
     nimaServer
   )
+
+lazy val perfTestsMicro: ProjectMatrix = (projectMatrix in file("perf-tests/perf-tests-micro"))
+  .enablePlugins(JmhPlugin)
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-perf-tests-micro",
+    libraryDependencies ++= Seq(
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % Versions.jsoniter,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % Versions.jsoniter
+    ),
+    publishArtifact := false
+  )
+  .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
+  .dependsOn(core, jsoniterScala)
 
 // integrations
 
@@ -1030,7 +1046,7 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
   .settings(
     name := "tapir-pekko-grpc-examples",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-discovery" % "1.2.0",
+      "org.apache.pekko" %% "pekko-discovery" % "1.4.0",
       slf4j
     ),
     fork := true
@@ -2160,7 +2176,24 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
   .jvmPlatform(scalaVersions = codegenScalaVersions, settings = commonJvmSettings)
   .settings(
     name := "tapir-openapi-codegen-core",
+    Test / fork := true,
+    libraryDependencies ++= {
+      if (scalaBinaryVersion.value == "3") {
+        Seq(
+          "io.github.bishabosha" %% "enum-extensions" % "0.1.1" % Test,
+          "org.latestbit" %% "circe-tagged-adt-codec" % "0.11.0" % Test,
+          scalaOrganization.value %% "scala3-compiler" % scalaVersion.value % Test
+        )
+      } else {
+        Seq(
+          scalaOrganization.value % "scala-reflect" % scalaVersion.value,
+          scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test
+        )
+      }
+    },
     libraryDependencies ++= Seq(
+      "com.beachape" %% "enumeratum" % "1.9.0" % Test,
+      "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
       "io.circe" %% "circe-core" % Versions.circe,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
@@ -2168,12 +2201,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      scalaOrganization.value % "scala-reflect" % scalaVersion.value,
-      scalaOrganization.value % "scala-compiler" % scalaVersion.value % Test,
-      "com.beachape" %% "enumeratum" % "1.9.0" % Test,
-      "com.beachape" %% "enumeratum-circe" % "1.9.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.7" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.7" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.9" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.9" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
@@ -2183,6 +2212,13 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
   .settings(commonSettings)
   .jvmPlatform(scalaVersions = codegenScalaVersions, settings = commonJvmSettings)
   .settings(
+    // This is surprising -- you would probably expect to just have 'val codegenScalaVersions = List(scala2_12, scala3_7)'
+    // If we try that, however, we get an error running `openapiCodegenSbt3/scripted` like the following:
+    // > Modules were resolved with conflicting cross-version suffixes in ProjectRef(uri("file:/..snip../tapir/"), "openapiCodegenCore3")
+    // >   io.circe:circe-parser _2.13, _3
+    // >   org.scala-lang.modules:scala-collection-compat _3, _2.13
+    // ... etc
+    scalaVersion := (if (scalaVersion.value.startsWith("3")) scala3_7 else scalaVersion.value),
     name := "sbt-openapi-codegen",
     sbtPlugin := true,
     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
@@ -2190,14 +2226,27 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       .filter(a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)),
     scriptedBufferLog := false,
     sbtTestDirectory := sourceDirectory.value / "sbt-test",
+    libraryDependencies ++= (if (scalaBinaryVersion.value == "3") Nil
+                             else Seq("org.scala-lang" % "scala-compiler" % scalaVersion.value % Test)),
     libraryDependencies ++= Seq(
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test
     ),
-    sbtPluginPublishLegacyMavenStyle := false // required by sonatype central
+    sbtPluginPublishLegacyMavenStyle := false, // required by sonatype central
+    (pluginCrossBuild / sbtVersion) := {
+      scalaBinaryVersion.value match {
+        case "2.12" => "1.12.4"
+        case _      => "2.0.0-RC8"
+      }
+    },
+    scriptedSbt := {
+      scalaBinaryVersion.value match {
+        case "2.12" => "1.12.4"
+        case _      => (pluginCrossBuild / sbtVersion).value
+      }
+    }
   )
   .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
 

@@ -17,7 +17,8 @@ jobs:
     if: |
       github.event_name == 'push' || 
       github.event.pull_request.head.repo.full_name != github.repository ||
-      github.event.pull_request.user.login == 'softwaremill-ci'
+      github.event.pull_request.user.login == 'softwaremill-ci' ||
+      github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -37,9 +38,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v6
-    - uses: sbt/setup-sbt@a627500d27445f8c5021755a439829b6e78e3358 # v1, specifically v1.1.15
+    - uses: sbt/setup-sbt@6bec67c98f542b9e17369bfca0ec822ac1363194 # v1, specifically v1.1.19
     - name: Set up JDK 
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         distribution: 'temurin'
         cache: 'sbt'
@@ -70,7 +71,7 @@ jobs:
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Install scala-cli
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
-      uses: VirtusLab/scala-cli-setup@89a48599f871d08573707e82bdcefbce839de436 # main, specifically v1.11.0
+      uses: VirtusLab/scala-cli-setup@59e308800210b0414d2d7190068c80021e1b3e5d # main, specifically v1.12.4
       with:
         jvm: '' # needed because scala-cli-setup otherwise forces the installation of their default JVM (17)
     - name: Enable Loom-specific modules
@@ -103,8 +104,8 @@ jobs:
             exit 1
           fi
     - name: Test OpenAPI codegen
-      if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
-      run: sbt $SBT_JAVA_OPTS -v "openapiCodegenSbt2_12/scripted"                
+      if: matrix.target-platform == 'JVM' && (matrix.scala-version == '2.12' || matrix.scala-version == '3')
+      run: sbt $SBT_JAVA_OPTS -v $(sed 's/\./_/' <<<"openapiCodegenSbt${{ matrix.scala-version }}/scripted")
     # The finatra tests take a really long time (1/3 of the build duration); hence, they are disabled and need to be run separately
     #- name: Test finatra
     #  if: matrix.target-platform != 'JS'
@@ -120,13 +121,13 @@ jobs:
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test
-    - uses: actions/upload-artifact@v6  # upload test results
+    - uses: actions/upload-artifact@v7  # upload test results
       if: success() || failure()        # run this step even if previous step failed
       with:
         name: 'tests-results-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'
         path: '**/test-reports/TEST*.xml'
     - name: Prepare release notes
-      uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5 # v6, specifically v6.1.0
+      uses: release-drafter/release-drafter@6a93d829887aa2e0748befe2e808c66c0ec6e4c7 # v6, specifically v6.4.0
       with:
         config-name: release-drafter.yml
       env:
@@ -150,9 +151,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - uses: sbt/setup-sbt@a627500d27445f8c5021755a439829b6e78e3358 # v1, specifically v1.1.15
+      - uses: sbt/setup-sbt@6bec67c98f542b9e17369bfca0ec822ac1363194 # v1, specifically v1.1.19
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
@@ -186,7 +187,7 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - name: Publish release notes
         if: matrix.java == '11'
-        uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5 # v6, specifically v6.1.0
+        uses: release-drafter/release-drafter@6a93d829887aa2e0748befe2e808c66c0ec6e4c7 # v6, specifically v6.4.0
         with:
           config-name: release-drafter.yml
           publish: true
@@ -214,4 +215,5 @@ jobs:
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     needs: [ ci, mima ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
-    secrets: inherit
+    secrets:
+      github-token: ${{ secrets.SOFTWAREMILL_CI_PR_TOKEN }}

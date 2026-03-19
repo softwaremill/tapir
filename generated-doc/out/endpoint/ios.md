@@ -159,7 +159,7 @@ val userInput: EndpointInput[User] =
 
 Similarly, endpoint outputs can be derived using `EndpointOutput.derived[...]`.
 
-Following annotations are available in package `sttp.tapir.annotations` for describing both input and output values:
+Following annotations are available in package `sttp.tapir.EndpointIO.annotations` for describing both input and output values:
 
 * `@header` captures a header with the same name as name of annotated field in a case class. This annotation
 can also be used with optional parameter `@header("headerName")` in order to capture a header with name `"headerName"`

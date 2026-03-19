@@ -20,9 +20,10 @@ openapiGenerateEndpointTypes := true
 import scala.io.Source
 import scala.util.Using
 
+
 TaskKey[Unit]("check") := {
   val generatedCode =
-    Using(Source.fromFile("target/scala-3.3.1/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala"))(
+    Using(Source.fromFile(s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala"))(
       _.getLines.mkString("\n")
     ).get
   val expected = Using(Source.fromFile("Expected.scala.txt"))(_.getLines.mkString("\n")).get

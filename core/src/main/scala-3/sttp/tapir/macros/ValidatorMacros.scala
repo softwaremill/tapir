@@ -43,7 +43,7 @@ private[tapir] object ValidatorMacros {
     val name = '{ Option(Schema.SName(${ Expr(symbol.fullName) })) }
 
     '{
-      Validator.Enumeration[T](
+      Validator.Enumeration.documentationOnly[T](
         List(${ Varargs(instances) }: _*).asInstanceOf[List[T]],
         None,
         ${ name }

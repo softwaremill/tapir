@@ -6,7 +6,9 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
   OpenapiSchemaBoolean,
+  OpenapiSchemaDate,
   OpenapiSchemaDateTime,
+  OpenapiSchemaDuration,
   OpenapiSchemaDouble,
   OpenapiSchemaEnum,
   OpenapiSchemaFloat,
@@ -34,7 +36,9 @@ object DefaultValueRenderer {
         renderStringWithName(value)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
       case OpenapiSchemaString(_, _, _, _) => '"' +: value :+ '"'
       case OpenapiSchemaEnum(_, _, _)      => s"$name.$value"
+      case OpenapiSchemaDate(_)             => s"""java.time.LocalDate.parse("$value")"""
       case OpenapiSchemaDateTime(_)        => s"""java.time.Instant.parse("$value")"""
+      case OpenapiSchemaDuration(_)        => s"""java.time.Duration.parse("$value")"""
       case OpenapiSchemaBinary(_)          => s""""$value".getBytes("utf-8")"""
       case OpenapiSchemaUUID(_)            => s"""java.util.UUID.fromString("$value")"""
       case other => throw new IllegalArgumentException(s"Cannot render ${value} as type ${other.getClass.getName}")
@@ -94,7 +98,9 @@ object DefaultValueRenderer {
             case ref: OpenapiSchemaRef =>
               renderStringWithName(jsonString)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
             case OpenapiSchemaString(_, _, _, _)                              => '"' +: jsonString :+ '"'
+            case OpenapiSchemaDate(_)                                         => s"""java.time.LocalDate.parse("$jsonString")"""
             case OpenapiSchemaDateTime(_)                                     => s"""java.time.Instant.parse("$jsonString")"""
+            case OpenapiSchemaDuration(_)                                     => s"""java.time.Duration.parse("$jsonString")"""
             case OpenapiSchemaBinary(_)                                       => s""""$jsonString".getBytes("utf-8")"""
             case OpenapiSchemaUUID(_)                                         => s"""java.util.UUID.fromString("$jsonString")"""
             case OpenapiSchemaAllOf(Seq(singleElement))                       => render(allModels, singleElement, false, config)(json)

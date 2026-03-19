@@ -4,3 +4,13 @@
 $ copy-file target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala target/TapirGeneratedEndpoints.scala
 > compile
 $ newer target/TapirGeneratedEndpoints.scala target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala
+
+# Verify that code generation is skipped on unchanged inputs.
+# The snapshot is taken after the first run; if generation ran again on the
+# second call, the generated file would be newer than the snapshot.
+> clean
+> generateTapirDefinitions
+$ sleep 1000
+$ copy-file target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala target/TapirGeneratedEndpoints.scala
+> generateTapirDefinitions
+$ newer target/TapirGeneratedEndpoints.scala target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala
