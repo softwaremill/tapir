@@ -7,7 +7,7 @@ lazy val root = (project in file("."))
     openapiGenerateEndpointTypes := true
   )
 
-val tapirVersion = "1.13.12"
+val tapirVersion = "1.13.13"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
@@ -24,7 +24,6 @@ libraryDependencies ++= Seq(
 
 import scala.io.Source
 import scala.util.Using
-
 
 TaskKey[Unit]("check") := {
   def check(generatedFileName: String, expectedFileName: String) = {
