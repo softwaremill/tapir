@@ -38,6 +38,19 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ADTWithoutDiscriminator'
+  '/dynamic/content-type/test':
+    get:
+      ## For now, headers aren't really supported on streaming endpoints, but the wildcard in the content requires we add one
+      x-tapir-codegen-directives:
+        - force-resp-body-eager
+      responses:
+        "200":
+          description: No Content
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
   '/oneof/option/test':
     get:
       responses:

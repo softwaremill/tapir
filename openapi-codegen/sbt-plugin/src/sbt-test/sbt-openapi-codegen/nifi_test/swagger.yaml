@@ -3589,6 +3589,9 @@ paths:
           name: rootFieldName
           schema:
             type: string
+      ## For now, headers aren't really supported on streaming endpoints, and the wildcard in the content requires we add one
+      x-tapir-codegen-directives:
+        - force-resp-body-eager
       responses:
         "200":
           content:

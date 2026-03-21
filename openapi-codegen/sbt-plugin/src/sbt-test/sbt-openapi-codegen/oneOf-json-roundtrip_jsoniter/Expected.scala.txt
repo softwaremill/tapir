@@ -17,6 +17,9 @@ object TapirGeneratedEndpoints {
   case class `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "vnd.openxmlformats-officedocument.spreadsheetml.sheet")
   }
+  case class `image/*CodecFormat`() extends CodecFormat {
+    override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "image", subType = "*")
+  }
   case class `text/csvCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "text", subType = "csv")
   }
@@ -231,7 +234,8 @@ object TapirGeneratedEndpoints {
     override def `text/csv`: () => String = () => value
   }
 
-
+  type TapirCodegenDirectivesExtension = Seq[String]
+  val tapirCodegenDirectivesExtensionKey = new sttp.tapir.AttributeKey[TapirCodegenDirectivesExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.TapirCodegenDirectivesExtension")
 
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
@@ -248,6 +252,14 @@ object TapirGeneratedEndpoints {
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
+
+  type GetDynamicContentTypeTestEndpoint = Endpoint[Unit, Unit, Unit, (Array[Byte], String), Any]
+  lazy val getDynamicContentTypeTest: GetDynamicContentTypeTestEndpoint =
+    endpoint
+      .get
+      .in(("dynamic" / "content-type" / "test"))
+      .out(EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `image/*CodecFormat`](`image/*CodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("No Content").and(header[String]("Content-Type").validate(Validator.pattern("image/([^*]+|[*])"))))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-resp-body-eager"))
 
   type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnEnum], Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
@@ -391,7 +403,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[HasASet].description("OK"))
 
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getDynamicContentTypeTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
 
 
   object Servers {
