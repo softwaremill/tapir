@@ -20,7 +20,6 @@ import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
   forceRespStreaming,
   forceStreaming
 }
-import sttp.tapir.codegen.util.MapUtils
 
 import scala.collection.mutable
 // https://swagger.io/specification/

@@ -282,7 +282,10 @@ class EndpointGenerator {
 
           val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
           val queryOrPathParamRefs = m.resolvedParameters
-            .collect { case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" => queryParam.schema }
+            .collect {
+              case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" || queryParam.in == "header" =>
+                queryParam.schema
+            }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
@@ -611,7 +614,7 @@ class EndpointGenerator {
     atts
       .map { case (k, v) =>
         val camelCaseK = strippedToCamelCase(k)
-        val uncapitalisedName = camelCaseK.head.toLower + camelCaseK.tail
+        val uncapitalisedName = camelCaseK.head.toLower +: camelCaseK.tail
         s""".attribute[${camelCaseK.capitalize}Extension](${uncapitalisedName}ExtensionKey, ${SpecificationExtensionRenderer.renderValue(
             v
           )})"""
@@ -814,7 +817,7 @@ class EndpointGenerator {
           val allBodiesAreEmpty = many.forall(_.content.isEmpty)
           val allResponsesAreEmpty = allBodiesAreEmpty && many.forall(_.getHeaders.isEmpty)
           val (noHeaders, hs, outHeaderDefns, matchHeaders, headerTypes, headerTopType) =
-            headerDefns(targetScala3, jsonSerdeLib, doc, generateValidators)(endpointName, many, isErrorPosition)
+            headerDefns(targetScala3, jsonSerdeLib, doc, generateValidators)(endpointName, many)
           val (oneOfs, types, inlineDefns) = many.map { m =>
             val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = contentCanBeEmpty)
             val code = if (m.code == "default") "400" else m.code
@@ -941,8 +944,7 @@ class EndpointGenerator {
 
   private def headerDefns(targetScala3: Boolean, jsonSerdeLib: JsonSerdeLib, doc: OpenapiDocument, generateValidators: Boolean)(
       endpointName: String,
-      many: Seq[OpenapiResponseDef],
-      isErrorPosition: Boolean
+      many: Seq[OpenapiResponseDef]
   )(implicit
       location: Location
   ): (Boolean, OpenapiResponseDef => String, Seq[Option[String]], OpenapiResponseDef => String, OpenapiResponseDef => String, String) = {

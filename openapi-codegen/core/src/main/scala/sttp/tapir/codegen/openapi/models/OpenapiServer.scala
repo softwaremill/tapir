@@ -1,8 +1,5 @@
 package sttp.tapir.codegen.openapi.models
 
-import io.circe.generic.semiauto.deriveDecoder
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaEnum
-
 case class OpenapiServerEnum(`enum`: Seq[String] = Nil, default: Option[String] = None)
 object OpenapiServerEnum {
   import io.circe._
