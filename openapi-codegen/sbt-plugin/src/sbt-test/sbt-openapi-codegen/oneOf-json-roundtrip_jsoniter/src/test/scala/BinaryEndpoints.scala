@@ -147,4 +147,33 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
     Await.result(doPost3, 5.seconds)
     Await.result(doPost4, 5.seconds)
   }
+  "dynamic response content-type works" in {
+    def responseStream =
+      Source[ByteString](immutable.Iterable.fill(100)(ByteString("CHUNK")))
+    val route =
+      TapirGeneratedEndpoints.getDynamicContentTypeTest
+        .serverLogicSuccess[Future]({ _ =>
+          Future.successful(responseStream -> "image/png")
+        })
+    val stub = TapirStubInterpreter(SttpBackendStub[Future, PekkoStreams](new FutureMonad()))
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+
+    def doPost = sttp.client3.basicRequest
+      .get(uri"http://test.com/dynamic/content-type/test")
+      .response(asStringAlways)
+      .header("accept", "*/*")
+      .response(sttp.client3.asStreamAlwaysWithMetadata(PekkoStreams) { case (s, meta) => Future.successful(s -> meta.header("content-type")) })
+      .send[Future, PekkoStreams](stub)
+      .map { resp =>
+        resp.code.code shouldEqual 200
+        val b = Await.result(resp.body._1.runFold(Seq.empty[String])((l, a) => l :+ a.utf8String), 5.seconds)
+        b shouldEqual (immutable.Iterable
+          .fill(100)(ByteString("CHUNK").utf8String)
+          .toSeq)
+        resp.body._2 shouldEqual Some("image/png")
+      }
+    Await.result(doPost, 5.seconds)
+  }
 }

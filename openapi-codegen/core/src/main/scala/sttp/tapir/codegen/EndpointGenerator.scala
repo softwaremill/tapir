@@ -758,9 +758,9 @@ class EndpointGenerator {
           )
       }
     }
-    def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) =
+    def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): MappedOutGroup =
       group match {
-        case Nil         => (None, None, None)
+        case Nil         => MappedOutGroup(None, None, None)
         case resp +: Nil =>
           val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.getHeaders.map { case (name, defn) =>
             genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc, generateValidators)
@@ -778,7 +778,7 @@ class EndpointGenerator {
           resp.content match {
             case Nil =>
               val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
-              (
+              MappedOutGroup(
                 resp.code match {
                   case "200" | "default" if outHeaderDefns.isEmpty => None
                   case "200"                                       => Some(s"statusCode(sttp.model.StatusCode(200))$d$hs")
@@ -796,12 +796,13 @@ class EndpointGenerator {
                 else if (maybeBodyType.isEmpty) ht()
                 else maybeBodyType.map(t => s"($t, ${ht(false).get})")
               val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
-              (
+              MappedOutGroup(
                 Some(resp.code match {
-                  case "200" | "default"       => s"$decl$hs"
-                  case okStatus(s) if tpeIsBin => s"$decl.toEndpointIO$hs.and(statusCode(sttp.model.StatusCode($s)))"
-                  case okStatus(s)             => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
-                  case errorStatus(s)          => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case "200" | "default" if !tpeIsBin || hs.isEmpty => s"$decl$hs"
+                  case "200" | "default"                            => s"$decl.toEndpointIO$hs"
+                  case okStatus(s) if tpeIsBin                      => s"$decl.toEndpointIO$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case okStatus(s)                                  => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case errorStatus(s)                               => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
                 }),
                 tpe,
                 inlineDefn.map(_ ++ inlineHeaderEnumDefns.getOrElse("")).orElse(inlineHeaderEnumDefns)
@@ -923,16 +924,16 @@ class EndpointGenerator {
             }
           }
           val oneOfType = if (noHeaders) commmonType else if (allBodiesAreEmpty) headerTopType else s"($commmonType, $headerTopType)"
-          (
+          MappedOutGroup(
             Some(s"oneOf[$oneOfType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
             Some(oneOfType),
             (inlineDefns ++ outHeaderDefns).foldLeft(Option.empty[String])(combine(_, _))
           )
       }
 
-    val (outDecls, outTypes, inlineOutDefns) = mappedGroup(outs, false)
+    val MappedOutGroup(outDecls, outTypes, inlineOutDefns) = mappedGroup(outs, false)
     val mappedOuts = outDecls.map(s => s".out($s)")
-    val (errDecls, errTypes, inlineErrDefns) = mappedGroup(errorOuts, true)
+    val MappedOutGroup(errDecls, errTypes, inlineErrDefns) = mappedGroup(errorOuts, true)
     val mappedErrorOuts = errDecls.map(s => s".errorOut($s)")
 
     (Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n"), outTypes, errTypes, combine(inlineOutDefns, inlineErrDefns))
@@ -1199,3 +1200,4 @@ class EndpointGenerator {
 }
 
 case class MappedContentType(bodyImpl: String, bodyType: String, inlineDefns: Option[String] = None)
+case class MappedOutGroup(decls: Option[String], types: Option[String], defns: Option[String])

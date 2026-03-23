@@ -234,8 +234,7 @@ object TapirGeneratedEndpoints {
     override def `text/csv`: () => String = () => value
   }
 
-  type TapirCodegenDirectivesExtension = Seq[String]
-  val tapirCodegenDirectivesExtensionKey = new sttp.tapir.AttributeKey[TapirCodegenDirectivesExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.TapirCodegenDirectivesExtension")
+
 
   type PutAdtTestEndpoint = Endpoint[Unit, ADTWithoutDiscriminator, Unit, ADTWithoutDiscriminator, Any]
   lazy val putAdtTest: PutAdtTestEndpoint =
@@ -253,13 +252,12 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
-  type GetDynamicContentTypeTestEndpoint = Endpoint[Unit, Unit, Unit, (Array[Byte], String), Any]
+  type GetDynamicContentTypeTestEndpoint = Endpoint[Unit, Unit, Unit, (sttp.capabilities.pekko.PekkoStreams.BinaryStream, String), sttp.capabilities.pekko.PekkoStreams]
   lazy val getDynamicContentTypeTest: GetDynamicContentTypeTestEndpoint =
     endpoint
       .get
       .in(("dynamic" / "content-type" / "test"))
-      .out(EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `image/*CodecFormat`](`image/*CodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("No Content").and(header[String]("Content-Type").validate(Validator.pattern("image/([^*]+|[*])"))))
-      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-resp-body-eager"))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], `image/*CodecFormat`()).description("No Content").toEndpointIO.and(header[String]("Content-Type").validate(Validator.pattern("image/([^*]+|[*])"))))
 
   type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnEnum], Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =

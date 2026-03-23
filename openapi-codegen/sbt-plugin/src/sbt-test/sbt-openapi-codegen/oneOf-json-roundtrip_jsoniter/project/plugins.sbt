@@ -1,6 +1,5 @@
 {
-  val pluginVersion = "1.13.14.1-LOCAL"
-//  val pluginVersion = System.getProperty("plugin.version")
+  val pluginVersion = System.getProperty("plugin.version")
   if (pluginVersion == null)
     throw new RuntimeException("""|
                                   |
