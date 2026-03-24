@@ -18,7 +18,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaSimpleType,
   OpenapiSchemaString
 }
-import sttp.tapir.codegen.util.{DocUtils, JavaEscape}
+import sttp.tapir.codegen.util.JavaEscape
 
 import scala.annotation.tailrec
 

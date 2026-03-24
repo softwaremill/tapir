@@ -17,6 +17,9 @@ object TapirGeneratedEndpoints {
   case class `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "vnd.openxmlformats-officedocument.spreadsheetml.sheet")
   }
+  case class `image/*CodecFormat`() extends CodecFormat {
+    override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "image", subType = "*")
+  }
   case class `text/csvCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "text", subType = "csv")
   }
@@ -249,6 +252,13 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
+  type GetDynamicContentTypeTestEndpoint = Endpoint[Unit, Unit, Unit, (sttp.capabilities.pekko.PekkoStreams.BinaryStream, String), sttp.capabilities.pekko.PekkoStreams]
+  lazy val getDynamicContentTypeTest: GetDynamicContentTypeTestEndpoint =
+    endpoint
+      .get
+      .in(("dynamic" / "content-type" / "test"))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], `image/*CodecFormat`()).description("No Content").toEndpointIO.and(header[String]("Content-Type").validate(Validator.pattern("image/([^*]+|[*])"))))
+
   type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnEnum], Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
     endpoint
@@ -391,7 +401,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[HasASet].description("OK"))
 
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getDynamicContentTypeTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
 
 
   object Servers {

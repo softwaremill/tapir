@@ -7,7 +7,7 @@ lazy val root = (project in file("."))
     openapiGenerateEndpointTypes := true
   )
 
-val tapirVersion = "1.11.50"
+val tapirVersion = "1.13.13"
 val catsXmlVersion = "0.0.20"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
@@ -22,7 +22,7 @@ libraryDependencies ++= Seq(
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
   "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
+  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % tapirVersion % Test
 )
 
 import scala.io.Source
