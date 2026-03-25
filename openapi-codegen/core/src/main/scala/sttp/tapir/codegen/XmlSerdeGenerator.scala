@@ -12,7 +12,6 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaSimpleType
 }
 import sttp.tapir.codegen.openapi.models.OpenapiXml
-import sttp.tapir.codegen.openapi.models.OpenapiXml.XmlArrayConfiguration
 
 object SchemaTypeType extends Enumeration {
   val EnumType, ArrayType, OtherType = Value

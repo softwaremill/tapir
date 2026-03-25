@@ -1137,7 +1137,6 @@ class EndpointGenerator {
           eager,
           streamingImplementation
         )
-      case x => bail(s"Not all content types supported! Found $x")
     }
   }
   private def failoverBinaryCase(

@@ -6,10 +6,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiParameter,
   OpenapiPath,
   OpenapiPathMethod,
-  OpenapiRequestBody,
   OpenapiRequestBodyContent,
   OpenapiRequestBodyDefn,
-  OpenapiResponse,
   OpenapiResponseContent,
   OpenapiResponseDef,
   Resolved
