@@ -1702,7 +1702,12 @@ lazy val awsLambdaCore: ProjectMatrix = (projectMatrix in file("serverless/aws/l
   .settings(
     name := "tapir-aws-lambda-core"
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
+    )
+  )
   .jsPlatform(scalaVersions = scala2Versions, settings = commonJsSettings)
   .dependsOn(serverCore, circeJson, tests % "test")
 

@@ -12,12 +12,13 @@ For an overview of how this works in more detail, see [this blog post](https://b
 ## Runtime & Server interpreters
 
 Tapir supports three of the AWS Lambda runtimes: custom runtime, Java, and NodeJS. Below you have a list of classes that can be used as an entry point
-to your Lambda application depending on runtime of your choice. Each one of them uses server interpreter, which responsibility is to transform Tapir
-endpoints with associated server logic to function like `AwsRequest => F[AwsResponse]` in case of custom and Java runtime,
-or `AwsJsRequest => Future[AwsJsResponse]` in case of NodeJS runtime. Currently, two server interpreters are available, the first one is using
-cats-effect (`AwsCatsEffectServerInterpreter`), and the other one is using Scala Future (`AwsFutureServerInterpreter`). Custom runtime, and Java
-runtime are using only cats-effect interpreter, where NodeJS runtime can be used with both interpreters.
-These are corresponding classes for each of the supported runtime:
+to your Lambda application depending on runtime of your choice. Each one of them uses the server interpreter, whose responsibility is to transform Tapir
+endpoints with associated server logic to a function like `AwsRequest => F[AwsResponse]` (or `AwsRequest => AwsResponse` for direct-style) in case of custom and Java runtime,
+or `AwsJsRequest => Future[AwsJsResponse]` in case of NodeJS runtime. Currently, three server interpreters are available: `AwsCatsEffectServerInterpreter`
+using cats-effect, `AwsFutureServerInterpreter` using Scala Future, and `AwsSyncServerInterpreter` using direct-style (no effect wrapper).
+Custom runtime uses the cats-effect interpreter. Java runtime can use the cats-effect interpreter (`LambdaHandler`) or the direct-style interpreter
+(`SyncLambdaHandler`). NodeJS runtime can be used with both Future and cats-effect interpreters.
+These are the corresponding classes for each of the supported runtimes:
 
 * The `AwsLambdaIORuntime` for custom runtime. Implement the Lambda loop of reading the next request, computing and sending the response
   through [Lambda runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html).
@@ -26,11 +27,16 @@ These are corresponding classes for each of the supported runtime:
   interface for handling requests, response flow inside Java runtime.
 * The `AwsJsRouteHandler` for NodeJS runtime. The main benefit is the reduced deployment time. Initialization of JVM-based application (
   with `sam local`) took ~11 seconds on average, while Node.js based one only ~2 seconds.
+* The `SyncLambdaHandler` for Java runtime, a direct-style alternative to `LambdaHandler` that uses `Identity` instead of cats-effect.
+  Uses `AwsSyncServerInterpreter` and doesn't require any effect library.
 
-To start using any of the above add the following dependency:
+To start using any of the above add one of the following dependencies:
 
 ```scala
+// for cats-effect (LambdaHandler, AwsLambdaIORuntime, AwsCatsEffectServerInterpreter)
 "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "@VERSION@"
+// for direct-style / Future (SyncLambdaHandler, AwsSyncServerInterpreter, AwsFutureServerInterpreter)
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda-core" % "@VERSION@"
 ```
 
 ## Deployment
