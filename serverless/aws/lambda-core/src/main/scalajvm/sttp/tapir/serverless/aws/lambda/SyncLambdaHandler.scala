@@ -18,10 +18,11 @@ abstract class SyncLambdaHandler[R: Decoder](options: AwsServerOptions[sttp.shar
 
   protected def getAllEndpoints: List[ServerEndpoint[Any, sttp.shared.Identity]]
 
+  private lazy val route: AwsRequest => AwsResponse = AwsSyncServerInterpreter(options).toRoute(getAllEndpoints)
+
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
-    val server: AwsSyncServerInterpreter = AwsSyncServerInterpreter(options)
     val json = new String(input.readAllBytes(), StandardCharsets.UTF_8)
-    val response = AwsLambdaCodec.decodeRequest[R](json).fold(identity, server.toRoute(getAllEndpoints))
+    val response = AwsLambdaCodec.decodeRequest[R](json).fold(identity, route)
     AwsLambdaCodec.writeResponse(response, output)
   }
 }

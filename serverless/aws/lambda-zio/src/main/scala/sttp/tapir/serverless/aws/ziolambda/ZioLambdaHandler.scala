@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.ziolambda
 
 import io.circe._
 import sttp.tapir.server.ziohttp.ZioHttpServerOptions
-import sttp.tapir.serverless.aws.lambda.{AwsLambdaCodec, AwsServerOptions}
+import sttp.tapir.serverless.aws.lambda.{AwsLambdaCodec, AwsRequest, AwsResponse, AwsServerOptions}
 import sttp.tapir.ztapir._
 import zio.{RIO, ZIO}
 
@@ -20,18 +20,15 @@ abstract class ZioLambdaHandler[Env: RIOMonadError](options: AwsServerOptions[RI
 
   protected def getAllEndpoints: List[ZServerEndpoint[Env, Any]]
 
-  def process[R: Decoder](input: InputStream, output: OutputStream): RIO[Env, Unit] = {
+  private lazy val route: AwsRequest => RIO[Env, AwsResponse] = AwsZioServerInterpreter[Env](options).toRoute(getAllEndpoints)
 
-    val server: AwsZioServerInterpreter[Env] =
-      AwsZioServerInterpreter[Env](options)
-
+  def process[R: Decoder](input: InputStream, output: OutputStream): RIO[Env, Unit] =
     for {
       allBytes <- ZIO.attempt(input.readAllBytes())
       decoded <- ZIO.attempt(AwsLambdaCodec.decodeRequest[R](new String(allBytes, StandardCharsets.UTF_8)))
-      response <- decoded.fold(ZIO.succeed(_), server.toRoute(getAllEndpoints))
+      response <- decoded.fold(ZIO.succeed(_), route)
       _ <- ZIO.attempt(AwsLambdaCodec.writeResponse(response, output))
     } yield ()
-  }
 }
 
 object ZioLambdaHandler {
