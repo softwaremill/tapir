@@ -2,12 +2,9 @@ package sttp.tapir.serverless.aws.lambda
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import io.circe._
-import io.circe.generic.auto._
-import io.circe.parser.decode
-import io.circe.syntax._
 import sttp.tapir.server.ServerEndpoint
 
-import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
+import java.io.{InputStream, OutputStream}
 import java.nio.charset.StandardCharsets
 
 /** [[SyncLambdaHandler]] is a direct-style entry point for handling requests sent to AWS Lambda application which exposes Tapir endpoints.
@@ -23,27 +20,9 @@ abstract class SyncLambdaHandler[R: Decoder](options: AwsServerOptions[sttp.shar
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
     val server: AwsSyncServerInterpreter = AwsSyncServerInterpreter(options)
-
-    val allBytes = input.readAllBytes()
-    val decoded = decode[R](new String(allBytes, StandardCharsets.UTF_8))
-    val response = decoded match {
-      case Left(e)           => AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}")
-      case Right(awsRequest) =>
-        awsRequest match {
-          case r: AwsRequestV1 => server.toRoute(getAllEndpoints)(r.toV2)
-          case r: AwsRequest   => server.toRoute(getAllEndpoints)(r)
-          case r               =>
-            throw new IllegalArgumentException(s"Request of type ${r.getClass.getCanonicalName} is not supported")
-        }
-    }
-
-    val writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8))
-    try {
-      writer.write(Printer.noSpaces.print(response.asJson))
-    } finally {
-      writer.flush()
-      writer.close()
-    }
+    val json = new String(input.readAllBytes(), StandardCharsets.UTF_8)
+    val response = AwsLambdaCodec.decodeRequest[R](json).fold(identity, server.toRoute(getAllEndpoints))
+    AwsLambdaCodec.writeResponse(response, output)
   }
 }
 
