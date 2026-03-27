@@ -19,13 +19,12 @@ libraryDependencies ++= Seq(
   "com.beachape" %% "enumeratum-circe" % "1.9.0",
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
   "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
-  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.20" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
 )
 
 import scala.io.Source
 import scala.util.Using
-
 
 TaskKey[Unit]("check") := {
   def check(generatedFileName: String, expectedFileName: String) = {

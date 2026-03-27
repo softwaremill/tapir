@@ -12,14 +12,13 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-generic" % "0.14.15",
   "org.latestbit" %% "circe-tagged-adt-codec" % "0.11.0",
   "io.github.bishabosha" %% "enum-extensions" % "0.1.1",
-  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.20" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
 )
 openapiGenerateEndpointTypes := true
 
 import scala.io.Source
 import scala.util.Using
-
 
 TaskKey[Unit]("check") := {
   val generatedCode =

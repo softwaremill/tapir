@@ -23,7 +23,7 @@ libraryDependencies ++= Seq(
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-circe" % jsoniterScalaVersion,
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
   "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
-  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.20" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % tapirVersion % Test
 )
 
@@ -46,7 +46,6 @@ def compare(name: String, genFn: String, expFn: String) = {
     sys.error(s"For $name expected ${expectedTrimmed.size} non-empty lines, found ${generatedTrimmed.size}")
 
 }
-
 
 TaskKey[Unit]("check") := {
   compare("endpoints", s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
