@@ -14,10 +14,10 @@ For an overview of how this works in more detail, see [this blog post](https://b
 Tapir supports three of the AWS Lambda runtimes: custom runtime, Java, and NodeJS. Below you have a list of classes that can be used as an entry point
 to your Lambda application depending on runtime of your choice. Each one of them uses the server interpreter, whose responsibility is to transform Tapir
 endpoints with associated server logic to a function like `AwsRequest => F[AwsResponse]` (or `AwsRequest => AwsResponse` for direct-style) in case of custom and Java runtime,
-or `AwsJsRequest => Future[AwsJsResponse]` in case of NodeJS runtime. Currently, three server interpreters are available: `AwsCatsEffectServerInterpreter`
-using cats-effect, `AwsFutureServerInterpreter` using Scala Future, and `AwsSyncServerInterpreter` using direct-style (no effect wrapper).
-Custom runtime uses the cats-effect interpreter. Java runtime can use the cats-effect interpreter (`LambdaHandler`) or the direct-style interpreter
-(`SyncLambdaHandler`). NodeJS runtime can be used with both Future and cats-effect interpreters.
+or `AwsJsRequest => Future[AwsJsResponse]` in case of NodeJS runtime. Currently, four server interpreters are available: `AwsCatsEffectServerInterpreter`
+using cats-effect, `AwsZioServerInterpreter` using ZIO, `AwsFutureServerInterpreter` using Scala Future, and `AwsSyncServerInterpreter` using direct-style (no effect wrapper).
+Custom runtime uses the cats-effect interpreter. Java runtime can use the cats-effect interpreter (`LambdaHandler`), the ZIO interpreter
+(`ZioLambdaHandler`), or the direct-style interpreter (`SyncLambdaHandler`). NodeJS runtime can be used with both Future and cats-effect interpreters.
 These are the corresponding classes for each of the supported runtimes:
 
 * The `AwsLambdaIORuntime` for custom runtime. Implement the Lambda loop of reading the next request, computing and sending the response
@@ -25,19 +25,33 @@ These are the corresponding classes for each of the supported runtimes:
 * The `LambdaHandler` for Java runtime, which
   utilizes [RequestStreamHandler](https://github.com/aws/aws-lambda-java-libs/blob/master/aws-lambda-java-core/src/main/java/com/amazonaws/services/lambda/runtime/RequestStreamHandler.java)
   interface for handling requests, response flow inside Java runtime.
-* The `AwsJsRouteHandler` for NodeJS runtime. The main benefit is the reduced deployment time. Initialization of JVM-based application (
-  with `sam local`) took ~11 seconds on average, while Node.js based one only ~2 seconds.
+* The `ZioLambdaHandler` for Java runtime, using `AwsZioServerInterpreter` and ZIO effects.
 * The `SyncLambdaHandler` for Java runtime, a direct-style alternative to `LambdaHandler` that uses `Identity` instead of cats-effect.
   Uses `AwsSyncServerInterpreter` and doesn't require any effect library.
+* The `AwsJsRouteHandler` for NodeJS runtime. The main benefit is the reduced deployment time. Initialization of JVM-based application (
+  with `sam local`) took ~11 seconds on average, while Node.js based one only ~2 seconds.
 
 To start using any of the above add one of the following dependencies:
 
 ```scala
 // for cats-effect (LambdaHandler, AwsLambdaIORuntime, AwsCatsEffectServerInterpreter)
 "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "@VERSION@"
+// for ZIO (ZioLambdaHandler, AwsZioServerInterpreter)
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda-zio" % "@VERSION@"
 // for direct-style / Future (SyncLambdaHandler, AwsSyncServerInterpreter, AwsFutureServerInterpreter)
 "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda-core" % "@VERSION@"
 ```
+
+## Usage examples
+
+Example Lambda handler implementations:
+
+* [Direct-style (SyncLambdaHandler)](https://github.com/softwaremill/tapir/blob/master/serverless/aws/examples/src/main/scalajvm/sttp/tapir/serverless/aws/examples/SyncLambdaApiExample.scala)
+* [cats-effect (LambdaHandler)](https://github.com/softwaremill/tapir/blob/master/serverless/aws/examples/src/main/scalajvm/sttp/tapir/serverless/aws/examples/LambdaApiExample.scala) — see also the [V1 variant](https://github.com/softwaremill/tapir/blob/master/serverless/aws/examples/src/main/scalajvm/sttp/tapir/serverless/aws/examples/LambdaApiV1Example.scala)
+* [ZIO (ZioLambdaHandler)](https://github.com/softwaremill/tapir/blob/master/serverless/aws/lambda-zio-tests/src/main/scala/sttp/tapir/serverless/aws/ziolambda/tests/ZioLambdaHandlerImpl.scala)
+* [NodeJS with Future (AwsJsRouteHandler)](https://github.com/softwaremill/tapir/blob/master/serverless/aws/examples/src/main/scalajs/sttp/tapir/serverless/aws/examples/LambdaApiJsExample.scala) — see also the [cats-effect Resource variant](https://github.com/softwaremill/tapir/blob/master/serverless/aws/examples/src/main/scalajs/sttp/tapir/serverless/aws/examples/LambdaApiJsResourceExample.scala)
+
+The type parameter on `LambdaHandler` and `SyncLambdaHandler` (`AwsRequest` or `AwsRequestV1`) determines the expected API Gateway request format. Use `AwsRequest` for API Gateway V2 (HTTP API) and `AwsRequestV1` for API Gateway V1 (REST API). V1 requests are automatically normalized to V2 internally.
 
 ## Deployment
 
