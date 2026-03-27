@@ -22,12 +22,14 @@ These are the corresponding classes for each of the supported runtimes:
 
 * The `AwsLambdaIORuntime` for custom runtime. Implement the Lambda loop of reading the next request, computing and sending the response
   through [Lambda runtime API](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html).
-* The `LambdaHandler` for Java runtime, which
-  utilizes [RequestStreamHandler](https://github.com/aws/aws-lambda-java-libs/blob/master/aws-lambda-java-core/src/main/java/com/amazonaws/services/lambda/runtime/RequestStreamHandler.java)
-  interface for handling requests, response flow inside Java runtime.
-* The `ZioLambdaHandler` for Java runtime, using `AwsZioServerInterpreter` and ZIO effects.
-* The `SyncLambdaHandler` for Java runtime, a direct-style alternative to `LambdaHandler` that uses `Identity` instead of cats-effect.
-  Uses `AwsSyncServerInterpreter` and doesn't require any effect library.
+* The `LambdaHandler` for Java runtime using cats-effect. Extend it, provide your endpoints via `getAllEndpoints`, and implement
+  `handleRequest` by calling `process(input, output).unsafeRunSync()`. It implements the AWS
+  [RequestStreamHandler](https://github.com/aws/aws-lambda-java-libs/blob/master/aws-lambda-java-core/src/main/java/com/amazonaws/services/lambda/runtime/RequestStreamHandler.java)
+  interface.
+* The `ZioLambdaHandler` for Java runtime using ZIO. Create an instance via `ZioLambdaHandler.default(endpoints)`, then
+  call `handler.process[AwsRequest](input, output)` from a `RequestStreamHandler` to run it.
+* The `SyncLambdaHandler` for Java runtime, a direct-style alternative that uses `Identity` instead of an effect wrapper.
+  Extend it and provide your endpoints via `getAllEndpoints` — no additional wiring is needed, as it directly implements `RequestStreamHandler`.
 * The `AwsJsRouteHandler` for NodeJS runtime. The main benefit is the reduced deployment time. Initialization of JVM-based application (
   with `sam local`) took ~11 seconds on average, while Node.js based one only ~2 seconds.
 
