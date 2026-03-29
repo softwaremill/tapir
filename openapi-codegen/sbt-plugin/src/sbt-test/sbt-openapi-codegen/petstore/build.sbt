@@ -16,7 +16,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
   "io.circe" %% "circe-generic" % "0.14.15",
   "com.beachape" %% "enumeratum" % "1.7.5",
-  "com.beachape" %% "enumeratum-circe" % "1.9.0",
+  "com.beachape" %% "enumeratum-circe" % "1.9.7",
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
   "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
@@ -25,7 +25,6 @@ libraryDependencies ++= Seq(
 
 import scala.io.Source
 import scala.util.Using
-
 
 TaskKey[Unit]("check") := {
   def check(generatedFileName: String, expectedFileName: String) = {
