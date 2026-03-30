@@ -37,7 +37,7 @@ case class Person(name: String)
 endpoint.out(streamBody(PekkoStreams)(Schema.derived[List[Person]], CodecFormat.Json()))
 ```
 
-See also the [runnable streaming example](../examples.md). 
+See also the [runnable streaming examples](../examples.md). 
 
 ## Next
 
