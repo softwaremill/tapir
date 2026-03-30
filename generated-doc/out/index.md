@@ -186,17 +186,17 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
    :caption: Server interpreters
 
    server/overview
-   server/akkahttp
+   server/netty   
    server/http4s
-   server/zio-http4s
-   server/netty
-   server/nima
-   server/finatra
-   server/pekkohttp
-   server/play
    server/vertx
-   server/ziohttp
    server/armeria
+   server/pekkohttp
+   server/akkahttp
+   server/ziohttp
+   server/zio-http4s   
+   server/nima
+   server/play
+   server/finatra
    server/jdkhttp
    server/aws
    server/options
