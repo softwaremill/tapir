@@ -1702,18 +1702,18 @@ lazy val awsLambdaCore: ProjectMatrix = (projectMatrix in file("serverless/aws/l
   .settings(
     name := "tapir-aws-lambda-core"
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
+    )
+  )
   .jsPlatform(scalaVersions = scala2Versions, settings = commonJsSettings)
   .dependsOn(serverCore, circeJson, tests % "test")
 
 lazy val awsLambdaZio: ProjectMatrix = (projectMatrix in file("serverless/aws/lambda-zio"))
   .settings(commonSettings)
-  .settings(
-    name := "tapir-aws-lambda-zio",
-    libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
-    )
-  )
+  .settings(name := "tapir-aws-lambda-zio")
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore, awsLambdaCore, zio, zioHttpServer, circeJson, tests % "test")
 
@@ -1940,8 +1940,7 @@ lazy val awsCdk: ProjectMatrix = (projectMatrix in file("serverless/aws/cdk"))
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %%% "circe-parser" % Versions.circe,
-      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
-      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
@@ -1980,8 +1979,7 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
         case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
         case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
         case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
-      },
-      libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
+      }
     )
   )
   .jsPlatform(
