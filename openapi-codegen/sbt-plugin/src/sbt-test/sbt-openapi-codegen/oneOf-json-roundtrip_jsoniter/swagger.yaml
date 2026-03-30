@@ -38,6 +38,16 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ADTWithoutDiscriminator'
+  '/dynamic/content-type/test':
+    get:
+      responses:
+        "200":
+          description: No Content
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
   '/oneof/option/test':
     get:
       responses:

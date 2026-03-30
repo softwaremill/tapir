@@ -38,7 +38,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v6
-    - uses: sbt/setup-sbt@6bec67c98f542b9e17369bfca0ec822ac1363194 # v1, specifically v1.1.19
+    - uses: sbt/setup-sbt@508b753e53cb6095967669e0911487d2b9bc9f41 # v1, specifically v1.1.22
     - name: Set up JDK 
       uses: actions/setup-java@v5
       with:
@@ -87,7 +87,7 @@ jobs:
       run: sbt $SBT_JAVA_OPTS -v "project examples3" verifyExamplesCompileUsingScalaCli
     - name: Test
       if: matrix.target-platform != 'JS'
-      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3, specifically v3.0.2
+      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v3, specifically v4.0.0
       with:
         timeout_minutes: 10
         max_attempts: 2
@@ -151,7 +151,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - uses: sbt/setup-sbt@6bec67c98f542b9e17369bfca0ec822ac1363194 # v1, specifically v1.1.19
+      - uses: sbt/setup-sbt@508b753e53cb6095967669e0911487d2b9bc9f41 # v1, specifically v1.1.22
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:

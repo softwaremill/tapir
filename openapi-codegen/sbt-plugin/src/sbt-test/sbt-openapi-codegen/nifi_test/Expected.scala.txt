@@ -4127,6 +4127,10 @@ object TapirGeneratedEndpoints {
     implicit val enumCodecSupportGetFlowMetricsProducer: ExtraParamSupport[GetFlowMetricsProducer] =
       extraCodecSupport[GetFlowMetricsProducer]("GetFlowMetricsProducer", GetFlowMetricsProducer)
   }
+  sealed trait DownloadFlowFileContentResponseHeader
+  case class DownloadFlowFileContentResponseHeader200(`Content-Type`: String) extends DownloadFlowFileContentResponseHeader
+  case object DownloadFlowFileContentResponseHeader206 extends DownloadFlowFileContentResponseHeader
+
 
   sealed trait ClearState_2BodyIn extends Product with java.io.Serializable
   case class ClearState_2Body0In(value: Array[Byte]) extends ClearState_2BodyIn
@@ -4149,6 +4153,14 @@ object TapirGeneratedEndpoints {
   sealed trait ClearState_3BodyIn extends Product with java.io.Serializable
   case class ClearState_3Body0In(value: Array[Byte]) extends ClearState_3BodyIn
   case class ClearState_3BodyOption_ComponentStateEntity_In(value: Option[ComponentStateEntity]) extends ClearState_3BodyIn
+
+  sealed trait GetInputContentResponseHeader
+  case class GetInputContentResponseHeader200(`Content-Type`: String) extends GetInputContentResponseHeader
+  case object GetInputContentResponseHeader206 extends GetInputContentResponseHeader
+
+  sealed trait GetOutputContentResponseHeader
+  case class GetOutputContentResponseHeader200(`Content-Type`: String) extends GetOutputContentResponseHeader
+  case object GetOutputContentResponseHeader206 extends GetOutputContentResponseHeader
 
 
   sealed trait ClearState_4BodyIn extends Product with java.io.Serializable
@@ -5619,7 +5631,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[PortStatusEntity].description(""))
       .tags(List("Flow"))
 
-  type GetFlowMetricsEndpoint = Endpoint[Unit, (GetFlowMetricsProducer, Option[GetFlowMetricsIncludedRegistries], Option[String], Option[String], Option[String]), Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
+  type GetFlowMetricsEndpoint = Endpoint[Unit, (GetFlowMetricsProducer, Option[GetFlowMetricsIncludedRegistries], Option[String], Option[String], Option[String]), Unit, (sttp.capabilities.pekko.PekkoStreams.BinaryStream, String), sttp.capabilities.pekko.PekkoStreams]
   lazy val getFlowMetrics: GetFlowMetricsEndpoint =
     endpoint
       .name("getFlowMetrics")
@@ -5635,7 +5647,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(403), emptyOutput.description("Client is not authorized to make this request."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(409), emptyOutput.description("The request was valid but NiFi was not in the appropriate state to process it."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
-      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description(""))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])"))))
       .tags(List("Flow"))
 
   sealed trait GetFlowMetricsIncludedRegistries extends enumeratum.EnumEntry
@@ -6238,7 +6250,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[FlowFileEntity].description(""))
       .tags(List("FlowFileQueues"))
 
-  type DownloadFlowFileContentEndpoint = Endpoint[Unit, (String, String, Option[String], Option[ClientIdParameterStr], Option[String]), Unit, Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], sttp.capabilities.pekko.PekkoStreams]
+  type DownloadFlowFileContentEndpoint = Endpoint[Unit, (String, String, Option[String], Option[ClientIdParameterStr], Option[String]), Unit, (Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], DownloadFlowFileContentResponseHeader), sttp.capabilities.pekko.PekkoStreams]
   lazy val downloadFlowFileContent: DownloadFlowFileContentEndpoint =
     endpoint
       .name("downloadFlowFileContent")
@@ -6254,9 +6266,9 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(409), emptyOutput.description("The request was valid but NiFi was not in the appropriate state to process it."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(416), emptyOutput.description("Requested Range Not Satisfiable based on bytes requested"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
-      .out(oneOf[Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream]](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(206), emptyOutput.description("Partial Content with range of bytes requested"))(None),
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull)){ case Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream) => true }))
+      .out(oneOf[(Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], DownloadFlowFileContentResponseHeader)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(206), emptyOutputAs(None).description("Partial Content with range of bytes requested").and(emptyOutputAs(DownloadFlowFileContentResponseHeader206))){ case (None, DownloadFlowFileContentResponseHeader206) => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull).and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])")).map(DownloadFlowFileContentResponseHeader200(_))(_.`Content-Type`))){ case (Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream), (_: DownloadFlowFileContentResponseHeader200)) => true }))
       .tags(List("FlowFileQueues"))
 
   type CreateFlowFileListingEndpoint = Endpoint[Unit, String, Unit, ListingRequestEntity, Any]
@@ -6579,7 +6591,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[AssetEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type GetAssetContentEndpoint = Endpoint[Unit, (String, String), Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
   lazy val getAssetContent: GetAssetContentEndpoint =
     endpoint
@@ -6594,7 +6606,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[ByteString], CodecFormat.OctetStream()).description(""))
       .tags(List("ParameterContexts"))
-  
+
   type DeleteAssetEndpoint = Endpoint[Unit, (String, String, Option[Boolean]), Unit, AssetEntity, Any]
   lazy val deleteAsset: DeleteAssetEndpoint =
     endpoint
@@ -6610,7 +6622,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[AssetEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type SubmitParameterContextUpdateEndpoint = Endpoint[Unit, (String, ParameterContextEntity), Unit, ParameterContextUpdateRequestEntity, Any]
   lazy val submitParameterContextUpdate: SubmitParameterContextUpdateEndpoint =
     endpoint
@@ -6626,7 +6638,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterContextUpdateRequestEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type GetParameterContextUpdateEndpoint = Endpoint[Unit, (String, String), Unit, ParameterContextUpdateRequestEntity, Any]
   lazy val getParameterContextUpdate: GetParameterContextUpdateEndpoint =
     endpoint
@@ -6641,7 +6653,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterContextUpdateRequestEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type DeleteUpdateRequestEndpoint = Endpoint[Unit, (String, String, Option[Boolean]), Unit, ParameterContextUpdateRequestEntity, Any]
   lazy val deleteUpdateRequest: DeleteUpdateRequestEndpoint =
     endpoint
@@ -6657,7 +6669,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterContextUpdateRequestEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type SubmitValidationRequestEndpoint = Endpoint[Unit, (String, ParameterContextValidationRequestEntity), Unit, ParameterContextValidationRequestEntity, Any]
   lazy val submitValidationRequest: SubmitValidationRequestEndpoint =
     endpoint
@@ -6673,7 +6685,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterContextValidationRequestEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type GetValidationRequestEndpoint = Endpoint[Unit, (String, String), Unit, ParameterContextValidationRequestEntity, Any]
   lazy val getValidationRequest: GetValidationRequestEndpoint =
     endpoint
@@ -6688,7 +6700,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterContextValidationRequestEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type DeleteValidationRequestEndpoint = Endpoint[Unit, (String, String, Option[Boolean]), Unit, ParameterContextValidationRequestEntity, Any]
   lazy val deleteValidationRequest: DeleteValidationRequestEndpoint =
     endpoint
@@ -6704,7 +6716,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterContextValidationRequestEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type GetParameterContextEndpoint = Endpoint[Unit, (String, Option[Boolean]), Unit, ParameterContextEntity, Any]
   lazy val getParameterContext: GetParameterContextEndpoint =
     endpoint
@@ -6720,7 +6732,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterContextEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type UpdateParameterContextEndpoint = Endpoint[Unit, (String, ParameterContextEntity), Unit, ParameterContextEntity, Any]
   lazy val updateParameterContext: UpdateParameterContextEndpoint =
     endpoint
@@ -6736,7 +6748,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterContextEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type DeleteParameterContextEndpoint = Endpoint[Unit, (String, Option[LongParameterInt], Option[ClientIdParameterStr], Option[Boolean]), Unit, ParameterContextEntity, Any]
   lazy val deleteParameterContext: DeleteParameterContextEndpoint =
     endpoint
@@ -6754,7 +6766,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterContextEntity].description(""))
       .tags(List("ParameterContexts"))
-  
+
   type GetParameterProviderEndpoint = Endpoint[Unit, String, Unit, ParameterProviderEntity, Any]
   lazy val getParameterProvider: GetParameterProviderEndpoint =
     endpoint
@@ -6769,7 +6781,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterProviderEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type UpdateParameterProviderEndpoint = Endpoint[Unit, (String, ParameterProviderEntity), Unit, ParameterProviderEntity, Any]
   lazy val updateParameterProvider: UpdateParameterProviderEndpoint =
     endpoint
@@ -6785,7 +6797,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterProviderEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type RemoveParameterProviderEndpoint = Endpoint[Unit, (String, Option[LongParameterInt], Option[ClientIdParameterStr], Option[Boolean]), Unit, ParameterProviderEntity, Any]
   lazy val removeParameterProvider: RemoveParameterProviderEndpoint =
     endpoint
@@ -6803,7 +6815,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterProviderEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type AnalyzeConfiguration_1Endpoint = Endpoint[Unit, (String, ConfigurationAnalysisEntity), Unit, ConfigurationAnalysisEntity, Any]
   lazy val analyzeConfiguration_1: AnalyzeConfiguration_1Endpoint =
     endpoint
@@ -6819,7 +6831,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ConfigurationAnalysisEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type SubmitConfigVerificationRequest_1Endpoint = Endpoint[Unit, (String, VerifyConfigRequestEntity), Unit, VerifyConfigRequestEntity, Any]
   lazy val submitConfigVerificationRequest_1: SubmitConfigVerificationRequest_1Endpoint =
     endpoint
@@ -6835,7 +6847,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[VerifyConfigRequestEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type GetVerificationRequest_1Endpoint = Endpoint[Unit, (String, String), Unit, VerifyConfigRequestEntity, Any]
   lazy val getVerificationRequest_1: GetVerificationRequest_1Endpoint =
     endpoint
@@ -6850,7 +6862,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[VerifyConfigRequestEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type DeleteVerificationRequest_1Endpoint = Endpoint[Unit, (String, String), Unit, VerifyConfigRequestEntity, Any]
   lazy val deleteVerificationRequest_1: DeleteVerificationRequest_1Endpoint =
     endpoint
@@ -6865,7 +6877,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[VerifyConfigRequestEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type GetPropertyDescriptor_2Endpoint = Endpoint[Unit, (String, String), Unit, PropertyDescriptorEntity, Any]
   lazy val getPropertyDescriptor_2: GetPropertyDescriptor_2Endpoint =
     endpoint
@@ -6881,7 +6893,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[PropertyDescriptorEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type FetchParametersEndpoint = Endpoint[Unit, (String, ParameterProviderParameterFetchEntity), Unit, ParameterProviderEntity, Any]
   lazy val fetchParameters: FetchParametersEndpoint =
     endpoint
@@ -6897,7 +6909,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterProviderEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type GetParameterProviderReferencesEndpoint = Endpoint[Unit, String, Unit, ParameterProviderReferencingComponentsEntity, Any]
   lazy val getParameterProviderReferences: GetParameterProviderReferencesEndpoint =
     endpoint
@@ -6912,7 +6924,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterProviderReferencingComponentsEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type GetState_1Endpoint = Endpoint[Unit, String, Unit, ComponentStateEntity, Any]
   lazy val getState_1: GetState_1Endpoint =
     endpoint
@@ -6927,7 +6939,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ComponentStateEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type ClearState_2Endpoint = Endpoint[Unit, (String, ClearState_2BodyIn), Unit, ComponentStateEntity, Any]
   lazy val clearState_2: ClearState_2Endpoint =
     endpoint
@@ -6945,7 +6957,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ComponentStateEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type SubmitApplyParametersEndpoint = Endpoint[Unit, (String, ParameterProviderParameterApplicationEntity), Unit, ParameterProviderApplyParametersRequestEntity, Any]
   lazy val submitApplyParameters: SubmitApplyParametersEndpoint =
     endpoint
@@ -6961,7 +6973,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterProviderApplyParametersRequestEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type GetParameterProviderApplyParametersRequestEndpoint = Endpoint[Unit, (String, String), Unit, ParameterProviderApplyParametersRequestEntity, Any]
   lazy val getParameterProviderApplyParametersRequest: GetParameterProviderApplyParametersRequestEndpoint =
     endpoint
@@ -6976,7 +6988,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterProviderApplyParametersRequestEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type DeleteApplyParametersRequestEndpoint = Endpoint[Unit, (String, String, Option[Boolean]), Unit, ParameterProviderApplyParametersRequestEntity, Any]
   lazy val deleteApplyParametersRequest: DeleteApplyParametersRequestEndpoint =
     endpoint
@@ -6992,7 +7004,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ParameterProviderApplyParametersRequestEntity].description(""))
       .tags(List("ParameterProviders"))
-  
+
   type CreateAccessPolicyEndpoint = Endpoint[Unit, AccessPolicyEntity, Unit, AccessPolicyEntity, Any]
   lazy val createAccessPolicy: CreateAccessPolicyEndpoint =
     endpoint
@@ -7008,7 +7020,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[AccessPolicyEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("Policies"))
-  
+
   type GetAccessPolicyForResourceEndpoint = Endpoint[Unit, (String, String), Unit, AccessPolicyEntity, Any]
   lazy val getAccessPolicyForResource: GetAccessPolicyForResourceEndpoint =
     endpoint
@@ -7023,7 +7035,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[AccessPolicyEntity].description(""))
       .tags(List("Policies"))
-  
+
   type GetAccessPolicyEndpoint = Endpoint[Unit, String, Unit, AccessPolicyEntity, Any]
   lazy val getAccessPolicy: GetAccessPolicyEndpoint =
     endpoint
@@ -7038,7 +7050,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[AccessPolicyEntity].description(""))
       .tags(List("Policies"))
-  
+
   type UpdateAccessPolicyEndpoint = Endpoint[Unit, (String, AccessPolicyEntity), Unit, AccessPolicyEntity, Any]
   lazy val updateAccessPolicy: UpdateAccessPolicyEndpoint =
     endpoint
@@ -7054,7 +7066,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[AccessPolicyEntity].description(""))
       .tags(List("Policies"))
-  
+
   type RemoveAccessPolicyEndpoint = Endpoint[Unit, (String, Option[LongParameterInt], Option[ClientIdParameterStr], Option[Boolean]), Unit, AccessPolicyEntity, Any]
   lazy val removeAccessPolicy: RemoveAccessPolicyEndpoint =
     endpoint
@@ -7072,7 +7084,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[AccessPolicyEntity].description(""))
       .tags(List("Policies"))
-  
+
   type GetReplaceProcessGroupRequestEndpoint = Endpoint[Unit, String, Unit, ProcessGroupReplaceRequestEntity, Any]
   lazy val getReplaceProcessGroupRequest: GetReplaceProcessGroupRequestEndpoint =
     endpoint
@@ -7087,7 +7099,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupReplaceRequestEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type DeleteReplaceProcessGroupRequestEndpoint = Endpoint[Unit, (String, Option[Boolean]), Unit, ProcessGroupReplaceRequestEntity, Any]
   lazy val deleteReplaceProcessGroupRequest: DeleteReplaceProcessGroupRequestEndpoint =
     endpoint
@@ -7103,7 +7115,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupReplaceRequestEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type GetProcessGroupEndpoint = Endpoint[Unit, String, Unit, ProcessGroupEntity, Any]
   lazy val getProcessGroup: GetProcessGroupEndpoint =
     endpoint
@@ -7118,7 +7130,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type UpdateProcessGroupEndpoint = Endpoint[Unit, (String, ProcessGroupEntity), Unit, ProcessGroupEntity, Any]
   lazy val updateProcessGroup: UpdateProcessGroupEndpoint =
     endpoint
@@ -7134,7 +7146,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type RemoveProcessGroupEndpoint = Endpoint[Unit, (String, Option[LongParameterInt], Option[ClientIdParameterStr], Option[Boolean]), Unit, ProcessGroupEntity, Any]
   lazy val removeProcessGroup: RemoveProcessGroupEndpoint =
     endpoint
@@ -7152,7 +7164,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type GetConnectionsEndpoint = Endpoint[Unit, String, Unit, ConnectionsEntity, Any]
   lazy val getConnections: GetConnectionsEndpoint =
     endpoint
@@ -7167,7 +7179,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ConnectionsEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CreateConnectionEndpoint = Endpoint[Unit, (String, ConnectionEntity), Unit, ConnectionEntity, Any]
   lazy val createConnection: CreateConnectionEndpoint =
     endpoint
@@ -7183,7 +7195,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ConnectionEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type CreateControllerService_1Endpoint = Endpoint[Unit, (String, ControllerServiceEntity), Unit, ControllerServiceEntity, Any]
   lazy val createControllerService_1: CreateControllerService_1Endpoint =
     endpoint
@@ -7198,7 +7210,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ControllerServiceEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type CopyEndpoint = Endpoint[Unit, (String, CopyRequestEntity), Unit, CopyResponseEntity, Any]
   lazy val copy: CopyEndpoint =
     endpoint
@@ -7214,7 +7226,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[CopyResponseEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type ExportProcessGroupEndpoint = Endpoint[Unit, (String, Option[Boolean]), Unit, String, Any]
   lazy val exportProcessGroup: ExportProcessGroupEndpoint =
     endpoint
@@ -7230,7 +7242,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[String].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CreateEmptyAllConnectionsRequestEndpoint = Endpoint[Unit, String, Unit, DropRequestEntity, Any]
   lazy val createEmptyAllConnectionsRequest: CreateEmptyAllConnectionsRequestEndpoint =
     endpoint
@@ -7245,7 +7257,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[DropRequestEntity].description("The request has been accepted. An HTTP response header will contain the URI where the status can be polled.").and(statusCode(sttp.model.StatusCode(202))))
       .tags(List("ProcessGroups"))
-  
+
   type GetDropAllFlowfilesRequestEndpoint = Endpoint[Unit, (String, String), Unit, DropRequestEntity, Any]
   lazy val getDropAllFlowfilesRequest: GetDropAllFlowfilesRequestEndpoint =
     endpoint
@@ -7260,7 +7272,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[DropRequestEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type RemoveDropRequest_1Endpoint = Endpoint[Unit, (String, String), Unit, DropRequestEntity, Any]
   lazy val removeDropRequest_1: RemoveDropRequest_1Endpoint =
     endpoint
@@ -7275,7 +7287,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[DropRequestEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type ReplaceProcessGroupEndpoint = Endpoint[Unit, (String, ProcessGroupImportEntity), Unit, ProcessGroupImportEntity, Any]
   lazy val replaceProcessGroup: ReplaceProcessGroupEndpoint =
     endpoint
@@ -7291,7 +7303,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupImportEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type GetFunnelsEndpoint = Endpoint[Unit, String, Unit, FunnelsEntity, Any]
   lazy val getFunnels: GetFunnelsEndpoint =
     endpoint
@@ -7306,7 +7318,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[FunnelsEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CreateFunnelEndpoint = Endpoint[Unit, (String, FunnelEntity), Unit, FunnelEntity, Any]
   lazy val createFunnel: CreateFunnelEndpoint =
     endpoint
@@ -7322,7 +7334,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[FunnelEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type GetInputPortsEndpoint = Endpoint[Unit, String, Unit, InputPortsEntity, Any]
   lazy val getInputPorts: GetInputPortsEndpoint =
     endpoint
@@ -7337,7 +7349,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[InputPortsEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CreateInputPortEndpoint = Endpoint[Unit, (String, PortEntity), Unit, PortEntity, Any]
   lazy val createInputPort: CreateInputPortEndpoint =
     endpoint
@@ -7353,7 +7365,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[PortEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type GetLabelsEndpoint = Endpoint[Unit, String, Unit, LabelsEntity, Any]
   lazy val getLabels: GetLabelsEndpoint =
     endpoint
@@ -7368,7 +7380,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[LabelsEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CreateLabelEndpoint = Endpoint[Unit, (String, LabelEntity), Unit, LabelEntity, Any]
   lazy val createLabel: CreateLabelEndpoint =
     endpoint
@@ -7384,7 +7396,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[LabelEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type GetLocalModificationsEndpoint = Endpoint[Unit, String, Unit, FlowComparisonEntity, Any]
   lazy val getLocalModifications: GetLocalModificationsEndpoint =
     endpoint
@@ -7399,7 +7411,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[FlowComparisonEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type GetOutputPortsEndpoint = Endpoint[Unit, String, Unit, OutputPortsEntity, Any]
   lazy val getOutputPorts: GetOutputPortsEndpoint =
     endpoint
@@ -7414,7 +7426,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[OutputPortsEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CreateOutputPortEndpoint = Endpoint[Unit, (String, PortEntity), Unit, PortEntity, Any]
   lazy val createOutputPort: CreateOutputPortEndpoint =
     endpoint
@@ -7430,7 +7442,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[PortEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type PasteEndpoint = Endpoint[Unit, (String, PasteRequestEntity), Unit, PasteResponseEntity, Any]
   lazy val paste: PasteEndpoint =
     endpoint
@@ -7445,7 +7457,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[PasteResponseEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type GetProcessGroupsEndpoint = Endpoint[Unit, String, Unit, ProcessGroupsEntity, Any]
   lazy val getProcessGroups: GetProcessGroupsEndpoint =
     endpoint
@@ -7460,7 +7472,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupsEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CreateProcessGroupEndpoint = Endpoint[Unit, (String, Option[CreateProcessGroupParameterContextHandlingStrategy], ProcessGroupEntity), Unit, ProcessGroupEntity, Any]
   lazy val createProcessGroup: CreateProcessGroupEndpoint =
     endpoint
@@ -7477,7 +7489,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   sealed trait CreateProcessGroupParameterContextHandlingStrategy extends enumeratum.EnumEntry
   object CreateProcessGroupParameterContextHandlingStrategy extends enumeratum.Enum[CreateProcessGroupParameterContextHandlingStrategy] with enumeratum.CirceEnum[CreateProcessGroupParameterContextHandlingStrategy] {
     val values = findValues
@@ -7486,7 +7498,7 @@ object TapirGeneratedEndpoints {
     implicit val enumCodecSupportCreateProcessGroupParameterContextHandlingStrategy: ExtraParamSupport[CreateProcessGroupParameterContextHandlingStrategy] =
       extraCodecSupport[CreateProcessGroupParameterContextHandlingStrategy]("CreateProcessGroupParameterContextHandlingStrategy", CreateProcessGroupParameterContextHandlingStrategy)
   }
-  
+
   type ImportProcessGroupEndpoint = Endpoint[Unit, (String, Option[ProcessGroupUploadEntity]), Unit, ProcessGroupEntity, Any]
   lazy val importProcessGroup: ImportProcessGroupEndpoint =
     endpoint
@@ -7501,7 +7513,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type UploadProcessGroupEndpoint = Endpoint[Unit, (String, UploadProcessGroupRequest), Unit, ProcessGroupEntity, Any]
   lazy val uploadProcessGroup: UploadProcessGroupEndpoint =
     endpoint
@@ -7517,7 +7529,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type GetProcessorsEndpoint = Endpoint[Unit, (String, Option[Boolean]), Unit, ProcessorsEntity, Any]
   lazy val getProcessors: GetProcessorsEndpoint =
     endpoint
@@ -7533,7 +7545,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessorsEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CreateProcessorEndpoint = Endpoint[Unit, (String, ProcessorEntity), Unit, ProcessorEntity, Any]
   lazy val createProcessor: CreateProcessorEndpoint =
     endpoint
@@ -7549,7 +7561,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessorEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type GetRemoteProcessGroupsEndpoint = Endpoint[Unit, String, Unit, RemoteProcessGroupsEntity, Any]
   lazy val getRemoteProcessGroups: GetRemoteProcessGroupsEndpoint =
     endpoint
@@ -7564,7 +7576,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[RemoteProcessGroupsEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CreateRemoteProcessGroupEndpoint = Endpoint[Unit, (String, RemoteProcessGroupEntity), Unit, RemoteProcessGroupEntity, Any]
   lazy val createRemoteProcessGroup: CreateRemoteProcessGroupEndpoint =
     endpoint
@@ -7580,7 +7592,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[RemoteProcessGroupEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type InitiateReplaceProcessGroupEndpoint = Endpoint[Unit, (String, ProcessGroupImportEntity), Unit, ProcessGroupReplaceRequestEntity, Any]
   lazy val initiateReplaceProcessGroup: InitiateReplaceProcessGroupEndpoint =
     endpoint
@@ -7596,7 +7608,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessGroupReplaceRequestEntity].description(""))
       .tags(List("ProcessGroups"))
-  
+
   type CopySnippetEndpoint = Endpoint[Unit, (String, CopySnippetRequestEntity), Unit, FlowEntity, Any]
   lazy val copySnippet: CopySnippetEndpoint =
     endpoint
@@ -7612,7 +7624,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[FlowEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProcessGroups"))
-  
+
   type GetProcessorRunStatusDetailsEndpoint = Endpoint[Unit, GetProcessorRunStatusDetailsBodyIn, Unit, ProcessorsRunStatusDetailsEntity, Any]
   lazy val getProcessorRunStatusDetails: GetProcessorRunStatusDetailsEndpoint =
     endpoint
@@ -7630,7 +7642,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessorsRunStatusDetailsEntity].description(""))
       .tags(List("Processors"))
-  
+
   type GetProcessorEndpoint = Endpoint[Unit, String, Unit, ProcessorEntity, Any]
   lazy val getProcessor: GetProcessorEndpoint =
     endpoint
@@ -7645,7 +7657,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessorEntity].description(""))
       .tags(List("Processors"))
-  
+
   type UpdateProcessorEndpoint = Endpoint[Unit, (String, ProcessorEntity), Unit, ProcessorEntity, Any]
   lazy val updateProcessor: UpdateProcessorEndpoint =
     endpoint
@@ -7661,7 +7673,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessorEntity].description(""))
       .tags(List("Processors"))
-  
+
   type DeleteProcessorEndpoint = Endpoint[Unit, (String, Option[LongParameterInt], Option[ClientIdParameterStr], Option[Boolean]), Unit, ProcessorEntity, Any]
   lazy val deleteProcessor: DeleteProcessorEndpoint =
     endpoint
@@ -7679,7 +7691,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessorEntity].description(""))
       .tags(List("Processors"))
-  
+
   type AnalyzeConfiguration_2Endpoint = Endpoint[Unit, (String, ConfigurationAnalysisEntity), Unit, ConfigurationAnalysisEntity, Any]
   lazy val analyzeConfiguration_2: AnalyzeConfiguration_2Endpoint =
     endpoint
@@ -7695,7 +7707,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ConfigurationAnalysisEntity].description(""))
       .tags(List("Processors"))
-  
+
   type SubmitProcessorVerificationRequestEndpoint = Endpoint[Unit, (String, VerifyConfigRequestEntity), Unit, VerifyConfigRequestEntity, Any]
   lazy val submitProcessorVerificationRequest: SubmitProcessorVerificationRequestEndpoint =
     endpoint
@@ -7711,7 +7723,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[VerifyConfigRequestEntity].description(""))
       .tags(List("Processors"))
-  
+
   type GetVerificationRequest_2Endpoint = Endpoint[Unit, (String, String), Unit, VerifyConfigRequestEntity, Any]
   lazy val getVerificationRequest_2: GetVerificationRequest_2Endpoint =
     endpoint
@@ -7726,7 +7738,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[VerifyConfigRequestEntity].description(""))
       .tags(List("Processors"))
-  
+
   type DeleteVerificationRequest_2Endpoint = Endpoint[Unit, (String, String), Unit, VerifyConfigRequestEntity, Any]
   lazy val deleteVerificationRequest_2: DeleteVerificationRequest_2Endpoint =
     endpoint
@@ -7741,7 +7753,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[VerifyConfigRequestEntity].description(""))
       .tags(List("Processors"))
-  
+
   type GetPropertyDescriptor_3Endpoint = Endpoint[Unit, (String, Option[ClientIdParameterStr], String, Option[Boolean]), Unit, PropertyDescriptorEntity, Any]
   lazy val getPropertyDescriptor_3: GetPropertyDescriptor_3Endpoint =
     endpoint
@@ -7759,7 +7771,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[PropertyDescriptorEntity].description(""))
       .tags(List("Processors"))
-  
+
   type GetProcessorDiagnosticsEndpoint = Endpoint[Unit, String, Unit, ProcessorEntity, Any]
   lazy val getProcessorDiagnostics: GetProcessorDiagnosticsEndpoint =
     endpoint
@@ -7774,7 +7786,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessorEntity].description(""))
       .tags(List("Processors"))
-  
+
   type UpdateRunStatus_4Endpoint = Endpoint[Unit, (String, ProcessorRunStatusEntity), Unit, ProcessorEntity, Any]
   lazy val updateRunStatus_4: UpdateRunStatus_4Endpoint =
     endpoint
@@ -7790,7 +7802,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessorEntity].description(""))
       .tags(List("Processors"))
-  
+
   type GetState_2Endpoint = Endpoint[Unit, String, Unit, ComponentStateEntity, Any]
   lazy val getState_2: GetState_2Endpoint =
     endpoint
@@ -7805,7 +7817,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ComponentStateEntity].description(""))
       .tags(List("Processors"))
-  
+
   type ClearState_3Endpoint = Endpoint[Unit, (String, ClearState_3BodyIn), Unit, ComponentStateEntity, Any]
   lazy val clearState_3: ClearState_3Endpoint =
     endpoint
@@ -7823,7 +7835,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ComponentStateEntity].description(""))
       .tags(List("Processors"))
-  
+
   type TerminateProcessorEndpoint = Endpoint[Unit, String, Unit, ProcessorEntity, Any]
   lazy val terminateProcessor: TerminateProcessorEndpoint =
     endpoint
@@ -7838,7 +7850,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProcessorEntity].description(""))
       .tags(List("Processors"))
-  
+
   type SubmitProvenanceRequestEndpoint = Endpoint[Unit, ProvenanceEntity, Unit, ProvenanceEntity, Any]
   lazy val submitProvenanceRequest: SubmitProvenanceRequestEndpoint =
     endpoint
@@ -7853,7 +7865,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProvenanceEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("Provenance"))
-  
+
   type SubmitReplayLatestEventEndpoint = Endpoint[Unit, ReplayLastEventRequestEntity, Unit, ReplayLastEventResponseEntity, Any]
   lazy val submitReplayLatestEvent: SubmitReplayLatestEventEndpoint =
     endpoint
@@ -7869,7 +7881,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ReplayLastEventResponseEntity].description(""))
       .tags(List("ProvenanceEvents"))
-  
+
   type GetLatestProvenanceEventsEndpoint = Endpoint[Unit, (String, Option[Int]), Unit, LatestProvenanceEventsEntity, Any]
   lazy val getLatestProvenanceEvents: GetLatestProvenanceEventsEndpoint =
     endpoint
@@ -7885,7 +7897,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[LatestProvenanceEventsEntity].description(""))
       .tags(List("ProvenanceEvents"))
-  
+
   type SubmitReplayEndpoint = Endpoint[Unit, SubmitReplayRequestEntity, Unit, ProvenanceEventEntity, Any]
   lazy val submitReplay: SubmitReplayEndpoint =
     endpoint
@@ -7901,7 +7913,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProvenanceEventEntity].description("").and(statusCode(sttp.model.StatusCode(201))))
       .tags(List("ProvenanceEvents"))
-  
+
   type GetProvenanceEventEndpoint = Endpoint[Unit, (LongParameterInt, Option[String]), Unit, ProvenanceEventEntity, Any]
   lazy val getProvenanceEvent: GetProvenanceEventEndpoint =
     endpoint
@@ -7917,8 +7929,8 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(jsonBody[ProvenanceEventEntity].description(""))
       .tags(List("ProvenanceEvents"))
-  
-  type GetInputContentEndpoint = Endpoint[Unit, (LongParameterInt, Option[String], Option[String]), Unit, Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], sttp.capabilities.pekko.PekkoStreams]
+
+  type GetInputContentEndpoint = Endpoint[Unit, (LongParameterInt, Option[String], Option[String]), Unit, (Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], GetInputContentResponseHeader), sttp.capabilities.pekko.PekkoStreams]
   lazy val getInputContent: GetInputContentEndpoint =
     endpoint
       .name("getInputContent")
@@ -7933,12 +7945,12 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(409), emptyOutput.description("The request was valid but NiFi was not in the appropriate state to process it."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(416), emptyOutput.description("Requested Range Not Satisfiable based on bytes requested"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
-      .out(oneOf[Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream]](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(206), emptyOutput.description("Partial Content with range of bytes requested"))(None),
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull)){ case Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream) => true }))
+      .out(oneOf[(Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], GetInputContentResponseHeader)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(206), emptyOutputAs(None).description("Partial Content with range of bytes requested").and(emptyOutputAs(GetInputContentResponseHeader206))){ case (None, GetInputContentResponseHeader206) => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull).and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])")).map(GetInputContentResponseHeader200(_))(_.`Content-Type`))){ case (Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream), (_: GetInputContentResponseHeader200)) => true }))
       .tags(List("ProvenanceEvents"))
-  
-  type GetOutputContentEndpoint = Endpoint[Unit, (LongParameterInt, Option[String], Option[String]), Unit, Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], sttp.capabilities.pekko.PekkoStreams]
+
+  type GetOutputContentEndpoint = Endpoint[Unit, (LongParameterInt, Option[String], Option[String]), Unit, (Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], GetOutputContentResponseHeader), sttp.capabilities.pekko.PekkoStreams]
   lazy val getOutputContent: GetOutputContentEndpoint =
     endpoint
       .name("getOutputContent")
@@ -7953,9 +7965,9 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(409), emptyOutput.description("The request was valid but NiFi was not in the appropriate state to process it."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(416), emptyOutput.description("Requested Range Not Satisfiable based on bytes requested"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
-      .out(oneOf[Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream]](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(206), emptyOutput.description("Partial Content with range of bytes requested"))(None),
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull)){ case Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream) => true }))
+      .out(oneOf[(Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], GetOutputContentResponseHeader)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(206), emptyOutputAs(None).description("Partial Content with range of bytes requested").and(emptyOutputAs(GetOutputContentResponseHeader206))){ case (None, GetOutputContentResponseHeader206) => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull).and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])")).map(GetOutputContentResponseHeader200(_))(_.`Content-Type`))){ case (Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream), (_: GetOutputContentResponseHeader200)) => true }))
       .tags(List("ProvenanceEvents"))
   
   type SubmitLineageRequestEndpoint = Endpoint[Unit, LineageEntity, Unit, LineageEntity, Any]
