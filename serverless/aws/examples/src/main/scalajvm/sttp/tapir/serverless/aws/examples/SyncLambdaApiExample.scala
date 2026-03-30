@@ -10,7 +10,7 @@ object SyncLambdaApiExample extends SyncLambdaHandler[AwsRequest](AwsSyncServerO
   val helloEndpoint: ServerEndpoint[Any, sttp.shared.Identity] = endpoint.get
     .in("api" / "hello")
     .out(stringBody)
-    .serverLogic[sttp.shared.Identity] { _ => Right(s"Hello!") }
+    .handleSuccess { _ => s"Hello!" }
 
   override protected def getAllEndpoints: List[ServerEndpoint[Any, sttp.shared.Identity]] = List(helloEndpoint)
 }
