@@ -11,13 +11,13 @@ Currently supported:
 * [Netty](netty.md) (using direct-style, `Future`s, cats-effect or ZIO)
 * [Http4s](http4s.md) `HttpRoutes[F]` (using cats-effect or [ZIO](zio-http4s.md))
 * [Pekko HTTP](pekkohttp.md) `Route`s/`Directive`s
-* [ZIO Http](ziohttp.md) `Http`
-* [Play](play.md) `Route`
 * [Akka HTTP](akkahttp.md) `Route`s/`Directive`s
-* [Helidon Níma](nima.md) (using JVM 21 Virtual Threads and direct style)
-* [Finatra](finatra.md) `http.Controller`
 * [Vert.X](vertx.md) `Router => Route` (using `Future`s, cats-effect or ZIO)
 * [Armeria](armeria.md) `HttpServiceWithRoutes` (using `Future`s, cats-effect or ZIO)
+* [ZIO Http](ziohttp.md) `Http`
+* [Play](play.md) `Route`
+* [Helidon Níma](nima.md) (using JVM 21 Virtual Threads and direct style)
+* [Finatra](finatra.md) `http.Controller`
 * [JDK HTTP](jdkhttp.md) `HttpHandler` (simple, synchronous API only)
 * [aws](aws.md) through Lambda/SAM/Terraform
 * [gRPC](../other/grpc.md)
