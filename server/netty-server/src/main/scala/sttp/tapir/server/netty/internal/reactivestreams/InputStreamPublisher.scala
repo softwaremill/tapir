@@ -34,11 +34,19 @@ class InputStreamPublisher[F[_]](
     private val readingInProgress = new AtomicBoolean(false)
 
     override def request(n: Long): Unit = {
-      if (n <= 0) subscriber.onError(new IllegalArgumentException("§3.9: n must be greater than 0"))
-      else {
-        demand.addAndGet(n)
+      if (n <= 0) {
+        cancel()
+        subscriber.onError(new IllegalArgumentException("§3.9: n must be greater than 0"))
+      } else {
+        addDemand(n)
         readNextChunkIfNeeded()
       }
+    }
+
+    /** Add demand using saturating addition, capping at Long.MaxValue to prevent overflow. */
+    private def addDemand(n: Long): Unit = {
+      demand.getAndUpdate(current => if (current > Long.MaxValue - n) Long.MaxValue else current + n)
+      ()
     }
 
     /** Non-blocking by itself, starts an asynchronous operation with blocking stream.readNBytes. Can be called multiple times by
