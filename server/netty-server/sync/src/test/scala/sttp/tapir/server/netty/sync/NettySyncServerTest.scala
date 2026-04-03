@@ -92,12 +92,26 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         endpoint.get.in("hello").out(stringBody).handleSuccess(_ => "ok"),
         testNameSuffix = "properly log invalid requests when the URL is malformed"
       ) { (_, baseUri) =>
-        IO.blocking:
+        IO.blocking {
           @scala.annotation.nowarn
           val conn = new java.net.URL(s"$baseUri/hello?param=%%2G").openConnection().asInstanceOf[java.net.HttpURLConnection]
-          try
-            conn.getResponseCode() shouldBe 400
+          try conn.getResponseCode() shouldBe 400
           finally conn.disconnect
+        }
+      },
+      // #5150: large InputStream responses previously caused StackOverflowError due to recursive readNextChunkIfNeeded
+      createServerTest.testServerLogic(
+        endpoint.get
+          .in("large-stream")
+          .out(inputStreamBody)
+          .handleSuccess(_ => new java.io.ByteArrayInputStream(new Array[Byte](10 * 1024 * 1024))),
+        testNameSuffix = "large InputStream response should not cause StackOverflowError"
+      ) { (backend, baseUri) =>
+        basicRequest
+          .get(uri"$baseUri/large-stream")
+          .response(asByteArrayAlways)
+          .send(backend)
+          .map(_.body.length shouldBe 10 * 1024 * 1024)
       }
     )
 }

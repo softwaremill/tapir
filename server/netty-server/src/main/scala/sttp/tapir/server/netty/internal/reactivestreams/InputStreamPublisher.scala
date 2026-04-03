@@ -10,8 +10,8 @@ import sttp.tapir.server.netty.internal.RunAsync
 
 import java.io.InputStream
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-import scala.util.Try
 
+/** The effect F should never be Id; instead, the InputStreamSyncPublisher should then be used */
 class InputStreamPublisher[F[_]](
     range: InputStreamRange,
     chunkSize: Int,
@@ -53,8 +53,6 @@ class InputStreamPublisher[F[_]](
           case _                                        => chunkSize
         }
 
-        // Note: the effect F may be Id, in which case everything here will be synchronous and blocking
-        // (which technically is against the reactive streams spec).
         runAsync(
           monad
             .blocking(
@@ -79,7 +77,10 @@ class InputStreamPublisher[F[_]](
               }
             }
             .handleError { case e =>
-              val _ = Try(stream.close())
+              try stream.close()
+              catch {
+                case e2: Throwable => e.addSuppressed(e2)
+              }
               monad.unit(subscriber.onError(e))
             }
         )
@@ -88,7 +89,10 @@ class InputStreamPublisher[F[_]](
 
     override def cancel(): Unit = {
       isCompleted.set(true)
-      val _ = Try(stream.close())
+      try stream.close()
+      catch {
+        case e2: Throwable => // ignore
+      }
     }
   }
 }

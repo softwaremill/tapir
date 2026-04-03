@@ -11,8 +11,6 @@ import org.apache.http.entity.mime.content.*
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import org.reactivestreams.{Publisher, Subscriber}
 import sttp.model.{HasHeaders, Part}
-import sttp.monad.MonadError
-import sttp.shared.Identity
 import sttp.tapir.*
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.server.netty.NettyResponse
@@ -21,8 +19,8 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ReactivePublisherNettyResponseContent,
   ReactiveWebSocketProcessorNettyResponseContent
 }
-import sttp.tapir.server.netty.internal.reactivestreams.{FileRangePublisher, InputStreamPublisher}
-import sttp.tapir.server.netty.internal.RunAsync
+import sttp.tapir.server.netty.internal.reactivestreams.FileRangePublisher
+import sttp.tapir.server.netty.sync.internal.reactivestreams.InputStreamSyncPublisher
 import sttp.tapir.server.netty.sync.*
 import sttp.tapir.server.netty.sync.internal.NettySyncToResponseBody.DefaultChunkSize
 
@@ -30,9 +28,8 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-private[sync] class NettySyncToResponseBody(runAsync: RunAsync[Identity], inScopeRunner: InScopeRunner)(using
-    me: MonadError[Identity]
-) extends ToResponseBody[NettyResponse, OxStreams]:
+private[sync] class NettySyncToResponseBody(inScopeRunner: InScopeRunner)
+    extends ToResponseBody[NettyResponse, OxStreams]:
 
   override val streams: OxStreams = OxStreams
 
@@ -70,7 +67,7 @@ private[sync] class NettySyncToResponseBody(runAsync: RunAsync[Identity], inScop
   }
 
   private def wrap(streamRange: InputStreamRange): Publisher[HttpContent] = {
-    new InputStreamPublisher[Identity](streamRange, DefaultChunkSize, runAsync)
+    new InputStreamSyncPublisher(streamRange, DefaultChunkSize)
   }
 
   private def wrap(fileRange: FileRange): Publisher[HttpContent] = {
