@@ -33,7 +33,7 @@ class InputStreamSyncPublisherTest extends AnyFreeSpec with Matchers {
 
           publisher.subscribe(new Subscriber[HttpContent] {
             override def onSubscribe(s: Subscription): Unit = {
-              // Request all chunks at once - this triggers the recursive loop
+              // Request all chunks at once - previously triggered recursive StackOverflowError
               s.request(Long.MaxValue)
             }
 
@@ -63,6 +63,10 @@ class InputStreamSyncPublisherTest extends AnyFreeSpec with Matchers {
     )
     thread.start()
     thread.join(30000)
+    if (thread.isAlive) {
+      thread.interrupt()
+      fail("Worker thread did not complete within 30 seconds")
+    }
 
     result.get() should not be null
     result.get() match {

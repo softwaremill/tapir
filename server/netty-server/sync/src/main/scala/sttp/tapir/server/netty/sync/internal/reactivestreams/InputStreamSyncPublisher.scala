@@ -38,7 +38,7 @@ class InputStreamSyncPublisher(
     }
 
     private def readNextChunkIfNeeded(): Unit = {
-      // Everything here is be synchronous and blocking - which is against the reactive streams spec
+      // Everything here is synchronous and blocking, which is against the reactive streams spec
       while (demand.get() > 0 && !isCompleted.get() && readingInProgress.compareAndSet(false, true)) {
         try {
           var continue = true
