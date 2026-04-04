@@ -20,7 +20,6 @@ openapiGenerateEndpointTypes := true
 import scala.io.Source
 import scala.util.Using
 
-
 TaskKey[Unit]("check") := {
   val generatedCode =
     Using(Source.fromFile(s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala"))(

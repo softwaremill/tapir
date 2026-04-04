@@ -47,7 +47,6 @@ def compare(name: String, genFn: String, expFn: String) = {
 
 }
 
-
 TaskKey[Unit]("check") := {
   compare("endpoints", s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
   compare(

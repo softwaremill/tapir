@@ -117,15 +117,17 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       generated.shouldCompile()
     })
 
-    VersionCheck.runTest(jsonSerdeLib)(it should s"compile endpoints with date and duration default values using ${jsonSerdeLib} serdes" in {
-      val doc = TestHelpers.parseYamlDocument(TestHelpers.dateAndDurationDefaultsYaml).fold(err => fail(err.getMessage), identity)
-      val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
+    VersionCheck.runTest(jsonSerdeLib)(
+      it should s"compile endpoints with date and duration default values using ${jsonSerdeLib} serdes" in {
+        val doc = TestHelpers.parseYamlDocument(TestHelpers.dateAndDurationDefaultsYaml).fold(err => fail(err.getMessage), identity)
+        val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
 
-      generated should include("""java.time.LocalDate.parse("2024-01-15")""")
-      generated should include("""java.time.Duration.parse("PT1H30M")""")
+        generated should include("""java.time.LocalDate.parse("2024-01-15")""")
+        generated should include("""java.time.Duration.parse("PT1H30M")""")
 
-      generated.shouldCompile()
-    })
+        generated.shouldCompile()
+      }
+    )
   }
 
   Seq("circe", "jsoniter", "zio") foreach testJsonLib

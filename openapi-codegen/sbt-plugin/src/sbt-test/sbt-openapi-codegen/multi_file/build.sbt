@@ -13,8 +13,6 @@ libraryDependencies += "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" %
 import scala.io.Source
 import scala.util.Using
 
-
-
 openapiAdditionalPackages := List(
   "sttp.tapir.generated.swagger" -> baseDirectory.value / "swagger.yaml",
   "sttp.tapir.generated.swagger2" -> baseDirectory.value / "swagger2.yaml"

@@ -20,4 +20,3 @@ TaskKey[Unit]("check") := {
   }
   ()
 }
-

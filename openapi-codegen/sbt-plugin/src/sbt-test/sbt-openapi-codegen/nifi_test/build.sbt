@@ -28,7 +28,6 @@ libraryDependencies ++= Seq(
 import scala.io.Source
 import scala.util.Using
 
-
 TaskKey[Unit]("check") := {
   def check(generatedFileName: String, expectedFileName: String) = {
     val generatedCode =

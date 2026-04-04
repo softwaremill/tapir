@@ -50,7 +50,8 @@ class ClassDefinitionGenerator {
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
 
-    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").sorted.mkString("", "\n", "\n")
+    val adtTypes =
+      adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").sorted.mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
     val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
@@ -120,7 +121,8 @@ class ClassDefinitionGenerator {
         validatedChildren.map(_ -> ((name, schema)))
       }
       .groupBy(_._1)
-      .mapValues(_.map(_._2)).toMap
+      .mapValues(_.map(_._2))
+      .toMap
 
   private def enumSerdeHelperDefn(targetScala3: Boolean): String = {
     if (targetScala3)
