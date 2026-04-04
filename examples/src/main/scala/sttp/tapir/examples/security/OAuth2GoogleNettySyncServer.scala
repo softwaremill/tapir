@@ -107,8 +107,8 @@ import java.time.Instant
     JwtCirce
       .decodeAll(token, jwtKey, Seq(jwtAlgo))
       .toEither match
-        case Left(err) => Left("Invalid token: " + err)
-        case Right(decoded) => Right(decoded._2.content)
+      case Left(err)      => Left("Invalid token: " + err)
+      case Right(decoded) => Right(decoded._2.content)
 
   // get user details from decoded jwt
   val secretPlaceServerEndpoint = secretPlace
@@ -117,7 +117,7 @@ import java.time.Instant
 
   supervised:
     val backend = useInScope(HttpClientSyncBackend())(_.close())
-    
+
     val binding = useInScope(
       NettySyncServer()
         .host("localhost")

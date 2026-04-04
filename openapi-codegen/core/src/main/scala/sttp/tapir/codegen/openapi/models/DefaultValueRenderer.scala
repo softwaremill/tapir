@@ -36,7 +36,7 @@ object DefaultValueRenderer {
         renderStringWithName(value)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
       case OpenapiSchemaString(_, _, _, _) => '"' +: value :+ '"'
       case OpenapiSchemaEnum(_, _, _)      => s"$name.$value"
-      case OpenapiSchemaDate(_)             => s"""java.time.LocalDate.parse("$value")"""
+      case OpenapiSchemaDate(_)            => s"""java.time.LocalDate.parse("$value")"""
       case OpenapiSchemaDateTime(_)        => s"""java.time.Instant.parse("$value")"""
       case OpenapiSchemaDuration(_)        => s"""java.time.Duration.parse("$value")"""
       case OpenapiSchemaBinary(_)          => s""""$value".getBytes("utf-8")"""

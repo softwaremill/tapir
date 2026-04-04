@@ -27,10 +27,12 @@ object OpenapiCodegenPlugin extends AutoPlugin {
         hashFile.delete()
         java.nio.file.Files.write(hashFile.toPath, configHash)
         val swaggerFiles = (c.swaggerFile +: c.additionalPackages.map(_._2)).filter(_.exists()).toSet + hashFile
-        FileFunction.cached(cacheDir / s"scala-$sv" / "openapi-inputs", FileInfo.hash) { _ =>
-          log.info("Generating OpenAPI sources...")
-          codegen(c, srcDir, sv).toSet
-        }(swaggerFiles).toSeq
+        FileFunction
+          .cached(cacheDir / s"scala-$sv" / "openapi-inputs", FileInfo.hash) { _ =>
+            log.info("Generating OpenAPI sources...")
+            codegen(c, srcDir, sv).toSet
+          }(swaggerFiles)
+          .toSeq
       }.value,
       generateTapirDefinitions / fileInputs ++= {
         (openapiSwaggerFile.value +: openapiAdditionalPackages.value.map(_._2))

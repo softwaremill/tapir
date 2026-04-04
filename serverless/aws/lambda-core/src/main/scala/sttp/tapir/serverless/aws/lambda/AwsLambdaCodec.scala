@@ -19,10 +19,10 @@ private[aws] object AwsLambdaCodec {
     */
   def decodeRequest[R: Decoder](json: String): Either[AwsResponse, AwsRequest] =
     jsonDecode[R](json) match {
-      case Left(e)                 => Left(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
+      case Left(e)                => Left(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
       case Right(r: AwsRequestV1) => Right(r.toV2)
       case Right(r: AwsRequest)   => Right(r)
-      case Right(r) =>
+      case Right(r)               =>
         throw new IllegalArgumentException(s"Request of type ${r.getClass.getCanonicalName} is not supported")
     }
 
