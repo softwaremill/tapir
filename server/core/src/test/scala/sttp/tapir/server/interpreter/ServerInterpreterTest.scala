@@ -13,6 +13,7 @@ import sttp.tapir.server.interceptor.RequestResult.Response
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectInterceptor}
 import sttp.tapir.server.model.{ServerResponse, ValuedEndpointOutput}
+import sttp.tapir.CodecFormat.TextPlain
 
 class ServerInterpreterTest extends AnyFlatSpec with Matchers {
   implicit val idMonad: MonadError[Identity] = sttp.monad.IdentityMonad
@@ -68,9 +69,11 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
         _ =>
           List(
             endpoint
-              .securityIn(query[StringWrapper]("x")(Codec.listHead(addToTrailCodec("x"))))
-              .in(query[StringWrapper]("y")(Codec.listHead(addToTrailCodec("y"))))
-              .in(plainBody[StringWrapper](addToTrailCodec("z")))
+              // passing the codec explicitly via queryAnyFormat/Body instead of query[T]/plainBody[T],
+              // due to Scala 3.8 compatibility (the implicit can no longer be applied as a regular argument)
+              .securityIn(queryAnyFormat[StringWrapper, TextPlain]("x", Codec.listHead(addToTrailCodec("x"))))
+              .in(queryAnyFormat[StringWrapper, TextPlain]("y", Codec.listHead(addToTrailCodec("y"))))
+              .in(EndpointIO.Body(RawBodyType.StringBody(java.nio.charset.StandardCharsets.UTF_8), addToTrailCodec("z"), EndpointIO.Info.empty))
               .serverSecurityLogic[Unit, Identity](_ => Left(()))
               .serverLogic(_ => _ => Right(()))
           ),

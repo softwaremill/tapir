@@ -85,7 +85,7 @@ private[tapir] object MultipartCodecMacros {
     val encodeDefSymbol =
       Symbol.newMethod(
         Symbol.spliceOwner,
-        "encode",
+        "$anonfun$encode",
         MethodType(List("t"))(_ => List(caseClass.tpe), _ => TypeRepr.of[ListMap[String, Any]])
       )
     val encodeDef = DefDef(
@@ -113,7 +113,7 @@ private[tapir] object MultipartCodecMacros {
     val decodeDefSymbol =
       Symbol.newMethod(
         Symbol.spliceOwner,
-        "decode",
+        "$anonfun$decode",
         MethodType(List("params"))(_ => List(TypeRepr.of[ListMap[String, Any]]), _ => TypeRepr.of[T])
       )
     val decodeDef = DefDef(
