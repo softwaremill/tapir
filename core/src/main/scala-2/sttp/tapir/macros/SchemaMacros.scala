@@ -19,7 +19,7 @@ trait SchemaMacros[T] {
   def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.generateModify[T, U]
 }
 
-trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
+private[tapir] trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro SchemaMapMacro.generateSchemaForStringMap[V]
 
   /** Create a schema for a map with arbitrary keys. The schema for the keys `K` should be a string, however this cannot be verified at
