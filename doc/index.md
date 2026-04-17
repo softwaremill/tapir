@@ -125,6 +125,8 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
 * [sttp shared](https://github.com/softwaremill/sttp-shared): shared web socket, FP abstractions, capabilities and streaming code.
 * [sttp apispec](https://github.com/softwaremill/sttp-apispec): OpenAPI, AsyncAPI and JSON Schema models.
 
+When using AI agents, the [Scala skills](https://github.com/VirtusLab/scala-skill) that we maintain might be useful.
+
 ## Table of contents
 
 ```{eval-rst}
