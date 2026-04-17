@@ -52,9 +52,9 @@ private[pekkohttp] class PekkoToResponseBody(implicit m: Materializer, ec: Execu
           case nb: ContentType.NonBinary => HttpEntity(nb, r)
           case _                         => HttpEntity(ct, r.getBytes(charset))
         }
-      case RawBodyType.ByteArrayBody   => HttpEntity(ct, r)
-      case RawBodyType.ByteBufferBody  => HttpEntity(ct, ByteString(r))
-      case RawBodyType.InputStreamBody => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r, ChunkSize))
+      case RawBodyType.ByteArrayBody        => HttpEntity(ct, r)
+      case RawBodyType.ByteBufferBody       => HttpEntity(ct, ByteString(r))
+      case RawBodyType.InputStreamBody      => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r, ChunkSize))
       case RawBodyType.InputStreamRangeBody =>
         val resource = r
         val initialStream = StreamConverters.fromInputStream(resource.inputStreamFromRangeStart, ChunkSize)
@@ -125,7 +125,7 @@ private[pekkohttp] class PekkoToResponseBody(implicit m: Materializer, ec: Execu
       case CodecFormat.Zip()         => MediaTypes.`application/zip`
       case CodecFormat.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`
       case CodecFormat.MultipartFormData()  => MediaTypes.`multipart/form-data`
-      case f =>
+      case f                                =>
         val mt = if (f.mediaType.isText) charset.fold(f.mediaType)(f.mediaType.charset(_)) else f.mediaType
         parseContentType(mt.toString())
     }

@@ -45,7 +45,7 @@ private[sync] class OxProcessor[A, B](
     if a == null then throw new NullPointerException("Element cannot be null") // Rule 2.13
     else
       channel.sendOrClosed(a) match
-        case () => ()
+        case ()               => ()
         case _: ChannelClosed =>
           cancelSubscription()
           onError(new IllegalStateException("onNext called when the channel is closed"))

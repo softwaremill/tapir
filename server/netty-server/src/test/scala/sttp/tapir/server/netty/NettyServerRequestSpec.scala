@@ -3,6 +3,7 @@ package sttp.tapir.server.netty
 import java.net.{URI => JavaUri}
 
 import io.netty.buffer.Unpooled
+import io.netty.channel.embedded.EmbeddedChannel
 import io.netty.handler.codec.http._
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -28,7 +29,21 @@ class NettyServerRequestSpec extends AnyFreeSpec with Matchers {
     trailingHeaders
   )
 
-  val nettyServerRequest: NettyServerRequest = NettyServerRequest(emptyPostRequest)
+  // Use EmbeddedChannel for testing - it provides a ChannelHandlerContext
+  private val embeddedChannel = new EmbeddedChannel()
+  private var capturedCtx: io.netty.channel.ChannelHandlerContext = null
+
+  embeddedChannel
+    .pipeline()
+    .addLast(new io.netty.channel.ChannelInboundHandlerAdapter {
+      override def channelActive(ctx: io.netty.channel.ChannelHandlerContext): Unit = {
+        capturedCtx = ctx
+        super.channelActive(ctx)
+      }
+    })
+    .fireChannelActive()
+
+  val nettyServerRequest: NettyServerRequest = NettyServerRequest(emptyPostRequest, capturedCtx)
 
   "uri is the same as in request" in {
     nettyServerRequest.uri.toString should equal(uri.toString)

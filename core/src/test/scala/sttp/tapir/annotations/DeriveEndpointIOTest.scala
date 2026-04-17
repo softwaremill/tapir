@@ -175,7 +175,7 @@ final case class TapirRequestTest15(
 )
 
 final case class TapirRequestTest16(@customise({
-  case a: EndpointTransput.Atom[_] => a.attribute(TapirRequestTest16.testAttributeKey, "test")
+  case a: EndpointTransput.Atom[?] => a.attribute(TapirRequestTest16.testAttributeKey, "test")
   case x                           => x
 }) @query field: Int)
 object TapirRequestTest16 {
@@ -314,7 +314,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
       ("multipart", multipartBody[Form].mapTo[TapirRequestTest14], EndpointInput.derived[TapirRequestTest14])
     )
 
-  forAll(bodyInputDerivations) { (body: String, expected: EndpointIO.Body[_, _], derived: EndpointInput[_]) =>
+  forAll(bodyInputDerivations) { (body: String, expected: EndpointIO.Body[?, ?], derived: EndpointInput[?]) =>
     it should s"derive correct input for $body body" in {
       compareTransputs(derived, expected) shouldBe true
     }
@@ -498,7 +498,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
     val endpointInput: EndpointInput[LoginUserInput] = EndpointInput.derived
   }
 
-  def compareTransputs(left: EndpointTransput[_], right: EndpointTransput[_]): Boolean =
+  def compareTransputs(left: EndpointTransput[?], right: EndpointTransput[?]): Boolean =
     (left, right) match {
       case (EndpointInput.Pair(left1, right1, _, _), EndpointInput.Pair(left2, right2, _, _)) =>
         compareTransputs(left1, left2) && compareTransputs(right1, right2)

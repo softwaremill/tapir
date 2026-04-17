@@ -4,10 +4,9 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.macros.ValidatorMacros
 
 import scala.collection.immutable
-import scala.util.matching.Regex
 
 sealed trait Validator[T] {
-  def apply(t: T): List[ValidationError[_]]
+  def apply(t: T): List[ValidationError[?]]
 
   def contramap[TT](g: TT => T): Validator[TT] = Validator.Mapped(this, g)
 
@@ -111,10 +110,10 @@ object Validator extends ValidatorMacros {
   def nonEmptyString[T <: String]: Validator.Primitive[T] = MinLength(1)
 
   // iterable
-  def minSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
-  def maxSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
-  def nonEmpty[T, C[_] <: Iterable[_]]: Validator.Primitive[C[T]] = MinSize(1)
-  def fixedSize[T, C[_] <: Iterable[_]](value: Int): Validator[C[T]] = MinSize(value).and(MaxSize(value))
+  def minSize[T, C[_] <: Iterable[?]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
+  def maxSize[T, C[_] <: Iterable[?]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
+  def nonEmpty[T, C[_] <: Iterable[?]]: Validator.Primitive[C[T]] = MinSize(1)
+  def fixedSize[T, C[_] <: Iterable[?]](value: Int): Validator[C[T]] = MinSize(value).and(MaxSize(value))
 
   // enum
   /** Create an enumeration validator, with the given possible values.
@@ -151,7 +150,7 @@ object Validator extends ValidatorMacros {
   sealed trait Primitive[T] extends Validator[T] {
     def doValidate(t: T): ValidationResult
     override def apply(t: T): List[ValidationError[T]] = doValidate(t) match {
-      case ValidationResult.Valid => Nil
+      case ValidationResult.Valid                   => Nil
       case ValidationResult.Invalid(customMessages) =>
         customMessages match {
           case Nil => List(ValidationError(this, t, Nil, None))
@@ -207,15 +206,20 @@ object Validator extends ValidatorMacros {
     def apply[T <: String](value: Int) = new MaxLength[T](value, false)
   }
 
-  case class MinSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
+  case class MinSize[T, C[_] <: Iterable[?]](value: Int) extends Primitive[C[T]] {
     override def doValidate(t: C[T]): ValidationResult = ValidationResult.validWhen(t.size >= value)
   }
-  case class MaxSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
+  case class MaxSize[T, C[_] <: Iterable[?]](value: Int) extends Primitive[C[T]] {
     override def doValidate(t: C[T]): ValidationResult = ValidationResult.validWhen(t.size <= value)
   }
   case class Custom[T](validationLogic: T => ValidationResult, showMessage: Option[String] = None) extends Primitive[T] {
     override def doValidate(t: T): ValidationResult = validationLogic(t)
   }
+
+  /** A marker trait for validators where runtime validation is not needed, because invalid values are not representable in the type system
+    * (e.g. Scala 3 enums, sealed trait hierarchies of objects). Such validators are used only for documentation purposes.
+    */
+  trait DocumentationOnly
 
   case class Enumeration[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], name: Option[SName]) extends Primitive[T] {
     override def doValidate(t: T): ValidationResult = ValidationResult.validWhen(possibleValues.contains(t))
@@ -236,21 +240,44 @@ object Validator extends ValidatorMacros {
     def encodeWithCodec[CF <: CodecFormat](implicit c: Codec[String, T, CF]): Enumeration[T] = copy(encode = Some(v => Some(c.encode(v))))
   }
 
+  object Enumeration {
+
+    /** Creates an [[Enumeration]] validator marked as documentation-only. Runtime validation will be skipped for such validators, as the
+      * type system already guarantees that only valid values are representable.
+      *
+      * Note: the [[DocumentationOnly]] marker is preserved through `encode`, `encodeWithPlainCodec` and `encodeWithCodec` calls. Any code
+      * that copies or deconstructs an [[Enumeration]] instance and reconstructs it (e.g. in [[inferEnumerationEncode]]) must check for the
+      * [[DocumentationOnly]] trait and use this factory method to preserve the marker.
+      */
+    def documentationOnly[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], name: Option[SName]): Enumeration[T] = {
+      val pv = possibleValues
+      val n = name
+      new Enumeration[T](pv, encode, n) with DocumentationOnly {
+        override def encode(e: T => scala.Any): Enumeration[T] =
+          Enumeration.documentationOnly(pv, Some(v => Some(e(v))), n)
+        override def encodeWithPlainCodec(implicit c: Codec.PlainCodec[T]): Enumeration[T] =
+          Enumeration.documentationOnly(pv, Some(v => Some(c.encode(v))), n)
+        override def encodeWithCodec[CF <: CodecFormat](implicit c: Codec[String, T, CF]): Enumeration[T] =
+          Enumeration.documentationOnly(pv, Some(v => Some(c.encode(v))), n)
+      }
+    }
+  }
+
   //
 
   case class Mapped[TT, T](wrapped: Validator[T], g: TT => T) extends Validator[TT] {
-    override def apply(t: TT): List[ValidationError[_]] = wrapped.apply(g(t))
+    override def apply(t: TT): List[ValidationError[?]] = wrapped.apply(g(t))
   }
 
   case class All[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
-    override def apply(t: T): List[ValidationError[_]] = validators.flatMap(_.apply(t)).toList
+    override def apply(t: T): List[ValidationError[?]] = validators.flatMap(_.apply(t)).toList
 
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) this.asInstanceOf[Validator[TT]] else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
   }
 
   case class Any[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
-    override def apply(t: T): List[ValidationError[_]] = {
+    override def apply(t: T): List[ValidationError[?]] = {
       val results = validators.map(_.apply(t))
       if (results.exists(_.isEmpty)) {
         List.empty
@@ -283,7 +310,7 @@ object Validator extends ValidatorMacros {
       case Custom(_, showMessage)            => showMessage.orElse(Some("custom"))
       case Enumeration(possibleValues, _, _) => Some(s"in(${possibleValues.mkString(",")}")
       case Mapped(wrapped, _)                => show(wrapped)
-      case All(validators) =>
+      case All(validators)                   =>
         validators.flatMap(show(_)) match {
           case immutable.Seq()  => None
           case immutable.Seq(s) => Some(s)

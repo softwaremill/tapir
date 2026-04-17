@@ -83,6 +83,11 @@ case class User(email: String)
 multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 ```
 
+```{warning}
+When receiving a multipart request in a Tapir server, any files created to store multipart parts will be removed after 
+the request processing completes (regardless of the outcome - HTTP success, HTTP failure or exception).
+```
+
 ## Next
 
 Read on about [security](security.md).

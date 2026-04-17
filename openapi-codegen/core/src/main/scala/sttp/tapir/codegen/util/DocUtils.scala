@@ -39,7 +39,7 @@ object DocUtils {
       case OpenapiSchemaAnyOf(types)                                      => nextParamsFromTypeSeq(types)
       case OpenapiSchemaAllOf(types)                                      => nextParamsFromTypeSeq(types)
       case OpenapiSchemaObject(properties, _, _, _) if properties.isEmpty => None
-      case OpenapiSchemaObject(properties, required, nullable, _) =>
+      case OpenapiSchemaObject(properties, required, nullable, _)         =>
         val propToCheck = properties.head
         val (propToCheckName, OpenapiSchemaField(propToCheckType, _, _)) = propToCheck
         val objectWithoutHeadField = OpenapiSchemaObject(properties - propToCheckName, required, nullable)

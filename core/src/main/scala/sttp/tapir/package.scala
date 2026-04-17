@@ -4,11 +4,11 @@ import sttp.model.Part
 
 package object tapir extends Tapir {
   // a part which contains one of the types supported by BodyType
-  type RawPart = Part[_]
-  type AnyPart = Part[_]
+  type RawPart = Part[?]
+  type AnyPart = Part[?]
   // used in multipart codecs
-  type AnyListCodec = Codec[_ <: List[_], _, _ <: CodecFormat]
+  type AnyListCodec = Codec[? <: List[?], ?, ? <: CodecFormat]
 
-  type AnyEndpoint = Endpoint[_, _, _, _, _]
+  type AnyEndpoint = Endpoint[?, ?, ?, ?, ?]
   type PublicEndpoint[INPUT, ERROR_OUTPUT, OUTPUT, -R] = Endpoint[Unit, INPUT, ERROR_OUTPUT, OUTPUT, R]
 }

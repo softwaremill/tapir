@@ -1,7 +1,8 @@
-# Other interpreters
+# Other interpreters & extensions
 
-At its core, tapir creates a data structure describing the HTTP endpoints. This data structure can be freely 
-interpreted also by code not included in the library. Below is a list of projects, which provide tapir interpreters.
+At its core, Tapir creates a data structure describing the HTTP endpoints. This data structure can be freely 
+interpreted also by code not included in the library. Below is a list of projects, which provide tapir interpreters
+and extensions to the project.
 
 ## GraphQL
 
@@ -26,3 +27,7 @@ layer that allows you to create traced http endpoints from tapir Endpoint defini
 ## tapir + kyo
 
 [Kyo](https://github.com/getkyo/kyo/#routes-http-server-via-tapir) includes a tapir integration module.
+
+## Baku
+
+[Baku](https://github.com/arkida39/baku) is a Tapir extension library that allows you to easily isolate your API definitions from server and security logic for cleaner, more maintainable code. This makes it simple to share contracts across microservices without exposing the underlying implementation.

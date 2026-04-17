@@ -1,13 +1,12 @@
 package sttp.tapir.server.play
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
 import play.api.Mode
 import play.api.http.ParserConfiguration
-import play.api.mvc.{Handler, PlayBodyParsers, RequestHeader}
+import play.api.mvc.PlayBodyParsers
 import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultPekkoHttpServerComponents, ServerConfig}
@@ -32,7 +31,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
   }
 
   override def server(
-      routes: NonEmptyList[Routes],
+      route: Routes,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
     lazy val components = new DefaultPekkoHttpServerComponents {
@@ -46,16 +45,7 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
         initialServerConfig.copy(configuration = customConf.withFallback(initialServerConfig.configuration))
       override lazy val actorSystem: ActorSystem =
         ActorSystem("tapir", defaultExecutionContext = Some(PlayTestServerInterpreter.this.actorSystem.dispatcher))
-      override lazy val router: Router =
-        Router.from(
-          routes.reduce((a: Routes, b: Routes) => {
-            val handler: PartialFunction[RequestHeader, Handler] = { case request =>
-              a.applyOrElse(request, b)
-            }
-
-            handler
-          })
-        )
+      override lazy val router: Router = Router.from(route)
     }
     val bind = IO.blocking {
       components.server

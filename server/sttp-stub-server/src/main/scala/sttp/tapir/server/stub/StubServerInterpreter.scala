@@ -35,8 +35,8 @@ private[stub] object StubServerInterpreter {
     val sRequest = new SttpRequest(req)
 
     interpreter.apply(sRequest).map {
-      case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
-      case RequestResult.Failure(_)          => toResponse(sRequest, ServerResponse.notFound)
+      case RequestResult.Response(sResponse, _) => toResponse(sRequest, sResponse)
+      case RequestResult.Failure(_)             => toResponse(sRequest, ServerResponse.notFound)
     }
   }
 

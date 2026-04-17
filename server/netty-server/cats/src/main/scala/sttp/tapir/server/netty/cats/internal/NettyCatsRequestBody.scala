@@ -5,14 +5,15 @@ import cats.syntax.all._
 import fs2.Chunk
 import fs2.io.file.{Files, Path}
 import io.netty.handler.codec.http.HttpContent
+import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
-import sttp.tapir.TapirFile
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.netty.internal.{NettyStreamingRequestBody, StreamCompatible}
-import sttp.capabilities.WebSockets
+import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 
 private[cats] class NettyCatsRequestBody[F[_]: Async](
     val createFile: ServerRequest => F[TapirFile],
@@ -24,6 +25,13 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
   override def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): F[Array[Byte]] =
     streamCompatible.fromPublisher(publisher, maxBytes).compile.to(Chunk).map(_.toArray[Byte])
 
+  def publisherToMultipart(
+      nettyRequest: StreamedHttpRequest,
+      serverRequest: ServerRequest,
+      m: RawBodyType.MultipartBody,
+      maxBytes: Option[Long]
+  ): F[RawValue[Seq[RawPart]]] = monad.error(new UnsupportedOperationException("Multipart requests are not supported"))
+
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit] =
     (toStream(serverRequest, maxBytes)
       .asInstanceOf[streamCompatible.streams.BinaryStream])
@@ -32,4 +40,7 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
       )
       .compile
       .drain
+
+  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): F[Unit] =
+    monad.error(new UnsupportedOperationException("Multipart requests are not supported"))
 }

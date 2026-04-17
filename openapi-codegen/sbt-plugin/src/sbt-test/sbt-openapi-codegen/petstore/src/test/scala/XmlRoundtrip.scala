@@ -130,7 +130,7 @@ class XmlRoundtrip extends AnyFreeSpec with Matchers {
             Future successful Right(o)
           case PlaceOrderBodyOption_Order_In(None)       => Future.successful(Right(Order()))
           case PlaceOrderBody2In(bytes) if bytes.isEmpty => Future.successful(Right(Order()))
-          case PlaceOrderBody2In(bytes) =>
+          case PlaceOrderBody2In(bytes)                  =>
             val m = new String(bytes, "utf-8").split('&').map(_.split("=", 2)).map { case Array(k, v) => k -> v }.toMap
             Future(
               Order(

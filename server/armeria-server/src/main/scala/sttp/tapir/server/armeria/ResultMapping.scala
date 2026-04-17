@@ -9,7 +9,7 @@ private[armeria] object ResultMapping {
     result match {
       case RequestResult.Failure(_) =>
         HttpResponse.of(HttpStatus.NOT_FOUND)
-      case RequestResult.Response(response) =>
+      case RequestResult.Response(response, _) =>
         val headers = HeaderMapping.toArmeria(response.headers, response.code)
         response.body match {
           case None =>

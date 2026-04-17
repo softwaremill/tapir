@@ -5,7 +5,7 @@ import sttp.tapir.{AnyEndpoint, DecodeResult, EndpointInput}
 
 case class DecodeFailureContext(
     endpoint: AnyEndpoint,
-    failingInput: EndpointInput[_],
+    failingInput: EndpointInput[?],
     failure: DecodeResult.Failure,
     request: ServerRequest
 )

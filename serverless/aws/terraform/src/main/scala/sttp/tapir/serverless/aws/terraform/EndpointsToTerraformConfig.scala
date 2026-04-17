@@ -15,7 +15,7 @@ private[terraform] object EndpointsToTerraformConfig {
       val pathComponents: Seq[(Either[EndpointInput.FixedPath[_], EndpointInput.PathCapture[_]], String)] = basicInputs
         .foldLeft((Seq.empty[(Either[EndpointInput.FixedPath[_], EndpointInput.PathCapture[_]], String)], 0)) { case ((acc, c), input) =>
           input match {
-            case fp @ EndpointInput.FixedPath(p, _, _) => (acc :+ Left(fp) -> p, c)
+            case fp @ EndpointInput.FixedPath(p, _, _)      => (acc :+ Left(fp) -> p, c)
             case pc @ EndpointInput.PathCapture(name, _, _) =>
               (acc :+ Right(pc) -> name.getOrElse(s"param$c"), if (name.isEmpty) c + 1 else c)
             case _ => (acc, c)

@@ -28,7 +28,7 @@ class WebSocketToPekkoPipe[R](implicit ec: ExecutionContext) extends WebSocketTo
       .mapAsync(1) {
         case _: WebSocketFrame.Close if !o.decodeCloseResponses => Future.successful(Right(None): Either[Unit, Option[RESP]])
         case _: WebSocketFrame.Pong if o.ignorePong             => Future.successful(Left(()): Either[Unit, Option[RESP]])
-        case WebSocketFrame.Ping(p) if o.autoPongOnPing =>
+        case WebSocketFrame.Ping(p) if o.autoPongOnPing         =>
           ws.send(WebSocketFrame.Pong(p)).map(_ => Left(()): Either[Unit, Option[RESP]])
         case f =>
           o.responses.decode(f) match {

@@ -1,6 +1,5 @@
 package sttp.tapir.serverless.aws.lambda.tests
 
-import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import org.scalatest.Assertion
@@ -31,7 +30,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerO
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3001").unsafeToFuture())
   }
 
-  def testServerWithStop(name: String, rs: => NonEmptyList[Route[IO]], gracefulShutdownTimeout: Option[FiniteDuration])(
+  def testServerWithStop(name: String, r: => Route[IO], gracefulShutdownTimeout: Option[FiniteDuration])(
       runTest: KillSwitch => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = throw new UnsupportedOperationException
 
@@ -54,15 +53,14 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, AwsServerO
       runTest: KillSwitch => (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = throw new java.lang.UnsupportedOperationException
 
-  override def testServer(name: String, rs: => NonEmptyList[Route[IO]])(
+  override def testServer(name: String, r: => Route[IO])(
       runTest: (WebSocketStreamBackend[IO, Fs2Streams[IO]], Uri) => IO[Assertion]
   ): Test = {
     val backend = WebSocketStreamBackendStub[IO, Fs2Streams[IO]](catsMonadIO).whenAnyRequest
       .thenRespondF { request =>
-        val responses: NonEmptyList[Response[StubBody]] = rs.map { route =>
-          route(sttpToAwsRequest(request)).map(awsToSttpResponse).unsafeRunSync()
-        }
-        IO.pure(responses.find(_.code != StatusCode.NotFound).getOrElse(ResponseStub.adjust("", StatusCode.NotFound)))
+        val response: Response[StubBody] =
+          r(sttpToAwsRequest(request)).map(awsToSttpResponse).unsafeRunSync()
+        IO.pure(if (response.code != StatusCode.NotFound) response else ResponseStub.adjust("", StatusCode.NotFound))
       }
     Test(name)(runTest(backend, uri"http://localhost:3001").unsafeToFuture())
   }

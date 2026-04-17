@@ -5,7 +5,7 @@ import sttp.tapir.codegen.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.util.DocUtils
+import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
 
 case class GeneratedClassDefinitions(
     classRepr: String,
@@ -20,7 +20,7 @@ class ClassDefinitionGenerator {
 
   def classDefs(
       doc: OpenapiDocument,
-      targetScala3: Boolean = false,
+      targetScala3: Boolean,
       queryOrPathParamRefs: Set[String] = Set.empty,
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib = Circe,
       xmlSerdeLib: XmlSerdeLib.XmlSerdeLib = XmlSerdeLib.CatsXml,
@@ -50,7 +50,8 @@ class ClassDefinitionGenerator {
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
 
-    val adtTypes = adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").mkString("", "\n", "\n")
+    val adtTypes =
+      adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").sorted.mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
     val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
@@ -58,14 +59,15 @@ class ClassDefinitionGenerator {
       throw new NotImplementedError(
         s"any not implemented for json libs other than circe and jsoniter (problematic models: ${schemasWithAny.keys})"
       )
-    val schemas = SchemaGenerator.generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile, schemasContainAny)
+    val schemas = SchemaGenerator
+      .generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile, schemasContainAny, targetScala3)
     val jsonSerdes = JsonSerdeGenerator.serdeDefs(
       doc,
       jsonSerdeLib,
       jsonParamRefs,
       allTransitiveJsonParamRefs,
       validateNonDiscriminatedOneOfs,
-      adtInheritanceMap.mapValues(_.map(_._1)),
+      adtInheritanceMap.mapValues(_.map(_._1)).toMap,
       targetScala3,
       schemasContainAny,
       useCustomJsoniterSerdes
@@ -84,9 +86,10 @@ class ClassDefinitionGenerator {
         case (name, OpenapiSchemaMap(valueSchema, _, _))       => generateMap(name, valueSchema)
         case (name, OpenapiSchemaArray(valueSchema, _, _, rs)) => generateArray(name, valueSchema, rs)
         case (_, _: OpenapiSchemaOneOf)                        => Nil
+        case (name, r: OpenapiSchemaSimpleType)                => generateAlias(name, r)
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
-      .map(_.mkString("\n"))
+      .map(_.toSeq.sorted.mkString("\n"))
     val helpers = (enumSerdeHelper + adtTypes).linesIterator
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
@@ -99,7 +102,7 @@ class ClassDefinitionGenerator {
       .flatMap { case (name, schema) =>
         val validatedChildren = schema.types.map {
           case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped
-          case other =>
+          case other                                 =>
             val unsupportedChild = other.getClass.getName
             throw new NotImplementedError(
               s"oneOf declarations are only supported when all variants are declared schemas. Found type '$unsupportedChild' as variant of $name"
@@ -107,7 +110,7 @@ class ClassDefinitionGenerator {
         }
         // If defined, check that the discriminator mappings match the oneOf refs
         schema.discriminator match {
-          case None | Some(Discriminator(_, None)) => // if there's no discriminator or no mapping, nothing to validate
+          case None | Some(Discriminator(_, None))   => // if there's no discriminator or no mapping, nothing to validate
           case Some(Discriminator(_, Some(mapping))) =>
             val targetClassNames = mapping.values.map(_.split('/').last).toSet
             if (targetClassNames != validatedChildren.toSet)
@@ -119,6 +122,7 @@ class ClassDefinitionGenerator {
       }
       .groupBy(_._1)
       .mapValues(_.map(_._2))
+      .toMap
 
   private def enumSerdeHelperDefn(targetScala3: Boolean): String = {
     if (targetScala3)
@@ -188,11 +192,18 @@ class ClassDefinitionGenerator {
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
       case simpleType: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(simpleType)._1
-      case otherType =>
+      case otherType                           =>
         throw new NotImplementedError(s"Only simple value types and refs are implemented for named arrays (found $otherType)")
     }
     if (rs.uniqueItems.contains(true)) Seq(s"""type $name = Set[$valueSchemaName]""")
     else Seq(s"""type $name = List[$valueSchemaName]""")
+  }
+
+  private[codegen] def generateAlias(name: String, valueSchema: OpenapiSchemaSimpleType): Seq[String] = valueSchema match {
+    case r: OpenapiSchemaRef        => Seq(s"""type $name = ${r.stripped}""")
+    case r: OpenapiSchemaSimpleType =>
+      val simpleType = mapSchemaSimpleTypeToType(r)._1
+      Seq(s"""type $name = $simpleType""")
   }
 
   private[codegen] def generateClass(
@@ -236,7 +247,7 @@ class ClassDefinitionGenerator {
         }
         .distinct
       val discriminatorDefBody = discriminatorDefFields.filter { case (n, _) => obj.properties.map(_._1).toSet.contains(n) } match {
-        case Nil => ""
+        case Nil    => ""
         case fields =>
           val fs = fields.map { case (k, v) => s"""def `$k`: String = "$v"""" }.mkString("\n")
           s""" {
@@ -340,7 +351,7 @@ class ClassDefinitionGenerator {
 
   private def addName(parentName: String, key: String) = parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
 
-  private val reservedKeys = scala.reflect.runtime.universe.asInstanceOf[scala.reflect.internal.SymbolTable].nme.keywords.map(_.toString)
+  private val reservedKeys = VersionedHelpers.reservedKeys
 
   private def fixKey(key: String) = {
     if (reservedKeys.contains(key))

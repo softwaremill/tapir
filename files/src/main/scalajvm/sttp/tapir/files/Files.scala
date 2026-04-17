@@ -7,7 +7,6 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.FileRange
 import sttp.tapir.RangeValue
-import sttp.tapir.files.StaticInput
 
 import java.io.File
 import java.net.URL
@@ -33,11 +32,20 @@ object Files {
       options: FilesOptions[F] = FilesOptions.default[F]
   ): MonadError[F] => StaticInput => F[Either[StaticErrorOutput, StaticOutput[FileRange]]] = { implicit monad => filesInput =>
     MonadError[F]
-      .blocking(Paths.get(systemPath).toRealPath())
-      .flatMap(path => {
-        val resolveUrlFn: ResolveUrlFn = resolveSystemPathUrl(filesInput, options, path)
-        files(filesInput, options, resolveUrlFn, fileRangeFromUrl)
-      })
+      .blocking {
+        // resolve the system path to a real path upfront, so that later security checks (that the user's request doesn't try to access
+        // files outside of the system path) work properly
+        val systemPathAsPath = Paths.get(systemPath)
+        if (JFiles.exists(systemPathAsPath, LinkOption.NOFOLLOW_LINKS)) Some(systemPathAsPath.toRealPath()) else None
+      }
+      .flatMap {
+        case Some(path) =>
+          val resolveUrlFn: ResolveUrlFn = resolveSystemPathUrl(filesInput, options, path)
+          files(filesInput, options, resolveUrlFn, fileRangeFromUrl)
+        case None =>
+          // if the system path doesn't exist, just return a 404
+          MonadError[F].unit(Left(StaticErrorOutput.NotFound))
+      }
   }
 
   def defaultEtag[F[_]]: MonadError[F] => Option[RangeValue] => URL => F[Option[ETag]] = monad => { range => url =>

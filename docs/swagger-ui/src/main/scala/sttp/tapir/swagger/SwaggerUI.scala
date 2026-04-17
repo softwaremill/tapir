@@ -30,8 +30,8 @@ object SwaggerUI {
     s.close()
     r
   }
-  
-  private[swagger] def optionsInjection(swaggerInitializerJs: String, options: SwaggerUIOptions) : String = {
+
+  private[swagger] def optionsInjection(swaggerInitializerJs: String, options: SwaggerUIOptions): String = {
     val swaggerInitializerJsWithExtensions = swaggerInitializerJs.replace(
       "window.ui = SwaggerUIBundle({",
       s"""window.ui = SwaggerUIBundle({
@@ -91,8 +91,7 @@ object SwaggerUI {
     val yamlEndpoint = baseEndpoint
       .in(options.yamlName)
       .out(stringBodyUtf8AnyFormat(Codec.string.format(new CodecFormat {
-        // #2396: although application/yaml is not official, that's what swagger ui sends in the accept header
-        override def mediaType: MediaType = MediaType("application", "yaml")
+        override def mediaType: MediaType = MediaType.ApplicationYaml
       })))
       .serverLogicSuccessPure[F](_ => yaml)
 
@@ -101,7 +100,7 @@ object SwaggerUI {
     val swaggerInitializerJsWithReplacedUrl =
       swaggerInitializerJs.replace("https://petstore.swagger.io/v2/swagger.json", s"${concat(fullPathPrefix, options.yamlName)}")
 
-   val swaggerInitializerJsWithOptions = optionsInjection(swaggerInitializerJsWithReplacedUrl, options)
+    val swaggerInitializerJsWithOptions = optionsInjection(swaggerInitializerJsWithReplacedUrl, options)
 
     val textJavascriptUtf8: EndpointIO.Body[String, String] = stringBodyUtf8AnyFormat(Codec.string.format(CodecFormat.TextJavascript()))
     val swaggerInitializerJsEndpoint =

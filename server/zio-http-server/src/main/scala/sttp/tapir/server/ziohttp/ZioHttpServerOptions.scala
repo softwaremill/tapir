@@ -6,12 +6,15 @@ import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 import zio.http.WebSocketConfig
 import zio.{Cause, RIO, Task, ZIO}
+import zio.stream.ZStream
 
 case class ZioHttpServerOptions[R](
     createFile: ServerRequest => Task[TapirFile],
     deleteFile: TapirFile => RIO[R, Unit],
     interceptors: List[Interceptor[RIO[R, *]]],
-    customWebSocketConfig: ServerRequest => Option[WebSocketConfig]
+    customWebSocketConfig: ServerRequest => Option[WebSocketConfig],
+    /** #4762: the chunk size used when converting an input stream to a response body. */
+    inputStreamChunkSize: Int = ZStream.DefaultChunkSize
 ) {
   def prependInterceptor(i: Interceptor[RIO[R, *]]): ZioHttpServerOptions[R] =
     copy(interceptors = i :: interceptors)

@@ -17,7 +17,7 @@ some nested component (such as a field value).
 
 If you are using automatic or semi-automatic schema derivation, validators for such schemas, and their nested 
 components, including collections and options, can be added as described in 
-[schema customisation](schemas.html#customising-derived-schemas).
+[schema customisation](schemas.md#customising-derived-schemas).
 
 ## Adding validators to inputs/outputs
 

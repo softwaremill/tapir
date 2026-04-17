@@ -19,7 +19,7 @@ trait NimaServerInterpreter {
     val filteredEndpoints = FilterServerEndpoints[Any, Identity](ses)
     val requestBody = new NimaRequestBody(nimaServerOptions.createFile)
     val responseBody = new NimaToResponseBody
-    val interceptors = RejectInterceptor.disableWhenSingleEndpoint(nimaServerOptions.interceptors, ses)
+    val interceptors = nimaServerOptions.interceptors
 
     (helidonRequest: HelidonServerRequest, helidonResponse: HelidonServerResponse) => {
       implicit val bodyListener: BodyListener[Identity, InputStream] = new NimaBodyListener(helidonResponse)
@@ -33,7 +33,7 @@ trait NimaServerInterpreter {
       )
 
       serverInterpreter(NimaServerRequest(helidonRequest)) match {
-        case RequestResult.Response(tapirResponse) =>
+        case RequestResult.Response(tapirResponse, _) =>
           helidonResponse.status(Status.create(tapirResponse.code.code))
           tapirResponse.headers.groupBy(_.name).foreach { case (name, headers) =>
             helidonResponse.header(name, headers.map(_.value): _*)

@@ -7,26 +7,26 @@ import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.model.ValuedEndpointOutput
 
 trait RejectHandler[F[_]] {
-  def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]]
+  def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]]
 }
 
 object RejectHandler {
-  def apply[F[_]](f: RejectContext => F[Option[ValuedEndpointOutput[_]]]): RejectHandler[F] = new RejectHandler[F] {
-    override def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+  def apply[F[_]](f: RejectContext => F[Option[ValuedEndpointOutput[?]]]): RejectHandler[F] = new RejectHandler[F] {
+    override def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]] =
       f(ctx)
   }
 
-  def pure[F[_]](f: RejectContext => Option[ValuedEndpointOutput[_]]): RejectHandler[F] = new RejectHandler[F] {
-    override def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] =
+  def pure[F[_]](f: RejectContext => Option[ValuedEndpointOutput[?]]): RejectHandler[F] = new RejectHandler[F] {
+    override def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]] =
       monad.unit(f(ctx))
   }
 }
 
 case class DefaultRejectHandler[F[_]](
-    response: (StatusCode, String) => ValuedEndpointOutput[_],
+    response: (StatusCode, String) => ValuedEndpointOutput[?],
     defaultStatusCodeAndBody: Option[(StatusCode, String)]
 ) extends RejectHandler[F] {
-  override def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] = {
+  override def apply(ctx: RejectContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[?]]] = {
     import DefaultRejectHandler._
 
     val statusCodeAndBody = if (hasMethodMismatch(ctx.failure)) Some(Responses.MethodNotAllowed) else defaultStatusCodeAndBody
@@ -45,7 +45,7 @@ object DefaultRejectHandler {
     )
 
   private def hasMethodMismatch(f: RequestResult.Failure): Boolean = f.failures.map(_.failingInput).exists {
-    case _: EndpointInput.FixedMethod[_] => true
+    case _: EndpointInput.FixedMethod[?] => true
     case _                               => false
   }
 

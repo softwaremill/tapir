@@ -159,7 +159,7 @@ val successOutput: EndpointOutput[AvatarSuccess] = oneOf(
 The `oneOf` output can be typed using the common parent of both variants, which is `AvatarSuccess`. The server logic
 will then have to return an instance of `AvatarSuccess`, in case of successful completion.
 
-```{warn}
+```{warning}
 Unfortunately, Tapir is not able to verify at compile-time that the variants are exhaustive, that is that every variant
 of the high-level type has a corresponding output-variant.
 ```

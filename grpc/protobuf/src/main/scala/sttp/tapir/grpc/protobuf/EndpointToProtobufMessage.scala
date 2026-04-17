@@ -125,7 +125,7 @@ class EndpointToProtobufMessage {
       case SchemaType.SBinary()                          => ProtobufScalarType.ProtobufBytes
       case SDateTime()                                   => ProtobufScalarType.ProtobufInt64
       case SDate()                                       => ProtobufScalarType.ProtobufInt64
-      case SArray(element) =>
+      case SArray(element)                               =>
         resolveType(availableMessages)(element) match {
           case valueType: SingularValueType => ProtobufRepeatedField(valueType)
           case ProtobufRepeatedField(_)     => throw new IllegalArgumentException("Nested collections are not supported.")

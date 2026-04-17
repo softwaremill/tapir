@@ -19,9 +19,9 @@ class FinatraToResponseBody extends ToResponseBody[FinatraContent, NoStreams] {
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         FinatraContentBuf(Buf.ByteArray.Owned(v.toString.getBytes(charset)))
-      case RawBodyType.ByteArrayBody   => FinatraContentBuf(Buf.ByteArray.Owned(v))
-      case RawBodyType.ByteBufferBody  => FinatraContentBuf(Buf.ByteBuffer.Owned(v))
-      case RawBodyType.InputStreamBody => FinatraContentReader(Reader.fromStream(v))
+      case RawBodyType.ByteArrayBody        => FinatraContentBuf(Buf.ByteArray.Owned(v))
+      case RawBodyType.ByteBufferBody       => FinatraContentBuf(Buf.ByteBuffer.Owned(v))
+      case RawBodyType.InputStreamBody      => FinatraContentReader(Reader.fromStream(v))
       case RawBodyType.InputStreamRangeBody =>
         val stream =
           v.range

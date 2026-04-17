@@ -2,7 +2,6 @@ package sttp.tapir.codegen
 import io.circe.Json
 import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
 import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
-import sttp.tapir.codegen.StreamingImplementation.StreamingImplementation
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
@@ -14,6 +13,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiResponseDef
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  AnyType,
   OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
@@ -26,9 +26,18 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaString
 }
 import sttp.tapir.codegen.openapi.models._
-import sttp.tapir.codegen.openapi.models.GenerationDirectives.{jsonBodyAsString, securityPrefixKey}
+import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
+  forceEager,
+  forceReqEager,
+  forceReqStreaming,
+  forceRespEager,
+  forceRespStreaming,
+  forceStreaming,
+  jsonBodyAsString,
+  securityPrefixKey
+}
 import sttp.tapir.codegen.util.ErrUtils.bail
-import sttp.tapir.codegen.util.{JavaEscape, Location}
+import sttp.tapir.codegen.util.{JavaEscape, Location, NameHelpers}
 
 case class EndpointTypes(security: Seq[String], in: Seq[String], err: Seq[String], out: Seq[String]) {
   private def toType(types: Seq[String]) = types match {
@@ -43,6 +52,12 @@ case class EndpointTypes(security: Seq[String], in: Seq[String], err: Seq[String
 }
 case class GeneratedEndpoint(name: String, definition: String, maybeInlineDefns: Option[String], types: EndpointTypes)
 case class GeneratedEndpointsForFile(maybeFileName: Option[String], generatedEndpoints: Seq[GeneratedEndpoint])
+
+object Position extends Enumeration {
+  val Request, Response, Err = Value
+  type Position = Value
+}
+import Position._
 
 case class EndpointDetails(
     jsonParamRefs: Set[String],
@@ -85,6 +100,13 @@ case class EndpointDefs(
     details: EndpointDetails
 )
 
+case class UrlMapResponse(
+    pathDecl: String,
+    pathTypes: Seq[String],
+    maybeSecurityPath: Option[(String, Seq[String])],
+    inlineUrlDefs: Seq[String]
+)
+
 class EndpointGenerator {
   private def combine(inlineDefn1: Option[String], inlineDefn2: Option[String], separator: String = "\n") =
     (inlineDefn1, inlineDefn2) match {
@@ -96,15 +118,17 @@ class EndpointGenerator {
   private[codegen] def allEndpoints: String = "generatedEndpoints"
 
   private def capabilityImpl(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
-    case StreamingImplementation.Akka  => "sttp.capabilities.akka.AkkaStreams"
-    case StreamingImplementation.FS2   => "sttp.capabilities.fs2.Fs2Streams[cats.effect.IO]"
-    case StreamingImplementation.Pekko => "sttp.capabilities.pekko.PekkoStreams"
-    case StreamingImplementation.Zio   => "sttp.capabilities.zio.ZioStreams"
+    case Akka            => "sttp.capabilities.akka.AkkaStreams"
+    case FS2(effectType) => s"sttp.capabilities.fs2.Fs2Streams[$effectType]"
+    case Pekko           => "sttp.capabilities.pekko.PekkoStreams"
+    case Zio             => "sttp.capabilities.zio.ZioStreams"
   }
   private def capabilityType(streamingImplementation: StreamingImplementation): String = streamingImplementation match {
-    case StreamingImplementation.FS2 => "fs2.Stream[cats.effect.IO, Byte]"
-    case x                           => s"${capabilityImpl(x)}.BinaryStream"
+    case FS2(effectType) => s"fs2.Stream[$effectType, Byte]"
+    case x               => s"${capabilityImpl(x)}.BinaryStream"
   }
+  // These types all use 'eager' schemas, except for '*/*', which we default to eager for convenience but which has no schema mappings
+  private val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data", "*/*")
 
   def endpointDefs(
       doc: OpenapiDocument,
@@ -197,8 +221,11 @@ class EndpointGenerator {
 
           val name = m.name(p.url)
           val maybeName = m.operationId.map(n => s"""\n  .name("${JavaEscape.escapeString(n)}")""").getOrElse("")
-          val (pathDecl, pathTypes, maybeSecurityPath) = urlMapper(
+          val UrlMapResponse(pathDecl, pathTypes, maybeSecurityPath, inlineUrlDefs) = urlMapper(
             p.url,
+            name,
+            targetScala3,
+            jsonSerdeLib,
             m.resolvedParameters,
             doc.pathsExtensions.get(securityPrefixKey).flatMap(_.asArray).toSeq.flatMap(_.flatMap(_.asString)),
             doc,
@@ -239,7 +266,8 @@ class EndpointGenerator {
             errTypes.toSeq,
             outTypes.toSeq
           )
-          val inlineDefn = combine(inlineInDefns, inlineDefns)
+          val maybeInlineUrlDefs = if (inlineUrlDefs.isEmpty) None else Some(inlineUrlDefs.mkString("\n"))
+          val inlineDefn = combine(maybeInlineUrlDefs, combine(inlineInDefns, inlineDefns))
           val sec = securityDecl.map(indent(2)(_) + "\n").getOrElse("")
           val securityPathDecl = maybeSecurityPath.map("\n  " + _._1).getOrElse("")
           val definition =
@@ -254,7 +282,10 @@ class EndpointGenerator {
 
           val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
           val queryOrPathParamRefs = m.resolvedParameters
-            .collect { case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" => queryParam.schema }
+            .collect {
+              case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" || queryParam.in == "header" =>
+                queryParam.schema
+            }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
@@ -266,13 +297,13 @@ class EndpointGenerator {
             .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
           val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
+            .filterNot(_ => m.tapirCodegenDirectives.contains(jsonBodyAsString))
             .collect { case (contentType, schema) if contentType == "application/json" => schema }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
-              case OpenapiSchemaArray(OpenapiSchemaAny(_), _, _, _) =>
-                bail("Cannot generate schema for 'Any' with jsoniter library")
-              case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _) =>
+              case OpenapiSchemaArray(OpenapiSchemaAny(_, tpe), _, _, _)              => AnyType.toCirceTpe(tpe)
+              case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _)       =>
                 val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
                 s"List[$name]"
               case simple: OpenapiSchemaSimpleType =>
@@ -289,7 +320,7 @@ class EndpointGenerator {
           )
         } catch {
           case e: NotImplementedError => throw e
-          case e: Throwable           => bail(s"Unexpected error (${e.getMessage})")
+          case e: Throwable           => bail(s"Unexpected error (${e.getMessage})", Some(e))
         }
       }
       .unzip3
@@ -314,18 +345,21 @@ class EndpointGenerator {
 
   private def urlMapper(
       url: String,
+      endpointName: String,
+      targetScala3: Boolean,
+      jsonSerdeLib: JsonSerdeLib,
       parameters: Seq[OpenapiParameter],
       securityPathPrefixes: Seq[String],
       doc: OpenapiDocument,
       generateValidators: Boolean
   )(implicit
       location: Location
-  ): (String, Seq[String], Option[(String, Seq[String])]) = {
+  ): UrlMapResponse = {
     val securityPrefixes = securityPathPrefixes.filter(url.startsWith)
     // .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     val maxSecurityPrefix = if (securityPrefixes.nonEmpty) Some(securityPrefixes.maxBy(_.length)) else None
     val inUrl = maxSecurityPrefix.fold(url)(url.stripPrefix)
-    def toPathDecl(url: String) = url
+    def toPathDecl(url: String): (Array[String], Array[Option[String]], Array[Option[String]]) = url
       .split('/')
       .filter(_.nonEmpty)
       .map { segment =>
@@ -338,20 +372,28 @@ class EndpointGenerator {
                 val (t, _) = mapSchemaSimpleTypeToType(st)
                 val desc = p.description.fold("")(d => s""".description("$d")""")
                 val validations = if (generateValidators) ValidationGenerator.mkValidations(doc, st, true) else ""
-                s"""path[$t]("$name")$validations$desc""" -> Some(t)
+                (s"""path[$t]("$name")$validations$desc""", Some(t), None)
+              case e: OpenapiSchemaEnum =>
+                val (param, inlineDefn, tpe) = getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, p, e, false)
+                (param, Some(tpe), inlineDefn.map(_.mkString("\n")))
               case _ => bail("Can't create non-simple params to url yet")
             }
           }
         } else {
-          '"' + segment + '"' -> None
+          ('"' + segment + '"', None, None)
         }
       }
-      .unzip
-    val (inPath, tpes) = toPathDecl(inUrl)
+      .unzip3
+    val (inPath, tpes, inlineDefns) = toPathDecl(inUrl)
     val inPathDecl = if (inPath.nonEmpty) ".in((" + inPath.mkString(" / ") + "))" else ""
-    val secPathDecl =
-      maxSecurityPrefix.map(toPathDecl).map { case (ds, ts) => ".prependSecurityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten }
-    (inPathDecl, tpes.toSeq.flatten, secPathDecl)
+    val (secPathDecl, secInlineDefs) =
+      maxSecurityPrefix
+        .map(toPathDecl)
+        .map { case (ds, ts, inline) => (".prependSecurityIn(" + ds.mkString(" / ") + ")" -> ts.toSeq.flatten) -> inline }
+        .unzip
+    val flatInlineSecDefs: Seq[String] = secInlineDefs.toSeq.flatten.flatten
+    val flatInlineDefs: Seq[String] = inlineDefns.toSeq.flatten
+    UrlMapResponse(inPathDecl, tpes.toSeq.flatten, secPathDecl.headOption, flatInlineSecDefs ++ flatInlineDefs)
   }
 
   private def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
@@ -368,7 +410,7 @@ class EndpointGenerator {
       param: OpenapiParameter,
       e: OpenapiSchemaEnum,
       isArray: Boolean
-  ) = {
+  ): (String, Some[Seq[String]], String) = {
     val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
     val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
     val enumDefn = EnumGenerator.generateEnum(
@@ -458,7 +500,11 @@ class EndpointGenerator {
       .map { case (defn, enums, tpe) => (s".in($defn)", enums, tpe) }
       .unzip3
 
-    def mapContent(content: OpenapiRequestBodyContent, required: Boolean, forceEager: Boolean = false): (String, String, Option[String]) = {
+    def mapContent(
+        content: OpenapiRequestBodyContent,
+        required: Boolean,
+        preferEager: Boolean = false
+    ): (String, String, Option[String]) = {
       val schemaIsNullable = content.schema.nullable || (content.schema match {
         case ref: OpenapiSchemaRef =>
           doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
@@ -471,8 +517,8 @@ class EndpointGenerator {
           streamingImplementation,
           required && !schemaIsNullable,
           endpointName,
-          "Request",
-          forceEager,
+          Request,
+          preferEager,
           xmlSerdeLib,
           tapirCodegenDirectives,
           validators
@@ -487,10 +533,9 @@ class EndpointGenerator {
         val d = b.description.map(s => s""".description("${JavaEscape.escapeString(s)}")""").getOrElse("")
         Some((s".in($decl$d)", tpe, maybeInlineDefn))
       } else {
-        // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
-        val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
-        val forceEager = b.content.exists(c => eagerTypes.contains(c.contentType))
-        val mapped = b.content.map(mapContent(_, b.required, forceEager))
+        // We cannot mix eager and streaming types when using oneOfBody
+        val preferEager = b.content.exists(c => eagerTypes.contains(c.contentType))
+        val mapped = b.content.map(mapContent(_, b.required, preferEager))
         val (decls, tpes, maybeInlineDefns) = mapped.unzip3
         val distinctTypes = tpes.distinct
         // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
@@ -515,6 +560,8 @@ class EndpointGenerator {
           if (needsAliases) {
             val wrappers = declsByWrapperClassName
               .map { case (name, seq) => s"""case class ${name}(value: ${seq.head._2}) extends $traitName""" }
+              .toSeq
+              .sorted
               .mkString("\n")
             Some(s"""
                |sealed trait $traitName extends Product with java.io.Serializable
@@ -567,7 +614,7 @@ class EndpointGenerator {
     atts
       .map { case (k, v) =>
         val camelCaseK = strippedToCamelCase(k)
-        val uncapitalisedName = camelCaseK.head.toLower + camelCaseK.tail
+        val uncapitalisedName = camelCaseK.head.toLower +: camelCaseK.tail
         s""".attribute[${camelCaseK.capitalize}Extension](${uncapitalisedName}ExtensionKey, ${SpecificationExtensionRenderer.renderValue(
             v
           )})"""
@@ -605,7 +652,7 @@ class EndpointGenerator {
     }
 
     def bodyFmt(resp: OpenapiResponseDef, isErrorPosition: Boolean, optional: Boolean = false): (String, Option[String], Option[String]) = {
-      def wrapContent(content: OpenapiResponseContent, forceEager: Boolean = false) = {
+      def wrapContent(content: OpenapiResponseContent, preferEager: Boolean = false) = {
         val schemaIsNullable = content.schema.nullable || (content.schema match {
           case ref: OpenapiSchemaRef =>
             doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
@@ -618,8 +665,8 @@ class EndpointGenerator {
             streamingImplementation,
             !(optional || schemaIsNullable),
             endpointName,
-            "Response",
-            isErrorPosition || forceEager,
+            if (isErrorPosition) Err else Response,
+            preferEager,
             xmlSerdeLib,
             tapirCodegenDirectives,
             validators
@@ -627,16 +674,15 @@ class EndpointGenerator {
         (decl, tpe, maybeInlineDefn)
       }
       resp.content match {
-        case Nil => ("", None, None)
+        case Nil            => ("", None, None)
         case content +: Nil =>
           val (decl, tpe, maybeInlineDefn) = wrapContent(content)
           val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
           (s"$decl$d", Some(tpe), maybeInlineDefn)
         case seq =>
-          // These types all use 'eager' schemas; we cannot mix eager and streaming types when using oneOfBody
-          val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data")
-          val forceEager = seq.exists(c => eagerTypes.contains(c.contentType))
-          val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent(_, forceEager)).unzip3
+          // We cannot mix eager and streaming types when using oneOfBody
+          val preferEager = seq.exists(c => eagerTypes.contains(c.contentType))
+          val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent(_, preferEager)).unzip3
           val distinctTypes = tpes.distinct
           // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
           // eager or lazy binary, wrappers make it easier to implement logic binding.
@@ -668,14 +714,18 @@ class EndpointGenerator {
                       else ","}"""
                   }
                 }
+                .toSeq
+                .sorted
                 .mkString("\n")
               val wrappers = declsByWrapperClassName
                 .map { case (name, seq) =>
-                  val defns = seq.map { case (_, t, _, ct) => s"""override def `$ct`: () => $t = () => value""" }.mkString("\n")
+                  val defns = seq.map { case (_, t, _, ct) => s"""override def `$ct`: () => $t = () => value""" }.sorted.mkString("\n")
                   s"""case class ${name}(value: ${seq.head._2}) extends $traitName{
                      |${indent(2)(defns)}
                      |}""".stripMargin
                 }
+                .toSeq
+                .sorted
                 .mkString("\n")
               Some(s"""
                       |sealed trait $traitName extends Product with java.io.Serializable {
@@ -711,17 +761,13 @@ class EndpointGenerator {
           )
       }
     }
-    def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): (Option[String], Option[String], Option[String]) =
+    def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): MappedOutGroup =
       group match {
-        case Nil => (None, None, None)
+        case Nil         => MappedOutGroup(None, None, None)
         case resp +: Nil =>
-          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.headers
-            // according to api spec, content-type header should be ignored - cf https://swagger.io/specification/#response-object
-            .filterNot(_._1.toLowerCase == "content-type")
-            .map { case (name, defn) =>
-              genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc, generateValidators)
-            }
-            .unzip3
+          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.getHeaders.map { case (name, defn) =>
+            genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc, generateValidators)
+          }.unzip3
           val hs = outHeaderDefns.map(d => s".and($d)").mkString
           def ht(wrap: Boolean = true) =
             if (outHeaderTypes.isEmpty) None
@@ -735,7 +781,7 @@ class EndpointGenerator {
           resp.content match {
             case Nil =>
               val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
-              (
+              MappedOutGroup(
                 resp.code match {
                   case "200" | "default" if outHeaderDefns.isEmpty => None
                   case "200"                                       => Some(s"statusCode(sttp.model.StatusCode(200))$d$hs")
@@ -746,17 +792,20 @@ class EndpointGenerator {
                 ht(),
                 inlineHeaderEnumDefns
               )
-            case s =>
+            case _ =>
               val (decl, maybeBodyType, inlineDefn) = bodyFmt(resp, isErrorPosition)
               val tpe =
                 if (outHeaderTypes.isEmpty) maybeBodyType
                 else if (maybeBodyType.isEmpty) ht()
                 else maybeBodyType.map(t => s"($t, ${ht(false).get})")
-              (
+              val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
+              MappedOutGroup(
                 Some(resp.code match {
-                  case "200" | "default" => s"$decl$hs"
-                  case okStatus(s)       => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
-                  case errorStatus(s)    => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case "200" | "default" if !tpeIsBin || hs.isEmpty => s"$decl$hs"
+                  case "200" | "default"                            => s"$decl.toEndpointIO$hs"
+                  case okStatus(s) if tpeIsBin                      => s"$decl.toEndpointIO$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case okStatus(s)                                  => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case errorStatus(s)                               => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
                 }),
                 tpe,
                 inlineDefn.map(_ ++ inlineHeaderEnumDefns.getOrElse("")).orElse(inlineHeaderEnumDefns)
@@ -765,39 +814,21 @@ class EndpointGenerator {
         case many =>
           if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
           val contentCanBeEmpty = many.exists(_.content.isEmpty)
-          val allResponsesAreEmpty = many.forall(o => o.content.isEmpty && o.headers.isEmpty)
-          val headerNamesAndTypes = many.map { m =>
-            m.headers
-              .filterNot(_._1.toLowerCase == "content-type")
-              .map { case (name, defn) =>
-                genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc, generateValidators)
-              }
-              .toSeq
-          }
-          val posn = if (isErrorPosition) "error" else "output"
-          // We can probably do better here, but it's very fiddly... For now, fail if we don't meet this condition
-          if (headerNamesAndTypes.map(_.map { case (name, _, defn) => name -> defn }.toSet).distinct.size != 1)
-            bail(s"Cannot generate code for differing response headers on $posn responses")
-          val commonResponseHeaders = headerNamesAndTypes.head
-          val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = commonResponseHeaders.unzip3
-          val underscores = outHeaderDefns.map(_ => "_").mkString(", ")
-          val hs = outHeaderDefns.map(d => s".and($d)").mkString
-          def ht(wrap: Boolean = true) =
-            if (outHeaderTypes.isEmpty) None
-            else if (outHeaderTypes.size == 1) Some(outHeaderTypes.head)
-            else if (!wrap) Some(outHeaderTypes.mkString(", "))
-            else Some(s"(${outHeaderTypes.mkString(", ")})")
+          val allBodiesAreEmpty = many.forall(_.content.isEmpty)
+          val allResponsesAreEmpty = allBodiesAreEmpty && many.forall(_.getHeaders.isEmpty)
+          val (noHeaders, hs, outHeaderDefns, matchHeaders, headerTypes, headerTopType) =
+            headerDefns(targetScala3, jsonSerdeLib, doc, generateValidators)(endpointName, many)
           val (oneOfs, types, inlineDefns) = many.map { m =>
             val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = contentCanBeEmpty)
             val code = if (m.code == "default") "400" else m.code
-            if (decl == "" && allResponsesAreEmpty && commonResponseHeaders.isEmpty)
+            if (decl == "" && allResponsesAreEmpty && noHeaders)
               (
                 s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
                   s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(())""",
                 maybeBodyType,
                 inlineDefn1
               )
-            else if (decl == "" && commonResponseHeaders.isEmpty)
+            else if (decl == "" && noHeaders)
               (
                 s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
                   s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""",
@@ -805,29 +836,38 @@ class EndpointGenerator {
                 inlineDefn1
               )
             else if (decl == "") {
-              (
-                s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
-                  s"""emptyOutputAs(None).description("${JavaEscape.escapeString(
-                      m.description
-                    )}")$hs){ case (None, $underscores) => true}""",
-                maybeBodyType,
-                inlineDefn1
-              )
+              val s =
+                if (allBodiesAreEmpty)
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
+                    s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}")""" +
+                    s""".and(${hs(m)})){ case ${matchHeaders(m)} => true}"""
+                else
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
+                    s"""emptyOutputAs(None).description("${JavaEscape.escapeString(
+                        m.description
+                      )}").and(${hs(m)})){ case (None, ${matchHeaders(m)}) => true}"""
+              (s, maybeBodyType, inlineDefn1)
             } else {
-              def withHeaderTypes(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, ${ht(false).get})"
-              def withUnderscores(t: String): String = if (commonResponseHeaders.isEmpty) t else s"($t, $underscores)"
+              def bodyAndHeaderTypes(bodyType: String): String =
+                if (noHeaders) bodyType
+                else if (allBodiesAreEmpty) headerTypes(m)
+                else s"($bodyType, ${headerTypes(m)})"
+              def matchBodyAndHeaders(matchBody: String): String = if (noHeaders) matchBody else s"($matchBody, ${matchHeaders(m)})"
+              val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
+              val maybeStrict = if (tpeIsBin) ".toEndpointIO" else ""
+              def h = hs(m) match { case s if s.isEmpty => ""; case s => s".and($s)" }
               if (contentCanBeEmpty) {
                 val (_, nonOptionalType, _) = bodyFmt(m, isErrorPosition)
-                val maybeMap = if (m.content.size > 1) ".map(Some(_))(_.orNull)" else ""
+                val maybeMap = if (m.content.size > 1 || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
                 (
-                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeMap$hs){ case ${withUnderscores(s"Some(_$someType)")} => true }",
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeStrict$maybeMap$h){ case ${matchBodyAndHeaders(s"Some(_$someType)")} => true }",
                   maybeBodyType,
                   inlineDefn1
                 )
               } else
                 (
-                  s"oneOfVariant${maybeBodyType.map(s => s"[${withHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$hs)",
+                  s"oneOfVariant${maybeBodyType.map(s => s"[${bodyAndHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$maybeStrict$h)",
                   maybeBodyType,
                   inlineDefn1
                 )
@@ -848,6 +888,11 @@ class EndpointGenerator {
             .toMap
           val traitName = s"${endpointName.capitalize}Body${if (isErrorPosition) "Err" else "Out"}"
           val mappable = Set("application/json", "application/xml", "multipart/form-data")
+          val bodyIsStreaming = (!isErrorPosition && tapirCodegenDirectives.contains(forceRespStreaming)) ||
+            (!isErrorPosition && tapirCodegenDirectives.contains(forceStreaming))
+          val bodyIsEager = !bodyIsStreaming && (isErrorPosition ||
+            (!isErrorPosition && tapirCodegenDirectives.contains(forceRespEager)) ||
+            (!isErrorPosition && tapirCodegenDirectives.contains(forceEager)))
           val allElemTypes = many
             .flatMap(y =>
               y.content.map(x =>
@@ -855,19 +900,20 @@ class EndpointGenerator {
               )
             )
             .map {
-              case (_, _, true)                                                                    => traitName
-              case (ct, _, _) if ct.startsWith("text/") && isErrorPosition                         => "String"
-              case ("text/plain" | "text/html", _, _)                                              => "String"
+              case (_, _, _) if bodyIsStreaming                            => capabilityType(streamingImplementation)
+              case (_, _, true)                                            => traitName
+              case (ct, _, _) if ct.startsWith("text/") && isErrorPosition => "String"
+              case ("text/plain" | "text/html", _, _)                      => "String"
               case ("application/json", _, _) if tapirCodegenDirectives.contains(jsonBodyAsString) => "String"
               case (ct, r: OpenapiSchemaRef, _) if mappable.contains(ct)                           => r.stripped
               case (ct, x: OpenapiSchemaSimpleType, _) if mappable.contains(ct)                    => mapSchemaSimpleTypeToType(x)._1
               case (ct, x, _) if mappable.contains(ct) => bail(s"Unexpected oneOf elem type $x with content type $ct")
-              case (_, _, _) if isErrorPosition        => "Array[Byte]"
+              case (_, _, _) if bodyIsEager            => "Array[Byte]"
               case (_, _, _)                           => capabilityType(streamingImplementation)
             }
             .distinct
           val commmonType = {
-            if (allResponsesAreEmpty) "Unit"
+            if (allResponsesAreEmpty || allElemTypes.isEmpty) "Unit"
             else if (contentCanBeEmpty && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
             else if (allElemTypes.size == 1) allElemTypes.head
             else {
@@ -880,23 +926,100 @@ class EndpointGenerator {
               if (contentCanBeEmpty) s"Option[$baseType]" else baseType
             }
           }
-          val oneOfType = if (commonResponseHeaders.isEmpty) commmonType else s"($commmonType, ${ht(false).get})"
-          (
+          val oneOfType = if (noHeaders) commmonType else if (allBodiesAreEmpty) headerTopType else s"($commmonType, $headerTopType)"
+          MappedOutGroup(
             Some(s"oneOf[$oneOfType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
             Some(oneOfType),
-            (inlineDefns ++ outHeaderInlineEnums.map(_.map(_.mkString("\n")))).foldLeft(Option.empty[String])(combine(_, _))
+            (inlineDefns ++ outHeaderDefns).foldLeft(Option.empty[String])(combine(_, _))
           )
       }
 
-    val (outDecls, outTypes, inlineOutDefns) = mappedGroup(outs, false)
+    val MappedOutGroup(outDecls, outTypes, inlineOutDefns) = mappedGroup(outs, false)
     val mappedOuts = outDecls.map(s => s".out($s)")
-    val (errDecls, errTypes, inlineErrDefns) = mappedGroup(errorOuts, true)
+    val MappedOutGroup(errDecls, errTypes, inlineErrDefns) = mappedGroup(errorOuts, true)
     val mappedErrorOuts = errDecls.map(s => s".errorOut($s)")
 
     (Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n"), outTypes, errTypes, combine(inlineOutDefns, inlineErrDefns))
   }
 
-  private def inlineDefn(endpointName: String, position: String, schemaRef: OpenapiSchemaObject) = {
+  private def headerDefns(targetScala3: Boolean, jsonSerdeLib: JsonSerdeLib, doc: OpenapiDocument, generateValidators: Boolean)(
+      endpointName: String,
+      many: Seq[OpenapiResponseDef]
+  )(implicit
+      location: Location
+  ): (Boolean, OpenapiResponseDef => String, Seq[Option[String]], OpenapiResponseDef => String, OpenapiResponseDef => String, String) = {
+    val (paramNames, headerNamesAndTypes) = many.map { m =>
+      m.getHeaders
+        .map { case (name, defn) =>
+          val param = defn.resolved(name, doc).param
+          NameHelpers.safeVariableName(param.name) ->
+            genParamDefn(endpointName, targetScala3, jsonSerdeLib, param, doc, generateValidators)
+        }
+        .toSeq
+        .sortBy(_._1)
+        .unzip
+    }.unzip
+    if (headerNamesAndTypes.forall(_.isEmpty)) (true, _ => "", Nil, _ => "", _ => "", "")
+    else if (headerNamesAndTypes.map(_.map { case (name, _, defn) => name -> defn }.toSet).distinct.size == 1) {
+      val commonResponseHeaders = headerNamesAndTypes.head
+      val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = commonResponseHeaders.unzip3
+      val underscores = outHeaderDefns.map(_ => "_").mkString(", ")
+      val hs = (_: OpenapiResponseDef) => outHeaderDefns.zipWithIndex.map { case (d, 0) => d; case (d, _) => s".and($d)" }.mkString
+      val noHeaders = commonResponseHeaders.isEmpty
+
+      val ht = (_: OpenapiResponseDef) =>
+        if (outHeaderTypes.isEmpty) bail("Should not try to construct header types if no headers are required")
+        else if (outHeaderTypes.size == 1) outHeaderTypes.head
+        else s"(${outHeaderTypes.mkString(", ")})"
+
+      val headerTopType = if (outHeaderTypes.isEmpty) "Unit" else ht(null)
+
+      val enumDefns = outHeaderInlineEnums.map(_.map(_.mkString("\n")))
+      (noHeaders, hs, enumDefns, (_: OpenapiResponseDef) => underscores, ht, headerTopType)
+    } else {
+      val traitName = s"${endpointName.capitalize}ResponseHeader"
+
+      val (headerMappingDefns, headerModelDefns, enumDefns: Seq[Seq[String]]) = headerNamesAndTypes
+        .zip(many.map(_.code))
+        .zip(paramNames)
+        .map {
+          case ((s, c), _) if s.isEmpty =>
+            val objName = s"$traitName$c"
+            (s"emptyOutputAs($objName)", s"case object $objName extends $traitName", Seq.empty[String])
+          case ((s, c), names) =>
+            val className = s"$traitName$c"
+            val (headerDefns, headerInlineEnums, headerTypes) = s.unzip3
+            val rawOutput = headerDefns.zipWithIndex.map { case (d, 0) => d; case (d, _) => s".and($d)" }.mkString
+            val output =
+              if (s.size == 1) s"$rawOutput.map($className(_))(_.${names.head})"
+              else s"($rawOutput).map(($className.apply _).tupled)($className.unapply(_).get)"
+            val fields = names.zip(headerTypes).map { case (n, t) => s"$n: $t" }.mkString(", ")
+            (output, s"""case class $traitName$c($fields) extends $traitName""", headerInlineEnums.flatten.flatten)
+        }
+        .unzip3
+      val mappingsByCode = headerMappingDefns
+        .zip(many.map(_.code))
+        .map { case (s, c) => c -> s }
+        .toMap
+      val tpesByCode = headerModelDefns
+        .zip(many.map(_.code))
+        .map { case (s, c) => c -> s }
+        .toMap
+      val headerTypeDefns =
+        s"""sealed trait ${endpointName.capitalize}ResponseHeader
+           |${tpesByCode.values.toSeq.sorted.mkString("\n")}
+           |""".stripMargin
+      def ht(m: OpenapiResponseDef) = tpesByCode(m.code)
+      def getMapping(m: OpenapiResponseDef) = mappingsByCode(m.code)
+      def getMatch(m: OpenapiResponseDef) =
+        if (m.getHeaders.isEmpty) s"$traitName${m.code}"
+        else s"(_: $traitName${m.code})"
+      val enums = enumDefns.flatten.distinct.map(Some(_))
+      (false, getMapping, Some(headerTypeDefns) +: enums, getMatch, ht, traitName)
+    }
+  }
+
+  private def inlineDefn(endpointName: String, position: Position, schemaRef: OpenapiSchemaObject) = {
     require(schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]))
     val inlineClassName = endpointName.capitalize + position
     val properties = schemaRef.properties.map { case (k, v) =>
@@ -920,8 +1043,8 @@ class EndpointGenerator {
       streamingImplementation: StreamingImplementation,
       required: Boolean,
       endpointName: String,
-      position: String,
-      forceEager: Boolean, // no streaming support for errorOut
+      position: Position,
+      defaultEager: Boolean,
       xmlSerdeLib: XmlSerdeLib,
       tapirCodegenDirectives: Set[String],
       validators: ValidationDefns
@@ -941,8 +1064,18 @@ class EndpointGenerator {
         }
         .getOrElse("")
     }
-    def v(tpe: String, r: Boolean) = vRef(schema, r)
+    def v(r: Boolean) = vRef(schema, r)
+    val streaming = (tapirCodegenDirectives.contains(forceStreaming) && position != Err) ||
+      (tapirCodegenDirectives.contains(forceReqStreaming) && position == Request) ||
+      (tapirCodegenDirectives.contains(forceRespStreaming) && position == Response)
+    val eager = !streaming && (defaultEager ||
+      position == Err ||
+      (tapirCodegenDirectives.contains(forceEager) && position != Err) ||
+      (tapirCodegenDirectives.contains(forceReqEager) && position == Request) ||
+      (tapirCodegenDirectives.contains(forceRespEager) && position == Response))
     contentType match {
+      case any if streaming =>
+        failoverBinaryCase(endpointName, position, any, schema, false, streamingImplementation)
       case "text/plain" =>
         MappedContentType("stringBody", "String")
       case "text/html" =>
@@ -954,14 +1087,14 @@ class EndpointGenerator {
             (t, None, None)
           case a @ OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            val xmlSeqConfig = XmlSerdeGenerator.genTopLevelSeqSerdes(xmlSerdeLib, a, endpointName, position)
+            val xmlSeqConfig = XmlSerdeGenerator.genTopLevelSeqSerdes(xmlSerdeLib, a, endpointName, position.toString)
             (s"List[$t]", xmlSeqConfig, Some(endpointName.capitalize + position))
           case x => bail(s"Only ref, primitive (and arrays of either) schemas supported for xml body (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
         def toList = if (required) ".toList" else ".map(_.toList)"
         val bodyType = maybeAlias.map(a => s"xmlBody[$a].map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(s"xmlBody[$req]")
-        MappedContentType(bodyType + v(req, required), req, maybeInline)
+        MappedContentType(bodyType + v(required), req, maybeInline)
       case "application/json" if tapirCodegenDirectives.contains(jsonBodyAsString) =>
         if (required) MappedContentType("stringJsonBody", "String", None)
         else MappedContentType("stringJsonBody.map(Option(_))(_.orNull)", "Option[String]", None)
@@ -981,7 +1114,7 @@ class EndpointGenerator {
           case x => bail(s"Can't create non-simple or array params as output (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
-        MappedContentType(s"jsonBody[$req]" + v(req, required), req, maybeInline)
+        MappedContentType(s"jsonBody[$req]" + v(required), req, maybeInline)
 
       case "multipart/form-data" =>
         schema match {
@@ -989,20 +1122,30 @@ class EndpointGenerator {
             MappedContentType("multipartBody", "Seq[Part[Array[Byte]]]")
           case schemaRef: OpenapiSchemaRef =>
             val (t, _) = mapSchemaSimpleTypeToType(schemaRef, multipartForm = true)
-            MappedContentType(s"multipartBody[$t]" + v(t, required), t)
+            MappedContentType(s"multipartBody[$t]" + v(required), t)
           case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]) =>
             val (inlineClassName, inlineClassDefn) = inlineDefn(endpointName, position, schemaRef)
-            MappedContentType(s"multipartBody[$inlineClassName]" + v(inlineClassName, required), inlineClassName, inlineClassDefn)
+            MappedContentType(s"multipartBody[$inlineClassName]" + v(required), inlineClassName, inlineClassDefn)
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
-      case other => failoverBinaryCase(other, schema, forceEager, streamingImplementation)
-      case x     => bail(s"Not all content types supported! Found $x")
+      case other =>
+        failoverBinaryCase(
+          endpointName,
+          position,
+          other,
+          schema,
+          eager,
+          streamingImplementation
+        )
+      case x => bail(s"Not all content types supported! Found $x")
     }
   }
   private def failoverBinaryCase(
+      endpointName: String,
+      position: Position,
       contentType: String,
       schema: OpenapiSchemaType,
-      isErrorPosition: Boolean,
+      isEager: Boolean,
       streamingImplementation: StreamingImplementation
   )(implicit location: Location): MappedContentType = {
     def codec(baseType: String, contentType: String) = baseType match {
@@ -1019,11 +1162,18 @@ class EndpointGenerator {
       case o                          => s"EndpointIO.Body(RawBodyType.ByteArrayBody, ${codec("Array[Byte]", o)}, EndpointIO.Info.empty)"
     }
     def streamingBody = contentType match {
-      case "application/octet-stream" => "CodecFormat.OctetStream()"
-      case "application/xml"          => "CodecFormat.Xml()"
-      case o                          => s"`${o}CodecFormat`()"
+      case "text/plain"                        => "CodecFormat.TextPlain()"
+      case "text/html"                         => "CodecFormat.TextHtml()"
+      case "multipart/form-data"               => "CodecFormat.MultipartFormData()"
+      case "application/grpc"                  => "CodecFormat.Grpc()"
+      case "application/json"                  => "CodecFormat.Json()"
+      case "application/octet-stream"          => "CodecFormat.OctetStream()"
+      case "application/xml"                   => "CodecFormat.Xml()"
+      case "application/x-www-form-urlencoded" => "CodecFormat.XWwwFormUrlencoded()"
+      case "application/zip"                   => "CodecFormat.Zip()"
+      case o                                   => s"`${o}CodecFormat`()"
     }
-    if (isErrorPosition) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")
+    if (isEager) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")
     else {
       val capability = capabilityImpl(streamingImplementation)
       val tpe = capabilityType(streamingImplementation)
@@ -1031,19 +1181,20 @@ class EndpointGenerator {
         case _: OpenapiSchemaString =>
           MappedContentType(s"streamTextBody($capability)($streamingBody)", tpe)
         case schema =>
-          val outT = schema match {
+          val (outT, maybeInlineDefn) = schema match {
             case st: OpenapiSchemaSimpleType =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
-              t
+              t -> None
             case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
-              s"List[$t]"
+              s"List[$t]" -> None
             case OpenapiSchemaMap(st: OpenapiSchemaSimpleType, _, _) =>
               val (t, _) = mapSchemaSimpleTypeToType(st)
-              s"Map[String, $t]"
-            case x => bail(s"Can't create this param as output (found $x)")
+              s"Map[String, $t]" -> None
+            case o: OpenapiSchemaObject => inlineDefn(endpointName, position, o)
+            case x                      => bail(s"Can't create this param as output (found $x)")
           }
-          MappedContentType(s"streamBody($capability)(Schema.binary[$outT], $streamingBody)", tpe)
+          MappedContentType(s"streamBody($capability)(Schema.binary[$outT], $streamingBody)", tpe, inlineDefns = maybeInlineDefn)
       }
     }
   }
@@ -1051,3 +1202,4 @@ class EndpointGenerator {
 }
 
 case class MappedContentType(bodyImpl: String, bodyType: String, inlineDefns: Option[String] = None)
+case class MappedOutGroup(decls: Option[String], types: Option[String], defns: Option[String])

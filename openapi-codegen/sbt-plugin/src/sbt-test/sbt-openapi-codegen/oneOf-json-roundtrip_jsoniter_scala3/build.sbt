@@ -5,21 +5,24 @@ lazy val root = (project in file("."))
     version := "0.1",
     openapiJsonSerdeLib := "jsoniter",
     openapiXmlSerdeLib := "none",
-    openapiStreamingImplementation := "pekko",
-    openapiUseCustomJsoniterSerdes := false
+    openapiStreamingImplementation := "fs2-injections.Types.A",
+    openapiUseCustomJsoniterSerdes := false,
+    openapiGenerateEndpointTypes := true
   )
 
 val tapirVersion = "1.11.16"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
-  "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % tapirVersion,
-  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
-  "com.beachape" %% "enumeratum" % "1.7.6",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.36.0",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.36.0" % "compile-internal",
+  "com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % tapirVersion,
+  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
+  "com.beachape" %% "enumeratum" % "1.9.0",
+  "co.fs2" %% "fs2-core" % "3.12.2",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.9",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.9" % "compile-internal",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test
+  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test,
+  "com.softwaremill.sttp.client3" %% "http4s-backend" % "3.11.0" % Test
 )
 
 import sttp.tapir.sbt.OpenapiCodegenPlugin.autoImport.{openapiJsonSerdeLib, openapiUseHeadTagForObjectName}
@@ -43,7 +46,16 @@ def compare(name: String, genFn: String, expFn: String) = {
 }
 
 TaskKey[Unit]("check") := {
-  compare("endpoints", "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
-  compare("json", "target/scala-3.3.3/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala", "ExpectedJsonSerdes.scala.txt")
+  compare("endpoints", s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
+  compare(
+    "json",
+    s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
+    "ExpectedJsonSerdes.scala.txt"
+  )
+  compare(
+    "schemas",
+    s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpointsSchemas.scala",
+    "ExpectedSchemas.scala.txt"
+  )
   ()
 }

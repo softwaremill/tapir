@@ -1,9 +1,0 @@
-name: rebase-command
-on:
-  repository_dispatch:
-    types: [rebase-command]
-jobs:
-  rebase:
-    uses: softwaremill/github-actions-workflows/.github/workflows/rebase-cmd.yml@main
-    secrets:
-      repo-github-token: ${{ secrets.REPO_GITHUB_TOKEN }}

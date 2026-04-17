@@ -70,7 +70,7 @@ class OpenTelemetryTracing[F[_]](config: OpenTelemetryTracingConfig) extends Req
         requestHandler(knownEndpointInterceptor(request, span))(request, endpoints)
           .map { result =>
             result match {
-              case Response(response) =>
+              case Response(response, _) =>
                 span.setAllAttributes(config.responseAttributes(request, response))
                 // https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
                 if (response.isServerError) {

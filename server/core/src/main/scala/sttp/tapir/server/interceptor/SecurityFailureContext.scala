@@ -5,9 +5,9 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 
 case class SecurityFailureContext[F[_], A](
-    serverEndpoint: ServerEndpoint.Full[A, _, _, _, _, _, F],
+    serverEndpoint: ServerEndpoint.Full[A, ?, ?, ?, ?, ?, F],
     securityInput: A,
     request: ServerRequest
 ) {
-  def endpoint: Endpoint[A, _, _, _, _] = serverEndpoint.endpoint
+  def endpoint: Endpoint[A, ?, ?, ?, ?] = serverEndpoint.endpoint
 }

@@ -12,6 +12,11 @@ import sttp.tapir.tests.Files._
 import sttp.tapir.tests.Mapping._
 import sttp.tapir.tests.Multipart._
 import sttp.tapir.tests.OneOf._
+import io.circe.generic.auto._
+import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
+import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
 
 class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
 
@@ -133,5 +138,30 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     val es = List(e1, e2)
 
     OpenAPIDocsInterpreter(options).toOpenAPI(es, Info("title", "19.2-beta-RC1"))
+  }
+
+  test("should fail when OpenAPIDocsOptions.failOnDuplicateSchemaName is true and there are duplicate schema names") {
+    val e: sttp.tapir.Endpoint[Unit, APet, Unit, BPet, Any] = endpoint
+      .in(jsonBody[APet])
+      .out(jsonBody[BPet])
+
+    val options = OpenAPIDocsOptions.default.copy(failOnDuplicateSchemaName = true)
+
+    val thrown = intercept[IllegalStateException] {
+      OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("Entities", "1.0"))
+    }
+
+    thrown.getMessage should include("Duplicate schema names found")
+    thrown.getMessage should include("Pet")
+  }
+
+  test("should pass when OpenAPIDocsOptions.failOnDuplicateSchemaName is false and there are duplicate schema names") {
+    val e: sttp.tapir.Endpoint[Unit, APet, Unit, BPet, Any] = endpoint
+      .in(jsonBody[APet])
+      .out(jsonBody[BPet])
+
+    val options = OpenAPIDocsOptions.default.copy(failOnDuplicateSchemaName = false)
+
+    OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("Entities", "1.0"))
   }
 }

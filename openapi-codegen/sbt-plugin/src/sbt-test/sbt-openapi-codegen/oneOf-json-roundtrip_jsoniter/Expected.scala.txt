@@ -17,6 +17,9 @@ object TapirGeneratedEndpoints {
   case class `application/vnd.openxmlformats-officedocument.spreadsheetml.sheetCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "vnd.openxmlformats-officedocument.spreadsheetml.sheet")
   }
+  case class `image/*CodecFormat`() extends CodecFormat {
+    override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "image", subType = "*")
+  }
   case class `text/csvCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "text", subType = "csv")
   }
@@ -81,75 +84,9 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
-  sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
-
-  sealed trait PetStatus extends enumeratum.EnumEntry
-  object PetStatus extends enumeratum.Enum[PetStatus] {
-    val values = findValues
-    case object available extends PetStatus
-    case object pending extends PetStatus
-    case object sold extends PetStatus
-  }
-  case class Pet (
-    id: Option[Long] = None,
-    name: String,
-    category: Option[Category] = None,
-    photoUrls: Seq[String],
-    tags: Option[Seq[Tag]] = None,
-    tags2: Option[Seq[Tag2]] = None,
-    status: Option[PetStatus] = None
-  )
-  case class Category (
-    id: Option[Long] = None,
-    name: Option[String] = None
-  )
-  case class NotNullableThingy (
-    uuid: java.util.UUID
-  )
-  case class SubtypeWithoutD1 (
-    s: String,
-    i: Option[Int] = None,
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class HasASet (
-    setA: Set[String],
-    setB: Option[Set[Int]] = None
-  )
-  case class SubtypeWithD1 (
-    s: String,
-    i: Option[Int] = None,
-    d: Option[Double] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
-  case class SubtypeWithoutD3 (
-    s: String,
-    i: Option[Int] = None,
-    e: Option[AnEnum] = None,
-    e2: Option[SubtypeWithoutD3E2] = None,
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-
-  sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry
-  object SubtypeWithoutD3E2 extends enumeratum.Enum[SubtypeWithoutD3E2] {
-    val values = findValues
-    case object A extends SubtypeWithoutD3E2
-    case object B extends SubtypeWithoutD3E2
-    case object C extends SubtypeWithoutD3E2
-  }
-  case class SubtypeWithoutD2 (
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class SubtypeWithD2 (
-    s: String,
-    a: Option[Seq[String]] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
-  case class Tag (
-    id: Option[Long] = None,
-    name: Option[String] = None
-  )
+  sealed trait ADTWithoutDiscriminator
 
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] {
@@ -160,14 +97,90 @@ object TapirGeneratedEndpoints {
     implicit val enumCodecSupportAnEnum: ExtraParamSupport[AnEnum] =
       extraCodecSupport[AnEnum]("AnEnum", AnEnum)
   }
+
+  sealed trait PetStatus extends enumeratum.EnumEntry
+  object PetStatus extends enumeratum.Enum[PetStatus] {
+    val values = findValues
+    case object available extends PetStatus
+    case object pending extends PetStatus
+    case object sold extends PetStatus
+  }
+
+  sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry
+  object SubtypeWithoutD3E2 extends enumeratum.Enum[SubtypeWithoutD3E2] {
+    val values = findValues
+    case object A extends SubtypeWithoutD3E2
+    case object B extends SubtypeWithoutD3E2
+    case object C extends SubtypeWithoutD3E2
+  }
+  case class Category (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
+  case class HasASet (
+    setA: Set[String],
+    setB: Option[Set[Int]] = None
+  )
+  case class NotNullableThingy (
+    uuid: java.util.UUID
+  )
+  case class Pet (
+    id: Option[Long] = None,
+    name: String,
+    category: Option[Category] = None,
+    photoUrls: Seq[String],
+    tags: Option[Seq[Tag]] = None,
+    tags2: Option[Seq[Tag2]] = None,
+    status: Option[PetStatus] = None
+  )
+  case class SubtypeWithD1 (
+    s: String,
+    i: Option[Int] = None,
+    d: Option[Double] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithD2 (
+    s: String,
+    a: Option[Seq[String]] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithoutD1 (
+    s: String,
+    i: Option[Int] = None,
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithoutD2 (
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithoutD3 (
+    s: String,
+    i: Option[Int] = None,
+    e: Option[AnEnum] = None,
+    e2: Option[SubtypeWithoutD3E2] = None,
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class Tag (
+    id: Option[Long] = None,
+    name: Option[String] = None
+  )
   case class Tag2 (
     id: Option[Long] = None,
     name: Option[String] = None
   )
   type ListType = List[ByteString]
-  case class SomeBinaryType (
+  type SomeBinaryType = io.circe.JsonObject
+  sealed trait GetRedirectTestResponseHeader
+  case class GetRedirectTestResponseHeader307(redirectHeader: String) extends GetRedirectTestResponseHeader
+  case object GetRedirectTestResponseHeader204 extends GetRedirectTestResponseHeader
 
-  )
+  sealed trait PutRedirectTestResponseHeader
+  case class PutRedirectTestResponseHeader307(redirectHeader: String) extends PutRedirectTestResponseHeader
+  case object PutRedirectTestResponseHeader204 extends PutRedirectTestResponseHeader
+
+  sealed trait DeleteRedirectTestResponseHeader
+  case class DeleteRedirectTestResponseHeader307(redirectHeader: String, secondHeader: String) extends DeleteRedirectTestResponseHeader
+  case object DeleteRedirectTestResponseHeader204 extends DeleteRedirectTestResponseHeader
+
   case class PutInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -191,12 +204,12 @@ object TapirGeneratedEndpoints {
 
 
   sealed trait PostCustomContentNegotiationBodyOut extends Product with java.io.Serializable {
-    def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
+    def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
   }
   case class PostCustomContentNegotiationBodyOutFull (
-    override val `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
     override val `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
+    override val `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream,
   ) extends PostCustomContentNegotiationBodyOut
   case class PostCustomContentNegotiationBody0Out(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyOut{
     override def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
@@ -207,18 +220,18 @@ object TapirGeneratedEndpoints {
 
 
   sealed trait PostCustomContentNegotiationBodyErr extends Product with java.io.Serializable {
-    def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
+    def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
   }
   case class PostCustomContentNegotiationBodyErrFull (
-    override val `text/csv`: () => String,
     override val `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte],
+    override val `text/csv`: () => String,
   ) extends PostCustomContentNegotiationBodyErr
-  case class PostCustomContentNegotiationBodyStringErr(value: String) extends PostCustomContentNegotiationBodyErr{
-    override def `text/csv`: () => String = () => value
-  }
   case class PostCustomContentNegotiationBody1Err(value: Array[Byte]) extends PostCustomContentNegotiationBodyErr{
     override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => value
+  }
+  case class PostCustomContentNegotiationBodyStringErr(value: String) extends PostCustomContentNegotiationBodyErr{
+    override def `text/csv`: () => String = () => value
   }
 
 
@@ -239,6 +252,13 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
 
+  type GetDynamicContentTypeTestEndpoint = Endpoint[Unit, Unit, Unit, (sttp.capabilities.pekko.PekkoStreams.BinaryStream, String), sttp.capabilities.pekko.PekkoStreams]
+  lazy val getDynamicContentTypeTest: GetDynamicContentTypeTestEndpoint =
+    endpoint
+      .get
+      .in(("dynamic" / "content-type" / "test"))
+      .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], `image/*CodecFormat`()).description("No Content").toEndpointIO.and(header[String]("Content-Type").validate(Validator.pattern("image/([^*]+|[*])"))))
+
   type GetOneofOptionTestEndpoint = Endpoint[Unit, Unit, Unit, Option[AnEnum], Any]
   lazy val getOneofOptionTest: GetOneofOptionTestEndpoint =
     endpoint
@@ -247,6 +267,34 @@ object TapirGeneratedEndpoints {
       .out(oneOf[Option[AnEnum]](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None),
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[AnEnum]].description("An enum")){ case Some(_: AnEnum) => true }))
+
+  type GetRedirectTestEndpoint = Endpoint[Unit, Unit, Unit, GetRedirectTestResponseHeader, Any]
+  lazy val getRedirectTest: GetRedirectTestEndpoint =
+    endpoint
+      .get
+      .in(("redirect" / "test"))
+      .out(oneOf[GetRedirectTestResponseHeader](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutput.description("No Content").and(emptyOutputAs(GetRedirectTestResponseHeader204))){ case GetRedirectTestResponseHeader204 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(307), emptyOutput.description("Some redirect").and(header[String]("redirectHeader").map(GetRedirectTestResponseHeader307(_))(_.redirectHeader))){ case (_: GetRedirectTestResponseHeader307) => true}))
+
+  type PutRedirectTestEndpoint = Endpoint[Unit, Unit, Unit, (Option[String], PutRedirectTestResponseHeader), Any]
+  lazy val putRedirectTest: PutRedirectTestEndpoint =
+    endpoint
+      .put
+      .in(("redirect" / "test"))
+      .out(oneOf[(Option[String], PutRedirectTestResponseHeader)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(None).description("No Content").and(emptyOutputAs(PutRedirectTestResponseHeader204))){ case (None, PutRedirectTestResponseHeader204) => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(307), jsonBody[Option[String]].description("Some redirect").and(header[String]("redirectHeader").map(PutRedirectTestResponseHeader307(_))(_.redirectHeader))){ case (Some(_: String), (_: PutRedirectTestResponseHeader307)) => true }))
+
+  type DeleteRedirectTestEndpoint = Endpoint[Unit, Unit, Unit, DeleteRedirectTestResponseHeader, Any]
+  lazy val deleteRedirectTest: DeleteRedirectTestEndpoint =
+    endpoint
+      .delete
+      .in(("redirect" / "test"))
+      .errorOut(statusCode(sttp.model.StatusCode(404)).description("Not found"))
+      .out(oneOf[DeleteRedirectTestResponseHeader](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutput.description("No Content").and(emptyOutputAs(DeleteRedirectTestResponseHeader204))){ case DeleteRedirectTestResponseHeader204 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(307), emptyOutput.description("Some redirect").and((header[String]("redirectHeader").and(header[String]("secondHeader"))).map((DeleteRedirectTestResponseHeader307.apply _).tupled)(DeleteRedirectTestResponseHeader307.unapply(_).get))){ case (_: DeleteRedirectTestResponseHeader307) => true}))
 
   type PostGenericJsonEndpoint = Endpoint[Unit, (Option[List[AnEnum]], Option[io.circe.Json]), Unit, io.circe.Json, Any]
   lazy val postGenericJson: PostGenericJsonEndpoint =
@@ -352,7 +400,9 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[HasASet]])
       .out(jsonBody[HasASet].description("OK"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getOneofOptionTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
+
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getDynamicContentTypeTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
+
 
   object Servers {
     import sttp.model.Uri.UriContext

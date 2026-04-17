@@ -217,3 +217,13 @@ val secureFileEndpoints = staticFilesServerEndpoints[Future]("secure")("/home/da
     Future.successful(if (token.startsWith("secret")) Right(()) else Left(()))
   })
 ```
+
+## File handling
+
+When:
+
+* receiving a multipart request in a Tapir server, and mapping some parts to files
+* receiving the request body as a file
+
+all created files are treated as temporary, and will be deleted when the request processing completes (regardless of 
+the outcome - HTTP success, HTTP failure or exception).

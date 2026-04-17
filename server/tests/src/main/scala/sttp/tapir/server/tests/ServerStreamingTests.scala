@@ -13,6 +13,7 @@ import sttp.tapir.server.model.MaxContentLength
 import sttp.tapir.AttributeKey
 import cats.effect.IO
 import sttp.capabilities.fs2.Fs2Streams
+import sttp.model.HttpVersion
 
 class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, S, OPTIONS, ROUTE],

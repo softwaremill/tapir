@@ -8,8 +8,8 @@ lazy val root = (project in file("."))
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.11.16",
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.11.16",
-  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.9",
-  "io.circe" %% "circe-generic" % "0.14.13",
+  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
+  "io.circe" %% "circe-generic" % "0.14.15",
   "org.latestbit" %% "circe-tagged-adt-codec" % "0.11.0",
   "io.github.bishabosha" %% "enum-extensions" % "0.1.1",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
@@ -22,7 +22,7 @@ import scala.util.Using
 
 TaskKey[Unit]("check") := {
   val generatedCode =
-    Using(Source.fromFile("target/scala-3.3.1/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala"))(
+    Using(Source.fromFile(s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala"))(
       _.getLines.mkString("\n")
     ).get
   val expected = Using(Source.fromFile("Expected.scala.txt"))(_.getLines.mkString("\n")).get

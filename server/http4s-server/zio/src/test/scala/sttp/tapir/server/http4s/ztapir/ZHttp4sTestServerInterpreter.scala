@@ -1,9 +1,7 @@
 package sttp.tapir.server.http4s.ztapir
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats._
-import cats.syntax.all._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.{HttpApp, HttpRoutes}
@@ -36,11 +34,11 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
   }
 
   override def server(
-      routes: NonEmptyList[Routes],
+      route: Routes,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
     val service: WebSocketBuilder2[Task] => HttpApp[Task] =
-      wsb => routes.map(_.apply(wsb)).reduceK.orNotFound
+      wsb => route(wsb).orNotFound
 
     BlazeServerBuilder[Task]
       .withExecutionContext(ExecutionContext.global)

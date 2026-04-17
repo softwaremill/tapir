@@ -22,13 +22,10 @@ abstract class PlayClientTests[R] extends ClientTests[R] {
       securityArgs: A,
       args: I,
       scheme: String = "http"
-  ): IO[Either[E, O]] = {
-    def response: Future[Either[E, O]] = {
-      val (req, responseParser) =
-        PlayClientInterpreter().toSecureRequestThrowDecodeFailures(e, s"http://localhost:$port").apply(securityArgs).apply(args)
-      req.execute().map(responseParser)
-    }
-    IO.fromFuture(IO(response))
+  ): Future[Either[E, O]] = {
+    val (req, responseParser) =
+      PlayClientInterpreter().toSecureRequestThrowDecodeFailures(e, s"http://localhost:$port").apply(securityArgs).apply(args)
+    req.execute().map(responseParser)
   }
 
   override def safeSend[A, I, E, O](
@@ -36,12 +33,9 @@ abstract class PlayClientTests[R] extends ClientTests[R] {
       port: Port,
       securityArgs: A,
       args: I
-  ): IO[DecodeResult[Either[E, O]]] = {
-    def response: Future[DecodeResult[Either[E, O]]] = {
-      val (req, responseParser) = PlayClientInterpreter().toSecureRequest(e, s"http://localhost:$port").apply(securityArgs).apply(args)
-      req.execute().map(responseParser)
-    }
-    IO.fromFuture(IO(response))
+  ): Future[DecodeResult[Either[E, O]]] = {
+    val (req, responseParser) = PlayClientInterpreter().toSecureRequest(e, s"http://localhost:$port").apply(securityArgs).apply(args)
+    req.execute().map(responseParser)
   }
 
 }

@@ -27,7 +27,7 @@ case class AwsLambdaFunction(name: String, timeout: FiniteDuration, memorySize: 
           "handler" -> Json.fromString(s3.handler)
         )
       case image: ImageSource => Seq("image_uri" -> Json.fromString(image.imageUri))
-      case code: CodeSource =>
+      case code: CodeSource   =>
         Seq(
           "filename" -> Json.fromString(code.fileName),
           "runtime" -> Json.fromString(code.runtime),

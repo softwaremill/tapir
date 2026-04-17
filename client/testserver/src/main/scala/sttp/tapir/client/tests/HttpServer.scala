@@ -85,7 +85,7 @@ class HttpServer(port: HttpServer.Port) {
         }
       }
     case r @ POST -> Root / "api" / "echo" => r.as[String].flatMap(Ok(_))
-    case r @ GET -> Root =>
+    case r @ GET -> Root                   =>
       r.headers.get(CIString("X-Role")) match {
         case None     => Ok()
         case Some(hs) => Ok("Role: " + hs.head.value)

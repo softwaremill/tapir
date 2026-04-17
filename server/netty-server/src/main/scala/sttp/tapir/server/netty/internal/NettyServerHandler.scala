@@ -10,6 +10,7 @@ import io.netty.handler.timeout.{IdleState, IdleStateEvent, IdleStateHandler}
 import org.playframework.netty.http.{DefaultStreamedHttpResponse, DefaultWebSocketHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
+import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
@@ -24,8 +25,8 @@ import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, S
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{TimeUnit, TimeoutException}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
@@ -93,7 +94,7 @@ class NettyServerHandler[F[_]](
           logger.debug("Http channel to {} closed. Cancelling {} responses.", ctx.channel.remoteAddress, pendingResponses.length)
         }
         while (pendingResponses.nonEmpty) {
-          pendingResponses.dequeue().apply()
+          pendingResponses.dequeue().apply(): Unit // running the cancellation for background side-effects only (best-effort)
         }
       }
     }
@@ -141,11 +142,18 @@ class NettyServerHandler[F[_]](
       }
       requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
-        route(NettyServerRequest(req))
-          .map {
-            case Some(response) => response
-            case None           => ServerResponse.notFound
+        try {
+          route(NettyServerRequest(req, ctx))
+            .map {
+              case Some(response) => response
+              case None           => ServerResponse.notFound
+            }
+        } catch {
+          case e: IllegalArgumentException if e.getMessage.startsWith("URLDecoder:") => {
+            logger.debug(s"Invalid request URL: ${req.uri()}", e)
+            me.unit(ServerResponse[NettyResponse](StatusCode.BadRequest, Nil, None, None))
           }
+        }
       }
       pendingResponses.enqueue(cancellationSwitch)
       lastResponseSent = lastResponseSent.flatMap { _ =>
@@ -180,9 +188,12 @@ class NettyServerHandler[F[_]](
                 // pendingResponses is already dequeued because the channel is closed
                 result match {
                   case Success(serverResponse) =>
-                    val e = new TimeoutException("Request timed out")
-                    responseCompletedPromise = Some(handleResponseAfterTimeout(ctx, serverResponse, e))
-                    Failure(e)
+                    val e = new RuntimeException("Client disconnected, request timed out, or request cancelled")
+                    responseCompletedPromise = Some(handleResponseWhenChannelClosed(ctx, serverResponse, e))
+                    logger.debug(
+                      "Response created but not sent, as the channel is closed (due to client disconnect, timeout, or cancellation)."
+                    )
+                    Success(())
                   case Failure(e) => Failure(e)
                 }
               }
@@ -305,27 +316,27 @@ class NettyServerHandler[F[_]](
       }
     )
 
-  private def handleResponseAfterTimeout(
+  private def handleResponseWhenChannelClosed(
       ctx: ChannelHandlerContext,
       serverResponse: ServerResponse[NettyResponse],
-      timeoutException: Exception
+      channelPromiseFailure: Exception
   ): ChannelPromise =
     serverResponse.handle(
       ctx = ctx,
-      byteBufHandler = (channelPromise, byteBuf) => { val _ = channelPromise.setFailure(timeoutException) },
+      byteBufHandler = (channelPromise, byteBuf) => { val _ = channelPromise.setFailure(channelPromiseFailure) },
       chunkedStreamHandler = (channelPromise, chunkedStream) => {
         chunkedStream.close()
-        val _ = channelPromise.setFailure(timeoutException)
+        val _ = channelPromise.setFailure(channelPromiseFailure)
       },
       chunkedFileHandler = (channelPromise, chunkedFile) => {
         chunkedFile.close()
-        val _ = channelPromise.setFailure(timeoutException)
+        val _ = channelPromise.setFailure(channelPromiseFailure)
       },
       reactiveStreamHandler = (channelPromise, publisher) => {
         publisher.subscribe(new Subscriber[HttpContent] {
           override def onSubscribe(s: Subscription): Unit = {
             s.cancel()
-            val _ = channelPromise.setFailure(timeoutException)
+            val _ = channelPromise.setFailure(channelPromiseFailure)
           }
           override def onNext(t: HttpContent): Unit = ()
           override def onError(t: Throwable): Unit = ()
@@ -333,7 +344,7 @@ class NettyServerHandler[F[_]](
         })
       },
       wsHandler = (responseContent) => {
-        val _ = responseContent.channelPromise.setFailure(timeoutException)
+        val _ = responseContent.channelPromise.setFailure(channelPromiseFailure)
       },
       noBodyHandler = () => ()
     )

@@ -1,9 +1,32 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath, OpenapiPathMethod, OpenapiRequestBody, OpenapiRequestBodyContent, OpenapiRequestBodyDefn, OpenapiResponse, OpenapiResponseContent, OpenapiResponseDef, Resolved}
-import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeBasicType, OpenapiSecuritySchemeBearerType}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaBinary, OpenapiSchemaField, OpenapiSchemaObject, OpenapiSchemaRef, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
+  OpenapiDocument,
+  OpenapiParameter,
+  OpenapiPath,
+  OpenapiPathMethod,
+  OpenapiRequestBody,
+  OpenapiRequestBodyContent,
+  OpenapiRequestBodyDefn,
+  OpenapiResponse,
+  OpenapiResponseContent,
+  OpenapiResponseDef,
+  Resolved
+}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
+  OpenapiSecuritySchemeApiKeyType,
+  OpenapiSecuritySchemeBasicType,
+  OpenapiSecuritySchemeBearerType
+}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaBinary,
+  OpenapiSchemaField,
+  OpenapiSchemaObject,
+  OpenapiSchemaRef,
+  OpenapiSchemaString
+}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
 import scala.collection.mutable
@@ -44,15 +67,15 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       null,
       Nil
     )
-    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) ++
+    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) +
       new EndpointGenerator()
         .endpointDefs(
           doc,
           useHeadTagForObjectNames = false,
-          targetScala3 = false,
+          targetScala3 = isScala3,
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
-          streamingImplementation = StreamingImplementation.FS2,
+          streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
           generateValidators = true
@@ -61,7 +84,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     generatedCode should include("val getTestAsdId =")
     generatedCode should include(""".in(query[Option[String]]("fgh-id"))""")
     generatedCode should include(""".in(header[Option[String]]("jkl-id"))""")
-    generatedCode shouldCompile ()
+    generatedCode.shouldCompile()
   }
 
   it should "generete endpoints defs with security" in {
@@ -135,20 +158,20 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    RootGenerator.imports(JsonSerdeLib.Circe) ++
+    (RootGenerator.imports(JsonSerdeLib.Circe) +
       new EndpointGenerator()
         .endpointDefs(
           doc,
           useHeadTagForObjectNames = false,
-          targetScala3 = false,
+          targetScala3 = isScala3,
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
-          streamingImplementation = StreamingImplementation.FS2,
+          streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
           generateValidators = true
         )
-        .endpointDecls(None) shouldCompile ()
+        .endpointDecls(None)).shouldCompile()
   }
 
   it should "handle status codes" in {
@@ -198,10 +221,10 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
         .endpointDefs(
           doc,
           useHeadTagForObjectNames = false,
-          targetScala3 = false,
+          targetScala3 = isScala3,
           jsonSerdeLib = JsonSerdeLib.Circe,
           xmlSerdeLib = XmlSerdeLib.CatsXml,
-          streamingImplementation = StreamingImplementation.FS2,
+          streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
           generateValidators = true
@@ -217,7 +240,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       """.errorOut(statusCode(sttp.model.StatusCode(403)).description("Not authorised"))"""
     ) // error status code, no body
     generatedCode should include(""".out(statusCode(sttp.model.StatusCode(204)).description("No body"))""") // status code, no body
-    generatedCode shouldCompile ()
+    generatedCode.shouldCompile()
   }
 
   it should "support multipart body" in {
@@ -264,11 +287,11 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    val generatedCode = RootGenerator.generateObjects(
+    val objs: Map[String, String] = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
-      targetScala3 = false,
+      targetScala3 = isScala3,
       useHeadTagForObjectNames = false,
       jsonSerdeLib = "circe",
       xmlSerdeLib = "cats-xml",
@@ -278,14 +301,16 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       generateEndpointTypes = false,
       generateValidators = true,
       useCustomJsoniterSerdes = true
-    )("TapirGeneratedEndpoints")
+    )
+    val schemas = objs("TapirGeneratedEndpointsSchemas")
+    val generatedCode = objs("TapirGeneratedEndpoints")
     generatedCode should include(
       """file: sttp.model.Part[java.io.File]"""
     )
     generatedCode should include(
       """.in(multipartBody[FileUpload])"""
     )
-    generatedCode shouldCompile ()
+    (schemas + "\n" + generatedCode).shouldCompile()
   }
 
   it should "generate attributes for specification extensions on path and operation objects" in {
@@ -294,7 +319,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
-      targetScala3 = false,
+      targetScala3 = isScala3,
       useHeadTagForObjectNames = false,
       jsonSerdeLib = "circe",
       xmlSerdeLib = "cats-xml",
@@ -305,7 +330,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       generateValidators = true,
       useCustomJsoniterSerdes = true
     )("TapirGeneratedEndpoints")
-    generatedCode shouldCompile ()
+    generatedCode.shouldCompile()
     val expectedAttrDecls = Seq(
       """.attribute[CustomStringExtensionOnPathExtension](customStringExtensionOnPathExtensionKey, "another string")""",
       """.attribute[CustomStringExtensionOnOperationExtension](customStringExtensionOnOperationExtensionKey, "bazquux")""",

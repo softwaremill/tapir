@@ -25,7 +25,6 @@ import sttp.monad.syntax._
 import sttp.shared.Identity
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 
 class TapirSyncStubInterpreter[OPTIONS](
@@ -226,7 +225,7 @@ abstract class AbstractTapirStubInterpreter[F[_], R, OPTIONS](
   //   )
 
   protected def handleRequest(req: GenericRequest[_, _]): F[Response[StubBody]] =
-    StubServerInterpreter(req, endpoints, RejectInterceptor.disableWhenSingleEndpoint(interceptors, endpoints))
+    StubServerInterpreter(req, endpoints, interceptors)
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
     def thenRespond(response: O): StubType =

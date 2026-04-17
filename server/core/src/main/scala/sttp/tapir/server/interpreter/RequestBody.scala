@@ -11,7 +11,14 @@ trait RequestBody[F[_], S] {
   def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream
 }
 
-case class RawValue[R](value: R, createdFiles: Seq[FileRange] = Nil)
+/** @param value
+  *   The parsed value of the request body.
+  * @param createdFiles
+  *   Temporary files created when parsing the request body, which should be deleted when the request is processed.
+  * @param cleanup
+  *   Cleanup function to be called when the request is processed.
+  */
+case class RawValue[R](value: R, createdFiles: Seq[FileRange] = Nil, cleanup: Option[() => Unit] = None)
 
 object RawValue {
   def fromParts(parts: Seq[RawPart]): RawValue[Seq[RawPart]] =

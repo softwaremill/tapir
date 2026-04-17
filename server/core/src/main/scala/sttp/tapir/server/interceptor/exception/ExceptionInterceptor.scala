@@ -10,6 +10,9 @@ import sttp.tapir.server.model.ServerResponse
 
 import scala.util.control.NonFatal
 
+/** Handles exceptions thrown by the server logic. Usually, the [[ServerLogAndExceptionInterceptor]] is used instead, which combines logging
+  * and exception handling.
+  */
 class ExceptionInterceptor[F[_]](handler: ExceptionHandler[F]) extends EndpointInterceptor[F] {
   override def apply[B](responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {

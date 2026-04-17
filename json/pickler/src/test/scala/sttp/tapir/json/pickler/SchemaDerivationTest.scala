@@ -505,7 +505,7 @@ object SchemaDerivationTest {
 
   // comparing recursive schemas without validators
   private[json] def removeValidators[T](s: Schema[T]): Schema[T] = (s.schemaType match {
-    case SProduct(fields) => s.copy(schemaType = SProduct(convertToSProductField(fields)))
+    case SProduct(fields)                         => s.copy(schemaType = SProduct(convertToSProductField(fields)))
     case st @ SCoproduct(subtypes, discriminator) =>
       s.copy(schemaType =
         SCoproduct(

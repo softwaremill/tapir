@@ -32,10 +32,18 @@ class CodecTestDateTime extends AnyFlatSpec with Matchers with Checkers {
     Gen.chooseNum[Long](0, 86399999999999L).map(LocalTime.ofNanoOfDay)
   )
 
+  private implicit val arbitraryPeriod: Arbitrary[Period] =
+    Arbitrary(for {
+      years <- Arbitrary.arbitrary[Short]
+      months <- Arbitrary.arbitrary[Short]
+      days <- Arbitrary.arbitrary[Short]
+    } yield Period.of(years, months, days))
+
   private val localDateTimeCodec: Codec[String, LocalDateTime, TextPlain] = implicitly[Codec[String, LocalDateTime, TextPlain]]
 
   it should "encode simple types using .toString" in {
     checkEncodeDecodeToString[Duration]
+    checkEncodeDecodeToString[Period]
     checkEncodeDecodeToString[SDuration]
   }
 

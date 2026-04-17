@@ -112,7 +112,7 @@ case class Schema[T](
     */
   def renameWithTypeParameter[TT](implicit stt: Schema[TT]): Schema[T] =
     name match {
-      case None => throw new IllegalArgumentException("Generic class is nameless")
+      case None       => throw new IllegalArgumentException("Generic class is nameless")
       case Some(name) =>
         stt.name match {
           case None          => throw new IllegalArgumentException("Type parameter of generic class is nameless")
@@ -192,9 +192,9 @@ case class Schema[T](
     if (hasValidation) {
       val thisValidator = validator.show
       val childValidators = schemaType match {
-        case SOption(element) => element.showValidators.map(esv => s"elements($esv)")
-        case SArray(element)  => element.showValidators.map(esv => s"elements($esv)")
-        case SProduct(fields) => showFieldValidators(fields)
+        case SOption(element)                  => element.showValidators.map(esv => s"elements($esv)")
+        case SArray(element)                   => element.showValidators.map(esv => s"elements($esv)")
+        case SProduct(fields)                  => showFieldValidators(fields)
         case SOpenProduct(fields, valueSchema) =>
           val fieldValidators = showFieldValidators(fields)
           val elementsValidators = valueSchema.showValidators.map(esv => s"elements($esv)")
@@ -227,7 +227,7 @@ case class Schema[T](
 
   private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] =
     fieldPath match {
-      case Nil => modify(this.asInstanceOf[Schema[U]]).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
+      case Nil     => modify(this.asInstanceOf[Schema[U]]).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
       case f :: fs =>
         def modifyFieldsAtPath(fields: List[SProductField[T]]) = {
           fields.map { field =>
@@ -239,7 +239,7 @@ case class Schema[T](
         val schemaType2 = schemaType match {
           case s @ SArray(element) if f == Schema.ModifyCollectionElements  => SArray(element.modifyAtPath(fs, modify))(s.toIterable)
           case s @ SOption(element) if f == Schema.ModifyCollectionElements => SOption(element.modifyAtPath(fs, modify))(s.toOption)
-          case s @ SProduct(fields) =>
+          case s @ SProduct(fields)                                         =>
             s.copy(fields = modifyFieldsAtPath(fields))
           case s @ SOpenProduct(fields, valueSchema) if f == Schema.ModifyCollectionElements =>
             s.copy(
@@ -267,9 +267,9 @@ case class Schema[T](
   }
 
   /** Apply defined validation rules to the given value. */
-  def applyValidation(t: T): List[ValidationError[_]] = applyValidation(t, Map())
+  def applyValidation(t: T): List[ValidationError[?]] = applyValidation(t, Map())
 
-  private def applyValidation(t: T, objects: Map[SName, Schema[_]]): List[ValidationError[_]] = {
+  private def applyValidation(t: T, objects: Map[SName, Schema[?]]): List[ValidationError[?]] = {
     val objects2 = name.fold(objects)(n => objects + (n -> this))
 
     def applyFieldsValidation(fields: List[SProductField[T]]) = {
@@ -277,11 +277,11 @@ case class Schema[T](
     }
 
     // we avoid running validation for structures where there are no validation rules applied (recursively)
-    if (hasValidation) {
+    if (hasRuntimeValidation) {
       validator(t) ++ (schemaType match {
-        case s @ SOption(element) => s.toOption(t).toList.flatMap(element.applyValidation(_, objects2))
-        case s @ SArray(element)  => s.toIterable(t).flatMap(element.applyValidation(_, objects2))
-        case s @ SProduct(_)      => applyFieldsValidation(s.fieldsWithValidation)
+        case s @ SOption(element)             => s.toOption(t).toList.flatMap(element.applyValidation(_, objects2))
+        case s @ SArray(element)              => s.toIterable(t).flatMap(element.applyValidation(_, objects2))
+        case s @ SProduct(_)                  => applyFieldsValidation(s.fieldsWithValidation)
         case s @ SOpenProduct(_, valueSchema) =>
           applyFieldsValidation(s.fieldsWithValidation) ++
             s.mapFieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
@@ -305,6 +305,26 @@ case class Schema[T](
       case SRef(_)                          => true
       case _                                => false
     })
+  }
+
+  private lazy val hasRuntimeValidation: Boolean = {
+    (validatorRequiresRuntimeValidation(validator)) || (schemaType match {
+      case SOption(element)                 => element.hasRuntimeValidation
+      case SArray(element)                  => element.hasRuntimeValidation
+      case s: SProduct[T]                   => s.fields.exists(f => f.schema.hasRuntimeValidation)
+      case s @ SOpenProduct(_, valueSchema) => s.fields.exists(f => f.schema.hasRuntimeValidation) || valueSchema.hasRuntimeValidation
+      case SCoproduct(subtypes, _)          => subtypes.exists(_.hasRuntimeValidation)
+      case SRef(_)                          => true
+      case _                                => false
+    })
+  }
+
+  private def validatorRequiresRuntimeValidation(v: Validator[?]): Boolean = v match {
+    case Validator.All(validators)      => validators.exists(validatorRequiresRuntimeValidation)
+    case Validator.Any(validators)      => validators.exists(validatorRequiresRuntimeValidation)
+    case _: Validator.DocumentationOnly => false
+    case Validator.Mapped(wrapped, _)   => validatorRequiresRuntimeValidation(wrapped)
+    case other                          => other != Validator.pass
   }
 
   def attribute[A](k: AttributeKey[A]): Option[A] = attributes.get(k)
@@ -348,6 +368,9 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
   implicit lazy val schemaForJavaDuration: Schema[Duration] = Schema(SString())
   implicit lazy val schemaForLocalTime: Schema[LocalTime] = Schema(SString())
   implicit lazy val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString())
+
+  // Period represents ISO 8601 ABNF "duration" format, supported in JsonSchema
+  implicit lazy val schemaForPeriod: Schema[Period] = Schema(SString()).format("duration")
 
   implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString())
   implicit val schemaForUUID: Schema[UUID] = Schema(SString[UUID]()).format("uuid")
@@ -475,7 +498,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * }}}
       */
     class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
-    class customise(val f: Schema[_] => Schema[_]) extends StaticAnnotation with Serializable
+    class customise(val f: Schema[?] => Schema[?]) extends StaticAnnotation with Serializable
   }
 
   /** Wraps the given schema with a single-field product, where `fieldName` maps to `schema`.

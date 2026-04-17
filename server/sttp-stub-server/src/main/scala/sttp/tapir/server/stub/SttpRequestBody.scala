@@ -87,7 +87,9 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
             name = part.name,
             body = body,
             contentType = part.contentType.flatMap(ct => MediaType.parse(ct).toOption),
-            fileName = part.fileName
+            fileName = part.fileName,
+            otherDispositionParams = part.otherDispositionParams,
+            otherHeaders = part.headers
           )
         )
       }

@@ -1,7 +1,6 @@
 package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiHeader, OpenapiRequestBodyContent, OpenapiResponseContent}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaRef, OpenapiSchemaSimpleType}
 
 case class OpenapiResponseDefn(
     description: String,

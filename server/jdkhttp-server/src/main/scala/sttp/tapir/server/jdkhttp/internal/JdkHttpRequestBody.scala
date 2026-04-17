@@ -9,6 +9,7 @@ import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.jdkhttp.internal.ParsedMultiPart.parseMultipartBody
+import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart, TapirFile}
 
 import java.io._
@@ -39,7 +40,7 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
       case RawBodyType.ByteArrayBody        => RawValue(asByteArray)
       case RawBodyType.ByteBufferBody       => RawValue(ByteBuffer.wrap(asByteArray))
       case RawBodyType.InputStreamBody      => RawValue(asInputStream)
-      case RawBodyType.FileBody =>
+      case RawBodyType.FileBody             =>
         val file = createFile(serverRequest)
         Files.copy(asInputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
         RawValue(FileRange(file), Seq(FileRange(file)))
@@ -67,20 +68,24 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
     val httpExchange = jdkHttpRequest(request)
     val boundary = extractBoundary(httpExchange)
 
-    parseMultipartBody(requestBody, boundary, multipartFileThresholdBytes).flatMap(parsedPart =>
-      parsedPart.getName.flatMap(name =>
-        m.partType(name)
-          .map(partType => {
-            val bodyRawValue = toRaw(request, partType, parsedPart.getBody, maxBytes = None)
-            Part(
-              name,
-              bodyRawValue.value,
-              otherDispositionParams = parsedPart.getDispositionParams - "name",
-              headers = parsedPart.fileItemHeaders
-            )
-          })
+    try {
+      parseMultipartBody(requestBody, boundary, multipartFileThresholdBytes).flatMap(parsedPart =>
+        parsedPart.getName.flatMap(name =>
+          m.partType(name)
+            .map(partType => {
+              val bodyRawValue = toRaw(request, partType, parsedPart.getBody, maxBytes = None)
+              Part(
+                name,
+                bodyRawValue.value,
+                otherDispositionParams = parsedPart.getDispositionParams - "name",
+                headers = parsedPart.fileItemHeaders
+              )
+            })
+        )
       )
-    )
+    } catch {
+      case e: Exception if e.getMessage().contains("Parsing multipart failed") => throw InvalidMultipartBodyException(e)
+    }
   }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =

@@ -277,7 +277,7 @@ private[tapir] object SchemaCompanionMacros {
             case '[f] => {
               Expr.summon[Schema[f]] match {
                 case Some(subSchema) => '{ ${ Expr(child.name) } -> Schema.wrapWithSingleFieldProduct(${ subSchema })($conf) }
-                case None => {
+                case None            => {
                   val typeName = TypeRepr.of[f].typeSymbol.name
                   report.errorAndAbort(s"Cannot summon schema for `${typeName}`. Make sure schema derivation is properly configured.")
                 }
@@ -363,7 +363,7 @@ private[tapir] object SchemaCompanionMacros {
     def findOrTypes(t: TypeRepr, failIfNotOrType: Boolean = true): List[TypeRepr] =
       t.dealias match {
         // only failing if the top-level type is not an OrType
-        case OrType(l, r) => findOrTypes(l, failIfNotOrType = false) ++ findOrTypes(r, failIfNotOrType = false)
+        case OrType(l, r)         => findOrTypes(l, failIfNotOrType = false) ++ findOrTypes(r, failIfNotOrType = false)
         case _ if failIfNotOrType =>
           report.errorAndAbort(s"Can only derive Schemas for union types, got: ${tpe.show}")
         case _ => List(t)
@@ -377,7 +377,7 @@ private[tapir] object SchemaCompanionMacros {
         case '[f] =>
           Expr.summon[Schema[f]] match {
             case Some(subSchema) => subSchema
-            case None =>
+            case None            =>
               val typeName = TypeRepr.of[f].show
               report.errorAndAbort(s"Cannot summon schema for `$typeName`. Make sure schema derivation is properly configured.")
           }
@@ -429,7 +429,7 @@ private[tapir] object SchemaCompanionMacros {
         def caseThen = Block(Nil, '{ Some(SchemaWithValue($orTypeSchema.asInstanceOf[Schema[Any]], $e)) }.asTerm)
 
         orType.classSymbol match
-          case None => Some(CaseDef(Ident(orType.termSymbol.termRef), None, caseThen))
+          case None                                  => Some(CaseDef(Ident(orType.termSymbol.termRef), None, caseThen))
           case Some(sym) if orType.typeArgs.nonEmpty =>
             if genericTypesThatAppearMoreThanOnce.contains(sym.fullName) then None
             else

@@ -10,10 +10,10 @@ import java.nio.charset.Charset
 import scala.collection.immutable.Seq
 
 class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsContentTypes: Seq[ContentTypeRange]) {
-  def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
+  def apply(output: EndpointOutput[?], value: Params, ov: OutputValues[B]): OutputValues[B] = {
     output match {
-      case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
-      case s: EndpointOutput.Single[_]                => applySingle(s, value, ov)
+      case s: EndpointIO.Single[?]                    => applySingle(s, value, ov)
+      case s: EndpointOutput.Single[?]                => applySingle(s, value, ov)
       case EndpointIO.Pair(left, right, _, split)     => applyPair(left, right, split, value, ov)
       case EndpointOutput.Pair(left, right, _, split) => applyPair(left, right, split, value, ov)
       case EndpointOutput.Void()                      => throw new IllegalArgumentException("Cannot encode a void output!")
@@ -21,8 +21,8 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
   }
 
   private def applyPair(
-      left: EndpointOutput[_],
-      right: EndpointOutput[_],
+      left: EndpointOutput[?],
+      right: EndpointOutput[?],
       split: SplitParams,
       params: Params,
       ov: OutputValues[B]
@@ -31,14 +31,14 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
     apply(right, rightParams, apply(left, leftParams, ov))
   }
 
-  private def applySingle(output: EndpointOutput.Single[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
-    def encodedC[T](codec: Codec[_, _, _ <: CodecFormat]): T = codec.asInstanceOf[Codec[T, Any, CodecFormat]].encode(value.asAny)
-    def encodedM[T](mapping: Mapping[_, _]): T = mapping.asInstanceOf[Mapping[T, Any]].encode(value.asAny)
+  private def applySingle(output: EndpointOutput.Single[?], value: Params, ov: OutputValues[B]): OutputValues[B] = {
+    def encodedC[T](codec: Codec[?, ?, ? <: CodecFormat]): T = codec.asInstanceOf[Codec[T, Any, CodecFormat]].encode(value.asAny)
+    def encodedM[T](mapping: Mapping[?, ?]): T = mapping.asInstanceOf[Mapping[T, Any]].encode(value.asAny)
     output match {
       case EndpointIO.Empty(_, _)                   => ov
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name, header.value)
-      case EndpointIO.Body(rawBodyType, codec, _) =>
+      case EndpointIO.Body(rawBodyType, codec, _)   =>
         val maybeCharset = if (codec.format.mediaType.isText) charset(rawBodyType) else None
         ov.withBody(headers => rawToResponseBody.fromRawValue(encodedC(codec), headers, codec.format, rawBodyType))
           .withDefaultContentType(codec.format, maybeCharset)
@@ -55,7 +55,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         encodedC[List[sttp.model.Header]](codec).foldLeft(ov)((ov2, h) => ov2.withHeader(h.name, h.value))
       case EndpointIO.MappedPair(wrapped, mapping) => apply(wrapped, ParamsAsAny(encodedM[Any](mapping)), ov)
       case EndpointOutput.StatusCode(_, codec, _)  => ov.withStatusCode(encodedC[StatusCode](codec))
-      case EndpointOutput.WebSocketBodyWrapper(o) =>
+      case EndpointOutput.WebSocketBodyWrapper(o)  =>
         ov.withBody(_ =>
           rawToResponseBody.fromWebSocketPipe(
             encodedC[rawToResponseBody.streams.Pipe[Any, Any]](o.codec),
@@ -80,19 +80,19 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
     }
   }
 
-  private def chooseOneOfVariant(variants: List[OneOfBodyVariant[_]]): EndpointIO.Atom[_] = {
+  private def chooseOneOfVariant(variants: List[OneOfBodyVariant[?]]): EndpointIO.Atom[?] = {
     val mediaTypeToBody = variants.map(v => v.mediaTypeWithCharset -> v)
-    chooseBestVariant[OneOfBodyVariant[_]](mediaTypeToBody).getOrElse(variants.head).bodyAsAtom
+    chooseBestVariant[OneOfBodyVariant[?]](mediaTypeToBody).getOrElse(variants.head).bodyAsAtom
   }
 
-  private def chooseOneOfVariant(variants: Seq[OneOfVariant[_]]): OneOfVariant[_] = {
+  private def chooseOneOfVariant(variants: Seq[OneOfVariant[?]]): OneOfVariant[?] = {
     // #1164: there might be multiple applicable mappings, for the same content type - e.g. when there's a default
     // mapping. We need to take the first defined into account.
-    val bodyVariants: Seq[(MediaType, OneOfVariant[_])] = variants
+    val bodyVariants: Seq[(MediaType, OneOfVariant[?])] = variants
       .flatMap { om =>
         val mediaTypeFromBody = om.output.traverseOutputs {
-          case b: EndpointIO.Body[_, _]              => Vector[(MediaType, OneOfVariant[_])](b.mediaTypeWithCharset -> om)
-          case b: EndpointIO.StreamBodyWrapper[_, _] => Vector[(MediaType, OneOfVariant[_])](b.mediaTypeWithCharset -> om)
+          case b: EndpointIO.Body[?, ?]              => Vector[(MediaType, OneOfVariant[?])](b.mediaTypeWithCharset -> om)
+          case b: EndpointIO.StreamBodyWrapper[?, ?] => Vector[(MediaType, OneOfVariant[?])](b.mediaTypeWithCharset -> om)
         }
 
         // #2200: some variants might have no body, which means that they match any of the `acceptsContentTypes`;

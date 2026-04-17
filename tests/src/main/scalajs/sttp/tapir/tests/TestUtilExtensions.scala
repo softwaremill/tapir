@@ -14,10 +14,12 @@ trait Blob extends js.Object {
 }
 
 trait TestUtilExtensions {
-  def writeToFile(s: String): File = {
+  def writeToFile(s: String): File = writeToFile("test", "tapir", s)
+
+  def writeToFile(fileName: String, suffix: String, s: String): File = {
     new File(
       Iterable(s.getBytes.toTypedArray.asInstanceOf[BlobPart]).toJSIterable,
-      "test.tapir"
+      s"$fileName.$suffix"
     )
   }
 

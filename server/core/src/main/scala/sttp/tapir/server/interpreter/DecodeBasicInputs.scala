@@ -14,20 +14,20 @@ object DecodeBasicInputsResult {
   /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint. */
   case class Values(
       basicInputsValues: Vector[Any],
-      bodyInputWithIndex: Option[(Either[EndpointIO.OneOfBody[_, _], EndpointIO.StreamBodyWrapper[_, _]], Int)]
+      bodyInputWithIndex: Option[(Either[EndpointIO.OneOfBody[?, ?], EndpointIO.StreamBodyWrapper[?, ?]], Int)]
   ) extends DecodeBasicInputsResult {
-    private def verifyNoBody(input: EndpointInput[_]): Unit = if (bodyInputWithIndex.isDefined) {
+    private def verifyNoBody(input: EndpointInput[?]): Unit = if (bodyInputWithIndex.isDefined) {
       throw new IllegalStateException(s"Double body definition: $input")
     }
-    def addBodyInput[O](input: EndpointIO.Body[_, O], bodyIndex: Int): Values = {
+    def addBodyInput[O](input: EndpointIO.Body[?, O], bodyIndex: Int): Values = {
       verifyNoBody(input)
       copy(bodyInputWithIndex = Some((Left(oneOfBody(ContentTypeRange.AnyRange -> input)), bodyIndex)))
     }
-    def addOneOfBodyInput(input: EndpointIO.OneOfBody[_, _], bodyIndex: Int): Values = {
+    def addOneOfBodyInput(input: EndpointIO.OneOfBody[?, ?], bodyIndex: Int): Values = {
       verifyNoBody(input)
       copy(bodyInputWithIndex = Some((Left(input), bodyIndex)))
     }
-    def addStreamingBodyInput(input: EndpointIO.StreamBodyWrapper[_, _], bodyIndex: Int): Values = {
+    def addStreamingBodyInput(input: EndpointIO.StreamBodyWrapper[?, ?], bodyIndex: Int): Values = {
       verifyNoBody(input)
       copy(bodyInputWithIndex = Some((Right(input), bodyIndex)))
     }
@@ -40,7 +40,7 @@ object DecodeBasicInputsResult {
 
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }
-  case class Failure(input: EndpointInput.Basic[_], failure: DecodeResult.Failure) extends DecodeBasicInputsResult
+  case class Failure(input: EndpointInput.Basic[?], failure: DecodeResult.Failure) extends DecodeBasicInputsResult
 
   def higherPriorityFailure(l: DecodeBasicInputsResult, r: DecodeBasicInputsResult): Option[Failure] = (l, r) match {
     case (f1: Failure, _: Values)   => Some(f1)
@@ -53,7 +53,7 @@ object DecodeBasicInputsResult {
 /** @param previousLastPathInput
   *   The last path input from decoding a previous segment of inputs (security inputs), if any.
   */
-case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String], previousLastPathInput: Option[EndpointInput.Basic[_]]) {
+case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String], previousLastPathInput: Option[EndpointInput.Basic[?]]) {
   def method: Method = request.method
   def nextPathSegment: (Option[String], DecodeInputsContext) =
     pathSegments match {
@@ -70,7 +70,7 @@ object DecodeInputsContext {
 }
 
 object DecodeBasicInputs {
-  case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
+  case class IndexedBasicInput(input: EndpointInput.Basic[?], index: Int)
 
   /** Decodes values of all basic inputs defined by the given `input`, and returns a map from the input to the input's value.
     *
@@ -86,7 +86,7 @@ object DecodeBasicInputs {
     *   Should the whole path be matched - that is, if the input doesn't exhaust the path, should a failure be reported
     */
   def apply(
-      input: EndpointInput[_],
+      input: EndpointInput[?],
       ctx: DecodeInputsContext,
       matchWholePath: Boolean = true
   ): (DecodeBasicInputsResult, DecodeInputsContext) = {
@@ -122,7 +122,7 @@ object DecodeBasicInputs {
       ctx: DecodeInputsContext,
       matchWholePath: Boolean
   ): (DecodeBasicInputsResult, DecodeInputsContext) = {
-    def matchPathInnerUsingLast(last: EndpointInput.Basic[_]) = matchPathInner(
+    def matchPathInnerUsingLast(last: EndpointInput.Basic[?]) = matchPathInner(
       index = 0,
       pathInputs = pathInputs,
       ctx = ctx.copy(previousLastPathInput = Some(last)),
@@ -153,8 +153,8 @@ object DecodeBasicInputs {
       pathInputs: Vector[IndexedBasicInput],
       ctx: DecodeInputsContext,
       decodeValues: DecodeBasicInputsResult.Values,
-      decodedPathInputs: Array[DecodeResult[_]],
-      lastPathInput: EndpointInput.Basic[_],
+      decodedPathInputs: Array[DecodeResult[?]],
+      lastPathInput: EndpointInput.Basic[?],
       matchWholePath: Boolean
   ): (DecodeBasicInputsResult, DecodeInputsContext) = {
     if (index < pathInputs.size) {
@@ -182,7 +182,7 @@ object DecodeBasicInputs {
                 (failure, newCtx)
               }
           }
-        case in: EndpointInput.PathCapture[_] =>
+        case in: EndpointInput.PathCapture[?] =>
           val (nextSegment, newCtx) = ctx.nextPathSegment
           nextSegment match {
             case Some(seg) =>
@@ -192,7 +192,7 @@ object DecodeBasicInputs {
               val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)
               (failure, newCtx)
           }
-        case i: EndpointInput.PathsCapture[_] =>
+        case i: EndpointInput.PathsCapture[?] =>
           val (paths, newCtx) = collectRemainingPath(Vector.empty, ctx)
           decodedPathInputs(index) = i.codec.decode(paths.toList)
           matchPathInner(index + 1, pathInputs, newCtx, decodeValues, decodedPathInputs, idxInput.input, matchWholePath)
@@ -219,7 +219,7 @@ object DecodeBasicInputs {
   private def foldDecodedPathInputs(
       index: Int,
       pathInputs: Vector[IndexedBasicInput],
-      decodedPathInputs: Array[DecodeResult[_]],
+      decodedPathInputs: Array[DecodeResult[?]],
       acc: DecodeBasicInputsResult.Values
   ): DecodeBasicInputsResult = {
     if (index < pathInputs.size) {
@@ -249,7 +249,7 @@ object DecodeBasicInputs {
       ctx: DecodeInputsContext
   ): (DecodeBasicInputsResult, DecodeInputsContext) = {
     inputs.headAndTail match {
-      case None => (values, ctx)
+      case None                                                                           => (values, ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.Body(_, _, _), index), inputsTail)) =>
         matchOthers(inputsTail, values.addBodyInput(input, index), ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.OneOfBody(_, _), index), inputsTail)) =>
@@ -265,7 +265,7 @@ object DecodeBasicInputs {
     }
   }
 
-  private def matchOther(input: EndpointInput.Basic[_], ctx: DecodeInputsContext): (DecodeResult[_], DecodeInputsContext) = {
+  private def matchOther(input: EndpointInput.Basic[?], ctx: DecodeInputsContext): (DecodeResult[?], DecodeInputsContext) = {
     input match {
       case EndpointInput.FixedMethod(m, codec, _) =>
         if (m == ctx.method) (codec.decode(()), ctx)
@@ -329,15 +329,15 @@ object DecodeBasicInputs {
     }
   }
 
-  private val isRequestMethod: EndpointInput.Basic[_] => Boolean = {
-    case _: EndpointInput.FixedMethod[_] => true
+  private val isRequestMethod: EndpointInput.Basic[?] => Boolean = {
+    case _: EndpointInput.FixedMethod[?] => true
     case _                               => false
   }
 
-  private val isPath: EndpointInput.Basic[_] => Boolean = {
-    case _: EndpointInput.FixedPath[_]    => true
-    case _: EndpointInput.PathCapture[_]  => true
-    case _: EndpointInput.PathsCapture[_] => true
+  private val isPath: EndpointInput.Basic[?] => Boolean = {
+    case _: EndpointInput.FixedPath[?]    => true
+    case _: EndpointInput.PathCapture[?]  => true
+    case _: EndpointInput.PathsCapture[?] => true
     case _                                => false
   }
 

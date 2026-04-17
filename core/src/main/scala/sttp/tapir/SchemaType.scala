@@ -67,7 +67,7 @@ object SchemaType {
     def get: T => Option[FieldType]
 
     override def equals(other: Any): Boolean = other match {
-      case p: SProductField[_] => p.name == name && p.schema == schema
+      case p: SProductField[?] => p.name == name && p.schema == schema
       case _                   => false
     }
 
@@ -116,8 +116,8 @@ object SchemaType {
 
   case class SchemaWithValue[T](schema: Schema[T], value: T)
 
-  case class SCoproduct[T](subtypes: List[Schema[_]], discriminator: Option[SDiscriminator])(
-      val subtypeSchema: T => Option[SchemaWithValue[_]]
+  case class SCoproduct[T](subtypes: List[Schema[?]], discriminator: Option[SDiscriminator])(
+      val subtypeSchema: T => Option[SchemaWithValue[?]]
   ) extends SchemaType[T] {
     override def show: String = "oneOf:" + subtypes.map(_.show).mkString(",")
 
@@ -127,7 +127,7 @@ object SchemaType {
     def addDiscriminatorField[D](
         discriminatorName: FieldName,
         discriminatorSchema: Schema[D] = Schema.string,
-        discriminatorMapping: Map[String, SRef[_]] = Map.empty
+        discriminatorMapping: Map[String, SRef[?]] = Map.empty
     ): SCoproduct[T] = {
       // used to add encoded discriminator value attributes
       val reverseDiscriminatorByNameMapping: Map[SName, String] = discriminatorMapping.toList.map { case (v, ref) => (ref.name, v) }.toMap
@@ -179,5 +179,5 @@ object SchemaType {
   }
 
   /** @param mapping Schemas that should be used, given the `name` field's value. */
-  case class SDiscriminator(name: FieldName, mapping: Map[String, SRef[_]])
+  case class SDiscriminator(name: FieldName, mapping: Map[String, SRef[?]])
 }

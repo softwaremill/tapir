@@ -71,8 +71,8 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   ): (Uri, PartialAnyRequest) = {
     def value: I = params.asAny.asInstanceOf[I]
     input match {
-      case EndpointInput.FixedMethod(_, _, _) => (uri, req)
-      case EndpointInput.FixedPath(p, _, _)   => (uri.addPath(p), req)
+      case EndpointInput.FixedMethod(_, _, _)     => (uri, req)
+      case EndpointInput.FixedPath(p, _, _)       => (uri.addPath(p), req)
       case EndpointInput.PathCapture(_, codec, _) =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
         (uri.addPath(v), req)
@@ -91,7 +91,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
         val mqp = codec.encode(value)
         val uri2 = uri.addParams(mqp.toSeq: _*)
         (uri2, req)
-      case EndpointIO.Empty(_, _) => (uri, req)
+      case EndpointIO.Empty(_, _)              => (uri, req)
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2)
@@ -102,7 +102,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
           ) =>
         val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
         (uri, req2)
-      case EndpointIO.OneOfBody(Nil, _) => throw new RuntimeException("One of body without variants")
+      case EndpointIO.OneOfBody(Nil, _)                                    => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
         (uri, req2)
@@ -173,7 +173,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case RawBodyType.InputStreamBody      => req.body(encoded)
       case RawBodyType.FileBody             => req.body(encoded.file)
       case RawBodyType.InputStreamRangeBody => req.body(encoded.inputStream())
-      case m: RawBodyType.MultipartBody =>
+      case m: RawBodyType.MultipartBody     =>
         val parts: Seq[Part[RequestBody[Any]]] = (encoded: Seq[RawPart]).flatMap { p =>
           m.partType(p.name).map { partType =>
             // copying the name & body
@@ -208,7 +208,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     ((bodyIsStream(out), isWebSocket) match {
       case (Some(streams), _) => asStreamAlwaysUnsafe(streams)
       case (_, true)          => asWebSocketAlwaysUnsafe
-      case (None, false) =>
+      case (None, false)      =>
         out.bodyType
           .map {
             case RawBodyType.StringBody(charset)  => asStringAlways(charset.name())

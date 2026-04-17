@@ -44,6 +44,7 @@ if os.environ.get("READTHEDOCS", "") == "True":
 extensions = ['myst_parser', 'sphinx_rtd_theme']
 
 myst_enable_extensions = ['attrs_block']
+myst_heading_anchors = 3
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -62,8 +63,8 @@ source_suffix = {
 master_doc = 'index'
 
 # General information about the project.
-project = u'tapir'
-copyright = u'2024, SoftwareMill'
+project = u'Tapir'
+copyright = u'2025, SoftwareMill'
 author = u'SoftwareMill'
 
 # The version info for the project you're documenting, acts as replacement for

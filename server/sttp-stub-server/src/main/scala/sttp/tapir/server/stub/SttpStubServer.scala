@@ -47,7 +47,7 @@ trait SttpStubServer {
     private def whenInputMatches[A, I, E, O](input: EndpointInput[I])(inputMatcher: I => Boolean): stub.WhenRequest =
       new stub.WhenRequest(req =>
         SttpRequestDecoder(req, input) match {
-          case _: DecodeBasicInputsResult.Failure => false
+          case _: DecodeBasicInputsResult.Failure     => false
           case values: DecodeBasicInputsResult.Values =>
             InputValue(input, values) match {
               case InputValueResult.Value(params, _) => inputMatcher(params.asAny.asInstanceOf[I])

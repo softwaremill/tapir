@@ -20,7 +20,7 @@ class NotAcceptableInterceptor[F[_]] extends EndpointInterceptor[F] {
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
         ctx.request.acceptsContentTypes match {
           case _ @(Right(Nil) | Right(ContentTypeRange.AnyRange :: Nil)) => endpointHandler.onDecodeSuccess(ctx)
-          case Right(ranges) =>
+          case Right(ranges)                                             =>
             val supportedMediaTypes = ctx.endpoint.output.supportedMediaTypes
             // empty supported media types -> no body is defined, so the accepts header can be ignored
             val hasMatchingRepresentation = supportedMediaTypes.exists(mt => ranges.exists(mt.matches)) || supportedMediaTypes.isEmpty

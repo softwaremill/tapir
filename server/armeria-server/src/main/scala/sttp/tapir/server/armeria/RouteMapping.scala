@@ -44,7 +44,7 @@ private[armeria] object RouteMapping {
 
   private def isStreaming(output: EndpointTransput.Basic[_]): Boolean = output match {
     case StreamBodyWrapper(_) => true
-    case body: Body[_, _] =>
+    case body: Body[_, _]     =>
       body.bodyType match {
         case FileBody                        => true
         case RawBodyType.MultipartBody(_, _) => true

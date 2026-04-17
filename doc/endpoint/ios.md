@@ -31,8 +31,8 @@ For both inputs/outputs:
 * `cookies` captures cookies from the `Cookie` header and represents them as `List[Cookie]` 
 * `setCookie(name)` captures the value & metadata of the a `Set-Cookie` header with a matching name 
 * `setCookies` captures cookies from the `Set-Cookie` header and represents them as `List[SetCookie]` 
-* `stringBody`, `plainBody[T]`, `jsonBody[T]`, `rawBinaryBody[R]`, `binaryBody[R, T]`, `formBody[T]`, `multipartBody[T]`
-  captures the body
+* `stringBody`, `plainBody[T]`, `jsonBody[T]`, `rawBinaryBody[R]`, `binaryBody[R, T]`, `formBody[T]`, 
+  `multipartBody[T]`, `fileBody` captures the body
 * `streamBody[S]` captures the body as a stream: only a client/server interpreter supporting streams of type `S` can be 
   used with such an endpoint
 * `oneOfBody` captures multiple variants of bodies representing the same content, but using different content types
@@ -159,7 +159,7 @@ val userInput: EndpointInput[User] =
 
 Similarly, endpoint outputs can be derived using `EndpointOutput.derived[...]`.
 
-Following annotations are available in package `sttp.tapir.annotations` for describing both input and output values:
+Following annotations are available in package `sttp.tapir.EndpointIO.annotations` for describing both input and output values:
 
 * `@header` captures a header with the same name as name of annotated field in a case class. This annotation
 can also be used with optional parameter `@header("headerName")` in order to capture a header with name `"headerName"`

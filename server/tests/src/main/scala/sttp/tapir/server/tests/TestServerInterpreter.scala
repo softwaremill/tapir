@@ -1,6 +1,5 @@
 package sttp.tapir.server.tests
 
-import cats.data.NonEmptyList
 import cats.effect.{Deferred, IO, Resource}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.CustomiseInterceptors
@@ -19,14 +18,14 @@ trait TestServerInterpreter[F[_], +R, OPTIONS, ROUTE] {
   def route(es: List[ServerEndpoint[R, F]], interceptors: Interceptors = identity): ROUTE
 
   def serverWithStop(
-      routes: NonEmptyList[ROUTE],
+      route: ROUTE,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   ): Resource[IO, (Port, KillSwitch)] = for {
     stopSignal <- Resource.eval(Deferred[IO, Unit])
     portValue <- Resource.eval(Deferred[IO, Port])
-    _ <- server(routes, gracefulShutdownTimeout).evalTap(portValue.complete).surround(stopSignal.get).background
+    _ <- server(route, gracefulShutdownTimeout).evalTap(portValue.complete).surround(stopSignal.get).background
     port <- Resource.eval(portValue.get)
   } yield (port, stopSignal.complete(()).void)
 
-  def server(routes: NonEmptyList[ROUTE], gracefulShutdownTimeout: Option[FiniteDuration] = None): Resource[IO, Port]
+  def server(route: ROUTE, gracefulShutdownTimeout: Option[FiniteDuration] = None): Resource[IO, Port]
 }

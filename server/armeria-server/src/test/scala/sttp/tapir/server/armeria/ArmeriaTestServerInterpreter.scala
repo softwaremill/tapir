@@ -1,6 +1,5 @@
 package sttp.tapir.server.armeria
 
-import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import com.linecorp.armeria.server.Server
 import sttp.capabilities.Streams
@@ -12,7 +11,7 @@ import scala.concurrent.duration._
 trait ArmeriaTestServerInterpreter[S <: Streams[S], F[_], OPTIONS] extends TestServerInterpreter[F, S, OPTIONS, TapirService[S, F]] {
 
   override def server(
-      routes: NonEmptyList[TapirService[S, F]],
+      route: TapirService[S, F],
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
     val (quietPeriodMs, totalDeadlineMs) = gracefulShutdownTimeout
@@ -26,7 +25,7 @@ trait ArmeriaTestServerInterpreter[S <: Streams[S], F[_], OPTIONS] extends TestS
           .maxRequestLength(0)
           .connectionDrainDurationMicros(0)
           .gracefulShutdownTimeoutMillis(quietPeriodMs, totalDeadlineMs)
-        routes.foldLeft(serverBuilder)((sb, route) => sb.service(route))
+          .service(route)
         val server = serverBuilder.build()
         server.start().thenApply[Server](_ => server)
       }

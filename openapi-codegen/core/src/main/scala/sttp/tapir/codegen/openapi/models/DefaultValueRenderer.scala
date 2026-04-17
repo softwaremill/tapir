@@ -6,7 +6,9 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
   OpenapiSchemaBoolean,
+  OpenapiSchemaDate,
   OpenapiSchemaDateTime,
+  OpenapiSchemaDuration,
   OpenapiSchemaDouble,
   OpenapiSchemaEnum,
   OpenapiSchemaFloat,
@@ -34,7 +36,9 @@ object DefaultValueRenderer {
         renderStringWithName(value)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
       case OpenapiSchemaString(_, _, _, _) => '"' +: value :+ '"'
       case OpenapiSchemaEnum(_, _, _)      => s"$name.$value"
+      case OpenapiSchemaDate(_)            => s"""java.time.LocalDate.parse("$value")"""
       case OpenapiSchemaDateTime(_)        => s"""java.time.Instant.parse("$value")"""
+      case OpenapiSchemaDuration(_)        => s"""java.time.Duration.parse("$value")"""
       case OpenapiSchemaBinary(_)          => s""""$value".getBytes("utf-8")"""
       case OpenapiSchemaUUID(_)            => s"""java.util.UUID.fromString("$value")"""
       case other => throw new IllegalArgumentException(s"Cannot render ${value} as type ${other.getClass.getName}")
@@ -93,11 +97,13 @@ object DefaultValueRenderer {
           thisType match {
             case ref: OpenapiSchemaRef =>
               renderStringWithName(jsonString)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
-            case OpenapiSchemaString(_, _, _, _)        => '"' +: jsonString :+ '"'
-            case OpenapiSchemaDateTime(_)               => s"""java.time.Instant.parse("$jsonString")"""
-            case OpenapiSchemaBinary(_)                 => s""""$jsonString".getBytes("utf-8")"""
-            case OpenapiSchemaUUID(_)                   => s"""java.util.UUID.fromString("$jsonString")"""
-            case OpenapiSchemaAllOf(Seq(singleElement)) => render(allModels, singleElement, false, config)(json)
+            case OpenapiSchemaString(_, _, _, _)                              => '"' +: jsonString :+ '"'
+            case OpenapiSchemaDate(_)                                         => s"""java.time.LocalDate.parse("$jsonString")"""
+            case OpenapiSchemaDateTime(_)                                     => s"""java.time.Instant.parse("$jsonString")"""
+            case OpenapiSchemaDuration(_)                                     => s"""java.time.Duration.parse("$jsonString")"""
+            case OpenapiSchemaBinary(_)                                       => s""""$jsonString".getBytes("utf-8")"""
+            case OpenapiSchemaUUID(_)                                         => s"""java.util.UUID.fromString("$jsonString")"""
+            case OpenapiSchemaAllOf(Seq(singleElement))                       => render(allModels, singleElement, false, config)(json)
             case OpenapiSchemaEnum(_, _, _) if config.maybeEnumName.isDefined =>
               s"${config.maybeEnumName.get}.$jsonString"
             //      case OpenapiSchemaEnum(_, _, _) => // inline enum definitions are not currently supported, so let it throw
@@ -107,7 +113,7 @@ object DefaultValueRenderer {
           thisType match {
             case ref: OpenapiSchemaRef                  => render(allModels, lookup(allModels, ref), isOptional = false, config)(json)
             case OpenapiSchemaAllOf(Seq(singleElement)) => render(allModels, singleElement, isOptional = false, config)(json)
-            case OpenapiSchemaArray(items, _, _, rs) =>
+            case OpenapiSchemaArray(items, _, _, rs)    =>
               val container = if (rs.uniqueItems.contains(true)) "Set" else "Vector"
               s"$container(${jsonArray.map(render(allModels, items, isOptional = false, config)).mkString(", ")})"
             case other => fail("list", other)
@@ -117,7 +123,7 @@ object DefaultValueRenderer {
             case ref: OpenapiSchemaRef =>
               renderMapWithName(jsonObject.toMap)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
             case OpenapiSchemaAllOf(Seq(singleElement)) => render(allModels, singleElement, isOptional = false, config)(json)
-            case OpenapiSchemaMap(types, _, _) =>
+            case OpenapiSchemaMap(types, _, _)          =>
               s"Map(${jsonObject.toMap.map { case (k, v) => s""""$k" -> ${render(allModels, types, isOptional = false, config)(v)}""" }.mkString(", ")})"
             case other => fail("map", other)
           }

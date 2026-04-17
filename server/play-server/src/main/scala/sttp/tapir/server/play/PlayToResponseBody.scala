@@ -12,7 +12,7 @@ import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, FileRange, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 
 class PlayToResponseBody extends ToResponseBody[PlayResponseBody, PekkoStreams] {
 
@@ -195,8 +195,8 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, PekkoStreams] 
         Source
           .single(filePartHeader(file))
           .concat(file.ref)
-          .concat(Source.single(ByteString("\r\n", Charset.forName("UTF-8"))))
-          .concat(Source.single(ByteString(s"--$boundary--", "UTF-8")))
+          .concat(Source.single(ByteString("\r\n", StandardCharsets.UTF_8)))
+          .concat(Source.single(ByteString(s"--$boundary--", StandardCharsets.UTF_8)))
       })
   }
 }

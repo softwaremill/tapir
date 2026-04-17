@@ -28,7 +28,7 @@ private[docs] class TSchemaToASchema(
 
     val result = schema.name match {
       case Some(name) if allowReference => toSchemaReference.map(schema, name)
-      case _ =>
+      case _                            =>
         schema.schemaType match {
           case TSchemaType.SInteger() => ASchema(SchemaType.Integer)
           case TSchemaType.SNumber()  => ASchema(SchemaType.Number)
@@ -51,11 +51,11 @@ private[docs] class TSchemaToASchema(
             val propagated = propagateMetadataForOption(schema, opt).element
             val ref = toSchemaReference.map(propagated, name)
             if (!markOptionsAsNullable) ref else ref.nullable
-          case TSchemaType.SOption(el)    => apply(el, allowReference = true, isOptionElement = true)
-          case TSchemaType.SBinary()      => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary))
-          case TSchemaType.SDate()        => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Date))
-          case TSchemaType.SDateTime()    => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime))
-          case TSchemaType.SRef(fullName) => toSchemaReference.mapDirect(fullName)
+          case TSchemaType.SOption(el)            => apply(el, allowReference = true, isOptionElement = true)
+          case TSchemaType.SBinary()              => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary))
+          case TSchemaType.SDate()                => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.Date))
+          case TSchemaType.SDateTime()            => ASchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime))
+          case TSchemaType.SRef(fullName)         => toSchemaReference.mapDirect(fullName)
           case TSchemaType.SCoproduct(schemas, d) =>
             ASchema.oneOf(
               schemas
@@ -63,7 +63,7 @@ private[docs] class TSchemaToASchema(
                 .map(apply(_, allowReference = true))
                 .sortBy {
                   case schema if schema.$ref.isDefined => schema.$ref.get
-                  case schema =>
+                  case schema                          =>
                     schema.`type`
                       .collect {
                         case List(t)                  => t.value

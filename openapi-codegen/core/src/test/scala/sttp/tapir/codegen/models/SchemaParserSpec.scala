@@ -1,8 +1,25 @@
 package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiResponseContent
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{NumericRestrictions, OpenapiSchemaAny, OpenapiSchemaArray, OpenapiSchemaField, OpenapiSchemaInt, OpenapiSchemaMap, OpenapiSchemaObject, OpenapiSchemaString}
-import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeBasicType, OpenapiSecuritySchemeBearerType}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  AnyType,
+  NumericRestrictions,
+  OpenapiSchemaAny,
+  OpenapiSchemaArray,
+  OpenapiSchemaDate,
+  OpenapiSchemaDateTime,
+  OpenapiSchemaDuration,
+  OpenapiSchemaField,
+  OpenapiSchemaInt,
+  OpenapiSchemaMap,
+  OpenapiSchemaObject,
+  OpenapiSchemaString
+}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
+  OpenapiSecuritySchemeApiKeyType,
+  OpenapiSecuritySchemeBasicType,
+  OpenapiSecuritySchemeBearerType
+}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
@@ -103,8 +120,50 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       OpenapiComponent(
         Map(
           "User" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap("anyValue" -> OpenapiSchemaField(OpenapiSchemaAny(false), None)),
+            mutable.LinkedHashMap("anyValue" -> OpenapiSchemaField(OpenapiSchemaAny(false, AnyType.Any), None)),
             Seq("anyValue"),
+            false
+          )
+        )
+      )
+    )
+  }
+
+  it should "parse date, date-time and duration string formats" in {
+    val yaml = """
+      |schemas:
+      |  Event:
+      |    type: object
+      |    properties:
+      |      eventDate:
+      |        type: string
+      |        format: date
+      |      createdAt:
+      |        type: string
+      |        format: date-time
+      |      ttl:
+      |        type: string
+      |        format: duration
+      |    required:
+      |      - eventDate
+      |      - createdAt
+      |      - ttl""".stripMargin
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiComponent])
+
+    res shouldBe Right(
+      OpenapiComponent(
+        Map(
+          "Event" -> OpenapiSchemaObject(
+            mutable.LinkedHashMap(
+              "eventDate" -> OpenapiSchemaField(OpenapiSchemaDate(false), None),
+              "createdAt" -> OpenapiSchemaField(OpenapiSchemaDateTime(false), None),
+              "ttl" -> OpenapiSchemaField(OpenapiSchemaDuration(false), None)
+            ),
+            Seq("eventDate", "createdAt", "ttl"),
             false
           )
         )
@@ -187,7 +246,12 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .flatMap(_.as[Seq[OpenapiResponseContent]])
 
     res shouldBe Right(
-      Seq(OpenapiResponseContent("application/json", OpenapiSchemaArray(OpenapiSchemaObject(mutable.LinkedHashMap.empty, Seq.empty, false), false)))
+      Seq(
+        OpenapiResponseContent(
+          "application/json",
+          OpenapiSchemaArray(OpenapiSchemaAny(false, AnyType.Object), false)
+        )
+      )
     )
   }
 

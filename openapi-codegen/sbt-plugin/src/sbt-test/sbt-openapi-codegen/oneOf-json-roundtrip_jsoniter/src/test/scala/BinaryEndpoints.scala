@@ -23,6 +23,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.util.Random
+import java.nio.charset.StandardCharsets
 
 class BinaryEndpoints extends AnyFreeSpec with Matchers {
   private implicit val system: ActorSystem = ActorSystem()
@@ -35,7 +36,7 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
       def next(): ByteString = {
         val nxt = Random.alphanumeric.take(140).mkString
         linesToGo -= 1
-        ByteString.fromString(nxt, "utf-8")
+        ByteString.fromString(nxt, StandardCharsets.UTF_8)
       }
     }
     def handleCsv(stream: ByteString): State = State(stream.utf8String.take(100).mkString)
@@ -51,14 +52,16 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
           }
           val running = partial.runFold(0 -> Option.empty[State]) { case ((i, _), ns) => i + 1 -> Some(ns) }
           def out: Option[PostCustomContentNegotiationBodyOut] =
-            Some(PostCustomContentNegotiationBodyOutFull(
-              `text/csv` = () =>
-                Source[ByteString](immutable.Iterable.fill(100)(produceCsv()))
-                  .concat(Source.future(running).map { case (i, w) => ByteString(s"$i: ${w.map(_.s.length)}") }),
-              `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` = () =>
-                Source[ByteString](immutable.Iterable.fill(100)(produceSpreadsheet()))
-                  .concat(Source.future(running).map { case (i, w) => ByteString(s"$i: ${w.map(_.s.length)}") })
-            ))
+            Some(
+              PostCustomContentNegotiationBodyOutFull(
+                `text/csv` = () =>
+                  Source[ByteString](immutable.Iterable.fill(100)(produceCsv()))
+                    .concat(Source.future(running).map { case (i, w) => ByteString(s"$i: ${w.map(_.s.length)}") }),
+                `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` = () =>
+                  Source[ByteString](immutable.Iterable.fill(100)(produceSpreadsheet()))
+                    .concat(Source.future(running).map { case (i, w) => ByteString(s"$i: ${w.map(_.s.length)}") })
+              )
+            )
 
           Future.successful(out)
         })
@@ -143,5 +146,36 @@ class BinaryEndpoints extends AnyFreeSpec with Matchers {
     Await.result(doPost2, 5.seconds)
     Await.result(doPost3, 5.seconds)
     Await.result(doPost4, 5.seconds)
+  }
+  "dynamic response content-type works" in {
+    def responseStream =
+      Source[ByteString](immutable.Iterable.fill(100)(ByteString("CHUNK")))
+    val route =
+      TapirGeneratedEndpoints.getDynamicContentTypeTest
+        .serverLogicSuccess[Future]({ _ =>
+          Future.successful(responseStream -> "image/png")
+        })
+    val stub = TapirStubInterpreter(SttpBackendStub[Future, PekkoStreams](new FutureMonad()))
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+
+    def doPost = sttp.client3.basicRequest
+      .get(uri"http://test.com/dynamic/content-type/test")
+      .response(asStringAlways)
+      .header("accept", "*/*")
+      .response(sttp.client3.asStreamAlwaysWithMetadata(PekkoStreams) { case (s, meta) =>
+        Future.successful(s -> meta.header("content-type"))
+      })
+      .send[Future, PekkoStreams](stub)
+      .map { resp =>
+        resp.code.code shouldEqual 200
+        val b = Await.result(resp.body._1.runFold(Seq.empty[String])((l, a) => l :+ a.utf8String), 5.seconds)
+        b shouldEqual (immutable.Iterable
+          .fill(100)(ByteString("CHUNK").utf8String)
+          .toSeq)
+        resp.body._2 shouldEqual Some("image/png")
+      }
+    Await.result(doPost, 5.seconds)
   }
 }

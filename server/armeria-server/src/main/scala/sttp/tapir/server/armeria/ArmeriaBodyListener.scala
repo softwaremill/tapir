@@ -5,21 +5,21 @@ import sttp.monad.syntax._
 import sttp.monad.{Canceler, MonadAsyncError}
 import sttp.tapir.server.interpreter.BodyListener
 
-private[armeria] final class ArmeriaBodyListener[F[_]](implicit F: MonadAsyncError[F]) extends BodyListener[F, ArmeriaResponseType] {
+private[armeria] final class ArmeriaBodyListener[F[_]](implicit F: MonadAsyncError[F], futureConversion: FutureConversion[F])
+    extends BodyListener[F, ArmeriaResponseType] {
   override def onComplete(body: ArmeriaResponseType)(cb: Try[Unit] => F[Unit]): F[ArmeriaResponseType] = {
     body match {
       case Left(stream) =>
-        F.async[Try[Unit]] { cb0 =>
-          stream
-            .whenComplete()
-            .handle[Unit] {
-              case (_, null) =>
-                cb0(Right(Success(())))
-              case (_, ex) =>
-                cb0(Right(Failure(ex)))
-            }
-          Canceler(() => stream.abort())
-        }.flatMap(cb(_).map(_ => body))
+        stream
+          .whenComplete()
+          .handle[Unit] {
+            case (_, null) =>
+              futureConversion.to(cb(Success(()))): Unit // no way to log failures here
+            case (_, ex) =>
+              futureConversion.to(cb(Failure(ex))): Unit // no way to log failures here
+          }
+
+        F.unit(Left(stream))
       case Right(_) =>
         cb(Success(())).map(_ => body)
     }

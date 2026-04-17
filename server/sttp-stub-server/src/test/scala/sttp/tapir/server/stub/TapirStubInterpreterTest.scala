@@ -5,7 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.client3._
 import sttp.client3.monad.IdMonad
 import sttp.client3.testing.SttpBackendStub
-import sttp.model.StatusCode
+import sttp.model.{Header, Part, StatusCode}
 import sttp.shared.Identity
 import sttp.tapir._
 import sttp.tapir.client.sttp.SttpClientInterpreter
@@ -16,7 +16,6 @@ import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.generic.auto._
 import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
-import sttp.model.Part
 import sttp.tapir.TapirFile
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -279,6 +278,47 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
     // then
     response.body shouldBe Right("name: abc file: file_content")
+  }
+
+  it should "retrieve individual part headers and content-disposition parameters" in {
+    // given
+    val e = endpoint.post
+      .in("api" / "multipart")
+      .in(multipartBody)
+      .out(stringBody)
+      .errorOut(stringBody)
+
+    val server = TapirStubInterpreter(SttpBackendStub.synchronous)
+      .whenServerEndpointRunLogic(e.serverLogic { multipartData =>
+        val maybePart = multipartData.find(_.name == "name")
+        val maybeContentLength = maybePart.flatMap(_.contentLength)
+        val dispositionParams = maybePart.map(_.dispositionParams).getOrElse(Map.empty)
+
+        (maybeContentLength, dispositionParams.get("param")) match {
+          case (Some(contentLength), Some(value)) =>
+            Right("contentLength: " + contentLength + " param: " + value)
+          case (Some(_), None) =>
+            Left("'param' disposition parameter not found")
+          case (None, Some(_)) =>
+            Left("Content-Length header not found")
+          case (None, None) =>
+            Left("Both Content-Length header and 'param' disposition parameter not found")
+        }
+      })
+      .backend()
+
+    // when
+    val response = basicRequest
+      .post(uri"http://test.com/api/multipart")
+      .multipartBody(
+        multipart("name", "abc")
+          .dispositionParam("param", "hello")
+          .header(Header.contentLength(12))
+      )
+      .send(server)
+
+    // then
+    response.body shouldBe Right("contentLength: 12 param: hello")
   }
 
   it should "correctly handle derived multipart body" in {

@@ -36,7 +36,7 @@ object ZioMetricsTest extends ZIOSpecDefault {
         val active: Gauge[Long] = ZioMetrics
           .getActiveRequestGauge("tapir")
           .tagged(
-            Set(MetricLabel("path", "/person"), MetricLabel("method", "GET"))
+            Set(MetricLabel("method", "GET"))
           )
 
         for {

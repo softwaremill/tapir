@@ -16,10 +16,10 @@ private[nima] class NimaToResponseBody extends ToResponseBody[InputStream, NoStr
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): InputStream = {
     bodyType match {
-      case RawBodyType.StringBody(charset) => new ByteArrayInputStream(v.getBytes(charset))
-      case RawBodyType.ByteArrayBody       => new ByteArrayInputStream(v)
-      case RawBodyType.ByteBufferBody      => new ByteBufferBackedInputStream(v)
-      case RawBodyType.InputStreamBody     => v
+      case RawBodyType.StringBody(charset)       => new ByteArrayInputStream(v.getBytes(charset))
+      case RawBodyType.ByteArrayBody             => new ByteArrayInputStream(v)
+      case RawBodyType.ByteBufferBody            => new ByteBufferBackedInputStream(v)
+      case RawBodyType.InputStreamBody           => v
       case rr @ RawBodyType.InputStreamRangeBody =>
         val base = v.inputStreamFromRangeStart()
         v.range.flatMap(_.startAndEnd) match {

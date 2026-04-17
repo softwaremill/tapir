@@ -14,6 +14,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaObject,
   OpenapiSchemaOneOf,
   OpenapiSchemaRef,
+  OpenapiSchemaSimpleType,
   OpenapiSchemaString,
   OpenapiSchemaStringType
 }
@@ -35,7 +36,7 @@ object JsonSerdeGenerator {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
 
     jsonSerdeLib match {
-      case JsonSerdeLib.Circe => genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs)
+      case JsonSerdeLib.Circe    => genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs)
       case JsonSerdeLib.Jsoniter =>
         genJsoniterSerdes(
           doc,
@@ -152,8 +153,11 @@ object JsonSerdeGenerator {
           Some(genCirceAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf | _: OpenapiSchemaAny, _) =>
           None
+        case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
         case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       }
+      .toSeq
+      .sorted
       .foldLeft(Option.empty[String]) {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
@@ -276,7 +280,13 @@ object JsonSerdeGenerator {
     val maybeAnySerde =
       if (schemasContainAny)
         Some(
-          "implicit lazy val anyJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.Json] = com.github.plokhotnyuk.jsoniter_scala.circe.JsoniterScalaCodec.jsonCodec()"
+          """implicit lazy val anyJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.Json] = com.github.plokhotnyuk.jsoniter_scala.circe.JsoniterScalaCodec.jsonCodec()
+            |implicit lazy val anyObjJsonSupport: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.JsonObject] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[io.circe.JsonObject] {
+            |  import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonWriter}
+            |  override def decodeValue(in: JsonReader, default: io.circe.JsonObject): io.circe.JsonObject = anyJsonSupport.decodeValue(in, io.circe.Json.fromJsonObject(default)).asObject.getOrElse(throw new RuntimeException(s"${default.getClass.getSimpleName} is not an object"))
+            |  override def encodeValue(x: io.circe.JsonObject, out: JsonWriter): Unit = anyJsonSupport.encodeValue(io.circe.Json.fromJsonObject(x), out)
+            |  override def nullValue: io.circe.JsonObject = null
+            |}""".stripMargin
         )
       else None
     // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
@@ -287,7 +297,8 @@ object JsonSerdeGenerator {
         val name = s.replace(" ", "").replace(",", "_").replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
         s"""implicit lazy val $name: $jsoniterPkgCore.JsonValueCodec[$s] =
            |  $jsoniterPkgMacros.JsonCodecMaker.make[$s]""".stripMargin
-      } ++ maybeAnySerde)
+      }
+      .sorted ++ maybeAnySerde)
       .mkString("", "\n", "\n")
 
     // Permits usage of Option/Seq wrapped classes at top level without having to be explicit
@@ -333,10 +344,12 @@ object JsonSerdeGenerator {
             _
           ) =>
         Nil
+      case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => Nil
       case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
     }
     (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
       .flatMap { (getSerdeString _).tupled }
+      .sorted
       .foldLeft(Option.empty[String]) {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
@@ -492,8 +505,11 @@ object JsonSerdeGenerator {
           Some(genZioAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf, _) =>
           None
+        case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
         case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
       }
+      .toSeq
+      .sorted
       .foldLeft(Option.empty[String]) {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)

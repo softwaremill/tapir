@@ -64,7 +64,8 @@ object TapirGeneratedEndpoints {
 
 
 
-  lazy val putBooksGenreYear =
+  type PutBooksGenreYearEndpoint = Endpoint[Unit, Option[Book], Unit, Unit, Any]
+  lazy val putBooksGenreYear: PutBooksGenreYearEndpoint =
     endpoint
       .name("putBooksGenreYear")
       .put

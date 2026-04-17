@@ -8,12 +8,12 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir.{CodecFormat, StreamBodyIO, streamTextBody}
 
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
 package object akkahttp {
   type AkkaResponseBody = Either[Flow[Message, Message, Any], ResponseEntity]
 
   val serverSentEventsBody: StreamBodyIO[Source[ByteString, Any], Source[ServerSentEvent, Any], AkkaStreams] =
-    streamTextBody(AkkaStreams)(CodecFormat.TextEventStream(), Some(Charset.forName("UTF-8")))
+    streamTextBody(AkkaStreams)(CodecFormat.TextEventStream(), Some(StandardCharsets.UTF_8))
       .map(AkkaServerSentEvents.parseBytesToSSE)(AkkaServerSentEvents.serialiseSSEToBytes)
 }

@@ -29,7 +29,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
         case RawBodyType.StringBody(charset) => resp.end(v.toString, charset.toString)
         case RawBodyType.ByteArrayBody       => resp.end(Buffer.buffer(v.asInstanceOf[Array[Byte]]))
         case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, v.asInstanceOf[ByteBuffer]))
-        case RawBodyType.InputStreamBody =>
+        case RawBodyType.InputStreamBody     =>
           inputStreamToBuffer(v, rc.vertx, byteLimit = None).flatMap(resp.end)
         case RawBodyType.InputStreamRangeBody =>
           v.range

@@ -36,7 +36,7 @@ class ChatRoom:
     members = members.flatMap: (id, member) =>
       selectOrClosed(member.channel.sendClause(message), Default(())) match
         case member.channel.Sent() => Some((id, member))
-        case _: ChannelClosed =>
+        case _: ChannelClosed      =>
           println(s"Channel of member $id closed, removing from members")
           None
         case DefaultResult(_) =>

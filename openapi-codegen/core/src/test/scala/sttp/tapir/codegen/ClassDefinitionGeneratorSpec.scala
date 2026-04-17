@@ -13,7 +13,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
   def noDefault(f: OpenapiSchemaType): OpenapiSchemaField = OpenapiSchemaField(f, None)
 
   it should "generate the example class defs" in {
-    new ClassDefinitionGenerator().classDefs(TestHelpers.myBookshopDoc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(TestHelpers.myBookshopDoc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "generate simple class" in {
@@ -32,7 +32,36 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
+  }
+
+  it should "generate class with date and duration fields" in {
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Nil,
+      Some(
+        OpenapiComponent(
+          Map(
+            "Event" -> OpenapiSchemaObject(
+              mutable.LinkedHashMap(
+                "name" -> noDefault(OpenapiSchemaString(false)),
+                "eventDate" -> noDefault(OpenapiSchemaDate(false)),
+                "optionalDate" -> noDefault(OpenapiSchemaDate(true)),
+                "duration" -> noDefault(OpenapiSchemaDuration(false)),
+                "optionalDuration" -> noDefault(OpenapiSchemaDuration(true))
+              ),
+              Seq("name", "eventDate", "duration"),
+              false
+            )
+          )
+        )
+      ),
+      Nil
+    )
+
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "generate simple enum" in {
@@ -55,7 +84,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
     // the enumeratum import should be included by the RootGenerator iff we generated enums
-    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "generate simple class with reserved propName" in {
@@ -74,7 +103,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "generate class with array" in {
@@ -97,7 +126,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "generate class with map" in {
@@ -120,7 +149,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "generate class with any type" in {
@@ -132,14 +161,18 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("anyType" -> noDefault(OpenapiSchemaAny(false))), Seq("anyType"), false)
+            "Test" -> OpenapiSchemaObject(
+              mutable.LinkedHashMap("anyType" -> noDefault(OpenapiSchemaAny(false, AnyType.Any))),
+              Seq("anyType"),
+              false
+            )
           )
         )
       ),
       Nil
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "generate class with inner class" in {
@@ -153,7 +186,9 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
           Map(
             "Test" -> OpenapiSchemaObject(
               mutable.LinkedHashMap(
-                "inner" -> noDefault(OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false))
+                "inner" -> noDefault(
+                  OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
+                )
               ),
               Seq("inner"),
               false
@@ -164,7 +199,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "generate class with array with inner class" in {
@@ -195,7 +230,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "generate class with map with inner class" in {
@@ -226,7 +261,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
 
-    new ClassDefinitionGenerator().classDefs(doc).get.classRepr shouldCompile ()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
   it should "nonrequired and required are not the same" in {
@@ -259,11 +294,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
     val gen = new ClassDefinitionGenerator()
-    val res1 = gen.classDefs(doc1).map(_.classRepr)
-    val res2 = gen.classDefs(doc2).map(_.classRepr)
+    val res1 = gen.classDefs(doc1, targetScala3 = isScala3).map(_.classRepr)
+    val res2 = gen.classDefs(doc2, targetScala3 = isScala3).map(_.classRepr)
     res1 shouldNot be(res2)
-    res1.get shouldCompile ()
-    res2.get shouldCompile ()
+    res1.get.shouldCompile()
+    res2.get.shouldCompile()
   }
   it should "nonrequired and nullable are the same" in {
     val doc1 = OpenapiDocument(
@@ -295,8 +330,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Nil
     )
     val gen = new ClassDefinitionGenerator()
-    val res1 = gen.classDefs(doc1).map(_.classRepr)
-    val res2 = gen.classDefs(doc2).map(_.classRepr)
+    val res1 = gen.classDefs(doc1, targetScala3 = isScala3).map(_.classRepr)
+    val res2 = gen.classDefs(doc2, targetScala3 = isScala3).map(_.classRepr)
     res1 shouldBe res2
   }
 
@@ -383,7 +418,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
 
     val gen = new ClassDefinitionGenerator()
-    gen.classDefs(doc, false).get.classRepr shouldCompile ()
+    gen.classDefs(doc, false).get.classRepr.shouldCompile()
   }
 
   import cats.implicits._
@@ -421,15 +456,15 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
 
     val res: String = parserRes match {
       case Left(value) => throw new Exception(value)
-      case Right(doc) =>
+      case Right(doc)  =>
         new EndpointGenerator()
           .endpointDefs(
             doc,
             useHeadTagForObjectNames = false,
-            targetScala3 = false,
+            targetScala3 = isScala3,
             jsonSerdeLib = JsonSerdeLib.Circe,
             xmlSerdeLib = XmlSerdeLib.CatsXml,
-            streamingImplementation = StreamingImplementation.FS2,
+            streamingImplementation = FS2(),
             generateEndpointTypes = false,
             validators = ValidationDefns.empty,
             generateValidators = true
@@ -446,7 +481,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
          |}
          |  """.stripMargin
 
-    compileUnit shouldCompile ()
+    compileUnit.shouldCompile()
 
   }
 
@@ -524,7 +559,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       .toTry
       .get
     val gen = new ClassDefinitionGenerator()
-    val res1 = Try(gen.classDefs(OpenapiDocument("", Nil, null, Nil, Some(doc), Nil))).toEither
+    val res1 = Try(gen.classDefs(OpenapiDocument("", Nil, null, Nil, Some(doc), Nil), targetScala3 = isScala3)).toEither
 
     res1.left.get.getMessage shouldEqual "Generating class for ReqWithDefaults: Cannot render a number as type sttp.tapir.codegen.openapi.models.OpenapiSchemaType$OpenapiSchemaString."
 
@@ -551,8 +586,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
           .get
 
       val fullRes = imports + res + "\n" + jsonSerdes.get
-      res shouldCompile ()
-      fullRes shouldCompile ()
+      res.shouldCompile()
+      fullRes.shouldCompile()
       if (useCustomMacros)
         jsonSerdes.get should include(
           """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type")"""
@@ -585,7 +620,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
       val fullRes = (res + "\n" + jsonSerdes.get)
-      (imports + fullRes) shouldCompile ()
+      (imports + fullRes).shouldCompile()
       val expectedLines = Seq(
         """implicit lazy val reqWithVariantsJsonEncoder: io.circe.Encoder[ReqWithVariants]""",
         """case x: ReqSubtype1 => io.circe.Encoder[ReqSubtype1].apply(x).mapObject(_.add("type", io.circe.Json.fromString("ReqSubtype1")))""",

@@ -36,7 +36,7 @@ object ZioWebSockets {
           intermediateStream = autoPongs
             .map {
               case _: SttpWebSocketFrame.Close if !o.decodeCloseRequests => None
-              case f =>
+              case f                                                     =>
                 o.requests.decode(f) match {
                   case failure: DecodeResult.Failure => throw new WebSocketFrameDecodeFailure(f, failure)
                   case DecodeResult.Value(v)         => Some(v)
@@ -128,7 +128,7 @@ object ZioWebSockets {
           case (None, f: SttpWebSocketFrame.Binary)                                => (Some(Left(f.payload)), None)
           case (Some(Left(acc)), f: SttpWebSocketFrame.Binary) if f.finalFragment  => (None, Some(f.copy(payload = acc ++ f.payload)))
           case (Some(Left(acc)), f: SttpWebSocketFrame.Binary) if !f.finalFragment => (Some(Left(acc ++ f.payload)), None)
-          case (Some(Right(acc)), f: SttpWebSocketFrame.Text) if f.finalFragment =>
+          case (Some(Right(acc)), f: SttpWebSocketFrame.Text) if f.finalFragment   =>
             (None, Some(f.copy(payload = acc + f.payload)))
           case (Some(Right(acc)), f: SttpWebSocketFrame.Text) if !f.finalFragment =>
             (Some(Right(acc + f.payload)), None)

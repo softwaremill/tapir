@@ -1,6 +1,5 @@
 package sttp.tapir.server.ziohttp
 
-import cats.data.NonEmptyList
 import org.scalactic.source.Position.here
 import org.scalatest.matchers.should.Matchers._
 import sttp.client4._
@@ -30,7 +29,7 @@ class ZioHttpCompositionTest(
         val route2: Routes[Any, ZioHttpResponse] = Routes(Method.GET / "p2" -> handler(ZioHttpResponse.ok))
         val route3: Routes[Any, ZioHttpResponse] = ZioHttpInterpreter().toHttp(ep3)
 
-        NonEmptyList.of(route3, route1, route2)
+        route3 ++ route1 ++ route2
       }
     ) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/p1").send(backend).map(_.code shouldBe StatusCode.Ok) >>

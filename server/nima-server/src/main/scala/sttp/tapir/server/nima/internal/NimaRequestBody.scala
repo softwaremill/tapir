@@ -24,7 +24,7 @@ private[nima] class NimaRequestBody(createFile: ServerRequest => TapirFile) exte
       case RawBodyType.ByteBufferBody       => RawValue(ByteBuffer.wrap(asByteArray))
       case RawBodyType.InputStreamBody      => RawValue(asInputStream)
       case RawBodyType.InputStreamRangeBody => RawValue(InputStreamRange(() => asInputStream))
-      case RawBodyType.FileBody =>
+      case RawBodyType.FileBody             =>
         val file = createFile(serverRequest)
         Files.copy(asInputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
         RawValue(FileRange(file), Seq(FileRange(file)))

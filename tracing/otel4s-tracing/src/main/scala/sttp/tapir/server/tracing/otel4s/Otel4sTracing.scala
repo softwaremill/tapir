@@ -61,7 +61,7 @@ class Otel4sTracing[F[_]](config: Otel4sTracingConfig[F]) extends RequestInterce
             (for {
               requestResult <- requestHandler(knownEndpointInterceptor(request, span))(request, endpoints)
               _ <- requestResult match {
-                case Response(response) =>
+                case Response(response, _) =>
                   span
                     .addAttributes(responseAttributes(request, response))
                     .flatMap(_ =>

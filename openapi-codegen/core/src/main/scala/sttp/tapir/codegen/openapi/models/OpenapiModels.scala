@@ -8,11 +8,18 @@ import OpenapiSchemaType.{
   OpenapiSchemaObject,
   OpenapiSchemaRef,
   OpenapiSchemaRefDecoder,
-  OpenapiSchemaSimpleType
+  OpenapiSchemaString
 }
 import io.circe.Json
 import sttp.tapir.codegen.RootGenerator.strippedToCamelCase
-import sttp.tapir.codegen.util.MapUtils
+import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
+  forceEager,
+  forceReqEager,
+  forceReqStreaming,
+  forceRespEager,
+  forceRespStreaming,
+  forceStreaming
+}
 
 import scala.collection.mutable
 // https://swagger.io/specification/
@@ -48,10 +55,10 @@ object OpenapiModels {
             else {
               val resolved = s.map {
                 case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
-                case ref: OpenapiSchemaRef =>
+                case ref: OpenapiSchemaRef    =>
                   schemas(ref.stripped) match {
                     case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
-                    case other =>
+                    case other                    =>
                       throw new NotImplementedError(
                         s"Only object type refs are supported for allOf schemas. For $n found ${other.getClass.getName} under ${ref.stripped}"
                       )
@@ -62,7 +69,7 @@ object OpenapiModels {
                   )
               }
               val merged = resolved.foldLeft((Set.empty[String], mutable.LinkedHashMap.empty[String, OpenapiSchemaField])) {
-                case ((_, accProp), next) if accProp.isEmpty => next
+                case ((_, accProp), next) if accProp.isEmpty  => next
                 case ((accReq, accProp), (nextReq, nextProp)) =>
                   val dupDecls = accProp.keySet.intersect(nextProp.keySet)
                   dupDecls.foreach { fieldName =>
@@ -129,10 +136,22 @@ object OpenapiModels {
       this.copy(parameters = filteredParents ++ resolved)
     }
     val tapirCodegenDirectives: Set[String] = {
-      specificationExtensions
+      val readDirectives = specificationExtensions
         .collect { case (GenerationDirectives.extensionKey, json) => json.asArray.toSeq.flatMap(_.flatMap(_.asString)) }
         .flatten
         .toSet
+      // Disallow directives with conflicting semantics, since it's not obvious what the generator will do in such cases
+      val incompatiblePairs =
+        Seq(forceStreaming, forceReqStreaming, forceRespStreaming).map(forceEager -> _) ++
+          Seq(forceReqEager, forceRespEager).map(forceStreaming -> _) :+
+          (forceReqEager -> forceReqStreaming) :+
+          (forceRespEager -> forceRespStreaming)
+      val matchingIncompatible = incompatiblePairs.filter { case (a, b) => readDirectives.contains(a) && readDirectives.contains(b) }
+      val incompatErrMsgs =
+        matchingIncompatible.map { case (a, b) => s"May not have both $a and $b directives on same endpoint" }.mkString(". ")
+      if (matchingIncompatible.nonEmpty)
+        throw new IllegalArgumentException(s"Incompatible directives found: $incompatErrMsgs")
+      readDirectives
     }
   }
 
@@ -184,9 +203,28 @@ object OpenapiModels {
       code: String,
       description: String,
       content: Seq[OpenapiResponseContent],
-      headers: Map[String, OpenapiHeader] = Map.empty
+      private val headers: Map[String, OpenapiHeader] = Map.empty
   ) extends OpenapiResponse {
     def resolve(doc: OpenapiDocument): OpenapiResponseDef = this
+    private def maybeContentTypeHeader: Option[(String, OpenapiHeader)] = if (content.forall(!_.contentType.contains("*"))) None
+    else {
+      def generalRegex = "([^*]+|[*])/([^*]+|[*])"
+      val validatingRegex = content.map(_.contentType) match {
+        case s if s.contains("*/*") => generalRegex
+        case Seq(oneType)           => oneType.replace("*", "([^*]+|[*])")
+        case s                      => s.map(_.replace("*", "([^*]+|[*])")).map(t => s"($t)").mkString("|")
+      }
+      Some(
+        "Content-Type" -> OpenapiHeaderDef(
+          OpenapiParameter("Content-Type", "header", Some(true), None, OpenapiSchemaString(false, Some(validatingRegex), None, None))
+        )
+      )
+    }
+    def getHeaders: Map[String, OpenapiHeader] =
+      // according to api spec, content-type header should be ignored - cf https://swagger.io/specification/#response-object
+      headers.filterNot(_._1.toLowerCase == "content-type") ++
+        // but add one explicitly if content contains a wildcard
+        maybeContentTypeHeader
   }
   case class OpenapiResponseRef(
       code: String,
@@ -257,16 +295,17 @@ object OpenapiModels {
   implicit val OpenapiResponseDecoder: Decoder[Seq[OpenapiResponse]] = { (c: HCursor) =>
     implicit val InnerDecoder: Decoder[(String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])] = { (c: HCursor) =>
       for {
-        description <- c.downField("description").as[String]
+        // should be required, but is often missing in the wild
+        description <- c.downField("description").as[Option[String]]
         content <- c.downField("content").as[Option[Seq[OpenapiResponseContent]]]
         headers <- c.getOrElse[Map[String, OpenapiHeader]]("headers")(Map.empty)
       } yield {
-        (description, content, headers)
+        (description.getOrElse(""), content, headers)
       }
     }
     implicit val EitherDecoder
         : Decoder[Either[OpenapiSchemaRef, (String, Option[Seq[OpenapiResponseContent]], Map[String, OpenapiHeader])]] =
-      InnerDecoder.map(Right(_)).or(OpenapiSchemaRefDecoder.map(Left(_)))
+      OpenapiSchemaRefDecoder.map(Left(_)).or(InnerDecoder.map(Right(_)))
 
     for {
       schema <- c

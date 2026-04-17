@@ -82,7 +82,7 @@ object Endpoints:
 If the generation of OpenAPI documentation is required, consider adding OpenAPI doc extension on schema providing XML
 namespace as described in the "Prefixes and Namespaces" section at [OpenAPI documentation regarding handling XML](https://swagger.io/docs/specification/data-models/representing-xml/).
 This would add `xmlns` property to example request/responses at swagger, which is required by scalaxb to properly deserialize XML.
-For more information on adding OpenAPI doc extension in tapir refer to [documentation](../docs/openapi.html#openapi-specification-extensions).
+For more information on adding OpenAPI doc extension in tapir refer to [documentation](../docs/openapi.md#openapi-specification-extensions).
 
 Adding xml namespace doc extension to `Outer`'s `Schema` example:
 ```scala

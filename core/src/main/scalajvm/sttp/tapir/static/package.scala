@@ -9,7 +9,7 @@ package object static {
 
   private[tapir] def isModified(staticInput: StaticInput, etag: Option[ETag], lastModified: Long): Boolean = {
     etag match {
-      case None => isModifiedByModifiedSince(staticInput, lastModified)
+      case None     => isModifiedByModifiedSince(staticInput, lastModified)
       case Some(et) =>
         val ifNoneMatch = staticInput.ifNoneMatch.getOrElse(Nil)
         if (ifNoneMatch.nonEmpty) ifNoneMatch.forall(e => e.tag != et.tag)

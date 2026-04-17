@@ -43,9 +43,9 @@ private[http4s] class Http4sToResponseBody[F[_]: Async](
       case RawBodyType.StringBody(charset) =>
         val bytes = r.toString.getBytes(charset)
         (fs2.Stream.chunk(Chunk.array(bytes)), Some(bytes.length))
-      case RawBodyType.ByteArrayBody   => (fs2.Stream.chunk(Chunk.array(r)), Some((r: Array[Byte]).length))
-      case RawBodyType.ByteBufferBody  => (fs2.Stream.chunk(Chunk.byteBuffer(r)), None)
-      case RawBodyType.InputStreamBody => (inputStreamToFs2(() => r), None)
+      case RawBodyType.ByteArrayBody        => (fs2.Stream.chunk(Chunk.array(r)), Some((r: Array[Byte]).length))
+      case RawBodyType.ByteBufferBody       => (fs2.Stream.chunk(Chunk.byteBuffer(r)), None)
+      case RawBodyType.InputStreamBody      => (inputStreamToFs2(() => r), None)
       case RawBodyType.InputStreamRangeBody =>
         val fs2Stream = r.range
           .map(range => inputStreamToFs2(r.inputStreamFromRangeStart).take(range.contentLength))

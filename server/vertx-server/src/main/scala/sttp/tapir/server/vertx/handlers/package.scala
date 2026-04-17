@@ -46,7 +46,7 @@ package object handlers {
       case Some(MultipartBody(_, _))                          => route.handler(multipartHandler(uploadDirectory, maxBytes))
       case Some(_: EndpointIO.StreamBodyWrapper[_, _])        => route.handler(streamPauseHandler)
       case Some(_: EndpointOutput.WebSocketBodyWrapper[_, _]) => route.handler(streamPauseHandler)
-      case Some(_) =>
+      case Some(_)                                            =>
         route.handler(maxBytes.map(BodyHandler.create(false).setBodyLimit).getOrElse(BodyHandler.create(false)))
       case None => ()
     }

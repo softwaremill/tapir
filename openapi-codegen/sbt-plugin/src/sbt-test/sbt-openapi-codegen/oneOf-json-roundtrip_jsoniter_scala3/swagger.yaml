@@ -53,6 +53,21 @@ paths:
             application/xml:
               schema:
                 $ref: '#/components/schemas/Pet'
+  '/recursive/schema/endpoint':
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Node'
+      responses:
+        "200":
+          description: An object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Node'
 
 components:
   schemas:
@@ -236,3 +251,15 @@ components:
       xml:
         name: category
       type: object
+    Node:
+      title: Node
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'

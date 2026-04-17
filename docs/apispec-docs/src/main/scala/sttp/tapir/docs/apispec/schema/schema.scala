@@ -20,9 +20,9 @@ package object schema {
   private[docs] type KeyedSchema = (SchemaKey, TSchema[_])
   private[docs] type SchemaId = String
 
-  private[docs] def calculateUniqueIds[T](ts: Iterable[T], toIdBase: T => String): Map[T, String] = {
+  private[docs] def calculateUniqueIds[T](ts: Iterable[T], toIdBase: T => String, failOnDuplicateSchemaName: Boolean): Map[T, String] = {
     case class Assigment(idToT: Map[String, T], tToId: Map[T, String])
-    ts
+    val result = ts
       .foldLeft(Assigment(Map.empty, Map.empty)) { case (Assigment(idToT, tToId), t) =>
         val id = uniqueString(toIdBase(t), n => !idToT.contains(n) || idToT.get(n).contains(t))
 
@@ -31,7 +31,21 @@ package object schema {
           tToId + (t -> id)
         )
       }
-      .tToId
+
+    if (failOnDuplicateSchemaName) {
+      val conflicts: Map[T, String] = result.tToId.collect { case (t, id) if toIdBase(t) != id => t -> id }
+
+      if (conflicts.nonEmpty) {
+        // Extract unique base names that had conflicts
+        val baseNames = conflicts.map { case (t, _) => toIdBase(t) }.toSet.toList.sorted
+        throw new IllegalStateException(
+          s"Duplicate schema names found: ${baseNames.mkString(", ")}. " +
+            "Consider using unique class names or customize the schemaName function."
+        )
+      }
+    }
+
+    result.tToId
   }
 
   private[docs] def propagateMetadataForOption[T, E](schema: TSchema[T], opt: TSchemaType.SOption[T, E]): TSchemaType.SOption[T, E] = {

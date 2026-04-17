@@ -41,7 +41,7 @@ object PathMapping {
       .collect {
         case segment: EndpointInput.FixedPath[_] => segment.show
         case PathCapture(Some(name), _, _)       => s"/:$name"
-        case PathCapture(_, _, _) =>
+        case PathCapture(_, _, _)                =>
           idxUsed += 1
           s"/:param$idxUsed"
         case EndpointInput.PathsCapture(_, _) => "/*"

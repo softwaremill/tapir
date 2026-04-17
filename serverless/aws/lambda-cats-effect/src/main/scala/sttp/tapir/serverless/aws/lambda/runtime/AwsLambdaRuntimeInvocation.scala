@@ -42,7 +42,7 @@ object AwsLambdaRuntimeInvocation {
         .flatMap { response =>
           response.header("lambda-runtime-aws-request-id") match {
             case Some(id) => RequestEvent(id, response.body).unit
-            case _ =>
+            case _        =>
               monad.error[RequestEvent](new RuntimeException(s"Missing lambda-runtime-aws-request-id header in request event $response"))
           }
         }

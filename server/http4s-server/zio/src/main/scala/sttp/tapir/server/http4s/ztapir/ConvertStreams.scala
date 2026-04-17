@@ -35,7 +35,7 @@ object ConvertStreams {
       case EndpointIO.StreamBodyWrapper(wrapped) => EndpointIO.StreamBodyWrapper(apply(wrapped))
       // traversing wrapped inputs
       case EndpointInput.Pair(left, right, combine, split) => EndpointInput.Pair(forInput(left), forInput(right), combine, split)
-      case EndpointIO.Pair(left, right, combine, split) =>
+      case EndpointIO.Pair(left, right, combine, split)    =>
         EndpointIO.Pair(forInput(left).asInstanceOf[EndpointIO[_]], forInput(right).asInstanceOf[EndpointIO[_]], combine, split)
       case EndpointInput.MappedPair(wrapped, mapping) =>
         EndpointInput.MappedPair(forInput(wrapped).asInstanceOf[EndpointInput.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
@@ -65,7 +65,7 @@ object ConvertStreams {
       case EndpointOutput.WebSocketBodyWrapper(wrapped) => EndpointOutput.WebSocketBodyWrapper(apply(wrapped))
       // traversing wrapped outputs
       case EndpointOutput.Pair(left, right, combine, split) => EndpointOutput.Pair(forOutput(left), forOutput(right), combine, split)
-      case EndpointIO.Pair(left, right, combine, split) =>
+      case EndpointIO.Pair(left, right, combine, split)     =>
         EndpointIO.Pair(forOutput(left).asInstanceOf[EndpointIO[_]], forOutput(right).asInstanceOf[EndpointIO[_]], combine, split)
       case EndpointOutput.MappedPair(wrapped, mapping) =>
         EndpointOutput.MappedPair(forOutput(wrapped).asInstanceOf[EndpointOutput.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
