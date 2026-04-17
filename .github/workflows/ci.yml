@@ -79,9 +79,15 @@ jobs:
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
-    - name: Compile core & server-core with Scala 3.8.3
+    - name: Compile core & server-core with next Scala 3
       if: matrix.scala-version == '3' && matrix.target-platform == 'JVM' && matrix.java == '21'
-      run: sbt $SBT_JAVA_OPTS -v 'set LocalProject("core3") / scalaVersion := "3.8.3"' 'set LocalProject("serverCore3") / scalaVersion := "3.8.3"' core3/Test/compile serverCore3/Test/compile
+      env:
+        SCALA_3_NEXT: "3.8.3"
+      run: |
+        sbt $SBT_JAVA_OPTS -v \
+          "set LocalProject(\"core3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          "set LocalProject(\"serverCore3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          core3/Test/compile serverCore3/Test/compile
     - name: Compile documentation
       if: matrix.target-platform == 'JVM' && matrix.java == '21'
       run: sbt $SBT_JAVA_OPTS -v compileDocumentation
