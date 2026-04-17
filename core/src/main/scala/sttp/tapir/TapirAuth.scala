@@ -53,7 +53,7 @@ object TapirAuth {
     EndpointInput.Auth(
       // this should be header[T](HeaderNames.Authorization)(authCodec), but since Scala 3.8 we would need an additional "using",
       // which we can't add due to source compatibility
-      { implicit val _: Codec[List[String], T, TextPlain] = authCodec; header[T](HeaderNames.Authorization) },
+      EndpointIO.Header(HeaderNames.Authorization, authCodec, EndpointIO.Info.empty),
       challenge,
       EndpointInput.AuthType.Http(authScheme),
       EndpointInput.AuthInfo.Empty
