@@ -45,7 +45,7 @@ private[tapir] object FormCodecMacros {
 
     val encodeDefSymbol = Symbol.newMethod(
       Symbol.spliceOwner,
-      "encode",
+      "$anonfun$encode",
       MethodType(List("t"))(_ => List(caseClass.tpe), _ => TypeRepr.of[Seq[(String, String)]])
     )
     val encodeDef = DefDef(
@@ -83,7 +83,7 @@ private[tapir] object FormCodecMacros {
 
     val decodeDefSymbol = Symbol.newMethod(
       Symbol.spliceOwner,
-      "decode",
+      "$anonfun$decode",
       MethodType(List("params"))(_ => List(TypeRepr.of[Seq[(String, String)]]), _ => TypeRepr.of[DecodeResult[T]])
     )
     val decodeDef = DefDef(
