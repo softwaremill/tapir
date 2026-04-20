@@ -1,7 +1,7 @@
 package sttp.tapir.server.metrics.otel4s
 
 import org.typelevel.otel4s.{Attribute, Attributes}
-import org.typelevel.otel4s.metrics.{Counter, Histogram, Meter, UpDownCounter}
+import org.typelevel.otel4s.metrics.{BucketBoundaries, Counter, Histogram, Meter, UpDownCounter}
 import org.typelevel.otel4s.semconv.attributes.{ErrorAttributes, HttpAttributes, UrlAttributes}
 import org.typelevel.otel4s.semconv.metrics.HttpMetrics
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
@@ -38,6 +38,10 @@ case class Otel4sMetrics[F[_]](metrics: List[Metric[F, _]]) {
 
 object Otel4sMetrics {
   private type MetricLabels = MetricLabelsTyped[Attribute[_]]
+
+  private val DurationBucketBoundaries = BucketBoundaries(
+     0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10
+  )
 
   /** Using the default labels, registers the following metrics:
     *
@@ -132,6 +136,7 @@ object Otel4sMetrics {
         .histogram[Double](HttpMetrics.ServerRequestDuration.name)
         .withDescription(HttpMetrics.ServerRequestDuration.description)
         .withUnit(HttpMetrics.ServerRequestDuration.unit)
+        .withExplicitBucketBoundaries(DurationBucketBoundaries)
         .create,
       onRequest = (req, recorderM, m) =>
         m.map(recorderM) { recorder =>
