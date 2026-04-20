@@ -3,6 +3,7 @@ package sttp.tapir.server.metrics.otel4s
 import org.typelevel.otel4s.{Attribute, Attributes}
 import org.typelevel.otel4s.metrics.{Counter, Histogram, Meter, UpDownCounter}
 import org.typelevel.otel4s.semconv.attributes.{ErrorAttributes, HttpAttributes, UrlAttributes}
+import org.typelevel.otel4s.semconv.metrics.HttpMetrics
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabelsTyped}
 import sttp.tapir.AnyEndpoint
@@ -72,7 +73,7 @@ object Otel4sMetrics {
     forResponse = List(
       {
         case Right(r) => Some(HttpAttributes.HttpResponseStatusCode(r.code.code.toLong))
-        case Left(ex) => Some(HttpAttributes.HttpResponseStatusCode(500))
+        case Left(_) => Some(HttpAttributes.HttpResponseStatusCode(500))
       },
       {
         case Right(_) => None
@@ -85,8 +86,8 @@ object Otel4sMetrics {
     Metric(
       metric = meter
         .upDownCounter[Long]("http.server.active_requests")
-        .withDescription("Active HTTP requests")
-        .withUnit("1")
+        .withDescription("Number of active HTTP server requests.")
+        .withUnit("{request}")
         .create,
       onRequest = (req, counterM, m) => {
         // Calculate labels once upfront using only request data (no endpoint labels)
@@ -128,15 +129,15 @@ object Otel4sMetrics {
   private def requestDuration[F[_]](meter: Meter[F], labels: MetricLabels): Metric[F, F[Histogram[F, Double]]] =
     Metric(
       metric = meter
-        .histogram[Double]("http.server.request.duration")
-        .withDescription("Duration of HTTP requests")
-        .withUnit("ms")
+        .histogram[Double](HttpMetrics.ServerRequestDuration.name)
+        .withDescription(HttpMetrics.ServerRequestDuration.description)
+        .withUnit(HttpMetrics.ServerRequestDuration.unit)
         .create,
       onRequest = (req, recorderM, m) =>
         m.map(recorderM) { recorder =>
           val requestStart = Instant.now()
 
-          def duration = Duration.between(requestStart, Instant.now()).toMillis.toDouble
+          def duration = Duration.between(requestStart, Instant.now()).toNanos / 1000000000d
 
           EndpointMetric()
             .onResponseHeaders { (ep, res) =>

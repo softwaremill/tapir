@@ -1153,7 +1153,6 @@ lazy val otel4sTracing: ProjectMatrix = (projectMatrix in file("tracing/otel4s-t
     libraryDependencies ++= Seq(
       "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
       "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
       "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
       scalaTest.value % Test
     )
@@ -1168,7 +1167,8 @@ lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-m
     libraryDependencies ++= Seq(
       "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
       "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
+      "org.typelevel" %% "otel4s-semconv-metrics" % Versions.otel4s,
+      "org.typelevel" %% "otel4s-semconv-metrics-experimental" % Versions.otel4s % Test,
       "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
       scalaTest.value % Test
     )

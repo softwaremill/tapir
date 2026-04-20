@@ -10,6 +10,10 @@ import org.typelevel.otel4s.oteljava.testkit.OtelJavaTestkit
 import org.typelevel.otel4s.Attribute
 import org.typelevel.otel4s.metrics.{Gauge, Meter}
 import org.typelevel.otel4s.oteljava.testkit.metrics.{MetricExpectation, MetricExpectations, PointExpectation}
+import org.typelevel.otel4s.semconv.{MetricSpec, Requirement}
+import org.typelevel.otel4s.semconv.attributes.{ErrorAttributes, HttpAttributes, UrlAttributes}
+import org.typelevel.otel4s.semconv.experimental.metrics.HttpExperimentalMetrics
+import org.typelevel.otel4s.semconv.metrics.HttpMetrics
 import sttp.capabilities.Streams
 import sttp.model.Uri._
 import sttp.monad.MonadError
@@ -25,6 +29,7 @@ import sttp.tapir.server.interpreter._
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabelsTyped}
 import sttp.tapir.server.metrics.otel4s.Otel4sMetrics.{requestAttrs, responseAttrs}
 
+import scala.jdk.CollectionConverters._
 import scala.util.{Success, Try}
 
 class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
@@ -167,6 +172,8 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
           assertMetrics(
             metrics,
             List(
+              metricExpectation(HttpExperimentalMetrics.ServerActiveRequests),
+              metricExpectation(HttpMetrics.ServerRequestDuration),
               requestsTotalExpectation(expectedCount, expectedStatusCode, isFailure),
               activeRequestsExpectation,
               requestDurationExpectation(expectedCount, expectedStatusCode, isFailure)
@@ -249,25 +256,25 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
 
   private val activeRequestsExpectation: MetricExpectation.Numeric[Long] =
     MetricExpectation
-      .sum[Long]("http.server.active_requests")
-      .unit("1")
-      .description("Active HTTP requests")
+      .sum[Long](HttpExperimentalMetrics.ServerActiveRequests.name)
+      .unit(HttpExperimentalMetrics.ServerActiveRequests.unit)
+      .description(HttpExperimentalMetrics.ServerActiveRequests.description)
       .value(0L)
       .pointsWhere("single active_requests point expected")(_.size == 1)
       .containsPoints(
         PointExpectation
           .numeric(0L)
           .attributesExact(
-            Attribute("http.request.method", "GET"),
-            Attribute("url.scheme", "http")
+            HttpAttributes.HttpRequestMethod("GET"),
+            UrlAttributes.UrlScheme("http")
           )
       )
 
   private def requestDurationExpectation(expectedCount: Int, expectedStatusCode: Long, isFailure: Boolean): MetricExpectation.Histogram = {
     val base = MetricExpectation
-      .histogram("http.server.request.duration")
-      .unit("ms")
-      .description("Duration of HTTP requests")
+      .histogram(HttpMetrics.ServerRequestDuration.name)
+      .unit(HttpMetrics.ServerRequestDuration.unit)
+      .description(HttpMetrics.ServerRequestDuration.description)
 
     if (isFailure) {
         base
@@ -326,14 +333,14 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
 
   private def baseResponseAttributes(statusCode: Long): List[Attribute[_]] =
     List(
-      Attribute("http.request.method", "GET"),
-      Attribute("http.response.status_code", statusCode),
-      Attribute("http.route", "/person"),
-      Attribute("url.scheme", "http")
+      HttpAttributes.HttpRequestMethod("GET"),
+      HttpAttributes.HttpResponseStatusCode(statusCode),
+      HttpAttributes.HttpRoute("/person"),
+      UrlAttributes.UrlScheme("http")
     )
 
   private def failureAttributes(isFailure: Boolean): List[Attribute[_]] =
-    if (isFailure) List(Attribute("error.type", "java.lang.RuntimeException")) else Nil
+    if (isFailure) List(ErrorAttributes.ErrorType("java.lang.RuntimeException")) else Nil
 
   private def phaseAttribute(phase: String): List[Attribute[_]] =
     List(Attribute("phase", phase))
@@ -344,4 +351,24 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
       case Left(mismatches) =>
         fail(MetricExpectations.format(mismatches))
     }
+
+  private def metricExpectation(spec: MetricSpec): MetricExpectation = {
+    val required = spec.attributeSpecs
+      .filter(_.requirement.level == Requirement.Level.Required)
+      .map(_.key.name)
+      .toSet
+
+    MetricExpectation
+      .name(spec.name)
+      .description(spec.description)
+      .unit(spec.unit)
+      .clue(spec.name)
+      .where("required semantic-convention attributes are present") { metric =>
+        metric.getData.getPoints.asScala.iterator
+          .flatMap(_.asInstanceOf[io.opentelemetry.sdk.metrics.data.PointData].getAttributes.asMap().keySet().asScala)
+          .map(_.getKey)
+          .filter(required.contains)
+          .toSet == required
+      }
+  }
 }

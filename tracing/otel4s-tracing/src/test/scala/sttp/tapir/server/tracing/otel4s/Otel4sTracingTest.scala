@@ -6,9 +6,9 @@ import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
 import io.opentelemetry.sdk.trace.data.SpanData
 import org.scalatest.compatible.Assertion
-import org.typelevel.otel4s.Attribute
 import org.typelevel.otel4s.oteljava.testkit.OtelJavaTestkit
 import org.typelevel.otel4s.oteljava.testkit.trace.{SpanExpectation, TraceExpectation, TraceExpectations, TraceForestExpectation}
+import org.typelevel.otel4s.semconv.attributes.{HttpAttributes, ServerAttributes, UrlAttributes}
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
@@ -74,8 +74,8 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         .server("GET /person")
         .noParentSpanContext
         .attributesSubset(
-          Attribute("http.response.status_code", 200L),
-          Attribute("url.path", "/person")
+          HttpAttributes.HttpResponseStatusCode(200L),
+          UrlAttributes.UrlPath("/person")
         )
     ).unsafeToFuture()
   }
@@ -93,8 +93,8 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         .server("GET /person/{name}/{surname}/info")
         .noParentSpanContext
         .attributesSubset(
-          Attribute("http.response.status_code", 200L),
-          Attribute("url.path", "/person/Adam/Smith/info")
+          HttpAttributes.HttpResponseStatusCode(200L),
+          UrlAttributes.UrlPath("/person/Adam/Smith/info")
         )
     ).unsafeToFuture()
   }
@@ -116,7 +116,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
         .server("GET /person")
         .noParentSpanContext
         .attributesSubset(
-          Attribute("server.address", "softwaremill.com")
+          ServerAttributes.ServerAddress("softwaremill.com")
         )
     ).unsafeToFuture()
   }
