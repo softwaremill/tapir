@@ -10,8 +10,6 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabels}
 import sttp.tapir.server.model.ServerResponse
 
-import java.time.{Duration, Instant}
-
 import OpenTelemetryMetrics._
 
 case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]]) {
@@ -26,7 +24,7 @@ case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]])
   def addRequestsTotal(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestTotal(meter, labels))
 
-  /** Registers a `http.server.request.duration` histogram (assuming default labels). */
+  /** Registers a `http.server.request.duration` histogram (assuming default labels), recording durations in seconds (`s`). */
   def addRequestsDuration(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestDuration(meter, labels))
 
@@ -68,6 +66,12 @@ object OpenTelemetryMetrics {
       }
     )
   )
+
+  /** Default explicit bucket boundaries (in seconds) for the `http.server.request.duration` histogram, as recommended by the OpenTelemetry
+    * HTTP server semantic conventions: https://opentelemetry.io/docs/specs/semconv/http/http-metrics/#metric-httpserverrequestduration
+    */
+  val HttpServerRequestDurationBucketsSeconds: java.util.List[java.lang.Double] =
+    java.util.Arrays.asList[java.lang.Double](0.005d, 0.01d, 0.025d, 0.05d, 0.075d, 0.1d, 0.25d, 0.5d, 0.75d, 1d, 2.5d, 5d, 7.5d, 10d)
 
   def apply[F[_]](meter: Meter): OpenTelemetryMetrics[F] = apply(meter, Nil)
   def apply[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] = apply(defaultMeter(otel), Nil)
@@ -171,14 +175,12 @@ object OpenTelemetryMetrics {
         .histogramBuilder("http.server.request.duration")
         .setDescription("Duration of HTTP server requests")
         .setUnit("s")
-        .setExplicitBucketBoundariesAdvice(
-          java.util.Arrays.asList[java.lang.Double](0.005d, 0.01d, 0.025d, 0.05d, 0.075d, 0.1d, 0.25d, 0.5d, 0.75d, 1d, 2.5d, 5d, 7.5d, 10d)
-        )
+        .setExplicitBucketBoundariesAdvice(HttpServerRequestDurationBucketsSeconds)
         .build(),
       onRequest = (req, recorder, m) =>
         m.eval {
-          val requestStart = Instant.now()
-          def duration = Duration.between(requestStart, Instant.now()).toNanos.toDouble / 1e9
+          val requestStartNanos = System.nanoTime()
+          def duration = (System.nanoTime() - requestStartNanos).toDouble / 1e9
           EndpointMetric()
             .onResponseHeaders { (ep, res) =>
               m.eval {
