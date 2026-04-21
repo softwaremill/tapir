@@ -3,19 +3,18 @@ package sttp.tapir.server.metrics.otel4s
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.syntax.traverse._
-import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator
-import io.opentelemetry.api.common.{AttributeKey, Attributes}
-import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
-import io.opentelemetry.sdk.metrics.data.{HistogramPointData, LongPointData, MetricData, MetricDataType}
-import io.opentelemetry.semconv.{ErrorAttributes, HttpAttributes, UrlAttributes}
 import org.scalatest.compatible.Assertion
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.otel4s.oteljava.testkit.OtelJavaTestkit
 import org.typelevel.otel4s.Attribute
 import org.typelevel.otel4s.metrics.{Gauge, Meter}
+import org.typelevel.otel4s.oteljava.testkit.metrics.{MetricExpectation, MetricExpectations, PointExpectation}
+import org.typelevel.otel4s.semconv.{MetricSpec, Requirement}
+import org.typelevel.otel4s.semconv.attributes.{ErrorAttributes, HttpAttributes, UrlAttributes}
+import org.typelevel.otel4s.semconv.experimental.metrics.HttpExperimentalMetrics
+import org.typelevel.otel4s.semconv.metrics.HttpMetrics
 import sttp.capabilities.Streams
-import sttp.model._
 import sttp.model.Uri._
 import sttp.monad.MonadError
 import sttp.tapir.{AttributeKey => _, _}
@@ -167,99 +166,19 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
             deleteFile = _ => IO.pure(())
           )
           _ <- requests.traverse(interpreter.apply)
-          metrics <- testkit.collectMetrics[MetricData]
+          metrics <- testkit.collectMetrics
         } yield {
           metrics should have size 3
-
-          // asserts for metric "http.server.requests.total"
-          val requestsTotal = metrics.find(_.getName == "http.server.requests.total").head
-          requestsTotal.getType shouldBe MetricDataType.LONG_SUM
-          requestsTotal.getUnit shouldBe "1"
-          requestsTotal.getDescription shouldBe "Total HTTP requests"
-
-          val requestsTotalData = requestsTotal.getData.getPoints.asScala.toList.asInstanceOf[List[LongPointData]].head
-          requestsTotalData.getValue shouldBe expectedCount
-          if (isFailure) {
-            // deliberately checking against Opentelemetry API (Java)
-            // Java API could claim about types, so that's why long2Long conversion is applied for a value of HttpAttributes.HTTP_RESPONSE_STATUS_CODE
-            requestsTotalData.getAttributes shouldBe
-              Attributes
-                .builder()
-                .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
-                .put(HttpAttributes.HTTP_ROUTE, "/person")
-                .put(UrlAttributes.URL_SCHEME, "http")
-                .put(ErrorAttributes.ERROR_TYPE, "java.lang.RuntimeException")
-                .build()
-          } else {
-            requestsTotalData.getAttributes shouldBe
-              Attributes
-                .builder()
-                .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
-                .put(HttpAttributes.HTTP_ROUTE, "/person")
-                .put(UrlAttributes.URL_SCHEME, "http")
-                .build()
-          }
-
-          // asserts for metric "http.server.active_requests"
-          val activeRequests = metrics.find(_.getName == "http.server.active_requests").head
-          activeRequests.getType shouldBe MetricDataType.LONG_SUM
-          activeRequests.getUnit shouldBe "1"
-          activeRequests.getDescription shouldBe "Active HTTP requests"
-
-          val activeRequestsData = activeRequests.getData.getPoints.asScala.toList.asInstanceOf[List[LongPointData]].head
-          activeRequestsData.getValue shouldBe 0
-          activeRequestsData.getAttributes.size() shouldBe 2
-          activeRequestsData.getAttributes shouldBe
-            Attributes
-              .builder()
-              .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-              .put(UrlAttributes.URL_SCHEME, "http")
-              .build()
-
-          // asserts for metric "http.server.request.duration"
-          val requestDuration = metrics.find(_.getName == "http.server.request.duration").head
-          requestDuration.getType shouldBe MetricDataType.HISTOGRAM
-          requestDuration.getUnit shouldBe "ms"
-          requestDuration.getDescription shouldBe "Duration of HTTP requests"
-
-          val requestDurationData = requestDuration.getData.getPoints.asScala.toList.asInstanceOf[List[HistogramPointData]]
-          if (isFailure) {
-            // deliberately checking against Opentelemetry API (Java)
-            // Java API could claim about types, so that's why long2Long conversion is applied for a value of HttpAttributes.HTTP_RESPONSE_STATUS_CODE
-            requestDurationData.map(_.getCount) shouldBe List(expectedCount)
-            requestDurationData.map(_.getAttributes) shouldBe List(
-              Attributes
-                .builder()
-                .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
-                .put(HttpAttributes.HTTP_ROUTE, "/person")
-                .put(UrlAttributes.URL_SCHEME, "http")
-                .put(ErrorAttributes.ERROR_TYPE, "java.lang.RuntimeException")
-                .build()
+          assertMetrics(
+            metrics,
+            List(
+              metricExpectation(HttpExperimentalMetrics.ServerActiveRequests),
+              metricExpectation(HttpMetrics.ServerRequestDuration),
+              requestsTotalExpectation(expectedCount, expectedStatusCode, isFailure),
+              activeRequestsExpectation,
+              requestDurationExpectation(expectedCount, expectedStatusCode, isFailure)
             )
-          } else {
-            requestDurationData.map(_.getCount) shouldBe List(expectedCount, expectedCount)
-            requestDurationData.map(_.getAttributes) should contain theSameElementsAs List(
-              Attributes
-                .builder()
-                .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
-                .put(HttpAttributes.HTTP_ROUTE, "/person")
-                .put(UrlAttributes.URL_SCHEME, "http")
-                .put(AttributeKey.stringKey("phase"), "headers")
-                .build(),
-              Attributes
-                .builder()
-                .put(HttpAttributes.HTTP_REQUEST_METHOD, "GET")
-                .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, long2Long(expectedStatusCode))
-                .put(HttpAttributes.HTTP_ROUTE, "/person")
-                .put(UrlAttributes.URL_SCHEME, "http")
-                .put(AttributeKey.stringKey("phase"), "body")
-                .build()
-            )
-          }
+          )
         }
       )
 
@@ -273,8 +192,8 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
       forEndpoint = Nil,
       forResponse = List(
         {
-          case Right(r) => Some(Attribute.apply("custom.response.key", "value"))
-          case Left(ex) => Some(Attribute.apply("custom.error.key", "value"))
+          case Right(_) => Some(Attribute.apply("custom.response.key", "value"))
+          case Left(_)  => Some(Attribute.apply("custom.error.key", "value"))
         }
       )
     )
@@ -309,36 +228,147 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
             deleteFile = _ => IO.pure(())
           )
           _ <- requests.traverse(interpreter.apply)
-          metrics <- testkit.collectMetrics[MetricData]
+          metrics <- testkit.collectMetrics
         } yield {
           metrics should have size 1
-
-          // asserts for metric "my.custom.gauge"
-          val requestsTotal = metrics.find(_.getName == "my.custom.gauge").head
-          requestsTotal.getType shouldBe MetricDataType.LONG_GAUGE
-          requestsTotal.getUnit shouldBe "ms"
-          requestsTotal.getDescription shouldBe "My custom Gauge"
-
-          val requestsTotalData = requestsTotal.getData.getPoints.asScala.toList.asInstanceOf[List[LongPointData]].head
-
-          if (isFailure) {
-            requestsTotalData.getValue shouldBe 11
-            requestsTotalData.getAttributes shouldBe
-              Attributes
-                .builder()
-                .put("custom.request.key", "value")
-                .put("custom.error.key", "value")
-                .build()
-          } else {
-            requestsTotalData.getValue shouldBe 10
-            requestsTotalData.getAttributes shouldBe
-              Attributes
-                .builder()
-                .put("custom.request.key", "value")
-                .put("custom.response.key", "value")
-                .build()
-          }
+          assertMetrics(
+            metrics,
+            List(
+              customGaugeExpectation(isFailure)
+            )
+          )
         }
       )
+  }
+
+  private def requestsTotalExpectation(expectedCount: Int, expectedStatusCode: Long, isFailure: Boolean): MetricExpectation.Numeric[Long] =
+    MetricExpectation
+      .sum[Long]("http.server.requests.total")
+      .unit("1")
+      .description("Total HTTP requests")
+      .value(expectedCount.toLong)
+      .pointsWhere("single requests.total point expected")(_.size == 1)
+      .containsPoints(
+        PointExpectation
+          .numeric(expectedCount.toLong)
+          .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
+      )
+
+  private val activeRequestsExpectation: MetricExpectation.Numeric[Long] =
+    MetricExpectation
+      .sum[Long](HttpExperimentalMetrics.ServerActiveRequests.name)
+      .unit(HttpExperimentalMetrics.ServerActiveRequests.unit)
+      .description(HttpExperimentalMetrics.ServerActiveRequests.description)
+      .value(0L)
+      .pointsWhere("single active_requests point expected")(_.size == 1)
+      .containsPoints(
+        PointExpectation
+          .numeric(0L)
+          .attributesExact(
+            HttpAttributes.HttpRequestMethod("GET"),
+            UrlAttributes.UrlScheme("http")
+          )
+      )
+
+  private def requestDurationExpectation(expectedCount: Int, expectedStatusCode: Long, isFailure: Boolean): MetricExpectation.Histogram = {
+    val base = MetricExpectation
+      .histogram(HttpMetrics.ServerRequestDuration.name)
+      .unit(HttpMetrics.ServerRequestDuration.unit)
+      .description(HttpMetrics.ServerRequestDuration.description)
+
+    if (isFailure) {
+        base
+          .pointCount(1)
+          .containsPoints(
+            PointExpectation
+              .histogram
+              .count(expectedCount.toLong)
+              .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
+          )
+    } else {
+      base
+        .pointCount(2)
+        .containsPoints(
+          PointExpectation
+            .histogram
+            .count(expectedCount.toLong)
+            .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ phaseAttribute("headers")): _*)
+        )
+        .containsPoints(
+          PointExpectation
+            .histogram
+            .count(expectedCount.toLong)
+            .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ phaseAttribute("body")): _*)
+        )
+    }
+  }
+
+  private def customGaugeExpectation(isFailure: Boolean): MetricExpectation.Numeric[Long] = {
+    val value = if (isFailure) 11L else 10L
+    val attrs =
+      if (isFailure) {
+        List(
+          Attribute("custom.request.key", "value"),
+          Attribute("custom.error.key", "value")
+        )
+      } else {
+        List(
+          Attribute("custom.request.key", "value"),
+          Attribute("custom.response.key", "value")
+        )
+      }
+
+    MetricExpectation
+      .gauge[Long]("my.custom.gauge")
+      .unit("ms")
+      .description("My custom Gauge")
+      .value(value)
+      .pointsWhere("single custom gauge point expected")(_.size == 1)
+      .containsPoints(
+        PointExpectation
+          .numeric(value)
+          .attributesExact(attrs: _*)
+      )
+  }
+
+  private def baseResponseAttributes(statusCode: Long): List[Attribute[_]] =
+    List(
+      HttpAttributes.HttpRequestMethod("GET"),
+      HttpAttributes.HttpResponseStatusCode(statusCode),
+      HttpAttributes.HttpRoute("/person"),
+      UrlAttributes.UrlScheme("http")
+    )
+
+  private def failureAttributes(isFailure: Boolean): List[Attribute[_]] =
+    if (isFailure) List(ErrorAttributes.ErrorType("java.lang.RuntimeException")) else Nil
+
+  private def phaseAttribute(phase: String): List[Attribute[_]] =
+    List(Attribute("phase", phase))
+
+  private def assertMetrics(metrics: List[io.opentelemetry.sdk.metrics.data.MetricData], expectations: List[MetricExpectation]): Assertion =
+    MetricExpectations.checkAll(metrics, expectations) match {
+      case Right(_) => succeed
+      case Left(mismatches) =>
+        fail(MetricExpectations.format(mismatches))
+    }
+
+  private def metricExpectation(spec: MetricSpec): MetricExpectation = {
+    val required = spec.attributeSpecs
+      .filter(_.requirement.level == Requirement.Level.Required)
+      .map(_.key.name)
+      .toSet
+
+    MetricExpectation
+      .name(spec.name)
+      .description(spec.description)
+      .unit(spec.unit)
+      .clue(spec.name)
+      .where("required semantic-convention attributes are present") { metric =>
+        metric.getData.getPoints.asScala.iterator
+          .flatMap(_.asInstanceOf[io.opentelemetry.sdk.metrics.data.PointData].getAttributes.asMap().keySet().asScala)
+          .map(_.getKey)
+          .filter(required.contains)
+          .toSet == required
+      }
   }
 }
