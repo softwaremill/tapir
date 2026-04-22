@@ -10,21 +10,21 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabels}
 import sttp.tapir.server.model.ServerResponse
 
-import java.time.{Duration, Instant}
-
 import OpenTelemetryMetrics._
 
 case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]]) {
 
-  /** Registers a `request_active{path, method}` up-down-counter (assuming default labels). */
+  /** Registers a `http.server.active_requests` up-down-counter (assuming default labels). */
   def addRequestsActive(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestActive(meter, labels))
 
-  /** Registers a `request_total{path, method, status}` counter (assuming default labels). */
+  /** Registers a `http.server.request.total` counter (assuming default labels). Note: this metric is not part of the OpenTelemetry
+    * HTTP semantic conventions - the count is implicitly provided by the `http.server.request.duration` histogram.
+    */
   def addRequestsTotal(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestTotal(meter, labels))
 
-  /** Registers a `request_duration_seconds{path, method, status, phase}` histogram (assuming default labels). */
+  /** Registers a `http.server.request.duration` histogram (assuming default labels), recording durations in seconds (`s`). */
   def addRequestsDuration(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestDuration(meter, labels))
 
@@ -67,18 +67,24 @@ object OpenTelemetryMetrics {
     )
   )
 
+  /** Default explicit bucket boundaries (in seconds) for the `http.server.request.duration` histogram, as recommended by the OpenTelemetry
+    * HTTP server semantic conventions: https://opentelemetry.io/docs/specs/semconv/http/http-metrics/#metric-httpserverrequestduration
+    */
+  val HttpServerRequestDurationBucketsSeconds: java.util.List[java.lang.Double] =
+    java.util.Arrays.asList[java.lang.Double](0.005d, 0.01d, 0.025d, 0.05d, 0.075d, 0.1d, 0.25d, 0.5d, 0.75d, 1d, 2.5d, 5d, 7.5d, 10d)
+
   def apply[F[_]](meter: Meter): OpenTelemetryMetrics[F] = apply(meter, Nil)
   def apply[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] = apply(defaultMeter(otel), Nil)
   def apply[F[_]](otel: OpenTelemetry, metrics: List[Metric[F, _]]): OpenTelemetryMetrics[F] = apply(defaultMeter(otel), metrics)
 
   /** Using the default labels, registers the following metrics:
     *
-    *   - `request_active{path, method}` (up-down-counter)
-    *   - `request_total{path, method, status}` (counter)
-    *   - `request_duration{path, method, status, phase}` (histogram)
+    *   - `http.server.active_requests` (up-down-counter)
+    *   - `http.server.request.total` (counter) - not part of the OpenTelemetry HTTP semantic conventions
+    *   - `http.server.request.duration` (histogram, in seconds) - follows the OpenTelemetry HTTP server conventions
     *
-    * Status is by default the status code class (1xx, 2xx, etc.), and phase can be either `headers` or `body` - request duration is
-    * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
+    * The `phase` attribute is added to the duration histogram and can be either `headers` or `body` - request duration is measured
+    * separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
   def default[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] =
     default(defaultMeter(otel), OpenTelemetryAttributes)
@@ -88,12 +94,12 @@ object OpenTelemetryMetrics {
 
   /** Using the default labels, registers the following metrics:
     *
-    *   - `request_active{path, method}` (up-down-counter)
-    *   - `request_total{path, method, status}` (counter)
-    *   - `request_duration{path, method, status, phase}` (histogram)
+    *   - `http.server.active_requests` (up-down-counter)
+    *   - `http.server.request.total` (counter) - not part of the OpenTelemetry HTTP semantic conventions
+    *   - `http.server.request.duration` (histogram, in seconds) - follows the OpenTelemetry HTTP server conventions
     *
-    * Status is by default the status code class (1xx, 2xx, etc.), and phase can be either `headers` or `body` - request duration is
-    * measured separately up to the point where the headers are determined, and then once again when the whole response body is complete.
+    * The `phase` attribute is added to the duration histogram and can be either `headers` or `body` - request duration is measured
+    * separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
   def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, OpenTelemetryAttributes)
 
@@ -112,8 +118,8 @@ object OpenTelemetryMetrics {
     Metric[F, LongUpDownCounter](
       meter
         .upDownCounterBuilder("http.server.active_requests")
-        .setDescription("Active HTTP requests")
-        .setUnit("1")
+        .setDescription("Number of active HTTP server requests")
+        .setUnit("{request}")
         .build(),
       onRequest = (req, counter, m) => {
         val attrs = asOpenTelemetryAttributesFromRequest(labels, req)
@@ -132,7 +138,7 @@ object OpenTelemetryMetrics {
       meter
         .counterBuilder("http.server.request.total")
         .setDescription("Total HTTP requests")
-        .setUnit("1")
+        .setUnit("{request}")
         .build(),
       onRequest = (req, counter, m) => {
         m.unit {
@@ -167,13 +173,14 @@ object OpenTelemetryMetrics {
     Metric[F, DoubleHistogram](
       meter
         .histogramBuilder("http.server.request.duration")
-        .setDescription("Duration of HTTP requests")
-        .setUnit("ms")
+        .setDescription("Duration of HTTP server requests")
+        .setUnit("s")
+        .setExplicitBucketBoundariesAdvice(HttpServerRequestDurationBucketsSeconds)
         .build(),
       onRequest = (req, recorder, m) =>
         m.eval {
-          val requestStart = Instant.now()
-          def duration = Duration.between(requestStart, Instant.now()).toMillis.toDouble
+          val requestStartNanos = System.nanoTime()
+          def duration = (System.nanoTime() - requestStartNanos).toDouble / 1e9
           EndpointMetric()
             .onResponseHeaders { (ep, res) =>
               m.eval {
