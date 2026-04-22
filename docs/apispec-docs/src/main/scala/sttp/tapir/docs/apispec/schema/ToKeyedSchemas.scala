@@ -7,7 +7,12 @@ private[docs] object ToKeyedSchemas {
   def apply[T](codec: Codec[_, T, _]): List[KeyedSchema] = apply(codec.schema)
 
   def apply(schema: TSchema[_]): List[KeyedSchema] = {
-    val thisSchema = SchemaKey(schema).map(_ -> schema).toList
+    // #5187: for a product field whose type is a named case class with per-field annotations (e.g. @deprecated),
+    // derivation preserves the canonical (un-enriched) form via Schema.OriginalForDocs so that those annotations
+    // don't leak into the referenced component definition. ToSchemaReference.map still observes the difference
+    // between the canonical and the field-enriched schema, and attaches the annotations to the $ref.
+    val storeSchema = schema.attribute(TSchema.OriginalForDocs.Attribute).map(_.schema).getOrElse(schema)
+    val thisSchema = SchemaKey(schema).map(_ -> storeSchema).toList
     val nestedSchemas = schema match {
       case TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _, _, _, _)            => apply(o)
       case t @ TSchema(o: TSchemaType.SOption[_, _], _, _, _, _, _, _, _, _, _, _) =>
