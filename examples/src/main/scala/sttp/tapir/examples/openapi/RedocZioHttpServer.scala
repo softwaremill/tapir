@@ -1,9 +1,9 @@
 // {cat=OpenAPI documentation; effects=ZIO; server=ZIO HTTP; json=circe; docs=ReDoc}: Exposing documentation using ReDoc
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.16
-//> using dep com.softwaremill.sttp.tapir::tapir-redoc-bundle:1.13.16
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.16
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.16
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.17
+//> using dep com.softwaremill.sttp.tapir::tapir-redoc-bundle:1.13.17
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.17
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.17
 
 package sttp.tapir.examples.openapi
 
