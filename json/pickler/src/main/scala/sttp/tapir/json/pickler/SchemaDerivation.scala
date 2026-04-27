@@ -57,11 +57,20 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
             case '[f] =>
               val fieldSchema: Expr[Schema[f]] = '{ $childSchemasArray(${ Expr(i) }).asInstanceOf[Schema[f]] }
               val enrichedFieldSchema = enrichSchema(fieldSchema, fieldAnnotations)
+              // #5187: preserve the canonical schema so the docs interpreters don't leak per-field annotations
+              // into the referenced component definition.
+              val fieldSchemaWithOriginal = '{
+                val original = $fieldSchema
+                val enriched = $enrichedFieldSchema
+                if ((enriched ne original) && original.name.isDefined)
+                  enriched.attribute(Schema.OriginalForDocs.Attribute, Schema.OriginalForDocs(original))
+                else enriched
+              }
 
               '{
                 SProductField(
                   FieldName($name, $encodedName),
-                  $enrichedFieldSchema,
+                  $fieldSchemaWithOriginal,
                   obj => Some(${ Select('{ obj }.asTerm, fieldSymbol).asExprOf[f] })
                 )
               }
