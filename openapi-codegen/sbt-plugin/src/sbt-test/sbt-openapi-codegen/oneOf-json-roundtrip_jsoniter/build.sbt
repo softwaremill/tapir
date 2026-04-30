@@ -23,7 +23,7 @@ libraryDependencies ++= Seq(
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-circe" % jsoniterScalaVersion,
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
   "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
-  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.20" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % tapirVersion % Test
 )
 
