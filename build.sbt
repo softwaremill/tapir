@@ -662,6 +662,7 @@ lazy val catsEffect: ProjectMatrix = (projectMatrix in file("integrations/cats-e
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
   .dependsOn(core)
 
 lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumeratum"))
@@ -1440,6 +1441,12 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
         "org.http4s" %%% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
       )
     }
+  )
+  .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = commonNativeSettings ++ Seq(
+      Test / skip := true
+    )
   )
   .dependsOn(serverCore, cats, catsEffect)
 
