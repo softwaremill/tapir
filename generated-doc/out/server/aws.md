@@ -47,7 +47,7 @@ No effect library needed. Extend `SyncLambdaHandler`, provide your endpoints via
 Uses `AwsSyncServerInterpreter` (`AwsRequest => AwsResponse`).
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda-core" % "1.13.17"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda-core" % "1.13.18"
 ```
 
 Example:
@@ -61,7 +61,7 @@ implement `handleRequest` by calling `process(input, output).unsafeRunSync()`.
 Uses `AwsCatsEffectServerInterpreter` (`AwsRequest => F[AwsResponse]`).
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.13.17"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.13.18"
 ```
 
 Examples:
@@ -78,7 +78,7 @@ implementation, running the ZIO effect with `Runtime.default.unsafe.run(...)`.
 Uses `AwsZioServerInterpreter` (`AwsRequest => RIO[Env, AwsResponse]`).
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda-zio" % "1.13.17"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda-zio" % "1.13.18"
 ```
 
 Example:
@@ -101,7 +101,7 @@ implements `main` and runs the polling loop via `AwsLambdaRuntime`.
 Uses `AwsCatsEffectServerInterpreter` (`AwsRequest => F[AwsResponse]`).
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.13.17"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.13.18"
 ```
 
 ### NodeJS runtime
@@ -120,7 +120,7 @@ either Future or cats-effect:
 Uses `AwsFutureServerInterpreter` (`AwsRequest => Future[AwsResponse]`).
 
 ```scala
-"com.softwaremill.sttp.tapir" %%% "tapir-aws-lambda-core" % "1.13.17"
+"com.softwaremill.sttp.tapir" %%% "tapir-aws-lambda-core" % "1.13.18"
 ```
 
 Example:
@@ -133,7 +133,7 @@ Supports both plain `Route[IO]` (via `catsIOHandler`) and `Resource[IO,
 Route[IO]]` (via `catsResourceHandler`).
 
 ```scala
-"com.softwaremill.sttp.tapir" %%% "tapir-aws-lambda" % "1.13.17"
+"com.softwaremill.sttp.tapir" %%% "tapir-aws-lambda" % "1.13.18"
 ```
 
 Example:
@@ -150,9 +150,9 @@ You can start by adding one of the following dependencies to your project, and
 then follow examples:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.13.17"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.13.17"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "1.13.17"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.13.18"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "1.13.18"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-cdk" % "1.13.18"
 ```
 
 ### Examples
