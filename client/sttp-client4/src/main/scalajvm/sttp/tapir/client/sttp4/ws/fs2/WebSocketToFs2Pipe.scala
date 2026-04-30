@@ -90,8 +90,7 @@ class WebSocketToFs2Pipe[_F[_]: Concurrent, R <: Fs2Streams[_F] with WebSockets]
             )
         }
         .collect { case (_, Right(d)) => d }
-        .unNoneTerminate
 
-      sends.drain.merge(receives)
+      sends.drain.merge(receives).unNoneTerminate
   }
 }
