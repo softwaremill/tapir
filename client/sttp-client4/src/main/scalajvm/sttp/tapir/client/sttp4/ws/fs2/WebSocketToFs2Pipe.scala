@@ -91,7 +91,16 @@ class WebSocketToFs2Pipe[_F[_]: Concurrent, R <: Fs2Streams[_F] with WebSockets]
         }
         .collect { case (_, Right(d)) => d }
         .unNoneTerminate
+        // `unNoneTerminate` halts `receives` immediately when the server's Close frame produces a
+        // `None`. This is important because after returning the Close frame, `ws.receive()` arms
+        // an internal poison pill - the next call raises `WebSocketClosed`. Halting here cancels
+        // the upstream `Stream.repeatEval(ws.receive())` before it can make that follow-up call.
 
-      sends.drain.merge(receives)
+      // `concurrently` (rather than `merge`) makes `sends` a side-effect of `receives`: when the
+      // output stream from the server terminates (e.g. on Close), the `sends` background fiber is
+      // interrupted, even if the user-supplied input stream is still emitting (or blocked waiting
+      // for more input). `merge` would instead wait for both arms to terminate, hanging until the
+      // input stream finishes on its own.
+      receives.concurrently(sends.drain)
   }
 }
