@@ -4,7 +4,6 @@ import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import fs2.Chunk
 import fs2.io.file.Files
-import fs2.io.toInputStreamResource
 import fs2.text.decodeWithCharset
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.{Charset, EntityDecoder, Headers, Media, Request, multipart}
@@ -44,9 +43,9 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
       case RawBodyType.ByteArrayBody   => asByteArray.map(RawValue(_))
       case RawBodyType.ByteBufferBody  => asChunk.map(c => RawValue(c.toByteBuffer))
       case RawBodyType.InputStreamBody =>
-        toInputStreamResource(body).allocated.map { case (is, _) => RawValue(is) }
+        Http4sInputStream.toInputStream(body).map(RawValue(_))
       case RawBodyType.InputStreamRangeBody =>
-        toInputStreamResource(body).allocated.map { case (is, _) => RawValue(InputStreamRange(() => is)) }
+        Http4sInputStream.toInputStream(body).map(is => RawValue(InputStreamRange(() => is)))
       case RawBodyType.FileBody =>
         serverOptions.createFile(serverRequest).flatMap { file =>
           val fileSink = Files[F].writeAll(file.toPath)
