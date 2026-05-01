@@ -95,8 +95,21 @@ trait ZioHttpInterpreter[R] {
         case _                                                                                                 => false
       }
 
+      val method = e.input.method match {
+        case Some(sttp.model.Method.GET)     => Method.GET
+        case Some(sttp.model.Method.POST)    => Method.POST
+        case Some(sttp.model.Method.PUT)     => Method.PUT
+        case Some(sttp.model.Method.DELETE)  => Method.DELETE
+        case Some(sttp.model.Method.HEAD)    => Method.HEAD
+        case Some(sttp.model.Method.OPTIONS) => Method.OPTIONS
+        case Some(sttp.model.Method.PATCH)   => Method.PATCH
+        case Some(sttp.model.Method.CONNECT) => Method.CONNECT
+        case Some(sttp.model.Method.TRACE)   => Method.TRACE
+        case _                               => Method.ANY // if no method (or custom) is specified, we match on any
+      }
+
       val routePattern: RoutePattern[Any] = if (hasPath) {
-        val initialPattern = RoutePattern(Method.ANY, PathCodec.empty).asInstanceOf[RoutePattern[Any]]
+        val initialPattern = RoutePattern(method, PathCodec.empty).asInstanceOf[RoutePattern[Any]]
         // The second tuple parameter specifies if PathCodec.trailing should be added to the route's pattern. It can
         // be added either because of a PathsCapture, or because of an noTrailingSlash input.
         val (p, addTrailing) = inputs
@@ -113,7 +126,7 @@ trait ZioHttpInterpreter[R] {
         if (addTrailing) (p / PathCodec.trailing).asInstanceOf[RoutePattern[Any]] else p
       } else {
         // if there are no path inputs, we return a catch-all
-        RoutePattern(Method.ANY, PathCodec.trailing).asInstanceOf[RoutePattern[Any]]
+        RoutePattern(method, PathCodec.trailing).asInstanceOf[RoutePattern[Any]]
       }
 
       ServerEndpointWithPattern(index, pathTemplate, routePattern, se)
