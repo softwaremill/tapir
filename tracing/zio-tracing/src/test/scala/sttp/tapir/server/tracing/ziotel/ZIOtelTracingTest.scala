@@ -22,7 +22,7 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.`export`.SimpleSpanProcessor
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import zio.telemetry.opentelemetry.tracing.Tracing
-import scala.jdk.CollectionConverters.*
+
 import zio.test.Spec
 import sttp.tapir.server.tracing.ziotel.ZIOtelTracing
 
@@ -54,9 +54,6 @@ object TracingTest extends ZIOSpecDefault {
   ): URLayer[ContextStorage, Tracing with InMemorySpanExporter with Tracer] =
     inMemoryTracerLayer >>> (Tracing.live(logAnnotated) ++ inMemoryTracerLayer)
 
-  def getFinishedSpans: ZIO[InMemorySpanExporter, Nothing, List[SpanData]] =
-    ZIO.serviceWith[InMemorySpanExporter](_.getFinishedSpanItems.asScala.toList)
-
   def spec: Spec[Any, Throwable] =
     suite("zio opentelemetry tapir interceptor")(test("report a simple trace") {
       for {
@@ -83,7 +80,7 @@ object TracingTest extends ZIOSpecDefault {
 
       } yield {
 
-        assert(exported.getFinishedSpanItems.asScala.toList.isEmpty)(isFalse)
+        assert(exported.getFinishedSpanItems.isEmpty())(isFalse)
       }
 
     }).provide(
