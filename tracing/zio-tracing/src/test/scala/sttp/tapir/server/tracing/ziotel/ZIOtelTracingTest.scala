@@ -13,9 +13,9 @@ import sttp.tapir.server.TestUtil.StringToResponseBody
 import sttp.tapir.server.interpreter._
 
 import scala.util.{Success, Try}
-import zio.test.*
-import zio.test.Assertion.*
-import zio.*
+import zio.test._
+import zio.test.Assertion._
+import zio._
 import io.opentelemetry.api.trace.Tracer
 import zio.telemetry.opentelemetry.context.ContextStorage
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
