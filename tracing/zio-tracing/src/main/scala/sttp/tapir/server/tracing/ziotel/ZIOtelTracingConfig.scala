@@ -50,7 +50,7 @@ case class ZIOtelTracingConfig(
         Attributes
     ),
     responseAttributes: (ServerRequest, ServerResponse[?]) => Attributes,
-    errorAttributes: StatusCode | Throwable => Attributes
+    errorAttributes: Either[StatusCode, Throwable] => Attributes
 )
 
 object ZIOtelTracingConfig {
@@ -66,7 +66,7 @@ object ZIOtelTracingConfig {
           Attributes
       ) = Defaults.spanNameFromEndpointAndAttributes,
       responseAttributes: (ServerRequest, ServerResponse[?]) => Attributes = Defaults.responseAttributes,
-      errorAttributes: StatusCode | Throwable => Attributes = Defaults.errorAttributes
+      errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes
   ): ZIOtelTracingConfig =
     new ZIOtelTracingConfig(
       propagator,
@@ -126,15 +126,15 @@ object ZIOtelTracingConfig {
     ): Attributes =
       Attributes.of(
         HttpAttributes.HTTP_RESPONSE_STATUS_CODE,
-        response.code.code.toLong
+        response.code.code.toLong.asInstanceOf[java.lang.Long]
       )
 
-    def errorAttributes(e: StatusCode | Throwable): Attributes =
-      e match {
-        case statusCode: StatusCode =>
+    def errorAttributes(error: Either[StatusCode, Throwable]): Attributes =
+      error match {
+        case Left(statusCode) =>
           // see footnote for error.type
           Attributes.of(ErrorAttributes.ERROR_TYPE, statusCode.code.toString)
-        case exception: Throwable =>
+        case Right(exception) =>
           val errorType = exception.getClass.getSimpleName
           Attributes.of(ErrorAttributes.ERROR_TYPE, errorType)
       }

@@ -1,6 +1,6 @@
 package sttp.tapir.server.tracing.ziotel
 
-import zio.*
+import zio._
 import zio.telemetry.opentelemetry.OpenTelemetry
 import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.api
