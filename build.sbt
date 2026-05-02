@@ -1194,13 +1194,13 @@ lazy val zioTracing: ProjectMatrix = (projectMatrix in file("tracing/zio-tracing
       "io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % Versions.openTelemetryRuntime,
 
       "dev.zio" %% "zio-test" % Versions.zio % Test,
-      "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
 
-      scalaTest.value % Test
+      "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
-  .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
+  .dependsOn(serverCore % CompileAndTest)
 
 // docs
 
