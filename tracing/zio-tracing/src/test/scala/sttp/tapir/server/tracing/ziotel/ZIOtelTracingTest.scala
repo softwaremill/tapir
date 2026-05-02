@@ -1,32 +1,23 @@
 package sttp.tapir.server.tracing.otel4s
 
-import cats.effect.IO
-import cats.effect.unsafe.implicits.global
-import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator
-import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
 import io.opentelemetry.sdk.trace.data.SpanData
-import org.scalatest.compatible.Assertion
-import org.scalatest.flatspec.AsyncFlatSpec
-import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model._
 import sttp.model.Uri._
-import sttp.model.headers.Forwarded
 import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.TestUtil.serverRequestFromUri
 import sttp.tapir.capabilities.NoStreams
-import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.TestUtil.StringToResponseBody
 import sttp.tapir.server.interpreter._
 
 import scala.util.{Success, Try}
 import zio.test.*
+import zio.test.Assertion.*
 import zio.*
 import io.opentelemetry.api.trace.Tracer
-import zio.telemetry.opentelemetry.context.{ContextStorage, IncomingContextCarrier, OutgoingContextCarrier}
+import zio.telemetry.opentelemetry.context.ContextStorage
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.`export`.SimpleSpanProcessor
 import io.opentelemetry.sdk.trace.SdkTracerProvider
@@ -34,10 +25,9 @@ import zio.telemetry.opentelemetry.tracing.Tracing
 import scala.jdk.CollectionConverters.*
 import zio.test.Spec
 import sttp.tapir.server.tracing.ziotel.ZIOtelTracing
-import sttp.tapir.server.tracing.ziotel.ZIOtelTracingConfig
+
 import sttp.tapir.ztapir.RIOMonadError
 import zio.telemetry.opentelemetry.OpenTelemetry
-import sttp.tapir.server.tracing.ziotel.ZIOtelSdk
 
 object TracingTest extends ZIOSpecDefault {
 
@@ -88,24 +78,17 @@ object TracingTest extends ZIOSpecDefault {
           _ => ZIO.succeed(())
         )
         _ <- interpreter(request)
-        span <- tracing.getCurrentSpanContextUnsafe
-        // spans <- testkit.finishedSpans
+
+        exported <- ZIO.service[InMemorySpanExporter]
+
       } yield {
-        // assertTrace(
-        //   spans,
-        //   TraceForestExpectation.unordered(
-        //     TraceExpectation.leaf(expectation)
-        //   )
-        // )
-        assertCompletes
+
+        assert(exported.getFinishedSpanItems.asScala.toList.isEmpty)(isFalse)
       }
 
     }).provide(
       OpenTelemetry.contextZIO,
-      ZIOtelSdk
-        .custom("Test") >+> OpenTelemetry
-        .logging(s"zio-simulator-test"),
-      OpenTelemetry.tracing("DemoServer")
+      tracingMockLayer(false)
     )
 }
 
