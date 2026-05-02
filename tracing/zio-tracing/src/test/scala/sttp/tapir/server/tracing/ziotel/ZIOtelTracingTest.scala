@@ -1,6 +1,5 @@
 package sttp.tapir.server.tracing.otel4s
 
-import io.opentelemetry.sdk.trace.data.SpanData
 import sttp.capabilities.Streams
 import sttp.model._
 import sttp.model.Uri._
