@@ -1,3 +1,4 @@
+import Versions.zioHttp
 import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
@@ -192,6 +193,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   opentelemetryTracing.projectRefs ++
   otel4sMetrics.projectRefs ++
   otel4sTracing.projectRefs ++
+  zioTracing.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   play29Json.projectRefs ++
@@ -1176,6 +1178,29 @@ lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-m
   )
   .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
+
+lazy val zioTracing: ProjectMatrix = (projectMatrix in file("tracing/zio-tracing"))
+  .dependsOn(zio)
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-zio-tracing",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-opentelemetry" % Versions.zioOpenTelemetry,
+      "dev.zio" %% "zio-opentelemetry-zio-logging" % Versions.zioOpenTelemetry,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
+      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-exporter-logging-otlp" % Versions.openTelemetry,
+      "io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % Versions.openTelemetryRuntime,
+
+      "dev.zio" %% "zio-test" % Versions.zio % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
+
+      "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest)
 
 // docs
 
