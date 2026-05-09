@@ -18,7 +18,7 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-generic" % "0.14.15",
   "com.beachape" %% "enumeratum" % "1.9.0",
   "com.beachape" %% "enumeratum-circe" % "1.9.0",
-  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.20" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % tapirVersion % Test
 )
 
