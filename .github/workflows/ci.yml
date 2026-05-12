@@ -139,6 +139,7 @@ jobs:
         name: 'tests-results-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'
         path: '**/test-reports/TEST*.xml'
     - name: Prepare release notes
+      if: github.ref == 'refs/heads/master' # this should not run on PR builds
       uses: release-drafter/release-drafter@c2e2804cc59f45f57076a99af580d0fedb697927 # v6, specifically v7.3.0
       with:
         config-name: release-drafter.yml
