@@ -212,6 +212,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   swaggerUiBundle.projectRefs ++
   redoc.projectRefs ++
   redocBundle.projectRefs ++
+  scalar.projectRefs ++
+  scalarBundle.projectRefs ++
   serverTests.projectRefs ++
   serverCore.projectRefs ++
   akkaHttpServer.projectRefs ++
@@ -1310,6 +1312,32 @@ lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(redoc, openapiDocs, sttpClient4 % Test, http4sServer % Test)
 
+lazy val scalar: ProjectMatrix = (projectMatrix in file("docs/scalar"))
+  .settings(commonSettings)
+  .settings(name := "tapir-scalar")
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
+lazy val scalarBundle: ProjectMatrix = (projectMatrix in file("docs/scalar-bundle"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-scalar-bundle",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(scalar, openapiDocs, sttpClient4 % Test, http4sServer % Test)
+
 // server
 
 lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
@@ -2329,6 +2357,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     sttpStub4Server,
     swaggerUiBundle,
     redocBundle,
+    scalarBundle,
     vertxServer,
     zioHttpServer,
     zioJson,
