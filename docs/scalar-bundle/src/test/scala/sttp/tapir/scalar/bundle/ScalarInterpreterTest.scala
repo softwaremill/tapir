@@ -104,7 +104,6 @@ class ScalarInterpreterTest extends AsyncFunSuite with Matchers {
           }
           val firstHistory = resp.history.head
           firstHistory.code shouldBe StatusCode.PermanentRedirect
-          println(firstHistory.header("Location"))
           firstHistory.header("Location") shouldBe Some(s"$redirectPath/${ScalarUIOptions.default.htmlName}")
 
           // test getting docs.yaml
