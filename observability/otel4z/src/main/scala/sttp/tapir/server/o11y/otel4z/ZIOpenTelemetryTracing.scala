@@ -19,6 +19,7 @@ import io.opentelemetry.api.trace.SpanKind
 
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.common.Attributes
+import zio.telemetry.opentelemetry.context.IncomingContextCarrier
 
 /** Interceptor which traces requests using otel4s.
   *
@@ -45,12 +46,15 @@ import io.opentelemetry.api.common.Attributes
   * }}}
   */
 
-class ZIOtelTracing(
+class ZIOpenTelemetryTracing(
     tracing: Tracing,
-    config: ZIOtelTracingConfig
+    config: ZIOpenTelemetryTracingConfig
 ) extends RequestInterceptor[Task] {
 
   import config._
+
+
+  def newCarrier() = IncomingContextCarrier.default()
 
   override def apply[R, B](
       responder: Responder[Task, B],
@@ -64,7 +68,7 @@ class ZIOtelTracing(
       )(implicit monad: MonadError[Task]): Task[RequestResult[B]] = tracing
         .extractSpanUnsafe(
           config.propagator,
-          config.carrier,
+          newCarrier(),
           request.showShort,
           spanKind = SpanKind.SERVER,
           attributes = config.requestAttributes(request)
@@ -182,7 +186,7 @@ class ZIOtelTracing(
     }
 }
 
-object ZIOtelTracing {
+object ZIOpenTelemetryTracing {
 
   /** Create a new ZIOpenTelemetryTracing interceptor with the provided Tracing and default configuration.
     *
@@ -191,19 +195,19 @@ object ZIOtelTracing {
     */
   def apply(
       tracing: Tracing
-  ): ZIOtelTracing =
-    new ZIOtelTracing(
+  ): ZIOpenTelemetryTracing =
+    new ZIOpenTelemetryTracing(
       tracing,
-      ZIOtelTracingConfig()
+      ZIOpenTelemetryTracingConfig()
     )
 
   /** Create a new ZIOpenTelemetryTracing interceptor with the provided Tracing and configuration.
     */
   def apply(
       tracing: Tracing,
-      config: ZIOtelTracingConfig
-  ): ZIOtelTracing =
-    new ZIOtelTracing(
+      config: ZIOpenTelemetryTracingConfig
+  ): ZIOpenTelemetryTracing =
+    new ZIOpenTelemetryTracing(
       tracing,
       config
     )

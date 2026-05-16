@@ -96,7 +96,7 @@ object ZIOpenTelemetryExample extends ZIOApp with ZIOpenTelemetry("zio-observabi
       // which is used to create spans for incoming requests and other operations.
       otel4zTracing(resourceName),
 
-      ZIOpenTelemetry.runtimeTelemetry
+      otel4zRuntimeTelemetry
 
       )
 
@@ -111,12 +111,12 @@ object ZIOpenTelemetryExample extends ZIOApp with ZIOpenTelemetry("zio-observabi
       tracing: Tracing
   ): ZioHttpServerOptions[Any] = ZioHttpServerOptions.customiseInterceptors
       .prependInterceptor(
-        ZIOtelTracing(tracing)
+        ZIOpenTelemetryTracing(tracing)
       )
       .appendInterceptor(
         CORSInterceptor.default
       )
-      .appendInterceptor(metricsInterceptor)
+      .appendInterceptor(otel4zMetricsInterceptor())
       .serverLog(
         ZioHttpServerOptions.defaultServerLog[Any]
       )

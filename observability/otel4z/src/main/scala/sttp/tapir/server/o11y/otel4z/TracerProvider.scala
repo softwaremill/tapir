@@ -10,6 +10,9 @@ import zio._
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingSpanExporter
 
+/**
+  * Provides a tracer provider for OpenTelemetry.
+  */
 object TracerProvider extends OtlpEndpoint {
 
   /** Prints to stdout in OTLP Json format

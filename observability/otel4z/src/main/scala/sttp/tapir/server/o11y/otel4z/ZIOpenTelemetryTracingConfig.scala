@@ -13,7 +13,7 @@ import io.opentelemetry.semconv.ServerAttributes
 import io.opentelemetry.semconv.ErrorAttributes
 import scala.annotation.nowarn
 import zio.telemetry.opentelemetry.tracing.propagation.TraceContextPropagator
-import zio.telemetry.opentelemetry.context.IncomingContextCarrier
+
 
 /** Configuration for OpenTelemetry Otel4z tracing of server requests, used by [[ZIOpenTelemetry]]. Use the apply method to override only
   * some of the configuration options, while using the defaults for the rest.
@@ -37,11 +37,9 @@ import zio.telemetry.opentelemetry.context.IncomingContextCarrier
   *   Calculates additional attributes of the span, given an error that occurred while processing the request (an exception); although
   *   usually, exceptions are translated into 5xx responses earlier in the interceptor chain.
   */
-case class ZIOtelTracingConfig(
+case class ZIOpenTelemetryTracingConfig(
     propagator: TraceContextPropagator,
-    carrier: IncomingContextCarrier[
-      scala.collection.mutable.Map[String, String]
-    ],
+    
 
     spanName: ServerRequest => String,
     requestAttributes: ServerRequest => Attributes,
@@ -53,12 +51,9 @@ case class ZIOtelTracingConfig(
     errorAttributes: Either[StatusCode, Throwable] => Attributes
 )
 
-object ZIOtelTracingConfig {
+object ZIOpenTelemetryTracingConfig {
   def apply(
       propagator: TraceContextPropagator = TraceContextPropagator.default,
-      carrier: IncomingContextCarrier[
-        scala.collection.mutable.Map[String, String]
-      ] = IncomingContextCarrier.default(),
       spanName: ServerRequest => String = Defaults.spanName,
       requestAttributes: ServerRequest => Attributes = Defaults.requestAttributes,
       spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (
@@ -67,10 +62,9 @@ object ZIOtelTracingConfig {
       ) = Defaults.spanNameFromEndpointAndAttributes,
       responseAttributes: (ServerRequest, ServerResponse[?]) => Attributes = Defaults.responseAttributes,
       errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes
-  ): ZIOtelTracingConfig =
-    new ZIOtelTracingConfig(
+  ): ZIOpenTelemetryTracingConfig =
+    new ZIOpenTelemetryTracingConfig(
       propagator,
-      carrier,
       spanName,
       requestAttributes,
       spanNameFromEndpointAndAttributes,
