@@ -79,7 +79,7 @@ object ZIOtelTracingTest extends ZIOSpecDefault  {
 
         fishedSpans = exported.getFinishedSpanItems()
 
-        span = fishedSpans.getFirst()
+        span = fishedSpans.get(0) // getFirst not supported in Java 11
 
         _ <- ZIO.debug(s"Span: $span")
 
