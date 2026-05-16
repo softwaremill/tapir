@@ -9,58 +9,43 @@ import io.opentelemetry.api
 import sttp.tapir.server.metrics.opentelemetry.OpenTelemetryMetrics
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import io.opentelemetry.sdk.logs.SdkLoggerProvider
-import io.opentelemetry.instrumentation.runtimetelemetry.RuntimeTelemetry
+
 import zio.telemetry.opentelemetry.context.ContextStorage
 
-/**
-  * Logging, Metrics and Tracing providers for OpenTelemetry.
+/** Logging, Metrics and Tracing providers for OpenTelemetry.
   */
 trait Logging {
   this: ZIOpentelemetryBase =>
 
-  /**
-   * Provides a logger provider for OpenTelemetry, which logs in OTLP Json format to stdout.
-   */ 
-  override def logProvider: URIO[Scope, Option[SdkLoggerProvider]] = LoggerProvider.grpc(resourceName)
+  /** Provides a logger provider for OpenTelemetry, which logs in OTLP Json format to stdout.
+    */
+  override def logProvider: URIO[Scope, Option[SdkLoggerProvider]] = LoggerProvider.grpc(attributes)
 
-  /**
-    * A OpenTelemetry logging layer, with configurable instrumentation scope name and log level.
+  /** A OpenTelemetry logging layer, with configurable instrumentation scope name and log level.
     *
     * @param instrumentationScopeName
     * @param logLevel
     * @return
     */
-  def otel4zLogging(instrumentationScopeName: String, logLevel: LogLevel = LogLevel.Info): URLayer[api.OpenTelemetry with ContextStorage, Unit] = OpenTelemetry.logging(
+  def otel4zLogging(
+      instrumentationScopeName: String,
+      logLevel: LogLevel = LogLevel.Info
+  ): URLayer[api.OpenTelemetry with ContextStorage, Unit] = OpenTelemetry.logging(
     instrumentationScopeName = instrumentationScopeName,
     logLevel = logLevel
   )
 }
 
-/**
-  * Metrics provider for OpenTelemetry.
+/** Metrics provider for OpenTelemetry.
   */
 trait Metrics {
   this: ZIOpentelemetryBase =>
 
-  /**
-   * Provides a meter provider for OpenTelemetry, which exports metrics in OTLP Json format to stdout.
-   */
-  override def meterProvider: URIO[Scope, Option[SdkMeterProvider]] = MeterProvider.grpc(resourceName)
-
-  /**
-    * A OpenTelemetry runtime metrics layer.
-    *
-    * @return
+  /** Provides a meter provider for OpenTelemetry, which exports metrics in OTLP Json format to stdout.
     */
-  def otel4zRuntimeTelemetry = ZLayer.fromZIO(
-    for {
-      openTelemetry <- ZIO.service[io.opentelemetry.api.OpenTelemetry]
-      _ <- ZIO.fromAutoCloseable(ZIO.succeed(RuntimeTelemetry.create(openTelemetry)))
-    } yield ()
-  )
+  override def meterProvider: URIO[Scope, Option[SdkMeterProvider]] = MeterProvider.grpc(attributes)
 
-  /**
-    * A OpenTelemetry metrics layer, with configurable instrumentation scope name, version and schema url.
+  /** A OpenTelemetry metrics layer, with configurable instrumentation scope name, version and schema url.
     *
     * @param instrumentationScopeName
     * @param instrumentationVersion
@@ -80,16 +65,17 @@ trait Metrics {
     logAnnotated = logAnnotated
   )
 
-  /**
-    * A OpenTelemetry metrics interceptor for tapir, with configurable instrumentation scope name.
-    * 
+  /** A OpenTelemetry metrics interceptor for tapir, with configurable instrumentation scope name.
+    *
     * It uses the OpenTelemetry instance from the environment, which is provided by the [[ZIOpenTelemetry]] trait bootstrap layer.
     *
     * @param instrumentationScopeName
     * @param otel
     * @return
     */
-  def otel4zMetricsInterceptor(instrumentationScopeName: String = "tapir")(implicit otel: api.OpenTelemetry): MetricsRequestInterceptor[Task] = {
+  def otel4zMetricsInterceptor(
+      instrumentationScopeName: String = "tapir"
+  )(implicit otel: api.OpenTelemetry): MetricsRequestInterceptor[Task] = {
     val meter: api.metrics.Meter = otel.meterBuilder(instrumentationScopeName).build()
 
     val metrics = OpenTelemetryMetrics.default[Task](meter)
@@ -99,11 +85,10 @@ trait Metrics {
 
 }
 
-
 trait Traces {
   this: ZIOpentelemetryBase =>
 
-  override def tracerProvider: URIO[Scope, Option[SdkTracerProvider]] = TracerProvider.grpc(resourceName)
+  override def tracerProvider: URIO[Scope, Option[SdkTracerProvider]] = TracerProvider.grpc(attributes)
 
   def otel4zTracing(
       instrumentationScopeName: String,
@@ -117,4 +102,3 @@ trait Traces {
     logAnnotated = logAnnotated
   )
 }
-

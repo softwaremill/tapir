@@ -1,9 +1,8 @@
-package sttp.tapir.server.o11y.otel4s
+package sttp.tapir.server.o11y.otel4z
 
 import scala.util.{Success, Try}
 
 import sttp.capabilities.Streams
-import sttp.model._
 import sttp.model.Uri._
 import sttp.monad.MonadError
 import sttp.tapir._
@@ -29,7 +28,7 @@ import zio.test.Assertion._
 import sttp.tapir.ztapir.RIOMonadError
 import zio.telemetry.opentelemetry.OpenTelemetry
 
-object ZIOtelTracingTest extends ZIOSpecDefault {
+object ZIOtelTracingTest extends ZIOSpecDefault  {
 
   implicit val bodyListener: BodyListener[Task, String] = new BodyListener[Task, String] {
     override def onComplete(body: String)(cb: Try[Unit] => Task[Unit]): Task[String] = cb(Success(())).map(_ => body)
@@ -72,15 +71,20 @@ object ZIOtelTracingTest extends ZIOSpecDefault {
           ZIOTestRequestBody,
           StringToResponseBody,
           List(ZIOpenTelemetryTracing(tracing)),
-          _ => ZIO.succeed(())
+          _ => ZIO.succeed(()) @@ tracing.aspects.span("interpreter")
         )
         _ <- interpreter(request)
 
         exported <- ZIO.service[InMemorySpanExporter]
 
-      } yield {
+        span = exported.getFinishedSpanItems.getFirst()
 
-        assert(exported.getFinishedSpanItems.isEmpty())(isFalse)
+        _ <- ZIO.debug(s"Span: $span")
+
+      } yield {
+        assert(exported.getFinishedSpanItems.size())(equalTo(1)) &&
+        assert(span.getName)(equalTo("GET /person")) &&
+        assert(span.getAttributes.size())(equalTo(6))
       }
 
     }).provide(
