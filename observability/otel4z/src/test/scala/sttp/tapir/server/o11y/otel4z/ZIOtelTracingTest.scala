@@ -77,13 +77,15 @@ object ZIOtelTracingTest extends ZIOSpecDefault  {
 
         exported <- ZIO.service[InMemorySpanExporter]
 
-        span = exported.getFinishedSpanItems.getFirst()
+        fishedSpans = exported.getFinishedSpanItems()
+
+        span = fishedSpans.getFirst()
 
         _ <- ZIO.debug(s"Span: $span")
 
       } yield {
-        assert(exported.getFinishedSpanItems.size())(equalTo(1)) &&
-        assert(span.getName)(equalTo("GET /person")) &&
+        assert(fishedSpans.size())(equalTo(1)) &&
+        assert(span.getName())(equalTo("GET /person")) &&
         assert(span.getAttributes.size())(equalTo(6))
       }
 
