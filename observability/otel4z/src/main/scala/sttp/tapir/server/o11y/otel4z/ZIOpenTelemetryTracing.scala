@@ -53,7 +53,6 @@ class ZIOpenTelemetryTracing(
 
   import config._
 
-
   def newCarrier() = IncomingContextCarrier.default()
 
   override def apply[R, B](

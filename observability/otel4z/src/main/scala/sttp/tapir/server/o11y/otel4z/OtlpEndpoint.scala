@@ -1,6 +1,6 @@
 package sttp.tapir.server.o11y.otel4z
 
-trait OtlpEndpoint {
+object OtlpEndpoint {
 
   /** OTLP gRPC endpoint to export telemetry data to.
     *
@@ -15,11 +15,8 @@ trait OtlpEndpoint {
     * @param envVar
     * @return
     */
-  protected def getEndpoint(envVar: String): String =
+  def apply(envVar: String): Option[String] =
     sys.env
       .get(envVar)
       .orElse(sys.env.get("OTEL_EXPORTER_OTLP_ENDPOINT"))
-      .getOrElse(
-        "http://localhost:4317"
-      )
 }

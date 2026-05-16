@@ -1195,10 +1195,8 @@ lazy val otel4z: ProjectMatrix = (projectMatrix in file("observability/otel4z"))
       "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-exporter-logging-otlp" % Versions.openTelemetry,
-      "io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % Versions.openTelemetryRuntime,
       "dev.zio" %% "zio-test" % Versions.zio % Test,
       "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
-
       "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test
     )
   )

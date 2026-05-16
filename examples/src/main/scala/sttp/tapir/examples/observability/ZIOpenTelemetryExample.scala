@@ -22,6 +22,7 @@ import zio.http._
 import zio.telemetry.opentelemetry.metrics.Meter
 import zio.telemetry.opentelemetry.tracing.Tracing
 import sttp.tapir.server.interceptor.cors.CORSInterceptor
+import io.opentelemetry.api.common.Attributes
 
 
 
@@ -34,7 +35,7 @@ import sttp.tapir.server.interceptor.cors.CORSInterceptor
   * To effectively produce traces, you need to set the OTEL_EXPORTER_OTLP_ENDPOINT environment variable to the address of your
   * OpenTelemetry.
   */
-object ZIOpenTelemetryExample extends ZIOApp with ZIOpenTelemetry("zio-observability-example") with Logging with Metrics with Traces {
+object ZIOpenTelemetryExample extends ZIOApp with ZIOpenTelemetry("zio-observability-example", Some("1.0.0"), Some("dev")) with Logging with Metrics with Traces {
 
   /** The server options for the ZIOOpenTelemetry trait.
     *
@@ -43,6 +44,8 @@ object ZIOpenTelemetryExample extends ZIOApp with ZIOpenTelemetry("zio-observabi
     * program.
     */
 
+
+  override def extraAttributes: Attributes = Attributes.builder().put("stack", "zio").build()
 
 
   // The main program - start the server on port 8080
@@ -80,7 +83,7 @@ object ZIOpenTelemetryExample extends ZIOApp with ZIOpenTelemetry("zio-observabi
     */
   override def run =
     program.provideSome[Environment](
-      Scope.default,
+      
       Server.default,
 
       // This layers provides sample custom metric, which will be visible in the OpenTelemetry collector and can be used to verify that the metrics are working.
@@ -96,9 +99,13 @@ object ZIOpenTelemetryExample extends ZIOApp with ZIOpenTelemetry("zio-observabi
       // which is used to create spans for incoming requests and other operations.
       otel4zTracing(resourceName),
 
-      otel4zRuntimeTelemetry
+      // This layer provides the OpenTelemetry Runtime Metrics service, which is used to expose ZIO runtime metrics.
+      // Scope.default,
+      // RuntimeMetrics.otel4zRuntimeTelemetry
 
       )
+
+
 
 
     /** The server options for the ZIOpenTelemetry trait.
@@ -158,6 +165,23 @@ object TickCounter {
       } yield ()
     )
 }
+
+/*
+
+To provide runtime metrics, you can use the OpenTelemetry Runtime Telemetry module, which is available as a separate dependency.
+It provides a RuntimeTelemetry class that can be instantiated with an OpenTelemetry instance and will automatically collect and export runtime metrics.
+
+"io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % <version>
+
+object RuntimeMetrics {
+  def otel4zRuntimeTelemetry = ZLayer.fromZIO(
+    for {
+      openTelemetry <- ZIO.service[io.opentelemetry.api.OpenTelemetry]
+      _ <- ZIO.fromAutoCloseable(ZIO.succeed(RuntimeTelemetry.create(openTelemetry)))
+    } yield ()
+  )
+}
+*/
 
 class ZIOHttpApi(using tracing: Tracing) {
 
