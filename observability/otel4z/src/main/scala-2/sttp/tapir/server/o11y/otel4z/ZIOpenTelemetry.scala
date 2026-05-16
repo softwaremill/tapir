@@ -13,4 +13,3 @@ trait ZIOpenTelemetryFull extends ZIOtelBase with Metrics with Traces {
   this: ZIOApp =>
 }
 
-object ZIOpenTelemetry extends ZIOpenTelemetryBase

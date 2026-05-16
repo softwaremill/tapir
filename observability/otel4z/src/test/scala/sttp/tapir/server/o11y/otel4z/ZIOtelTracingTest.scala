@@ -11,7 +11,7 @@ import sttp.tapir.TestUtil.serverRequestFromUri
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter._
-import sttp.tapir.server.o11y.otel4z.ZIOtelTracing
+import sttp.tapir.server.o11y.otel4z.ZIOpenTelemetryTracing
 import sttp.tapir.server.TestUtil.StringToResponseBody
 
 import io.opentelemetry.api.trace.Tracer
@@ -71,7 +71,7 @@ object ZIOtelTracingTest extends ZIOSpecDefault {
           _ => List(endpointa),
           ZIOTestRequestBody,
           StringToResponseBody,
-          List(ZIOtelTracing(tracing)),
+          List(ZIOpenTelemetryTracing(tracing)),
           _ => ZIO.succeed(())
         )
         _ <- interpreter(request)
