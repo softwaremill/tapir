@@ -69,7 +69,7 @@ object Versions {
   val dogstatsdClient = "4.4.5"
   val nettyAll = "4.2.13.Final"
   val logback = "1.5.32"
-  val slf4j = "2.0.17"
+  val slf4j = "2.0.18"
   val jsoniter = "2.38.12"
   val otel4s = "1.0.0"
 }
