@@ -29,3 +29,7 @@ aws-lambda-zio-template.yaml
 .java-version
 
 file-uploads
+
+# TraceVault — local only, do not commit
+.tracevault/
+.claude/settings.local.json
