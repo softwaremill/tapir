@@ -2,6 +2,8 @@ package sttp.tapir.server.o11y.ziopentelemetry
 
 import zio._
 
+import collection.mutable.{Map => MutableMap}
+
 import sttp.monad.MonadError
 import sttp.model.{StatusCode => SttpStatusCode}
 import sttp.tapir.AnyEndpoint
@@ -53,7 +55,7 @@ class ZIOpenTelemetryTracing(
 
   import config._
 
-  def newCarrier() = IncomingContextCarrier.default()
+  private def extractCarrier(request: ServerRequest) = IncomingContextCarrier.default(MutableMap.from(request.headers.map(h => (h.name, h.value))))
 
   override def apply[R, B](
       responder: Responder[Task, B],
@@ -67,7 +69,7 @@ class ZIOpenTelemetryTracing(
       )(implicit monad: MonadError[Task]): Task[RequestResult[B]] = tracing
         .extractSpanUnsafe(
           config.propagator,
-          newCarrier(),
+          extractCarrier(request),
           request.showShort,
           spanKind = SpanKind.SERVER,
           attributes = config.requestAttributes(request)
