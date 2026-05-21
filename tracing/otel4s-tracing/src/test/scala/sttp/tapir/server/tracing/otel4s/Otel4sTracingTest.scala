@@ -143,7 +143,7 @@ class Otel4sTracingTest extends AsyncFlatSpec with Matchers {
 
   private def assertTrace(spans: List[SpanData], expectation: TraceForestExpectation): Assertion =
     TraceExpectations.check(spans, expectation) match {
-      case Right(_) => succeed
+      case Right(_)         => succeed
       case Left(mismatches) =>
         fail(TraceExpectations.format(mismatches))
     }

@@ -73,7 +73,10 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
               // due to Scala 3.8 compatibility (the implicit can no longer be applied as a regular argument)
               .securityIn(queryAnyFormat[StringWrapper, TextPlain]("x", Codec.listHead(addToTrailCodec("x"))))
               .in(queryAnyFormat[StringWrapper, TextPlain]("y", Codec.listHead(addToTrailCodec("y"))))
-              .in(EndpointIO.Body(RawBodyType.StringBody(java.nio.charset.StandardCharsets.UTF_8), addToTrailCodec("z"), EndpointIO.Info.empty))
+              .in(
+                EndpointIO
+                  .Body(RawBodyType.StringBody(java.nio.charset.StandardCharsets.UTF_8), addToTrailCodec("z"), EndpointIO.Info.empty)
+              )
               .serverSecurityLogic[Unit, Identity](_ => Left(()))
               .serverLogic(_ => _ => Right(()))
           ),
