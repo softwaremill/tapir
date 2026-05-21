@@ -1,3 +1,4 @@
+import Versions.zioHttp
 import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
@@ -192,6 +193,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   opentelemetryTracing.projectRefs ++
   otel4sMetrics.projectRefs ++
   otel4sTracing.projectRefs ++
+  zioOpenTelemetry.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   play29Json.projectRefs ++
@@ -1178,6 +1180,28 @@ lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-m
   )
   .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
+
+lazy val zioOpenTelemetry: ProjectMatrix = (projectMatrix in file("observability/zio-opentelemetry"))
+  .dependsOn(zio, zioHttpServer, opentelemetryMetrics)
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-zio-opentelemetry",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-logging" % Versions.zioLogging,
+      "dev.zio" %% "zio-logging-slf4j2" % Versions.zioLogging,
+      "dev.zio" %% "zio-opentelemetry" % Versions.zioOpenTelemetry,
+      "dev.zio" %% "zio-opentelemetry-zio-logging" % Versions.zioOpenTelemetry,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
+      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-exporter-logging-otlp" % Versions.openTelemetry,
+      "dev.zio" %% "zio-test" % Versions.zio % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
+      "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore % CompileAndTest)
 
 // docs
 
@@ -2361,7 +2385,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     vertxServer,
     zioHttpServer,
     zioJson,
-    zioMetrics
+    zioMetrics,
+    zioOpenTelemetry
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355

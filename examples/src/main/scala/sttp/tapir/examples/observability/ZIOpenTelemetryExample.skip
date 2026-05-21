@@ -1,0 +1,197 @@
+// {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=zio; docs=Swagger UI}: ZIO OpenTelemetry tracing example
+
+//> using option -Xkind-projector
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.18
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.18
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.18
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.18
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.18
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.18
+
+package sttp.tapir.examples.observability
+
+import io.opentelemetry.api.OpenTelemetry
+
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.o11y.otel4z._
+import sttp.tapir.server.ziohttp._
+import sttp.tapir.ztapir._
+
+import zio._
+import zio.http._
+import zio.telemetry.opentelemetry.metrics.Meter
+import zio.telemetry.opentelemetry.tracing.Tracing
+import sttp.tapir.server.interceptor.cors.CORSInterceptor
+import io.opentelemetry.api.common.Attributes
+
+
+
+
+/** This example demonstrates how to use ZIO with Tapir and OpenTelemetry for tracing. It sets up a simple HTTP server with a single
+  * endpoint that returns "Hello, World!" and includes tracing for incoming requests.
+  *
+  * To enable tracing, we use the ZIOpenTelemetry trait, which provides a Tracing service.
+  *
+  * To effectively produce traces, you need to set the OTEL_EXPORTER_OTLP_ENDPOINT environment variable to the address of your
+  * OpenTelemetry.
+  */
+object ZIOpenTelemetryExample extends ZIOApp with ZIOpenTelemetry("zio-observability-example", Some("1.0.0"), Some("dev")) with Logging with Metrics with Traces {
+
+  /** The server options for the ZIOOpenTelemetry trait.
+    *
+    * This is a separate method pulled by the bootstrap layer, as it is used to provide the OpenTelemetry layer to the server options, which
+    * are provided by the ZIO application itself. This allows the OpenTelemetry layer to be used for both the server options and the main
+    * program.
+    */
+
+
+  override def extraAttributes: Attributes = Attributes.builder().put("stack", "zio").build()
+
+
+  // The main program - start the server on port 8080
+  val program = for
+    _ <- Console.printLine("Starting server on http://localhost:8080")
+
+    given OpenTelemetry <- ZIO.service[OpenTelemetry]
+
+    given Tracing <- ZIO.service[Tracing]
+
+//    m <- ZIO.service[Meter]
+
+    httpApi = ZIOHttpApi()
+
+    endpoints = httpApi.endpoints
+
+    httpApp = ZioHttpInterpreter(serverOptions).toHttp(
+      endpoints
+    )
+    _ <- Server.serve(httpApp)
+  yield ()
+
+  /** Run the program.
+    *
+    * Provide the necessary layers for the program, including the ZIOOpenTelemetry layer and the server layer.
+    *
+    * Note that if not metric are exposed by a service, the meter layer will not be used, hence provideSomeLayer have to be used to ignore
+    * the meter layer (part of bootstrap layer Environment):
+    * {{{
+    *   override def run =
+    *    program.provideSome[Environment](
+    *      Server.default
+    * )
+    * }}}
+    */
+  override def run =
+    program.provideSome[Environment](
+      
+      Server.default,
+
+      // This layers provides sample custom metric, which will be visible in the OpenTelemetry collector and can be used to verify that the metrics are working.
+       TickCounter.tickRefLayer,
+       TickCounter.tickCounterLayer,
+      // This layer provides the OpenTelemetry Metrics service.
+      // Can be used to create custom metrics.
+      // Note this will be different Meter instance than the one used by the ZIO runtime or Tapir.
+      otel4zMetrics(resourceName),
+      // This layer publishes ZIO logs to OpenTelemetry, which will be correlated with traces and metrics.
+      otel4zLogging(resourceName),
+      // This layer provides the OpenTelemetry Tracing service, 
+      // which is used to create spans for incoming requests and other operations.
+      otel4zTracing(resourceName),
+
+      // This layer provides the OpenTelemetry Runtime Metrics service, which is used to expose ZIO runtime metrics.
+      // Scope.default,
+      // RuntimeMetrics.otel4zRuntimeTelemetry
+
+      )
+
+
+
+
+    /** The server options for the ZIOpenTelemetry trait.
+    *
+    * This is the server options that will be used to run the ZIO application, hence provided by bootstrap. It includes the OpenTelemetry
+    * instance and the ContextStorage.
+    */
+  private def serverOptions(implicit
+      otel: OpenTelemetry,
+      tracing: Tracing
+  ): ZioHttpServerOptions[Any] = ZioHttpServerOptions.customiseInterceptors
+      .prependInterceptor(
+        ZIOpenTelemetryTracing(tracing)
+      )
+      .appendInterceptor(
+        CORSInterceptor.default
+      )
+      .appendInterceptor(otel4zMetricsInterceptor())
+      .serverLog(
+        ZioHttpServerOptions.defaultServerLog[Any]
+      )
+      .options
+  }  
+    
+
+
+/**
+  * A simple counter that increments every second and is exposed as an OpenTelemetry metric.
+  * 
+  *  This is used to demonstrate how to create custom metrics
+  */
+object TickCounter {
+  val tickRefLayer: ULayer[Ref[Long]] =
+    ZLayer(
+      for {
+        ref <- Ref.make(0L)
+        _ <- ref
+          .update(_ + 1)
+          .repeat[Any, Long](Schedule.spaced(1.second))
+          .forkDaemon
+      } yield ref
+    )
+
+  // Records the number of seconds elapsed since the application startup
+  val tickCounterLayer: RLayer[Meter & Ref[Long], Unit] =
+    ZLayer.scoped(
+      for {
+        meter <- ZIO.service[Meter]
+        ref <- ZIO.service[Ref[Long]]
+        // Initialize observable counter instrument
+        _ <- meter.observableCounter("tick_counter") { om =>
+          for {
+            tick <- ref.get
+            _ <- om.record(tick)
+          } yield ()
+        }
+      } yield ()
+    )
+}
+
+/*
+
+To provide runtime metrics, you can use the OpenTelemetry Runtime Telemetry module, which is available as a separate dependency.
+It provides a RuntimeTelemetry class that can be instantiated with an OpenTelemetry instance and will automatically collect and export runtime metrics.
+
+"io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry-java17" % <version>
+
+object RuntimeMetrics {
+  def otel4zRuntimeTelemetry = ZLayer.fromZIO(
+    for {
+      openTelemetry <- ZIO.service[io.opentelemetry.api.OpenTelemetry]
+      _ <- ZIO.fromAutoCloseable(ZIO.succeed(RuntimeTelemetry.create(openTelemetry)))
+    } yield ()
+  )
+}
+*/
+
+class ZIOHttpApi(using tracing: Tracing) {
+
+  val helloEndpoint: ServerEndpoint[Any, Task] = sttp.tapir.endpoint.get
+    .in("hello")
+    .out(stringBody)
+    .zServerLogic(_ => 
+      ZIO.logInfo("Handling /hello request") *>
+      ZIO.succeed("Hello, World!") @@ tracing.aspects.span("hello-logic"))
+
+  val endpoints: List[ServerEndpoint[Any, Task]] = List(helloEndpoint)
+
+}
