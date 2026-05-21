@@ -193,7 +193,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   opentelemetryTracing.projectRefs ++
   otel4sMetrics.projectRefs ++
   otel4sTracing.projectRefs ++
-  otel4z.projectRefs ++
+  zioOpenTelemetry.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   play29Json.projectRefs ++
@@ -1181,11 +1181,11 @@ lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-m
   .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
 
-lazy val otel4z: ProjectMatrix = (projectMatrix in file("observability/otel4z"))
+lazy val zioOpenTelemetry: ProjectMatrix = (projectMatrix in file("observability/zio-opentelemetry"))
   .dependsOn(zio, zioHttpServer, opentelemetryMetrics)
   .settings(commonSettings)
   .settings(
-    name := "tapir-otel4z",
+    name := "tapir-zio-opentelemetry",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-logging" % Versions.zioLogging,
       "dev.zio" %% "zio-logging-slf4j2" % Versions.zioLogging,
@@ -2386,7 +2386,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioHttpServer,
     zioJson,
     zioMetrics,
-    otel4z
+    zioOpenTelemetry
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
