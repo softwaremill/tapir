@@ -1049,7 +1049,7 @@ lazy val pekkoGrpcExamples: ProjectMatrix = (projectMatrix in file("grpc/pekko-e
   .settings(
     name := "tapir-pekko-grpc-examples",
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-discovery" % "1.4.0",
+      "org.apache.pekko" %% "pekko-discovery" % "1.6.0",
       slf4j
     ),
     fork := true
