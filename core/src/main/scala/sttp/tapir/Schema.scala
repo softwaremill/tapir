@@ -460,6 +460,15 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       new AttributeKey[EncodedDiscriminatorValue]("sttp.tapir.Schema.EncodedDiscriminatorValue")
   }
 
+  /** Captures the canonical (un-field-enriched) form of a named schema that was used as a product field together with per-usage
+    * annotations (e.g. `@deprecated`, `@description`). Documentation interpreters use this reference when building component
+    * definitions to avoid leaking field-level customisations into the referenced type (#5187). Set only by schema derivation.
+    */
+  case class OriginalForDocs(schema: Schema[_])
+  object OriginalForDocs {
+    val Attribute: AttributeKey[OriginalForDocs] = new AttributeKey[OriginalForDocs]("sttp.tapir.Schema.OriginalForDocs")
+  }
+
   /** @param typeParameterShortNames
     *   full name of type parameters, name is legacy and kept only for backward compatibility
     */

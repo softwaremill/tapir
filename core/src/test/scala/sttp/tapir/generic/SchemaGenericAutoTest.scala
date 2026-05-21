@@ -133,6 +133,15 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "add meta-data to schema from annotations" in {
     val schema = implicitly[Schema[I]]
+    val canonicalK = Schema[K](
+      SProduct(
+        List(
+          field(FieldName("double"), implicitly[Schema[Double]].format("double64")),
+          field(FieldName("str"), stringSchema.format("special-string"))
+        )
+      ),
+      Some(SName("sttp.tapir.generic.K"))
+    )
     schema shouldBe Schema[I](
       SProduct(
         List(
@@ -147,15 +156,10 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           ),
           field(
             FieldName("child", "child-k-name"),
-            Schema[K](
-              SProduct(
-                List(
-                  field(FieldName("double"), implicitly[Schema[Double]].format("double64")),
-                  field(FieldName("str"), stringSchema.format("special-string"))
-                )
-              ),
-              Some(SName("sttp.tapir.generic.K"))
-            ).deprecated(true).description("child-k-desc")
+            canonicalK
+              .deprecated(true)
+              .description("child-k-desc")
+              .attribute(Schema.OriginalForDocs.Attribute, Schema.OriginalForDocs(canonicalK))
           )
         )
       ),

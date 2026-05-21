@@ -35,12 +35,19 @@ trait SchemaMagnoliaDerivation {
     SProduct(
       ctx.parameters.map { p =>
         val annotations = mergeAnnotations(p.annotations, p.inheritedAnnotations)
-        val pSchema = enrichSchema(p.typeclass, annotations)
+        val pSchema = withOriginalForDocs(p.typeclass, enrichSchema(p.typeclass, annotations))
         val encodedName = getEncodedName(annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
 
         SProductField[T, p.PType](FieldName(p.label, encodedName), pSchema, t => Some(p.dereference(t)))
       }.toList
     )
+
+  // #5187: if field-level annotations changed the named schema, preserve the canonical version so that
+  // documentation interpreters can use it for the referenced component definition.
+  private def withOriginalForDocs[X](original: Schema[X], enriched: Schema[X]): Schema[X] =
+    if ((enriched ne original) && original.name.isDefined)
+      enriched.attribute(Schema.OriginalForDocs.Attribute, Schema.OriginalForDocs(original))
+    else enriched
 
   private def typeNameToSchemaName(typeName: TypeName, annotations: Seq[Any]): Schema.SName = {
     def allTypeArguments(tn: TypeName): Seq[TypeName] = tn.typeArguments.flatMap(tn2 => tn2 +: allTypeArguments(tn2))

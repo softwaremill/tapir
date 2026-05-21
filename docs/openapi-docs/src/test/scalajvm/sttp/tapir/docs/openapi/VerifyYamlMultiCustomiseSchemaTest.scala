@@ -65,6 +65,16 @@ class VerifyYamlMultiCustomiseSchemaTest extends AnyFunSuite with Matchers {
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  test("deprecated nested case class field, when referenced case class is not used elsewhere (#5187)") {
+    val expectedYaml = load("multi_customise_schema/expected_deprecated_only_field.yml")
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.in(jsonBody[HasOnlyDeprecatedReference]), Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlMultiCustomiseSchemaTest {
@@ -73,4 +83,5 @@ object VerifyYamlMultiCustomiseSchemaTest {
 
   case class HasOptionalDeprecated(field1: Data1, @Schema.annotations.deprecated field2: Option[Data1])
   case class HasCollectionDeprecated(field1: List[Data1], @Schema.annotations.deprecated field2: List[Data1])
+  case class HasOnlyDeprecatedReference(field1: String, @Schema.annotations.deprecated field2: Data1)
 }
