@@ -55,7 +55,12 @@ class ZIOpenTelemetryTracing(
 
   import config._
 
-  private def extractCarrier(request: ServerRequest) = IncomingContextCarrier.default(MutableMap.from(request.headers.map(h => (h.name, h.value))))
+  private def extractCarrier(request: ServerRequest) = {
+    val headers = request.headers
+    val carrier = MutableMap.empty[String, String]
+    headers.foreach(h => carrier.put(h.name, h.value))
+    IncomingContextCarrier.default(carrier)
+  }
 
   override def apply[R, B](
       responder: Responder[Task, B],
