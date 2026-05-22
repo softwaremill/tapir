@@ -1,13 +1,16 @@
 // {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=zio; docs=Swagger UI}: ZIO OpenTelemetry tracing example
 
 //> using option -Xkind-projector
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.18
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.18
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.18
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.18
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.18
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.18
-//> using dep dev.zio::zio-logging-slf4j2:0.7.44
+//> using dep com.softwaremill.sttp.tapir::tapir-core::1.13.19
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.19
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.19
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.19
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.19
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.19
+//> using dep dev.zio::zio-logging:2.5.3
+//> using dep dev.zio::zio-logging-slf4j2:2.5.3
+//> using dep ch.qos.logback:logback-classic:1.5.32
+
 
 package sttp.tapir.examples.observability
 
@@ -19,12 +22,13 @@ import sttp.tapir.server.ziohttp._
 import sttp.tapir.ztapir._
 
 import zio._
+import zio.logging.backend.SLF4J
 import zio.http._
 import zio.telemetry.opentelemetry.metrics.Meter
 import zio.telemetry.opentelemetry.tracing.Tracing
 import sttp.tapir.server.interceptor.cors.CORSInterceptor
 import io.opentelemetry.api.common.Attributes
-import zio.logging.backend.SLF4J
+
 
 
 
