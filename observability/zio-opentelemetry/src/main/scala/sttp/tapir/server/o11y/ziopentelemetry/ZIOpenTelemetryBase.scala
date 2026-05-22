@@ -2,7 +2,6 @@ package sttp.tapir.server.o11y.ziopentelemetry
 
 import io.opentelemetry.api
 import zio._
-import zio.logging.backend.SLF4J
 import zio.telemetry.opentelemetry.context.ContextStorage
 
 import zio.telemetry.opentelemetry.OpenTelemetry
@@ -70,9 +69,14 @@ protected trait ZIOpenTelemetryBase {
 
   /** The console log layer for the ZIOpenTelemetry trait.
     *
-    * Default implementation uses SLF4J for logging to stdout.
+    * Default implementation uses the default ZIO console logger, which logs to stdout.
+    *  You can override this to use a different logger, e.g. SLF4J, Logback, etc.
+    * To use SLF4J, you can use the following layer:
+    * {{{
+    *  def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
+    * }}}
     */
-  def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
+  def consoleLogLayer: ZLayer[Any, Nothing, Unit] = ZLayer.unit
 
   /** The OpenTelemetry providers for the ZIOpenTelemetry trait.
     *

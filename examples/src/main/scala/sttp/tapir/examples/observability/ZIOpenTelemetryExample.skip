@@ -7,13 +7,14 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.18
 //> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.18
 //> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.18
+//> using dep dev.zio::zio-logging-slf4j2:0.7.44
 
 package sttp.tapir.examples.observability
 
 import io.opentelemetry.api.OpenTelemetry
 
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.o11y.otel4z._
+import sttp.tapir.server.o11y.ziopentelemetry._
 import sttp.tapir.server.ziohttp._
 import sttp.tapir.ztapir._
 
@@ -23,6 +24,7 @@ import zio.telemetry.opentelemetry.metrics.Meter
 import zio.telemetry.opentelemetry.tracing.Tracing
 import sttp.tapir.server.interceptor.cors.CORSInterceptor
 import io.opentelemetry.api.common.Attributes
+import zio.logging.backend.SLF4J
 
 
 
@@ -44,6 +46,7 @@ object ZIOpenTelemetryExample extends ZIOApp with ZIOpenTelemetry("zio-observabi
     * program.
     */
 
+  override def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
   override def extraAttributes: Attributes = Attributes.builder().put("stack", "zio").build()
 

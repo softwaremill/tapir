@@ -1187,8 +1187,6 @@ lazy val zioOpenTelemetry: ProjectMatrix = (projectMatrix in file("observability
   .settings(
     name := "tapir-zio-opentelemetry",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-logging" % Versions.zioLogging,
-      "dev.zio" %% "zio-logging-slf4j2" % Versions.zioLogging,
       "dev.zio" %% "zio-opentelemetry" % Versions.zioOpenTelemetry,
       "dev.zio" %% "zio-opentelemetry-zio-logging" % Versions.zioOpenTelemetry,
       "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
