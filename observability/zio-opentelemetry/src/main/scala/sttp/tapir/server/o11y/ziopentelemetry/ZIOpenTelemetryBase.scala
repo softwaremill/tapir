@@ -17,7 +17,6 @@ import io.opentelemetry.semconv.DeploymentAttributes
   *
   * By default, it uses the OTEL_EXPORTER_OTLP_ENDPOINT environment variable to configure the OpenTelemetry exporter.
   *
-  *   - Uses SLF4J for logging to stdout.
   *   - Logs, Metrics, Traces are sent to the OpenTelemetry collector through gRPC.
   */
 protected trait ZIOpenTelemetryBase {
@@ -69,23 +68,35 @@ protected trait ZIOpenTelemetryBase {
 
   /** The console log layer for the ZIOpenTelemetry trait.
     *
-    * Default implementation uses the default ZIO console logger, which logs to stdout.
-    *  You can override this to use a different logger, e.g. SLF4J, Logback, etc.
-    * To use SLF4J, you can use the following layer:
+    * Default implementation uses the default ZIO console logger, which logs to stdout. You can override this to use a different logger,
+    * e.g. SLF4J, Logback, etc. To use SLF4J, you can use the following layer:
     * {{{
     *  def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
     * }}}
     */
   def consoleLogLayer: ZLayer[Any, Nothing, Unit] = ZLayer.unit
 
-  /** The OpenTelemetry providers for the ZIOpenTelemetry trait.
+  /** The OpenTelemetry [[SdkLoggerProvider]] for the ZIOpenTelemetry trait.
     *
-    * @return
+    * By default, no logger provider is provided. You can override this to provide a logger provider, e.g. to export logs in OTLP gRPC
+    * format to collector.
+    *
+    * Or mixing in the [[Logging]] trait, which provides a logger provider that exports logs in OTLP gRPC format to collector.
     */
   def logProvider: URIO[Scope, Option[SdkLoggerProvider]] = ZIO.none
 
+  /** The OpenTelemetry [[SdkMeterProvider]] for the ZIOpenTelemetry trait. By default, no meter provider is provided. You can override this
+    * to provide a meter provider, e.g. to export metrics in OTLP gRPC format to collector.
+    *
+    * Or mixing in the [[Metrics]] trait, which provides a meter provider that exports metrics in OTLP gRPC format to collector.
+    */
   def meterProvider: URIO[Scope, Option[SdkMeterProvider]] = ZIO.none
 
+  /** The OpenTelemetry [[SdkTracerProvider]] for the ZIOpenTelemetry trait. By default, no tracer provider is provided. You can override
+    * this to provide a tracer provider, e.g. to export traces in OTLP gRPC format to collector.
+    *
+    * Or mixing in the [[Traces]] trait, which provides a tracer provider that exports traces in OTLP gRPC format to collector.
+    */
   def tracerProvider: URIO[Scope, Option[SdkTracerProvider]] = ZIO.none
 
   final def otelProviders: URIO[Scope, OtelProviders] = for {

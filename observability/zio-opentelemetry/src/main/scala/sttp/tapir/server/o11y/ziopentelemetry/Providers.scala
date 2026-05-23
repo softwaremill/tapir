@@ -12,12 +12,16 @@ import io.opentelemetry.sdk.logs.SdkLoggerProvider
 
 import zio.telemetry.opentelemetry.context.ContextStorage
 
-/** Logging, Metrics and Tracing providers for OpenTelemetry.
+/** Logging provider for OpenTelemetry.
+  *
+  * The providers are configured to export logs in OTLP gRPC format to collector.
+  *
+  * The providers are used by the OpenTelemetry layers, which are/must be provided by the [[ZIOpenTelemetry]] trait bootstrap layer.
   */
 trait Logging {
   this: ZIOpenTelemetryBase =>
 
-  /** Provides a logger provider for OpenTelemetry, which logs in OTLP Json format to stdout.
+  /** Provides a logger provider for OpenTelemetry, which logs in OTLP gRPC format with [[LoggerProvider]]
     */
   override def logProvider: URIO[Scope, Option[SdkLoggerProvider]] = LoggerProvider.grpc(attributes)
 
@@ -36,12 +40,16 @@ trait Logging {
   )
 }
 
-/** Metrics provider for OpenTelemetry.
+/** Metrics providers for OpenTelemetry.
+  *
+  * The providers are configured to export metricsin OTLP gRPC format to collector.
+  *
+  * The providers are used by the OpenTelemetry layers, which are/must be provided by the [[ZIOpenTelemetry]] trait bootstrap layer.
   */
 trait Metrics {
   this: ZIOpenTelemetryBase =>
 
-  /** Provides a meter provider for OpenTelemetry, which exports metrics in OTLP Json format to stdout.
+  /** Provides a meter provider for OpenTelemetry, which exports metrics in OTLP gRPC format with [[MeterProvider]]
     */
   override def meterProvider: URIO[Scope, Option[SdkMeterProvider]] = MeterProvider.grpc(attributes)
 
@@ -85,9 +93,17 @@ trait Metrics {
 
 }
 
+/** Tracing providers for OpenTelemetry.
+  *
+  * The providers are configured to export traces in OTLP gRPC format to collector.
+  *
+  * The providers are used by the OpenTelemetry layers, which are/must be provided by the [[ZIOpenTelemetry]] trait bootstrap layer.
+  */
 trait Traces {
   this: ZIOpenTelemetryBase =>
 
+  /** Provides a tracer provider for OpenTelemetry, which exports traces in OTLP gRPC format with [[TracerProvider]]
+    */
   override def tracerProvider: URIO[Scope, Option[SdkTracerProvider]] = TracerProvider.grpc(attributes)
 
   def otel4zTracing(
