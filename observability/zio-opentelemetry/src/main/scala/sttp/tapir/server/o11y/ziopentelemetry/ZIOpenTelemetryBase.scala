@@ -99,11 +99,16 @@ protected trait ZIOpenTelemetryBase {
     */
   def tracerProvider: URIO[Scope, Option[SdkTracerProvider]] = ZIO.none
 
-  final def otelProviders: URIO[Scope, OtelProviders] = for {
+  /** The OpenTelemetry providers for the ZIOpenTelemetry trait.
+    *
+    * This is the layer that will be used to provide the OpenTelemetry providers to the ZIO application. It includes the OpenTelemetry
+    * logger provider, the OpenTelemetry meter provider, and the OpenTelemetry tracer provider.
+    */
+  final def otelProviders: ULayer[OtelProviders] = ZLayer.scoped[Any](for {
     logger <- logProvider
     meter <- meterProvider
     tracer <- tracerProvider
-  } yield OtelProviders(tracer, meter, logger)
+  } yield OtelProviders(tracer, meter, logger))
 
   /** The bootstrap layer for the ZIOpenTelemetry trait.
     *
@@ -112,7 +117,7 @@ protected trait ZIOpenTelemetryBase {
     */
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Environment] =
     consoleLogLayer >>>
-      OpenTelemetry.contextZIO >+> (ZLayer.scoped[Any](otelProviders) >>>
+      OpenTelemetry.contextZIO >+> (otelProviders >>>
         ZIOpenTelemetryLayer
           .live(withZIOMetrics))
 
