@@ -255,18 +255,13 @@ enum ColorEnum:
 given Schema.derivedEnumeration.defaultStringBased
 ```
 
-To parse json bodies containing enum fields using `jsoniter-scala`, an additional configuration flag is required:
+You might need additional json-library-specific configuration, so that the Tapir & JSON configurations match.
+For example, in case of `jsoniter-scala`:
 
 ```scala
-enum ColorEnum:
-  case Green extends ColorEnum
-  case Pink extends ColorEnum
-
 given JsonValueCodec[ColorEnum] = JsonCodecMaker.make(
-    CodecMakerConfig.withDiscriminatorFieldName(None)
-  )
-
-given Schema.derivedEnumeration.defaultStringBased
+  CodecMakerConfig.withDiscriminatorFieldName(None)
+)
 ```
 
 This ensures that enum fields are parsed as plain strings instead of objects with a "type" discriminator field, e.g. `{"type": "Green"}`
