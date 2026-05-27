@@ -255,6 +255,22 @@ enum ColorEnum:
 given Schema.derivedEnumeration.defaultStringBased
 ```
 
+To parse json bodies containing enum fields using `jsoniter-scala`, an additional configuration flag is required:
+
+```scala
+enum ColorEnum:
+  case Green extends ColorEnum
+  case Pink extends ColorEnum
+
+given JsonValueCodec[ColorEnum] = JsonCodecMaker.make(
+    CodecMakerConfig.withDiscriminatorFieldName(None)
+  )
+
+given Schema.derivedEnumeration.defaultStringBased
+```
+
+This ensures that enum fields are parsed as plain strings instead of objects with a "type" discriminator field, e.g. `{"type": "Green"}`
+
 ### Scala 3 string-based constant union types to enum
 
 If a union type is a string-based constant union type, it can be auto-derived as field type or manually derived by using the `Schema.derivedStringBasedUnionEnumeration[T]` method.
