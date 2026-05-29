@@ -70,6 +70,6 @@ object Versions {
   val nettyAll = "4.2.13.Final"
   val logback = "1.5.33"
   val slf4j = "2.0.18"
-  val jsoniter = "2.38.12"
+  val jsoniter = "2.38.13"
   val otel4s = "1.0.0"
 }
