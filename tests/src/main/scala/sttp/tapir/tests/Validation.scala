@@ -31,7 +31,7 @@ object Validation {
     implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
     implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
     implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
-    endpoint.in(jsonBody[ValidFruitAmount])
+    endpoint.post.in(jsonBody[ValidFruitAmount])
   }
 
   val in_valid_optional_json: PublicEndpoint[Option[ValidFruitAmount], Unit, Unit, Any] = {
@@ -42,7 +42,7 @@ object Validation {
     implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
     implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
     implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
-    endpoint.in(jsonBody[Option[ValidFruitAmount]])
+    endpoint.post.in(jsonBody[Option[ValidFruitAmount]])
   }
 
   val in_valid_query: PublicEndpoint[IntWrapper, Unit, Unit, Any] = {

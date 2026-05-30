@@ -1,7 +1,7 @@
 package sttp.tapir.server.interpreter
 
 import sttp.capabilities.StreamMaxLengthExceededException
-import sttp.model.{Headers, StatusCode}
+import sttp.model.{Headers, Method, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
@@ -9,7 +9,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.model.{InvalidMultipartBodyException, MaxContentLength, ServerResponse, ValuedEndpointOutput}
 import sttp.tapir.server.{model, _}
-import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, TapirFile}
 import sttp.tapir.EndpointInfo
 import sttp.tapir.AttributeKey
 import java.util.concurrent.ConcurrentHashMap
@@ -111,7 +111,16 @@ class ServerInterpreter[R, F[_], B, S](
     val rawValues = ConcurrentHashMap.newKeySet[RawValue[?]]()
     val addRawValue: RawValue[?] => Unit = rawValues.add(_): Unit
 
+    // When no explicit method is defined across the whole endpoint, default to GET, consistent with the OpenAPI docs
+    // interpreter, which uses getOrElse(Method.GET) for the same case.
+    val implicitMethodFailure: Option[DecodeBasicInputsResult.Failure] =
+      if (se.endpoint.method.isEmpty && request.method != Method.GET) {
+        val implicitGet = EndpointInput.FixedMethod(Method.GET, Codec.idPlain(), EndpointIO.Info.empty)
+        Some(DecodeBasicInputsResult.Failure(implicitGet, DecodeResult.Mismatch(Method.GET.method, request.method.method)))
+      } else None
+
     (for {
+      _ <- resultOrValueFrom(implicitMethodFailure)
       // 2. if the decoding failed, short-circuiting further processing with the decode failure that has a lower sort
       // index (so that the correct one is passed to the decode failure handler)
       _ <- resultOrValueFrom(DecodeBasicInputsResult.higherPriorityFailure(securityBasicInputs, regularBasicInputs))

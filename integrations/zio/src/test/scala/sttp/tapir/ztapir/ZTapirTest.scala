@@ -54,7 +54,7 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
     override def underlying: Any = ???
     override def pathSegments: List[String] = List("foo", "bar")
     override def queryParameters: QueryParams = QueryParams()
-    override def method: Method = ???
+    override def method: Method = Method.GET
     override def uri: Uri = ???
     override def headers: scala.collection.immutable.Seq[Header] = scala.collection.immutable.Seq(Header("X-User-Name", "John"))
     override def attribute[T](k: AttributeKey[T]): Option[T] = None

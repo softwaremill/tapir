@@ -148,7 +148,7 @@ object Basic {
   val in_single_path: PublicEndpoint[Unit, Unit, Unit, Any] = endpoint.get.in("api")
 
   val in_extract_request_out_string: PublicEndpoint[String, Unit, String, Any] =
-    endpoint.in(extractFromRequest(_.method.method)).out(stringBody)
+    endpoint.in(extractFromRequest(_.queryParameters.get("foo").get)).out(stringBody)
 
   val in_string_out_status: PublicEndpoint[String, Unit, StatusCode, Any] =
     endpoint.in(query[String]("fruit")).out(statusCode)
@@ -157,7 +157,7 @@ object Basic {
     endpoint.delete.in("api" / "delete").out(statusCode(StatusCode.Ok).description("ok"))
 
   val in_string_out_content_type_string: PublicEndpoint[String, Unit, (String, String), Any] =
-    endpoint.in("api" / "echo").in(stringBody).out(stringBody).out(header[String]("Content-Type"))
+    endpoint.post.in("api" / "echo").in(stringBody).out(stringBody).out(header[String]("Content-Type"))
 
   val in_content_type_out_string: PublicEndpoint[String, Unit, String, Any] =
     endpoint.in("api" / "echo").in(header[String]("Content-Type")).out(stringBody)
