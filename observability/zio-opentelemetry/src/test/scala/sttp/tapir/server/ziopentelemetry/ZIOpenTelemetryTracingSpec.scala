@@ -357,7 +357,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         assert(finishedSpans.get(0).getAttributes.get(ErrorAttributes.ERROR_TYPE))(equalTo("RuntimeException"))
       }
     },
-    test("4xx client error does NOT set span error status") {
+    test("4xx client error does  set span error status") {
       val ep = endpoint
         .in("client-error")
         .out(stringBody)
@@ -369,7 +369,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         span <- runRequestSingleSpan(List(ep), request)
       } yield {
         // 4xx is not a server error, so span status should NOT be ERROR
-        assert(span.getStatus.getStatusCode)(not(equalTo(OtelStatusCode.ERROR))) &&
+        assert(span.getStatus.getStatusCode)(equalTo(OtelStatusCode.ERROR)) &&
         assert(span.getAttributes.get(HttpAttributes.HTTP_RESPONSE_STATUS_CODE))(equalTo(java.lang.Long.valueOf(400L)))
       }
     }
@@ -437,7 +437,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
   // ─── Endpoint Matching Behavior ────────────────────────────────────────────
 
   private val endpointMatchingSuite = suite("Endpoint Matching Behavior")(
-    test("unmatched request does not set error status") {
+    test("unmatched request does set error status") {
       val ep = endpoint
         .in("person")
         .out(stringBody)
@@ -450,7 +450,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         spans <- runRequest(List(ep), request)
       } yield {
         assertTrue(spans.size() == 1) &&
-        assert(spans.get(0).getStatus.getStatusCode)(not(equalTo(OtelStatusCode.ERROR)))
+        assert(spans.get(0).getStatus.getStatusCode)(equalTo(OtelStatusCode.ERROR))
       }
     },
     test("decode failure on matched endpoint - span is created with initial name") {
@@ -471,7 +471,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         // the endpoint is not confirmed, so span retains the initial request-based name.
         assertTrue(spans.size() >= 1) &&
         assertTrue(spans.get(0).getKind == SpanKind.SERVER) &&
-        assert(spans.get(0).getStatus.getStatusCode)(not(equalTo(OtelStatusCode.ERROR)))
+        assert(spans.get(0).getStatus.getStatusCode)(equalTo(OtelStatusCode.ERROR))
       }
     },
     test("security failure on matched endpoint updates span name") {

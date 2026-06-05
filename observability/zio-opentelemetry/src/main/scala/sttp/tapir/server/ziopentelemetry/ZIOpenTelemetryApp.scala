@@ -96,23 +96,22 @@ trait ZIOpenTelemetryApp extends ZIOApp {
     tracer <- tracerProvider
   } yield OtelProviders(tracer, meter, logger))
 
-  /** The console log layer, provide a console logger to the ZIO application.
+  /** The base log layer.
     *
     * Default implementation does nothing, hence uses the default ZIO console logger, which logs to stdout.
     *
-    * You should override this to use a different logger:
+    * You should override this to use a different logger.
+    * Exmples include:
+    *.  - To bridge SLF4J to ZIO logging, you can use the following layer:
+    * {{{
+    *   override def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Slf4jBridge.init(...)
+    * }}}
     *   - No logs at all:
-    *
     * {{{
     *   override def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers
     * }}}
-    *
-    *   - SLF4J, Logback, etc. To use SLF4J, you can use the following layer:
-    *     {{{
-    *   override def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
-    *     }}}
     */
-  def consoleLogLayer: ZLayer[Any, Nothing, Unit] = ZLayer.unit
+  def baseLogLayer: ZLayer[Any, Nothing, Unit] = ZLayer.unit
 
   /** The OpenTelemetry metrics layer for the ZIOpenTelemetry trait.
     *
@@ -154,7 +153,7 @@ trait ZIOpenTelemetryApp extends ZIOApp {
   )
 
   def observabilityLayer: ULayer[ContextStorage & OpenTelemetrySdk & Meter & Tracing] =
-    consoleLogLayer >>>
+    baseLogLayer >>>
       OpenTelemetry.contextZIO >+> (otelProviders >>>
         openTelemetryLive) >+> (otel4zLogging ++ zioMetrics ++ otel4zMetrics(resourceName) ++ otel4zTracing(resourceName))
 }

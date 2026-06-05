@@ -82,6 +82,9 @@ class ZIOpenTelemetryTracing(
         )
         .flatMap { case (span, finalize) =>
           handleRequest(span, finalize, request, endpoints)
+            .tapError { e =>
+                spanError(span, finalize)(Right(e))
+             }
         }
 
       /** Handle the request, setting span attributes and status based on the result.
@@ -136,7 +139,7 @@ class ZIOpenTelemetryTracing(
             }
             ZIO.succeed(response.copy(body = Some(Right(ZioStreamHttpResponseBody(wrapped, contentLength)).asInstanceOf[B])))
           case _ =>
-            ZIO.when(response.isServerError)(
+            ZIO.when(response.isServerError || response.isClientError)(
               spanError(span, finalize)(Left(response.code))
             ) *> finalize *> ZIO.succeed(response)
         })
