@@ -16,11 +16,17 @@ trait Logging {
 
   /** The log level to use for the OpenTelemetry logger provider.
     *
-    * Uses the `OTEL_LOG_LEVEL` environment variable to determine the log level.
+    * Uses the [[oltpLogLevel]] method to determine the log level, can be overridden to provide a different log level logic.
     *
     * By default, this is set to `INFO`. You can override this to change the log level, e.g. to `DEBUG` for more verbose logging.
     */
-  def logLevel = sys.env.getOrElse("OTEL_LOG_LEVEL", "INFO") match {
+  def logLevel = oltpLogLevel
+
+  /** Uses the `OTEL_LOG_LEVEL` environment variable to determine the log level.
+    *
+    * By default, this is set to `INFO`. You can override this to change the log level, e.g. to `DEBUG` for more verbose logging.
+    */
+  final protected def oltpLogLevel = sys.env.getOrElse("OTEL_LOG_LEVEL", "INFO").toUpperCase match {
     case "DEBUG" => LogLevel.Debug
     case "INFO"  => LogLevel.Info
     case "WARN"  => LogLevel.Warning
@@ -32,12 +38,21 @@ trait Logging {
 
   /** The OTLP endpoint to use for logging.
     *
+    * Default uses the `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` environment variable to determine the endpoint. If not set, it will use the
+    * `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable. If neither is set, it will return `None`.
+    *
+    * @return
+    */
+  def logEndpoint = otelLogEndpoint
+
+  /** The OTLP endpoint to use for logging.
+    *
     * Uses the `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` environment variable to determine the endpoint. If not set, it will use the
     * `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable. If neither is set, it will return `None`.
     *
     * @return
     */
-  def logEndpoint: ZIO[Any, Nothing, Option[String]] = OtlpEndpoint("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") match {
+  final protected def otelLogEndpoint: ZIO[Any, Nothing, Option[String]] = OtlpEndpoint("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") match {
     case None =>
       ZIO.logInfo(
         "No OTLP logs endpoint configured, skipping OpenTelemetry logging setup. To enable it, set either OTEL_EXPORTER_OTLP_LOGS_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT environment variable."

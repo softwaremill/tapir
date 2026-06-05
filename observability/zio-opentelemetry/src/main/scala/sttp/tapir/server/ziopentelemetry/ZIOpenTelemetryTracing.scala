@@ -138,8 +138,7 @@ class ZIOpenTelemetryTracing(
           case _ =>
             ZIO.when(response.isServerError)(
               spanError(span, finalize)(Left(response.code))
-            ) *> finalize
-              *> ZIO.succeed(response)
+            ) *> finalize *> ZIO.succeed(response)
         })
 
       private def handleStreamError(cause: Cause[Any], span: Span, finalize: UIO[Any]): UIO[Unit] =
