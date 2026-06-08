@@ -270,6 +270,8 @@ lazy val rawAllAggregates = core.projectRefs ++
 
 lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
 
+lazy val java17Projects: Seq[String] = Seq(zioJson).flatMap(_.projectRefs).flatMap(projectId)
+
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
     case ProjectRef(_, id) => Some(id)
@@ -285,7 +287,7 @@ lazy val allAggregates: Seq[ProjectReference] = {
     println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
-  if (sys.env.isDefinedAt("ONLY_LOOM")) {
+  val filteredByLoom = if (sys.env.isDefinedAt("ONLY_LOOM")) {
     println("[info] ONLY_LOOM defined, including only loom-based projects")
     filteredByNative.filter(p => projectId(p).forall(loomProjects.contains))
   } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
@@ -294,6 +296,13 @@ lazy val allAggregates: Seq[ProjectReference] = {
   } else {
     println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
     filteredByNative.filterNot(p => projectId(p).forall(loomProjects.contains))
+  }
+  if(sys.env.isDefinedAt("ONLY_JAVA_17")) {
+    println("[info] JAVA_17 defined, including only java17-based projects")
+    filteredByLoom.filter(p => projectId(p).forall(java17Projects.contains))
+  } else {
+    println("[info] JAVA_17 *not* defined, *not* including java17-based projects")
+    filteredByLoom.filterNot(p => projectId(p).forall(java17Projects.contains))
   }
 }
 

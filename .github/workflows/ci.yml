@@ -25,9 +25,10 @@ jobs:
       matrix:
         scala-version: [ "2.12", "2.13", "3" ]
         target-platform: [ "JVM", "JS", "Native" ]
-        java: [ "11", "21" ]
+        java: [ "11", "17", "21" ]
         exclude:
           - java: "21"
+          - java: "17"
         include: # Restricted to build only specific Loom-based modules
           - scala-version: "2.13"
             target-platform: "JVM"
@@ -35,6 +36,12 @@ jobs:
           - scala-version: "3"
             target-platform: "JVM"
             java: "21"
+          - scala-version: "2.13"
+            target-platform: "JVM"
+            java: "17"
+          - scala-version: "3"
+            target-platform: "JVM"
+            java: "17"
     steps:
     - name: Checkout
       uses: actions/checkout@v6
@@ -77,6 +84,9 @@ jobs:
     - name: Enable Loom-specific modules
       if: matrix.java == '21'
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
+    - name: Enable Java 17 modules
+      if: matrix.java == '17'
+      run: echo "ONLY_JAVA_17=1" >> $GITHUB_ENV
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     - name: Compile core & server-core with next Scala 3
