@@ -5,13 +5,22 @@ import sttp.tapir.generated.TapirGeneratedEndpoints.*
 import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes.*
 
 class JsonRoundtrip extends AnyFreeSpec with Matchers {
-  "an inline enum nested in a json object can be round-tripped by generated jsoniter serdes" in {
-    val json = """{"message":{"role":"assistant","content":"hi"}}"""
-    val expected = ChatResponse(ChatResponseMessage(ChatResponseMessageRole.assistant, Some("hi")))
+  // Without a dedicated codec for an inline enum, jsoniter derives it as a discriminated ADT and throws
+  // "expected '{'" on the bare string value. We exercise inline enums reached as a direct property, an array
+  // element, a map value, and through a single-element allOf, asserting each round-trips its bare-string values.
+  "inline enums nested in a json object (direct, array, map, allOf) can be round-tripped by generated jsoniter serdes" in {
+    val json =
+      """{"message":{"role":"assistant","roles":["user","tool"],"labels":{"a":"system"},"priority":"user","content":"hi"}}"""
+    val expected = ChatResponse(
+      ChatResponseMessage(
+        role = ChatResponseMessageRole.assistant,
+        roles = Seq(ChatResponseMessageRolesItem.user, ChatResponseMessageRolesItem.tool),
+        labels = Map("a" -> ChatResponseMessageLabelsItem.system),
+        priority = ChatResponseMessagePriority.user,
+        content = Some("hi")
+      )
+    )
 
-    // Fails on the current code: the codegen does not emit a JsonValueCodec for the inline enum
-    // 'ChatResponseMessageRole', so jsoniter's derivation for ChatResponse treats the enum as a
-    // discriminated ADT and throws "expected '{'" when decoding the bare string "assistant".
     readFromString[ChatResponse](json) shouldEqual expected
     readFromString[ChatResponse](writeToString(expected)) shouldEqual expected
   }
