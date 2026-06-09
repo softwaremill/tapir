@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: Inline enum json test for jsoniter-scala
+  version: 1.0.0
+paths:
+  '/chat':
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatResponse'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+components:
+  schemas:
+    # 'message' is an inline object (not a $ref) carrying an inline string enum 'role'.
+    # The codegen names the inline enum '<object><field>' => ChatResponseMessageRole.
+    ChatResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: object
+          required:
+            - role
+          properties:
+            role:
+              type: string
+              enum:
+                - system
+                - user
+                - assistant
+                - tool
+            content:
+              type: string
