@@ -74,8 +74,8 @@ object ScalarInterpreter {
     *   Options passed to [[Scalar]] to customise how the documentation is exposed, e.g. the path.
     * @param addServerWhenContextPathPresent
     *   Should a default server entry be added to the generated [[OpenAPI]] model pointing to the context path, if a non-empty context path
-    *   is specified in `scalarUIOptions`. In presence of a context path, either the endpoints need to be prefixed with the context path,
-    *   or a server entry must be added, for invocations from within the Scalar UI to work properly. Defaults to `true`.
+    *   is specified in `scalarUIOptions`. In presence of a context path, either the endpoints need to be prefixed with the context path, or
+    *   a server entry must be added, for invocations from within the Scalar UI to work properly. Defaults to `true`.
     */
   def apply(
       openAPIInterpreterOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default,
