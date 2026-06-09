@@ -126,7 +126,7 @@ object CORSConfig {
   val default: CORSConfig = CORSConfig(
     allowedOrigin = AllowedOrigin.All,
     allowedCredentials = AllowedCredentials.Deny,
-    allowedMethods = AllowedMethods.Some(Set(Method.GET, Method.HEAD, Method.POST, Method.PUT, Method.DELETE)),
+    allowedMethods = AllowedMethods.Some(Set(Method.GET, Method.HEAD, Method.POST, Method.PUT, Method.PATCH, Method.DELETE)),
     allowedHeaders = AllowedHeaders.Reflect,
     exposedHeaders = ExposedHeaders.None,
     maxAge = MaxAge.Default,
