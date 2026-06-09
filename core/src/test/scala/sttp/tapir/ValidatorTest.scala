@@ -228,6 +228,11 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     v.apply(0) shouldBe List(ValidationError(v, 0))
   }
 
+  it should "show enumeration with a closing parenthesis" in {
+    val v = Validator.enumeration(List("A", "B", "C"))
+    v.show shouldBe Some("in(A,B,C)")
+  }
+
 }
 
 sealed trait Color
