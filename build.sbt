@@ -275,6 +275,10 @@ lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, 
 lazy val zioJvmProjects: Seq[String] =
   zioJson.projectRefs.flatMap(projectId).filterNot(id => id.contains("JS") || id.contains("Native"))
 
+// mockserver-netty 7.x (a test-only dependency of sttp-mock-server) requires JDK 17+, so the module is built and
+// tested only on the JDK 21 jobs (alongside the Loom and zio-json JVM projects), not on the JDK 11 jobs.
+lazy val jdk17Projects: Seq[String] = sttpMockServer.projectRefs.flatMap(projectId)
+
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
     case ProjectRef(_, id) => Some(id)
@@ -299,14 +303,16 @@ lazy val allAggregates: Seq[ProjectReference] = {
     filteredByNative.filterNot(p => projectId(p).forall(zioJvmProjects.contains))
   }
   if (sys.env.isDefinedAt("ONLY_LOOM")) {
-    println("[info] ONLY_LOOM defined, including only loom-based and zio-json JVM projects")
-    filteredByZio.filter(p => projectId(p).forall(id => loomProjects.contains(id) || zioJvmProjects.contains(id)))
+    println("[info] ONLY_LOOM defined, including only loom-based, zio-json JVM and JDK17+ projects")
+    filteredByZio.filter(p =>
+      projectId(p).forall(id => loomProjects.contains(id) || zioJvmProjects.contains(id) || jdk17Projects.contains(id))
+    )
   } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
     println("[info] ALSO_LOOM defined, including also loom-based projects")
     filteredByZio
   } else {
-    println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByZio.filterNot(p => projectId(p).forall(loomProjects.contains))
+    println("[info] ONLY_LOOM *not* defined, *not* including loom-based and JDK17+ projects")
+    filteredByZio.filterNot(p => projectId(p).forall(id => loomProjects.contains(id) || jdk17Projects.contains(id)))
   }
 }
 
