@@ -212,6 +212,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   swaggerUiBundle.projectRefs ++
   redoc.projectRefs ++
   redocBundle.projectRefs ++
+  scalar.projectRefs ++
+  scalarBundle.projectRefs ++
   serverTests.projectRefs ++
   serverCore.projectRefs ++
   akkaHttpServer.projectRefs ++
@@ -268,6 +270,11 @@ lazy val rawAllAggregates = core.projectRefs ++
 
 lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
 
+// zio-json's JVM artifact requires JDK 17+, so the JVM variant is built on the JDK 21 jobs (alongside the Loom
+// projects). The JS/Native variants are unaffected (no JVM runtime loads their classes), and stay on the JDK 11 jobs.
+lazy val zioJvmProjects: Seq[String] =
+  zioJson.projectRefs.flatMap(projectId).filterNot(id => id.contains("JS") || id.contains("Native"))
+
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
     case ProjectRef(_, id) => Some(id)
@@ -283,15 +290,23 @@ lazy val allAggregates: Seq[ProjectReference] = {
     println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
-  if (sys.env.isDefinedAt("ONLY_LOOM")) {
-    println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(p => projectId(p).forall(loomProjects.contains))
-  } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
-    println("[info] ALSO_LOOM defined, including also loom-based projects")
+  // zio-json's JVM artifact requires JDK 17+, so it's only included on the JDK 21 jobs (where WITH_ZIO is set)
+  val filteredByZio = if (sys.env.isDefinedAt("WITH_ZIO")) {
+    println("[info] WITH_ZIO defined, including zio-json JVM in the aggregate projects")
     filteredByNative
   } else {
+    println("[info] WITH_ZIO *not* defined, *not* including zio-json JVM in the aggregate projects")
+    filteredByNative.filterNot(p => projectId(p).forall(zioJvmProjects.contains))
+  }
+  if (sys.env.isDefinedAt("ONLY_LOOM")) {
+    println("[info] ONLY_LOOM defined, including only loom-based and zio-json JVM projects")
+    filteredByZio.filter(p => projectId(p).forall(id => loomProjects.contains(id) || zioJvmProjects.contains(id)))
+  } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
+    println("[info] ALSO_LOOM defined, including also loom-based projects")
+    filteredByZio
+  } else {
     println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(p => projectId(p).forall(loomProjects.contains))
+    filteredByZio.filterNot(p => projectId(p).forall(loomProjects.contains))
   }
 }
 
@@ -1067,8 +1082,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.6.1",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.6.1",
+      "io.prometheus" % "prometheus-metrics-core" % "1.7.0",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.7.0",
       scalaTest.value % Test
     )
   )
@@ -1309,6 +1324,32 @@ lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(redoc, openapiDocs, sttpClient4 % Test, http4sServer % Test)
+
+lazy val scalar: ProjectMatrix = (projectMatrix in file("docs/scalar"))
+  .settings(commonSettings)
+  .settings(name := "tapir-scalar")
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
+lazy val scalarBundle: ProjectMatrix = (projectMatrix in file("docs/scalar-bundle"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-scalar-bundle",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(scalar, openapiDocs, sttpClient4 % Test, http4sServer % Test)
 
 // server
 
@@ -2206,8 +2247,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.9" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.9" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.14" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.14" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
@@ -2329,6 +2370,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     sttpStub4Server,
     swaggerUiBundle,
     redocBundle,
+    scalarBundle,
     vertxServer,
     zioHttpServer,
     zioJson,

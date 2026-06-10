@@ -4,6 +4,7 @@ import sttp.tapir.codegen.RootGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAllOf,
   OpenapiSchemaAny,
   OpenapiSchemaArray,
   OpenapiSchemaBoolean,
@@ -314,11 +315,14 @@ object JsonSerdeGenerator {
     def getSerdeString(name: String, t: OpenapiSchemaType, isJson: Boolean): Seq[String] = (name, t, isJson) match {
       // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
       case (name, o: OpenapiSchemaObject, isJson) =>
-        val inlinedEnumDefns = if (allTransitiveJsonParamRefs.contains(name)) {
-          o.properties.collect { case (en, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _)) =>
-            genJsoniterEnumSerde(useCustomJsoniterSerdes, name + en.capitalize)
-          }
-        } else Nil
+        // Inline enums (defined on a property rather than via $ref) need an explicitly emitted codec: jsoniter would
+        // otherwise derive them as discriminated ADTs and reject their bare-string values. We descend through nested
+        // inline objects/arrays/maps to reach enums at any depth, naming each to match the class ClassDefinitionGenerator
+        // generates for it.
+        val inlinedEnumDefns =
+          if (allTransitiveJsonParamRefs.contains(name))
+            collectInlineEnumNames(RootGenerator.addName("", name), o).distinct.map(genJsoniterEnumSerde(useCustomJsoniterSerdes, _))
+          else Nil
         val supertypes =
           adtInheritanceMap.getOrElse(name, Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
         val topLevelDefn =
@@ -349,6 +353,8 @@ object JsonSerdeGenerator {
     }
     (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
       .flatMap { (getSerdeString _).tupled }
+      // an inline enum can be reached by multiple paths (or also be emitted at top level); duplicate decls won't compile
+      .distinct
       .sorted
       .foldLeft(Option.empty[String]) {
         case (Some(a), b) => Some(a + "\n" + b)
@@ -380,6 +386,23 @@ object JsonSerdeGenerator {
         s"""implicit lazy val ${uncapitalisedName}JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[${name}] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make($jsoniterBaseConfig)"""
     }
   }
+
+  // Collects the class names of all inline enums reachable from the given object, descending through nested inline
+  // objects and the element schemas of arrays/maps. Nested inline objects need no codec of their own (jsoniter derives
+  // them as part of the parent); only inline enums require an explicitly emitted codec, so we gather just their names.
+  // Naming mirrors ClassDefinitionGenerator (via the shared RootGenerator.addName) so codec types match the classes.
+  private def collectInlineEnumNames(objName: String, obj: OpenapiSchemaObject): Seq[String] =
+    obj.properties.toSeq.flatMap { case (key, OpenapiSchemaField(tpe, _, _)) => inlineEnumNamesForType(objName, key, tpe) }
+
+  private def inlineEnumNamesForType(parentName: String, key: String, schemaType: OpenapiSchemaType): Seq[String] =
+    schemaType match {
+      case OpenapiSchemaAllOf(Seq(single))    => inlineEnumNamesForType(parentName, key, single)
+      case _: OpenapiSchemaEnum               => Seq(RootGenerator.addName(parentName.capitalize, key))
+      case o: OpenapiSchemaObject             => collectInlineEnumNames(RootGenerator.addName(parentName, key), o)
+      case OpenapiSchemaArray(items, _, _, _) => inlineEnumNamesForType(RootGenerator.addName(parentName, key), "item", items)
+      case OpenapiSchemaMap(items, _, _)      => inlineEnumNamesForType(RootGenerator.addName(parentName, key), "item", items)
+      case _                                  => Nil
+    }
 
   private def genJsoniterEnumSerde(useCustomJsoniterSerdes: Boolean, name: String): String = {
     val uncapitalisedName = RootGenerator.uncapitalise(name)
