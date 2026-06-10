@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx.cats
 import cats.effect.Sync
 import cats.effect.kernel.Async
 import cats.effect.std.Dispatcher
-import io.vertx.core.logging.{Logger, LoggerFactory}
+import org.slf4j.{Logger, LoggerFactory}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.vertx.VertxServerOptions
