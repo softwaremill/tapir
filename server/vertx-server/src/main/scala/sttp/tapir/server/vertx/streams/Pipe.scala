@@ -93,14 +93,13 @@ object Pipe {
 
     request.handler((data: Buffer) => {
       progress.getAndUpdate(s => s.copy(s.inProgress + 1))
-      writeStream.write(
-        data,
-        _ => {
+      writeStream
+        .write(data)
+        .onComplete(_ => {
           val state = progress.updateAndGet(s => s.copy(s.inProgress - 1))
           if (state.inProgress == 0 && state.completed) writeStream.end()
           ()
-        }
-      )
+        })
       if (writeStream.writeQueueFull()) {
         backpressure.updateAndGet(state => state.copy(queue = state.queue :+ Pause))
         applyBackpressureCommands(backpressure, request)
@@ -131,14 +130,13 @@ object Pipe {
     }
 
     def writeFrame(frame: VertxWebSocketFrame): Unit =
-      socket.writeFrame(
-        frame,
-        _ => {
+      socket
+        .writeFrame(frame)
+        .onComplete(_ => {
           val state = progress.updateAndGet(s => s.copy(s.inProgress - 1))
           if (state.inProgress == 0 && state.completed) socket.end()
           ()
-        }
-      ): Unit
+        }): Unit
 
     request.handler((sttpFrame: WebSocketFrame) => {
       progress.getAndUpdate(s => s.copy(s.inProgress + 1))
@@ -153,7 +151,7 @@ object Pipe {
         case Pong(payload) =>
           writeFrame(VertxWebSocketFrame.pongFrame(Buffer.buffer(payload)))
         case Close(statusCode, _) =>
-          socket.close(statusCode.toShort, { _ => () })
+          val _ = socket.close(statusCode.toShort)
       }
 
       if (!socket.isClosed && socket.writeQueueFull()) {

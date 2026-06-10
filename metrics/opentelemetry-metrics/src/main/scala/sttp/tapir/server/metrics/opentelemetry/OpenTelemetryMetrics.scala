@@ -18,8 +18,8 @@ case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]])
   def addRequestsActive(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestActive(meter, labels))
 
-  /** Registers a `http.server.request.total` counter (assuming default labels). Note: this metric is not part of the OpenTelemetry
-    * HTTP semantic conventions - the count is implicitly provided by the `http.server.request.duration` histogram.
+  /** Registers a `http.server.request.total` counter (assuming default labels). Note: this metric is not part of the OpenTelemetry HTTP
+    * semantic conventions - the count is implicitly provided by the `http.server.request.duration` histogram.
     */
   def addRequestsTotal(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     copy(metrics = metrics :+ requestTotal(meter, labels))

@@ -277,26 +277,23 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
       .description(HttpMetrics.ServerRequestDuration.description)
 
     if (isFailure) {
-        base
-          .pointCount(1)
-          .containsPoints(
-            PointExpectation
-              .histogram
-              .count(expectedCount.toLong)
-              .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
-          )
+      base
+        .pointCount(1)
+        .containsPoints(
+          PointExpectation.histogram
+            .count(expectedCount.toLong)
+            .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
+        )
     } else {
       base
         .pointCount(2)
         .containsPoints(
-          PointExpectation
-            .histogram
+          PointExpectation.histogram
             .count(expectedCount.toLong)
             .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ phaseAttribute("headers")): _*)
         )
         .containsPoints(
-          PointExpectation
-            .histogram
+          PointExpectation.histogram
             .count(expectedCount.toLong)
             .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ phaseAttribute("body")): _*)
         )
@@ -347,7 +344,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
 
   private def assertMetrics(metrics: List[io.opentelemetry.sdk.metrics.data.MetricData], expectations: List[MetricExpectation]): Assertion =
     MetricExpectations.checkAll(metrics, expectations) match {
-      case Right(_) => succeed
+      case Right(_)         => succeed
       case Left(mismatches) =>
         fail(MetricExpectations.format(mismatches))
     }
