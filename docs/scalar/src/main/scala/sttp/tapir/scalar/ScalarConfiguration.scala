@@ -1,10 +1,10 @@
 package sttp.tapir.scalar
 
-/** Configuration options for the Scalar API reference UI.
-  * See https://scalar.com/products/api-references/configuration for full documentation.
+/** Configuration options for the Scalar API reference UI. See https://scalar.com/products/api-references/configuration for full
+  * documentation.
   *
-  * Complex object/array options (`authentication`, `defaultHttpClient`, `hiddenClients`, `metaData`, `mcp`, `pathRouting`, `servers`) accept
-  * raw JSON strings that are embedded directly into the JavaScript configuration object.
+  * Complex object/array options (`authentication`, `defaultHttpClient`, `hiddenClients`, `metaData`, `mcp`, `pathRouting`, `servers`)
+  * accept raw JSON strings that are embedded directly into the JavaScript configuration object.
   *
   * @param authentication
   *   Prefill credentials for users. Raw JSON string of `AuthenticationConfiguration`.
