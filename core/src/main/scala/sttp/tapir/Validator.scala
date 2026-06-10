@@ -308,7 +308,7 @@ object Validator extends ValidatorMacros {
       case MinSize(value)                    => Some(s"size>=$value")
       case MaxSize(value)                    => Some(s"size<=$value")
       case Custom(_, showMessage)            => showMessage.orElse(Some("custom"))
-      case Enumeration(possibleValues, _, _) => Some(s"in(${possibleValues.mkString(",")}")
+      case Enumeration(possibleValues, _, _) => Some(s"in(${possibleValues.mkString(",")})")
       case Mapped(wrapped, _)                => show(wrapped)
       case All(validators)                   =>
         validators.flatMap(show(_)) match {

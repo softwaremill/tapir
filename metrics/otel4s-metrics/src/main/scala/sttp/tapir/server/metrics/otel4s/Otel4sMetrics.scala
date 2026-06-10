@@ -40,7 +40,7 @@ object Otel4sMetrics {
   private type MetricLabels = MetricLabelsTyped[Attribute[_]]
 
   private val DurationBucketBoundaries = BucketBoundaries(
-     0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10
+    0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10
   )
 
   /** Using the default labels, registers the following metrics:
@@ -77,7 +77,7 @@ object Otel4sMetrics {
     forResponse = List(
       {
         case Right(r) => Some(HttpAttributes.HttpResponseStatusCode(r.code.code.toLong))
-        case Left(_) => Some(HttpAttributes.HttpResponseStatusCode(500))
+        case Left(_)  => Some(HttpAttributes.HttpResponseStatusCode(500))
       },
       {
         case Right(_) => None
