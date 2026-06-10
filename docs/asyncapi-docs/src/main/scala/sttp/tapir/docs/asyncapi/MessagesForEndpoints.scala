@@ -20,7 +20,7 @@ private[asyncapi] class MessagesForEndpoints(tschemaToASchema: TSchemaToASchema,
     val codecs: Iterable[CodecWithInfo[_]] = wss.flatMap(ws => codecsFor(ws.wrapped))
     val codecToData: ListMap[CodecWithInfo[_], CodecData] = codecs.toList.map(ci => ci -> toData(ci.codec)).toListMap
 
-    val dataToKey = calculateUniqueIds(codecToData.values.toSet, dataToName)
+    val dataToKey = calculateUniqueIds(codecToData.values.toSet, dataToName, failOnDuplicateSchemaName = false)
     val codecToKey = codecToData.map { case (ci, data) => ci.codec -> dataToKey(data) }.toMap[Codec[_, _, _ <: CodecFormat], String]
     val keyToMessage = codecToData.map { case (ci, data) => dataToKey(data) -> message(ci) }
 

@@ -12,21 +12,21 @@ class CompileCheckTestBaseSpec extends CompileCheckTestBase {
   }
 
   it should "work with an extender too" in {
-    "object MyObj {}" shouldCompile ()
+    "object MyObj {}".shouldCompile()
   }
 
   it should "compile full files" in {
     """package test
       |object Asd{}
       |object Bsd{
-      |}""".stripMargin shouldCompile ()
+      |}""".stripMargin.shouldCompile()
   }
 
   it should "compile with imports" in {
     """object Asd{
       |  import scala.util._
       |  Try(1/0)
-      |}""".stripMargin shouldCompile ()
+      |}""".stripMargin.shouldCompile()
   }
 
   it should "compile with implicit imports" in {
@@ -34,7 +34,7 @@ class CompileCheckTestBaseSpec extends CompileCheckTestBase {
       |  import scala.concurrent.Future
       |  import scala.concurrent.ExecutionContext.Implicits._
       |  Future(1/0)
-      |}""".stripMargin shouldCompile ()
+      |}""".stripMargin.shouldCompile()
   }
 
   it should "compile code with tapir imports" in {
@@ -45,12 +45,12 @@ class CompileCheckTestBaseSpec extends CompileCheckTestBase {
       |  import io.circe.generic.auto._
       |  case class Book(title: String)
       |  endpoint.get.in("books" / "my").out(jsonBody[List[Book]])
-      |}""".stripMargin shouldCompile ()
+      |}""".stripMargin.shouldCompile()
   }
 
   it should "compile code with pure defs/vals" in {
     """val x = 5
       |def q = 4/2
-      |""".stripMargin shouldCompile ()
+      |""".stripMargin.shouldCompile()
   }
 }

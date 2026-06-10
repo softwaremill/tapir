@@ -72,7 +72,7 @@ object SchemaGenerator {
     )
     val openApiSchemasWithTapirSchemas: Map[String, ((Boolean, Seq[String])) => String] =
       doc.components
-        .map(_.schemas.toSeq.flatMap[(String, ((Boolean, Seq[String])) => String), Seq[(String, ((Boolean, Seq[String])) => String)]] {
+        .map(_.schemas.toSeq.flatMap {
           case (name, _: OpenapiSchemaEnum) =>
             Some(name -> { (_: (Boolean, Seq[String])) =>
               s"implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
@@ -166,7 +166,7 @@ object SchemaGenerator {
         )
     }
 
-    res.map(_.map { case (k, v, _) => k -> v })
+    res.map(_.map { case (k, v, _) => k -> v }).toSeq
   }
   // finds all mutually-recursive references, grouping mutually-recursive schemas into a single 'layer' seq
   private def constructRings(allSchemas: Map[String, OpenapiSchemaType]): Seq[Seq[(String, OpenapiSchemaType)]] = {
@@ -191,7 +191,7 @@ object SchemaGenerator {
       // Select next candidate. Order lexicographically for stable output
       val next = initialSet.minBy(_._1)
       recurse(next)
-      res += nextRing.distinct.sortBy(_._1)
+      res += nextRing.distinct.sortBy(_._1).toSeq
     }
     res.toSeq
   }

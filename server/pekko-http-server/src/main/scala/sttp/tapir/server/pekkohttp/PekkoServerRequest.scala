@@ -29,16 +29,19 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
   }
   override def underlying: Any = ctx
 
-  override lazy val pathSegments: List[String] = {
+  /** Converts a Pekko Uri.Path to a list of path segment strings. */
+  private def pekkoPathToSegments(p: PekkoUri.Path): List[String] = {
     @tailrec
     def run(p: PekkoUri.Path, acc: List[String]): List[String] = p match {
       case PekkoUri.Path.Slash(pathTail)      => run(pathTail, acc)
       case PekkoUri.Path.Segment(s, pathTail) => run(pathTail, s :: acc)
       case _                                  => acc.reverse
     }
-
-    run(ctx.unmatchedPath, Nil)
+    run(p, Nil)
   }
+
+  override lazy val pathSegments: List[String] = pekkoPathToSegments(ctx.unmatchedPath)
+
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(ctx.request.uri.query().toMultiMap)
   override lazy val method: Method = Method(ctx.request.method.value.toUpperCase)
 
@@ -61,11 +64,13 @@ private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes
   override lazy val showShort: String = s"$method ${ctx.request.uri.path}${ctx.request.uri.rawQueryString.getOrElse("")}"
   override lazy val uri: Uri = {
     val pekkoUri = ctx.request.uri
+    // Use the full path from the original request, not the unconsumed path
+    val fullPathSegments = pekkoPathToSegments(pekkoUri.path)
     Uri(
       Some(pekkoUri.scheme),
       // UserInfo is available only as a raw string, but we can skip it as it's not needed
       Some(Authority(userInfo = None, HostSegment(pekkoUri.authority.host.address), Some(pekkoUri.effectivePort))),
-      PathSegments.absoluteOrEmptyS(pathSegments ++ (if (pekkoUri.path.endsWithSlash) Seq("") else Nil)),
+      PathSegments.absoluteOrEmptyS(fullPathSegments ++ (if (pekkoUri.path.endsWithSlash) Seq("") else Nil)),
       queryToSegments(ctx.request.uri.query()),
       ctx.request.uri.fragment.map(f => FragmentSegment(f))
     )

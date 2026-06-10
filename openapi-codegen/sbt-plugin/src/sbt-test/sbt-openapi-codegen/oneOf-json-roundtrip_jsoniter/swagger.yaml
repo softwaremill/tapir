@@ -38,6 +38,16 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ADTWithoutDiscriminator'
+  '/dynamic/content-type/test':
+    get:
+      responses:
+        "200":
+          description: No Content
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
   '/oneof/option/test':
     get:
       responses:
@@ -49,6 +59,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnEnum'
+  '/redirect/test':
+    get:
+      responses:
+        "204":
+          description: No Content
+        "307":
+          description: Some redirect
+          headers:
+            redirectHeader:
+              $ref: '#/components/parameters/redirectHeader'
+    delete:
+      responses:
+        "204":
+          description: No Content
+        "307":
+          description: Some redirect
+          headers:
+            redirectHeader:
+              $ref: '#/components/parameters/redirectHeader'
+            secondHeader:
+              $ref: '#/components/parameters/secondHeader'
+        "404":
+          description: Not found
+    put:
+      responses:
+        "204":
+          description: No Content
+        "307":
+          description: Some redirect
+          headers:
+            redirectHeader:
+              $ref: '#/components/parameters/redirectHeader'
+          content:
+            application/json:
+              schema:
+                type: string
+                required: false
   '/generic/json':
     post:
       parameters:
@@ -275,6 +322,19 @@ paths:
                 $ref: '#/components/schemas/HasASet'
 
 components:
+  parameters:
+    redirectHeader:
+      in: header
+      name: location
+      required: true
+      schema:
+        type: string
+    secondHeader:
+      in: header
+      name: aux
+      required: true
+      schema:
+        type: string
   schemas:
     ADTWithDiscriminator:
       type: object

@@ -76,7 +76,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
             )
             .getOrElse {
               report.errorAndAbort(
-                s"All fields of ${caseClass.name} must be annotated with one of the annotations from sttp.tapir.annotations. No annotations for field: ${field.name}."
+                s"All fields of ${caseClass.name} must be annotated with one of the annotations from sttp.tapir.EndpointIO.annotations. No annotations for field: ${field.name}."
               )
             }
           inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> fieldIdx)
@@ -124,7 +124,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
             .orElse(if (field.annotated(setCookiesAnnotationSymbol)) Some(makeSetCookiesOutput[f](field)) else None)
             .getOrElse {
               report.errorAndAbort(
-                s"All fields of ${caseClass.name} must be annotated with one of the annotations from sttp.tapir.annotations. No annotations for field: ${field.name}."
+                s"All fields of ${caseClass.name} must be annotated with one of the annotations from sttp.tapir.EndpointIO.annotations. No annotations for field: ${field.name}."
               )
             }
           '{ ${ addMetadataFromAnnotations[f](field, output) }.asInstanceOf[EndpointOutput.Single[f]] }
@@ -299,9 +299,11 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   ): Expr[EndpointInput.Single[f]] =
     setSecuritySchemeName(
       '{
-        TapirAuth.bearer(${ auth.asExprOf[EndpointIO.annotations.bearer] }.challenge)(${
-          summonCodec[List[String], f, CodecFormat.TextPlain](field)
-        })
+        TapirAuth.bearer(${ auth.asExprOf[EndpointIO.annotations.bearer] }.challenge)(using
+          ${
+            summonCodec[List[String], f, CodecFormat.TextPlain](field)
+          }
+        )
       },
       schemeName
     )
@@ -313,9 +315,11 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   ): Expr[EndpointInput.Single[f]] =
     setSecuritySchemeName(
       '{
-        TapirAuth.basic(${ auth.asExprOf[EndpointIO.annotations.basic] }.challenge)(${
-          summonCodec[List[String], f, CodecFormat.TextPlain](field)
-        })
+        TapirAuth.basic(${ auth.asExprOf[EndpointIO.annotations.basic] }.challenge)(using
+          ${
+            summonCodec[List[String], f, CodecFormat.TextPlain](field)
+          }
+        )
       },
       schemeName
     )

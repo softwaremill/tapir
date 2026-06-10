@@ -17,7 +17,7 @@ object TestUtil {
   implicit val idMonad: MonadError[Identity] = IdentityMonad
 
   case class PersonsApi(logic: String => Identity[Either[String, String]] = PersonsApi.defaultLogic) {
-    def serverEp: ServerEndpoint[Any, Identity] = endpoint
+    def serverEp: ServerEndpoint[Any, Identity] = endpoint.get
       .in("person")
       .in(query[String]("name"))
       .out(stringBody)

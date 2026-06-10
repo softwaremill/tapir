@@ -23,7 +23,7 @@ class TapirSchemaToJsonSchemaTest extends AnyFlatSpec with Matchers with OptionV
     val tSchema = implicitly[Schema[Parent]]
 
     // when
-    val result: ASchema = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true)
+    val result: ASchema = TapirSchemaToJsonSchema(tSchema, markOptionsAsNullable = true, failOnDuplicateSchemaName = false)
 
     // then
     result.asJson.deepDropNullValues shouldBe json"""{"$$schema":"https://json-schema.org/draft/2020-12/schema","title":"Parent","required":["innerChildField"],"type":"object","properties":{"innerChildField":{"$$ref":"#/$$defs/Child"}},"$$defs":{"Child":{"title":"Child","required":["childId"],"type":"object","properties":{"childId":{"type":"string"},"childNames":{"type":"array","items":{"type":"string"}}}}}}"""

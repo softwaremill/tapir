@@ -1,13 +1,13 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.17",
+    scalaVersion := "2.13.18",
     version := "0.1",
     openapiStreamingImplementation := "pekko",
     openapiGenerateEndpointTypes := true
   )
 
-val tapirVersion = "1.11.50"
+val tapirVersion = "1.13.13"
 val catsXmlVersion = "0.0.20"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
@@ -22,7 +22,7 @@ libraryDependencies ++= Seq(
   "com.github.geirolz" %% "cats-xml" % catsXmlVersion,
   "com.github.geirolz" %% "cats-xml-generic" % catsXmlVersion,
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
+  "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % tapirVersion % Test
 )
 
 import scala.io.Source
@@ -31,7 +31,7 @@ import scala.util.Using
 TaskKey[Unit]("check") := {
   def check(generatedFileName: String, expectedFileName: String) = {
     val generatedCode =
-      Using(Source.fromFile(s"target/scala-2.13/src_managed/main/sbt-openapi-codegen/$generatedFileName"))(_.getLines.mkString("\n")).get
+      Using(Source.fromFile(s"${sourceManaged.value}/main/sbt-openapi-codegen/$generatedFileName"))(_.getLines.mkString("\n")).get
     val expectedCode = Using(Source.fromFile(expectedFileName))(_.getLines.mkString("\n")).get
     val generatedTrimmed =
       generatedCode.linesIterator.zipWithIndex.filterNot(_._1.isBlank).map { case (a, i) => a.trim -> i }.toSeq
