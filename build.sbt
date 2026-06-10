@@ -268,9 +268,10 @@ lazy val rawAllAggregates = core.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
 
-lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
+// zio-json requires JDK 17+, so it's built together with the Loom-based projects on the JDK 21 jobs
+lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation, zioJson).flatMap(_.projectRefs).flatMap(projectId)
 
-lazy val java17Projects: Seq[String] = Seq(zioJson).flatMap(_.projectRefs).flatMap(projectId)
+lazy val zioProjects: Seq[String] = Seq(zioJson).flatMap(_.projectRefs).flatMap(projectId)
 
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
@@ -287,22 +288,23 @@ lazy val allAggregates: Seq[ProjectReference] = {
     println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
-  val filteredByLoom = if (sys.env.isDefinedAt("ONLY_LOOM")) {
-    println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(p => projectId(p).forall(loomProjects.contains))
-  } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
-    println("[info] ALSO_LOOM defined, including also loom-based projects")
+  // zio-json requires JDK 17+, so it's only included on the JDK 21 jobs (where WITH_ZIO is set)
+  val filteredByZio = if (sys.env.isDefinedAt("WITH_ZIO")) {
+    println("[info] WITH_ZIO defined, including zio-json in the aggregate projects")
     filteredByNative
   } else {
-    println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(p => projectId(p).forall(loomProjects.contains))
+    println("[info] WITH_ZIO *not* defined, *not* including zio-json in the aggregate projects")
+    filteredByNative.filterNot(p => projectId(p).forall(zioProjects.contains))
   }
-  if(sys.env.isDefinedAt("ONLY_JAVA_17")) {
-    println("[info] JAVA_17 defined, including only java17-based projects")
-    filteredByLoom.filter(p => projectId(p).forall(java17Projects.contains))
+  if (sys.env.isDefinedAt("ONLY_LOOM")) {
+    println("[info] ONLY_LOOM defined, including only loom-based projects")
+    filteredByZio.filter(p => projectId(p).forall(loomProjects.contains))
+  } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
+    println("[info] ALSO_LOOM defined, including also loom-based projects")
+    filteredByZio
   } else {
-    println("[info] JAVA_17 *not* defined, *not* including java17-based projects")
-    filteredByLoom.filterNot(p => projectId(p).forall(java17Projects.contains))
+    println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
+    filteredByZio.filterNot(p => projectId(p).forall(loomProjects.contains))
   }
 }
 
