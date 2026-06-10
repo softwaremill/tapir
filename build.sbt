@@ -1702,7 +1702,9 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-serve
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx,
-      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided"
+      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided",
+      // Vert.x 5 removed io.vertx.core.logging; use slf4j directly (Vert.x logs through it)
+      slf4j
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)

@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx
 
-import io.vertx.core.logging.{Logger, LoggerFactory}
+import org.slf4j.{Logger, LoggerFactory}
 import io.vertx.core.{Context, Vertx}
 import io.vertx.ext.web.RoutingContext
 import sttp.tapir.server.interceptor.log.DefaultServerLog
