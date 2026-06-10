@@ -268,10 +268,12 @@ lazy val rawAllAggregates = core.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
 
-// zio-json requires JDK 17+, so it's built together with the Loom-based projects on the JDK 21 jobs
-lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation, zioJson).flatMap(_.projectRefs).flatMap(projectId)
+lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
 
-lazy val zioProjects: Seq[String] = Seq(zioJson).flatMap(_.projectRefs).flatMap(projectId)
+// zio-json's JVM artifact requires JDK 17+, so the JVM variant is built on the JDK 21 jobs (alongside the Loom
+// projects). The JS/Native variants are unaffected (no JVM runtime loads their classes), and stay on the JDK 11 jobs.
+lazy val zioJvmProjects: Seq[String] =
+  zioJson.projectRefs.flatMap(projectId).filterNot(id => id.contains("JS") || id.contains("Native"))
 
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
@@ -288,17 +290,17 @@ lazy val allAggregates: Seq[ProjectReference] = {
     println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
-  // zio-json requires JDK 17+, so it's only included on the JDK 21 jobs (where WITH_ZIO is set)
+  // zio-json's JVM artifact requires JDK 17+, so it's only included on the JDK 21 jobs (where WITH_ZIO is set)
   val filteredByZio = if (sys.env.isDefinedAt("WITH_ZIO")) {
-    println("[info] WITH_ZIO defined, including zio-json in the aggregate projects")
+    println("[info] WITH_ZIO defined, including zio-json JVM in the aggregate projects")
     filteredByNative
   } else {
-    println("[info] WITH_ZIO *not* defined, *not* including zio-json in the aggregate projects")
-    filteredByNative.filterNot(p => projectId(p).forall(zioProjects.contains))
+    println("[info] WITH_ZIO *not* defined, *not* including zio-json JVM in the aggregate projects")
+    filteredByNative.filterNot(p => projectId(p).forall(zioJvmProjects.contains))
   }
   if (sys.env.isDefinedAt("ONLY_LOOM")) {
-    println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByZio.filter(p => projectId(p).forall(loomProjects.contains))
+    println("[info] ONLY_LOOM defined, including only loom-based and zio-json JVM projects")
+    filteredByZio.filter(p => projectId(p).forall(id => loomProjects.contains(id) || zioJvmProjects.contains(id)))
   } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
     println("[info] ALSO_LOOM defined, including also loom-based projects")
     filteredByZio
