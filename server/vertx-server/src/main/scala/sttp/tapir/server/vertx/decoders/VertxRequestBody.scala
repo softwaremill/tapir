@@ -35,7 +35,8 @@ class VertxRequestBody[F[_], S <: Streams[S]](
       case RawBodyType.ByteArrayBody =>
         Future.succeededFuture(RawValue(Option(rc.body().buffer()).fold(Array.emptyByteArray)(_.getBytes)))
       case RawBodyType.ByteBufferBody =>
-        Future.succeededFuture(RawValue(Option(rc.body().buffer()).fold(ByteBuffer.allocate(0))(_.getByteBuf.nioBuffer())))
+        // Vert.x 5 removed Buffer.getByteBuf; wrap the copied bytes instead
+        Future.succeededFuture(RawValue(Option(rc.body().buffer()).fold(ByteBuffer.allocate(0))(b => ByteBuffer.wrap(b.getBytes))))
       case RawBodyType.InputStreamBody =>
         val bytes = Option(rc.body().buffer()).fold(Array.emptyByteArray)(_.getBytes)
         Future.succeededFuture(RawValue(new ByteArrayInputStream(bytes)))
