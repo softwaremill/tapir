@@ -125,6 +125,8 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
 * [sttp shared](https://github.com/softwaremill/sttp-shared): shared web socket, FP abstractions, capabilities and streaming code.
 * [sttp apispec](https://github.com/softwaremill/sttp-apispec): OpenAPI, AsyncAPI and JSON Schema models.
 
+When using AI agents, the [Scala skills](https://github.com/VirtusLab/scala-skill) that we maintain might be useful.
+
 ## Table of contents
 
 ```{eval-rst}
@@ -186,17 +188,17 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
    :caption: Server interpreters
 
    server/overview
-   server/akkahttp
+   server/netty   
    server/http4s
-   server/zio-http4s
-   server/netty
-   server/nima
-   server/finatra
-   server/pekkohttp
-   server/play
    server/vertx
-   server/ziohttp
    server/armeria
+   server/pekkohttp
+   server/akkahttp
+   server/ziohttp
+   server/zio-http4s   
+   server/nima
+   server/play
+   server/finatra
    server/jdkhttp
    server/aws
    server/options

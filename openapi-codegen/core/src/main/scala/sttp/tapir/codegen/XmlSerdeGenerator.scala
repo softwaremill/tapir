@@ -157,6 +157,8 @@ object XmlSerdeGenerator {
                |implicit lazy val $decoderName: Decoder[$ref] = $decoderDefn
                |implicit lazy val $encoderName: Encoder[$ref] = $encoderDefn""".stripMargin
           }
+          .toSeq
+          .sorted
           .mkString("\n")
       }
   }

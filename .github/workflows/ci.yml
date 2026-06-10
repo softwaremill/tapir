@@ -17,7 +17,8 @@ jobs:
     if: |
       github.event_name == 'push' || 
       github.event.pull_request.head.repo.full_name != github.repository ||
-      github.event.pull_request.user.login == 'softwaremill-ci'
+      github.event.pull_request.user.login == 'softwaremill-ci' ||
+      github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -37,9 +38,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v6
-    - uses: sbt/setup-sbt@3e125ece5c3e5248e18da9ed8d2cce3d335ec8dd # v1, specifically v1.1.14
+    - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b # v1, specifically v1.2.1
     - name: Set up JDK 
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         distribution: 'temurin'
         cache: 'sbt'
@@ -70,14 +71,29 @@ jobs:
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Install scala-cli
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
-      uses: VirtusLab/scala-cli-setup@89a48599f871d08573707e82bdcefbce839de436 # main, specifically v1.11.0
+      uses: VirtusLab/scala-cli-setup@d320e01a605bf27128a5657575382668f83ef34e # main, specifically v1.14.0
       with:
         jvm: '' # needed because scala-cli-setup otherwise forces the installation of their default JVM (17)
     - name: Enable Loom-specific modules
       if: matrix.java == '21'
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
+    - name: Enable ZIO-specific modules # zio-json requires JDK 17+
+      if: matrix.java == '21'
+      run: echo "WITH_ZIO=1" >> $GITHUB_ENV
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
+    - name: Compile core & server-core with next Scala 3
+      if: matrix.scala-version == '3' && matrix.target-platform == 'JVM' && matrix.java == '21'
+      env:
+        SCALA_3_NEXT: "3.8.3"
+      run: |
+        sbt $SBT_JAVA_OPTS -v \
+          "set LocalProject(\"core3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          "set LocalProject(\"serverCore3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          "set LocalProject(\"coreJS3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          "set LocalProject(\"serverCoreJS3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          core3/Test/compile serverCore3/Test/compile \
+          coreJS3/Test/compile serverCoreJS3/Test/compile
     - name: Compile documentation
       if: matrix.target-platform == 'JVM' && matrix.java == '21'
       run: sbt $SBT_JAVA_OPTS -v compileDocumentation
@@ -86,7 +102,7 @@ jobs:
       run: sbt $SBT_JAVA_OPTS -v "project examples3" verifyExamplesCompileUsingScalaCli
     - name: Test
       if: matrix.target-platform != 'JS'
-      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3, specifically v3.0.2
+      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v3, specifically v4.0.0
       with:
         timeout_minutes: 10
         max_attempts: 2
@@ -103,8 +119,8 @@ jobs:
             exit 1
           fi
     - name: Test OpenAPI codegen
-      if: matrix.target-platform == 'JVM' && matrix.scala-version == '2.12'
-      run: sbt $SBT_JAVA_OPTS -v "openapiCodegenSbt2_12/scripted"                
+      if: matrix.target-platform == 'JVM' && (matrix.scala-version == '2.12' || matrix.scala-version == '3')
+      run: sbt $SBT_JAVA_OPTS -v $(sed 's/\./_/' <<<"openapiCodegenSbt${{ matrix.scala-version }}/scripted")
     # The finatra tests take a really long time (1/3 of the build duration); hence, they are disabled and need to be run separately
     #- name: Test finatra
     #  if: matrix.target-platform != 'JS'
@@ -120,13 +136,14 @@ jobs:
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '3'
       run: sbt $SBT_JAVA_OPTS catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test
-    - uses: actions/upload-artifact@v6  # upload test results
+    - uses: actions/upload-artifact@v7  # upload test results
       if: success() || failure()        # run this step even if previous step failed
       with:
         name: 'tests-results-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'
         path: '**/test-reports/TEST*.xml'
     - name: Prepare release notes
-      uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5 # v6, specifically v6.1.0
+      if: github.ref == 'refs/heads/master' # this should not run on PR builds
+      uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v6, specifically v7.3.1
       with:
         config-name: release-drafter.yml
       env:
@@ -150,9 +167,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - uses: sbt/setup-sbt@3e125ece5c3e5248e18da9ed8d2cce3d335ec8dd # v1, specifically v1.1.14
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b # v1, specifically v1.2.1
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
@@ -165,9 +182,11 @@ jobs:
       - name: Enable Native-specific modules
         if: matrix.java == '11'
         run: echo "STTP_NATIVE=1" >> $GITHUB_ENV
-      - name: Enable Loom-specific modules
+      - name: Enable Loom and ZIO-specific modules # zio-json requires JDK 17+
         if: matrix.java == '21'
-        run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
+        run: |
+          echo "ONLY_LOOM=1" >> $GITHUB_ENV
+          echo "WITH_ZIO=1" >> $GITHUB_ENV
       - name: Compile
         run: sbt $SBT_JAVA_OPTS compile
       - name: Publish artifacts
@@ -186,7 +205,7 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - name: Publish release notes
         if: matrix.java == '11'
-        uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5 # v6, specifically v6.1.0
+        uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v6, specifically v7.3.1
         with:
           config-name: release-drafter.yml
           publish: true
@@ -214,4 +233,5 @@ jobs:
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     needs: [ ci, mima ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
-    secrets: inherit
+    secrets:
+      github-token: ${{ secrets.SOFTWAREMILL_CI_PR_TOKEN }}

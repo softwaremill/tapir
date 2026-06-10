@@ -15,8 +15,6 @@ object TapirGeneratedEndpoints {
   case class `application/something-unrecognisedCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "something-unrecognised")
   }
-
-
   sealed trait Basic_or_Bearer_SecurityIn
   case class BasicSecurityIn(value: UsernamePassword) extends Basic_or_Bearer_SecurityIn
   case class BearerSecurityIn(value: String) extends Basic_or_Bearer_SecurityIn
@@ -84,57 +82,57 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T: enumextensions.EnumMirror]: ExtraParamSupport[T] =
     EnumExtraParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
-  sealed trait AnyObjectWithInlineEnum
-  sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
-  case class NotNullableThingy (
-    uuid: java.util.UUID
-  )
-  case class ObjectWithInlineEnum2 (
-    inlineEnum: ObjectWithInlineEnum2InlineEnum
-  ) extends AnyObjectWithInlineEnum
+  sealed trait ADTWithoutDiscriminator
+  sealed trait AnyObjectWithInlineEnum
+
+  enum AnEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    case Foo, Bar, Baz
+  }
 
   enum ObjectWithInlineEnum2InlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
     case bar1, bar2
   }
+
+  enum ObjectWithInlineEnumInlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    case foo1, foo2, foo3, foo4
+  }
+  case class NotNullableThingy (
+    uuid: java.util.UUID
+  )
+  case class ObjectWithInlineEnum (
+    id: java.util.UUID,
+    inlineEnum: ObjectWithInlineEnumInlineEnum
+  ) extends AnyObjectWithInlineEnum
+  case class ObjectWithInlineEnum2 (
+    inlineEnum: ObjectWithInlineEnum2InlineEnum
+  ) extends AnyObjectWithInlineEnum
+  case class SubtypeWithD1 (
+    s: String,
+    i: Option[Int] = None,
+    d: Option[Double] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithD2 (
+    s: String,
+    a: Option[Seq[String]] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
   case class SubtypeWithoutD1 (
     s: String,
     i: Option[Int] = None,
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
-  case class SubtypeWithD1 (
-    s: String,
-    i: Option[Int] = None,
-    d: Option[Double] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithoutD2 (
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
     e: Option[AnEnum] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
-  case class ObjectWithInlineEnum (
-    id: java.util.UUID,
-    inlineEnum: ObjectWithInlineEnumInlineEnum
-  ) extends AnyObjectWithInlineEnum
-
-  enum ObjectWithInlineEnumInlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
-    case foo1, foo2, foo3, foo4
-  }
-  case class SubtypeWithoutD2 (
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class SubtypeWithD2 (
-    s: String,
-    a: Option[Seq[String]] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
-
-  enum AnEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
-    case Foo, Bar, Baz
-  }
   type ListType = List[String]
   case class PutInlineSimpleObjectRequest (
     foo: String,
@@ -287,9 +285,9 @@ object TapirGeneratedEndpoints {
 
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, postInlineEnumTest, getOneofOptionTest, getInlineSimpleObject, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject)
 
+
   object Servers {
     import sttp.model.Uri.UriContext
-
 
     /*
       These are the main endpoints.

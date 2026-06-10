@@ -272,4 +272,13 @@ class SchemaTest extends AnyFlatSpec with Matchers {
     )
   }
 
+  it should "have matching hashCodes for equal SProductFields" in {
+    val f1 = field[Unit, Int](FieldName("f"), Schema(SInteger()))
+    val f2 = field[Unit, Int](FieldName("f"), Schema(SInteger()))
+
+    f1 shouldBe f2
+    f1.hashCode() shouldBe f2.hashCode()
+    Set(f1, f2) should have size 1
+  }
+
 }

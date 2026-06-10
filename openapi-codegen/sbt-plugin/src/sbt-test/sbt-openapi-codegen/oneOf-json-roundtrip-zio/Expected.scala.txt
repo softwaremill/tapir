@@ -54,41 +54,9 @@ object TapirGeneratedEndpoints {
   type ByteString <: Array[Byte]
   implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
-  sealed trait ADTWithoutDiscriminator
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
-  case class NotNullableThingy (
-    uuid: java.util.UUID
-  )
-  case class SubtypeWithoutD1 (
-    s: String,
-    i: Option[Int] = None,
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class HasASet (
-    setA: Set[String],
-    setB: Option[Set[Int]] = None
-  )
-  case class SubtypeWithD1 (
-    s: String,
-    i: Option[Int] = None,
-    d: Option[Double] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
-  case class SubtypeWithoutD3 (
-    s: String,
-    i: Option[Int] = None,
-    e: Option[AnEnum] = None,
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class SubtypeWithoutD2 (
-    a: Seq[String],
-    absent: Option[String] = None
-  ) extends ADTWithoutDiscriminator
-  case class SubtypeWithD2 (
-    s: String,
-    a: Option[Seq[String]] = None
-  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  sealed trait ADTWithoutDiscriminator
 
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] {
@@ -97,6 +65,38 @@ object TapirGeneratedEndpoints {
     case object Bar extends AnEnum
     case object Baz extends AnEnum
   }
+  case class HasASet (
+    setA: Set[String],
+    setB: Option[Set[Int]] = None
+  )
+  case class NotNullableThingy (
+    uuid: java.util.UUID
+  )
+  case class SubtypeWithD1 (
+    s: String,
+    i: Option[Int] = None,
+    d: Option[Double] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithD2 (
+    s: String,
+    a: Option[Seq[String]] = None
+  ) extends ADTWithDiscriminator with ADTWithDiscriminatorNoMapping
+  case class SubtypeWithoutD1 (
+    s: String,
+    i: Option[Int] = None,
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithoutD2 (
+    a: Seq[String],
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
+  case class SubtypeWithoutD3 (
+    s: String,
+    i: Option[Int] = None,
+    e: Option[AnEnum] = None,
+    absent: Option[String] = None
+  ) extends ADTWithoutDiscriminator
   type ListType = List[String]
   case class PutInlineSimpleObjectRequest (
     foo: String,
@@ -176,11 +176,14 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[HasASet]])
       .out(jsonBody[HasASet].description("OK"))
 
+
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postUniqueItems)
+
 
   object Servers {
     import sttp.model.Uri.UriContext
 
     val `/v3`: sttp.model.Uri = uri"/v3"
+
   }
 }

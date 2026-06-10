@@ -18,7 +18,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaSimpleType,
   OpenapiSchemaString
 }
-import sttp.tapir.codegen.util.{DocUtils, JavaEscape}
+import sttp.tapir.codegen.util.JavaEscape
 
 import scala.annotation.tailrec
 
@@ -267,7 +267,7 @@ object ValidationGenerator {
         val defns = genValidationDefn(schemas, ignoreRefs)(s"${name}${fn.capitalize}", f.`type`)
         defns
           .filterNot(ignoreRefs && _.refOnly)
-          .map(defn =>
+          .map { defn =>
             (
               fn,
               (
@@ -277,7 +277,7 @@ object ValidationGenerator {
                 f.`type`
               )
             )
-          )
+          }
       }
       val validatedElemRefs: Map[String, (String, Boolean, OpenapiSchemaType)] = elemValidators
         .flatMap(_.map { case (fn, (defn, nb, tpe)) => (fn, (defn.name, nb, tpe)) }.headOption)

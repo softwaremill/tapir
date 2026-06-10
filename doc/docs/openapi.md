@@ -10,7 +10,8 @@ these steps can be done separately, giving you complete control over the process
 
 ### Using Swagger
 
-To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
+To generate OpenAPI documentation and expose it using the [Swagger UI](https://github.com/swagger-api/swagger-ui) 
+in a single step, first add the dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "@VERSION@"
@@ -52,13 +53,23 @@ for details.
 
 ### Using Redoc
 
-Similarly as above, you'll need the following dependency:
+For [Redoc](https://github.com/redocly/redoc), you'll need the following dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "@VERSION@"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
+
+### Using Scalar
+
+For [Scalar](https://github.com/scalar/scalar), you'll need the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-scalar-bundle" % "@VERSION@"
+```
+
+And the server endpoints can be generated using the `sttp.tapir.scalar.bundle.ScalarInterpreter` class.
 
 ## Generating OpenAPI documentation separately
 
@@ -216,6 +227,10 @@ Options can be customised by providing an instance of `OpenAPIDocsOptions` to th
 * `failOnDuplicateOperationId`: if set to `true`, the interpreter will throw an exception if it encounters two endpoints
   with the same operation id. An OpenAPI document with duplicate operation ids is not valid. Code generators can 
   silently drop duplicates. This is also verified by the [endpoint verifier](../testing.md).
+* `failOnDuplicateSchemaName`: if set to `true`, the interpreter will throw an exception if it encounters two schemas
+  which (without automatic deduplication by adding a numeric suffix) would be identical. Having automatically resolved 
+  de-duplications might result in different names depending on the order of endpoints. This might result in false 
+  positive changes in the OpenApi document.
 
 ## Inlined and referenced schemas
 
