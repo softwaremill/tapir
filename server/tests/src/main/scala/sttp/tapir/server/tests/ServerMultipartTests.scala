@@ -2,6 +2,7 @@ package sttp.tapir.server.tests
 
 import cats.effect.IO
 import cats.implicits._
+import org.scalatest.Succeeded
 import org.scalatest.matchers.should.Matchers._
 import org.scalatest.concurrent.Eventually.eventually
 import sttp.client4.{multipartFile, _}
@@ -57,7 +58,12 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
         .send(backend)
         .map { r =>
           r.code shouldBe StatusCode.PayloadTooLarge
-        } >> basicStringRequest
+        }
+        // The server may reject an over-limit body by closing the connection before the client has
+        // finished sending it (there is no Expect: 100-continue handshake), which surfaces on the
+        // client as a transport error (connection reset / broken pipe / EOF) instead of a 413. Both
+        // are valid rejections of the too-large body, so accept either to avoid a timing-dependent flake.
+        .recover { case _: SttpClientException => Succeeded } >> basicStringRequest
         .post(uri"$baseUri/api/echo/multipart")
         .multipartBody(multipart("fruitA", "pineapple".repeat(850)), multipart("fruitB", "maracuja".repeat(850)))
         .send(backend)

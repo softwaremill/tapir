@@ -69,7 +69,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
           ),
           websocket
         )
-        websocket.accept()
+        // Vert.x 5 removed ServerWebSocket.accept(); the socket from toWebSocket() is already accepted
         Future.succeededFuture[Void]()
       })
   }
