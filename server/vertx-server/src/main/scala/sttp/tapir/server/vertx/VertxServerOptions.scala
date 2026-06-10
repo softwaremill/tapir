@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx
 
-import io.vertx.core.logging.Logger
+import org.slf4j.Logger
 import sttp.tapir.TapirFile
 import sttp.tapir.server.interceptor.Interceptor
 

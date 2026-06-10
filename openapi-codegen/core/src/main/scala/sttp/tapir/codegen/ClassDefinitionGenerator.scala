@@ -349,7 +349,7 @@ class ClassDefinitionGenerator {
       (if (optional || !required) s"Option[$tpe]" else tpe, maybeEnum)
   }
 
-  private def addName(parentName: String, key: String) = parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
+  private def addName(parentName: String, key: String) = RootGenerator.addName(parentName, key)
 
   private val reservedKeys = VersionedHelpers.reservedKeys
 
