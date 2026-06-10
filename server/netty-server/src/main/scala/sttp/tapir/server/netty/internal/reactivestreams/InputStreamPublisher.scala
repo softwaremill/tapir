@@ -10,8 +10,8 @@ import sttp.tapir.server.netty.internal.RunAsync
 
 import java.io.InputStream
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-import scala.util.Try
 
+/** The effect F should never be Id; instead, the InputStreamSyncPublisher should then be used */
 class InputStreamPublisher[F[_]](
     range: InputStreamRange,
     chunkSize: Int,
@@ -34,11 +34,19 @@ class InputStreamPublisher[F[_]](
     private val readingInProgress = new AtomicBoolean(false)
 
     override def request(n: Long): Unit = {
-      if (n <= 0) subscriber.onError(new IllegalArgumentException("§3.9: n must be greater than 0"))
-      else {
-        demand.addAndGet(n)
+      if (n <= 0) {
+        cancel()
+        subscriber.onError(new IllegalArgumentException("§3.9: n must be greater than 0"))
+      } else {
+        addDemand(n)
         readNextChunkIfNeeded()
       }
+    }
+
+    /** Add demand using saturating addition, capping at Long.MaxValue to prevent overflow. */
+    private def addDemand(n: Long): Unit = {
+      demand.getAndUpdate(current => if (current > Long.MaxValue - n) Long.MaxValue else current + n)
+      ()
     }
 
     /** Non-blocking by itself, starts an asynchronous operation with blocking stream.readNBytes. Can be called multiple times by
@@ -53,8 +61,6 @@ class InputStreamPublisher[F[_]](
           case _                                        => chunkSize
         }
 
-        // Note: the effect F may be Id, in which case everything here will be synchronous and blocking
-        // (which technically is against the reactive streams spec).
         runAsync(
           monad
             .blocking(
@@ -79,7 +85,10 @@ class InputStreamPublisher[F[_]](
               }
             }
             .handleError { case e =>
-              val _ = Try(stream.close())
+              try stream.close()
+              catch {
+                case e2: Throwable => e.addSuppressed(e2)
+              }
               monad.unit(subscriber.onError(e))
             }
         )
@@ -88,7 +97,10 @@ class InputStreamPublisher[F[_]](
 
     override def cancel(): Unit = {
       isCompleted.set(true)
-      val _ = Try(stream.close())
+      try stream.close()
+      catch {
+        case e2: Throwable => // ignore
+      }
     }
   }
 }

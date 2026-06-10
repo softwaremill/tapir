@@ -1,14 +1,11 @@
 package sttp.tapir.codegen.openapi.models
 
-import io.circe.generic.semiauto.deriveDecoder
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaEnum
-
-case class OpenapiServerEnum(enum: Seq[String] = Nil, default: Option[String] = None)
+case class OpenapiServerEnum(`enum`: Seq[String] = Nil, default: Option[String] = None)
 object OpenapiServerEnum {
   import io.circe._
   implicit val serverEnumDecoder: Decoder[OpenapiServerEnum] = { (c: HCursor) =>
     for {
-      enum <- c.downField("enum").as[Option[Seq[String]]]
+      enumValue <- c.downField("enum").as[Option[Seq[String]]]
       default = c
         .downField("default")
         .focus
@@ -23,7 +20,7 @@ object OpenapiServerEnum {
           )
         )
         .flatten
-    } yield OpenapiServerEnum(enum.getOrElse(Nil), default)
+    } yield OpenapiServerEnum(enumValue.getOrElse(Nil), default)
   }
 }
 

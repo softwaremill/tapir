@@ -8,7 +8,7 @@ import OpenapiSchemaType.{
   OpenapiSchemaObject,
   OpenapiSchemaRef,
   OpenapiSchemaRefDecoder,
-  OpenapiSchemaSimpleType
+  OpenapiSchemaString
 }
 import io.circe.Json
 import sttp.tapir.codegen.RootGenerator.strippedToCamelCase
@@ -20,7 +20,6 @@ import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
   forceRespStreaming,
   forceStreaming
 }
-import sttp.tapir.codegen.util.MapUtils
 
 import scala.collection.mutable
 // https://swagger.io/specification/
@@ -204,9 +203,28 @@ object OpenapiModels {
       code: String,
       description: String,
       content: Seq[OpenapiResponseContent],
-      headers: Map[String, OpenapiHeader] = Map.empty
+      private val headers: Map[String, OpenapiHeader] = Map.empty
   ) extends OpenapiResponse {
     def resolve(doc: OpenapiDocument): OpenapiResponseDef = this
+    private def maybeContentTypeHeader: Option[(String, OpenapiHeader)] = if (content.forall(!_.contentType.contains("*"))) None
+    else {
+      def generalRegex = "([^*]+|[*])/([^*]+|[*])"
+      val validatingRegex = content.map(_.contentType) match {
+        case s if s.contains("*/*") => generalRegex
+        case Seq(oneType)           => oneType.replace("*", "([^*]+|[*])")
+        case s                      => s.map(_.replace("*", "([^*]+|[*])")).map(t => s"($t)").mkString("|")
+      }
+      Some(
+        "Content-Type" -> OpenapiHeaderDef(
+          OpenapiParameter("Content-Type", "header", Some(true), None, OpenapiSchemaString(false, Some(validatingRegex), None, None))
+        )
+      )
+    }
+    def getHeaders: Map[String, OpenapiHeader] =
+      // according to api spec, content-type header should be ignored - cf https://swagger.io/specification/#response-object
+      headers.filterNot(_._1.toLowerCase == "content-type") ++
+        // but add one explicitly if content contains a wildcard
+        maybeContentTypeHeader
   }
   case class OpenapiResponseRef(
       code: String,

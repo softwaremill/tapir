@@ -10,7 +10,8 @@ these steps can be done separately, giving you complete control over the process
 
 ### Using Swagger
 
-To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
+To generate OpenAPI documentation and expose it using the [Swagger UI](https://github.com/swagger-api/swagger-ui) 
+in a single step, first add the dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "@VERSION@"
@@ -52,13 +53,23 @@ for details.
 
 ### Using Redoc
 
-Similarly as above, you'll need the following dependency:
+For [Redoc](https://github.com/redocly/redoc), you'll need the following dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "@VERSION@"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
+
+### Using Scalar
+
+For [Scalar](https://github.com/scalar/scalar), you'll need the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-scalar-bundle" % "@VERSION@"
+```
+
+And the server endpoints can be generated using the `sttp.tapir.scalar.bundle.ScalarInterpreter` class.
 
 ## Generating OpenAPI documentation separately
 

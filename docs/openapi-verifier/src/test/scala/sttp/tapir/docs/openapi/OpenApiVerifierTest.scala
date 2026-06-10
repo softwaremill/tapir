@@ -3,6 +3,8 @@ package sttp.tapir.docs.openapi
 import org.scalatest.funsuite.AnyFunSuite
 import sttp.tapir._
 import sttp.tapir.json.circe.jsonBody
+import io.circe.generic.auto._
+import sttp.tapir.generic.auto._
 
 class OpenApiVerifierTest extends AnyFunSuite {
   val openAPISpecification: String =
@@ -45,6 +47,50 @@ class OpenApiVerifierTest extends AnyFunSuite {
       |                type: string
       """.stripMargin
 
+  val openAPISpecificationMarkOptionAsNullable: String =
+    """openapi: 3.0.0
+      |info:
+      |  title: Sample API
+      |  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+      |  version: 0.1.9
+      |
+      |servers:
+      |  - url: http://api.example.com/v1
+      |    description: Optional server description, e.g. Main (production) server
+      |  - url: http://staging-api.example.com
+      |    description: Optional server description, e.g. Internal staging server for testing
+      |
+      |paths:
+      |  /users:
+      |    get:
+      |      summary: Returns a list of users.
+      |      description: Optional extended description in CommonMark or HTML.
+      |      responses:
+      |        "200": # status code
+      |          description: A JSON array of user names
+      |          content:
+      |            application/json:
+      |              schema:
+      |                anyOf:
+      |                - $ref: '#/components/schemas/FullName'
+      |                - type: 'null'
+      |components:
+      |  schemas:
+      |    FullName:
+      |      title: FullName
+      |      type: object
+      |      required:
+      |      - firstName
+      |      - lastName
+      |      properties:
+      |        firstName:
+      |          type: string
+      |        lastName:
+      |          type: string
+      |      """.stripMargin
+
+  case class FullName(firstName: String, lastName: String)
+
   test("verifyServer - all client openapi endpoints have corresponding server endpoints") {
     val serverEndpoints = List(
       endpoint.get
@@ -84,6 +130,24 @@ class OpenApiVerifierTest extends AnyFunSuite {
     assert(OpenAPIVerifier.verifyServer(serverEndpoints, openAPISpecification).nonEmpty)
   }
 
+  test("verifyServer - respect OpenAPIDocsOptions") {
+    val serverEndpoints = List(
+      endpoint.get
+        .in("users")
+        .out(jsonBody[Option[FullName]])
+    )
+
+    assert(
+      OpenAPIVerifier
+        .verifyServer(
+          serverEndpoints,
+          openAPISpecificationMarkOptionAsNullable,
+          OpenAPIDocsOptions.default.copy(markOptionsAsNullable = true)
+        )
+        .isEmpty
+    )
+  }
+
   test("verifyClient - all server openapi endpoints have corresponding client endpoints") {
     val clientEndpoints = List(
       endpoint.get
@@ -121,5 +185,23 @@ class OpenApiVerifierTest extends AnyFunSuite {
     )
 
     assert(OpenAPIVerifier.verifyClient(clientEndpoints, openAPISpecification).isEmpty)
+  }
+
+  test("verifyClient - respect OpenAPIDocsOptions") {
+    val clientEndpoints = List(
+      endpoint.get
+        .in("users")
+        .out(jsonBody[Option[FullName]])
+    )
+
+    assert(
+      OpenAPIVerifier
+        .verifyClient(
+          clientEndpoints,
+          openAPISpecificationMarkOptionAsNullable,
+          OpenAPIDocsOptions.default.copy(markOptionsAsNullable = true)
+        )
+        .isEmpty
+    )
   }
 }

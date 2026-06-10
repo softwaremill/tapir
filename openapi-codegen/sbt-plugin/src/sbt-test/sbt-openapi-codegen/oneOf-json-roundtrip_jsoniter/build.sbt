@@ -10,8 +10,8 @@ lazy val root = (project in file("."))
   )
 
 val catsXmlVersion = "0.0.20"
-val jsoniterScalaVersion = "2.38.7"
-val tapirVersion = "1.11.18"
+val jsoniterScalaVersion = "2.38.14"
+val tapirVersion = "1.13.13"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
@@ -48,15 +48,15 @@ def compare(name: String, genFn: String, expFn: String) = {
 }
 
 TaskKey[Unit]("check") := {
-  compare("endpoints", "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
+  compare("endpoints", s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpoints.scala", "Expected.scala.txt")
   compare(
     "xml",
-    "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsXmlSerdes.scala",
+    s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpointsXmlSerdes.scala",
     "ExpectedXmlSerdes.scala.txt"
   )
   compare(
     "json",
-    "target/scala-2.13/src_managed/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
+    s"${sourceManaged.value}/main/sbt-openapi-codegen/TapirGeneratedEndpointsJsonSerdes.scala",
     "ExpectedJsonSerdes.scala.txt"
   )
   ()

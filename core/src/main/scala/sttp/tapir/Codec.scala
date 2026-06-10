@@ -242,6 +242,8 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     }(h => OffsetDateTime.of(h, ZoneOffset.UTC).toString)
     .schema(Schema.schemaForLocalDateTime)
 
+  implicit lazy val period: Codec[String, Period, TextPlain] = parsedString(Period.parse)
+
   implicit val scalaDuration: Codec[String, SDuration, TextPlain] =
     parsedString[SDuration](SDuration.apply).schema(Schema.schemaForScalaDuration)
   implicit val uri: PlainCodec[Uri] =

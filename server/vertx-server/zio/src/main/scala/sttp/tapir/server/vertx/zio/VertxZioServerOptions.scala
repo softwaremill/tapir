@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx.zio
 
-import io.vertx.core.logging.{Logger, LoggerFactory}
+import org.slf4j.{Logger, LoggerFactory}
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.vertx.VertxServerOptions
