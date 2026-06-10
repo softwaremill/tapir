@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx.zio
 
-import io.vertx.core.{Future, Handler, Promise}
+import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
@@ -76,9 +76,10 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
           cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
             rc.vertx()
               .executeBlocking[Unit](
-                (promise: Promise[Unit]) => {
+                // Vert.x 5 executeBlocking takes a Callable returning the result, not a Handler[Promise]
+                () => {
                   c(FiberId.None)
-                  promise.complete(())
+                  ()
                 },
                 false
               )
@@ -96,9 +97,10 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
         cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
           rc.vertx()
             .executeBlocking[Unit](
-              (promise: Promise[Unit]) => {
+              // Vert.x 5 executeBlocking takes a Callable returning the result, not a Handler[Promise]
+              () => {
                 canceler(FiberId.None)
-                promise.complete(())
+                ()
               },
               false
             )

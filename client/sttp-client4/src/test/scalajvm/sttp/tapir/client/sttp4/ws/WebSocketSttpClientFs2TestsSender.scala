@@ -12,7 +12,7 @@ import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 import concurrent.Future
 
-abstract class WebSocketSttpClientTestsSender extends ClientTests[WebSockets with Fs2Streams[IO]] {
+abstract class WebSocketSttpClientFs2TestsSender extends ClientTests[WebSockets with Fs2Streams[IO]] {
   private implicit val ioRT: IORuntime = cats.effect.unsafe.implicits.global
 
   val (dispatcher, closeDispatcher) = Dispatcher.parallel[IO](false).allocated.unsafeRunSync()

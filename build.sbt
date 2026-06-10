@@ -212,6 +212,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   swaggerUiBundle.projectRefs ++
   redoc.projectRefs ++
   redocBundle.projectRefs ++
+  scalar.projectRefs ++
+  scalarBundle.projectRefs ++
   serverTests.projectRefs ++
   serverCore.projectRefs ++
   akkaHttpServer.projectRefs ++
@@ -268,6 +270,15 @@ lazy val rawAllAggregates = core.projectRefs ++
 
 lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
 
+// zio-json's JVM artifact requires JDK 17+, so the JVM variant is built on the JDK 21 jobs (alongside the Loom
+// projects). The JS/Native variants are unaffected (no JVM runtime loads their classes), and stay on the JDK 11 jobs.
+lazy val zioJvmProjects: Seq[String] =
+  zioJson.projectRefs.flatMap(projectId).filterNot(id => id.contains("JS") || id.contains("Native"))
+
+// mockserver-netty 7.x (a test-only dependency of sttp-mock-server) requires JDK 17+, so the module is built and
+// tested only on the JDK 21 jobs (alongside the Loom and zio-json JVM projects), not on the JDK 11 jobs.
+lazy val jdk17Projects: Seq[String] = sttpMockServer.projectRefs.flatMap(projectId)
+
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
     case ProjectRef(_, id) => Some(id)
@@ -283,15 +294,25 @@ lazy val allAggregates: Seq[ProjectReference] = {
     println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
-  if (sys.env.isDefinedAt("ONLY_LOOM")) {
-    println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(p => projectId(p).forall(loomProjects.contains))
-  } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
-    println("[info] ALSO_LOOM defined, including also loom-based projects")
+  // zio-json's JVM artifact requires JDK 17+, so it's only included on the JDK 21 jobs (where WITH_ZIO is set)
+  val filteredByZio = if (sys.env.isDefinedAt("WITH_ZIO")) {
+    println("[info] WITH_ZIO defined, including zio-json JVM in the aggregate projects")
     filteredByNative
   } else {
-    println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(p => projectId(p).forall(loomProjects.contains))
+    println("[info] WITH_ZIO *not* defined, *not* including zio-json JVM in the aggregate projects")
+    filteredByNative.filterNot(p => projectId(p).forall(zioJvmProjects.contains))
+  }
+  if (sys.env.isDefinedAt("ONLY_LOOM")) {
+    println("[info] ONLY_LOOM defined, including only loom-based, zio-json JVM and JDK17+ projects")
+    filteredByZio.filter(p =>
+      projectId(p).forall(id => loomProjects.contains(id) || zioJvmProjects.contains(id) || jdk17Projects.contains(id))
+    )
+  } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
+    println("[info] ALSO_LOOM defined, including also loom-based projects")
+    filteredByZio
+  } else {
+    println("[info] ONLY_LOOM *not* defined, *not* including loom-based and JDK17+ projects")
+    filteredByZio.filterNot(p => projectId(p).forall(id => loomProjects.contains(id) || jdk17Projects.contains(id)))
   }
 }
 
@@ -450,7 +471,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.18")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.20")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.13",
@@ -561,7 +582,7 @@ lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-t
         "jackson-databind"
       ),
       "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.1",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.3",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.184",
@@ -662,6 +683,7 @@ lazy val catsEffect: ProjectMatrix = (projectMatrix in file("integrations/cats-e
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .jsPlatform(scalaVersions = scala2And3Versions, settings = commonJsSettings)
+  .nativePlatform(scalaVersions = List(scala3), settings = commonNativeSettings)
   .dependsOn(core)
 
 lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumeratum"))
@@ -1066,8 +1088,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.4.3",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.4.3",
+      "io.prometheus" % "prometheus-metrics-core" % "1.7.0",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.7.0",
       scalaTest.value % Test
     )
   )
@@ -1153,7 +1175,6 @@ lazy val otel4sTracing: ProjectMatrix = (projectMatrix in file("tracing/otel4s-t
     libraryDependencies ++= Seq(
       "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
       "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
       "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
       scalaTest.value % Test
     )
@@ -1168,7 +1189,8 @@ lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-m
     libraryDependencies ++= Seq(
       "org.typelevel" %% "otel4s-semconv" % Versions.otel4s,
       "org.typelevel" %% "otel4s-oteljava" % Versions.otel4s,
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion % Test,
+      "org.typelevel" %% "otel4s-semconv-metrics" % Versions.otel4s,
+      "org.typelevel" %% "otel4s-semconv-metrics-experimental" % Versions.otel4s % Test,
       "org.typelevel" %% "otel4s-oteljava-testkit" % Versions.otel4s % Test,
       scalaTest.value % Test
     )
@@ -1309,6 +1331,32 @@ lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(redoc, openapiDocs, sttpClient4 % Test, http4sServer % Test)
 
+lazy val scalar: ProjectMatrix = (projectMatrix in file("docs/scalar"))
+  .settings(commonSettings)
+  .settings(name := "tapir-scalar")
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJvmSettings
+  )
+  .jsPlatform(
+    scalaVersions = scala2And3Versions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
+lazy val scalarBundle: ProjectMatrix = (projectMatrix in file("docs/scalar-bundle"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-scalar-bundle",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(scalar, openapiDocs, sttpClient4 % Test, http4sServer % Test)
+
 // server
 
 lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
@@ -1440,6 +1488,12 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
         "org.http4s" %%% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
       )
     }
+  )
+  .nativePlatform(
+    scalaVersions = List(scala3),
+    settings = commonNativeSettings ++ Seq(
+      Test / skip := true
+    )
   )
   .dependsOn(serverCore, cats, catsEffect)
 
@@ -1654,7 +1708,9 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-serve
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx,
-      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided"
+      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided",
+      // Vert.x 5 removed io.vertx.core.logging; use slf4j directly (Vert.x logs through it)
+      slf4j
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
@@ -2199,8 +2255,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.9" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.9" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.14" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.14" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
@@ -2322,6 +2378,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     sttpStub4Server,
     swaggerUiBundle,
     redocBundle,
+    scalarBundle,
     vertxServer,
     zioHttpServer,
     zioJson,

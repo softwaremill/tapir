@@ -38,7 +38,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v6
-    - uses: sbt/setup-sbt@508b753e53cb6095967669e0911487d2b9bc9f41 # v1, specifically v1.1.22
+    - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b # v1, specifically v1.2.1
     - name: Set up JDK 
       uses: actions/setup-java@v5
       with:
@@ -71,14 +71,29 @@ jobs:
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Install scala-cli
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
-      uses: VirtusLab/scala-cli-setup@59e308800210b0414d2d7190068c80021e1b3e5d # main, specifically v1.12.4
+      uses: VirtusLab/scala-cli-setup@d320e01a605bf27128a5657575382668f83ef34e # main, specifically v1.14.0
       with:
         jvm: '' # needed because scala-cli-setup otherwise forces the installation of their default JVM (17)
     - name: Enable Loom-specific modules
       if: matrix.java == '21'
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
+    - name: Enable ZIO-specific modules # zio-json requires JDK 17+
+      if: matrix.java == '21'
+      run: echo "WITH_ZIO=1" >> $GITHUB_ENV
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
+    - name: Compile core & server-core with next Scala 3
+      if: matrix.scala-version == '3' && matrix.target-platform == 'JVM' && matrix.java == '21'
+      env:
+        SCALA_3_NEXT: "3.8.3"
+      run: |
+        sbt $SBT_JAVA_OPTS -v \
+          "set LocalProject(\"core3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          "set LocalProject(\"serverCore3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          "set LocalProject(\"coreJS3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          "set LocalProject(\"serverCoreJS3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          core3/Test/compile serverCore3/Test/compile \
+          coreJS3/Test/compile serverCoreJS3/Test/compile
     - name: Compile documentation
       if: matrix.target-platform == 'JVM' && matrix.java == '21'
       run: sbt $SBT_JAVA_OPTS -v compileDocumentation
@@ -127,7 +142,8 @@ jobs:
         name: 'tests-results-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'
         path: '**/test-reports/TEST*.xml'
     - name: Prepare release notes
-      uses: release-drafter/release-drafter@6a93d829887aa2e0748befe2e808c66c0ec6e4c7 # v6, specifically v6.4.0
+      if: github.ref == 'refs/heads/master' # this should not run on PR builds
+      uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v6, specifically v7.3.1
       with:
         config-name: release-drafter.yml
       env:
@@ -151,7 +167,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - uses: sbt/setup-sbt@508b753e53cb6095967669e0911487d2b9bc9f41 # v1, specifically v1.1.22
+      - uses: sbt/setup-sbt@af116cce31c00823d3903ce687f9cda3a4f19f1b # v1, specifically v1.2.1
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
@@ -166,9 +182,11 @@ jobs:
       - name: Enable Native-specific modules
         if: matrix.java == '11'
         run: echo "STTP_NATIVE=1" >> $GITHUB_ENV
-      - name: Enable Loom-specific modules
+      - name: Enable Loom and ZIO-specific modules # zio-json requires JDK 17+
         if: matrix.java == '21'
-        run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
+        run: |
+          echo "ONLY_LOOM=1" >> $GITHUB_ENV
+          echo "WITH_ZIO=1" >> $GITHUB_ENV
       - name: Compile
         run: sbt $SBT_JAVA_OPTS compile
       - name: Publish artifacts
@@ -187,7 +205,7 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - name: Publish release notes
         if: matrix.java == '11'
-        uses: release-drafter/release-drafter@6a93d829887aa2e0748befe2e808c66c0ec6e4c7 # v6, specifically v6.4.0
+        uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v6, specifically v7.3.1
         with:
           config-name: release-drafter.yml
           publish: true

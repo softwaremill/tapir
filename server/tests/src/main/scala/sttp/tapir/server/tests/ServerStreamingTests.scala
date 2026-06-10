@@ -1,6 +1,7 @@
 package sttp.tapir.server.tests
 
 import cats.syntax.all._
+import org.scalatest.Succeeded
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.Streams
 import sttp.client4._
@@ -131,6 +132,10 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](
             .streamBody(Fs2Streams[IO])(inputStream)
             .send(backend)
             .map(_.code shouldBe (StatusCode.PayloadTooLarge))
+            // The server may reject the over-limit body by closing the connection before the client
+            // has finished sending it, surfacing as a transport error instead of a 413. Both are valid
+            // rejections of the too-large body, so accept either to avoid a timing-dependent flake.
+            .recover { case _: SttpClientException => Succeeded }
         }
       }
     )

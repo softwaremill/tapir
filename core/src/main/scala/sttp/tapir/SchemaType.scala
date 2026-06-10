@@ -70,6 +70,7 @@ object SchemaType {
       case p: SProductField[?] => p.name == name && p.schema == schema
       case _                   => false
     }
+    override def hashCode(): Int = (name, schema).hashCode()
 
     def show: String = s"field($name,${schema.show})"
     override def toString: String = s"SProductField($name,$schema)"
