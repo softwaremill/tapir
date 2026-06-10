@@ -1,7 +1,7 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.testutils.CompileCheckTestBase
+import sttp.tapir.codegen.testutils.{CompileCheckTestBase, VersionCheck}
 
 class RootGeneratorSpec extends CompileCheckTestBase {
   def genMap(
@@ -13,7 +13,7 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
-      targetScala3 = false,
+      targetScala3 = isScala3,
       useHeadTagForObjectNames = useHeadTagForObjectNames,
       jsonSerdeLib = jsonSerdeLib,
       xmlSerdeLib = "cats-xml",
@@ -42,7 +42,7 @@ class RootGeneratorSpec extends CompileCheckTestBase {
   }
   def testJsonLib(jsonSerdeLib: String) = {
     it should s"generate the bookshop example using ${jsonSerdeLib} serdes" in {
-      gen(TestHelpers.myBookshopDoc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib) shouldCompile ()
+      gen(TestHelpers.myBookshopDoc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib).shouldCompile()
     }
 
     it should s"split outputs by tag if useHeadTagForObjectNames = true using ${jsonSerdeLib} serdes" in {
@@ -56,25 +56,24 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       val schemas = generated("TapirGeneratedEndpointsSchemas")
       val endpoints = generated("Bookshop")
       // schema file on its own should compile
-      models shouldCompile ()
+      models.shouldCompile()
       // schema file should contain no endpoint definitions
       models.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 0
       // schema file with serde file should compile
-      (models + "\n" + serdes) shouldCompile ()
+      (models + "\n" + serdes).shouldCompile()
       // schema file with serde file & schema file should compile
-      (models + "\n" + serdes + "\n" + schemas) shouldCompile ()
+      (models + "\n" + serdes + "\n" + schemas).shouldCompile()
       // Bookshop file should contain all endpoint definitions
       endpoints.linesIterator.count(_.matches("""^\s*endpoint""")) shouldEqual 4
       // endpoint file depends on models, serdes & schemas
-      (models + "\n" + serdes + "\n" + schemas + "\n" + endpoints) shouldCompile ()
+      (models + "\n" + serdes + "\n" + schemas + "\n" + endpoints).shouldCompile()
     }
 
     it should s"compile endpoints with enum query params using ${jsonSerdeLib} serdes" in {
-      gen(TestHelpers.enumQueryParamDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib) shouldCompile ()
+      gen(TestHelpers.enumQueryParamDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib).shouldCompile()
     }
 
-    // todo: jsoniter and zio fail this test with `Internal error: unable to find the outer accessor symbol of object TapirGeneratedEndpointsJsonSerdes`
-    if (jsonSerdeLib == "circe") it should s"compile endpoints with default params using ${jsonSerdeLib} serdes" in {
+    VersionCheck.runTest(jsonSerdeLib)(it should s"compile endpoints with default params using ${jsonSerdeLib} serdes" in {
       val genWithParams = gen(TestHelpers.withDefaultsDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
 
       val expectedDefaultDeclarations = Seq(
@@ -88,10 +87,48 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       )
       expectedDefaultDeclarations foreach (decln => genWithParams should include(decln))
 
-      genWithParams shouldCompile ()
-    }
+      genWithParams.shouldCompile()
+    })
 
+    VersionCheck.runTest(jsonSerdeLib)(it should s"compile endpoints with date and duration types using ${jsonSerdeLib} serdes" in {
+      val doc = TestHelpers.parseYamlDocument(TestHelpers.dateAndDurationYaml).fold(err => fail(err.getMessage), identity)
+      val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
+
+      generated should include(
+        """  case class Event (
+          |    name: String,
+          |    eventDate: java.time.LocalDate,
+          |    optionalDate: Option[java.time.LocalDate] = None,
+          |    duration: java.time.Duration,
+          |    optionalDuration: Option[java.time.Duration] = None,
+          |    scheduledAt: Option[java.time.Instant] = None
+          |  )""".stripMargin
+      )
+      generated should include(
+        """  lazy val getEventsByDate =
+          |    endpoint
+          |      .name("getEventsByDate")
+          |      .get
+          |      .in(("events" / path[java.time.LocalDate]("date")))
+          |      .in(query[Option[java.time.Duration]]("minDuration"))
+          |      .out(jsonBody[List[Event]].description(""))""".stripMargin
+      )
+
+      generated.shouldCompile()
+    })
+
+    VersionCheck.runTest(jsonSerdeLib)(
+      it should s"compile endpoints with date and duration default values using ${jsonSerdeLib} serdes" in {
+        val doc = TestHelpers.parseYamlDocument(TestHelpers.dateAndDurationDefaultsYaml).fold(err => fail(err.getMessage), identity)
+        val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
+
+        generated should include("""java.time.LocalDate.parse("2024-01-15")""")
+        generated should include("""java.time.Duration.parse("PT1H30M")""")
+
+        generated.shouldCompile()
+      }
+    )
   }
-  Seq("circe", "jsoniter", "zio") foreach testJsonLib
 
+  Seq("circe", "jsoniter", "zio") foreach testJsonLib
 }

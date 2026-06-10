@@ -116,13 +116,9 @@ object TapirGeneratedEndpointsXmlSerdes {
     case Left(t) => sttp.tapir.DecodeResult.Error(s, t)
   }
 
-  implicit lazy val TagXmlTypeInterpreter: XmlTypeInterpreter[Tag] = XmlTypeInterpreter.auto[Tag]((_, _) => false, (_, _) => false)
-  implicit lazy val TagXmlDecoder: Decoder[Tag] = deriveConfiguredDecoder[Tag]
-  implicit lazy val TagXmlEncoder: Encoder[Tag] = deriveConfiguredEncoder[Tag]
-
-  implicit lazy val Tag2XmlTypeInterpreter: XmlTypeInterpreter[Tag2] = XmlTypeInterpreter.auto[Tag2]((_, _) => false, (_, _) => false)
-  implicit lazy val Tag2XmlDecoder: Decoder[Tag2] = deriveConfiguredDecoder[Tag2]
-  implicit lazy val Tag2XmlEncoder: Encoder[Tag2] = deriveConfiguredEncoder[Tag2]
+  implicit lazy val CategoryXmlTypeInterpreter: XmlTypeInterpreter[Category] = XmlTypeInterpreter.auto[Category]((_, _) => false, (_, _) => false)
+  implicit lazy val CategoryXmlDecoder: Decoder[Category] = deriveConfiguredDecoder[Category]
+  implicit lazy val CategoryXmlEncoder: Encoder[Category] = deriveConfiguredEncoder[Category]
 
   implicit lazy val PetStatusXmlTypeInterpreter: XmlTypeInterpreter[PetStatus] = XmlTypeInterpreter.auto[PetStatus]((_, _) => false, (_, _) => false)
   implicit lazy val PetStatusXmlDecoder: Decoder[PetStatus] = deriveConfiguredDecoder[PetStatus]
@@ -154,7 +150,11 @@ object TapirGeneratedEndpointsXmlSerdes {
     deriveConfiguredEncoder[Pet]
   }
 
-  implicit lazy val CategoryXmlTypeInterpreter: XmlTypeInterpreter[Category] = XmlTypeInterpreter.auto[Category]((_, _) => false, (_, _) => false)
-  implicit lazy val CategoryXmlDecoder: Decoder[Category] = deriveConfiguredDecoder[Category]
-  implicit lazy val CategoryXmlEncoder: Encoder[Category] = deriveConfiguredEncoder[Category]
+  implicit lazy val Tag2XmlTypeInterpreter: XmlTypeInterpreter[Tag2] = XmlTypeInterpreter.auto[Tag2]((_, _) => false, (_, _) => false)
+  implicit lazy val Tag2XmlDecoder: Decoder[Tag2] = deriveConfiguredDecoder[Tag2]
+  implicit lazy val Tag2XmlEncoder: Encoder[Tag2] = deriveConfiguredEncoder[Tag2]
+
+  implicit lazy val TagXmlTypeInterpreter: XmlTypeInterpreter[Tag] = XmlTypeInterpreter.auto[Tag]((_, _) => false, (_, _) => false)
+  implicit lazy val TagXmlDecoder: Decoder[Tag] = deriveConfiguredDecoder[Tag]
+  implicit lazy val TagXmlEncoder: Encoder[Tag] = deriveConfiguredEncoder[Tag]
 }

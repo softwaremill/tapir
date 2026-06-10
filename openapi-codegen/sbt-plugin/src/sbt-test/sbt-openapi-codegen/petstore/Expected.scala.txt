@@ -78,14 +78,14 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
-  case class Pet (
-    id: Option[Long] = None,
-    name: String,
-    category: Option[Category] = None,
-    photoUrls: Seq[String],
-    tags: Option[Seq[Tag]] = None,
-    status: Option[PetStatus] = None
-  )
+
+  sealed trait OrderStatus extends enumeratum.EnumEntry
+  object OrderStatus extends enumeratum.Enum[OrderStatus] with enumeratum.CirceEnum[OrderStatus] {
+    val values = findValues
+    case object placed extends OrderStatus
+    case object approved extends OrderStatus
+    case object delivered extends OrderStatus
+  }
 
   sealed trait PetStatus extends enumeratum.EnumEntry
   object PetStatus extends enumeratum.Enum[PetStatus] with enumeratum.CirceEnum[PetStatus] {
@@ -94,9 +94,30 @@ object TapirGeneratedEndpoints {
     case object pending extends PetStatus
     case object sold extends PetStatus
   }
+  case class ApiResponse (
+    code: Option[Int] = None,
+    `type`: Option[String] = None,
+    message: Option[String] = None
+  )
   case class Category (
     id: Option[Long] = None,
     name: Option[String] = None
+  )
+  case class Order (
+    id: Option[Long] = None,
+    petId: Option[Long] = None,
+    quantity: Option[Int] = None,
+    shipDate: Option[java.time.Instant] = None,
+    status: Option[OrderStatus] = None,
+    complete: Option[Boolean] = None
+  )
+  case class Pet (
+    id: Option[Long] = None,
+    name: String,
+    category: Option[Category] = None,
+    photoUrls: Seq[String],
+    tags: Option[Seq[Tag]] = None,
+    status: Option[PetStatus] = None
   )
   case class Tag (
     id: Option[Long] = None,
@@ -112,36 +133,15 @@ object TapirGeneratedEndpoints {
     phone: Option[String] = None,
     userStatus: Option[Int] = None
   )
-  case class Order (
-    id: Option[Long] = None,
-    petId: Option[Long] = None,
-    quantity: Option[Int] = None,
-    shipDate: Option[java.time.Instant] = None,
-    status: Option[OrderStatus] = None,
-    complete: Option[Boolean] = None
-  )
-
-  sealed trait OrderStatus extends enumeratum.EnumEntry
-  object OrderStatus extends enumeratum.Enum[OrderStatus] with enumeratum.CirceEnum[OrderStatus] {
-    val values = findValues
-    case object placed extends OrderStatus
-    case object approved extends OrderStatus
-    case object delivered extends OrderStatus
-  }
-  case class ApiResponse (
-    code: Option[Int] = None,
-    `type`: Option[String] = None,
-    message: Option[String] = None
-  )
 
   sealed trait UpdatePetBodyIn extends Product with java.io.Serializable
-  case class UpdatePetBodyPetIn(value: Pet) extends UpdatePetBodyIn
   case class UpdatePetBody2In(value: Array[Byte]) extends UpdatePetBodyIn
+  case class UpdatePetBodyPetIn(value: Pet) extends UpdatePetBodyIn
 
 
   sealed trait AddPetBodyIn extends Product with java.io.Serializable
-  case class AddPetBodyPetIn(value: Pet) extends AddPetBodyIn
   case class AddPetBody2In(value: Array[Byte]) extends AddPetBodyIn
+  case class AddPetBodyPetIn(value: Pet) extends AddPetBodyIn
 
   type FindPetsByStatusResponse <: Seq[Pet]
   implicit val FindPetsByStatusResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByStatusResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByStatusResponse])
@@ -157,17 +157,18 @@ object TapirGeneratedEndpoints {
     implicitly[Schema[Seq[Pet]]].map(x => Some(x.asInstanceOf[FindPetsByTagsResponse]))(_.asInstanceOf[Seq[Pet]])
 
   sealed trait PlaceOrderBodyIn extends Product with java.io.Serializable
-  case class PlaceOrderBodyOption_Order_In(value: Option[Order]) extends PlaceOrderBodyIn
   case class PlaceOrderBody2In(value: Array[Byte]) extends PlaceOrderBodyIn
+  case class PlaceOrderBodyOption_Order_In(value: Option[Order]) extends PlaceOrderBodyIn
 
 
   sealed trait CreateUserBodyIn extends Product with java.io.Serializable
-  case class CreateUserBodyOption_User_In(value: Option[User]) extends CreateUserBodyIn
   case class CreateUserBody2In(value: Array[Byte]) extends CreateUserBodyIn
+  case class CreateUserBodyOption_User_In(value: Option[User]) extends CreateUserBodyIn
+
 
   sealed trait UpdateUserBodyIn extends Product with java.io.Serializable
-  case class UpdateUserBodyOption_User_In(value: Option[User]) extends UpdateUserBodyIn
   case class UpdateUserBody2In(value: Array[Byte]) extends UpdateUserBodyIn
+  case class UpdateUserBodyOption_User_In(value: Option[User]) extends UpdateUserBodyIn
 
   type SwaggerRouterControllerExtension = String
   val swaggerRouterControllerExtensionKey = new sttp.tapir.AttributeKey[SwaggerRouterControllerExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.SwaggerRouterControllerExtension")

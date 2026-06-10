@@ -1,15 +1,12 @@
 package sttp.tapir.serverless.aws.ziolambda
 
 import io.circe._
-import io.circe.generic.auto._
-import io.circe.parser.decode
-import io.circe.syntax.EncoderOps
 import sttp.tapir.server.ziohttp.ZioHttpServerOptions
-import sttp.tapir.serverless.aws.lambda.{AwsRequest, AwsRequestV1, AwsResponse, AwsServerOptions}
+import sttp.tapir.serverless.aws.lambda.{AwsLambdaCodec, AwsRequest, AwsResponse, AwsServerOptions}
 import sttp.tapir.ztapir._
-import zio.{RIO, Task, ZIO}
+import zio.{RIO, ZIO}
 
-import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
+import java.io.{InputStream, OutputStream}
 import java.nio.charset.StandardCharsets
 
 /** [[ZioLambdaHandler]] is an entry point for handling requests sent to AWS Lambda application which exposes Tapir endpoints.
@@ -23,37 +20,15 @@ abstract class ZioLambdaHandler[Env: RIOMonadError](options: AwsServerOptions[RI
 
   protected def getAllEndpoints: List[ZServerEndpoint[Env, Any]]
 
-  def process[R: Decoder](input: InputStream, output: OutputStream): RIO[Env, Unit] = {
+  private lazy val route: AwsRequest => RIO[Env, AwsResponse] = AwsZioServerInterpreter[Env](options).toRoute(getAllEndpoints)
 
-    val server: AwsZioServerInterpreter[Env] =
-      AwsZioServerInterpreter[Env](options)
-
+  def process[R: Decoder](input: InputStream, output: OutputStream): RIO[Env, Unit] =
     for {
       allBytes <- ZIO.attempt(input.readAllBytes())
-      str = new String(allBytes, StandardCharsets.UTF_8)
-      decoded = decode[R](str)
-      response <- decoded match {
-        case Left(e)                => ZIO.succeed(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
-        case Right(r: AwsRequestV1) => server.toRoute(getAllEndpoints)(r.toV2)
-        case Right(r: AwsRequest)   => server.toRoute(getAllEndpoints)(r)
-        case Right(r)               =>
-          val message = s"Request of type ${r.getClass.getCanonicalName} is not supported"
-          ZIO.fail(new IllegalArgumentException(message))
-      }
-      _ <- writerResource(response, output)
+      decoded <- ZIO.attempt(AwsLambdaCodec.decodeRequest[R](new String(allBytes, StandardCharsets.UTF_8)))
+      response <- decoded.fold(ZIO.succeed(_), route)
+      _ <- ZIO.attempt(AwsLambdaCodec.writeResponse(response, output))
     } yield ()
-  }
-
-  private def writerResource(response: AwsResponse, output: OutputStream): Task[Unit] = {
-    val acquire = ZIO.attempt(new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8)))
-    val release = (writer: BufferedWriter) =>
-      ZIO.attempt {
-        writer.flush()
-        writer.close()
-      }.orDie
-    val use = (writer: BufferedWriter) => ZIO.attempt(writer.write(Printer.noSpaces.print(response.asJson)))
-    ZIO.acquireReleaseWith(acquire)(release)(use)
-  }
 }
 
 object ZioLambdaHandler {

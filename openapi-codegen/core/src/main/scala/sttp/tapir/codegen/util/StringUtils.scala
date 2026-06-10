@@ -16,8 +16,7 @@ object JavaEscape {
 }
 
 object NameHelpers {
-  val reservedKeys: Set[String] =
-    scala.reflect.runtime.universe.asInstanceOf[scala.reflect.internal.SymbolTable].nme.keywords.map(_.toString)
+  val reservedKeys: Set[String] = VersionedHelpers.reservedKeys.toSet
 
   def safeVariableName(s: String): String =
     if ((reservedKeys ++ Set("enum", "given", "using")).contains(s) || !s.matches("[A-Za-z_$][A-Za-z_$0-9]*")) s"`$s`" else s

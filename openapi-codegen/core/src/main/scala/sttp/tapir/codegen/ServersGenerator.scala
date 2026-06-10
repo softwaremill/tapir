@@ -62,7 +62,7 @@ object ServersGenerator {
     val (withDefault, withoutDefault) = enumNames.partition(_._3.isDefined)
     val enumParams = (withoutDefault ++ withDefault)
       .map {
-        case (e, vs, d) if vs.nonEmpty => s"_$e: $e${d.map(v => s" = $e.default").getOrElse("")}"
+        case (e, vs, d) if vs.nonEmpty => s"_$e: $e${d.map(_ => s" = $e.default").getOrElse("")}"
         case (e, _, d) if d.nonEmpty   => s"_$e: String${d.map(_ => s" = ${safeVariableName(s"default${e.capitalize}")}").getOrElse("")}"
         case (e, _, _)                 => s"_$e: String"
       }

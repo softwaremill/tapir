@@ -1,14 +1,11 @@
 package sttp.tapir.serverless.aws.lambda
 
-import cats.effect.{Resource, Sync}
+import cats.effect.Sync
 import cats.implicits._
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import io.circe._
-import io.circe.generic.auto._
-import io.circe.parser.decode
-import io.circe.syntax.EncoderOps
 import sttp.tapir.server.ServerEndpoint
-import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
+import java.io.{InputStream, OutputStream}
 import java.nio.charset.StandardCharsets
 
 /** [[LambdaHandler]] is an entry point for handling requests sent to AWS Lambda application which exposes Tapir endpoints.
@@ -25,38 +22,13 @@ abstract class LambdaHandler[F[_]: Sync, R: Decoder](options: AwsServerOptions[F
 
   protected def getAllEndpoints: List[ServerEndpoint[Any, F]]
 
-  protected def process(input: InputStream, output: OutputStream): F[Unit] = {
-    val server: AwsCatsEffectServerInterpreter[F] = AwsCatsEffectServerInterpreter(options)
+  private lazy val route: Route[F] = AwsCatsEffectServerInterpreter(options).toRoute(getAllEndpoints)
 
+  protected def process(input: InputStream, output: OutputStream): F[Unit] =
     for {
       allBytes <- Sync[F].blocking(input.readAllBytes())
-      decoded <- Sync[F].delay(decode[R](new String(allBytes, StandardCharsets.UTF_8)))
-      response <- decoded match {
-        case Left(e)           => Sync[F].pure(AwsResponse.badRequest(s"Invalid AWS request: ${e.getMessage}"))
-        case Right(awsRequest) =>
-          awsRequest match {
-            case r: AwsRequestV1 => server.toRoute(getAllEndpoints)(r.toV2)
-            case r: AwsRequest   => server.toRoute(getAllEndpoints)(r)
-            case r               =>
-              Sync[F].raiseError[AwsResponse](
-                new IllegalArgumentException(s"Request of type ${r.getClass.getCanonicalName} is not suppoerted")
-              )
-          }
-      }
-      _ <- writerResource(Sync[F].delay(output)).use { writer =>
-        Sync[F].blocking(writer.write(Printer.noSpaces.print(response.asJson)))
-      }
+      decoded <- Sync[F].delay(AwsLambdaCodec.decodeRequest[R](new String(allBytes, StandardCharsets.UTF_8)))
+      response <- decoded.fold(Sync[F].pure(_), route)
+      _ <- Sync[F].blocking(AwsLambdaCodec.writeResponse(response, output))
     } yield ()
-  }
-
-  private val writerResource: F[OutputStream] => Resource[F, BufferedWriter] = output => {
-    Resource.make {
-      output.map(i => new BufferedWriter(new OutputStreamWriter(i, StandardCharsets.UTF_8)))
-    } { writer =>
-      Sync[F].delay {
-        writer.flush()
-        writer.close()
-      }
-    }
-  }
 }

@@ -26,7 +26,7 @@ trait NettySyncServerInterpreter:
         nettyServerOptions.multipartTempDirectory,
         nettyServerOptions.multipartMinSizeForDisk
       ),
-      new NettySyncToResponseBody(RunAsync.Id, inScopeRunner),
+      new NettySyncToResponseBody(inScopeRunner),
       // not using RejectInterceptor.disableWhenSingleEndpoint, as the typical use-case for the netty server is to run it exclusively with Tapir-managed endpoints
       nettyServerOptions.interceptors,
       nettyServerOptions.deleteFile

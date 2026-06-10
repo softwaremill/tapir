@@ -2,6 +2,8 @@ package sttp.tapir.server.interceptor.cors
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.model.Method
+import sttp.tapir.server.interceptor.cors.CORSConfig.AllowedMethods
 
 class CORSConfigTest extends AnyFlatSpec with Matchers {
 
@@ -9,6 +11,11 @@ class CORSConfigTest extends AnyFlatSpec with Matchers {
 
   it should "provide a valid default config" in {
     CORSConfig.default.isValid shouldBe true
+  }
+
+  it should "allow PATCH by default" in {
+    val AllowedMethods.Some(methods) = CORSConfig.default.allowedMethods: @unchecked
+    methods should contain(Method.PATCH)
   }
 
   it should "detect an invalid config" in {
