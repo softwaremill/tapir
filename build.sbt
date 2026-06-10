@@ -571,11 +571,13 @@ lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-t
     name := "tapir-perf-tests-e2e",
     libraryDependencies ++= Seq(
       // Required to force newer jackson in Pekko, a version that is compatible with Gatling's Jackson dependency
-      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.11.5" % "test" exclude (
+      "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.15.1" % "test" exclude (
         "com.fasterxml.jackson.core",
         "jackson-databind"
       ),
-      "io.gatling" % "gatling-test-framework" % "3.11.5" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      "io.gatling" % "gatling-test-framework" % "3.15.1" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+      // Gatling 3.15 no longer exposes HdrHistogram transitively; the perf tests use org.HdrHistogram directly
+      "org.hdrhistogram" % "HdrHistogram" % "2.2.1" % Test,
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.3",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
