@@ -1,0 +1,76 @@
+openapi: 3.0.3
+info:
+  title: Inline enum json test for jsoniter-scala
+  version: 1.0.0
+paths:
+  '/chat':
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatResponse'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+components:
+  schemas:
+    # 'message' is an inline object (not a $ref) carrying inline string enums at varying depths/shapes:
+    #  - 'role'     : a direct inline enum                    => ChatResponseMessageRole
+    #  - 'roles'    : an array of an inline enum              => ChatResponseMessageRolesItem
+    #  - 'labels'   : a map (additionalProperties) of an enum => ChatResponseMessageLabelsItem
+    #  - 'priority' : a single-element allOf wrapping an enum => ChatResponseMessagePriority
+    # Each requires its own jsoniter codec; the codegen names them '<object><field>[Item]'.
+    ChatResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: object
+          required:
+            - role
+            - roles
+            - labels
+            - priority
+          properties:
+            role:
+              type: string
+              enum:
+                - system
+                - user
+                - assistant
+                - tool
+            roles:
+              type: array
+              items:
+                type: string
+                enum:
+                  - system
+                  - user
+                  - assistant
+                  - tool
+            labels:
+              type: object
+              additionalProperties:
+                type: string
+                enum:
+                  - system
+                  - user
+                  - assistant
+                  - tool
+            priority:
+              allOf:
+                - type: string
+                  enum:
+                    - system
+                    - user
+                    - assistant
+                    - tool
+            content:
+              type: string

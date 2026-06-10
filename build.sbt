@@ -270,6 +270,15 @@ lazy val rawAllAggregates = core.projectRefs ++
 
 lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
 
+// zio-json's JVM artifact requires JDK 17+, so the JVM variant is built on the JDK 21 jobs (alongside the Loom
+// projects). The JS/Native variants are unaffected (no JVM runtime loads their classes), and stay on the JDK 11 jobs.
+lazy val zioJvmProjects: Seq[String] =
+  zioJson.projectRefs.flatMap(projectId).filterNot(id => id.contains("JS") || id.contains("Native"))
+
+// mockserver-netty 7.x (a test-only dependency of sttp-mock-server) requires JDK 17+, so the module is built and
+// tested only on the JDK 21 jobs (alongside the Loom and zio-json JVM projects), not on the JDK 11 jobs.
+lazy val jdk17Projects: Seq[String] = sttpMockServer.projectRefs.flatMap(projectId)
+
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
     case ProjectRef(_, id) => Some(id)
@@ -285,15 +294,25 @@ lazy val allAggregates: Seq[ProjectReference] = {
     println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
-  if (sys.env.isDefinedAt("ONLY_LOOM")) {
-    println("[info] ONLY_LOOM defined, including only loom-based projects")
-    filteredByNative.filter(p => projectId(p).forall(loomProjects.contains))
-  } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
-    println("[info] ALSO_LOOM defined, including also loom-based projects")
+  // zio-json's JVM artifact requires JDK 17+, so it's only included on the JDK 21 jobs (where WITH_ZIO is set)
+  val filteredByZio = if (sys.env.isDefinedAt("WITH_ZIO")) {
+    println("[info] WITH_ZIO defined, including zio-json JVM in the aggregate projects")
     filteredByNative
   } else {
-    println("[info] ONLY_LOOM *not* defined, *not* including loom-based-projects")
-    filteredByNative.filterNot(p => projectId(p).forall(loomProjects.contains))
+    println("[info] WITH_ZIO *not* defined, *not* including zio-json JVM in the aggregate projects")
+    filteredByNative.filterNot(p => projectId(p).forall(zioJvmProjects.contains))
+  }
+  if (sys.env.isDefinedAt("ONLY_LOOM")) {
+    println("[info] ONLY_LOOM defined, including only loom-based, zio-json JVM and JDK17+ projects")
+    filteredByZio.filter(p =>
+      projectId(p).forall(id => loomProjects.contains(id) || zioJvmProjects.contains(id) || jdk17Projects.contains(id))
+    )
+  } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
+    println("[info] ALSO_LOOM defined, including also loom-based projects")
+    filteredByZio
+  } else {
+    println("[info] ONLY_LOOM *not* defined, *not* including loom-based and JDK17+ projects")
+    filteredByZio.filterNot(p => projectId(p).forall(id => loomProjects.contains(id) || jdk17Projects.contains(id)))
   }
 }
 
@@ -452,7 +471,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.18")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.20")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.13",
@@ -1069,8 +1088,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.6.1",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.6.1",
+      "io.prometheus" % "prometheus-metrics-core" % "1.7.0",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.7.0",
       scalaTest.value % Test
     )
   )
@@ -1689,7 +1708,9 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-serve
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx,
-      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided"
+      "io.vertx" % "vertx-codegen" % Versions.vertx % "provided",
+      // Vert.x 5 removed io.vertx.core.logging; use slf4j directly (Vert.x logs through it)
+      slf4j
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
@@ -2234,8 +2255,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.12" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.12" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.14" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.14" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
