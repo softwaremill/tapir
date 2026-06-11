@@ -1,0 +1,33 @@
+package sttp.tapir.server.netty.internal
+
+import io.netty.handler.codec.http.multipart.HttpDataFactory
+import org.playframework.netty.http.StreamedHttpRequest
+import ox.Chunk
+import ox.flow.Flow
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.interpreter.RawValue
+import sttp.tapir.{RawBodyType, RawPart, TapirFile}
+
+import scala.concurrent.{ExecutionContext, Future}
+
+private[netty] class NettyFutureRequestBody(
+    val createFile: ServerRequest => Future[TapirFile],
+    val multipartTempDirectory: Option[TapirFile],
+    val multipartMinSizeForDisk: Option[Long]
+)(implicit ec: ExecutionContext)
+    extends NettyFutureRequestBodyBase {
+
+  private val httpDataFactory: HttpDataFactory = NettyHelper.createHttpDataFactory(multipartMinSizeForDisk, multipartTempDirectory)
+
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): Flow[Chunk[Byte]] =
+    NettyHelper.toStream(serverRequest, maxBytes)
+
+  override def publisherToMultipart(
+      nettyRequest: StreamedHttpRequest,
+      serverRequest: ServerRequest,
+      m: RawBodyType.MultipartBody,
+      maxBytes: Option[Long]
+  ): Future[RawValue[Seq[RawPart]]] =
+    NettyHelper.publishToMultipartF(nettyRequest, serverRequest, m, maxBytes)(httpDataFactory, toRawPart, s => Future.sequence(s))
+
+}

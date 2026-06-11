@@ -3,13 +3,13 @@ package sttp.tapir.server.netty.internal
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.HttpContent
+import org.apache.http.entity.mime.{FormBodyPart, MultipartEntityBuilder}
 import org.reactivestreams.Publisher
 import sttp.capabilities
 import sttp.model.HasHeaders
 import sttp.monad.MonadError
-import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.server.netty.NettyResponse
+import sttp.tapir.server.netty.{NettyResponse, NettyStreams}
 import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ReactivePublisherNettyResponseContent}
 import sttp.tapir.server.netty.internal.NettyToResponseBody.DefaultChunkSize
 import sttp.tapir.server.netty.internal.reactivestreams.{FileRangePublisher, InputStreamPublisher}
@@ -24,9 +24,9 @@ import java.nio.charset.Charset
   * Other kinds of raw responses like directly available String, ByteArray or ByteBuffer can be returned without wrapping into a Publisher.
   */
 private[netty] class NettyToResponseBody[F[_]](runAsync: RunAsync[F])(implicit me: MonadError[F])
-    extends ToResponseBody[NettyResponse, NoStreams] {
+    extends ToResponseBody[NettyResponse, NettyStreams] {
 
-  override val streams: capabilities.Streams[NoStreams] = NoStreams
+  override val streams: capabilities.Streams[NettyStreams] = NettyStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
     bodyType match {
@@ -76,7 +76,7 @@ private[netty] class NettyToResponseBody[F[_]](runAsync: RunAsync[F])(implicit m
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NettyStreams]
   ): NettyResponse = throw new UnsupportedOperationException
 }
 

@@ -8,8 +8,8 @@ import ox.*
 import ox.channels.ChannelClosedException
 import ox.flow.Flow
 import sttp.tapir.model.WebSocketFrameDecodeFailure
+import sttp.tapir.server.netty.NettyStreams
 import sttp.tapir.server.netty.internal.ws.WebSocketFrameConverters.*
-import sttp.tapir.server.netty.sync.OxStreams
 import sttp.tapir.server.netty.sync.internal.reactivestreams.OxProcessor
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput}
 import sttp.ws.WebSocketFrame
@@ -24,8 +24,8 @@ private[sync] object OxSourceWebSocketProcessor:
 
   def apply[REQ, RESP](
       inScopeRunner: InScopeRunner,
-      processingPipe: OxStreams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams],
+      processingPipe: NettyStreams.Pipe[REQ, RESP],
+      o: WebSocketBodyOutput[NettyStreams.Pipe[REQ, RESP], REQ, RESP, ?, NettyStreams],
       ctx: ChannelHandlerContext
   ): Processor[NettyWebSocketFrame, NettyWebSocketFrame] =
     def decodeFrame(f: WebSocketFrame): REQ = o.requests.decode(f) match {
@@ -33,7 +33,7 @@ private[sync] object OxSourceWebSocketProcessor:
       case x: DecodeResult.Value[REQ] @unchecked => x.v
     }
 
-    val frame2FramePipe: OxStreams.Pipe[NettyWebSocketFrame, NettyWebSocketFrame] = incoming =>
+    val frame2FramePipe: NettyStreams.Pipe[NettyWebSocketFrame, NettyWebSocketFrame] = incoming =>
       val closeSignal = new Semaphore(0)
       incoming
         .map { f =>

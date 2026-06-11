@@ -13,6 +13,6 @@ package object sync:
   type IdRoute = Route[Identity]
   private[sync] implicit val idMonad: MonadError[Identity] = IdentityMonad
 
-  val serverSentEventsBody: StreamBodyIO[Flow[Chunk[Byte]], Flow[ServerSentEvent], OxStreams] =
-    streamTextBody(OxStreams)(CodecFormat.TextEventStream(), Some(StandardCharsets.UTF_8))
+  val serverSentEventsBody: StreamBodyIO[Flow[Chunk[Byte]], Flow[ServerSentEvent], NettyStreams] =
+    streamTextBody(NettyStreams)(CodecFormat.TextEventStream(), Some(StandardCharsets.UTF_8))
       .map(OxServerSentEvents.parseBytesToSSE)(OxServerSentEvents.serializeSSEToBytes)

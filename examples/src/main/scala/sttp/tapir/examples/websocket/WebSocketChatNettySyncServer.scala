@@ -8,11 +8,12 @@ import ox.channels.{Actor, ActorRef, Channel, ChannelClosed, Default, DefaultRes
 import ox.{ExitCode, Ox, OxApp, forkDiscard, never, releaseAfterScope, supervised}
 import sttp.tapir.*
 import sttp.tapir.CodecFormat.*
-import sttp.tapir.server.netty.sync.{NettySyncServer, OxStreams}
+import sttp.tapir.server.netty.sync.NettySyncServer
 
 import java.util.UUID
 import ox.flow.Flow
 import ox.flow.FlowEmit
+import sttp.tapir.server.netty.NettyStreams
 
 type ChatMemberId = UUID
 
@@ -50,9 +51,9 @@ given Codec[String, Message, TextPlain] = Codec.string.map(Message(_))(_.v)
 
 val chatEndpoint = endpoint.get
   .in("chat")
-  .out(webSocketBody[Message, TextPlain, Message, TextPlain](OxStreams))
+  .out(webSocketBody[Message, TextPlain, Message, TextPlain](NettyStreams))
 
-def chatProcessor(a: ActorRef[ChatRoom]): OxStreams.Pipe[Message, Message] = incoming =>
+def chatProcessor(a: ActorRef[ChatRoom]): NettyStreams.Pipe[Message, Message] = incoming =>
   // returning a flow which, when run, creates a scope to handle the incoming & outgoing messages
   Flow.usingEmit: emit =>
     supervised:

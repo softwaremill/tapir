@@ -9,7 +9,7 @@ import ox.*
 import ox.flow.Flow
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir.*
-import sttp.tapir.server.netty.sync.{NettySyncServer, OxStreams, serverSentEventsBody}
+import sttp.tapir.server.netty.sync.{NettySyncServer, serverSentEventsBody}
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

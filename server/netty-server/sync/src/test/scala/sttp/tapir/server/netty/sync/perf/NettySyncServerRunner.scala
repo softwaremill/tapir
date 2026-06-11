@@ -11,8 +11,8 @@ import sttp.tapir.server.netty.sync.NettySyncServer
 import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.EndpointExtensions.*
-import sttp.tapir.server.netty.sync.OxStreams
 import sttp.capabilities.WebSockets
+import sttp.tapir.server.netty.NettyStreams
 import scala.concurrent.duration._
 
 object NettySyncServerRunner {
@@ -57,16 +57,16 @@ object NettySyncServerRunner {
 
   val wsBaseEndpoint = endpoint.get.in("ws" / "ts")
 
-  val wsPipe: OxStreams.Pipe[Long, Long] = in =>
+  val wsPipe: NettyStreams.Pipe[Long, Long] = in =>
     in.drain()
       .merge(
         Flow.tick(WebSocketSingleResponseLag).map(_ => System.currentTimeMillis()),
         propagateDoneLeft = true
       )
 
-  val wsEndpoint: Endpoint[Unit, Unit, Unit, OxStreams.Pipe[Long, Long], OxStreams with WebSockets] = wsBaseEndpoint
+  val wsEndpoint: Endpoint[Unit, Unit, Unit, NettyStreams.Pipe[Long, Long], NettyStreams with WebSockets] = wsBaseEndpoint
     .out(
-      webSocketBody[Long, CodecFormat.TextPlain, Long, CodecFormat.TextPlain](OxStreams)
+      webSocketBody[Long, CodecFormat.TextPlain, Long, CodecFormat.TextPlain](NettyStreams)
         .concatenateFragmentedFrames(false)
         .autoPongOnPing(false)
         .ignorePong(true)

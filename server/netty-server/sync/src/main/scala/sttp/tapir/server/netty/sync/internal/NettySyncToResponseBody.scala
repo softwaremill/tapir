@@ -1,4 +1,5 @@
 package sttp.tapir.server.netty.sync.internal
+package sttp.tapir.server.netty.sync.internal
 
 import _root_.ox.flow.Flow
 import _root_.ox.flow.reactive.toReactiveStreamsPublisher
@@ -13,12 +14,8 @@ import org.reactivestreams.{Publisher, Subscriber}
 import sttp.model.{HasHeaders, Part}
 import sttp.tapir.*
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.server.netty.NettyResponse
-import sttp.tapir.server.netty.NettyResponseContent.{
-  ByteBufNettyResponseContent,
-  ReactivePublisherNettyResponseContent,
-  ReactiveWebSocketProcessorNettyResponseContent
-}
+import sttp.tapir.server.netty.{NettyResponse, NettyStreams}
+import sttp.tapir.server.netty.NettyResponseContent.{ByteBufNettyResponseContent, ReactivePublisherNettyResponseContent, ReactiveWebSocketProcessorNettyResponseContent}
 import sttp.tapir.server.netty.internal.reactivestreams.FileRangePublisher
 import sttp.tapir.server.netty.sync.internal.reactivestreams.InputStreamSyncPublisher
 import sttp.tapir.server.netty.sync.*
@@ -29,9 +26,9 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
 private[sync] class NettySyncToResponseBody(inScopeRunner: InScopeRunner)
-    extends ToResponseBody[NettyResponse, OxStreams]:
+    extends ToResponseBody[NettyResponse, NettyStreams]:
 
-  override val streams: OxStreams = OxStreams
+  override val streams: NettyStreams = NettyStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): NettyResponse = {
     bodyType match
@@ -137,15 +134,15 @@ private[sync] class NettySyncToResponseBody(inScopeRunner: InScopeRunner)
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, NettyStreams]
   ): NettyResponse = (ctx: ChannelHandlerContext) =>
     val channelPromise = ctx.newPromise()
     new ReactiveWebSocketProcessorNettyResponseContent(
       channelPromise,
       ws.OxSourceWebSocketProcessor[REQ, RESP](
         inScopeRunner,
-        pipe.asInstanceOf[OxStreams.Pipe[REQ, RESP]],
-        o.asInstanceOf[WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams]],
+        pipe.asInstanceOf[NettyStreams.Pipe[REQ, RESP]],
+        o.asInstanceOf[WebSocketBodyOutput[NettyStreams.Pipe[REQ, RESP], REQ, RESP, ?, NettyStreams]],
         ctx
       ),
       ignorePong = o.ignorePong,

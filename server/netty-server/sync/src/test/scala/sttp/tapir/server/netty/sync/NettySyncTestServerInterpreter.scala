@@ -5,18 +5,19 @@ import cats.effect.{IO, Resource}
 import io.netty.channel.nio.NioEventLoopGroup
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.netty.NettyConfig
+import sttp.tapir.server.netty.{NettyConfig, NettyStreams}
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 import scala.concurrent.duration.FiniteDuration
 import sttp.capabilities.WebSockets
+
 import scala.annotation.nowarn
 
 @nowarn
 class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
-    extends TestServerInterpreter[Identity, OxStreams with WebSockets, NettySyncServerOptions, IdRoute] {
-  override def route(es: List[ServerEndpoint[OxStreams with WebSockets, Identity]], interceptors: Interceptors): IdRoute = {
+    extends TestServerInterpreter[Identity, NettyStreams with WebSockets, NettySyncServerOptions, IdRoute] {
+  override def route(es: List[ServerEndpoint[NettyStreams with WebSockets, Identity]], interceptors: Interceptors): IdRoute = {
     val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
     supervised { // not a correct way, but this method is only used in a few tests which don't test anything related to scopes
       NettySyncServerInterpreter(serverOptions).toRoute(es, inScopeRunner())
@@ -39,7 +40,7 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     useInScope(NettySyncServer(options, customizedConfig).addRoute(route).start())(_.stop())
 
   def scopedServerWithInterceptorsStop(
-      endpoint: ServerEndpoint[OxStreams with WebSockets, Identity],
+      endpoint: ServerEndpoint[NettyStreams with WebSockets, Identity],
       interceptors: Interceptors = identity,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(using Ox): NettySyncServerBinding =

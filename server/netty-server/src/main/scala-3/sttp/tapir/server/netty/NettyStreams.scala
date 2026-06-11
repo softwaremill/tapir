@@ -1,11 +1,12 @@
-package sttp.tapir.server.netty.sync
+package sttp.tapir.server.netty
 
 import ox.Chunk
 import ox.flow.Flow
 import sttp.capabilities.Streams
 
-trait OxStreams extends Streams[OxStreams]:
+trait NettyStreams extends Streams[NettyStreams] {
   override type BinaryStream = Flow[Chunk[Byte]]
   override type Pipe[A, B] = Flow[A] => Flow[B]
+}
 
-object OxStreams extends OxStreams
+object NettyStreams extends NettyStreams

@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory
 import ox.*
 import ox.channels.*
 import ox.flow.Flow
-import sttp.tapir.server.netty.sync.OxStreams
+import sttp.tapir.server.netty.NettyStreams
 
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future, Promise}
@@ -23,7 +23,7 @@ import scala.util.control.NonFatal
   */
 private[sync] class OxProcessor[A, B](
     inScopeRunner: InScopeRunner,
-    pipeline: OxStreams.Pipe[A, B],
+    pipeline: NettyStreams.Pipe[A, B],
     wrapSubscriber: Subscriber[? >: B] => Subscriber[? >: B]
 ) extends Processor[A, B]:
   private val logger = LoggerFactory.getLogger(getClass.getName)

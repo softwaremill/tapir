@@ -11,7 +11,7 @@ import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
-import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyStreams, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
@@ -22,15 +22,15 @@ import scala.util.control.NonFatal
 import java.util.concurrent.atomic.AtomicReference
 
 case class NettySyncServer(
-    serverEndpoints: Vector[ServerEndpoint[OxStreams & WebSockets, Identity]],
+    serverEndpoints: Vector[ServerEndpoint[NettyStreams & WebSockets, Identity]],
     otherRoutes: Vector[IdRoute],
     options: NettySyncServerOptions,
     config: NettyConfig
 ):
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
-  def addEndpoint(se: ServerEndpoint[OxStreams & WebSockets, Identity]): NettySyncServer = addEndpoints(List(se))
-  def addEndpoints(ses: List[ServerEndpoint[OxStreams & WebSockets, Identity]]): NettySyncServer =
+  def addEndpoint(se: ServerEndpoint[NettyStreams & WebSockets, Identity]): NettySyncServer = addEndpoints(List(se))
+  def addEndpoints(ses: List[ServerEndpoint[NettyStreams & WebSockets, Identity]]): NettySyncServer =
     copy(serverEndpoints = serverEndpoints ++ ses)
 
   /** Adds a custom route to the server. When a request is received, it is first processed by routes generated from the defined endpoints

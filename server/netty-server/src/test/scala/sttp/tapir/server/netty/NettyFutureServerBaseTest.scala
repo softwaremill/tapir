@@ -16,7 +16,8 @@ import sttp.client4._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 
-class NettyFutureServerTest extends TestSuite with EitherValues {
+abstract class NettyFutureServerBaseTest(multipart: Boolean) extends TestSuite with EitherValues {
+
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
       Resource
@@ -28,7 +29,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
           val tests =
-            new AllServerTests(createServerTest, interpreter, backend, multipart = false).tests() ++
+            new AllServerTests(createServerTest, interpreter, backend, multipart = multipart).tests() ++
               new ServerGracefulShutdownTests(createServerTest, Sleeper.futureSleeper).tests() ++
               new NettyFutureRequestTimeoutTests(eventLoopGroup, backend).tests() ++
               additionalTests(backend)

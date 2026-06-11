@@ -12,7 +12,8 @@ import sttp.client4.*
 import sttp.client4.httpclient.HttpClientSyncBackend
 import sttp.model.HeaderNames
 import sttp.tapir.*
-import sttp.tapir.server.netty.sync.{NettySyncServer, OxStreams}
+import sttp.tapir.server.netty.NettyStreams
+import sttp.tapir.server.netty.sync.NettySyncServer
 
 import java.nio.charset.StandardCharsets
 import scala.concurrent.duration.*
@@ -25,7 +26,7 @@ import scala.concurrent.duration.*
     endpoint.get
       .in("receive")
       .out(header[Long](HeaderNames.ContentLength))
-      .out(streamTextBody(OxStreams)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
+      .out(streamTextBody(NettyStreams)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
 
   val size = 100L
   val receiveServerEndpoint = receiveEndpoint.handleSuccess: _ =>
@@ -42,7 +43,7 @@ import scala.concurrent.duration.*
   val sendEndpoint =
     endpoint.post
       .in("send")
-      .in(streamTextBody(OxStreams)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
+      .in(streamTextBody(NettyStreams)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
       .out(stringBody)
 
   val sendServerEndpoint = sendEndpoint.handleSuccess: stream =>
