@@ -159,7 +159,7 @@ class ZIOpenTelemetryTracing(
             ZIO.succeed(response.copy(body = Some(Right(ZioStreamHttpResponseBody(wrapped, contentLength)).asInstanceOf[B])))
           case _ =>
             ZIO
-              .when(response.isServerError || response.isClientError)(
+              .when(response.isServerError)(
                 spanError(span)(Left(response.code))
               )
               .as(response)
