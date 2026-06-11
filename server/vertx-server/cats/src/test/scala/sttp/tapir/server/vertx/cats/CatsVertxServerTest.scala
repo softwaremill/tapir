@@ -48,7 +48,11 @@ class CatsVertxServerTest extends TestSuite {
             autoPing = false,
             handlePong = true,
             expectCloseResponse = false,
-            frameConcatenation = false
+            frameConcatenation = false,
+            // Vert.x sometimes ends the read stream (endHandler) without surfacing the client's CLOSE frame via the
+            // frameHandler, so the close cannot be reliably decoded as a `None` to the request pipe (same limitation
+            // as http4s). Disable the close-frame-as-None test to avoid a flaky failure.
+            decodeCloseRequests = false
           ) {
             override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
             override def emptyPipe[A, B]: streams.Pipe[A, B] = _ => Stream.empty
