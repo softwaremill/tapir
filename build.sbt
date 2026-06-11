@@ -584,7 +584,7 @@ lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-t
       "io.gatling" % "gatling-test-framework" % "3.15.1" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       // Gatling 3.15 no longer exposes HdrHistogram transitively; the perf tests use org.HdrHistogram directly
       "org.hdrhistogram" % "HdrHistogram" % "2.2.2" % Test,
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.3",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.4",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.184",
@@ -865,8 +865,8 @@ lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
   .settings(
     name := "tapir-json-json4s",
     libraryDependencies ++= Seq(
-      "org.json4s" %%% "json4s-core" % Versions.json4s,
-      "org.json4s" %%% "json4s-jackson" % Versions.json4s % Test,
+      "io.github.json4s" %%% "json4s-core" % Versions.json4s,
+      "io.github.json4s" %%% "json4s-jackson" % Versions.json4s % Test,
       scalaTest.value % Test
     )
   )
