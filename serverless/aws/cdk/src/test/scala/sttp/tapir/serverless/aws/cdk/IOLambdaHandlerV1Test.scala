@@ -78,6 +78,8 @@ class IOLambdaHandlerV1Test extends AnyFunSuite with Matchers {
     new LambdaCognitoIdentity("identityId", "PoolId"),
     "1.0",
     "1",
+    "tenantId", // tenantId and xrayTraceId were added to the LambdaContext constructor in aws-lambda 2.7.0+
+    "xrayTraceId",
     new LambdaClientContext()
   )
 
