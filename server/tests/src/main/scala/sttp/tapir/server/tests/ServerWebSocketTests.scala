@@ -57,8 +57,13 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
             _ <- ws.sendText("test2")
             m1 <- ws.receiveText()
             m2 <- ws.receiveText()
-            _ <- ws.close()
-            m3 <- if (expectCloseResponse) ws.eitherClose(ws.receiveText()).map(Some(_)) else IO.pure(None)
+            // With autoPing enabled the server sends pings; the JDK websocket client may have a queued auto-pong
+            // when the client closes the connection, and fails to encode it on the closing output
+            // (java.io.IOException: Output closed). That is a client-side race on a client-initiated close,
+            // unrelated to the echo being tested, so tolerate a transport error here (m3 becomes None).
+            m3 <- (ws.close() *> {
+              if (expectCloseResponse) ws.eitherClose(ws.receiveText()).map(Some(_)) else IO.pure(None)
+            }).handleError(_ => None)
           } yield List(m1, m2, m3)
         })
         .send(backend)
