@@ -59,7 +59,7 @@ object Versions {
   val awsLambdaInterface = "2.6.0"
   val armeria = "1.39.1"
   val scalaJava8Compat = "1.0.2"
-  val scalaCollectionCompat = "2.13.0"
+  val scalaCollectionCompat = "2.14.0"
   val fs2 = "3.13.0"
   val decline = "2.6.2"
   val quicklens = "1.9.12"
