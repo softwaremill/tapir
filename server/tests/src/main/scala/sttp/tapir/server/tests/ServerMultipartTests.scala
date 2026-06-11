@@ -52,7 +52,16 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
         .maxRequestBodyLength(15000),
       "multipart with maxContentLength"
     )((_: DoubleFruit) => pureResult(("ok").asRight[Unit])) { (backend, baseUri) =>
+      // The within-limit request is sent first, on a fresh connection: rejecting the over-limit body can reset
+      // the connection, and if that happened first a following request reusing the (keep-alive) connection from
+      // the pool would intermittently fail with a transport error.
       basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .multipartBody(multipart("fruitA", "pineapple".repeat(850)), multipart("fruitB", "maracuja".repeat(850)))
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+        } >> basicStringRequest
         .post(uri"$baseUri/api/echo/multipart")
         .multipartBody(multipart("fruitA", "pineapple".repeat(1100)), multipart("fruitB", "maracuja".repeat(1200)))
         .send(backend)
@@ -63,13 +72,7 @@ class ServerMultipartTests[F[_], OPTIONS, ROUTE](
         // finished sending it (there is no Expect: 100-continue handshake), which surfaces on the
         // client as a transport error (connection reset / broken pipe / EOF) instead of a 413. Both
         // are valid rejections of the too-large body, so accept either to avoid a timing-dependent flake.
-        .recover { case _: SttpClientException => Succeeded } >> basicStringRequest
-        .post(uri"$baseUri/api/echo/multipart")
-        .multipartBody(multipart("fruitA", "pineapple".repeat(850)), multipart("fruitB", "maracuja".repeat(850)))
-        .send(backend)
-        .map { r =>
-          r.code shouldBe StatusCode.Ok
-        }
+        .recover { case _: SttpClientException => Succeeded }
     }
   )
 
