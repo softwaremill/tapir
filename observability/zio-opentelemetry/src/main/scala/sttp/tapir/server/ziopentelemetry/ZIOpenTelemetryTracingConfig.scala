@@ -36,7 +36,6 @@ import zio.telemetry.opentelemetry.tracing.propagation.TraceContextPropagator
   */
 case class ZIOpenTelemetryTracingConfig(
     propagator: TraceContextPropagator,
-    spanName: ServerRequest => String,
     requestAttributes: ServerRequest => Attributes,
     spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (
         String,
@@ -49,7 +48,6 @@ case class ZIOpenTelemetryTracingConfig(
 object ZIOpenTelemetryTracingConfig {
   def apply(
       propagator: TraceContextPropagator = TraceContextPropagator.default,
-      spanName: ServerRequest => String = Defaults.spanName,
       requestAttributes: ServerRequest => Attributes = Defaults.requestAttributes,
       spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (
           String,
@@ -60,7 +58,6 @@ object ZIOpenTelemetryTracingConfig {
   ): ZIOpenTelemetryTracingConfig =
     new ZIOpenTelemetryTracingConfig(
       propagator,
-      spanName,
       requestAttributes,
       spanNameFromEndpointAndAttributes,
       responseAttributes,
