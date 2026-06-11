@@ -45,7 +45,13 @@ trait ZioHttpInterpreter[R] {
         interpreter
           .apply(serverRequest)
           .foldCauseZIO(
-            cause => ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
+            // Interrupt-only causes are expected connection lifecycle events (client disconnect, idle timeout,
+            // graceful shutdown), not application errors, so they are logged at DEBUG rather than ERROR.
+            cause =>
+              if (cause.isInterruptedOnly)
+                ZIO.logDebugCause("Request interrupted", cause) *> ZIO.fail(Response.internalServerError("Request interrupted"))
+              else
+                ZIO.logErrorCause(cause) *> ZIO.fail(Response.internalServerError(cause.squash.getMessage)),
             {
               case RequestResult.Response(resp, _) =>
                 resp.body match {
