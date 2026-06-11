@@ -12,7 +12,7 @@ import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.netty.NettyStreams
-import sttp.tapir.server.netty.internal.{NettyRequestBody, NettyHelper}
+import sttp.tapir.server.netty.internal.{NettyHelper, NettyOsxHelper, NettyRequestBody}
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
 
 import java.nio.file.Files
@@ -38,7 +38,7 @@ private[sync] class NettySyncRequestBody(
       m: RawBodyType.MultipartBody,
       maxBytes: Option[Long]
   ): RawValue[Seq[RawPart]] =
-    NettyHelper.publishToMultipartF(nettyRequest, serverRequest,m, maxBytes)(httpDataFactory, toRawPart, identity)
+    NettyOsxHelper.publishToMultipartF(nettyRequest, serverRequest,m, maxBytes)(httpDataFactory, toRawPart, identity)
 
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =
@@ -49,5 +49,5 @@ private[sync] class NettySyncRequestBody(
   override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): Unit = Files.write(file.toPath, bytes): Unit
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): Flow[Chunk[Byte]] =
-    NettyHelper.toStream(serverRequest, maxBytes)
+    NettyOsxHelper.toStream(serverRequest, maxBytes)
 

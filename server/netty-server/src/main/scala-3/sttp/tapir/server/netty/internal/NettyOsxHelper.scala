@@ -4,23 +4,16 @@ import _root_.ox.flow.Flow
 import _root_.ox.flow.reactive.FlowReactiveStreams
 import io.netty.buffer.ByteBufUtil
 import io.netty.handler.codec.http.HttpContent
-import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpDataFactory, HttpPostMultipartRequestDecoder, InterfaceHttpData}
+import io.netty.handler.codec.http.multipart.{HttpDataFactory, HttpPostMultipartRequestDecoder, InterfaceHttpData}
 import org.playframework.netty.http.StreamedHttpRequest
 import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.monad.MonadError
 import sttp.monad.syntax.*
-import sttp.tapir.{RawBodyType, RawPart, TapirFile}
+import sttp.tapir.{RawBodyType, RawPart}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
 
-object NettyHelper:
-
-  def createHttpDataFactory(minSizeForDisk: Option[Long], tempDirectory: Option[TapirFile]): HttpDataFactory =
-    val factory = minSizeForDisk match
-      case Some(minSize) => new DefaultHttpDataFactory(minSize)
-      case None          => new DefaultHttpDataFactory()
-    tempDirectory.foreach(dir => factory.setBaseDir(dir.getPath))
-    factory
+object NettyOsxHelper:
 
   def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): Flow[Chunk[Byte]] =
     serverRequest.underlying match

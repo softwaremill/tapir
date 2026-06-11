@@ -20,7 +20,7 @@ private[netty] class NettyFutureRequestBody(
   private val httpDataFactory: HttpDataFactory = NettyHelper.createHttpDataFactory(multipartMinSizeForDisk, multipartTempDirectory)
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): Flow[Chunk[Byte]] =
-    NettyHelper.toStream(serverRequest, maxBytes)
+    NettyOsxHelper.toStream(serverRequest, maxBytes)
 
   override def publisherToMultipart(
       nettyRequest: StreamedHttpRequest,
@@ -28,6 +28,6 @@ private[netty] class NettyFutureRequestBody(
       m: RawBodyType.MultipartBody,
       maxBytes: Option[Long]
   ): Future[RawValue[Seq[RawPart]]] =
-    NettyHelper.publishToMultipartF(nettyRequest, serverRequest, m, maxBytes)(httpDataFactory, toRawPart, s => Future.sequence(s))
+    NettyOsxHelper.publishToMultipartF(nettyRequest, serverRequest, m, maxBytes)(httpDataFactory, toRawPart, s => Future.sequence(s))
 
 }

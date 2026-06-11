@@ -1,7 +1,6 @@
 package sttp.tapir.server.netty.internal
 
 import org.playframework.netty.http.StreamedHttpRequest
-import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
 
