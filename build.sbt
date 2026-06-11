@@ -583,7 +583,7 @@ lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-t
       ),
       "io.gatling" % "gatling-test-framework" % "3.15.1" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       // Gatling 3.15 no longer exposes HdrHistogram transitively; the perf tests use org.HdrHistogram directly
-      "org.hdrhistogram" % "HdrHistogram" % "2.2.1" % Test,
+      "org.hdrhistogram" % "HdrHistogram" % "2.2.2" % Test,
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.3",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
