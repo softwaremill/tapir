@@ -115,6 +115,23 @@ class ZioHttpServerTest extends TestSuite {
               }
             Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
           },
+          // https://github.com/softwaremill/tapir/issues/5241
+          Test("interrupt-only causes are reported as 'Request interrupted', not the squashed cause message") {
+            val ep = endpoint.get.in("p1").out(stringBody).zServerLogic[Any](_ => ZIO.interrupt)
+            val route = ZioHttpInterpreter().toHttp(ep)
+            val test: UIO[Assertion] =
+              ZIO.scoped {
+                route
+                  .runZIO(Request.get(url = URL(Path.empty / "p1")))
+                  .flatMap(response => response.body.asString.map(body => (response.status, body)))
+                  .map { case (status, body) =>
+                    status shouldBe zio.http.Status.InternalServerError
+                    body shouldBe "Request interrupted"
+                  }
+                  .catchAll(_ => ZIO.succeed(fail("Unable to extract body from Http response")))
+              }
+            Unsafe.unsafe(implicit u => r.unsafe.runToFuture(test))
+          },
           Test("zio http middlewares run before the handler") {
             val test: UIO[Assertion] = for {
               p <- Promise.make[Nothing, Unit]
