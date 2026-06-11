@@ -20,7 +20,10 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
       None
     )
   override def underlying: Any = req
-  override lazy val pathSegments: List[String] = uri.pathSegments.segments.map(_.v).filter(_.nonEmpty).toList
+  // zio-http already decodes percent-encoded path segments while preserving segment boundaries (an encoded
+  // slash stays within a single segment), so use them directly rather than re-joining and re-parsing, which
+  // would turn an encoded slash into a segment separator.
+  override lazy val pathSegments: List[String] = req.url.path.segments.toList.filter(_.nonEmpty)
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams.map)
   override lazy val method: SttpMethod = SttpMethod(req.method.name.toUpperCase)
   override lazy val showShort: String = s"$method ${encodeQueryParams(req.url.path.encode, req.url.queryParams.normalize, Charsets.Http)}"

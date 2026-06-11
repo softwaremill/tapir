@@ -1789,6 +1789,9 @@ lazy val awsLambdaZioTests: ProjectMatrix = (projectMatrix in file("serverless/a
       case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
       case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
       case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
+      // bouncycastle (pulled transitively by zio-http) ships differing multi-release OSGi manifests in
+      // bcpkix/bcprov/bcutil, which the default `deduplicate` strategy rejects
+      case PathList(ps @ _*) if ps.takeRight(2) == Seq("OSGI-INF", "MANIFEST.MF")  => MergeStrategy.first
       case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
       case PathList("deriving.conf")                                               => MergeStrategy.concat
       case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
