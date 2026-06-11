@@ -145,7 +145,11 @@ object DefaultDecodeFailureHandler {
   }
   private val respondBadRequest = Some(onlyStatus(StatusCode.BadRequest))
   private val respondUnsupportedMediaType = Some(onlyStatus(StatusCode.UnsupportedMediaType))
-  private val respondPayloadTooLarge = Some(onlyStatus(StatusCode.PayloadTooLarge))
+  // A too-large body is rejected before it has been fully read, so the connection cannot be safely reused for the
+  // next request (the unread body would corrupt it). Signal `Connection: close` so the client does not return the
+  // connection to its pool and reuse it (which otherwise races with the server closing it -> a transport error).
+  private val respondPayloadTooLarge =
+    Some((StatusCode.PayloadTooLarge, List(Header(HeaderNames.Connection, "close"))))
 
   def respondNotFoundIfHasAuth(
       ctx: DecodeFailureContext,
