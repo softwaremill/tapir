@@ -29,14 +29,15 @@ import io.opentelemetry.semconv.ServerAttributes
 import io.opentelemetry.semconv.ErrorAttributes
 
 import zio._
-import zio.telemetry.opentelemetry.context.ContextStorage
 import zio.telemetry.opentelemetry.tracing.Tracing
 import zio.test._
 import zio.test.Assertion._
 
 import sttp.tapir.ztapir.RIOMonadError
 import zio.telemetry.opentelemetry.OpenTelemetry
+import zio.telemetry.opentelemetry.context.ContextStorage
 import sttp.tapir.server.ziopentelemetry.ZIOpenTelemetryTracingConfig
+import sttp.capabilities.zio.ZioStreams
 
 object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
 
@@ -431,13 +432,44 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         assertTrue(span.getSpanContext.isValid) &&
         assertTrue(!span.getParentSpanContext.isValid)
       }
-    }
+    },
+    test("child span can be created with correct parent context") {
+      def ep(tracing: Tracing) = endpoint
+        .in("hello")
+        .out(stringBody)
+        .errorOut(stringBody)
+        .serverLogic[Task] { _ =>
+          tracing.span("child-span")(ZIO.succeed(Right("hello")))
+        }
+
+      val request = serverRequestFromUri(
+        uri"http://example.com/hello",
+        _headers = List(Header("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"))
+      )
+      for {
+        tracing <- ZIO.service[Tracing]
+        spans <- runRequest(List(ep(tracing)), request)
+        parentSpan <- ZIO
+          .fromOption(spans.asScala.find(_.getName == "GET /hello"))
+          .mapError(_ => new RuntimeException("Parent span not found"))
+          .orDie
+        childSpan <- ZIO
+          .fromOption(spans.asScala.find(_.getName == "child-span"))
+          .mapError(_ => new RuntimeException("Child span not found"))
+          .orDie
+
+      } yield {
+        // Should have two spans: the server span and the child span, with correct parent-child relationship
+        assertTrue(spans.size() >= 2) &&
+        assertTrue(childSpan.getParentSpanContext.getSpanId == parentSpan.getSpanContext.getSpanId)
+      }
+    }.provide(tracingMockLayer(), OpenTelemetry.contextZIO)
   )
 
   // ─── Endpoint Matching Behavior ────────────────────────────────────────────
 
   private val endpointMatchingSuite = suite("Endpoint Matching Behavior")(
-    test("unmatched request does set error status") {
+    test("unmatched request does not set error status") {
       val ep = endpoint
         .in("person")
         .out(stringBody)
@@ -450,7 +482,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         spans <- runRequest(List(ep), request)
       } yield {
         assertTrue(spans.size() == 1) &&
-        assert(spans.get(0).getStatus.getStatusCode)(equalTo(OtelStatusCode.ERROR))
+        assert(spans.get(0).getStatus.getStatusCode)(not(equalTo(OtelStatusCode.ERROR)))
       }
     },
     test("decode failure on matched endpoint - span is created with initial name") {
