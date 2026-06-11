@@ -41,7 +41,8 @@ object IronRefinementErrorsNettyServer extends IOApp.Simple:
   object Age extends RefinedType[Int, Positive]
   type Age = Age.T
 
-  given Encoder[Age] = summon[Encoder[Int]].contramap[Age](identity[Int])
+  // iron 3.0.4 made RefinedType.T no longer a subtype of the base type, so unwrap explicitly via .value
+  given Encoder[Age] = summon[Encoder[Int]].contramap[Age](_.value)
 
   // Decoder throwing custom exception when refinement fails
   given decAge: Decoder[Age] = summon[Decoder[Int]].map(unrefinedValue =>
