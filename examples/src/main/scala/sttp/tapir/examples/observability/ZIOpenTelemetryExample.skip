@@ -1,12 +1,13 @@
 // {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=zio; docs=Swagger UI}: ZIO OpenTelemetry tracing example
 
 //> using option -Xkind-projector
-//> using dep com.softwaremill.sttp.tapir::tapir-core::1.13.19
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.19
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.19
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.19
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.19
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.19
+//> using dep com.softwaremill.sttp.tapir::tapir-core::1.13.20
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.20
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.20
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.20
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.20
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.20
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry-bootstrap:1.13.20
 //> using dep io.opentelemetry.semconv:opentelemetry-semconv:1.41.0
 //> using dep io.opentelemetry:opentelemetry-sdk:1.62.0
 //> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.62.0
@@ -47,14 +48,6 @@ import zio.telemetry.opentelemetry.context.ContextStorage
   * OpenTelemetry.
   */
 object ZIOpenTelemetryExample extends CustomZIOtelApp("zio-observability-custom", Some("1.0.0"), Some("dev")) {
-  /*
-   * Will use SLF4J as the logging backend, for the console logging.
-   *
-   * Note that OpenTelemetry will also receive the logs via the OpenTelemetry SDK, hence log collector
-   *  should not collect repeated logs.
-   */
-  override def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
-
   /* Adds extra attributes to the all resources. */
   override def extraAttributes: Attributes = Attributes.builder().put("stack", "zio").build()
 
@@ -217,7 +210,7 @@ abstract class CustomZIOtelApp(val resourceName: String, val version: Option[Str
     *  def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
     * }}}
     */
-  override def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
+  override def baseLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
   /** The bootstrap layer for the ZIOpenTelemetry trait.
     *

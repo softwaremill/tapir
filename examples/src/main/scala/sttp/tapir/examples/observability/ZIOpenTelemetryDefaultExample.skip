@@ -7,6 +7,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.20
 //> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.20
 //> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.20
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry-bootstrap:1.13.20
 //> using dep io.opentelemetry.semconv:opentelemetry-semconv:1.41.0
 //> using dep io.opentelemetry:opentelemetry-sdk:1.62.0
 //> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.62.0
