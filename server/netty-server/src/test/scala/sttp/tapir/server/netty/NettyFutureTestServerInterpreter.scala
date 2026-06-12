@@ -4,7 +4,7 @@ import cats.effect.{IO, Resource}
 import io.netty.channel.EventLoopGroup
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.tests.*
+import sttp.tapir.tests._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration

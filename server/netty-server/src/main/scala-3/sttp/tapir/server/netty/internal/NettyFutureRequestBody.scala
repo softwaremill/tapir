@@ -1,6 +1,5 @@
 package sttp.tapir.server.netty.internal
 
-import io.netty.handler.codec.http.multipart.HttpDataFactory
 import org.playframework.netty.http.StreamedHttpRequest
 import ox.Chunk
 import ox.flow.Flow
@@ -12,12 +11,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 private[netty] class NettyFutureRequestBody(
     val createFile: ServerRequest => Future[TapirFile],
-    val multipartTempDirectory: Option[TapirFile],
-    val multipartMinSizeForDisk: Option[Long]
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long]
 )(implicit ec: ExecutionContext)
-    extends NettyFutureRequestBodyBase {
-
-  private val httpDataFactory: HttpDataFactory = NettyHelper.createHttpDataFactory(multipartMinSizeForDisk, multipartTempDirectory)
+    extends NettyFutureRequestBodyBase(multipartTempDirectory, multipartMinSizeForDisk) {
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): Flow[Chunk[Byte]] =
     NettyOsxHelper.toStream(serverRequest, maxBytes)

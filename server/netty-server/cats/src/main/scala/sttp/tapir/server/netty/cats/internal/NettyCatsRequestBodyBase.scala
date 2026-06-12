@@ -18,8 +18,10 @@ import scala.util.Try
 
 abstract class NettyCatsRequestBodyBase[F[_]: Async](
     val createFile: ServerRequest => F[TapirFile],
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long],
     val streamCompatible: StreamCompatible[Fs2Streams[F]]
-) extends NettyStreamingRequestBody[F, Fs2Streams[F]] {
+) extends NettyStreamingRequestBody[F, Fs2Streams[F]](multipartTempDirectory, multipartMinSizeForDisk) {
 
   override implicit val monad: MonadError[F] = new CatsMonadError()
 
@@ -35,7 +37,7 @@ abstract class NettyCatsRequestBodyBase[F[_]: Async](
       .compile
       .drain
 
-  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): F[Unit] = {
+  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): F[Unit] =
     monad.fromTry(Try(JFiles.write(file.toPath, bytes)))
-  }
+
 }

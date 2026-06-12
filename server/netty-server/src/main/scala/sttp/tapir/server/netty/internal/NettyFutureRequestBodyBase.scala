@@ -1,6 +1,7 @@
 package sttp.tapir.server.netty.internal
 
 import io.netty.handler.codec.http.HttpContent
+import io.netty.handler.codec.http.multipart.HttpDataFactory
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.monad.{FutureMonad, MonadError}
@@ -16,9 +17,13 @@ import java.util.concurrent.CompletableFuture
 import scala.concurrent.{ExecutionContext, Future}
 import scala.compat.java8.FutureConverters
 
-private[netty] abstract class NettyFutureRequestBodyBase(implicit ec: ExecutionContext) extends NettyRequestBody[Future, NettyStreams] {
+private[netty] abstract class NettyFutureRequestBodyBase(multipartTempDirectory: Option[TapirFile], multipartMinSizeForDisk: Option[Long])(
+    implicit ec: ExecutionContext
+) extends NettyRequestBody[Future, NettyStreams] {
   override val streams: NettyStreams = NettyStreams
   override implicit val monad: MonadError[Future] = new FutureMonad()
+
+  protected lazy val httpDataFactory: HttpDataFactory = NettyHelper.createHttpDataFactory(multipartMinSizeForDisk, multipartTempDirectory)
 
   override def publisherToBytes(
       publisher: Publisher[HttpContent],

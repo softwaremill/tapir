@@ -13,7 +13,7 @@ private[netty] class NettyFutureRequestBody(
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
 )(implicit ec: ExecutionContext)
-    extends NettyFutureRequestBodyBase {
+    extends NettyFutureRequestBodyBase(multipartTempDirectory, multipartMinSizeForDisk) {
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException()
