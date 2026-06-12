@@ -104,14 +104,21 @@ jobs:
       if: matrix.target-platform != 'JS'
       uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v3, specifically v4.0.0
       with:
-        timeout_minutes: 10
-        max_attempts: 2
+        # 11 = inner `timeout` ceiling (10m) + SIGKILL grace (30s) + margin; the action is only a backstop.
+        timeout_minutes: 11
         # the netty server interpreter tests include some which run a large number of requests, to detect potential leaks
         # storing the output to verify it in the next step
+        max_attempts: 2
         command: |
           # reStop the forked client test server while the JVM is healthy; otherwise sbt-revolver's
           # shutdown hook races on JVM exit (IllegalStateException: Shutdown in progress) and can flake the build
-          sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}" "clientTestServer/reStop" 2>&1 | tee output.log
+          #
+          # The JVM run occasionally hangs after all tests pass (a server-interpreter teardown never returns
+          # and, with `Tags.limit(Tags.Test, 1)`, stalls the whole sbt JVM). `timeout` sends SIGQUIT at 10m to
+          # dump all JVM thread stacks to the log before SIGKILL 30s later, so the offending thread is captured.
+          # 10m matches the previous hard timeout, so it doesn't clip slow-but-healthy runs (e.g. Native linking);
+          # it only swaps a silent kill for a kill-with-thread-dump. A healthy run exits well before and is unaffected.
+          timeout -k 30s -s QUIT 10m sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}" "clientTestServer/reStop" 2>&1 | tee output.log
           exit ${PIPESTATUS[0]}
     - name: Check for reported leaks
       if: matrix.target-platform != 'JS'
