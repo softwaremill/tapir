@@ -5,7 +5,7 @@ import org.reactivestreams.{Publisher, Subscription}
 
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.{Path, StandardOpenOption}
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future, Promise}
 
@@ -20,6 +20,16 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
   /** Current position in the file */
   @volatile private var position: Long = 0
 
+  // Coordinates the (serially-signalled) upstream with the asynchronous write-completion handler, which runs on the
+  // file channel's thread pool. `onComplete` does not require demand, so the publisher may signal it while the last
+  // `onNext`'s write is still in flight; closing the channel then would race that write and truncate the file. We
+  // therefore close the channel and complete the promise only once the final write has finished. At most one write is
+  // ever in flight, because the next chunk is requested only from a write's completion callback.
+  private val lock = new Object
+  private var writeInProgress = false
+  private var upstreamCompleted = false
+  private val finished = new AtomicBoolean(false)
+
   /** Used to signal completion, so that external code can represent writing to a file as Future[Unit] */
   private val resultPromise = Promise[Unit]()
 
@@ -33,6 +43,7 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
 
   override def onNext(httpContent: HttpContent): Unit = {
     val byteBuffer = httpContent.content().nioBuffer()
+    lock.synchronized { writeInProgress = true }
     fileChannel.write(
       byteBuffer,
       position,
@@ -41,27 +52,44 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
         override def completed(result: Integer, attachment: Unit): Unit = {
           httpContent.release()
           position += result
-          subscription.request(1)
+          val finalizeNow = lock.synchronized {
+            writeInProgress = false
+            upstreamCompleted
+          }
+          if (finalizeNow) succeed()
+          else subscription.request(1)
         }
 
         override def failed(exc: Throwable, attachment: Unit): Unit = {
           httpContent.release()
           subscription.cancel()
-          onError(exc)
+          fail(exc)
         }
       }
     )
   }
 
-  override def onError(t: Throwable): Unit = {
-    fileChannel.close()
-    resultPromise.failure(t)
-  }
+  override def onError(t: Throwable): Unit = fail(t)
 
   override def onComplete(): Unit = {
-    fileChannel.close()
-    resultPromise.success(())
+    val finalizeNow = lock.synchronized {
+      upstreamCompleted = true
+      !writeInProgress
+    }
+    if (finalizeNow) succeed()
   }
+
+  private def succeed(): Unit =
+    if (finished.compareAndSet(false, true)) {
+      fileChannel.close()
+      resultPromise.success(())
+    }
+
+  private def fail(t: Throwable): Unit =
+    if (finished.compareAndSet(false, true)) {
+      if (fileChannel != null) fileChannel.close()
+      resultPromise.failure(t)
+    }
 }
 
 object FileWriterSubscriber {
