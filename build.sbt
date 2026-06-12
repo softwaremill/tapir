@@ -1212,9 +1212,7 @@ lazy val zioOpenTelemetry: ProjectMatrix = (projectMatrix in file("observability
       "dev.zio" %% "zio-opentelemetry" % Versions.zioOpenTelemetry,
       "dev.zio" %% "zio-test" % Versions.zio % Test,
       "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
-      "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
-      "io.opentelemetry" % "opentelemetry-exporter-otlp" % Versions.openTelemetry,
-      "io.opentelemetry" % "opentelemetry-exporter-logging-otlp" % Versions.openTelemetry,
+      "io.opentelemetry" % "opentelemetry-api" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test
     )
   )
