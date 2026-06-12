@@ -5,12 +5,11 @@ import scala.util.{Success, Try}
 
 import java.nio.charset.{StandardCharsets}
 
-
 import sttp.model.{Header, HeaderNames, Method, Uri}
 import sttp.model.Uri._
 import sttp.model.headers.Forwarded
 import sttp.monad.MonadError
-import sttp.tapir._
+
 import sttp.tapir.TestUtil.serverRequestFromUri
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
@@ -45,6 +44,8 @@ import sttp.capabilities.Streams
 import sttp.tapir.server.interceptor.RequestResult.Response
 import sttp.tapir.server.ziohttp.ZioStreamHttpResponseBody
 import sttp.tapir.server.ziohttp.ZioResponseBody
+import sttp.tapir.{CodecFormat, RawBodyType}
+import sttp.tapir.ztapir._
 
 object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
 
@@ -105,7 +106,6 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
       tracing <- ZIO.service[Tracing]
       exported <- ZIO.service[InMemorySpanExporter]
       _ <- ZIO.succeed(exported.reset())
-      _ <- ZIO.debug("Running stream request")
       interpreter = new ServerInterpreter[ZioStreams, Task, ZioResponseBody, ZioStreams](
         _ => endpoints,
         ZIOTestRequestStreamBody,
@@ -115,18 +115,18 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
       )
       stream <- interpreter(request)
       _ <- stream match {
-        case Response(serverResponse, source) => 
-//          ZIO.debug(serverResponse.body)
-            serverResponse.body match {
-              case Some(Right(ZioStreamHttpResponseBody(stream,None))) =>
-                stream.runDrain
-              case wtf =>
-                ZIO.debug(s"WTF: $wtf")
-            }
+        case Response(serverResponse, source) =>
+          serverResponse.body match {
+            case Some(Right(ZioStreamHttpResponseBody(stream, None))) =>
+              ZIO.logDebug("streaming") *>
+              stream.runDrain
+            case other =>
+              ZIO.logDebug(s"WHat is it: $other ?")
+          }
 
-        case wtf                                => 
+        case other =>
 
-          ZIO.debug(s"WTF: $wtf")
+          ZIO.logDebug(s"What is it: $other ?")
       }
 
       spans = exported.getFinishedSpanItems()
@@ -696,18 +696,34 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
     test("streaming endpoint produces a span") {
       val ep: ServerEndpoint[ZioStreams, Task] = endpoint
         .in("stream")
-      
         .out(streamTextBody(ZioStreams)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
         .serverLogicPure[Task](_ => Right(ZStream.fromIterable("abc".getBytes(StandardCharsets.UTF_8))))
 
       val request = serverRequestFromUri(uri"http://example.com/stream")
       for {
-        _ <- ZIO.logInfo("Running request")
+        _ <- ZIO.logDebug("Running request")
         span <- runRequestStreamSingleSpan(List(ep), request)
       } yield {
         assert(span.getName)(equalTo("GET /stream")) &&
         assert(span.getKind)(equalTo(SpanKind.SERVER))
       }
+    },
+    test("streaming error produces a span flagged as error") {
+      val ep: ServerEndpoint[ZioStreams, Task] = endpoint
+        .in("stream")
+        .out(streamTextBody(ZioStreams)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
+        .zServerLogic(_ => ZIO.succeed(ZStream.fromIterable("abc".getBytes(StandardCharsets.UTF_8)).flatMap(_ => ZStream.fail(new RuntimeException("boom")))))
+
+      val request = serverRequestFromUri(uri"http://example.com/stream")
+      for {
+        _ <- ZIO.logDebug("Running request")
+        span <- runRequestStreamSingleSpan(List(ep), request)
+        _ <- ZIO.logDebug(s"Span: $span")
+      } yield {
+        assert(span.getName)(equalTo("GET /stream")) &&
+        assert(span.getKind)(equalTo(SpanKind.SERVER))
+      }
+
     }
   )
 

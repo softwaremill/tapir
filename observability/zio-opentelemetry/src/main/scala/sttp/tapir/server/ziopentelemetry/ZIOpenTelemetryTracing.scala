@@ -26,6 +26,7 @@ import sttp.tapir.server.ziohttp.ZioStreamHttpResponseBody
 import sttp.tapir.DecodeResult.InvalidValue
 import sttp.tapir.DecodeResult.Error
 
+import zio.stream.ZStream
 /** Interceptor which traces requests using ZIO OpenTelemetry.
   *
   * Span names and attributes are calculated using the provided [[ZIOpenTelemetryTracingConfig]].
@@ -155,7 +156,7 @@ class ZIOpenTelemetryTracing(
               case Exit.Failure(cause) =>
                 handleStreamError(cause, span)
                   .ensuring(finalize)
-            }
+            }.catchAll(_ => ZStream.empty)
             ZIO.succeed(response.copy(body = Some(Right(ZioStreamHttpResponseBody(wrapped, contentLength)).asInstanceOf[B])))
           case _ =>
             ZIO
