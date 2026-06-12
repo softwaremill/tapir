@@ -584,7 +584,7 @@ lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-t
       "io.gatling" % "gatling-test-framework" % "3.15.1" % "test" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
       // Gatling 3.15 no longer exposes HdrHistogram transitively; the perf tests use org.HdrHistogram directly
       "org.hdrhistogram" % "HdrHistogram" % "2.2.2" % Test,
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.21.4",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.22.0",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
       "io.github.classgraph" % "classgraph" % "4.8.184",
@@ -1786,9 +1786,9 @@ lazy val awsLambdaZioTests: ProjectMatrix = (projectMatrix in file("serverless/a
     assembly / assemblyJarName := "tapir-aws-lambda-zio-tests.jar",
     assembly / test := {}, // no tests before building jar
     assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
-      case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
-      case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
+      case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last contains "FlowAdapters" => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last == "module-info.class"  => MergeStrategy.first
       // bouncycastle (pulled transitively by zio-http) ships differing multi-release OSGi manifests in
       // bcpkix/bcprov/bcutil, which the default `deduplicate` strategy rejects
       case PathList(ps @ _*) if ps.takeRight(2) == Seq("OSGI-INF", "MANIFEST.MF")  => MergeStrategy.first
