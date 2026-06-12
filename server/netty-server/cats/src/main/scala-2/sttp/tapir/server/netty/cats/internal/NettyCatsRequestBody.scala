@@ -10,10 +10,10 @@ import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 
 private[cats] class NettyCatsRequestBody[F[_]: Async](
     createFile: ServerRequest => F[TapirFile],
-    val multipartTempDirectory: Option[TapirFile],
-    val multipartMinSizeForDisk: Option[Long],
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long],
     streamCompatible: StreamCompatible[Fs2Streams[F]]
-) extends NettyCatsRequestBodyBase[F](createFile, streamCompatible) {
+) extends NettyCatsRequestBodyBase[F](createFile, multipartTempDirectory, multipartMinSizeForDisk, streamCompatible) {
 
   def publisherToMultipart(
       nettyRequest: StreamedHttpRequest,
