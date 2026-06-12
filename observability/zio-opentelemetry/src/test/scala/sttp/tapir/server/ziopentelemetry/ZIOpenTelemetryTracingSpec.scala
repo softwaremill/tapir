@@ -3,7 +3,9 @@ package sttp.tapir.server.ziopentelemetry
 import scala.jdk.CollectionConverters._
 import scala.util.{Success, Try}
 
-import sttp.capabilities.Streams
+import java.nio.charset.{StandardCharsets}
+
+
 import sttp.model.{Header, HeaderNames, Method, Uri}
 import sttp.model.Uri._
 import sttp.model.headers.Forwarded
@@ -29,6 +31,7 @@ import io.opentelemetry.semconv.ServerAttributes
 import io.opentelemetry.semconv.ErrorAttributes
 
 import zio._
+import zio.stream._
 import zio.telemetry.opentelemetry.tracing.Tracing
 import zio.test._
 import zio.test.Assertion._
@@ -38,11 +41,19 @@ import zio.telemetry.opentelemetry.OpenTelemetry
 import zio.telemetry.opentelemetry.context.ContextStorage
 import sttp.tapir.server.ziopentelemetry.ZIOpenTelemetryTracingConfig
 import sttp.capabilities.zio.ZioStreams
+import sttp.capabilities.Streams
+import sttp.tapir.server.interceptor.RequestResult.Response
+import sttp.tapir.server.ziohttp.ZioStreamHttpResponseBody
+import sttp.tapir.server.ziohttp.ZioResponseBody
 
 object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
 
   implicit val bodyListener: BodyListener[Task, String] = new BodyListener[Task, String] {
     override def onComplete(body: String)(cb: Try[Unit] => Task[Unit]): Task[String] = cb(Success(())).map(_ => body)
+  }
+
+  implicit val bodyStreamListener: BodyListener[Task, ZioResponseBody] = new BodyListener[Task, ZioResponseBody] {
+    override def onComplete(body: ZioResponseBody)(cb: Try[Unit] => Task[Unit]): Task[ZioResponseBody] = cb(Success(())).map(_ => body)
   }
 
   implicit val ioErr: MonadError[Task] = new RIOMonadError
@@ -85,6 +96,42 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
       spans = exported.getFinishedSpanItems()
     } yield spans
 
+  private def runRequestStream(
+      endpoints: List[ServerEndpoint[ZioStreams, Task]],
+      request: ServerRequest,
+      config: ZIOpenTelemetryTracingConfig
+  ): ZIO[Tracing with InMemorySpanExporter, Throwable, java.util.List[SpanData]] =
+    for {
+      tracing <- ZIO.service[Tracing]
+      exported <- ZIO.service[InMemorySpanExporter]
+      _ <- ZIO.succeed(exported.reset())
+      _ <- ZIO.debug("Running stream request")
+      interpreter = new ServerInterpreter[ZioStreams, Task, ZioResponseBody, ZioStreams](
+        _ => endpoints,
+        ZIOTestRequestStreamBody,
+        new sttp.tapir.server.ziohttp.ZioHttpToResponseBody(10),
+        List(ZIOpenTelemetryTracing(tracing, config)),
+        _ => ZIO.succeed(())
+      )
+      stream <- interpreter(request)
+      _ <- stream match {
+        case Response(serverResponse, source) => 
+//          ZIO.debug(serverResponse.body)
+            serverResponse.body match {
+              case Some(Right(ZioStreamHttpResponseBody(stream,None))) =>
+                stream.runDrain
+              case wtf =>
+                ZIO.debug(s"WTF: $wtf")
+            }
+
+        case wtf                                => 
+
+          ZIO.debug(s"WTF: $wtf")
+      }
+
+      spans = exported.getFinishedSpanItems()
+    } yield spans
+
   /** Helper: run request and return single span. */
   private def runRequestSingleSpan(
       endpoints: List[ServerEndpoint[Any, Task]],
@@ -92,6 +139,13 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
       config: ZIOpenTelemetryTracingConfig = ZIOpenTelemetryTracingConfig()
   ): ZIO[Tracing with InMemorySpanExporter, Throwable, SpanData] =
     runRequest(endpoints, request, config).map(_.get(0))
+
+  private def runRequestStreamSingleSpan(
+      endpoints: List[ServerEndpoint[ZioStreams, Task]],
+      request: ServerRequest,
+      config: ZIOpenTelemetryTracingConfig = ZIOpenTelemetryTracingConfig()
+  ): ZIO[Tracing with InMemorySpanExporter, Throwable, SpanData] =
+    runRequestStream(endpoints, request, config).map(_.get(0))
 
   // Tests are provided with layers at the suite level via .provide()
 
@@ -358,7 +412,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         assert(finishedSpans.get(0).getAttributes.get(ErrorAttributes.ERROR_TYPE))(equalTo("RuntimeException"))
       }
     },
-    test("4xx client error does  set span error status") {
+    test("4xx client error does *not* set span error status") {
       val ep = endpoint
         .in("client-error")
         .out(stringBody)
@@ -370,7 +424,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         span <- runRequestSingleSpan(List(ep), request)
       } yield {
         // 4xx is not a server error, so span status should NOT be ERROR
-        assert(span.getStatus.getStatusCode)(equalTo(OtelStatusCode.ERROR)) &&
+        assert(span.getStatus.getStatusCode)(not(equalTo(OtelStatusCode.ERROR))) &&
         assert(span.getAttributes.get(HttpAttributes.HTTP_RESPONSE_STATUS_CODE))(equalTo(java.lang.Long.valueOf(400L)))
       }
     }
@@ -636,6 +690,27 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
     }
   )
 
+  // ─── Streaming ────────────────────────────────────────────────────────────
+
+  private val streamingSuite = suite("Streaming")(
+    test("streaming endpoint produces a span") {
+      val ep: ServerEndpoint[ZioStreams, Task] = endpoint
+        .in("stream")
+      
+        .out(streamTextBody(ZioStreams)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
+        .serverLogicPure[Task](_ => Right(ZStream.fromIterable("abc".getBytes(StandardCharsets.UTF_8))))
+
+      val request = serverRequestFromUri(uri"http://example.com/stream")
+      for {
+        _ <- ZIO.logInfo("Running request")
+        span <- runRequestStreamSingleSpan(List(ep), request)
+      } yield {
+        assert(span.getName)(equalTo("GET /stream")) &&
+        assert(span.getKind)(equalTo(SpanKind.SERVER))
+      }
+    }
+  )
+
   // ─── Concurrency ──────────────────────────────────────────────────────────
 
   private val concurrencySuite = suite("Concurrency")(
@@ -689,6 +764,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
       contextPropagationSuite,
       endpointMatchingSuite,
       configCustomizationSuite,
+      streamingSuite,
       concurrencySuite
     ).provide(
       OpenTelemetry.contextZIO,
@@ -699,5 +775,10 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
 object ZIOTestRequestBody extends RequestBody[Task, NoStreams] {
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Task[RawValue[R]] = ???
   override val streams: Streams[NoStreams] = NoStreams
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = ???
+}
+object ZIOTestRequestStreamBody extends RequestBody[Task, ZioStreams] {
+  override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Task[RawValue[R]] = ???
+  override val streams: Streams[ZioStreams] = ZioStreams
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = ???
 }
