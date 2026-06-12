@@ -24,17 +24,21 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
       // Released by the server logic once it starts handling the request, so the test triggers shutdown only after
       // the request is genuinely in-flight. Relying on a fixed sleep instead races under load: the stop could begin
       // before the request reaches the server, which then aborts it and fails the test.
+      // The graceful-shutdown timeout is kept well above the request duration: the server force-closes in-flight
+      // requests once the timeout elapses, and a tight margin (e.g. 3s of work vs a 4s timeout) flakes on a loaded
+      // CI runner where the sleep and response write drift past it. A larger timeout doesn't slow the happy path -
+      // the stop returns as soon as the request's connection closes, not when the timeout elapses.
       val requestReceived = new CountDownLatch(1)
       testServerLogicWithStop(
         endpoint
           .out(plainBody[String])
           .serverLogic { _ =>
             m.eval(requestReceived.countDown())
-              .flatMap(_ => sleeper.sleep(3.seconds))
+              .flatMap(_ => sleeper.sleep(2.seconds))
               .flatMap(_ => pureResult("processing finished".asRight[Unit]))
           },
         "Server waits for long-running request to complete within timeout",
-        gracefulShutdownTimeout = Some(4.seconds)
+        gracefulShutdownTimeout = Some(10.seconds)
       ) { (stopServer) => (backend, baseUri) =>
         (for {
           runningRequest <- basicRequest.get(uri"$baseUri").send(backend).start
@@ -58,7 +62,7 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
               .flatMap(_ => pureResult("processing finished".asRight[Unit]))
           },
         "Server rejects requests with 503 during shutdown",
-        gracefulShutdownTimeout = Some(6.seconds)
+        gracefulShutdownTimeout = Some(10.seconds)
       ) { (stopServer) => (backend, baseUri) =>
         (for {
           runningRequest <- basicRequest.get(uri"$baseUri").send(backend).start
