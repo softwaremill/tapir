@@ -11,7 +11,7 @@ import sttp.shared.Identity
 import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
-import sttp.tapir.server.netty.NettyStreams
+import sttp.tapir.server.netty.sync.OxStreams
 import sttp.tapir.server.netty.internal.{NettyHelper, NettyOsxHelper, NettyRequestBody}
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
 
@@ -21,13 +21,13 @@ private[sync] class NettySyncRequestBody(
     val createFile: ServerRequest => TapirFile,
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
-) extends NettyRequestBody[Identity, NettyStreams]:
+) extends NettyRequestBody[Identity, OxStreams]:
 
   private val httpDataFactory: HttpDataFactory = NettyHelper.createHttpDataFactory(multipartMinSizeForDisk, multipartTempDirectory)
 
 
   override given monad: MonadError[Identity] = IdentityMonad
-  override val streams: NettyStreams = NettyStreams
+  override val streams: OxStreams = OxStreams
 
   override def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): Array[Byte] =
     SimpleSubscriber.processAllBlocking(publisher, contentLength, maxBytes)

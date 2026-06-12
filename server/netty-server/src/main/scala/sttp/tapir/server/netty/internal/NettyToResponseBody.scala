@@ -14,7 +14,10 @@ import java.nio.charset.Charset
   * custom reactive Publishers to integrate responses like InputStreamBody, InputStreamRangeBody or FileBody with Netty reactive extensions.
   * Other kinds of raw responses like directly available String, ByteArray or ByteBuffer can be returned without wrapping into a Publisher.
   */
-private[netty] class NettyToResponseBody[F[_]](runAsync: RunAsync[F])(implicit me: MonadError[F]) extends NettyToResponseBodyBase {
+private[netty] class NettyToResponseBody[F[_]](runAsync: RunAsync[F])(implicit me: MonadError[F])
+    extends NettyToResponseBodyBase[NettyStreams] {
+
+  override val streams: NettyStreams = NettyStreams
 
   override def fromStreamValue(
       v: streams.BinaryStream,
@@ -29,5 +32,5 @@ private[netty] class NettyToResponseBody[F[_]](runAsync: RunAsync[F])(implicit m
   ): NettyResponse = throw new UnsupportedOperationException
 
   override protected def wrap(streamRange: InputStreamRange): Publisher[HttpContent] =
-    new InputStreamPublisher[F](streamRange, NettyToResponseBodyBase.DefaultChunkSize, runAsync)
+    new InputStreamPublisher[F](streamRange, NettyToResponseBodyCommon.DefaultChunkSize, runAsync)
 }

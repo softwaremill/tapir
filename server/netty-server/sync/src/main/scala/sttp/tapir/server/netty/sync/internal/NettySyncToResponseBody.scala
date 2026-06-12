@@ -9,23 +9,23 @@ import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
 import org.reactivestreams.{Publisher, Subscriber}
 import sttp.model.HasHeaders
 import sttp.tapir.*
-import sttp.tapir.server.netty.{NettyResponse, NettyStreams}
+import sttp.tapir.server.netty.NettyResponse
 import sttp.tapir.server.netty.NettyResponseContent.{ReactivePublisherNettyResponseContent, ReactiveWebSocketProcessorNettyResponseContent}
 import sttp.tapir.server.netty.internal.NettyToResponseBodyBase
 import sttp.tapir.server.netty.sync.internal.reactivestreams.InputStreamSyncPublisher
 import sttp.tapir.server.netty.sync.*
-import sttp.tapir.server.netty.sync.internal.NettySyncToResponseBody.DefaultChunkSize
+import sttp.tapir.server.netty.internal.NettyToResponseBodyCommon.DefaultChunkSize
 
 import java.nio.charset.Charset
 
 private[sync] class NettySyncToResponseBody(inScopeRunner: InScopeRunner)
-    extends NettyToResponseBodyBase:
+    extends NettyToResponseBodyBase[OxStreams]:
+
+  override val streams: OxStreams = OxStreams
 
   protected def wrap(streamRange: InputStreamRange): Publisher[HttpContent] = {
     new InputStreamSyncPublisher(streamRange, DefaultChunkSize)
   }
-
-
 
 
   def fromStreamValue(v: Flow[Chunk[Byte]], headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): NettyResponse =
@@ -48,15 +48,15 @@ private[sync] class NettySyncToResponseBody(inScopeRunner: InScopeRunner)
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, NettyStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams]
   ): NettyResponse = (ctx: ChannelHandlerContext) =>
     val channelPromise = ctx.newPromise()
     new ReactiveWebSocketProcessorNettyResponseContent(
       channelPromise,
       ws.OxSourceWebSocketProcessor[REQ, RESP](
         inScopeRunner,
-        pipe.asInstanceOf[NettyStreams.Pipe[REQ, RESP]],
-        o.asInstanceOf[WebSocketBodyOutput[NettyStreams.Pipe[REQ, RESP], REQ, RESP, ?, NettyStreams]],
+        pipe.asInstanceOf[OxStreams.Pipe[REQ, RESP]],
+        o.asInstanceOf[WebSocketBodyOutput[OxStreams.Pipe[REQ, RESP], REQ, RESP, ?, OxStreams]],
         ctx
       ),
       ignorePong = o.ignorePong,
@@ -65,5 +65,3 @@ private[sync] class NettySyncToResponseBody(inScopeRunner: InScopeRunner)
       autoPing = o.autoPing
     )
 
-private[netty] object NettySyncToResponseBody:
-  val DefaultChunkSize = 8192

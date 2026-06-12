@@ -24,7 +24,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import ox.flow.Flow
 import scala.annotation.nowarn
-import sttp.tapir.server.netty.{NettyStreams, NettySyncRequestTimeoutTests}
+import sttp.tapir.server.netty.NettySyncRequestTimeoutTests
 import sttp.model.sse.ServerSentEvent
 import java.util.UUID
 import scala.util.Random
@@ -46,10 +46,10 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false, multipart = false)
         .tests() ++
         new ServerGracefulShutdownTests(createServerTest, sleeper).tests() ++
-        new ServerStreamingTests(createServerTest).tests(NettyStreams)(_.runDrain()) ++
-        new ServerWebSocketTests(createServerTest, NettyStreams, autoPing = true, handlePong = true) {
-          override def functionToPipe[A, B](f: A => B): NettyStreams.Pipe[A, B] = _.map(f)
-          override def emptyPipe[A, B]: NettyStreams.Pipe[A, B] = _ => Flow.empty
+        new ServerStreamingTests(createServerTest).tests(OxStreams)(_.runDrain()) ++
+        new ServerWebSocketTests(createServerTest, OxStreams, autoPing = true, handlePong = true) {
+          override def functionToPipe[A, B](f: A => B): OxStreams.Pipe[A, B] = _.map(f)
+          override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
         }.tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
@@ -70,7 +70,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
   }
 
   def additionalTests(
-      createServerTest: CreateServerTest[Identity, NettyStreams & WebSockets, NettySyncServerOptions, IdRoute]
+      createServerTest: CreateServerTest[Identity, OxStreams & WebSockets, NettySyncServerOptions, IdRoute]
   ): List[Test] =
     List(
       {
@@ -121,12 +121,12 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 class NettySyncCreateServerTest(
     backend: WebSocketStreamBackend[IO, Fs2Streams[IO]],
     interpreter: NettySyncTestServerInterpreter
-) extends CreateServerTest[Identity, NettyStreams & WebSockets, NettySyncServerOptions, IdRoute] {
+) extends CreateServerTest[Identity, OxStreams & WebSockets, NettySyncServerOptions, IdRoute] {
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
   override def testServer[I, E, O](
-      e: PublicEndpoint[I, E, O, NettyStreams & WebSockets],
+      e: PublicEndpoint[I, E, O, OxStreams & WebSockets],
       testNameSuffix: String = "",
       interceptors: Interceptors = identity
   )(
@@ -136,7 +136,7 @@ class NettySyncCreateServerTest(
   }
 
   override def testServerLogic(
-      e: ServerEndpoint[NettyStreams & WebSockets, Identity],
+      e: ServerEndpoint[OxStreams & WebSockets, Identity],
       testNameSuffix: String = "",
       interceptors: Interceptors = identity
   )(
@@ -146,7 +146,7 @@ class NettySyncCreateServerTest(
   }
 
   override def testServerLogicWithStop(
-      e: ServerEndpoint[NettyStreams & WebSockets, Identity],
+      e: ServerEndpoint[OxStreams & WebSockets, Identity],
       testNameSuffix: String = "",
       interceptors: Interceptors = identity,
       gracefulShutdownTimeout: Option[FiniteDuration] = None

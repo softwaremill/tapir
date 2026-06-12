@@ -8,10 +8,9 @@ package sttp.tapir.examples.websocket
 import ox.*
 import ox.channels.*
 import ox.flow.Flow
-import sttp.capabilities.WebSockets
 import sttp.tapir.*
-import sttp.tapir.server.netty.NettyStreams
-import NettyStreams.Pipe
+import sttp.tapir.server.netty.sync.OxStreams
+import sttp.tapir.server.netty.sync.OxStreams.Pipe
 import sttp.tapir.server.netty.sync.NettySyncServer
 
 import scala.concurrent.duration.*
@@ -20,7 +19,7 @@ import scala.concurrent.duration.*
 val wsEndpoint =
   endpoint.get
     .in("ws")
-    .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](NettyStreams))
+    .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
 
 // Your processor transforming a stream of requests into a stream of responses
 val wsPipe: Pipe[String, String] = requestStream => requestStream.map(_.toUpperCase)
