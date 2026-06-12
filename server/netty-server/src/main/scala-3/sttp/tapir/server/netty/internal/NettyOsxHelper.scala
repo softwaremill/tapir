@@ -37,15 +37,15 @@ object NettyOsxHelper:
       case _ => Flow.empty // Empty request, return an empty stream
   end toStream
 
-  def publishToMultipartF[F[_]](
+  def publishToMultipartF[F[_], R](
       nettyRequest: StreamedHttpRequest,
       serverRequest: ServerRequest,
       m: RawBodyType.MultipartBody,
       maxBytes: Option[Long]
   )(
       httpDataFactory: HttpDataFactory,
-      toRawPart: (ServerRequest, InterfaceHttpData, RawBodyType[?]) => F[RawPart],
-      toParts: Seq[F[RawPart]] => F[Seq[RawPart]]
+      toRawPart: (ServerRequest, InterfaceHttpData, RawBodyType[R]) => F[RawPart],
+      toParts: List[F[RawPart]] => F[List[RawPart]]
   )(using MonadError[F]): F[RawValue[Seq[RawPart]]] =
     val decoder = new HttpPostMultipartRequestDecoder(httpDataFactory, nettyRequest)
     val rawParts =
@@ -59,13 +59,13 @@ object NettyOsxHelper:
               (newBytesSoFar, decoder.decodeChunk(httpContent))
           case None => requestFlow.mapConcat(decoder.decodeChunk)
         ).mapConcat: httpData =>
-          m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType))
+          m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType.asInstanceOf[RawBodyType[R]]))
         .runToList()
       catch
         case t: Throwable =>
           decoder.destroy()
           throw t
-    val parts: F[Seq[RawPart]] = toParts(rawParts)
+    val parts: F[List[RawPart]] = toParts(rawParts)
     parts.map(p => RawValue.fromParts(p).copy(cleanup = Some(() => decoder.destroy())))
   end publishToMultipartF
 

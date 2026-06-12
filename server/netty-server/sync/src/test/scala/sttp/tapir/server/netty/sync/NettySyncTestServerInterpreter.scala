@@ -2,7 +2,7 @@ package sttp.tapir.server.netty.sync
 
 import ox.*
 import cats.effect.{IO, Resource}
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.EventLoopGroup
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.NettyConfig
@@ -15,7 +15,7 @@ import sttp.capabilities.WebSockets
 import scala.annotation.nowarn
 
 @nowarn
-class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
+class NettySyncTestServerInterpreter(eventLoopGroup: EventLoopGroup)
     extends TestServerInterpreter[Identity, OxStreams with WebSockets, NettySyncServerOptions, IdRoute] {
   override def route(es: List[ServerEndpoint[OxStreams with WebSockets, Identity]], interceptors: Interceptors): IdRoute = {
     val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
