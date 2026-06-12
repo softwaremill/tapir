@@ -42,30 +42,34 @@ class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpCon
     s.request(1)
   }
 
-  override def onNext(httpContent: HttpContent): Unit = {
-    val byteBuffer = httpContent.content().nioBuffer()
-    state.set(Writing)
-    fileChannel.write(
-      byteBuffer,
-      position,
-      (),
-      new java.nio.channels.CompletionHandler[Integer, Unit] {
-        override def completed(result: Integer, attachment: Unit): Unit = {
-          httpContent.release()
-          position += result
-          // If upstream completed during this write (state moved to Completing), finalize now; otherwise ask for more.
-          if (state.compareAndSet(Writing, Idle)) subscription.request(1)
-          else terminateSuccess()
-        }
+  override def onNext(httpContent: HttpContent): Unit =
+    // Normally state is Idle here. If the CAS fails we've already terminated - a compliant publisher may still deliver
+    // an onNext after we cancelled (rule 2.8) - so drop the chunk rather than write to an already-closed channel.
+    if (state.compareAndSet(Idle, Writing)) {
+      val byteBuffer = httpContent.content().nioBuffer()
+      fileChannel.write(
+        byteBuffer,
+        position,
+        (),
+        new java.nio.channels.CompletionHandler[Integer, Unit] {
+          override def completed(result: Integer, attachment: Unit): Unit = {
+            httpContent.release()
+            position += result
+            // If upstream completed during this write (state moved to Completing), finalize now; otherwise ask for more.
+            if (state.compareAndSet(Writing, Idle)) subscription.request(1)
+            else terminateSuccess()
+          }
 
-        override def failed(exc: Throwable, attachment: Unit): Unit = {
-          httpContent.release()
-          subscription.cancel()
-          terminateFailure(exc)
+          override def failed(exc: Throwable, attachment: Unit): Unit = {
+            httpContent.release()
+            subscription.cancel()
+            terminateFailure(exc)
+          }
         }
-      }
-    )
-  }
+      )
+    } else {
+      val _ = httpContent.release()
+    }
 
   override def onError(t: Throwable): Unit = terminateFailure(t)
 
