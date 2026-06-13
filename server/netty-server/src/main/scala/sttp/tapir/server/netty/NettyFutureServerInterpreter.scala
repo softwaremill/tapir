@@ -20,8 +20,12 @@ trait NettyFutureServerInterpreter {
     NettyServerInterpreter.toRoute(
       ses,
       nettyServerOptions.interceptors,
-      new NettyFutureRequestBody(nettyServerOptions.createFile),
-      new NettyToResponseBody[Future](RunAsync.Future),
+      new NettyFutureRequestBody(
+        nettyServerOptions.createFile,
+        nettyServerOptions.multipartTempDirectory,
+        nettyServerOptions.multipartMinSizeForDisk
+      ),
+      new NettyToResponseBody(RunAsync.Future),
       nettyServerOptions.deleteFile,
       RunAsync.Future
     )

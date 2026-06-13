@@ -1646,8 +1646,14 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
       "io.netty" % "netty-all" % Versions.nettyAll,
       "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams,
       "org.apache.httpcomponents" % "httpmime" % "4.5.14",
+      "org.scala-lang.modules" %% "scala-java8-compat" % Versions.scalaJava8Compat,
       slf4j
-    )
+    ) ++
+      (if (scalaBinaryVersion.value == "3") {
+        Seq("com.softwaremill.ox" %% "flow-reactive-streams" % Versions.ox)
+      } else {
+        Seq.empty
+      })
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore, serverTests % Test)
@@ -1659,8 +1665,7 @@ lazy val nettyServerSync: ProjectMatrix =
       name := "tapir-netty-server-sync",
       Test / run / fork := true,
       libraryDependencies ++= Seq(
-        "com.softwaremill.ox" %% "core" % Versions.ox,
-        "com.softwaremill.ox" %% "flow-reactive-streams" % Versions.ox
+        "com.softwaremill.ox" %% "core" % Versions.ox
       )
     )
     .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)

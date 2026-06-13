@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty
 
 import cats.effect.{IO, Resource}
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.EventLoopGroup
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
@@ -9,7 +9,7 @@ import sttp.tapir.tests._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 
-class NettyFutureTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)(implicit
+class NettyFutureTestServerInterpreter(eventLoopGroup: EventLoopGroup)(implicit
     ec: ExecutionContext
 ) extends TestServerInterpreter[Future, Any, NettyFutureServerOptions, FutureRoute] {
 

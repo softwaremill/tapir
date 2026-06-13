@@ -8,7 +8,6 @@ package sttp.tapir.examples.websocket
 import ox.*
 import ox.channels.*
 import ox.flow.Flow
-import sttp.capabilities.WebSockets
 import sttp.tapir.*
 import sttp.tapir.server.netty.sync.OxStreams
 import sttp.tapir.server.netty.sync.OxStreams.Pipe

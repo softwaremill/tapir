@@ -1,6 +1,5 @@
 package sttp.tapir.files
 
-import sttp.model.MediaType
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 

@@ -16,7 +16,8 @@ import sttp.client4._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 
-class NettyFutureServerTest extends TestSuite with EitherValues {
+abstract class NettyFutureServerBaseTest(multipart: Boolean) extends TestSuite with EitherValues {
+
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
       Resource
@@ -28,7 +29,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
           val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
           val tests =
-            new AllServerTests(createServerTest, interpreter, backend, multipart = false).tests() ++
+            new AllServerTests(createServerTest, interpreter, backend, multipart = multipart, partOtherHeaderSupport = false).tests() ++
               new ServerGracefulShutdownTests(createServerTest, Sleeper.futureSleeper).tests() ++
               new NettyFutureRequestTimeoutTests(eventLoopGroup, backend).tests() ++
               additionalTests(backend)
@@ -56,7 +57,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
         .map(_.port)
         .use { port =>
           (0 until 10000).toList
-            .traverse_ { i =>
+            .traverse_ { _ =>
               // the query is causing a decode failure, which in turn returns a 400 bad request
               // the request body is never read and should be ignored
               basicRequest.response(asStringAlways).body("abcde").post(uri"http://localhost:$port?x=abc").send(backend).map { response =>

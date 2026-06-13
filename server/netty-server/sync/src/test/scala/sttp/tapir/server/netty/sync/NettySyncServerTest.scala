@@ -69,7 +69,9 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
     super.afterAll()
   }
 
-  def additionalTests(createServerTest: CreateServerTest[Identity, OxStreams & WebSockets, NettySyncServerOptions, IdRoute]): List[Test] =
+  def additionalTests(
+      createServerTest: CreateServerTest[Identity, OxStreams & WebSockets, NettySyncServerOptions, IdRoute]
+  ): List[Test] =
     List(
       {
         def randomUUID = Some(UUID.randomUUID().toString)

@@ -11,8 +11,8 @@ import sttp.tapir.server.netty.sync.NettySyncServer
 import sttp.tapir.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.EndpointExtensions.*
-import sttp.tapir.server.netty.sync.OxStreams
 import sttp.capabilities.WebSockets
+import sttp.tapir.server.netty.sync.OxStreams
 import scala.concurrent.duration._
 
 object NettySyncServerRunner {

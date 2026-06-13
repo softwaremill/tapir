@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.zio
 
 import cats.effect.{IO, Resource}
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.EventLoopGroup
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyConfig, Route}
@@ -11,7 +11,7 @@ import zio.{Runtime, Task, Unsafe}
 
 import scala.concurrent.duration.FiniteDuration
 
-class NettyZioTestServerInterpreter[R](eventLoopGroup: NioEventLoopGroup)
+class NettyZioTestServerInterpreter[R](eventLoopGroup: EventLoopGroup)
     extends TestServerInterpreter[Task, ZioStreams, NettyZioServerOptions[Any], Task[Route[Task]]] {
   override def route(es: List[ServerEndpoint[ZioStreams, Task]], interceptors: Interceptors): Task[Route[Task]] = {
     val serverOptions = interceptors(

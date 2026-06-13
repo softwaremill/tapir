@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import zio.stream.ZSink
 
-class NettyZioServerTest extends TestSuite with EitherValues {
+abstract class NettyZioServerTestBase(multipart: Boolean) extends TestSuite with EitherValues {
   def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
     zStream.run(ZSink.drain)
 
@@ -39,7 +39,7 @@ class NettyZioServerTest extends TestSuite with EitherValues {
               interpreter,
               backend,
               staticContent = false,
-              multipart = false
+              multipart = multipart
             ).tests() ++
               new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
               new ServerCancellationTests(createServerTest)(monadError, asyncInstance).tests() ++
