@@ -1,0 +1,115 @@
+// {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=zio; docs=Swagger UI}: ZIO OpenTelemetry tracing example
+
+//> using option -Xkind-projector
+//> using dep com.softwaremill.sttp.tapir::tapir-core::1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry-bootstrap:1.13.21
+//> using dep io.opentelemetry.semconv:opentelemetry-semconv:1.41.0
+//> using dep io.opentelemetry:opentelemetry-sdk:1.63.0
+//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.63.0
+//> using dep io.opentelemetry:opentelemetry-exporter-logging-otlp:1.63.0
+//> using dep dev.zio::zio-logging:2.5.3
+//> using dep dev.zio::zio-logging-slf4j2:2.5.3
+//> using dep dev.zio::zio-opentelemetry-zio-logging:3.1.17
+//> using dep ch.qos.logback:logback-classic:1.5.32
+
+package sttp.tapir.examples.observability
+
+import io.opentelemetry.api.OpenTelemetry
+
+import sttp.tapir.server.interceptor.cors.CORSInterceptor
+import sttp.tapir.server.ziopentelemetry.*
+import sttp.tapir.server.ziohttp.*
+import sttp.tapir.ztapir.*
+
+import zio.*
+import zio.http.*
+import zio.telemetry.opentelemetry.tracing.Tracing
+import sttp.tapir.server.ServerEndpoint
+
+/** This example illustrates how to use ZIO with Tapir and OpenTelemetry for tracing, metrics and logging.
+  *
+  * It sets up a simple HTTP server with a single endpoint that returns "Hello, World!" and includes tracing for incoming requests.
+  *
+  * To effectively produce telemetry, you need to set the OTEL_EXPORTER_OTLP_ENDPOINT environment variable to the address of your
+  * OpenTelemetry.
+  */
+object ZIOpenTelemetryDefaultExample extends ZIOpenTelemetryAppDefault("zio-observability-default", Some("1.0.0"), Some("dev")) {
+
+  val program = for
+    _ <- Console.printLine("Starting server on http://localhost:8080")
+
+    given OpenTelemetry <- ZIO.service[OpenTelemetry]
+
+    given Tracing <- ZIO.service[Tracing]
+
+    endpoints = ZIOHttpApiDefault.endpoints
+
+    httpApp = ZioHttpInterpreter(serverOptions).toHttp(
+      endpoints
+    )
+    _ <- Server
+      .serve(httpApp)
+      .provide(
+        Server.default
+      )
+  yield ()
+
+  override def run =
+    program
+
+  /** The server options for the ZIOpenTelemetry trait.
+    */
+  private def serverOptions(implicit
+      otel: OpenTelemetry,
+      tracing: Tracing
+  ): ZioHttpServerOptions[Any] = ZioHttpServerOptions.customiseInterceptors
+    .prependInterceptor(
+      ZIOpenTelemetryTracing(tracing)
+    )
+    .appendInterceptor(
+      CORSInterceptor.default
+    )
+    .appendInterceptor(otel4zMetricsInterceptor())
+    .serverLog(
+      ZioHttpServerOptions.defaultServerLog[Any]
+    )
+    .options
+
+  /** The demo API..
+    */
+  class ZIOHttpApiDefault(using tracing: Tracing) {
+
+    import tracing.aspects.*
+
+    def helloEndpoint: ServerEndpoint[Any, Task] = sttp.tapir.endpoint.get
+      .in("hello")
+      .in(query[Int]("age").default(18))
+      .out(stringBody)
+      .zServerLogic(age =>
+        ZIO.logInfo(s"Handling /hello request for age $age") *>
+          logic(age) @@ span("hello-logic")
+      )
+
+    def logic(age: Int) = for {
+      _ <- ZIO.logInfo(s"Processing logic for age $age")
+      result = s"Hello, World! Your age is $age."
+      _ <- ZIO.logInfo(s"Logic result: $result")
+    } yield result
+
+  }
+
+  object ZIOHttpApiDefault {
+
+    def endpoints(using tracing: Tracing): List[ServerEndpoint[Any, Task]] =
+
+      val api = new ZIOHttpApiDefault(using tracing)
+
+      List(api.helloEndpoint)
+  }
+
+}
