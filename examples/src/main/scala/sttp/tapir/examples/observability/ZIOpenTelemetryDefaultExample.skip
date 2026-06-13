@@ -1,13 +1,13 @@
 // {cat=Hello, World!; effects=ZIO; server=ZIO HTTP; json=zio; docs=Swagger UI}: ZIO OpenTelemetry tracing example
 
 //> using option -Xkind-projector
-//> using dep com.softwaremill.sttp.tapir::tapir-core::1.13.20
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.20
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.20
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.20
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.20
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.20
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry-bootstrap:1.13.20
+//> using dep com.softwaremill.sttp.tapir::tapir-core::1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.21
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry-bootstrap:1.13.21
 //> using dep io.opentelemetry.semconv:opentelemetry-semconv:1.41.0
 //> using dep io.opentelemetry:opentelemetry-sdk:1.62.0
 //> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.62.0
