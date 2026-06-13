@@ -16,15 +16,7 @@ import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
 trait Traces {
   this: ZIOpenTelemetryApp =>
 
-  def traceEndpoint: ZIO[Any, Nothing, Option[String]] = OtlpEndpoint("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") match {
-    case None =>
-      ZIO.logInfo(
-        "No OTLP traces endpoint configured, skipping OpenTelemetry tracing setup. To enable it, set either OTEL_EXPORTER_OTLP_TRACES_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT environment variable."
-      ) *> ZIO.succeed(None)
-
-    case Some(endpoint) =>
-      ZIO.some(endpoint)
-  }
+  def traceEndpoint: ZIO[Any, Nothing, Option[String]] = OtlpEnv.otelTracesEndpoint
 
   /** Provides a tracer provider for OpenTelemetry, which logs in OTLP Json format as gRPC if either of the following environment variables
     * is set:

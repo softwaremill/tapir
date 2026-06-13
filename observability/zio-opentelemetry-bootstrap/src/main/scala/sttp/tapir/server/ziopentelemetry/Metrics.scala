@@ -3,6 +3,7 @@ package sttp.tapir.server.ziopentelemetry
 import zio._
 import io.opentelemetry.api
 import io.opentelemetry.sdk.metrics.SdkMeterProvider
+import io.opentelemetry.sdk.metrics.data.AggregationTemporality
 
 import zio.telemetry.opentelemetry.OpenTelemetry
 import zio.telemetry.opentelemetry.context.ContextStorage
@@ -39,13 +40,16 @@ trait Metrics {
     *
     * @return
     */
-  def metricExporter(endpoint: String): OtlpGrpcMetricExporter = {
+  def metricExporter(endpoint: String, preference: AggregationTemporality): OtlpGrpcMetricExporter = {
     val builder = OtlpGrpcMetricExporter
       .builder()
-    sys.env
-      .get("OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE")
-      .filter(v => v.toUpperCase().equals("DELTA"))
-      .foreach(_ => builder.setAggregationTemporalitySelector(AggregationTemporalitySelector.deltaPreferred()))
+
+    val preferenceSelector = preference match {
+      case AggregationTemporality.DELTA => AggregationTemporalitySelector.deltaPreferred()
+      case AggregationTemporality.CUMULATIVE => AggregationTemporalitySelector.alwaysCumulative()
+    }
+
+    builder.setAggregationTemporalitySelector(preferenceSelector)
 
     customMetricExporter(
       builder
@@ -53,15 +57,15 @@ trait Metrics {
     ).build()
   }
 
-  def meterEndpoint: ZIO[Any, Nothing, Option[String]] = OtlpEndpoint("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") match {
-    case None =>
-      ZIO.logInfo(
-        "No OTLP metrics endpoint configured, skipping OpenTelemetry metrics setup. To enable it, set either OTEL_EXPORTER_OTLP_METRICS_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT environment variable."
-      ) *> ZIO.succeed(None)
-
-    case Some(endpoint) =>
-      ZIO.some(endpoint)
-  }
+  /** The OTLP endpoint to use for metrics.
+    *
+    * Uses the [[OtlpEnv#otelMetricsEndpoint]] method to determine the endpoint, can be overridden to provide a different endpoint logic.
+    *
+    * Returns `None` if no endpoint is configured, in which case the OpenTelemetry metrics layer will not be configured.
+    *
+    * @return
+    */
+  def meterEndpoint: ZIO[Any, Nothing, Option[String]] = OtlpEnv.otelMetricsEndpoint
 
   /** Provides a meter provider for OpenTelemetry, which logs in OTLP Json format as gRPC if either of the following environment variables
     * is set:
@@ -111,8 +115,9 @@ trait Metrics {
 
     for {
       _ <- ZIO.logInfo(s"Configuring OpenTelemetry metrics to $endpoint")
+      preference <- OtlpEnv.metricsTemporalityPreference
       metricExporter <- ZIO.fromAutoCloseable(
-        ZIO.succeed(metricExporter(endpoint))
+        ZIO.succeed(metricExporter(endpoint, preference))
       )
       metricReader <-
         ZIO.fromAutoCloseable(
