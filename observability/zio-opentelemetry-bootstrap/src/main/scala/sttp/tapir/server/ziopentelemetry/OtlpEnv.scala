@@ -79,7 +79,7 @@ object OtlpEnv {
 
 
   def metricsTemporalityPreference: UIO[AggregationTemporality] = 
-    for
+    for{
       _ <- ZIO.logTrace(s"Configuring OpenTelemetry metrics temporality preference")
       maybe = sys.env
            .get(OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE)
@@ -95,7 +95,7 @@ object OtlpEnv {
            ZIO.succeed(AggregationTemporality.CUMULATIVE)
       }
       _ <- ZIO.logInfo(s"OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: $preference")
-    yield preference
+    } yield preference
 
   private def otelEndpoint(module: Module):  ZIO[Any, Nothing, Option[String]] = OtlpEnv.endpoint(module.envVar) match {
     case None =>
