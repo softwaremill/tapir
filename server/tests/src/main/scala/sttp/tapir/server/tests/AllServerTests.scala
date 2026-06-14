@@ -20,6 +20,7 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
     mapping: Boolean = true,
     metrics: Boolean = true,
     multipart: Boolean = true,
+    partOtherHeaderSupport: Boolean = true,
     oneOf: Boolean = true,
     reject: Boolean = true,
     staticContent: Boolean = true,
@@ -38,7 +39,13 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
       (if (file) new ServerFileTests(createServerTest).tests() else Nil) ++
       (if (mapping) new ServerMappingTests(createServerTest).tests() else Nil) ++
       (if (metrics) new ServerMetricsTest(createServerTest, serverInterpreter).tests() else Nil) ++
-      (if (multipart) new ServerMultipartTests(createServerTest, maxContentLengthSupport = maxContentLength).tests() else Nil) ++
+      (if (multipart)
+         new ServerMultipartTests(
+           createServerTest,
+           maxContentLengthSupport = maxContentLength,
+           partOtherHeaderSupport = partOtherHeaderSupport
+         ).tests()
+       else Nil)  ++
       (if (oneOf) new ServerOneOfTests(createServerTest).tests() else Nil) ++
       (if (reject) new ServerRejectTests(createServerTest, serverInterpreter).tests() else Nil) ++
       (if (staticContent) new ServerFilesTests(serverInterpreter, backend).tests() else Nil) ++

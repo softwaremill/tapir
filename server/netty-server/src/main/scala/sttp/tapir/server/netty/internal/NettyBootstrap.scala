@@ -1,7 +1,7 @@
 package sttp.tapir.server.netty.internal
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.{Channel, ChannelFuture, ChannelHandler, ChannelInitializer, ChannelOption, EventLoopGroup}
+import io.netty.channel.{Channel, ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
 import sttp.tapir.server.netty.NettyConfig
 
 import java.net.{InetSocketAddress, SocketAddress}

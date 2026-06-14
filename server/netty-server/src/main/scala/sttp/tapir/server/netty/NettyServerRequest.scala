@@ -4,7 +4,6 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.{HttpRequest, QueryStringDecoder}
-import io.netty.handler.ssl.SslHandler
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.{AttributeKey, AttributeMap}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
