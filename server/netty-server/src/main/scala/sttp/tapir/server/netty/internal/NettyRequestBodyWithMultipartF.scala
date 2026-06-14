@@ -11,6 +11,7 @@ import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 
 import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
 import java.nio.file.StandardOpenOption
+import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import java.util.concurrent.locks.ReentrantLock
@@ -120,13 +121,13 @@ private[netty] abstract class NettyRequestBodyWithMultipartF[F[_], S <: Streams[
     val javaFuture = new CompletableFuture[Unit]
     val channel = AsynchronousFileChannel.open(file.toPath, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
     channel.write(
-      java.nio.ByteBuffer.wrap(bytes),
+      ByteBuffer.wrap(bytes),
       0,
       channel,
       new CompletionHandler[Integer, AutoCloseable]() {
-        override def completed(result: Integer, attachment: AutoCloseable): Unit = {
+        override def completed(result: Integer, closeable: AutoCloseable): Unit = {
           javaFuture.complete(())
-          attachment.close()
+          closeable.close()
         }
 
         override def failed(exc: Throwable, attachment: AutoCloseable): Unit = {
