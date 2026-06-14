@@ -2,16 +2,17 @@ package sttp.tapir.server.netty.cats
 
 import cats.effect.std.Dispatcher
 import cats.effect.{IO, Resource}
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.EventLoopGroup
 import sttp.capabilities.WebSockets
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.netty.{NettyConfig, Route}
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests._
 import sttp.capabilities.fs2.Fs2Streams
+
 import scala.concurrent.duration.FiniteDuration
 
-class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatcher: Dispatcher[IO])
+class NettyCatsTestServerInterpreter(eventLoopGroup: EventLoopGroup, dispatcher: Dispatcher[IO])
     extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, NettyCatsServerOptions[IO], Route[IO]] {
   override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]], interceptors: Interceptors): Route[IO] = {
     val serverOptions: NettyCatsServerOptions[IO] = interceptors(
