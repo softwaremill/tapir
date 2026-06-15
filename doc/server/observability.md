@@ -524,27 +524,46 @@ If a default response (e.g. a `404 Not Found`) should be produced, this should b
 [reject interceptor](errors.md). Such a setup assumes that there are no other routes in the server, after the Tapir
 server interpreter is invoked.
 
-## ZIO OpenTelemetry 
+## ZIO OpenTelemetry
 
-ZIO OpenTelemetry integration is provided by the `otel4z` module, which uses the otel4s library under the hood. It provides both logging, tracing and metrics capabilities, as well as a runtime telemetry service for ZIO applications.
-
+ZIO OpenTelemetry tracing is provided by the `tapir-zio-opentelemetry` module. It is built on top of the
+[ZIO OpenTelemetry](https://zio.dev/zio-telemetry/) (zio-telemetry) library, and creates a span for each
+request handled by a tapir endpoint.
 
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-otel4z" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-opentelemetry" % "@VERSION@"
 ```
 
-The `otel4z` module provides integration with the [ZIO OpenTelemetry](https://zio.dev/zio-opentelemetry/) library, which is built on top of the [OpenTelemetry](https://opentelemetry.io/) allowing you to create traces and metrics for your tapir endpoints using a purely functional API.
+The module provides the `ZIOpenTelemetryTracing` request interceptor. Prepend it to the interpreter's interceptors, so
+that it runs as early as possible, passing a `zio.telemetry.opentelemetry.tracing.Tracing` instance:
 
-This module provides the following layers helpers:
-- `otel4zLogging` - a layer that provides the OpenTelemetry logging interceptor, which logs incoming requests and other operations.
-- `otel4zMetrics` - a layer that provides the OpenTelemetry metrics interceptor, which records metrics for incoming requests and other operations.
-- `otel4zTracing` - a layer that provides the OpenTelemetry tracing interceptor, which creates spans for incoming requests and other operations.
+```scala
+import sttp.tapir.server.ziohttp.ZioHttpServerOptions
+import sttp.tapir.server.ziopentelemetry.ZIOpenTelemetryTracing
+import zio.telemetry.opentelemetry.tracing.Tracing
 
-All of these layers require an OpenTelemetry instance to be provided, but this layer to works with Zio runtime metrics must be provided during the application startup (aka bootstrap).
+def serverOptions(tracing: Tracing): ZioHttpServerOptions[Any] =
+  ZioHttpServerOptions.customiseInterceptors
+    .prependInterceptor(ZIOpenTelemetryTracing(tracing))
+    .options
+```
 
-The ZIOpenTelemetry trait provide this bootstrap layer, which is used to create the OpenTelemetry instance and provide it to the application.
+Span names and attributes can be customised through `ZIOpenTelemetryTracingConfig`.
 
-Full example of using the `otel4z` module can be found in the [ZIO OpenTelemetry example](https://tapir.softwaremill.com/en/latest/observability/ZIOpenTelemetryExample.scala)
+### Bootstrap
+
+Setting up the OpenTelemetry SDK (exporters, providers and a runtime telemetry service) is optional and lives in a
+separate module:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-zio-opentelemetry-bootstrap" % "@VERSION@"
+```
+
+It provides the `ZIOpenTelemetryApp` trait, which assembles the bootstrap layer (creating the OpenTelemetry instance and
+providing it to the application), along with these layer helpers:
+- `otel4zLogging` - the OpenTelemetry logging layer.
+- `otel4zMetrics` - the OpenTelemetry metrics layer.
+- `otel4zTracing` - the OpenTelemetry tracing (`Tracing`) layer.
 
