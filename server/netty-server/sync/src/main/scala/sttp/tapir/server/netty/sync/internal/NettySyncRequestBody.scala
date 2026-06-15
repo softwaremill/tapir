@@ -98,9 +98,13 @@ private[sync] class NettySyncRequestBody(
       case _ => Flow.empty // Empty request, return an empty stream
 
 extension (decoder: HttpPostMultipartRequestDecoder)
-  private def decodeChunk(httpContent: HttpContent): Seq[InterfaceHttpData] = {
-    decoder.offer(httpContent)
-    Iterator.continually(maybeNext()).takeWhile(_.nonEmpty).flatten.toSeq
-  }
+  private def decodeChunk(httpContent: HttpContent): Seq[InterfaceHttpData] =
+    try
+      // offer() copies the readable bytes into the decoder's own buffer (released later via decoder.destroy()),
+      // and does not retain the passed content - so we must release the incoming chunk here to avoid a ByteBuf leak
+      decoder.offer(httpContent)
+      Iterator.continually(maybeNext()).takeWhile(_.nonEmpty).flatten.toSeq
+    finally
+      val _ = httpContent.release()
 
   private def maybeNext(): Option[InterfaceHttpData] = Option.when(decoder.hasNext)(decoder.next())
