@@ -567,9 +567,10 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         // A span is still created even when decode fails;
         // without a DecodeFailureHandler interceptor producing a response,
         // the endpoint is not confirmed, so span retains the initial request-based name.
+        // A decode failure surfaces to the client as a 4xx, which is not a server-span error.
         assertTrue(spans.size() >= 1) &&
         assertTrue(spans.get(0).getKind == SpanKind.SERVER) &&
-        assert(spans.get(0).getStatus.getStatusCode)(equalTo(OtelStatusCode.ERROR))
+        assert(spans.get(0).getStatus.getStatusCode)(not(equalTo(OtelStatusCode.ERROR)))
       }
     },
     test("security failure on matched endpoint updates span name") {
@@ -717,7 +718,9 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         span <- runRequestStreamSingleSpan(List(ep), request)
       } yield {
         assert(span.getName)(equalTo("GET /stream")) &&
-        assert(span.getKind)(equalTo(SpanKind.SERVER))
+        assert(span.getKind)(equalTo(SpanKind.SERVER)) &&
+        // a successfully streamed response must not be flagged as an error
+        assert(span.getStatus.getStatusCode)(equalTo(OtelStatusCode.UNSET))
       }
     },
     test("streaming error produces a span flagged as error") {

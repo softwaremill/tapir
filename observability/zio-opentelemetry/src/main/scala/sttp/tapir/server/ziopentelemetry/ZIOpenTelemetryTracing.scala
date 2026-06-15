@@ -8,7 +8,6 @@ import scala.util.{Failure, Success, Try}
 import sttp.monad.MonadError
 import sttp.model.{StatusCode => SttpStatusCode}
 import sttp.tapir.AnyEndpoint
-import sttp.tapir.DecodeResult.{Error, InvalidValue}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor._
@@ -88,19 +87,17 @@ class ZIOpenTelemetryTracing(
                 // The response was produced at the request level (e.g. by another interceptor); no body listener is
                 // available here, so the span is finalized immediately.
                 case RequestResult.Response(response, source) =>
-                  setSpanAttributes(span, config.responseAttributes(request, response)) *>
-                    ZIO.when(response.isServerError)(spanError(span)(Left(response.code))) *>
-                    finalize.as(RequestResult.Response(response, source))
-                case f @ RequestResult.Failure(failures) =>
-                  ZIO
-                    .when(failures.map(_.failure).exists {
-                      case InvalidValue(_) => true
-                      case Error(_, _)     => true
-                      case _               => false
-                    })(spanError(span)(Left(SttpStatusCode.BadRequest))) *>
-                    finalize.as(f)
+                  (setSpanAttributes(span, config.responseAttributes(request, response)) *>
+                    ZIO.when(response.isServerError)(spanError(span)(Left(response.code))))
+                    .ensuring(finalize)
+                    .as(RequestResult.Response(response, source))
+                // A Failure means no endpoint produced a response (unmatched / decode / auth failure). Per the OTel
+                // HTTP server semantic conventions a client error (4xx) is not a server-span error, so the span is not
+                // marked as errored here - it's only finalized.
+                case f @ RequestResult.Failure(_) =>
+                  finalize.as(f)
               }
-              .tapError(e => spanError(span)(Right(e)) *> finalize)
+              .tapError(e => spanError(span)(Right(e)).ensuring(finalize))
           }
     }
 
@@ -143,8 +140,8 @@ class ZIOpenTelemetryTracing(
             response: ServerResponse[B2]
         )(implicit bodyListener: BodyListener[Task, B2]): Task[ServerResponse[B2]] = {
           val cb: Try[Unit] => Task[Unit] = {
-            case Success(_)  => ZIO.when(response.isServerError)(spanError(span)(Left(response.code))).unit *> finalizeSpan.unit
-            case Failure(ex) => spanError(span)(Right(ex)) *> finalizeSpan.unit
+            case Success(_)  => ZIO.when(response.isServerError)(spanError(span)(Left(response.code))).unit.ensuring(finalizeSpan)
+            case Failure(ex) => spanError(span)(Right(ex)).ensuring(finalizeSpan)
           }
           setSpanAttributes(span, config.responseAttributes(request, response)) *> (response.body match {
             case Some(body) => body.onComplete(cb).map(b => response.copy(body = Some(b)))
@@ -154,7 +151,7 @@ class ZIOpenTelemetryTracing(
 
         private def knownEndpoint(e: AnyEndpoint): Task[Unit] = {
           val (name, attributes) = config.spanNameFromEndpointAndAttributes(request, e)
-          ZIO.succeed {
+          ZIO.attempt {
             span.updateName(name)
             span.setAllAttributes(attributes)
             ()
@@ -164,15 +161,15 @@ class ZIOpenTelemetryTracing(
     }
 
   /** Set span status and attributes for errors, both exceptions and error status. */
-  private def spanError(span: Span)(error: Either[SttpStatusCode, Throwable]): UIO[Unit] =
-    ZIO.succeed {
+  private def spanError(span: Span)(error: Either[SttpStatusCode, Throwable]): Task[Unit] =
+    ZIO.attempt {
       span.setStatus(StatusCode.ERROR)
       span.setAllAttributes(config.errorAttributes(error))
       ()
     }
 
   private def setSpanAttributes(span: Span, attributes: Attributes): Task[Unit] =
-    ZIO.succeed(span.setAllAttributes(attributes)).unit
+    ZIO.attempt(span.setAllAttributes(attributes)).unit
 }
 
 object ZIOpenTelemetryTracing {

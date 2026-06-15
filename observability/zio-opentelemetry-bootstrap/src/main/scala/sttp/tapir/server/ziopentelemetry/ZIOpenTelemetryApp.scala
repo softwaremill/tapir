@@ -100,15 +100,14 @@ trait ZIOpenTelemetryApp extends ZIOApp {
     *
     * Default implementation does nothing, hence uses the default ZIO console logger, which logs to stdout.
     *
-    * You should override this to use a different logger.
-    * Exmples include:
-    *.  - To bridge SLF4J to ZIO logging, you can use the following layer:
+    * You should override this to use a different logger. Examples include:
+    *   - To bridge SLF4J to ZIO logging, you can use the following layer:
     * {{{
-    *   override def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Slf4jBridge.init(...)
+    *   override def baseLogLayer: ZLayer[Any, Nothing, Unit] = Slf4jBridge.init(...)
     * }}}
     *   - No logs at all:
     * {{{
-    *   override def consoleLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers
+    *   override def baseLogLayer: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers
     * }}}
     */
   def baseLogLayer: ZLayer[Any, Nothing, Unit] = ZLayer.unit

@@ -14,15 +14,13 @@ import io.opentelemetry.semconv.ErrorAttributes
 import scala.annotation.nowarn
 import zio.telemetry.opentelemetry.tracing.propagation.TraceContextPropagator
 
-/** Configuration for OpenTelemetry Otel4z tracing of server requests, used by [[ZIOpenTelemetry]]. Use the apply method to override only
-  * some of the configuration options, while using the defaults for the rest.
+/** Configuration for ZIO OpenTelemetry tracing of server requests, used by [[ZIOpenTelemetryTracing]]. Use the apply method to override
+  * only some of the configuration options, while using the defaults for the rest.
   *
   * The default values follow OpenTelemetry semantic conventions, as described in [their
   * documentation](https://opentelemetry.io/docs/specs/semconv/http/http-spans/#name).
   * @param propagator
   *   The propagator to use for extracting and injecting trace context.
-  * @param spanName
-  *   Calculates the name of the span, given an incoming request.
   * @param requestAttributes
   *   Calculates the attributes of the span, given an incoming request.
   * @param spanNameFromEndpointAndAttributes
@@ -102,8 +100,6 @@ object ZIOpenTelemetryTracingConfig {
       )
 
     }
-
-    def spanName(request: ServerRequest): String = s"${request.method.method}"
 
     @nowarn
     def responseAttributes(
