@@ -1204,7 +1204,6 @@ lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-m
   .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
 
 lazy val zioOpenTelemetry: ProjectMatrix = (projectMatrix in file("observability/zio-opentelemetry"))
-  .dependsOn(zio, zioHttpServer, opentelemetryMetrics)
   .settings(commonSettings)
   .settings(
     name := "tapir-zio-opentelemetry",
@@ -1213,11 +1212,13 @@ lazy val zioOpenTelemetry: ProjectMatrix = (projectMatrix in file("observability
       "dev.zio" %% "zio-test" % Versions.zio % Test,
       "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
       "io.opentelemetry" % "opentelemetry-api" % Versions.openTelemetry,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
       "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
-  .dependsOn(serverCore % CompileAndTest)
+  // zioHttpServer is a test-only dependency, used to exercise the interceptor with a real streaming response body
+  .dependsOn(zio, serverCore % CompileAndTest, zioHttpServer % Test)
 
 lazy val zioOpenTelemetryBootstrap: ProjectMatrix = (projectMatrix in file("observability/zio-opentelemetry-bootstrap"))
   .dependsOn(zio, zioHttpServer, opentelemetryMetrics)

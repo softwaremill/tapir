@@ -3,33 +3,32 @@ package sttp.tapir.server.ziopentelemetry
 import zio._
 
 import collection.mutable.{Map => MutableMap}
+import scala.util.{Failure, Success, Try}
 
 import sttp.monad.MonadError
 import sttp.model.{StatusCode => SttpStatusCode}
 import sttp.tapir.AnyEndpoint
+import sttp.tapir.DecodeResult.{Error, InvalidValue}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.RequestResult.{Failure, Response}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
+import sttp.tapir.server.interpreter.BodyListener._
 import sttp.tapir.server.model.ServerResponse
 
-import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.{Span, SpanKind, StatusCode}
+import io.opentelemetry.api.common.Attributes
 
 import zio.telemetry.opentelemetry.tracing.Tracing
-import io.opentelemetry.api.trace.SpanKind
-
-import io.opentelemetry.api.trace.StatusCode
-import io.opentelemetry.api.common.Attributes
 import zio.telemetry.opentelemetry.context.IncomingContextCarrier
-import sttp.tapir.server.ziohttp.ZioStreamHttpResponseBody
-import sttp.tapir.DecodeResult.InvalidValue
-import sttp.tapir.DecodeResult.Error
 
-import zio.stream.ZStream
 /** Interceptor which traces requests using ZIO OpenTelemetry.
   *
   * Span names and attributes are calculated using the provided [[ZIOpenTelemetryTracingConfig]].
+  *
+  * The span is finalized once the response body has been fully sent, which is wired up through the [[BodyListener]] available in the
+  * endpoint interceptor. This way streamed responses are correctly captured, including their duration and any errors which occur while the
+  * body is being produced. The interceptor is backend-agnostic: it does not depend on any particular server backend's body representation.
   *
   * To use, customize the interceptors of the server interpreter you are using, and prepend this interceptor, so that it runs as early as
   * possible, e.g.:
@@ -51,18 +50,14 @@ import zio.stream.ZStream
   *        .options
   * }}}
   */
-
 class ZIOpenTelemetryTracing(
     tracing: Tracing,
     config: ZIOpenTelemetryTracingConfig
 ) extends RequestInterceptor[Task] {
 
-  import config._
-
   private def extractCarrier(request: ServerRequest) = {
-    val headers = request.headers
     val carrier = MutableMap.empty[String, String]
-    headers.foreach(h => carrier.put(h.name, h.value))
+    request.headers.foreach(h => carrier.put(h.name, h.value))
     IncomingContextCarrier.default(carrier)
   }
 
@@ -70,215 +65,123 @@ class ZIOpenTelemetryTracing(
       responder: Responder[Task, B],
       requestHandler: EndpointInterceptor[Task] => RequestHandler[Task, R, B]
   ): RequestHandler[Task, R, B] =
-
     new RequestHandler[Task, R, B] {
       override def apply(
           request: ServerRequest,
           endpoints: List[ServerEndpoint[R, Task]]
-      )(implicit monad: MonadError[Task]): Task[RequestResult[B]] = tracing
-        .extractSpanUnsafe(
-          config.propagator,
-          extractCarrier(request),
-          request.showShort,
-          spanKind = SpanKind.SERVER,
-          attributes = config.requestAttributes(request)
-        )
-        .flatMap { case (span, finalize) =>
-          ZIO.logTrace(s"Extracted span ${span.getSpanContext.getSpanId} for request ${request.showShort}") *>
-            handleRequest(span, finalize, request, endpoints)
-              .tapError { e =>
-                spanError(span)(Right(e)).ensuring(finalize)
-              }
-        }
-
-      /** Handle the request, setting span attributes and status based on the result.
-        *
-        * @param span
-        * @param request
-        * @param endpoints
-        * @param monad
-        * @return
-        */
-      private def handleRequest(
-          span: Span,
-          finalize: UIO[Any],
-          request: ServerRequest,
-          endpoints: List[ServerEndpoint[R, Task]]
       )(implicit monad: MonadError[Task]): Task[RequestResult[B]] =
-        requestHandler(
-          knownEndpointInterceptor(request, span)
-        )(request, endpoints).flatMap {
-          case Response(response, source) =>
-            setSpanAttributes(
-              span,
-              responseAttributes(request, response)
-            ) *> finalizeSpan(response, span, finalize)
-              .map { case (response) =>
-                Response(response, source)
+        tracing
+          .extractSpanUnsafe(
+            config.propagator,
+            extractCarrier(request),
+            request.showShort,
+            spanKind = SpanKind.SERVER,
+            attributes = config.requestAttributes(request)
+          )
+          .flatMap { case (span, finalize) =>
+            requestHandler(knownEndpointInterceptor(request, span, finalize))(request, endpoints)
+              .flatMap {
+                // The response was produced by an endpoint: the span is finalized once the response body has been fully
+                // sent, which is wired up via the BodyListener in knownEndpointInterceptor.
+                case r @ RequestResult.Response(_, ResponseSource.EndpointHandler) =>
+                  monad.unit(r)
+                // The response was produced at the request level (e.g. by another interceptor); no body listener is
+                // available here, so the span is finalized immediately.
+                case RequestResult.Response(response, source) =>
+                  setSpanAttributes(span, config.responseAttributes(request, response)) *>
+                    ZIO.when(response.isServerError)(spanError(span)(Left(response.code))) *>
+                    finalize.as(RequestResult.Response(response, source))
+                case f @ RequestResult.Failure(failures) =>
+                  ZIO
+                    .when(failures.map(_.failure).exists {
+                      case InvalidValue(_) => true
+                      case Error(_, _)     => true
+                      case _               => false
+                    })(spanError(span)(Left(SttpStatusCode.BadRequest))) *>
+                    finalize.as(f)
               }
-          case f @ Failure(failures) =>
-            ZIO.logTrace(s"Request failed with decode failures: ${failures.map(_.failure).mkString(", ")}") *>
-              ZIO
-                .when(
-                  failures
-                    .map(_.failure)
-                    .collect {
-                      case InvalidValue(_) =>
-                        ()
+              .tapError(e => spanError(span)(Right(e)) *> finalize)
+          }
+    }
 
-                      case Error(_, _) =>
-                        ()
-                    }
-                    .nonEmpty
-                )(
-                  spanError(span)(Left(SttpStatusCode.BadRequest))
-                )
-                .as(f)
-                .ensuring(finalize)
+  /** Endpoint interceptor which, once an endpoint is matched, updates the span name/attributes, and arranges for the span to be finalized
+    * after the response body has been fully sent.
+    */
+  private def knownEndpointInterceptor(
+      request: ServerRequest,
+      span: Span,
+      finalizeSpan: UIO[Any]
+  ): EndpointInterceptor[Task] =
+    new EndpointInterceptor[Task] {
+      override def apply[B2](
+          responder: Responder[Task, B2],
+          endpointHandler: EndpointHandler[Task, B2]
+      ): EndpointHandler[Task, B2] = new EndpointHandler[Task, B2] {
 
+        override def onDecodeSuccess[A, U, I](
+            ctx: DecodeSuccessContext[Task, A, U, I]
+        )(implicit monad: MonadError[Task], bodyListener: BodyListener[Task, B2]): Task[ServerResponse[B2]] =
+          knownEndpoint(ctx.endpoint) *> endpointHandler.onDecodeSuccess(ctx).flatMap(finalizeOnBodyComplete)
+
+        override def onSecurityFailure[A](
+            ctx: SecurityFailureContext[Task, A]
+        )(implicit monad: MonadError[Task], bodyListener: BodyListener[Task, B2]): Task[ServerResponse[B2]] =
+          knownEndpoint(ctx.endpoint) *> endpointHandler.onSecurityFailure(ctx).flatMap(finalizeOnBodyComplete)
+
+        override def onDecodeFailure(
+            ctx: DecodeFailureContext
+        )(implicit monad: MonadError[Task], bodyListener: BodyListener[Task, B2]): Task[Option[ServerResponse[B2]]] =
+          endpointHandler.onDecodeFailure(ctx).flatMap {
+            case Some(response) => knownEndpoint(ctx.endpoint) *> finalizeOnBodyComplete(response).map(Some(_))
+            case None           => monad.unit(None)
+          }
+
+        /** Sets the response attributes, then finalizes the span once the response body has been fully sent (or immediately, if there's no
+          * body). If sending the body fails, the span is additionally marked as errored.
+          */
+        private def finalizeOnBodyComplete(
+            response: ServerResponse[B2]
+        )(implicit bodyListener: BodyListener[Task, B2]): Task[ServerResponse[B2]] = {
+          val cb: Try[Unit] => Task[Unit] = {
+            case Success(_)  => ZIO.when(response.isServerError)(spanError(span)(Left(response.code))).unit *> finalizeSpan.unit
+            case Failure(ex) => spanError(span)(Right(ex)) *> finalizeSpan.unit
+          }
+          setSpanAttributes(span, config.responseAttributes(request, response)) *> (response.body match {
+            case Some(body) => body.onComplete(cb).map(b => response.copy(body = Some(b)))
+            case None       => cb(Success(())).as(response)
+          })
         }
 
-      /** Finalize the span by setting error status if needed.
-        *
-        * If the response body is a stream, wrap it in a stream that ensures the finalize effect is run after the stream is consumed. and
-        * ensuring the finalize effect is run after the response body is consumed, if there is one.
-        *
-        * @param response
-        * @param span
-        * @param finalize
-        * @return
-        */
-      private def finalizeSpan(response: ServerResponse[B], span: Span, finalize: UIO[Any]): Task[ServerResponse[B]] =
-        (response.body match {
-          case Some(Right(ZioStreamHttpResponseBody(stream, contentLength))) =>
-            val wrapped = stream.ensuringWith {
-              case Exit.Success(_)     => ZIO.logTrace("Stream completed successfully") *> finalize
-              case Exit.Failure(cause) =>
-                handleStreamError(cause, span)
-                  .ensuring(finalize)
-            }.catchAll(_ => ZStream.empty)
-            ZIO.succeed(response.copy(body = Some(Right(ZioStreamHttpResponseBody(wrapped, contentLength)).asInstanceOf[B])))
-          case _ =>
-            ZIO
-              .when(response.isServerError)(
-                spanError(span)(Left(response.code))
-              )
-              .as(response)
-              .ensuring(finalize)
-        })
-
-      private def handleStreamError(cause: Cause[Any], span: Span): UIO[Unit] =
-        cause match {
-          case Cause.Fail(error, a) =>
-            ZIO.logError(s"Stream failed with error: $error") *> spanError(span)(Left(SttpStatusCode.InternalServerError))
-          case Cause.Interrupt(fiberId, _) =>
-            ZIO.logError(s"Stream interrupted by fiber: $fiberId") *> spanError(span)(Left(SttpStatusCode.InternalServerError))
-          case Cause.Die(throwable, stackTrace) =>
-            ZIO.logError(s"Stream died with throwable: $throwable") *> spanError(span)(Left(SttpStatusCode.InternalServerError))
-          case _ => ZIO.logError(s"Stream failed with cause: $cause") *> spanError(span)(Left(SttpStatusCode.InternalServerError))
-        }
-
-      /** Interceptor which sets span name and attributes based on the matched endpoint.
-        *
-        * @param request
-        * @param span
-        * @return
-        */
-      def knownEndpointInterceptor(
-          request: ServerRequest,
-          span: Span
-      ) =
-        new EndpointInterceptor[Task] {
-          def apply[B2](
-              responder: Responder[Task, B2],
-              endpointHandler: EndpointHandler[Task, B2]
-          ): EndpointHandler[Task, B2] = new EndpointHandler[Task, B2] {
-            def onDecodeFailure(
-                ctx: DecodeFailureContext
-            )(implicit
-                monad: MonadError[Task],
-                bodyListener: BodyListener[Task, B2]
-            ): Task[Option[ServerResponse[B2]]] =
-              endpointHandler.onDecodeFailure(ctx).flatMap {
-                case result @ Some(_) =>
-                  knownEndpoint(ctx.endpoint).map(_ => result)
-                case None => monad.unit(None)
-              }
-
-            def onDecodeSuccess[A, U, I](
-                ctx: DecodeSuccessContext[Task, A, U, I]
-            )(implicit
-                monad: MonadError[Task],
-                bodyListener: BodyListener[Task, B2]
-            ): Task[ServerResponse[B2]] =
-              knownEndpoint(ctx.endpoint).flatMap(_ => endpointHandler.onDecodeSuccess(ctx))
-
-            def onSecurityFailure[A](
-                ctx: SecurityFailureContext[Task, A]
-            )(implicit
-                monad: MonadError[Task],
-                bodyListener: BodyListener[Task, B2]
-            ): Task[ServerResponse[B2]] =
-              knownEndpoint(ctx.endpoint).flatMap(_ => endpointHandler.onSecurityFailure(ctx))
-
-            def knownEndpoint(
-                e: AnyEndpoint
-            ): Task[Unit] = {
-              val (name, attributes) =
-                spanNameFromEndpointAndAttributes(request, e)
-              ZIO.succeed {
-                span
-                  .updateName(name)
-                span.setAllAttributes(attributes)
-              }.unit
-            }
+        private def knownEndpoint(e: AnyEndpoint): Task[Unit] = {
+          val (name, attributes) = config.spanNameFromEndpointAndAttributes(request, e)
+          ZIO.succeed {
+            span.updateName(name)
+            span.setAllAttributes(attributes)
+            ()
           }
         }
-
-      /** Set span status and attributes for errors, both exceptions and error status.
-        */
-      private def spanError(
-          span: Span
-      )(error: Either[SttpStatusCode, Throwable]): UIO[Unit] =
-        ZIO.succeed {
-          span.setStatus(StatusCode.ERROR)
-          span.setAllAttributes(errorAttributes(error))
-          ()
-        }
-
-      private def setSpanAttributes(
-          span: Span,
-          attributes: Attributes
-      ): Task[Unit] =
-        ZIO.succeed(span.setAllAttributes(attributes)).unit
-
+      }
     }
+
+  /** Set span status and attributes for errors, both exceptions and error status. */
+  private def spanError(span: Span)(error: Either[SttpStatusCode, Throwable]): UIO[Unit] =
+    ZIO.succeed {
+      span.setStatus(StatusCode.ERROR)
+      span.setAllAttributes(config.errorAttributes(error))
+      ()
+    }
+
+  private def setSpanAttributes(span: Span, attributes: Attributes): Task[Unit] =
+    ZIO.succeed(span.setAllAttributes(attributes)).unit
 }
 
 object ZIOpenTelemetryTracing {
 
-  /** Create a new ZIOpenTelemetryTracing interceptor with the provided Tracing and default configuration.
-    *
-    * @param tracing
-    * @return
-    */
-  def apply(
-      tracing: Tracing
-  ): ZIOpenTelemetryTracing =
-    new ZIOpenTelemetryTracing(
-      tracing,
-      ZIOpenTelemetryTracingConfig()
-    )
+  /** Create a new ZIOpenTelemetryTracing interceptor with the provided Tracing and default configuration. */
+  def apply(tracing: Tracing): ZIOpenTelemetryTracing =
+    new ZIOpenTelemetryTracing(tracing, ZIOpenTelemetryTracingConfig())
 
-  /** Create a new ZIOpenTelemetryTracing interceptor with the provided Tracing and configuration.
-    */
-  def apply(
-      tracing: Tracing,
-      config: ZIOpenTelemetryTracingConfig
-  ): ZIOpenTelemetryTracing =
-    new ZIOpenTelemetryTracing(
-      tracing,
-      config
-    )
-
+  /** Create a new ZIOpenTelemetryTracing interceptor with the provided Tracing and configuration. */
+  def apply(tracing: Tracing, config: ZIOpenTelemetryTracingConfig): ZIOpenTelemetryTracing =
+    new ZIOpenTelemetryTracing(tracing, config)
 }

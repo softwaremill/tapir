@@ -1,7 +1,7 @@
 package sttp.tapir.server.ziopentelemetry
 
 import scala.jdk.CollectionConverters._
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 import java.nio.charset.{StandardCharsets}
 
@@ -53,8 +53,18 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
     override def onComplete(body: String)(cb: Try[Unit] => Task[Unit]): Task[String] = cb(Success(())).map(_ => body)
   }
 
+  // Mirrors the production sttp.tapir.server.ziohttp.ZioHttpBodyListener: attaches the completion callback to the
+  // response stream, so it fires (with success or failure) only once the stream has actually been consumed/sent.
   implicit val bodyStreamListener: BodyListener[Task, ZioResponseBody] = new BodyListener[Task, ZioResponseBody] {
-    override def onComplete(body: ZioResponseBody)(cb: Try[Unit] => Task[Unit]): Task[ZioResponseBody] = cb(Success(())).map(_ => body)
+    override def onComplete(body: ZioResponseBody)(cb: Try[Unit] => Task[Unit]): Task[ZioResponseBody] = {
+      def succeed = cb(Success(()))
+      def failed(cause: Cause[Throwable]) = cb(Failure(cause.squash)).orDie
+      body match {
+        case Right(ZioStreamHttpResponseBody(stream, contentLength)) =>
+          ZIO.right(ZioStreamHttpResponseBody(stream.onError(failed) ++ ZStream.fromZIO(succeed).drain, contentLength))
+        case rawOrWs => succeed.as(rawOrWs)
+      }
+    }
   }
 
   implicit val ioErr: MonadError[Task] = new RIOMonadError
@@ -118,8 +128,10 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         case Response(serverResponse, source) =>
           serverResponse.body match {
             case Some(Right(ZioStreamHttpResponseBody(stream, None))) =>
+              // draining mimics the backend sending the body; tolerate failures so the body-listener callback (which
+              // marks the span as errored) runs and the finished span can be inspected
               ZIO.logDebug("streaming") *>
-              stream.runDrain
+              stream.runDrain.catchAllCause(_ => ZIO.unit)
             case other =>
               ZIO.logDebug(s"WHat is it: $other ?")
           }
@@ -721,7 +733,9 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
         _ <- ZIO.logDebug(s"Span: $span")
       } yield {
         assert(span.getName)(equalTo("GET /stream")) &&
-        assert(span.getKind)(equalTo(SpanKind.SERVER))
+        assert(span.getKind)(equalTo(SpanKind.SERVER)) &&
+        // the failure occurs while the response body is being streamed; the span must reflect it
+        assert(span.getStatus.getStatusCode)(equalTo(OtelStatusCode.ERROR))
       }
 
     }
