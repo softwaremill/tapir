@@ -14,7 +14,7 @@ class WebSocketPingPongFrameHandler(ignorePong: Boolean, autoPongOnPing: Boolean
         if (autoPongOnPing) {
           // retain the ping's content for the pong, then release the ping frame itself to avoid a ByteBuf leak
           val _ = ctx.writeAndFlush(new PongWebSocketFrame(ping.content().retain()))
-          val _ = ping.release()
+          ping.release(): Unit
         } else {
           val _ = ctx.fireChannelRead(ping)
         }
