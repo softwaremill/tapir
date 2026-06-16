@@ -73,7 +73,7 @@ val labels = MetricLabels(
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.13.21"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % "1.13.22"
 ```
 
 `PrometheusMetrics` encapsulates `PrometheusReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -157,7 +157,7 @@ Prometheus simpleclient is deprecated and will be removed in a future version. I
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-prometheus-simpleclient-metrics" % "1.13.21"
+"com.softwaremill.sttp.tapir" %% "tapir-prometheus-simpleclient-metrics" % "1.13.22"
 ```
 
 `PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
@@ -236,7 +236,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.13.21"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-metrics" % "1.13.22"
 ```
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
@@ -263,7 +263,7 @@ val metricsInterceptor = metrics.metricsInterceptor() // add to your server opti
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-otel4s-metrics" % "1.13.21"
+"com.softwaremill.sttp.tapir" %% "tapir-otel4s-metrics" % "1.13.22"
 ```
 
 The `Otel4sMetrics` provides integration with the [otel4s](https://typelevel.org/otel4s/) library for OpenTelemetry metrics.
@@ -312,7 +312,7 @@ By default, the following metrics are exposed, following the
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.13.21"
+"com.softwaremill.sttp.tapir" %% "tapir-datadog-metrics" % "1.13.22"
 ```
 
 Datadog metrics are sent as Datadog custom metrics through
@@ -378,7 +378,7 @@ val datadogMetrics = DatadogMetrics.default[Future](statsdClient)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.13.21"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % "1.13.22"
 ```
 
 Metrics have been integrated into ZIO core in ZIO2.
@@ -440,7 +440,7 @@ object ZioEndpoint:
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.13.21"
+"com.softwaremill.sttp.tapir" %% "tapir-opentelemetry-tracing" % "1.13.22"
 ```
 
 OpenTelemetry tracing is vendor-agnostic and can be exported using an exporters, such as Jaeger, Zipkin, DataDog, 
@@ -478,7 +478,7 @@ NettySyncServer().options(serverOptions).addEndpoint(???).startAndWait()
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-otel4s-tracing" % "1.13.21"
+"com.softwaremill.sttp.tapir" %% "tapir-otel4s-tracing" % "1.13.22"
 ```
 
 The `Otel4sTracing` interceptor provides integration with the [otel4s](https://typelevel.org/otel4s/) library for OpenTelemetry tracing.
@@ -523,3 +523,35 @@ might still serve the request.
 If a default response (e.g. a `404 Not Found`) should be produced, this should be enabled using the 
 [reject interceptor](errors.md). Such a setup assumes that there are no other routes in the server, after the Tapir
 server interpreter is invoked.
+
+## ZIO OpenTelemetry
+
+ZIO OpenTelemetry tracing is provided by the `tapir-zio-opentelemetry` module. It is built on top of the
+[ZIO OpenTelemetry](https://zio.dev/zio-telemetry/) (zio-telemetry) library, and creates a span for each
+request handled by a tapir endpoint.
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-zio-opentelemetry" % "1.13.22"
+```
+
+The module provides the `ZIOpenTelemetryTracing` request interceptor. Prepend it to the interpreter's interceptors, so
+that it runs as early as possible, passing a `zio.telemetry.opentelemetry.tracing.Tracing` instance:
+
+```scala
+import sttp.tapir.server.ziohttp.ZioHttpServerOptions
+import sttp.tapir.server.ziopentelemetry.ZIOpenTelemetryTracing
+import zio.telemetry.opentelemetry.tracing.Tracing
+
+def serverOptions(tracing: Tracing): ZioHttpServerOptions[Any] =
+  ZioHttpServerOptions.customiseInterceptors
+    .prependInterceptor(ZIOpenTelemetryTracing(tracing))
+    .options
+```
+
+Span names and attributes can be customised through `ZIOpenTelemetryTracingConfig`.
+
+The `Tracing` instance is created from an OpenTelemetry SDK using the [zio-telemetry](https://zio.dev/zio-telemetry/)
+library; see its documentation for setting up the SDK, exporters and providers.
+
