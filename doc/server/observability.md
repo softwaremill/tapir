@@ -552,18 +552,6 @@ def serverOptions(tracing: Tracing): ZioHttpServerOptions[Any] =
 
 Span names and attributes can be customised through `ZIOpenTelemetryTracingConfig`.
 
-### Bootstrap
-
-Setting up the OpenTelemetry SDK (exporters, providers and a runtime telemetry service) is optional and lives in a
-separate module:
-
-```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio-opentelemetry-bootstrap" % "@VERSION@"
-```
-
-It provides the `ZIOpenTelemetryApp` trait, which assembles the bootstrap layer (creating the OpenTelemetry instance and
-providing it to the application), along with these layer helpers:
-- `otel4zLogging` - the OpenTelemetry logging layer.
-- `otel4zMetrics` - the OpenTelemetry metrics layer.
-- `otel4zTracing` - the OpenTelemetry tracing (`Tracing`) layer.
+The `Tracing` instance is created from an OpenTelemetry SDK using the [zio-telemetry](https://zio.dev/zio-telemetry/)
+library; see its documentation for setting up the SDK, exporters and providers.
 
