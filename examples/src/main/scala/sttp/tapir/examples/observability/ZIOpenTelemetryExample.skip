@@ -45,7 +45,9 @@ object ZIOpenTelemetryExample extends ZIOAppDefault:
   private val tracingLayer: ZLayer[Any, Throwable, Tracing] =
     (openTelemetryLayer ++ ZioOpenTelemetry.contextZIO) >>> ZioOpenTelemetry.tracing(instrumentationScopeName = "zio-observability")
 
-  /** Reuses the default attributes, and adds a custom one to every request span. */
+  /** Customising the configuration is optional: `ZIOpenTelemetryTracing(tracing)` uses a sensible default config (following the
+    * OpenTelemetry semantic conventions). Here we override it to reuse the default attributes and add a custom one to every request span.
+    */
   private val tracingConfig: ZIOpenTelemetryTracingConfig = ZIOpenTelemetryTracingConfig(
     requestAttributes = request =>
       Attributes
@@ -57,6 +59,7 @@ object ZIOpenTelemetryExample extends ZIOAppDefault:
 
   private def serverOptions(tracing: Tracing): ZioHttpServerOptions[Any] =
     ZioHttpServerOptions.customiseInterceptors
+      // the config is optional - `ZIOpenTelemetryTracing(tracing)` uses the default configuration
       .prependInterceptor(ZIOpenTelemetryTracing(tracing, tracingConfig))
       .options
 
