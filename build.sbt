@@ -2405,7 +2405,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     vertxServer,
     zioHttpServer,
     zioJson,
-    zioMetrics
+    zioMetrics,
+    zioOpenTelemetry
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
