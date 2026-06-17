@@ -58,13 +58,20 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
         .map(r => frameToNettyFrame(o.responses.encode(r)))
         .onFinalizeCaseWeak {
           case ExitCase.Succeeded =>
-            Sync[F].delay { val _ = wsCompletedPromise.setSuccess() }
+            Sync[F].delay {
+              // Send the closing frame by writing it directly to the channel, rather than appending it to the outgoing
+              // stream. Netty releases the frame as part of the write - even if the channel is already closed - while a
+              // frame emitted through the reactive-streams bridge during teardown can be dropped without being released
+              // (the channel may already be closing once the stream completes). Writing it before completing the promise
+              // also ensures it's enqueued before any channel close triggered by the promise's listeners.
+              val _ = wsCompletedPromise.channel().writeAndFlush(frameToNettyFrame(WebSocketFrame.close))
+              val _ = wsCompletedPromise.setSuccess()
+            }
           case ExitCase.Errored(t) =>
             Sync[F].delay(wsCompletedPromise.setFailure(t)) >> Sync[F].delay(logger.error("Error occured in WebSocket channel", t))
           case ExitCase.Canceled =>
             Sync[F].delay { val _ = wsCompletedPromise.cancel(true) }
         }
-        .append(fs2.Stream(frameToNettyFrame(WebSocketFrame.close)))
 
     // Trigger listening for WS frames in the underlying fs2 StreamSubscribber
     subscriber.sub.onSubscribe(subscription)
