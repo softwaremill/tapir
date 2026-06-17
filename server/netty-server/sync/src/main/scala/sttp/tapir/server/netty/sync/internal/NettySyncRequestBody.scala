@@ -5,7 +5,7 @@ import _root_.ox.flow.Flow
 import _root_.ox.flow.reactive.FlowReactiveStreams
 import io.netty.buffer.ByteBufUtil
 import io.netty.handler.codec.http.HttpContent
-import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpDataFactory, HttpPostMultipartRequestDecoder, InterfaceHttpData}
+import io.netty.handler.codec.http.multipart.{HttpPostMultipartRequestDecoder, InterfaceHttpData}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.capabilities.StreamMaxLengthExceededException
@@ -14,7 +14,7 @@ import sttp.shared.Identity
 import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
-import sttp.tapir.server.netty.internal.NettyRequestBody
+import sttp.tapir.server.netty.internal.NettyRequestBodyWithMultipart
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
 import sttp.tapir.server.netty.sync.*
 
@@ -24,15 +24,8 @@ private[sync] class NettySyncRequestBody(
     val createFile: ServerRequest => TapirFile,
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
-) extends NettyRequestBody[Identity, OxStreams]:
+) extends NettyRequestBodyWithMultipart[Identity, OxStreams](multipartTempDirectory, multipartMinSizeForDisk):
 
-  private val httpDataFactory: HttpDataFactory = {
-    val factory = multipartMinSizeForDisk match
-      case Some(minSize) => new DefaultHttpDataFactory(minSize)
-      case None          => new DefaultHttpDataFactory()
-    multipartTempDirectory.foreach(dir => factory.setBaseDir(dir.getPath))
-    factory
-  }
 
   override given monad: MonadError[Identity] = IdentityMonad
   override val streams: OxStreams = OxStreams

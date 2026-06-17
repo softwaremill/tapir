@@ -7,17 +7,24 @@ import sttp.capabilities
 import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.netty.internal.reactivestreams._
-import sttp.tapir.{RawBodyType, RawPart, TapirFile}
+import sttp.tapir.{RawPart, TapirFile}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Future[TapirFile])(implicit ec: ExecutionContext)
-    extends NettyRequestBody[Future, NoStreams] {
+private[netty] class NettyFutureRequestBody(
+    val createFile: ServerRequest => Future[TapirFile],
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long]
+)(implicit ec: ExecutionContext)
+    extends NettyRequestBodyWithMultipartF[Future, NoStreams](multipartTempDirectory, multipartMinSizeForDisk) {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
   override implicit val monad: MonadError[Future] = new FutureMonad()
+
+  protected def listMonadToMonadOfList(l: List[Future[RawPart]]): Future[List[RawPart]] = Future.sequence(l)
+
+  override protected def fromFuture[T](f: Future[T]): Future[T] = f
 
   override def publisherToBytes(
       publisher: Publisher[HttpContent],
@@ -26,21 +33,11 @@ private[netty] class NettyFutureRequestBody(val createFile: ServerRequest => Fut
   ): Future[Array[Byte]] =
     SimpleSubscriber.processAll(publisher, contentLength, maxBytes)
 
-  override def publisherToMultipart(
-      nettyRequest: StreamedHttpRequest,
-      serverRequest: ServerRequest,
-      m: RawBodyType.MultipartBody,
-      maxBytes: Option[Long]
-  ): Future[RawValue[Seq[RawPart]]] = Future.failed(new UnsupportedOperationException("Multipart requests are not supported"))
-
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Future[Unit] =
     serverRequest.underlying match {
       case r: StreamedHttpRequest => FileWriterSubscriber.processAll(r, file.toPath, maxBytes)
       case _                      => monad.unit(()) // Empty request
     }
-
-  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): Future[Unit] =
-    Future.failed(new UnsupportedOperationException("Multipart requests are not supported"))
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException()

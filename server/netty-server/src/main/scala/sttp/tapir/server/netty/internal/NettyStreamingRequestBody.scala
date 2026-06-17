@@ -4,10 +4,14 @@ import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.FullHttpRequest
 import org.playframework.netty.http.StreamedHttpRequest
 import sttp.capabilities.Streams
+import sttp.tapir.TapirFile
 import sttp.tapir.model.ServerRequest
 
 /** Common logic for processing streaming request body in all Netty backends which support streaming. */
-private[netty] trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends NettyRequestBody[F, S] {
+private[netty] abstract class NettyStreamingRequestBody[F[_], S <: Streams[S]](
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long]
+) extends NettyRequestBodyWithMultipartF[F, S](multipartTempDirectory, multipartMinSizeForDisk) {
 
   val streamCompatible: StreamCompatible[S]
   override val streams = streamCompatible.streams
@@ -19,6 +23,6 @@ private[netty] trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends Ne
       case publisher: StreamedHttpRequest =>
         streamCompatible.fromPublisher(publisher, maxBytes)
       case other =>
-        streamCompatible.failedStream(new UnsupportedOperationException(s"Unexpected Netty request of type: ${other.getClass().getName()}"))
+        streamCompatible.failedStream(new UnsupportedOperationException(s"Unexpected Netty request of type: ${other.getClass.getName}"))
     }).asInstanceOf[streams.BinaryStream] // Scala can't figure out that it's the same type as streamCompatible.streams.BinaryStream
 }

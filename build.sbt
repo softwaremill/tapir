@@ -92,6 +92,11 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   evictionErrorLevel := Level.Info
 )
 
+val testSettings = Seq(
+  scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s",
+  scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s"
+)
+
 val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
 
 val enableMimaSettings = Seq(
@@ -540,6 +545,7 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .settings(commonSettings)
+  .settings(testSettings)
   .settings(
     name := "tapir-tests",
     libraryDependencies ++= Seq(
@@ -1393,6 +1399,7 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonSettings)
+  .settings(testSettings)
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
@@ -1664,6 +1671,7 @@ lazy val nettyServer: ProjectMatrix = (projectMatrix in file("server/netty-serve
       "io.netty" % "netty-all" % Versions.nettyAll,
       "org.playframework.netty" % "netty-reactive-streams-http" % Versions.nettyReactiveStreams,
       "org.apache.httpcomponents" % "httpmime" % "4.5.14",
+      "org.scala-lang.modules" %% "scala-java8-compat" % Versions.scalaJava8Compat,
       slf4j
     )
   )
@@ -2077,6 +2085,7 @@ lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala
 
 lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .settings(commonSettings)
+  .settings(testSettings)
   .settings(
     name := "tapir-client-tests"
   )
@@ -2344,6 +2353,7 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
 
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonSettings)
+  .settings(testSettings)
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= Seq(
