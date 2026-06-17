@@ -1,13 +1,13 @@
 // {cat=Observability; effects=ZIO; server=ZIO HTTP}: Tracing requests with ZIO OpenTelemetry (customised config)
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.21
-//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.21
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.21
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.21
-//> using dep dev.zio::zio-opentelemetry:3.1.16
-//> using dep io.opentelemetry:opentelemetry-sdk:1.51.0
-//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.51.0
-//> using dep io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.51.0
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.22
+//> using dep com.softwaremill.sttp.tapir::tapir-zio:1.13.22
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.22
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.22
+//> using dep dev.zio::zio-opentelemetry:3.1.17
+//> using dep io.opentelemetry:opentelemetry-sdk:1.63.0
+//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.63.0
+//> using dep io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.63.0
 
 package sttp.tapir.examples.observability
 
