@@ -87,14 +87,9 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       case _            => Seq("-Xmax-inlines", "64")
     }
   },
-  Test / scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s",
-  Test / scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s",
-  evictionErrorLevel := Level.Info
-)
-
-val testSettings = Seq(
   scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s",
-  scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s"
+  scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s",
+  evictionErrorLevel := Level.Info
 )
 
 val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
@@ -545,7 +540,6 @@ lazy val testing: ProjectMatrix = (projectMatrix in file("testing"))
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .settings(commonSettings)
-  .settings(testSettings)
   .settings(
     name := "tapir-tests",
     libraryDependencies ++= Seq(
@@ -1399,7 +1393,6 @@ lazy val serverCore: ProjectMatrix = (projectMatrix in file("server/core"))
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(commonSettings)
-  .settings(testSettings)
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
@@ -2085,7 +2078,6 @@ lazy val awsExamples2_13 = awsExamples.jvm(scala2_13).dependsOn(awsSam.jvm(scala
 
 lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .settings(commonSettings)
-  .settings(testSettings)
   .settings(
     name := "tapir-client-tests"
   )
@@ -2353,7 +2345,6 @@ lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-code
 
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .settings(commonSettings)
-  .settings(testSettings)
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= Seq(

@@ -17,8 +17,8 @@ import scala.concurrent.Future
 private[cats] class NettyCatsRequestBody[F[_]: Async](
     val createFile: ServerRequest => F[TapirFile],
     val streamCompatible: StreamCompatible[Fs2Streams[F]],
-    val multipartTempDirectory: Option[TapirFile] = None,
-    val multipartMinSizeForDisk: Option[Long] = None
+    val multipartTempDirectory: Option[TapirFile],
+    val multipartMinSizeForDisk: Option[Long]
 ) extends NettyStreamingRequestBody[F, Fs2Streams[F]] {
 
   override implicit val monad: MonadError[F] = new CatsMonadError()

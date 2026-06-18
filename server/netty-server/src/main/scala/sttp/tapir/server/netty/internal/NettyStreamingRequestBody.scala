@@ -7,7 +7,7 @@ import sttp.capabilities.Streams
 import sttp.tapir.model.ServerRequest
 
 /** Common logic for processing streaming request body in all Netty backends which support streaming. */
-private[netty] trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends NettyRequestBodyWithMultipartF[F, S] {
+private[netty] trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends NettyMonadRequestBody[F, S] {
 
   val streamCompatible: StreamCompatible[S]
   override val streams = streamCompatible.streams

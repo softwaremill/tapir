@@ -4,7 +4,7 @@ import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpDataFa
 import sttp.capabilities.Streams
 import sttp.tapir.TapirFile
 
-private[netty] trait NettyRequestBodyWithMultipart[F[_], S <: Streams[S]] extends NettyRequestBody[F, S] {
+private[netty] trait NettyRequestBodyWithHttpDataFactory[F[_], S <: Streams[S]] extends NettyRequestBody[F, S] {
   val multipartTempDirectory: Option[TapirFile]
   val multipartMinSizeForDisk: Option[Long]
 

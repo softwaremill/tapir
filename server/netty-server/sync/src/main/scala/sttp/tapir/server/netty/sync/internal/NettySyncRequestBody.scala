@@ -14,7 +14,7 @@ import sttp.shared.Identity
 import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
-import sttp.tapir.server.netty.internal.NettyRequestBodyWithMultipart
+import sttp.tapir.server.netty.internal.NettyRequestBodyWithHttpDataFactory
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
 import sttp.tapir.server.netty.sync.*
 
@@ -24,7 +24,7 @@ private[sync] class NettySyncRequestBody(
     val createFile: ServerRequest => TapirFile,
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
-) extends NettyRequestBodyWithMultipart[Identity, OxStreams]:
+) extends NettyRequestBodyWithHttpDataFactory[Identity, OxStreams]:
 
 
   override given monad: MonadError[Identity] = IdentityMonad

@@ -11,7 +11,7 @@ import sttp.model.HasHeaders
 import sttp.tapir.*
 import sttp.tapir.server.netty.NettyResponse
 import sttp.tapir.server.netty.NettyResponseContent.{ReactivePublisherNettyResponseContent, ReactiveWebSocketProcessorNettyResponseContent}
-import sttp.tapir.server.netty.internal.NettyToResponseBodyBase
+import sttp.tapir.server.netty.internal.NettyToResponseBodyWrap
 import sttp.tapir.server.netty.sync.internal.reactivestreams.InputStreamSyncPublisher
 import sttp.tapir.server.netty.sync.*
 import sttp.tapir.server.netty.internal.NettyToResponseBody.DefaultChunkSize
@@ -19,15 +19,14 @@ import sttp.tapir.server.netty.internal.NettyToResponseBody.DefaultChunkSize
 import java.nio.charset.Charset
 
 private[sync] class NettySyncToResponseBody(inScopeRunner: InScopeRunner)
-  extends NettyToResponseBodyBase[OxStreams]:
+  extends NettyToResponseBodyWrap[OxStreams]:
 
   override val streams: OxStreams = OxStreams
 
 
-  protected def wrap(streamRange: InputStreamRange): Publisher[HttpContent] = {
+  protected def wrap(streamRange: InputStreamRange): Publisher[HttpContent] =
     new InputStreamSyncPublisher(streamRange, DefaultChunkSize)
-  }
-
+  
 
   def fromStreamValue(v: Flow[Chunk[Byte]], headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): NettyResponse =
     (ctx: ChannelHandlerContext) =>

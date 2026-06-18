@@ -16,9 +16,9 @@ import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import scala.concurrent.{Future, Promise}
-import scala.compat.java8.FutureConverters._
-
-private[netty] trait NettyRequestBodyWithMultipartF[F[_], S <: Streams[S]] extends NettyRequestBodyWithMultipart[F, S] {
+import scala.compat.java8.FutureConverters._ //2.12 compatibility
+/** Generic implementation of NettyRequestBody, for any effect F[_] and any stream type S.* */
+private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyRequestBodyWithHttpDataFactory[F, S] {
 
   protected def listMonadToMonadOfList(l: List[F[RawPart]]): F[List[RawPart]]
   protected def fromFuture[T](f: Future[T]): F[T]
@@ -63,38 +63,52 @@ private[netty] trait NettyRequestBodyWithMultipartF[F[_], S <: Streams[S]] exten
       val currentRead = currentBytesRead.accumulateAndGet(httpContent.content().readableBytes().toLong, (prev, toAdd) => prev + toAdd)
       maxBytes match {
         case Some(max) if currentRead > max =>
-          subscription.get().cancel()
+          httpContent.release()
           onError(StreamMaxLengthExceededException(max))
         case _ =>
-          addContentSafe(httpContent)
-          val parts = Iterator
-            .continually(maybeNext())
-            .takeWhile(_.nonEmpty)
-            .flatten
-            .flatMap(toPart)
-            .toList
-          acc.getAndAccumulate(parts, (prev, toAdd) => prev ++ toAdd)
-          subscription.get().request(1)
-
+          if (addContentSafe(httpContent)) {
+            val _ = actionOrOnError(
+              {
+                val parts = Iterator
+                  .continually(maybeNext())
+                  .takeWhile(_.nonEmpty)
+                  .flatten
+                  .flatMap(toPart)
+                  .toList
+                acc.getAndAccumulate(parts, (prev, toAdd) => prev ++ toAdd)
+                subscription.get().request(1)
+              },
+              ()
+            )
+          }
       }
     }
 
     override def onError(t: Throwable): Unit = {
-      promise.failure(t)
+      subscription.get().cancel()
+      val _ = promise.tryFailure(t)
       decoder.destroy()
     }
 
     override def onComplete(): Unit = {
       val f = seqMonadToMonadOfSeq(acc.get())
       val r = f.map(p => RawValue.fromParts(p).copy(cleanup = Option(() => decoder.destroy())))
-      promise.success(r)
+      val _ = promise.trySuccess(r)
     }
 
-    private def addContentSafe(httpContent: HttpContent): Unit =
+    private def addContentSafe(httpContent: HttpContent): Boolean =
+      actionOrOnError(decoder.offer(httpContent), httpContent.release(): Unit)
+
+    private def actionOrOnError[T](action: => T, `finally`: => Unit): Boolean =
       try {
-        val _ = decoder.offer(httpContent)
+        val _ = action
+        true
+      } catch {
+        case r: RuntimeException =>
+          onError(r)
+          false
       } finally {
-        val _ = httpContent.release()
+        `finally`
       }
 
     private def toPart(httpData: InterfaceHttpData): Option[F[RawPart]] =

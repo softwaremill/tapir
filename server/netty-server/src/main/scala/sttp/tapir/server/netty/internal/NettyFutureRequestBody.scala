@@ -17,7 +17,7 @@ private[netty] class NettyFutureRequestBody(
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
 )(implicit ec: ExecutionContext)
-    extends NettyRequestBodyWithMultipartF[Future, NoStreams] {
+    extends NettyMonadRequestBody[Future, NoStreams] {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
   override implicit val monad: MonadError[Future] = new FutureMonad()
