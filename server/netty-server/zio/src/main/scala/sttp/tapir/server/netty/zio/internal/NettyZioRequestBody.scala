@@ -16,9 +16,9 @@ import scala.concurrent.Future
 private[zio] class NettyZioRequestBody[Env](
     val createFile: ServerRequest => RIO[Env, TapirFile],
     val streamCompatible: StreamCompatible[ZioStreams],
-    multipartTempDirectory: Option[TapirFile] = None,
-    multipartMinSizeForDisk: Option[Long] = None
-) extends NettyStreamingRequestBody[RIO[Env, *], ZioStreams](multipartTempDirectory, multipartMinSizeForDisk) {
+    val multipartTempDirectory: Option[TapirFile] = None,
+    val multipartMinSizeForDisk: Option[Long] = None
+) extends NettyStreamingRequestBody[RIO[Env, *], ZioStreams] {
 
   override val streams: ZioStreams = ZioStreams
   override implicit val monad: MonadError[RIO[Env, *]] = new RIOMonadError[Env]

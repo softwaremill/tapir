@@ -4,10 +4,10 @@ import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpDataFa
 import sttp.capabilities.Streams
 import sttp.tapir.TapirFile
 
-private[netty] abstract class NettyRequestBodyWithMultipart[F[_], S <: Streams[S]](
-    multipartTempDirectory: Option[TapirFile],
-    multipartMinSizeForDisk: Option[Long]
-) extends NettyRequestBody[F, S] {
+private[netty] trait NettyRequestBodyWithMultipart[F[_], S <: Streams[S]] extends NettyRequestBody[F, S] {
+  val multipartTempDirectory: Option[TapirFile]
+  val multipartMinSizeForDisk: Option[Long]
+
   protected val httpDataFactory: HttpDataFactory = {
     val factory = multipartMinSizeForDisk match {
       case Some(minSize) => new DefaultHttpDataFactory(minSize)

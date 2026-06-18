@@ -24,7 +24,7 @@ private[sync] class NettySyncRequestBody(
     val createFile: ServerRequest => TapirFile,
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
-) extends NettyRequestBodyWithMultipart[Identity, OxStreams](multipartTempDirectory, multipartMinSizeForDisk):
+) extends NettyRequestBodyWithMultipart[Identity, OxStreams]:
 
 
   override given monad: MonadError[Identity] = IdentityMonad

@@ -18,10 +18,7 @@ import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import scala.concurrent.{Future, Promise}
 import scala.compat.java8.FutureConverters._
 
-private[netty] abstract class NettyRequestBodyWithMultipartF[F[_], S <: Streams[S]](
-    multipartTempDirectory: Option[TapirFile],
-    multipartMinSizeForDisk: Option[Long]
-) extends NettyRequestBodyWithMultipart[F, S](multipartTempDirectory, multipartMinSizeForDisk) {
+private[netty] trait NettyRequestBodyWithMultipartF[F[_], S <: Streams[S]] extends NettyRequestBodyWithMultipart[F, S] {
 
   protected def listMonadToMonadOfList(l: List[F[RawPart]]): F[List[RawPart]]
   protected def fromFuture[T](f: Future[T]): F[T]
@@ -67,18 +64,14 @@ private[netty] abstract class NettyRequestBodyWithMultipartF[F[_], S <: Streams[
       maxBytes match {
         case Some(max) if currentRead > max =>
           subscription.get().cancel()
-          promise.failure(StreamMaxLengthExceededException(maxBytes.getOrElse(Long.MaxValue)))
+          onError(StreamMaxLengthExceededException(max))
         case _ =>
-          try {
-            decoder.offer(httpContent)
-          } finally {
-            val _ = httpContent.release()
-          }
+          addContentSafe(httpContent)
           val parts = Iterator
             .continually(maybeNext())
             .takeWhile(_.nonEmpty)
             .flatten
-            .flatMap(httpData => toPart(httpData))
+            .flatMap(toPart)
             .toList
           acc.getAndAccumulate(parts, (prev, toAdd) => prev ++ toAdd)
           subscription.get().request(1)
@@ -97,16 +90,26 @@ private[netty] abstract class NettyRequestBodyWithMultipartF[F[_], S <: Streams[
       promise.success(r)
     }
 
+    private def addContentSafe(httpContent: HttpContent): Unit =
+      try {
+        val _ = decoder.offer(httpContent)
+      } finally {
+        val _ = httpContent.release()
+      }
+
     private def toPart(httpData: InterfaceHttpData): Option[F[RawPart]] =
       m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType).map(identity))
 
     private def maybeNext(): Option[InterfaceHttpData] = if (decoder.hasNext) Option(decoder.next()) else None
   }
 
-  protected def writeBytesToFileFuture(bytes: Array[Byte], file: TapirFile): Future[Unit] =
+  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): F[Unit] =
+    fromFuture(writeBytesToFileFuture(bytes, file))
+
+  private def writeBytesToFileFuture(bytes: Array[Byte], file: TapirFile): Future[Unit] =
     writeBytesToFileCompletableFuture(bytes, file).toScala
 
-  protected def writeBytesToFileCompletableFuture(bytes: Array[Byte], file: TapirFile): CompletableFuture[Unit] = {
+  private def writeBytesToFileCompletableFuture(bytes: Array[Byte], file: TapirFile): CompletableFuture[Unit] = {
     val javaFuture = new CompletableFuture[Unit]
     val channel = AsynchronousFileChannel.open(file.toPath, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
     channel.write(
@@ -128,6 +131,4 @@ private[netty] abstract class NettyRequestBodyWithMultipartF[F[_], S <: Streams[
     javaFuture
   }
 
-  override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): F[Unit] =
-    fromFuture(writeBytesToFileFuture(bytes, file))
 }

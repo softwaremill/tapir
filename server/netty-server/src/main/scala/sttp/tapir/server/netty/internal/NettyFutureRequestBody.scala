@@ -14,10 +14,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 private[netty] class NettyFutureRequestBody(
     val createFile: ServerRequest => Future[TapirFile],
-    multipartTempDirectory: Option[TapirFile],
-    multipartMinSizeForDisk: Option[Long]
+    val multipartTempDirectory: Option[TapirFile],
+    val multipartMinSizeForDisk: Option[Long]
 )(implicit ec: ExecutionContext)
-    extends NettyRequestBodyWithMultipartF[Future, NoStreams](multipartTempDirectory, multipartMinSizeForDisk) {
+    extends NettyRequestBodyWithMultipartF[Future, NoStreams] {
 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
   override implicit val monad: MonadError[Future] = new FutureMonad()

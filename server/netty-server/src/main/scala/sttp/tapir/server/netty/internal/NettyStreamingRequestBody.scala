@@ -4,14 +4,10 @@ import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.FullHttpRequest
 import org.playframework.netty.http.StreamedHttpRequest
 import sttp.capabilities.Streams
-import sttp.tapir.TapirFile
 import sttp.tapir.model.ServerRequest
 
 /** Common logic for processing streaming request body in all Netty backends which support streaming. */
-private[netty] abstract class NettyStreamingRequestBody[F[_], S <: Streams[S]](
-    multipartTempDirectory: Option[TapirFile],
-    multipartMinSizeForDisk: Option[Long]
-) extends NettyRequestBodyWithMultipartF[F, S](multipartTempDirectory, multipartMinSizeForDisk) {
+private[netty] trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends NettyRequestBodyWithMultipartF[F, S] {
 
   val streamCompatible: StreamCompatible[S]
   override val streams = streamCompatible.streams
