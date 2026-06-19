@@ -16,7 +16,7 @@ import java.nio.ByteBuffer
 import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import scala.concurrent.{Future, Promise}
 
-/** Generic implementation of NettyRequestBody, for any effect F[_] and any stream type S.* */
+/** Generic implementation of NettyRequestBody, for any effect F[_] and any stream type S. */
 private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyRequestBodyWithHttpDataFactory[F, S] {
 
   protected def listMonadToMonadOfList(l: List[F[RawPart]]): F[List[RawPart]]
