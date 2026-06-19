@@ -13,10 +13,9 @@ import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
 import java.nio.file.StandardOpenOption
 import java.nio.ByteBuffer
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import scala.concurrent.{Future, Promise}
-import scala.compat.java8.FutureConverters._ //2.12 compatibility
+
 /** Generic implementation of NettyRequestBody, for any effect F[_] and any stream type S.* */
 private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyRequestBodyWithHttpDataFactory[F, S] {
 
@@ -120,11 +119,8 @@ private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyR
   override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): F[Unit] =
     fromFuture(writeBytesToFileFuture(bytes, file))
 
-  private def writeBytesToFileFuture(bytes: Array[Byte], file: TapirFile): Future[Unit] =
-    writeBytesToFileCompletableFuture(bytes, file).toScala
-
-  private def writeBytesToFileCompletableFuture(bytes: Array[Byte], file: TapirFile): CompletableFuture[Unit] = {
-    val javaFuture = new CompletableFuture[Unit]
+  private def writeBytesToFileFuture(bytes: Array[Byte], file: TapirFile): Future[Unit] = {
+    val promise = Promise[Unit]()
     val channel = AsynchronousFileChannel.open(file.toPath, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
     channel.write(
       ByteBuffer.wrap(bytes),
@@ -132,17 +128,17 @@ private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyR
       channel,
       new CompletionHandler[Integer, AutoCloseable]() {
         override def completed(result: Integer, closeable: AutoCloseable): Unit = {
-          javaFuture.complete(())
+          promise.success(())
           closeable.close()
         }
 
         override def failed(exc: Throwable, closeable: AutoCloseable): Unit = {
-          javaFuture.completeExceptionally(exc)
+          promise.failure(exc)
           closeable.close()
         }
       }
     )
-    javaFuture
+    promise.future
   }
 
 }
