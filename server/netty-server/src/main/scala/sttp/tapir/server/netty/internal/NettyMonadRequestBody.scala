@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 import scala.concurrent.{Future, Promise}
 
 /** Generic implementation of NettyRequestBody, for any effect F[_] and any stream type S. */
-private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyRequestBodyWithHttpDataFactory[F, S] {
+private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyRequestBody[F, S] {
 
   protected def listMonadToMonadOfList(l: List[F[RawPart]]): F[List[RawPart]]
   protected def fromFuture[T](f: Future[T]): F[T]
