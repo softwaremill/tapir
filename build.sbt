@@ -87,8 +87,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       case _            => Seq("-Xmax-inlines", "64")
     }
   },
-  Test / scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s",
-  Test / scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s",
+  scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s",
+  scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s",
   evictionErrorLevel := Level.Info
 )
 
@@ -192,6 +192,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   opentelemetryTracing.projectRefs ++
   otel4sMetrics.projectRefs ++
   otel4sTracing.projectRefs ++
+  zioOpenTelemetry.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   play29Json.projectRefs ++
@@ -471,10 +472,10 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.20")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.21")
         case _ =>
           Seq(
-            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.13",
+            "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.14",
             "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided
           )
       }
@@ -1199,6 +1200,23 @@ lazy val otel4sMetrics: ProjectMatrix = (projectMatrix in file("metrics/otel4s-m
   )
   .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
   .dependsOn(serverCore % CompileAndTest, catsEffect % Test)
+
+lazy val zioOpenTelemetry: ProjectMatrix = (projectMatrix in file("observability/zio-opentelemetry"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-zio-opentelemetry",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-opentelemetry" % Versions.zioOpenTelemetry,
+      "dev.zio" %% "zio-test" % Versions.zio % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
+      "io.opentelemetry" % "opentelemetry-api" % Versions.openTelemetry,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % Versions.openTelemetrySemconvVersion,
+      "io.opentelemetry" % "opentelemetry-sdk-testing" % Versions.openTelemetry % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  // zioHttpServer is a test-only dependency, used to exercise the interceptor with a real streaming response body
+  .dependsOn(zio, serverCore % CompileAndTest, zioHttpServer % Test)
 
 // docs
 
@@ -2260,8 +2278,8 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.14" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.14" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.15" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.15" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
@@ -2387,7 +2405,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     vertxServer,
     zioHttpServer,
     zioJson,
-    zioMetrics
+    zioMetrics,
+    zioOpenTelemetry
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355

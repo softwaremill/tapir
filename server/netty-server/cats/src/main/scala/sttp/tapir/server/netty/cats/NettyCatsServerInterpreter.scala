@@ -33,7 +33,12 @@ trait NettyCatsServerInterpreter[F[_]] {
 
     val serverInterpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, F, NettyResponse, Fs2Streams[F]](
       FilterServerEndpoints(ses),
-      new NettyCatsRequestBody(createFile, Fs2StreamCompatible[F](nettyServerOptions.dispatcher)),
+      new NettyCatsRequestBody(
+        createFile,
+        Fs2StreamCompatible[F](nettyServerOptions.dispatcher),
+        nettyServerOptions.multipartTempDirectory,
+        nettyServerOptions.multipartMinSizeForDisk
+      ),
       new NettyToStreamsResponseBody(Fs2StreamCompatible[F](nettyServerOptions.dispatcher)),
       interceptors,
       deleteFile

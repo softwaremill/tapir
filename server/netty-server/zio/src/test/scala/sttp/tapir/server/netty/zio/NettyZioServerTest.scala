@@ -39,7 +39,7 @@ class NettyZioServerTest extends TestSuite with EitherValues {
               interpreter,
               backend,
               staticContent = false,
-              multipart = false
+              partOtherHeaderSupport = false
             ).tests() ++
               new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
               new ServerCancellationTests(createServerTest)(monadError, asyncInstance).tests() ++

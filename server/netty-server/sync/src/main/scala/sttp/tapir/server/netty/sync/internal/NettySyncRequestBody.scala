@@ -5,7 +5,7 @@ import _root_.ox.flow.Flow
 import _root_.ox.flow.reactive.FlowReactiveStreams
 import io.netty.buffer.ByteBufUtil
 import io.netty.handler.codec.http.HttpContent
-import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, HttpDataFactory, HttpPostMultipartRequestDecoder, InterfaceHttpData}
+import io.netty.handler.codec.http.multipart.{HttpPostMultipartRequestDecoder, InterfaceHttpData}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.capabilities.StreamMaxLengthExceededException
@@ -25,14 +25,6 @@ private[sync] class NettySyncRequestBody(
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
 ) extends NettyRequestBody[Identity, OxStreams]:
-
-  private val httpDataFactory: HttpDataFactory = {
-    val factory = multipartMinSizeForDisk match
-      case Some(minSize) => new DefaultHttpDataFactory(minSize)
-      case None          => new DefaultHttpDataFactory()
-    multipartTempDirectory.foreach(dir => factory.setBaseDir(dir.getPath))
-    factory
-  }
 
   override given monad: MonadError[Identity] = IdentityMonad
   override val streams: OxStreams = OxStreams
@@ -98,9 +90,13 @@ private[sync] class NettySyncRequestBody(
       case _ => Flow.empty // Empty request, return an empty stream
 
 extension (decoder: HttpPostMultipartRequestDecoder)
-  private def decodeChunk(httpContent: HttpContent): Seq[InterfaceHttpData] = {
-    decoder.offer(httpContent)
-    Iterator.continually(maybeNext()).takeWhile(_.nonEmpty).flatten.toSeq
-  }
+  private def decodeChunk(httpContent: HttpContent): Seq[InterfaceHttpData] =
+    try
+      // offer() copies the readable bytes into the decoder's own buffer (released later via decoder.destroy()),
+      // and does not retain the passed content - so we must release the incoming chunk here to avoid a ByteBuf leak
+      decoder.offer(httpContent)
+      Iterator.continually(maybeNext()).takeWhile(_.nonEmpty).flatten.toSeq
+    finally
+      val _ = httpContent.release()
 
   private def maybeNext(): Option[InterfaceHttpData] = Option.when(decoder.hasNext)(decoder.next())

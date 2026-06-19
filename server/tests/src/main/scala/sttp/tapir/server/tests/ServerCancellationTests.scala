@@ -21,13 +21,15 @@ class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServ
   import createServerTest._
 
   def tests(): List[Test] = List({
-    val canceledSemaphore = new Semaphore(1)
+    // The semaphore starts with no permits; the only `release` happens in the server logic's cancellation finalizer,
+    // so the test's `tryAcquire` below blocks until cancellation has been handled.
+    val canceledSemaphore = new Semaphore(0)
     val canceled: AtomicBoolean = new AtomicBoolean(false)
     testServerLogic(
       endpoint
         .out(plainBody[String])
         .serverLogic { _ =>
-          (m.eval(canceledSemaphore.acquire())) >> (async.sleep(15.seconds) >> pureResult("processing finished".asRight[Unit]))
+          (async.sleep(15.seconds) >> pureResult("processing finished".asRight[Unit]))
             .onCancel(m.eval(canceled.set(true)) >> m.eval(canceledSemaphore.release()))
         },
       "Client cancelling request triggers cancellation on the server"

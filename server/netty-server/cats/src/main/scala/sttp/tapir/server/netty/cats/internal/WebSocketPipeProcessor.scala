@@ -28,22 +28,30 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
     o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]],
     wsCompletedPromise: ChannelPromise
 ) extends Processor[NettyWebSocketFrame, NettyWebSocketFrame] {
+  // Holds already-converted sttp frames (not netty frames): each incoming netty frame is converted and released in
+  // `onNext` (at the boundary), so a frame buffered here is never an un-released ByteBuf.
   // Not really that unsafe. Subscriber creation doesn't do any IO, only initializes an AtomicReference in an initial state.
-  private val subscriber: StreamSubscriber[F, NettyWebSocketFrame] = dispatcher.unsafeRunSync(
+  private val subscriber: StreamSubscriber[F, WebSocketFrame] = dispatcher.unsafeRunSync(
     // If bufferSize > 1, the stream may stale and not emit responses until enough requests are buffered
-    StreamSubscriber[F, NettyWebSocketFrame](bufferSize = 1)
+    StreamSubscriber[F, WebSocketFrame](bufferSize = 1)
   )
   private val publisher: Promise[Publisher[NettyWebSocketFrame]] = Promise[Publisher[NettyWebSocketFrame]]()
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
+  // The upstream (netty) subscription, kept so that once the WS interaction has completed we can keep requesting inbound
+  // frames and release them in `onNext`. Otherwise late frames (e.g. the client's Close in response to ours) would sit
+  // unreleased in the netty-reactive-streams publisher's buffer, which only releases its buffer on cancel - and we
+  // intentionally don't cancel, as that would close the channel before error/close handling completes.
+  @volatile private var inboundSubscription: Subscription = _
+
+  private def drainInbound(): Unit =
+    if (inboundSubscription != null) inboundSubscription.request(Long.MaxValue)
+
   override def onSubscribe(s: Subscription): Unit = {
+    inboundSubscription = s
     val subscription = new NonCancelingSubscription(s)
-    val in: Stream[F, NettyWebSocketFrame] = subscriber.sub.stream(Applicative[F].unit)
-    val sttpFrames = in.map { f =>
-      val sttpFrame = nettyFrameToFrame(f)
-      f.release()
-      sttpFrame
-    }
+    // frames are already converted to sttp frames (and the netty frames released) in `onNext`
+    val sttpFrames: Stream[F, WebSocketFrame] = subscriber.sub.stream(Applicative[F].unit)
     val stream: Stream[F, NettyWebSocketFrame] =
       optionallyConcatenateFrames(o.concatenateFragmentedFrames)(
         takeUntilCloseFrame(passAlongCloseFrame = o.decodeCloseRequests)(sttpFrames)
@@ -58,13 +66,29 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
         .map(r => frameToNettyFrame(o.responses.encode(r)))
         .onFinalizeCaseWeak {
           case ExitCase.Succeeded =>
-            Sync[F].delay { val _ = wsCompletedPromise.setSuccess() }
+            Sync[F].delay {
+              // Send the closing frame by writing it directly to the channel, rather than appending it to the outgoing
+              // stream. Netty releases the frame as part of the write - even if the channel is already closed - while a
+              // frame emitted through the reactive-streams bridge during teardown can be dropped without being released
+              // (the channel may already be closing once the stream completes). Writing it before completing the promise
+              // also ensures it's enqueued before any channel close triggered by the promise's listeners.
+              wsCompletedPromise.channel().writeAndFlush(frameToNettyFrame(WebSocketFrame.close)): Unit
+              val _ = wsCompletedPromise.setSuccess()
+              // keep draining (and releasing, in onNext) any inbound frames that arrive during teardown
+              drainInbound()
+            }
           case ExitCase.Errored(t) =>
-            Sync[F].delay(wsCompletedPromise.setFailure(t)) >> Sync[F].delay(logger.error("Error occured in WebSocket channel", t))
+            Sync[F].delay {
+              val _ = wsCompletedPromise.setFailure(t)
+              logger.error("Error occured in WebSocket channel", t)
+              drainInbound()
+            }
           case ExitCase.Canceled =>
-            Sync[F].delay { val _ = wsCompletedPromise.cancel(true) }
+            Sync[F].delay {
+              val _ = wsCompletedPromise.cancel(true)
+              drainInbound()
+            }
         }
-        .append(fs2.Stream(frameToNettyFrame(WebSocketFrame.close)))
 
     // Trigger listening for WS frames in the underlying fs2 StreamSubscribber
     subscriber.sub.onSubscribe(subscription)
@@ -73,7 +97,13 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
   }
 
   override def onNext(t: NettyWebSocketFrame): Unit = {
-    subscriber.sub.onNext(t)
+    // Convert (copying the payload) and release the netty frame here, at the boundary, so the inbound ByteBuf is always
+    // released. Once the WS interaction has completed the stream no longer consumes frames, so we don't forward them -
+    // but we still drain (see drainInbound) and release them here, so they don't leak in the publisher's buffer.
+    val sttpFrame =
+      try nettyFrameToFrame(t)
+      finally { val _ = t.release() }
+    if (!wsCompletedPromise.isDone()) subscriber.sub.onNext(sttpFrame)
   }
 
   override def onError(t: Throwable): Unit = {

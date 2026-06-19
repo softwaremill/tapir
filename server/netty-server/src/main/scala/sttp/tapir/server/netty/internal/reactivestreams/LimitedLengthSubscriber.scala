@@ -19,6 +19,8 @@ private[netty] class LimitedLengthSubscriber[R](maxBytes: Long, delegate: Subscr
   override def onNext(content: HttpContent): Unit = {
     bytesReadSoFar = bytesReadSoFar + content.content.readableBytes()
     if (bytesReadSoFar > maxBytes) {
+      // this chunk is not forwarded to the delegate, so we must release it ourselves to avoid a ByteBuf leak
+      val _ = content.release()
       subscription.cancel()
       onError(StreamMaxLengthExceededException(maxBytes))
       subscription = null

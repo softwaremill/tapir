@@ -523,3 +523,35 @@ might still serve the request.
 If a default response (e.g. a `404 Not Found`) should be produced, this should be enabled using the 
 [reject interceptor](errors.md). Such a setup assumes that there are no other routes in the server, after the Tapir
 server interpreter is invoked.
+
+## ZIO OpenTelemetry
+
+ZIO OpenTelemetry tracing is provided by the `tapir-zio-opentelemetry` module. It is built on top of the
+[ZIO OpenTelemetry](https://zio.dev/zio-telemetry/) (zio-telemetry) library, and creates a span for each
+request handled by a tapir endpoint.
+
+Add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-zio-opentelemetry" % "@VERSION@"
+```
+
+The module provides the `ZIOpenTelemetryTracing` request interceptor. Prepend it to the interpreter's interceptors, so
+that it runs as early as possible, passing a `zio.telemetry.opentelemetry.tracing.Tracing` instance:
+
+```scala
+import sttp.tapir.server.ziohttp.ZioHttpServerOptions
+import sttp.tapir.server.ziopentelemetry.ZIOpenTelemetryTracing
+import zio.telemetry.opentelemetry.tracing.Tracing
+
+def serverOptions(tracing: Tracing): ZioHttpServerOptions[Any] =
+  ZioHttpServerOptions.customiseInterceptors
+    .prependInterceptor(ZIOpenTelemetryTracing(tracing))
+    .options
+```
+
+Span names and attributes can be customised through `ZIOpenTelemetryTracingConfig`.
+
+The `Tracing` instance is created from an OpenTelemetry SDK using the [zio-telemetry](https://zio.dev/zio-telemetry/)
+library; see its documentation for setting up the SDK, exporters and providers.
+
