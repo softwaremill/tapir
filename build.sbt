@@ -87,8 +87,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       case _            => Seq("-Xmax-inlines", "64")
     }
   },
-  Test / scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s",
-  Test / scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s",
+  scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s",
+  scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s",
   evictionErrorLevel := Level.Info
 )
 

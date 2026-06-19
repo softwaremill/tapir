@@ -14,7 +14,9 @@ import zio.{Cause, RIO, ZIO}
 case class NettyZioServerOptions[R](
     interceptors: List[Interceptor[RIO[R, *]]],
     createFile: ServerRequest => RIO[R, TapirFile],
-    deleteFile: TapirFile => RIO[R, Unit]
+    deleteFile: TapirFile => RIO[R, Unit],
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long]
 ) {
   def prependInterceptor(i: Interceptor[RIO[R, *]]): NettyZioServerOptions[R] = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[RIO[R, *]]): NettyZioServerOptions[R] = copy(interceptors = interceptors :+ i)
@@ -31,7 +33,9 @@ object NettyZioServerOptions {
     NettyZioServerOptions(
       interceptors,
       _ => ZIO.attemptBlocking(Defaults.createTempFile()),
-      file => ZIO.attemptBlocking(Defaults.deleteFile()(file))
+      file => ZIO.attemptBlocking(Defaults.deleteFile()(file)),
+      None,
+      None
     )
 
   def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], NettyZioServerOptions[R]] =

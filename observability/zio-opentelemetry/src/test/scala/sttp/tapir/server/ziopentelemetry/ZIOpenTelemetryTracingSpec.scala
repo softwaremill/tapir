@@ -131,7 +131,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
               // draining mimics the backend sending the body; tolerate failures so the body-listener callback (which
               // marks the span as errored) runs and the finished span can be inspected
               ZIO.logDebug("streaming") *>
-              stream.runDrain.catchAllCause(_ => ZIO.unit)
+                stream.runDrain.catchAllCause(_ => ZIO.unit)
             case other =>
               ZIO.logDebug(s"WHat is it: $other ?")
           }
@@ -727,7 +727,9 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
       val ep: ServerEndpoint[ZioStreams, Task] = endpoint
         .in("stream")
         .out(streamTextBody(ZioStreams)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
-        .zServerLogic(_ => ZIO.succeed(ZStream.fromIterable("abc".getBytes(StandardCharsets.UTF_8)).flatMap(_ => ZStream.fail(new RuntimeException("boom")))))
+        .zServerLogic(_ =>
+          ZIO.succeed(ZStream.fromIterable("abc".getBytes(StandardCharsets.UTF_8)).flatMap(_ => ZStream.fail(new RuntimeException("boom"))))
+        )
 
       val request = serverRequestFromUri(uri"http://example.com/stream")
       for {
