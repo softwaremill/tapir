@@ -60,6 +60,7 @@
 * [Reporting OpenTelemetry metrics](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/openTelemetryMetricsExample.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">Netty</span>
 * [Reporting Prometheus metrics](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/ZioMetricsExample.scala) <span class="example-tag example-effects">ZIO</span> <span class="example-tag example-server">ZIO HTTP</span>
 * [Reporting Prometheus metrics](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/prometheusMetricsExample.scala) <span class="example-tag example-effects">Future</span> <span class="example-tag example-json">circe</span> <span class="example-tag example-server">Netty</span>
+* [Tracing requests with ZIO OpenTelemetry (customised config)](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples/observability/ZIOpenTelemetryExample.scala) <span class="example-tag example-effects">ZIO</span> <span class="example-tag example-server">ZIO HTTP</span>
 
 ## OpenAPI documentation
 

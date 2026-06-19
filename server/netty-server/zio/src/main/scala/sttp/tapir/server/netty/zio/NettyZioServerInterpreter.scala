@@ -25,7 +25,12 @@ trait NettyZioServerInterpreter[R] {
       implicit val bodyListener: BodyListener[F, NettyResponse] = new NettyBodyListener(runAsync)
       val serverInterpreter = new ServerInterpreter[ZioStreams, F, NettyResponse, ZioStreams](
         FilterServerEndpoints(widenedSes),
-        new NettyZioRequestBody(widenedServerOptions.createFile, ZioStreamCompatible(runtime)),
+        new NettyZioRequestBody(
+          widenedServerOptions.createFile,
+          ZioStreamCompatible(runtime),
+          widenedServerOptions.multipartTempDirectory,
+          widenedServerOptions.multipartMinSizeForDisk
+        ),
         new NettyToStreamsResponseBody[ZioStreams](ZioStreamCompatible(runtime)),
         widenedServerOptions.interceptors,
         widenedServerOptions.deleteFile

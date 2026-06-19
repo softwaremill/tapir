@@ -34,7 +34,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             createServerTest,
             interpreter,
             backend,
-            multipart = false
+            partOtherHeaderSupport = false
           )
             .tests() ++
             new ServerStreamingTests(createServerTest).tests(Fs2Streams[IO])(drainFs2) ++

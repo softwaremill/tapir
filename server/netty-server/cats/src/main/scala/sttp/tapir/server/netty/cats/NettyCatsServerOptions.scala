@@ -18,7 +18,9 @@ case class NettyCatsServerOptions[F[_]](
     interceptors: List[Interceptor[F]],
     createFile: ServerRequest => F[TapirFile],
     deleteFile: TapirFile => F[Unit],
-    dispatcher: Dispatcher[F]
+    dispatcher: Dispatcher[F],
+    multipartTempDirectory: Option[TapirFile],
+    multipartMinSizeForDisk: Option[Long]
 ) {
   def prependInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[F]): NettyCatsServerOptions[F] = copy(interceptors = interceptors :+ i)
@@ -37,7 +39,9 @@ object NettyCatsServerOptions {
       interceptors,
       _ => Sync[F].delay(Defaults.createTempFile()),
       file => Sync[F].delay(Defaults.deleteFile()(file)),
-      dispatcher
+      dispatcher,
+      None,
+      None
     )
 
   def customiseInterceptors[F[_]: Async](

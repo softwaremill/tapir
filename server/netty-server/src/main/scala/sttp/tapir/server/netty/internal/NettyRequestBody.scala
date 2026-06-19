@@ -2,7 +2,7 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.http.{FullHttpRequest, HttpContent}
-import io.netty.handler.codec.http.multipart.{FileUpload, HttpData, InterfaceHttpData}
+import io.netty.handler.codec.http.multipart.{DefaultHttpDataFactory, FileUpload, HttpData, HttpDataFactory, InterfaceHttpData}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
 import sttp.capabilities.Streams
@@ -26,6 +26,22 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
 
   /** Backend-specific implementation for creating a file. */
   def createFile: ServerRequest => F[TapirFile]
+
+  /** Directory in which multipart parts that don't fit in memory are buffered as temporary files. */
+  val multipartTempDirectory: Option[TapirFile]
+
+  /** Minimum size (in bytes) of a multipart part above which it is buffered on disk instead of in memory. */
+  val multipartMinSizeForDisk: Option[Long]
+
+  /** Netty factory used by the multipart decoder, configured with [[multipartTempDirectory]] and [[multipartMinSizeForDisk]]. */
+  protected val httpDataFactory: HttpDataFactory = {
+    val factory = multipartMinSizeForDisk match {
+      case Some(minSize) => new DefaultHttpDataFactory(minSize)
+      case None          => new DefaultHttpDataFactory()
+    }
+    multipartTempDirectory.foreach(dir => factory.setBaseDir(dir.getPath))
+    factory
+  }
 
   /** Backend-specific way to process all elements emitted by a Publisher[HttpContent] into a raw array of bytes.
     *
