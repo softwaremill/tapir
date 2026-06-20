@@ -72,5 +72,5 @@ object Versions {
   val logback = "1.5.34"
   val slf4j = "2.0.18"
   val jsoniter = "2.38.15"
-  val otel4s = "1.0.0"
+  val otel4s = "1.0.1"
 }
