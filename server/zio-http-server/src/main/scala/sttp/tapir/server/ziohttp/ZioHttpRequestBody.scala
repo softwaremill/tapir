@@ -42,11 +42,17 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
       case RawBodyType.InputStreamRangeBody       =>
         asByteArray.map(bytes => InputStreamRange(() => new ByteArrayInputStream(bytes))).map(RawValue(_))
       case RawBodyType.FileBody =>
-        for {
+        (for {
           file <- serverOptions.createFile(serverRequest)
-          _ <- limitedStream.run(ZSink.fromFile(file)).unit
-        } yield RawValue(FileRange(file), Seq(FileRange(file)))
-      case m: RawBodyType.MultipartBody => handleMultipartBody(serverRequest, m, limitedStream)
+          value <- limitedStream
+            .run(ZSink.fromFile(file))
+            .catchAll { e =>
+              serverOptions.deleteFile(file).flatMap(_ => ZIO.fail(e))
+            }
+            .map(_ => RawValue(FileRange(file), Seq(FileRange(file))))
+        } yield value).asInstanceOf[ZIO[Any, Throwable, RawValue[RAW]]]
+      case m: RawBodyType.MultipartBody =>
+        handleMultipartBody(serverRequest, m, limitedStream)
     }
   }
 

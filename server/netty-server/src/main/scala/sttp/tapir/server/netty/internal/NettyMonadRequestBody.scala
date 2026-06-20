@@ -40,6 +40,14 @@ private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyR
 
   }
 
+  override final def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit] =
+    writeToFileUnsafe(serverRequest, file, maxBytes)
+      .handleError { case e =>
+        deleteFile(file).flatMap(_ => monad.error(e))
+      }
+
+  protected def writeToFileUnsafe(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit]
+
   private class MonadSubscriber(
       decoder: HttpPostMultipartRequestDecoder,
       serverRequest: ServerRequest,

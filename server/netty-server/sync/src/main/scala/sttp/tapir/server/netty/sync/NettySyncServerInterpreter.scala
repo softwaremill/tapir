@@ -23,6 +23,7 @@ trait NettySyncServerInterpreter:
       FilterServerEndpoints(ses),
       new NettySyncRequestBody(
         nettyServerOptions.createFile,
+        nettyServerOptions.deleteFile,
         nettyServerOptions.multipartTempDirectory,
         nettyServerOptions.multipartMinSizeForDisk
       ),

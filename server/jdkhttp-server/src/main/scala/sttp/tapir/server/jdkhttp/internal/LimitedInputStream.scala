@@ -7,7 +7,7 @@ import java.io.IOException
 
 class FailingLimitedInputStream(in: InputStream, limit: Long) extends LimitedInputStream(in, limit) {
   override def onLimit: Int = {
-    throw new StreamMaxLengthExceededException(limit)
+    throw StreamMaxLengthExceededException(limit)
   }
 }
 

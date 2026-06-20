@@ -6,6 +6,7 @@ import enumeratum._
 import io.circe.generic.auto._
 import org.scalatest.Succeeded
 import org.scalatest.matchers.should.Matchers._
+import scala.util.Properties
 import sttp.client4._
 import sttp.model._
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
@@ -886,21 +887,41 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
 
   def testPayloadTooLarge[I](
       testedEndpoint: PublicEndpoint[I, Unit, I, Any],
-      maxLength: Int
+      maxLength: Int,
+      fileBased: Boolean = false
   ) = testServer(
     testedEndpoint.maxRequestBodyLength(maxLength.toLong),
     "checks payload limit and returns 413 on exceeded max content length (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
-    val tooLargeBody: String = List.fill(maxLength + 1)('x').mkString
+    val tooLargeMarker = "tooLargeMarker"
+    val tooLargeBody: String = tooLargeMarker + List.fill(maxLength - tooLargeMarker.length + 1)('x').mkString
     basicRequest
       .post(uri"$baseUri/api/echo")
       .body(tooLargeBody)
       .send(backend)
       .map(_.code shouldBe StatusCode.PayloadTooLarge)
+      .map { r =>
+        if (fileBased) {
+          val tmpDir = new TapirFile(Properties.tmpDir)
+          val optFiles = Option(tmpDir.listFiles((_, name) => name.startsWith(Defaults.Prefix)))
+          for {
+            files <- optFiles
+            file <- files.filter(_.isFile)
+          } {
+            val txt = java.nio.file.Files.readString(file.toPath)
+            if (txt.startsWith(tooLargeMarker)) {
+              fail(s"File has not be deleted after ${StatusCode.PayloadTooLarge} error: ${file.getAbsolutePath}")
+            }
+          }
+        }
+        r
+      }
       // The server may reject the over-limit body by closing the connection before the client has
       // finished sending it, surfacing as a transport error instead of a 413. Both are valid
       // rejections of the too-large body, so accept either to avoid a timing-dependent flake.
-      .recover { case _: SttpClientException => Succeeded }
+      .recover { case _: SttpClientException =>
+        Succeeded
+      }
   }
   def testPayloadWithinLimit[I](
       testedEndpoint: PublicEndpoint[I, Unit, I, Any],
@@ -918,7 +939,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     List(
       testPayloadTooLarge(in_string_out_string, maxLength),
       testPayloadTooLarge(in_byte_array_out_byte_array, maxLength),
-      testPayloadTooLarge(in_file_out_file, maxLength),
+      testPayloadTooLarge(in_file_out_file, maxLength, true),
       testServer(
         in_input_stream_out_input_stream.maxRequestBodyLength(maxLength.toLong),
         "checks payload limit and returns 413 on exceeded max content length (request)"
