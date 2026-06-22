@@ -106,7 +106,7 @@ object SchemaComparer {
         discriminatorsEqual(l.discriminator, r.discriminator) &&
         l.types.size == r.types.size &&
         l.types.zip(r.types).forall { case (lt, rt) =>
-          schemasEqual(leftName + "Variant", lt, leftAll, rightName + "Variant", rt, rightAll, nextVisited, true)
+          schemasEqual(leftName + "Variant", lt, leftAll, rightName + "Variant", rt, rightAll, nextVisited)
         }
       case (l: OpenapiSchemaAnyOf, r: OpenapiSchemaAnyOf) =>
         l.types.size == r.types.size &&

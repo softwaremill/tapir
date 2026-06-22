@@ -35,14 +35,44 @@ case class FS2(effectType: String = "cats.effect.IO") extends StreamingImplement
 object Pekko extends StreamingImplementation
 object Zio extends StreamingImplementation
 
-object GenerationMeta { val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, 0) }
+object GenerationMeta {
+  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, 0, Set.empty)
+}
 case class GenerationMeta(
     schemaFiles: Seq[String],
     hasValidators: Boolean,
     schemasContainAny: Boolean,
     explicitNonObjTypes: Seq[String],
-    depth: Int
-)
+    depth: Int,
+    security: Set[SecurityWrapperDefn]
+) {
+  def partition(securityWrappers: Set[SecurityWrapperDefn]): (Set[SecurityWrapperDefn], Set[SecurityWrapperDefn]) = {
+    val changed = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
+    val m = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
+    val ct = scala.collection.mutable.Set.empty[String]
+    securityWrappers.foreach(w =>
+      if (!security.contains(w)) {
+        changed += w
+        w.schemas.map(_.typeName).foreach(t => ct += t)
+      } else m += w
+    )
+    def checkChanged: Unit = {
+      var changedCount = 0
+      val mSnapshot = m.toSet
+      mSnapshot.foreach(w =>
+        if (w.schemas.map(_.typeName).exists(ct.contains)) {
+          changedCount += 1
+          w.schemas.map(_.typeName).foreach(t => ct += t)
+          changed += w
+          m.remove(w)
+        }
+      )
+      if (changedCount != 0) checkChanged
+    }
+    checkChanged
+    m.toSet -> changed.toSet
+  }
+}
 case class GenerationInfo(allFiles: Map[String, String], meta: GenerationMeta)
 
 object RootGenerator {
@@ -152,9 +182,8 @@ object RootGenerator {
       if (schemas.size > 1) (1 to schemas.size).map(i => s"import ${objName}Schemas$i._").mkString("\n", "\n", "")
       else if (schemas.size == 1) s"\nimport ${objName}Schemas._"
       else ""
-    val dependencyImports = "" // dependencyImportsFor(packageReuse)
     val internalImports =
-      s"import $packagePath.$objName._$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport$dependencyImports"
+      s"import $packagePath.$objName._$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
 
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
@@ -215,7 +244,7 @@ object RootGenerator {
       Seq(s"${objName}Schemas" -> s"""package $packagePath
          |
          |object ${objName}Schemas {
-         |  import $packagePath.$objName._${dependencyImportsFor(packageReuse)}
+         |  import $packagePath.$objName._${schemaDependencyImportsFor(packageReuse)}
          |  import sttp.tapir.generic.auto._
          |${indent(2)(schemas.head)}
          |}""".stripMargin)
@@ -262,8 +291,8 @@ object RootGenerator {
       }
       .mkString("\n")
     val extraImports =
-      if (endpointsInMain.nonEmpty) s"$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport$dependencyImports"
-      else dependencyImports
+      if (endpointsInMain.nonEmpty) s"$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
+      else ""
     val queryParamSupport =
       """
       |case class CommaSeparatedValues[T](values: List[T])
@@ -299,7 +328,7 @@ object RootGenerator {
       |}
       |""".stripMargin
 
-    val securityTypes = SecurityGenerator.genSecurityTypes(securityWrappers)
+    val securityTypes = SecurityGenerator.genSecurityTypes(securityWrappers, packageReuse)
     val byteStringDecl =
       if (packageReuse.reusedSchemas.nonEmpty)
         s"type ByteString = ${packageReuse.depPkg}.$objName.ByteString"
@@ -336,7 +365,14 @@ object RootGenerator {
       validationObj ++ schemaObjs + (objName -> mainObj)
     GenerationInfo(
       allFiles,
-      GenerationMeta(schemaObjs.map(_._1), validationObj.isDefined, schemasContainAny, explicitNonObjTypes, packageReuse.depth.getOrElse(0))
+      GenerationMeta(
+        schemaObjs.map(_._1),
+        validationObj.isDefined,
+        schemasContainAny,
+        explicitNonObjTypes,
+        packageReuse.depth.getOrElse(0),
+        securityWrappers
+      )
     )
   }
 
@@ -414,15 +450,11 @@ object RootGenerator {
   def addName(parentName: String, key: String): String =
     parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
 
-  private def dependencyImportsFor(packageReuse: PackageReuseContext): String =
+  private def schemaDependencyImportsFor(packageReuse: PackageReuseContext): String =
     if (packageReuse.reusedSchemas.isEmpty) ""
     else {
       val depPkg = packageReuse.depPkg
       val depObj = packageReuse.dependencyObjectName
-//      val validationImport =
-//        if (packageReuse.dependencyMeta.hasValidators)
-//          s"\nimport $depPkg.${depObj}Validators._"
-//        else ""
       packageReuse.dependencyMeta.schemaFiles.map(s => s"import $depPkg.$s._").mkString("\n") // + validationImport
     }
 }

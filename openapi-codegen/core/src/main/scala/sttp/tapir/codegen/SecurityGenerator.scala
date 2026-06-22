@@ -45,13 +45,28 @@ object SecurityGenerator {
        |  }""".stripMargin
   }
 
-  def genSecurityTypes(securityWrappers: Set[SecurityWrapperDefn]): String = {
-    val allSchemes = securityWrappers.flatMap(_.schemas)
+  def genSecurityTypes(securityWrappers: Set[SecurityWrapperDefn], packageReuse: PackageReuseContext): String = {
+    val (reused, newSecurity) = packageReuse.dependencyMeta.partition(securityWrappers)
+    val traitRedeclarations = reused.map(_.traitName).map(t => s"type $t = ${packageReuse.dependencyModelPath}.$t").toSeq.sorted
+    val classRedeclarations = reused
+      .flatMap(_.schemas)
+      .toSeq
+      .sortBy(_.typeName)
+      .map { tpe =>
+        val t = tpe.typeName // no type alias for case objects
+        val maybeType = if (tpe.argType == "Unit") "" else s"type $t = ${packageReuse.dependencyModelPath}.$t\n"
+        s"${maybeType}val $t = ${packageReuse.dependencyModelPath}.$t"
+      }
+    val redeclarations = {
+      val maybeNL = if (reused.isEmpty) "" else "\n"
+      traitRedeclarations.mkString("\n") + maybeNL + classRedeclarations.mkString("\n") + maybeNL
+    }
+    val allSchemes = newSecurity.flatMap(_.schemas)
     val allTpes = allSchemes.toSeq.sortBy(_.typeName)
     val tpesWithParents = allTpes.map { t =>
-      t -> securityWrappers.filter(_.schemas.contains(t)).map(_.traitName).toSeq.sorted.mkString(" with ")
+      t -> newSecurity.filter(_.schemas.contains(t)).map(_.traitName).toSeq.sorted.mkString(" with ")
     }
-    val traits = securityWrappers.map(_.traitName).toSeq.sorted.map(tn => s"sealed trait $tn").mkString("\n")
+    val traits = newSecurity.map(_.traitName).toSeq.sorted.map(tn => s"sealed trait $tn").mkString("\n")
     val classes = tpesWithParents
       .map {
         case (d, ps) if d.argType == "Unit" => s"case object EmptySecurityIn extends $ps"
@@ -66,7 +81,7 @@ object SecurityGenerator {
         s"""val ${t.typeName}Mapping = $mapImpl"""
       }
       .mkString("\n")
-    s"$traits\n$classes\n$mappings"
+    s"$redeclarations$traits\n$classes\n$mappings"
   }
 
   def security(securitySchemes: Map[String, OpenapiSecuritySchemeType], security: Seq[Map[String, Seq[String]]])(implicit
