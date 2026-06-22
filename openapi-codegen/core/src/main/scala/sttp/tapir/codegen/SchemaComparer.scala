@@ -35,11 +35,23 @@ object SchemaComparer {
   def findIdenticalSchemaNames(
       current: Map[String, OpenapiSchemaType],
       dependency: Map[String, OpenapiSchemaType]
-  ): Set[String] =
-    // TODO: There's an issue here; if we have obj A, obj B, C oneOf [A, B], and A(1) != A(2), then we'll not redeclare B, even though we must. 
-    current.keySet.intersect(dependency.keySet).filter { name =>
+  ): Set[String] = {
+    val commonNames = current.keySet.intersect(dependency.keySet)
+    val equalFirstPass = commonNames.filter { name =>
       schemasEqual(name, current(name), current, name, dependency(name), dependency, Set.empty)
     }
+    // need to re-define A for any A extends T, B extends T, if B differs between versions
+    // Even if A doesn't differ, we have sealed trait inheritance.
+    val neqOneOfs = current
+      .collect {
+        case (name, s: OpenapiSchemaOneOf) if !equalFirstPass.contains(name) => s.types
+        case (name, s: OpenapiSchemaAnyOf) if !equalFirstPass.contains(name) => s.types
+      }
+      .flatten
+      .collect { case s: OpenapiSchemaRef => s.stripped }
+      .toSet
+    equalFirstPass -- neqOneOfs
+  }
 
   private def schemasEqual(
       leftName: String,
@@ -61,28 +73,28 @@ object SchemaComparer {
           schemasEqual(s1, ls, leftAll, s2, rs, rightAll, nextVisited)
         }
       case (_: OpenapiSchemaBoolean, _: OpenapiSchemaBoolean) => true
-      case (l: OpenapiSchemaString, r: OpenapiSchemaString) =>
+      case (l: OpenapiSchemaString, r: OpenapiSchemaString)   =>
         l.pattern == r.pattern && l.minLength == r.minLength && l.maxLength == r.maxLength
-      case (_: OpenapiSchemaDate, _: OpenapiSchemaDate)           => true
-      case (_: OpenapiSchemaDateTime, _: OpenapiSchemaDateTime)   => true
-      case (_: OpenapiSchemaDuration, _: OpenapiSchemaDuration)   => true
-      case (_: OpenapiSchemaByte, _: OpenapiSchemaByte)           => true
-      case (_: OpenapiSchemaUUID, _: OpenapiSchemaUUID)           => true
-      case (l: OpenapiSchemaDouble, r: OpenapiSchemaDouble)       => l.restrictions == r.restrictions
-      case (l: OpenapiSchemaFloat, r: OpenapiSchemaFloat)         => l.restrictions == r.restrictions
-      case (l: OpenapiSchemaInt, r: OpenapiSchemaInt)             => l.restrictions == r.restrictions
-      case (l: OpenapiSchemaLong, r: OpenapiSchemaLong)           => l.restrictions == r.restrictions
-      case (l: OpenapiSchemaEnum, r: OpenapiSchemaEnum) =>
+      case (_: OpenapiSchemaDate, _: OpenapiSchemaDate)         => true
+      case (_: OpenapiSchemaDateTime, _: OpenapiSchemaDateTime) => true
+      case (_: OpenapiSchemaDuration, _: OpenapiSchemaDuration) => true
+      case (_: OpenapiSchemaByte, _: OpenapiSchemaByte)         => true
+      case (_: OpenapiSchemaUUID, _: OpenapiSchemaUUID)         => true
+      case (l: OpenapiSchemaDouble, r: OpenapiSchemaDouble)     => l.restrictions == r.restrictions
+      case (l: OpenapiSchemaFloat, r: OpenapiSchemaFloat)       => l.restrictions == r.restrictions
+      case (l: OpenapiSchemaInt, r: OpenapiSchemaInt)           => l.restrictions == r.restrictions
+      case (l: OpenapiSchemaLong, r: OpenapiSchemaLong)         => l.restrictions == r.restrictions
+      case (l: OpenapiSchemaEnum, r: OpenapiSchemaEnum)         =>
         l.`type` == r.`type` && l.items.map(_.value) == r.items.map(_.value)
       case (l: OpenapiSchemaConstantString, r: OpenapiSchemaConstantString) => l.value == r.value
-      case (l: OpenapiSchemaArray, r: OpenapiSchemaArray) =>
+      case (l: OpenapiSchemaArray, r: OpenapiSchemaArray)                   =>
         l.restrictions.minItems == r.restrictions.minItems &&
         l.restrictions.maxItems == r.restrictions.maxItems &&
         l.restrictions.uniqueItems == r.restrictions.uniqueItems &&
-        schemasEqual(leftName, l.items, leftAll, rightName, r.items, rightAll, nextVisited)
+        schemasEqual(leftName + "Item", l.items, leftAll, rightName + "Item", r.items, rightAll, nextVisited)
       case (l: OpenapiSchemaMap, r: OpenapiSchemaMap) =>
         l.restrictions == r.restrictions &&
-        schemasEqual(leftName, l.items, leftAll, rightName, r.items, rightAll, nextVisited)
+        schemasEqual(leftName + "Item", l.items, leftAll, rightName + "Item", r.items, rightAll, nextVisited)
       case (l: OpenapiSchemaObject, r: OpenapiSchemaObject) =>
         l.required.toSet == r.required.toSet &&
         l.properties.size == r.properties.size &&
@@ -94,35 +106,24 @@ object SchemaComparer {
         discriminatorsEqual(l.discriminator, r.discriminator) &&
         l.types.size == r.types.size &&
         l.types.zip(r.types).forall { case (lt, rt) =>
-          simpleTypesEqual(leftName, lt, leftAll, rightName, rt, rightAll, nextVisited)
+          schemasEqual(leftName + "Variant", lt, leftAll, rightName + "Variant", rt, rightAll, nextVisited, true)
         }
       case (l: OpenapiSchemaAnyOf, r: OpenapiSchemaAnyOf) =>
         l.types.size == r.types.size &&
         l.types.zip(r.types).forall { case (lt, rt) =>
-          simpleTypesEqual(leftName, lt, leftAll, rightName, rt, rightAll, nextVisited)
+          schemasEqual(leftName + "Variant", lt, leftAll, rightName + "Variant", rt, rightAll, nextVisited)
         }
       case (l: OpenapiSchemaAllOf, r: OpenapiSchemaAllOf) =>
         l.types.size == r.types.size &&
         l.types.zip(r.types).forall { case (lt, rt) =>
-          schemasEqual(leftName, lt, leftAll, rightName, rt, rightAll, nextVisited)
+          schemasEqual(leftName + "Trait", lt, leftAll, rightName + "Trait", rt, rightAll, nextVisited)
         }
       case (l: OpenapiSchemaNot, r: OpenapiSchemaNot) =>
-        schemasEqual(leftName, l.`type`, leftAll, rightName, r.`type`, rightAll, nextVisited)
+        schemasEqual(leftName + "Not", l.`type`, leftAll, rightName + "Not", r.`type`, rightAll, nextVisited)
       case (l: OpenapiSchemaAny, r: OpenapiSchemaAny) => l.tpe == r.tpe
-      case _                                            => false
+      case _                                          => false
     }
   }
-
-  private def simpleTypesEqual(
-      leftName: String,
-      left: OpenapiSchemaSimpleType,
-      leftAll: Map[String, OpenapiSchemaType],
-      rightName: String,
-      right: OpenapiSchemaSimpleType,
-      rightAll: Map[String, OpenapiSchemaType],
-      visited: Set[(String, String)]
-  ): Boolean =
-    schemasEqual(leftName, left, leftAll, rightName, right, rightAll, visited)
 
   private def fieldsEqual(
       fieldName: String,
