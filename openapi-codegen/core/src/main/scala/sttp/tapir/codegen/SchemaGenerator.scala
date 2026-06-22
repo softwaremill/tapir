@@ -27,10 +27,18 @@ import scala.collection.mutable
 
 object SchemaGenerator {
   def decl(isRecursive: Boolean): String = if (isRecursive) "def" else "lazy val"
-  def blockingMutualRefs(mutualRefs: Seq[String])(s: String): String = if (mutualRefs.isEmpty) s
+  def schemaName(name: String)(implicit packageReuse: PackageReuseContext) = {
+    val suffix = if (packageReuse.dependencyMeta.depth == 0) "" else packageReuse.dependencyMeta.depth.toString
+    s"${RootGenerator.uncapitalise(name)}TapirSchema$suffix"
+  }
+  def parentSchemaName(name: String)(implicit packageReuse: PackageReuseContext) = {
+    val suffix = if (packageReuse.dependencyMeta.depth <= 1) "" else (packageReuse.dependencyMeta.depth - 1).toString
+    s"${RootGenerator.uncapitalise(name)}TapirSchema$suffix"
+  }
+  def blockingMutualRefs(mutualRefs: Seq[String])(s: String)(implicit packageReuse: PackageReuseContext): String = if (mutualRefs.isEmpty) s
   else {
     val shadows = mutualRefs
-      .map(r => s"  val ${RootGenerator.uncapitalise(r)}TapirSchema = null // shadow mutually-recursive schema")
+      .map(r => s"  val ${schemaName(r)} = null // shadow mutually-recursive schema")
       .mkString("\n")
     s"""{
        |$shadows
@@ -45,8 +53,10 @@ object SchemaGenerator {
       jsonSerdeLib: JsonSerdeLib,
       maxSchemasPerFile: Int,
       schemasContainAny: Boolean,
-      targetScala3: Boolean
+      targetScala3: Boolean,
+      packageReuse: PackageReuseContext
   ): Seq[String] = {
+    implicit val pkgReuse: PackageReuseContext = packageReuse
     val anySchemas: Seq[(String, ((Boolean, Seq[String])) => String)] =
       if (!schemasContainAny) Nil
       else if (jsonSerdeLib == JsonSerdeLib.Circe || jsonSerdeLib == JsonSerdeLib.Jsoniter)
@@ -70,19 +80,26 @@ object SchemaGenerator {
         case ("anyArrTapirSchema", _) => "anyArrTapirSchema" -> OpenapiSchemaAny(false, AnyType.Array)
       }
     )
+    def parentImpl(name: String)(fn: ((Boolean, Seq[String])) => String): ((Boolean, Seq[String])) => String =
+      if (PackageReuseContext.isReused(name, packageReuse)) {
+
+        { (_: (Boolean, Seq[String])) =>
+          s"implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = ${parentSchemaName(name)}"
+        }
+      } else fn
     val openApiSchemasWithTapirSchemas: Map[String, ((Boolean, Seq[String])) => String] =
       doc.components
         .map(_.schemas.toSeq.flatMap {
           case (name, _: OpenapiSchemaEnum) =>
-            Some(name -> { (_: (Boolean, Seq[String])) =>
-              s"implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
-            })
-          case (name, obj: OpenapiSchemaObject)   => Some(name -> (schemaForObject(name, _, obj)))
-          case (name, schema: OpenapiSchemaMap)   => Some(name -> (schemaForMapOrArray(name, _, schema.items)))
-          case (name, schema: OpenapiSchemaArray) => Some(name -> (schemaForMapOrArray(name, _, schema.items)))
+            Some(name -> parentImpl(name)({ (_: (Boolean, Seq[String])) =>
+              s"implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
+            }))
+          case (name, obj: OpenapiSchemaObject)   => Some(name -> parentImpl(name)(schemaForObject(name, _, obj)))
+          case (name, schema: OpenapiSchemaMap)   => Some(name -> parentImpl(name)(schemaForMapOrArray(name, _, schema.items)))
+          case (name, schema: OpenapiSchemaArray) => Some(name -> parentImpl(name)(schemaForMapOrArray(name, _, schema.items)))
           case (_, _: OpenapiSchemaAny)           => None
           case (name, schema: OpenapiSchemaOneOf) =>
-            Some(name -> (genADTSchema(name, schema, _, if (fullModelPath.isEmpty) None else Some(fullModelPath))))
+            Some(name -> parentImpl(name)(genADTSchema(name, schema, _, if (fullModelPath.isEmpty) None else Some(fullModelPath))))
           // no need to generate schemas for simple type aliases
           case (_, schema: OpenapiSchemaSimpleType) if !schema.isInstanceOf[OpenapiSchemaRef] => None
           case (n, x) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")
@@ -246,7 +263,7 @@ object SchemaGenerator {
       kvs.values.flatMap(v => getReferencesToXInY(allSchemas, referent, v.`type`, checked, maybeRefs)).toSet
   }
 
-  private def schemaForObject(name: String, recursionParams: (Boolean, Seq[String]), schema: OpenapiSchemaObject): String = {
+  private def schemaForObject(name: String, recursionParams: (Boolean, Seq[String]), schema: OpenapiSchemaObject)(implicit packageReuse: PackageReuseContext): String = {
     val subs = schema.properties.collect {
       case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => schemaForObject(s"$name${k.capitalize}", recursionParams, `type`)
       case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
@@ -263,24 +280,24 @@ object SchemaGenerator {
       case s              => s.mkString("", "\n", "\n")
     }
     val (isRecursive, mutualRefs) = recursionParams
-    s"${subs}implicit ${decl(isRecursive)} ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = ${blockingMutualRefs(mutualRefs)("sttp.tapir.Schema.derived")}"
+    s"${subs}implicit ${decl(isRecursive)} ${schemaName(name)}: sttp.tapir.Schema[$name] = ${blockingMutualRefs(mutualRefs)("sttp.tapir.Schema.derived")}"
   }
-  private def schemaForMapOrArray(name: String, recursionParams: (Boolean, Seq[String]), schema: OpenapiSchemaType): String = {
+  private def schemaForMapOrArray(name: String, recursionParams: (Boolean, Seq[String]), schema: OpenapiSchemaType)(implicit packageReuse: PackageReuseContext): String = {
     val subs = schema match {
       case `type`: OpenapiSchemaObject => Some(schemaForObject(s"${name}ObjectsItem", recursionParams, `type`))
       case _                           => None
     }
     subs.fold("")("\n" + _)
   }
-  private def schemaForEnum(name: String): String =
-    s"""implicit lazy val ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"""
+  private def schemaForEnum(name: String)(implicit packageReuse: PackageReuseContext): String =
+    s"""implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"""
 
   private def genADTSchema(
       name: String,
       schema: OpenapiSchemaOneOf,
       recursionParams: (Boolean, Seq[String]),
       fullModelPath: Option[String]
-  ): String = {
+  )(implicit packageReuse: PackageReuseContext): String = {
     val schemaImpl = schema match {
       case OpenapiSchemaOneOf(_, None)                                            => "sttp.tapir.Schema.derived"
       case OpenapiSchemaOneOf(_, Some(Discriminator(propertyName, maybeMapping))) =>
@@ -315,6 +332,6 @@ object SchemaGenerator {
     }
 
     val (isRecursive, mutualRefs) = recursionParams
-    s"implicit ${decl(isRecursive)} ${RootGenerator.uncapitalise(name)}TapirSchema: sttp.tapir.Schema[$name] = ${blockingMutualRefs(mutualRefs)(schemaImpl)}"
+    s"implicit ${decl(isRecursive)} ${schemaName(name)}: sttp.tapir.Schema[$name] = ${blockingMutualRefs(mutualRefs)(schemaImpl)}"
   }
 }

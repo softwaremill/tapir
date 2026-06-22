@@ -3,6 +3,8 @@ package sttp.tapir.sbt
 import sbt._
 import Keys._
 import sbt.nio.Keys.fileInputs
+import sttp.tapir.codegen.{GenerationMeta, OpenApiInputParser, PackageReuseContext}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 
 object OpenapiCodegenPlugin extends AutoPlugin {
 
@@ -26,18 +28,15 @@ object OpenapiCodegenPlugin extends AutoPlugin {
         val hashFile = cacheDir / "tapir-config-hash"
         hashFile.delete()
         java.nio.file.Files.write(hashFile.toPath, configHash)
-        val swaggerFiles = (c.swaggerFile +: c.additionalPackages.map(_._2)).filter(_.exists()).toSet + hashFile
+        val inputFiles = allInputFiles(c).filter(_.exists()).toSet + hashFile
         FileFunction
           .cached(cacheDir / s"scala-$sv" / "openapi-inputs", FileInfo.hash) { _ =>
             log.info("Generating OpenAPI sources...")
             codegen(c, srcDir, sv).toSet
-          }(swaggerFiles)
+          }(inputFiles)
           .toSeq
       }.value,
-      generateTapirDefinitions / fileInputs ++= {
-        (openapiSwaggerFile.value +: openapiAdditionalPackages.value.map(_._2))
-          .map(f => Glob(f.toPath))
-      },
+      generateTapirDefinitions / fileInputs ++= allInputFiles(openapiOpenApiConfiguration.value).map(f => Glob(f.toPath)),
       sourceGenerators += generateTapirDefinitions.taskValue
     )
   )
@@ -56,7 +55,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiGenerateEndpointTypes.value,
       openapiDisableValidatorGeneration.value,
       openapiUseCustomJsoniterSerdes.value,
-      openapiAdditionalPackages.value
+      openapiAdditionalPackages.value,
+      openapiPackageDependencies.value
     )
   def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
     openapiSwaggerFile := baseDirectory.value / "swagger.yaml",
@@ -68,6 +68,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiValidateNonDiscriminatedOneOfs := true,
     openapiMaxSchemasPerFile := 400,
     openapiAdditionalPackages := Nil,
+    openapiPackageDependencies := Map.empty,
     openapiStreamingImplementation := "fs2",
     openapiGenerateEndpointTypes := false,
     openapiDisableValidatorGeneration := false,
@@ -75,39 +76,102 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     standardParamSetting
   )
 
-  private def codegen(c: OpenApiConfiguration, srcDir: File, sv: String): Seq[File] = {
-    def genTask(swaggerFile: File, packageName: String, directoryName: Option[String] = None) =
-      OpenapiCodegenTask(
-        swaggerFile,
-        packageName,
-        c.objectName,
-        c.useHeadTagForObjectName,
-        c.jsonSerdeLib,
-        c.xmlSerdeLib,
-        c.streamingImplementation,
-        c.validateNonDiscriminatedOneOfs,
-        c.maxSchemasPerFile,
-        c.generateEndpointTypes,
-        c.disableValidatorGeneration,
-        c.useCustomJsoniterSerdes,
-        srcDir,
-        sv.startsWith("3"),
-        directoryName
-      )
+  private def allInputFiles(c: OpenApiConfiguration): Seq[File] = {
+    val declared = (c.swaggerFile +: c.additionalPackages.map(_._2)).filter(_.exists())
+    declared.flatMap(listInputFiles)
+  }
 
+  private def listInputFiles(file: File): Seq[File] =
+    if (!file.exists()) Nil
+    else if (file.isDirectory)
+      Option(file.listFiles()).getOrElse(Array.empty[File]).toSeq.flatMap(listInputFiles)
+    else Seq(file)
+
+  private def codegen(c: OpenApiConfiguration, srcDir: File, sv: String): Seq[File] = {
+    val packageToFile = packageFileMapping(c)
+    val parsedDocs = packageToFile.map { case (pkg, file) =>
+      pkg -> OpenApiInputParser.parse(file).fold(err => throw new RuntimeException(err.getMessage), identity).resolveAllOfSchemas
+    }
+    val generationOrder = topologicalSort(packageToFile.keys.toSeq, c.packageDependencies)
+
+    generationOrder
+      .foldLeft((Seq.empty[File], Map.empty[String, GenerationMeta])) { case ((accFiles, accSchemaMeta), pkg) =>
+        val file = packageToFile(pkg)
+        val doc = parsedDocs(pkg)
+        val reuseContext = c.packageDependencies
+          .get(pkg)
+          .flatMap { depPkg =>
+            parsedDocs.get(depPkg).map { depDoc =>
+              val parentMeta = accSchemaMeta.getOrElse(depPkg, GenerationMeta.default)
+              PackageReuseContext.fromDocuments(doc, depDoc, depPkg, c.objectName, parentMeta, Some(parentMeta.depth))
+            }
+          }
+          .getOrElse(PackageReuseContext.none)
+
+        val directoryName =
+          if (pkg == c.packageName && !c.additionalPackages.exists(_._1 == c.packageName)) None
+          else Some(pkg.replace('.', '/'))
+
+        val (files, schemaMeta) = genTask(c, srcDir, sv, file, pkg, doc, reuseContext, directoryName).filesAndMeta
+        (accFiles ++ files, accSchemaMeta + (pkg -> schemaMeta))
+      }
+      ._1
+  }
+
+  private def packageFileMapping(c: OpenApiConfiguration): Map[String, File] = {
     val overriddenDefaultLocation = c.additionalPackages.find(_._2 == c.swaggerFile)
     val defaultIsRedeclared = overriddenDefaultLocation.isDefined
-    val maybeDefaultFiles: Seq[File] = {
-      if (defaultIsRedeclared) {
-        System.err.println(s"WARN: Default swagger file is redeclared. Writing to ${overriddenDefaultLocation.get._1}")
-        Nil
-      } else if (!c.swaggerFile.exists() && c.additionalPackages.nonEmpty) {
-        System.err.println(s"WARN: File not found: ${c.swaggerFile.toPath}. Skipping default, only writing additional packages.")
-        Nil
-      } else genTask(c.swaggerFile, c.packageName).file
-    }
-    maybeDefaultFiles ++ c.additionalPackages.flatMap { case (pkg, defns) =>
-      genTask(defns, pkg, Some(pkg.replace('.', '/'))).file
-    }
+    val maybeDefault: Map[String, File] =
+      if (defaultIsRedeclared) Map.empty
+      else if (!c.swaggerFile.exists() && c.additionalPackages.nonEmpty) Map.empty
+      else Map(c.packageName -> c.swaggerFile)
+    maybeDefault ++ c.additionalPackages.toMap
   }
+
+  /** Packages that depend on others are generated after their dependencies. */
+  private def topologicalSort(packages: Seq[String], dependencies: Map[String, String]): Seq[String] = {
+    @scala.annotation.tailrec
+    def loop(remaining: List[String], done: List[String]): List[String] = remaining match {
+      case Nil => done
+      case _   =>
+        remaining.find { pkg =>
+          dependencies.get(pkg).forall(dep => !remaining.contains(dep) || !packages.contains(dep))
+        } match {
+          case Some(next) => loop(remaining.filterNot(_ == next), done :+ next)
+          case None       =>
+            throw new IllegalArgumentException(s"Cyclic or missing package dependencies involving: ${remaining.mkString(", ")}")
+        }
+    }
+    loop(packages.toList, Nil)
+  }
+
+  private def genTask(
+      c: OpenApiConfiguration,
+      srcDir: File,
+      sv: String,
+      swaggerFile: File,
+      packageName: String,
+      doc: OpenapiDocument,
+      packageReuse: PackageReuseContext,
+      directoryName: Option[String]
+  ): OpenapiCodegenTask =
+    OpenapiCodegenTask(
+      swaggerFile,
+      packageName,
+      c.objectName,
+      c.useHeadTagForObjectName,
+      c.jsonSerdeLib,
+      c.xmlSerdeLib,
+      c.streamingImplementation,
+      c.validateNonDiscriminatedOneOfs,
+      c.maxSchemasPerFile,
+      c.generateEndpointTypes,
+      c.disableValidatorGeneration,
+      c.useCustomJsoniterSerdes,
+      srcDir,
+      sv.startsWith("3"),
+      directoryName,
+      Some(doc),
+      packageReuse
+    )
 }

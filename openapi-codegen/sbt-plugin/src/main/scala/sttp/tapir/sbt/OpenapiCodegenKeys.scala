@@ -15,7 +15,8 @@ case class OpenApiConfiguration(
     generateEndpointTypes: Boolean,
     disableValidatorGeneration: Boolean,
     useCustomJsoniterSerdes: Boolean,
-    additionalPackages: List[(String, File)]
+    additionalPackages: List[(String, File)],
+    packageDependencies: Map[String, String]
 )
 
 trait OpenapiCodegenKeys {
@@ -31,6 +32,8 @@ trait OpenapiCodegenKeys {
     settingKey[Boolean]("Whether to fail if variants of a oneOf without a discriminator cannot be disambiguated..")
   lazy val openapiMaxSchemasPerFile = settingKey[Int]("Maximum number of schemas to generate for a single file")
   lazy val openapiAdditionalPackages = settingKey[List[(String, File)]]("Addition package -> spec mappings to generate.")
+  lazy val openapiPackageDependencies =
+    settingKey[Map[String, String]]("Maps generated packages to dependency packages for model reuse via type aliases.")
   lazy val openapiStreamingImplementation =
     settingKey[String]("Implementation for streamTextBody. Supports: akka, fs2(-EffectType)?, pekko, zio.")
   lazy val openapiGenerateEndpointTypes = settingKey[Boolean]("Whether to emit explicit types for endpoint defns")

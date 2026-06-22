@@ -148,7 +148,7 @@ object GenScala {
                 useCustomJsoniterSerdes
               )
             )
-            destFiles <- contents.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }
+            destFiles <- contents.allFiles.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }
             _ <- IO.println(s"Generated endpoints written to: ${destFiles.mkString(", ")}")
           } yield ()
 

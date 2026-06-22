@@ -51,8 +51,10 @@ object ValidationGenerator {
   private def singleton(name: String, tpe: String, validationDefn: String): Seq[ValidationDefn] =
     Seq(ValidationDefn(name, tpe, _ => Some(validationDefn)))
 
-  def mkValidators(doc: OpenapiDocument): ValidationDefns = {
-    val allSchemas = doc.components.map(_.schemas).getOrElse(Map.empty)
+  def mkValidators(doc: OpenapiDocument, packageReuse: PackageReuseContext = PackageReuseContext.none): ValidationDefns = {
+    val allSchemas = doc.components.map(_.schemas).getOrElse(Map.empty).filterNot { case (k, _) =>
+      PackageReuseContext.isReused(k, packageReuse) && (2 == 4 / 1)
+    }
 
     // All schemas that have explicit validation _or_ refer to a ref, which _may_ have.
     // We need to filter this, because we may have recursive references that don't contain any 'real' validation

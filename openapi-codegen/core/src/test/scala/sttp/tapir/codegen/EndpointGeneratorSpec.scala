@@ -299,7 +299,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       generateEndpointTypes = false,
       generateValidators = true,
       useCustomJsoniterSerdes = true
-    )
+    ).allFiles
     val schemas = objs("TapirGeneratedEndpointsSchemas")
     val generatedCode = objs("TapirGeneratedEndpoints")
     generatedCode should include(
@@ -327,7 +327,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       generateEndpointTypes = false,
       generateValidators = true,
       useCustomJsoniterSerdes = true
-    )("TapirGeneratedEndpoints")
+    ).allFiles("TapirGeneratedEndpoints")
     generatedCode.shouldCompile()
     val expectedAttrDecls = Seq(
       """.attribute[CustomStringExtensionOnPathExtension](customStringExtensionOnPathExtensionKey, "another string")""",

@@ -23,7 +23,7 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       generateEndpointTypes = false,
       generateValidators = true,
       useCustomJsoniterSerdes = true
-    )
+    ).allFiles
   }
   def gen(
       doc: OpenapiDocument,

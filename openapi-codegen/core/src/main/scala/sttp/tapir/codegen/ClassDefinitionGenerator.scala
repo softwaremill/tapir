@@ -11,7 +11,9 @@ case class GeneratedClassDefinitions(
     classRepr: String,
     jsonSerdeRepr: Option[String],
     schemaRepr: Seq[String],
-    xmlSerdeRepr: Option[String]
+    xmlSerdeRepr: Option[String],
+    schemasContainAny: Boolean,
+    explicitNonObjTypes: Seq[String]
 )
 
 case class InlineEnumDefn(enumName: String, impl: String)
@@ -30,7 +32,9 @@ class ClassDefinitionGenerator {
       maxSchemasPerFile: Int = 400,
       enumsDefinedOnEndpointParams: Boolean = false,
       xmlParamRefs: Set[String] = Set.empty,
-      useCustomJsoniterSerdes: Boolean = true
+      useCustomJsoniterSerdes: Boolean = true,
+      objName: String = "TapirGeneratedEndpoints",
+      packageReuse: PackageReuseContext = PackageReuseContext.none
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -51,7 +55,15 @@ class ClassDefinitionGenerator {
     )
 
     val adtTypes =
-      adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").sorted.mkString("", "\n", "\n")
+      adtInheritanceMap
+        .flatMap(_._2)
+        .toSeq
+        .map(_._1)
+        .distinct
+        .filterNot(PackageReuseContext.isReused(_, packageReuse))
+        .map(name => s"sealed trait $name")
+        .sorted
+        .mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
     val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
@@ -60,8 +72,17 @@ class ClassDefinitionGenerator {
         s"any not implemented for json libs other than circe and jsoniter (problematic models: ${schemasWithAny.keys})"
       )
     val schemas = SchemaGenerator
-      .generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile, schemasContainAny, targetScala3)
-    val jsonSerdes = JsonSerdeGenerator.serdeDefs(
+      .generateSchemas(
+        doc,
+        allSchemas,
+        fullModelPath,
+        jsonSerdeLib,
+        maxSchemasPerFile,
+        schemasContainAny,
+        targetScala3,
+        packageReuse
+      )
+    val SerdeGenResponse(jsonSerdes, explicitNonObjTypes) = JsonSerdeGenerator.serdeDefs(
       doc,
       jsonSerdeLib,
       jsonParamRefs,
@@ -70,15 +91,21 @@ class ClassDefinitionGenerator {
       adtInheritanceMap.mapValues(_.map(_._1)).toMap,
       targetScala3,
       schemasContainAny,
-      useCustomJsoniterSerdes
+      useCustomJsoniterSerdes,
+      objName,
+      packageReuse
     )
     val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
       xmlParamRefs,
       xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
-    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3)
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3, objName, packageReuse)
     val defns = doc.components
       .map(_.schemas.flatMap {
+        case (name, _: OpenapiSchemaEnum) if PackageReuseContext.isReused(name, packageReuse) =>
+          Seq(PackageReuseContext.enumAliasType(name, packageReuse))
+        case (name, _) if PackageReuseContext.isReused(name, packageReuse) =>
+          Seq(PackageReuseContext.aliasType(name, packageReuse))
         case (name, obj: OpenapiSchemaObject) =>
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
         case (name, obj: OpenapiSchemaEnum) =>
@@ -94,7 +121,9 @@ class ClassDefinitionGenerator {
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
     // Json serdes & schemas live in separate files from the class defns
-    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas, xmlSerdes))
+    defns
+      .map(helpers + "\n" + _)
+      .map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas, xmlSerdes, schemasContainAny, explicitNonObjTypes))
   }
 
   private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[(String, OpenapiSchemaOneOf)]] =

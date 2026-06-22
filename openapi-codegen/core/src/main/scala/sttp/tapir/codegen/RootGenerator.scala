@@ -35,6 +35,16 @@ case class FS2(effectType: String = "cats.effect.IO") extends StreamingImplement
 object Pekko extends StreamingImplementation
 object Zio extends StreamingImplementation
 
+object GenerationMeta { val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, 0) }
+case class GenerationMeta(
+    schemaFiles: Seq[String],
+    hasValidators: Boolean,
+    schemasContainAny: Boolean,
+    explicitNonObjTypes: Seq[String],
+    depth: Int
+)
+case class GenerationInfo(allFiles: Map[String, String], meta: GenerationMeta)
+
 object RootGenerator {
 
   val classGenerator = new ClassDefinitionGenerator()
@@ -53,8 +63,9 @@ object RootGenerator {
       maxSchemasPerFile: Int,
       generateEndpointTypes: Boolean,
       generateValidators: Boolean,
-      useCustomJsoniterSerdes: Boolean
-  ): Map[String, String] = {
+      useCustomJsoniterSerdes: Boolean,
+      packageReuse: PackageReuseContext = PackageReuseContext.none
+  ): GenerationInfo = {
     val doc = unNormalisedDoc.resolveAllOfSchemas
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
@@ -93,7 +104,7 @@ object RootGenerator {
         }
     }
 
-    val validators = if (generateValidators) ValidationGenerator.mkValidators(doc) else ValidationDefns.empty
+    val validators = if (generateValidators) ValidationGenerator.mkValidators(doc, packageReuse) else ValidationDefns.empty
 
     val EndpointDefs(
       endpointsByTag,
@@ -112,7 +123,7 @@ object RootGenerator {
         validators,
         generateValidators
       )
-    val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas, xmlSerdes) =
+    val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas, xmlSerdes, schemasContainAny, explicitNonObjTypes) =
       classGenerator
         .classDefs(
           doc = doc,
@@ -126,9 +137,11 @@ object RootGenerator {
           maxSchemasPerFile = maxSchemasPerFile,
           enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams,
           xmlParamRefs = xmlParamRefs,
-          useCustomJsoniterSerdes = useCustomJsoniterSerdes
+          useCustomJsoniterSerdes = useCustomJsoniterSerdes,
+          objName = objName,
+          packageReuse = packageReuse
         )
-        .getOrElse(GeneratedClassDefinitions("", None, Nil, None))
+        .getOrElse(GeneratedClassDefinitions("", None, Nil, None, false, Nil))
     val hasJsonSerdes = jsonSerdes.nonEmpty
     val hasXmlSerdes = xmlSerdes.nonEmpty
 
@@ -139,7 +152,9 @@ object RootGenerator {
       if (schemas.size > 1) (1 to schemas.size).map(i => s"import ${objName}Schemas$i._").mkString("\n", "\n", "")
       else if (schemas.size == 1) s"\nimport ${objName}Schemas._"
       else ""
-    val internalImports = s"import $packagePath.$objName._$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
+    val dependencyImports = "" // dependencyImportsFor(packageReuse)
+    val internalImports =
+      s"import $packagePath.$objName._$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport$dependencyImports"
 
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
@@ -200,7 +215,7 @@ object RootGenerator {
       Seq(s"${objName}Schemas" -> s"""package $packagePath
          |
          |object ${objName}Schemas {
-         |  import $packagePath.$objName._
+         |  import $packagePath.$objName._${dependencyImportsFor(packageReuse)}
          |  import sttp.tapir.generic.auto._
          |${indent(2)(schemas.head)}
          |}""".stripMargin)
@@ -246,7 +261,9 @@ object RootGenerator {
         case ct => throw new NotImplementedError(s"Cannot handle content type '$ct'")
       }
       .mkString("\n")
-    val extraImports = if (endpointsInMain.nonEmpty) s"$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport" else ""
+    val extraImports =
+      if (endpointsInMain.nonEmpty) s"$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport$dependencyImports"
+      else dependencyImports
     val queryParamSupport =
       """
       |case class CommaSeparatedValues[T](values: List[T])
@@ -283,6 +300,10 @@ object RootGenerator {
       |""".stripMargin
 
     val securityTypes = SecurityGenerator.genSecurityTypes(securityWrappers)
+    val byteStringDecl =
+      if (packageReuse.reusedSchemas.nonEmpty)
+        s"type ByteString = ${packageReuse.depPkg}.$objName.ByteString"
+      else "type ByteString <: Array[Byte]"
     val mainObj = s"""
         |package $packagePath
         |
@@ -299,7 +320,7 @@ object RootGenerator {
         |  implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
         |    def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
         |  }
-        |  type ByteString <: Array[Byte]
+        |  $byteStringDecl
         |  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
         |
         |${indent(2)(classDefns)}
@@ -311,8 +332,12 @@ object RootGenerator {
         |${indent(2)(ServersGenerator.genServerDefinitions(doc.servers, targetScala3).getOrElse(""))}
         |}
         |""".stripMargin
-    taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ xmlSerdeObj.map(s"${objName}XmlSerdes" -> _) ++
+    val allFiles = taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ xmlSerdeObj.map(s"${objName}XmlSerdes" -> _) ++
       validationObj ++ schemaObjs + (objName -> mainObj)
+    GenerationInfo(
+      allFiles,
+      GenerationMeta(schemaObjs.map(_._1), validationObj.isDefined, schemasContainAny, explicitNonObjTypes, packageReuse.depth.getOrElse(0))
+    )
   }
 
   private[codegen] def imports(jsonSerdeLib: JsonSerdeLib.JsonSerdeLib): String = {
@@ -388,4 +413,16 @@ object RootGenerator {
   // the json serde generators so that emitted codec types cannot drift from the generated class names.
   def addName(parentName: String, key: String): String =
     parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
+
+  private def dependencyImportsFor(packageReuse: PackageReuseContext): String =
+    if (packageReuse.reusedSchemas.isEmpty) ""
+    else {
+      val depPkg = packageReuse.depPkg
+      val depObj = packageReuse.dependencyObjectName
+//      val validationImport =
+//        if (packageReuse.dependencyMeta.hasValidators)
+//          s"\nimport $depPkg.${depObj}Validators._"
+//        else ""
+      packageReuse.dependencyMeta.schemaFiles.map(s => s"import $depPkg.$s._").mkString("\n") // + validationImport
+    }
 }
