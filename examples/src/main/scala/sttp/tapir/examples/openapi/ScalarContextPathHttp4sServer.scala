@@ -3,15 +3,15 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.25
 //> using dep com.softwaremill.sttp.tapir::tapir-scalar-bundle:1.13.25
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.25
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep org.http4s::http4s-ember-server:0.23.34
 
 package sttp.tapir.examples.openapi
 
 import cats.effect.*
 import cats.syntax.all.*
 import org.http4s.HttpRoutes
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
-import org.http4s.blaze.server.BlazeServerBuilder
 import sttp.tapir.*
 import sttp.tapir.scalar.ScalarUIOptions
 import sttp.tapir.scalar.bundle.ScalarInterpreter
@@ -36,10 +36,10 @@ object ScalarContextPathHttp4sServer extends IOApp:
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def run(args: List[String]): IO[ExitCode] =
-    BlazeServerBuilder[IO]
-      .withExecutionContext(ec)
-      .bindHttp(8080, "localhost")
+    // starting the server
+    EmberServerBuilder
+      .default[IO]
       .withHttpApp(Router(s"/${contextPath.mkString("/")}" -> routes).orNotFound)
-      .resource
+      .build
       .use { _ => IO.println(s"go to: http://127.0.0.1:8080/${(contextPath ++ docPathPrefix).mkString("/")}") *> IO.never }
       .as(ExitCode.Success)
