@@ -36,7 +36,7 @@ object Pekko extends StreamingImplementation
 object Zio extends StreamingImplementation
 
 object GenerationMeta {
-  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, 0, Set.empty)
+  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, 0, Set.empty, Nil)
 }
 case class GenerationMeta(
     schemaFiles: Seq[String],
@@ -44,7 +44,8 @@ case class GenerationMeta(
     schemasContainAny: Boolean,
     explicitNonObjTypes: Seq[String],
     depth: Int,
-    security: Set[SecurityWrapperDefn]
+    security: Set[SecurityWrapperDefn],
+    extensions: Seq[(String, String, String)]
 ) {
   def partition(securityWrappers: Set[SecurityWrapperDefn]): (Set[SecurityWrapperDefn], Set[SecurityWrapperDefn]) = {
     val changed = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
@@ -252,7 +253,7 @@ object RootGenerator {
 
     val endpointsInMain = endpointsByTag.getOrElse(None, "")
 
-    val maybeSpecificationExtensionKeys = doc.paths
+    val extensions: Seq[(String, String, String)] = doc.paths
       .flatMap { p =>
         p.specificationExtensions.toSeq ++ p.methods.flatMap(_.specificationExtensions.toSeq)
       }
@@ -263,8 +264,18 @@ object RootGenerator {
         val name = strippedToCamelCase(keyName)
         val uncapitalisedName = uncapitalise(name)
         val capitalisedName = uncapitalisedName.capitalize
-        s"""type ${capitalisedName}Extension = ${`type`}
-           |val ${uncapitalisedName}ExtensionKey = new sttp.tapir.AttributeKey[${capitalisedName}Extension]("$packagePath.$objName.${capitalisedName}Extension")
+        (s"${capitalisedName}Extension", s"${uncapitalisedName}ExtensionKey", `type`)
+      }
+      .toSeq
+      .sortBy(_._1)
+    val maybeSpecificationExtensionKeys = extensions
+      .map { case tup @ (typeName, keyName, tpe) =>
+        if (packageReuse.dependencyMeta.extensions.contains(tup))
+          s"""type $typeName = ${packageReuse.dependencyModelPath}.$typeName
+             |val $keyName = ${packageReuse.dependencyModelPath}.$keyName
+             |""".stripMargin
+        else s"""type $typeName = $tpe
+           |val $keyName = new sttp.tapir.AttributeKey[$typeName]("$packagePath.$objName.$typeName")
            |""".stripMargin
       }
       .mkString("\n")
@@ -371,7 +382,8 @@ object RootGenerator {
         schemasContainAny,
         explicitNonObjTypes,
         packageReuse.depth.getOrElse(0),
-        securityWrappers
+        securityWrappers,
+        extensions
       )
     )
   }
