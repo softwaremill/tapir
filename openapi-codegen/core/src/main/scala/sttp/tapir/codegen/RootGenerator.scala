@@ -455,6 +455,6 @@ object RootGenerator {
     else {
       val depPkg = packageReuse.depPkg
       val depObj = packageReuse.dependencyObjectName
-      packageReuse.dependencyMeta.schemaFiles.map(s => s"import $depPkg.$s._").mkString("\n") // + validationImport
+      packageReuse.dependencyMeta.schemaFiles.map(s => s"\nimport $depPkg.$s._").mkString("\n")
     }
 }
