@@ -1152,9 +1152,9 @@ class EndpointGenerator {
             (t, None, None, Nil)
           case a @ OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            val (seqName, xmlSeqConfig) = XmlSerdeGenerator.genTopLevelSeqSerdes(xmlSerdeLib, a, endpointName, position.toString).unzip
             val tpeName = endpointName.capitalize + position
-            (s"List[$t]", xmlSeqConfig, Some(tpeName), xmlSeqConfig.map(_ => tpeName).toSeq)
+            val xmlSeqConfig = XmlSerdeGenerator.genTopLevelSeqSerdes(xmlSerdeLib, a, endpointName, position.toString).map(_._2)
+            (s"List[$t]", xmlSeqConfig, Some(tpeName), xmlSeqConfig.toSeq.map(_ => tpeName))
           case x => bail(s"Only ref, primitive (and arrays of either) schemas supported for xml body (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
