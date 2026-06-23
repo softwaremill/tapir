@@ -1,0 +1,23 @@
+# Map redefined: values are integers not strings.
+openapi: 3.1.0
+info:
+  title: Redefine map (value type change)
+  version: '1.0'
+paths:
+  /redefine/map:
+    get:
+      operationId: redefineTagMap
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagMap'
+components:
+  schemas:
+    TagMap:
+      type: object
+      additionalProperties:
+        type: integer
+        format: int32

@@ -1,0 +1,63 @@
+# oneOf redefined: adds Bird variant.
+openapi: 3.1.0
+info:
+  title: Redefine oneOf (extra variant)
+  version: '1.0'
+paths:
+  /redefine/oneof:
+    post:
+      operationId: redefineOneOfAnimal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Animal'
+      responses:
+        '204':
+          description: OK
+components:
+  schemas:
+    Animal:
+      oneOf:
+        - $ref: '#/components/schemas/Dog'
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Bird'
+      discriminator:
+        propertyName: kind
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+          bird: '#/components/schemas/Bird'
+    Dog:
+      type: object
+      required:
+        - kind
+        - barks
+      properties:
+        kind:
+          type: string
+        barks:
+          type: boolean
+    Cat:
+      type: object
+      required:
+        - kind
+        - lives
+      properties:
+        kind:
+          type: string
+        lives:
+          type: integer
+          format: int32
+    Bird:
+      type: object
+      required:
+        - kind
+        - wingspan
+      properties:
+        kind:
+          type: string
+        wingspan:
+          type: integer
+          format: int32

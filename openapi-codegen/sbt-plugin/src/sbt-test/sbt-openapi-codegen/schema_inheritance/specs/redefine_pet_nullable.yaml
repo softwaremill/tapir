@@ -1,0 +1,30 @@
+# Pet redefined: `species` explicitly nullable in one spec, not in core.
+openapi: 3.1.0
+info:
+  title: Redefine Pet (nullable flag diff)
+  version: '1.0'
+paths:
+  /redefine/pet-nullable:
+    post:
+      operationId: createPetNullableSpecies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        '204':
+          description: OK
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        species:
+          type: string
+          nullable: true

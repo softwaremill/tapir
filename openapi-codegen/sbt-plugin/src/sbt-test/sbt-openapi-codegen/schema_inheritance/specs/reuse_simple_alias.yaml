@@ -1,0 +1,20 @@
+# Simple string type alias identical to core PetName.
+openapi: 3.1.0
+info:
+  title: Reuse simple type alias
+  version: '1.0'
+paths:
+  /reuse/alias:
+    get:
+      operationId: reusePetName
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetName'
+components:
+  schemas:
+    PetName:
+      type: string

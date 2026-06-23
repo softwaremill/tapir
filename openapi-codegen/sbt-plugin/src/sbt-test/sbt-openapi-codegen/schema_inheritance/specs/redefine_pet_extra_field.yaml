@@ -1,0 +1,36 @@
+# Pet redefined: extra `age` field — must NOT alias to core.Pet.
+openapi: 3.1.0
+info:
+  title: Redefine Pet (extra field)
+  version: '1.0'
+paths:
+  /redefine/pet-extra:
+    post:
+      operationId: createPetWithAge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        species:
+          type: string
+        age:
+          type: integer
+          format: int32

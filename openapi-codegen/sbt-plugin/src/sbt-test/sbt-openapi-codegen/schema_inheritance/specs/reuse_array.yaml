@@ -1,0 +1,23 @@
+# Array alias identical to core IdList.
+openapi: 3.1.0
+info:
+  title: Reuse array schema
+  version: '1.0'
+paths:
+  /reuse/array:
+    get:
+      operationId: reuseIdList
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdList'
+components:
+  schemas:
+    IdList:
+      type: array
+      items:
+        type: integer
+        format: int64

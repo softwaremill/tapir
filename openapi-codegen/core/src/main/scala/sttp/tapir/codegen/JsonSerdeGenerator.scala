@@ -160,8 +160,19 @@ object JsonSerdeGenerator {
       Some(s"""implicit lazy val $decoderName: io.circe.Decoder[$name] = $inheritedImpl.$decoderName
        |implicit lazy val $encoderName: io.circe.Encoder[$name] = $inheritedImpl.$encoderName""")
     } else None
+    def genCirceReusedEnumSerde(name: String): String = {
+      val uncapitalisedName = RootGenerator.uncapitalise(name)
+      val decoderName = s"${uncapitalisedName}JsonDecoder"
+      val encoderName = s"${uncapitalisedName}JsonEncoder"
+      val companion = s"${packageReuse.dependencyModelPath}.$name"
+      s"""implicit lazy val $decoderName: io.circe.Decoder[$name] = enumeratum.Circe.decoder($companion)
+         |implicit lazy val $encoderName: io.circe.Encoder[$name] = enumeratum.Circe.encoder($companion)"""
+    }
     val serdesDefn = (docSchemas ++ pathSchemas)
       .flatMap {
+        // Reused enums are aliased; generate codecs here when referenced in json but wasn't 'before'
+        case (name, _: OpenapiSchemaEnum, true) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
+          circeParentImpl(name) orElse Some(genCirceReusedEnumSerde(name))
         // Enum serdes are generated at the declaration site
         case (_, _: OpenapiSchemaEnum, _) => None
         // We generate the serde if it's referenced in any json model
@@ -173,7 +184,12 @@ object JsonSerdeGenerator {
           circeParentImpl(name) orElse Some(genCirceMapOrArraySerde(name, schema.items))
         case (name, schema: OpenapiSchemaOneOf, true) =>
           circeParentImpl(name) orElse Some(genCirceAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
-        case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf | _: OpenapiSchemaAny, _) =>
+        case (
+              _,
+              _: OpenapiSchemaObject | _: OpenapiSchemaArray | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf |
+              _: OpenapiSchemaAny,
+              _
+            ) =>
           None
         case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
         case (n, x, _) => throw new NotImplementedError(s"Only objects, enums, maps, arrays and oneOf supported! (for $n found ${x})")

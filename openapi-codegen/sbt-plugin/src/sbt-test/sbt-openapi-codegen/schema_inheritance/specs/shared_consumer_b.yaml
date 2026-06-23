@@ -1,0 +1,36 @@
+# Consumer B: Widget identical to core; different Holder wrapper name.
+openapi: 3.1.0
+info:
+  title: Shared consumer B
+  version: '1.0'
+paths:
+  /shared/b/containers:
+    get:
+      operationId: sharedConsumerBListContainers
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Container'
+components:
+  schemas:
+    Widget:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+    Container:
+      type: object
+      required:
+        - widget
+      properties:
+        widget:
+          $ref: '#/components/schemas/Widget'

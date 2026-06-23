@@ -1,0 +1,37 @@
+# Person structurally same but Address differs (postcode required) — neither should alias.
+openapi: 3.1.0
+info:
+  title: Redefine nested (Address mismatch)
+  version: '1.0'
+paths:
+  /redefine/nested:
+    get:
+      operationId: redefineNestedPerson
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+components:
+  schemas:
+    Address:
+      type: object
+      required:
+        - city
+        - postcode
+      properties:
+        city:
+          type: string
+        postcode:
+          type: string
+    Person:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        home:
+          $ref: '#/components/schemas/Address'

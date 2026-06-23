@@ -1,0 +1,36 @@
+# Pet defined inline on endpoint instead of $ref — structurally same as core but not a named schema ref path.
+openapi: 3.1.0
+info:
+  title: Inline vs ref (Pet as inline object on endpoint)
+  version: '1.0'
+paths:
+  /inline/pet:
+    post:
+      operationId: inlinePetBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                species:
+                  type: string
+      responses:
+        '204':
+          description: OK
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        species:
+          type: string

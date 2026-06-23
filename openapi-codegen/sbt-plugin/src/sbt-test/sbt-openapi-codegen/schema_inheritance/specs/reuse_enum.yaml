@@ -1,0 +1,23 @@
+# Status enum identical to core; Pet omitted (not present in this spec).
+openapi: 3.1.0
+info:
+  title: Reuse enum only
+  version: '1.0'
+paths:
+  /reuse/enum:
+    get:
+      operationId: reuseEnumStatus
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+components:
+  schemas:
+    Status:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE

@@ -1,0 +1,36 @@
+# Consumer A: Widget identical to core; adds Holder referencing Widget.
+openapi: 3.1.0
+info:
+  title: Shared consumer A
+  version: '1.0'
+paths:
+  /shared/a/holders:
+    get:
+      operationId: sharedConsumerAListHolders
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Holder'
+components:
+  schemas:
+    Widget:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+    Holder:
+      type: object
+      required:
+        - widget
+      properties:
+        widget:
+          $ref: '#/components/schemas/Widget'

@@ -1,0 +1,24 @@
+# Array redefined: uniqueItems true (Set vs List in codegen).
+openapi: 3.1.0
+info:
+  title: Redefine array (uniqueItems)
+  version: '1.0'
+paths:
+  /redefine/array:
+    get:
+      operationId: redefineIdList
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdList'
+components:
+  schemas:
+    IdList:
+      type: array
+      uniqueItems: true
+      items:
+        type: integer
+        format: int64

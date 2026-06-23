@@ -1,0 +1,24 @@
+# Status enum redefined: extra value PENDING.
+openapi: 3.1.0
+info:
+  title: Redefine enum (extra value)
+  version: '1.0'
+paths:
+  /redefine/enum:
+    get:
+      operationId: redefineEnumStatus
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+components:
+  schemas:
+    Status:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+        - PENDING
