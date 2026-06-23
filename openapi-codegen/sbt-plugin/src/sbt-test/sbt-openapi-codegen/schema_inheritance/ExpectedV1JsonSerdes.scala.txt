@@ -3,8 +3,6 @@ package sttp.tapir.generated.v1
 object TapirGeneratedEndpointsJsonSerdes {
   import sttp.tapir.generated.v1.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
-import sttp.tapir.generated.v2.TapirGeneratedEndpointsJsonSerdes._
-import sttp.tapir.generated.v2.TapirGeneratedEndpointsSchemas._
   implicit val byteStringJsonDecoder: io.circe.Decoder[ByteString] =
     io.circe.Decoder.decodeString
       .map(java.util.Base64.getDecoder.decode)
@@ -14,4 +12,6 @@ import sttp.tapir.generated.v2.TapirGeneratedEndpointsSchemas._
       .contramap(java.util.Base64.getEncoder.encodeToString)
   implicit lazy val orderJsonDecoder: io.circe.Decoder[Order] = io.circe.generic.semiauto.deriveDecoder[Order]
   implicit lazy val orderJsonEncoder: io.circe.Encoder[Order] = io.circe.generic.semiauto.deriveEncoder[Order]
+  implicit lazy val petJsonDecoder: io.circe.Decoder[Pet] = sttp.tapir.generated.v2.TapirGeneratedEndpointsJsonSerdes.petJsonDecoder
+  implicit lazy val petJsonEncoder: io.circe.Encoder[Pet] = sttp.tapir.generated.v2.TapirGeneratedEndpointsJsonSerdes.petJsonEncoder
 }

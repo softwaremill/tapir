@@ -4,10 +4,10 @@ lazy val root = (project in file("."))
     scalaVersion := "2.13.18",
     version := "0.1",
     openapiGenerateEndpointTypes := true,
-    openapiSwaggerFile := baseDirectory.value / "specs" / "v2.yaml",
     openapiPackage := "sttp.tapir.generated.v2",
     openapiAdditionalPackages := List(
-      "sttp.tapir.generated.v1" -> (baseDirectory.value / "specs" / "v1.yaml")
+      "sttp.tapir.generated.v2" -> (baseDirectory.value / "specs" / "v2.yaml"),
+      "sttp.tapir.generated.v1" -> (baseDirectory.value / "specs" / "v1.yaml"),
     ),
     openapiPackageDependencies := Map(
       "sttp.tapir.generated.v1" -> "sttp.tapir.generated.v2"
@@ -36,7 +36,7 @@ TaskKey[Unit]("check") := {
       sys.error(s"expected ${expectedTrimmed.size} non-empty lines in $generatedFileName, found ${generatedTrimmed.size}")
   }
   Seq(
-    "sbt-openapi-codegen/TapirGeneratedEndpoints.scala" -> "ExpectedV2.scala.txt",
+    "v2/TapirGeneratedEndpoints.scala" -> "ExpectedV2.scala.txt",
     "v1/TapirGeneratedEndpoints.scala" -> "ExpectedV1.scala.txt",
     "v1/TapirGeneratedEndpointsJsonSerdes.scala" -> "ExpectedV1JsonSerdes.scala.txt"
   ).foreach { case (generated, expected) => check(generated, expected) }

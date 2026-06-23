@@ -11,13 +11,11 @@ object TapirGeneratedEndpoints {
   
   import sttp.tapir.generated.v1.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
-  import sttp.tapir.generated.v2.TapirGeneratedEndpointsJsonSerdes._
-  import sttp.tapir.generated.v2.TapirGeneratedEndpointsSchemas._
 
 
-  
-  
-  
+
+
+
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -55,7 +53,7 @@ object TapirGeneratedEndpoints {
   implicit class RichStreamBody[A, T, R](bod: sttp.tapir.StreamBodyIO[A, T, R]) {
     def widenBody[TT >: T]: sttp.tapir.StreamBodyIO[A, TT, R] = bod.map(_.asInstanceOf[TT])(_.asInstanceOf[T])
   }
-  type ByteString <: Array[Byte]
+  type ByteString = sttp.tapir.generated.v2.TapirGeneratedEndpoints.ByteString
   implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
   
