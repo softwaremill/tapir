@@ -149,7 +149,10 @@ object JsonSerdeGenerator {
   ): SerdeGenResponse = {
     val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
     val pathSchemas = inlineEndpointSchemas(doc)
-    def circeParentImpl(name: String): Option[String] = if (PackageReuseContext.isReusedSchema(name, packageReuse)) {
+    def circeParentImpl(name: String): Option[String] = if (
+      PackageReuseContext.isReusedSchema(name, packageReuse) &&
+      packageReuse.dependencyMeta.allTransitiveJsonParamRefs.contains(name)
+    ) {
       val inheritedImpl = s"${packageReuse.dependencyModelPath}JsonSerdes"
       val uncapitalisedName = RootGenerator.uncapitalise(name)
       val decoderName = s"${uncapitalisedName}JsonDecoder"
@@ -315,11 +318,15 @@ object JsonSerdeGenerator {
       .filter(x => !allSchemas.contains(x) && x != "io.circe.Json")
 
     lazy val inheritedImpl = s"${packageReuse.dependencyModelPath}JsonSerdes"
+    val meta = packageReuse.dependencyMeta
+    def hasExistingDefn(name: String, enumLike: Boolean = false, skipCheck: Boolean = false) =
+      PackageReuseContext.isReusedSchema(name, packageReuse) &&
+        (skipCheck || (enumLike && meta.allTransitiveJsonParamRefs.contains(name)) || meta.jsonParamRefs.contains(name))
     // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
     // This should be the set of all json param refs not included in our schema definitions
     val additionalExplicitSerdes = (explicitNonObjTypes.map { s =>
       val name = s.replace(" ", "").replace(",", "_").replace("[", "_").replace("]", "_").replace(".", "_") + "JsonCodec"
-      if (packageReuse.dependencyMeta.explicitNonObjTypes.contains(s))
+      if (meta.explicitNonObjTypes.contains(s) && meta.jsonParamRefs.contains(s))
         s"implicit lazy val $name: $jsoniterPkgCore.JsonValueCodec[$s] = $inheritedImpl.$name"
       else
         s"""implicit lazy val $name: $jsoniterPkgCore.JsonValueCodec[$s] =
@@ -328,7 +335,7 @@ object JsonSerdeGenerator {
 
     // Permits usage of Option/Seq wrapped classes at top level without having to be explicit
     val jsonSerdeHelpers =
-      if (packageReuse.reusedSchemas.nonEmpty)
+      if (packageReuse.reusedSchemas.nonEmpty && meta.jsonParamRefs.nonEmpty)
         s"""
            |implicit def seqCodec[T: $jsoniterPkgCore.JsonValueCodec]: $jsoniterPkgCore.JsonValueCodec[List[T]] = $inheritedImpl.seqCodec[T]
            |implicit def optionCodec[T: $jsoniterPkgCore.JsonValueCodec]: $jsoniterPkgCore.JsonValueCodec[Option[T]] = $inheritedImpl.optionCodec[T]
@@ -342,10 +349,11 @@ object JsonSerdeGenerator {
            |""".stripMargin
     val docSchemas = doc.components.toSeq.flatMap(_.schemas)
     val pathSchemas = inlineEndpointSchemas(doc)
-    def jsoniterParentImpl(name: String): Option[Seq[String]] = if (PackageReuseContext.isReusedSchema(name, packageReuse)) {
-      val codecName = getJsoniterName(name)
-      Some(Seq(s"implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $inheritedImpl.$codecName"))
-    } else None
+    def jsoniterParentImpl(name: String, enumLike: Boolean = false, skipCheck: Boolean = false): Option[Seq[String]] =
+      if (hasExistingDefn(name, enumLike, skipCheck)) {
+        val codecName = getJsoniterName(name)
+        Some(Seq(s"implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $inheritedImpl.$codecName"))
+      } else None
     def getSerdeString(name: String, t: OpenapiSchemaType, isJson: Boolean): Seq[String] = (name, t, isJson) match {
       // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
       case (name, o: OpenapiSchemaObject, isJson) =>
@@ -354,27 +362,28 @@ object JsonSerdeGenerator {
         // inline objects/arrays/maps to reach enums at any depth, naming each to match the class ClassDefinitionGenerator
         // generates for it.
         val inlinedEnumDefns =
-          if (allTransitiveJsonParamRefs.contains(name) && !PackageReuseContext.isReusedSchema(name, packageReuse))
+          if (allTransitiveJsonParamRefs.contains(name) && !hasExistingDefn(name, enumLike = true))
             collectInlineEnumNames(RootGenerator.addName("", name), o).distinct.map(genJsoniterEnumSerde(useCustomJsoniterSerdes, _))
           else Nil
         val supertypes =
           adtInheritanceMap.getOrElse(name, Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
         val topLevelDefn =
           if (isJson || jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty))
-            jsoniterParentImpl(name).getOrElse(Seq(genJsoniterClassSerde(useCustomJsoniterSerdes, supertypes)(name)))
+            jsoniterParentImpl(name, skipCheck = isJson || supertypes.exists(_.discriminator.isEmpty))
+              .getOrElse(Seq(genJsoniterClassSerde(useCustomJsoniterSerdes, supertypes)(name)))
           else Nil
         topLevelDefn ++ inlinedEnumDefns
       // For named maps and arrays, only generate the schema if it's a 'top level' json schema
       case (name, _: OpenapiSchemaMap, isJson) if jsonParamRefs.contains(name) || isJson =>
-        jsoniterParentImpl(name) getOrElse Seq(genJsoniterNamedSerde(useCustomJsoniterSerdes, name))
+        jsoniterParentImpl(name, skipCheck = isJson) getOrElse Seq(genJsoniterNamedSerde(useCustomJsoniterSerdes, name))
       case (name, _: OpenapiSchemaArray, isJson) if jsonParamRefs.contains(name) || isJson =>
-        jsoniterParentImpl(name) getOrElse Seq(genJsoniterNamedSerde(useCustomJsoniterSerdes, name))
+        jsoniterParentImpl(name, skipCheck = isJson) getOrElse Seq(genJsoniterNamedSerde(useCustomJsoniterSerdes, name))
       // For enums, generate the serde if it's referenced in any json model
       case (name, _: OpenapiSchemaEnum, _) if allTransitiveJsonParamRefs.contains(name) =>
-        jsoniterParentImpl(name) getOrElse Seq(genJsoniterEnumSerde(useCustomJsoniterSerdes, name))
+        jsoniterParentImpl(name, enumLike = true) getOrElse Seq(genJsoniterEnumSerde(useCustomJsoniterSerdes, name))
       // For ADTs, generate the serde if it's referenced in any json model
       case (name, schema: OpenapiSchemaOneOf, _) if allTransitiveJsonParamRefs.contains(name) =>
-        jsoniterParentImpl(name) getOrElse Seq(
+        jsoniterParentImpl(name, enumLike = true) getOrElse Seq(
           generateJsoniterAdtSerde(allSchemas, name, schema, validateNonDiscriminatedOneOfs, useCustomJsoniterSerdes)
         )
       case (
@@ -389,7 +398,7 @@ object JsonSerdeGenerator {
     }
 
     val maybeCustomByteStringSerde =
-      if (packageReuse.reusedSchemas.nonEmpty)
+      if (packageReuse.reusedSchemas.nonEmpty && meta.jsonParamRefs.nonEmpty)
         s"implicit val byteStringJsonCodec: $jsoniterPkgCore.JsonValueCodec[ByteString] = $inheritedImpl.byteStringJsonCodec\n"
       else
         s"""implicit val byteStringJsonCodec: $jsoniterPkgCore.JsonValueCodec[ByteString] = new $jsoniterPkgCore.JsonValueCodec[ByteString] {
@@ -563,7 +572,10 @@ object JsonSerdeGenerator {
     val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
     val pathSchemas = inlineEndpointSchemas(doc)
     lazy val inheritedImpl = s"${packageReuse.dependencyModelPath}JsonSerdes"
-    def zioParentImpl(name: String): Option[String] = if (PackageReuseContext.isReusedSchema(name, packageReuse)) {
+    def zioParentImpl(name: String): Option[String] = if (
+      PackageReuseContext.isReusedSchema(name, packageReuse) &&
+      packageReuse.dependencyMeta.allTransitiveJsonParamRefs.contains(name)
+    ) {
       val uncapitalisedName = RootGenerator.uncapitalise(name)
       val codecName = s"${uncapitalisedName}JsonCodec"
       Some(s"implicit lazy val $codecName: zio.json.JsonCodec[$name] = $inheritedImpl.$codecName")

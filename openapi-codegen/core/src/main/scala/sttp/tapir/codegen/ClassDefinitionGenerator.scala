@@ -13,7 +13,8 @@ case class GeneratedClassDefinitions(
     schemaRepr: Seq[(Option[String], String)],
     xmlSerdeRepr: Option[String],
     schemasContainAny: Boolean,
-    explicitNonObjTypes: Seq[String]
+    explicitNonObjTypes: Seq[String],
+    allTransitiveJsonParamRefs: Set[String]
 )
 
 case class InlineEnumDefn(enumName: String, impl: String)
@@ -122,7 +123,17 @@ class ClassDefinitionGenerator {
     // Json serdes & schemas live in separate files from the class defns
     defns
       .map(helpers + "\n" + _)
-      .map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, shimsAndSchemas, xmlSerdes, schemasContainAny, explicitNonObjTypes))
+      .map(defStr =>
+        GeneratedClassDefinitions(
+          defStr,
+          jsonSerdes,
+          shimsAndSchemas,
+          xmlSerdes,
+          schemasContainAny,
+          explicitNonObjTypes,
+          allTransitiveJsonParamRefs
+        )
+      )
   }
 
   private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[(String, OpenapiSchemaOneOf)]] =

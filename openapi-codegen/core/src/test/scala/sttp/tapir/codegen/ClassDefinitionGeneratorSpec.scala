@@ -574,7 +574,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(useCustomMacros: Boolean, doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _, _, _, _) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _, _, _, _, _) =
         gen
           .classDefs(
             doc,
@@ -617,7 +617,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _, _, _, _) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _, _, _, _, _) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
       val fullRes = (res + "\n" + jsonSerdes.get)

@@ -36,7 +36,7 @@ object Pekko extends StreamingImplementation
 object Zio extends StreamingImplementation
 
 object GenerationMeta {
-  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, Set.empty, Nil, 0)
+  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, Set.empty, Nil, 0, Set.empty, Set.empty)
 }
 case class GenerationMeta(
     schemaFiles: Seq[String],
@@ -45,7 +45,9 @@ case class GenerationMeta(
     explicitNonObjTypes: Seq[String],
     security: Set[SecurityWrapperDefn],
     extensions: Seq[(String, String, String)],
-    schemaObjectCount: Int
+    schemaObjectCount: Int,
+    allTransitiveJsonParamRefs: Set[String],
+    jsonParamRefs: Set[String],
 ) {
   def partition(securityWrappers: Set[SecurityWrapperDefn]): (Set[SecurityWrapperDefn], Set[SecurityWrapperDefn]) = {
     val changed = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
@@ -153,9 +155,17 @@ object RootGenerator {
         generateEndpointTypes,
         validators,
         generateValidators,
-        packageReuse,
+        packageReuse
       )
-    val GeneratedClassDefinitions(classDefns, jsonSerdes, shimsAndSchemas, xmlSerdes, schemasContainAny, explicitNonObjTypes) =
+    val GeneratedClassDefinitions(
+      classDefns,
+      jsonSerdes,
+      shimsAndSchemas,
+      xmlSerdes,
+      schemasContainAny,
+      explicitNonObjTypes,
+      allTransitiveJsonParamRefs
+    ) =
       classGenerator
         .classDefs(
           doc = doc,
@@ -173,7 +183,7 @@ object RootGenerator {
           objName = objName,
           packageReuse = packageReuse
         )
-        .getOrElse(GeneratedClassDefinitions("", None, Nil, None, false, Nil))
+        .getOrElse(GeneratedClassDefinitions("", None, Nil, None, false, Nil, Set.empty))
 
     val schemas = shimsAndSchemas.map(_._2)
     val hasJsonSerdes = jsonSerdes.nonEmpty
@@ -389,7 +399,9 @@ object RootGenerator {
         explicitNonObjTypes,
         securityWrappers,
         extensions,
-        schemaObjs.size
+        schemaObjs.size,
+        allTransitiveJsonParamRefs,
+        jsonParamRefs
       )
     )
   }
