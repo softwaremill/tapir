@@ -9,13 +9,12 @@ case class PackageReuseContext(
     dependencyObjectName: String,
     dependencyMeta: GenerationMeta,
     replacedSchemas: Set[String],
-    depth: Option[Int]
 ) {
   lazy val depPkg: String = dependencyModelPath.split('.').dropRight(1).mkString(".")
 }
 
 object PackageReuseContext {
-  val none: PackageReuseContext = PackageReuseContext(Set.empty, "", "", GenerationMeta.default, Set.empty, None)
+  val none: PackageReuseContext = PackageReuseContext(Set.empty, "", "", GenerationMeta.default, Set.empty)
 
   def fromDocuments(
       current: OpenapiDocument,
@@ -23,13 +22,12 @@ object PackageReuseContext {
       dependencyPackage: String,
       dependencyObjectName: String,
       dependencyMeta: GenerationMeta,
-      depth: Option[Int]
   ): PackageReuseContext = {
     val currentSchemas = current.components.toSeq.flatMap(_.schemas).toMap
     val dependencySchemas = dependency.components.toSeq.flatMap(_.schemas).toMap
     val reused = SchemaComparer.findIdenticalSchemaNames(currentSchemas, dependencySchemas)
     val replaced = currentSchemas.keySet.intersect(dependencySchemas.keySet) -- reused
-    PackageReuseContext(reused, s"$dependencyPackage.$dependencyObjectName", dependencyObjectName, dependencyMeta, replaced, depth)
+    PackageReuseContext(reused, s"$dependencyPackage.$dependencyObjectName", dependencyObjectName, dependencyMeta, replaced)
   }
 
   def aliasType(name: String, ctx: PackageReuseContext): String =

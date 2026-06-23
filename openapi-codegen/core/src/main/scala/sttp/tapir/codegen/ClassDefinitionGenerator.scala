@@ -10,7 +10,7 @@ import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
 case class GeneratedClassDefinitions(
     classRepr: String,
     jsonSerdeRepr: Option[String],
-    schemaRepr: Seq[String],
+    schemaRepr: Seq[(Option[String], String)],
     xmlSerdeRepr: Option[String],
     schemasContainAny: Boolean,
     explicitNonObjTypes: Seq[String]
@@ -71,7 +71,7 @@ class ClassDefinitionGenerator {
       throw new NotImplementedError(
         s"any not implemented for json libs other than circe and jsoniter (problematic models: ${schemasWithAny.keys})"
       )
-    val schemas = SchemaGenerator
+    val shimsAndSchemas = SchemaGenerator
       .generateSchemas(
         doc,
         allSchemas,
@@ -123,7 +123,7 @@ class ClassDefinitionGenerator {
     // Json serdes & schemas live in separate files from the class defns
     defns
       .map(helpers + "\n" + _)
-      .map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas, xmlSerdes, schemasContainAny, explicitNonObjTypes))
+      .map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, shimsAndSchemas, xmlSerdes, schemasContainAny, explicitNonObjTypes))
   }
 
   private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[(String, OpenapiSchemaOneOf)]] =

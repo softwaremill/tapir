@@ -36,16 +36,16 @@ object Pekko extends StreamingImplementation
 object Zio extends StreamingImplementation
 
 object GenerationMeta {
-  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, 0, Set.empty, Nil)
+  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, Set.empty, Nil, 0)
 }
 case class GenerationMeta(
     schemaFiles: Seq[String],
     hasValidators: Boolean,
     schemasContainAny: Boolean,
     explicitNonObjTypes: Seq[String],
-    depth: Int,
     security: Set[SecurityWrapperDefn],
-    extensions: Seq[(String, String, String)]
+    extensions: Seq[(String, String, String)],
+    schemaObjectCount: Int
 ) {
   def partition(securityWrappers: Set[SecurityWrapperDefn]): (Set[SecurityWrapperDefn], Set[SecurityWrapperDefn]) = {
     val changed = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
@@ -154,7 +154,7 @@ object RootGenerator {
         validators,
         generateValidators
       )
-    val GeneratedClassDefinitions(classDefns, jsonSerdes, schemas, xmlSerdes, schemasContainAny, explicitNonObjTypes) =
+    val GeneratedClassDefinitions(classDefns, jsonSerdes, shimsAndSchemas, xmlSerdes, schemasContainAny, explicitNonObjTypes) =
       classGenerator
         .classDefs(
           doc = doc,
@@ -173,6 +173,8 @@ object RootGenerator {
           packageReuse = packageReuse
         )
         .getOrElse(GeneratedClassDefinitions("", None, Nil, None, false, Nil))
+
+    val schemas = shimsAndSchemas.map(_._2)
     val hasJsonSerdes = jsonSerdes.nonEmpty
     val hasXmlSerdes = xmlSerdes.nonEmpty
 
@@ -229,23 +231,26 @@ object RootGenerator {
 
     val xmlSerdeObj = xmlSerdes.map(XmlSerdeGenerator.wrapBody(normalisedXmlLib, packagePath, objName, targetScala3, _))
 
-    val schemaObjs = if (schemas.size > 1) schemas.zipWithIndex.map { case (body, idx) =>
+    val schemaObjs = if (schemas.size > 1) shimsAndSchemas.zipWithIndex.map { case ((shims, body), idx) =>
       val priorImports = (0 until idx).map { i => s"import $packagePath.${objName}Schemas${i + 1}._" }.mkString("\n")
-      val name = s"${objName}Schemas${idx + 1}"
+      val suffix = idx + 1
+      val name = s"${objName}Schemas$suffix"
       name -> s"""package $packagePath
          |
+         |${shims.map(_.replace("object Refs ", s"object Refs$suffix ")).getOrElse("")}
          |object $name {
          |  import $packagePath.$objName._
          |  import sttp.tapir.generic.auto._
          |${indent(2)(priorImports)}
-         |${indent(2)(body)}
+         |${indent(2)(body.replace(" Refs.", s" Refs$suffix."))}
          |}""".stripMargin
     }
     else if (schemas.size == 1)
       Seq(s"${objName}Schemas" -> s"""package $packagePath
          |
+         |${shimsAndSchemas.head._1.getOrElse("")}
          |object ${objName}Schemas {
-         |  import $packagePath.$objName._${schemaDependencyImportsFor(packageReuse)}
+         |  import $packagePath.$objName._
          |  import sttp.tapir.generic.auto._
          |${indent(2)(schemas.head)}
          |}""".stripMargin)
@@ -381,9 +386,9 @@ object RootGenerator {
         validationObj.isDefined,
         schemasContainAny,
         explicitNonObjTypes,
-        packageReuse.depth.getOrElse(0),
         securityWrappers,
-        extensions
+        extensions,
+        schemaObjs.size
       )
     )
   }

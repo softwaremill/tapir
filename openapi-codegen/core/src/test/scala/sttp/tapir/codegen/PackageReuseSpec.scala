@@ -80,7 +80,6 @@ class PackageReuseContextSpec extends AnyFlatSpec with Matchers {
       "sttp.tapir.generated.core",
       "TapirGeneratedEndpoints",
       GenerationMeta.default,
-      None,
     )
     ctx.reusedSchemas shouldBe Set("Pet")
     ctx.dependencyModelPath shouldBe "sttp.tapir.generated.core.TapirGeneratedEndpoints"
@@ -139,7 +138,7 @@ class PackageReuseContextSpec extends AnyFlatSpec with Matchers {
     val v1 = YamlParser.parseFile(v1Yaml).fold(err => fail(err.getMessage), identity).resolveAllOfSchemas
     val v2 = YamlParser.parseFile(v2Yaml).fold(err => fail(err.getMessage), identity).resolveAllOfSchemas
     val ctx =
-      PackageReuseContext.fromDocuments(v1, v2, "sttp.tapir.generated.v2", "TapirGeneratedEndpoints", GenerationMeta.default, None)
+      PackageReuseContext.fromDocuments(v1, v2, "sttp.tapir.generated.v2", "TapirGeneratedEndpoints", GenerationMeta.default)
     ctx.reusedSchemas shouldBe Set("Pet")
   }
 }

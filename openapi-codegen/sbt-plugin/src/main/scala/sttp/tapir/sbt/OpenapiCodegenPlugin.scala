@@ -103,7 +103,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
           .flatMap { depPkg =>
             parsedDocs.get(depPkg).map { depDoc =>
               val parentMeta = accSchemaMeta.getOrElse(depPkg, GenerationMeta.default)
-              PackageReuseContext.fromDocuments(doc, depDoc, depPkg, c.objectName, parentMeta, Some(parentMeta.depth))
+              PackageReuseContext.fromDocuments(doc, depDoc, depPkg, c.objectName, parentMeta)
             }
           }
           .getOrElse(PackageReuseContext.none)
