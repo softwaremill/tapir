@@ -24,9 +24,17 @@ import scala.annotation.tailrec
 
 case class ValidationDefn(name: String, tpe: String, construct: Set[String] => Option[String], refOnly: Boolean = false)
 case class ValidationDefns(defns: Map[String, ValidationDefn]) {
-  def render: String = defns.values.toSeq
+  def render(packageReuse: PackageReuseContext): String = defns.values.toSeq
     .sortBy(_.name)
-    .flatMap { d => d.construct(defns.keySet).map(impl => s"lazy val ${d.name}Validator: Validator[${d.tpe}] = $impl") }
+    .flatMap { d =>
+      d.construct(defns.keySet)
+        .map { impl =>
+          val vName = s"${d.name}Validator"
+          if (packageReuse.reusedSchemas.contains(d.tpe))
+            s"def $vName: Validator[${d.tpe}] = ${packageReuse.dependencyModelPath}Validators.$vName"
+          else s"lazy val $vName: Validator[${d.tpe}] = $impl"
+        }
+    }
     .mkString("\n")
 }
 object ValidationDefns {
@@ -51,10 +59,8 @@ object ValidationGenerator {
   private def singleton(name: String, tpe: String, validationDefn: String): Seq[ValidationDefn] =
     Seq(ValidationDefn(name, tpe, _ => Some(validationDefn)))
 
-  def mkValidators(doc: OpenapiDocument, packageReuse: PackageReuseContext = PackageReuseContext.none): ValidationDefns = {
-    val allSchemas = doc.components.map(_.schemas).getOrElse(Map.empty).filterNot { case (k, _) =>
-      PackageReuseContext.isReused(k, packageReuse) && (2 == 4 / 1)
-    }
+  def mkValidators(doc: OpenapiDocument): ValidationDefns = {
+    val allSchemas = doc.components.map(_.schemas).getOrElse(Map.empty)
 
     // All schemas that have explicit validation _or_ refer to a ref, which _may_ have.
     // We need to filter this, because we may have recursive references that don't contain any 'real' validation

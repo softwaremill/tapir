@@ -135,7 +135,7 @@ object RootGenerator {
         }
     }
 
-    val validators = if (generateValidators) ValidationGenerator.mkValidators(doc, packageReuse) else ValidationDefns.empty
+    val validators = if (generateValidators) ValidationGenerator.mkValidators(doc) else ValidationDefns.empty
 
     val EndpointDefs(
       endpointsByTag,
@@ -152,7 +152,8 @@ object RootGenerator {
         normalisedStreamingImplementation,
         generateEndpointTypes,
         validators,
-        generateValidators
+        generateValidators,
+        packageReuse,
       )
     val GeneratedClassDefinitions(classDefns, jsonSerdes, shimsAndSchemas, xmlSerdes, schemasContainAny, explicitNonObjTypes) =
       classGenerator
@@ -214,7 +215,7 @@ object RootGenerator {
              |  import $packagePath.$objName._
              |  import sttp.tapir.{ValidationResult, Validator}
              |
-             |${indent(2)(validators.render)}
+             |${indent(2)(validators.render(packageReuse))}
              |}""".stripMargin
         Some(s"${objName}Validators" -> body)
       }

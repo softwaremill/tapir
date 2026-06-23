@@ -60,7 +60,7 @@ class ClassDefinitionGenerator {
         .toSeq
         .map(_._1)
         .distinct
-        .filterNot(PackageReuseContext.isReused(_, packageReuse))
+        .filterNot(PackageReuseContext.isReusedSchema(_, packageReuse))
         .map(name => s"sealed trait $name")
         .sorted
         .mkString("", "\n", "\n")
@@ -92,19 +92,18 @@ class ClassDefinitionGenerator {
       targetScala3,
       schemasContainAny,
       useCustomJsoniterSerdes,
-      objName,
       packageReuse
     )
     val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
       xmlParamRefs,
       xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
-    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3, objName, packageReuse)
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3, packageReuse)
     val defns = doc.components
       .map(_.schemas.flatMap {
-        case (name, _: OpenapiSchemaEnum) if PackageReuseContext.isReused(name, packageReuse) =>
+        case (name, _: OpenapiSchemaEnum) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
           Seq(PackageReuseContext.enumAliasType(name, packageReuse))
-        case (name, _) if PackageReuseContext.isReused(name, packageReuse) =>
+        case (name, _) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
           Seq(PackageReuseContext.aliasType(name, packageReuse))
         case (name, obj: OpenapiSchemaObject) =>
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)

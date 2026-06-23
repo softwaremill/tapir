@@ -27,7 +27,7 @@ case class ScopedAuxCodecParams(
 )
 
 object XmlSerdeGenerator {
-  def genTopLevelSeqSerdes(xmlSerdeLib: XmlSerdeLib, schema: OpenapiSchemaArray, endpointName: String, position: String): Option[String] =
+  def genTopLevelSeqSerdes(xmlSerdeLib: XmlSerdeLib, schema: OpenapiSchemaArray, endpointName: String, position: String): Option[(String, String)] =
     schema match {
       case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, c, _) if xmlSerdeLib == XmlSerdeLib.CatsXml =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
@@ -35,7 +35,7 @@ object XmlSerdeGenerator {
         val name = c.flatMap(_.name).getOrElse(t)
         val w = c.exists(_.isWrapped)
         val in = c.flatMap(_.itemName).getOrElse(t)
-        Some(s"""type $seqSubtype <: Seq[$t]
+        Some(seqSubtype -> s"""type $seqSubtype <: Seq[$t]
          |implicit val ${seqSubtype}SeqDecoder: cats.xml.codec.Decoder[$seqSubtype] = seqDecoder[$t]("$name", isWrapped = $w).map(_.asInstanceOf[$seqSubtype])
          |implicit val ${seqSubtype}SeqEncoder: cats.xml.codec.Encoder[$seqSubtype] =
          |  seqEncoder[$t]("$name", isWrapped = $w, itemName = "$in").contramap(_.asInstanceOf[Seq[$t]])
@@ -49,19 +49,18 @@ object XmlSerdeGenerator {
       doc: OpenapiDocument,
       xmlParamRefs: Set[String],
       targetScala3: Boolean,
-      objName: String,
       packageReuse: PackageReuseContext = PackageReuseContext.none
   ): Option[String] = {
     if (xmlParamRefs.isEmpty || xmlSerdeLib == XmlSerdeLib.NoSupport) None
     else
       Some {
         xmlParamRefs
-          .filterNot(PackageReuseContext.isReused(_, packageReuse))
+          .filterNot(PackageReuseContext.isReusedSchema(_, packageReuse))
           .map { ref =>
             val decoderName = s"${ref}XmlDecoder"
             val encoderName = s"${ref}XmlEncoder"
-            if (PackageReuseContext.isReused(ref, packageReuse)){
-              val inheritedImpl = s"${packageReuse.depPkg}.${objName}XmlSerdes"
+            if (PackageReuseContext.isReusedSchema(ref, packageReuse)){
+              val inheritedImpl = s"${packageReuse.dependencyModelPath}XmlSerdes"
               s"""
                  |implicit lazy val $decoderName: Decoder[$ref] = $inheritedImpl.$decoderName
                  |implicit lazy val $encoderName: Encoder[$ref] = $inheritedImpl.$encoderName""".stripMargin

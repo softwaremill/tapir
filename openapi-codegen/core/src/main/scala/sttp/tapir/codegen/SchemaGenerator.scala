@@ -92,7 +92,7 @@ object SchemaGenerator {
       val reused = ring
         .filter { case (_, _, t, _) => reffableType(t) }
         .map(_._1)
-        .filter(PackageReuseContext.isReused(_, packageReuse))
+        .filter(PackageReuseContext.isReusedSchema(_, packageReuse))
       if (reused.isEmpty) None
       else
         Some {
@@ -112,7 +112,7 @@ object SchemaGenerator {
         }
     }
     def parentImpl(name: String, t: OpenapiSchemaType)(fn: ((Boolean, Seq[String])) => String): ((Boolean, Seq[String])) => String =
-      if (PackageReuseContext.isReused(name, packageReuse) && reffableType(t)) {
+      if (PackageReuseContext.isReusedSchema(name, packageReuse) && reffableType(t)) {
         { (_: (Boolean, Seq[String])) =>
           s"implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = Refs.${shimSchemaName(name)}"
         }

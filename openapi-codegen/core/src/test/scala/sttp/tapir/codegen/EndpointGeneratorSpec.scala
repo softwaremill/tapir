@@ -76,7 +76,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
-          generateValidators = true
+          generateValidators = true,
+          packageReuse = PackageReuseContext.none,
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -167,7 +168,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
-          generateValidators = true
+          generateValidators = true,
+          packageReuse = PackageReuseContext.none,
         )
         .endpointDecls(None)).shouldCompile()
   }
@@ -225,7 +227,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
-          generateValidators = true
+          generateValidators = true,
+          packageReuse = PackageReuseContext.none,
         )
         .endpointDecls(None)
     generatedCode should include(

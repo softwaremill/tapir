@@ -1,35 +1,53 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  Discriminator,
-  OpenapiSchemaAllOf,
-  OpenapiSchemaAny,
-  OpenapiSchemaAnyOf,
-  OpenapiSchemaArray,
-  OpenapiSchemaBoolean,
-  OpenapiSchemaByte,
-  OpenapiSchemaConstantString,
-  OpenapiSchemaDate,
-  OpenapiSchemaDateTime,
-  OpenapiSchemaDouble,
-  OpenapiSchemaDuration,
-  OpenapiSchemaEnum,
-  OpenapiSchemaField,
-  OpenapiSchemaFloat,
-  OpenapiSchemaInt,
-  OpenapiSchemaLong,
-  OpenapiSchemaMap,
-  OpenapiSchemaNot,
-  OpenapiSchemaObject,
-  OpenapiSchemaOneOf,
-  OpenapiSchemaRef,
-  OpenapiSchemaSimpleType,
-  OpenapiSchemaString,
-  OpenapiSchemaUUID
-}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiPath, OpenapiPathMethod, OpenapiRequestBodyDefn, OpenapiResponseDef}
+import sttp.tapir.codegen.openapi.models.{OpenapiModels, OpenapiSchemaType}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{Discriminator, OpenapiSchemaAllOf, OpenapiSchemaAny, OpenapiSchemaAnyOf, OpenapiSchemaArray, OpenapiSchemaBoolean, OpenapiSchemaByte, OpenapiSchemaConstantString, OpenapiSchemaDate, OpenapiSchemaDateTime, OpenapiSchemaDouble, OpenapiSchemaDuration, OpenapiSchemaEnum, OpenapiSchemaField, OpenapiSchemaFloat, OpenapiSchemaInt, OpenapiSchemaLong, OpenapiSchemaMap, OpenapiSchemaNot, OpenapiSchemaObject, OpenapiSchemaOneOf, OpenapiSchemaRef, OpenapiSchemaSimpleType, OpenapiSchemaString, OpenapiSchemaUUID}
 
 object SchemaComparer {
+  private def resolved(doc: OpenapiDocument, ps: Map[String, OpenapiModels.OpenapiParameter])(
+      p: OpenapiPath
+  ): Seq[(String, OpenapiPathMethod)] = p.methods.map(m =>
+    m.name(p.url) -> m.copy(
+      requestBody = m.requestBody.map(_.resolve(doc)),
+      responses = m.responses.map(_.resolve(doc)),
+      parameters = m.parameters.map(_.toResolved(ps)),
+      security = Some(m.security.getOrElse(doc.security))
+    )
+  )
+  private def securityMatches(current: OpenapiDocument, dependency: OpenapiDocument)(m: Seq[Map[String, Seq[String]]]): Boolean = {
+    m.flatMap(_.keySet).toSet.forall { s =>
+      val depDefn = dependency.components.flatMap(_.securitySchemes.get(s))
+      val currDefn = current.components.flatMap(_.securitySchemes.get(s))
+      depDefn == currDefn
+    }
+  }
+
+  def findReusedEndpointNames(
+      current: OpenapiDocument,
+      dependency: OpenapiDocument,
+      currentSchemas: Map[String, OpenapiSchemaType],
+      dependencySchemas: Map[String, OpenapiSchemaType]
+  ): Set[String] = {
+    val depsPs = Option(dependency.components).flatten.map(_.parameters).getOrElse(Map.empty)
+    val resolvedDeps = dependency.paths.flatMap(resolved(dependency, depsPs)).groupBy(_._1).map { case (k, v) => k -> v.head._2 }
+    val currPs = Option(current.components).flatten.map(_.parameters).getOrElse(Map.empty)
+    val resolvedCurr = current.paths.flatMap(resolved(current, currPs)).groupBy(_._1).map { case (k, v) => k -> v.head._2 }
+    val mayMatch = resolvedCurr.filter { case (name, m) => resolvedDeps.get(name).contains(m) }
+
+    mayMatch.filter { case (name, m) =>
+      m.requestBody.toSeq
+        .flatMap(_.asInstanceOf[OpenapiRequestBodyDefn].content.map(_.schema))
+        .forall(t => schemasEqual(name, t, currentSchemas, name, t, dependencySchemas, Set.empty)) &&
+      m.responses.toSeq
+        .flatMap(_.asInstanceOf[OpenapiResponseDef].content.map(_.schema))
+        .forall(t => schemasEqual(name, t, currentSchemas, name, t, dependencySchemas, Set.empty)) &&
+      m.parameters
+        .map(_.resolve(currPs).schema)
+        .forall(t => schemasEqual(name, t, currentSchemas, name, t, dependencySchemas, Set.empty)) &&
+      securityMatches(current, dependency)(m.security.get)
+    }.keySet
+  }
 
   /** Returns schema names present in both maps whose definitions are structurally identical (including transitive refs). */
   def findIdenticalSchemaNames(

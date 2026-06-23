@@ -38,14 +38,13 @@ object JsonSerdeGenerator {
       targetScala3: Boolean,
       schemasContainAny: Boolean,
       useCustomJsoniterSerdes: Boolean,
-      objName: String,
       packageReuse: PackageReuseContext = PackageReuseContext.none
   ): SerdeGenResponse = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
 
     jsonSerdeLib match {
       case JsonSerdeLib.Circe =>
-        genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs, objName, packageReuse)
+        genCirceSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs, packageReuse)
       case JsonSerdeLib.Jsoniter =>
         genJsoniterSerdes(
           doc,
@@ -56,11 +55,10 @@ object JsonSerdeGenerator {
           validateNonDiscriminatedOneOfs,
           schemasContainAny,
           useCustomJsoniterSerdes,
-          objName,
           packageReuse
         )
       case JsonSerdeLib.Zio =>
-        genZioSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs, targetScala3, objName, packageReuse)
+        genZioSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs, targetScala3, packageReuse)
     }
   }
 
@@ -147,13 +145,12 @@ object JsonSerdeGenerator {
       allSchemas: Map[String, OpenapiSchemaType],
       allTransitiveJsonParamRefs: Set[String],
       validateNonDiscriminatedOneOfs: Boolean,
-      objName: String,
       packageReuse: PackageReuseContext
   ): SerdeGenResponse = {
     val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
     val pathSchemas = inlineEndpointSchemas(doc)
-    def circeParentImpl(name: String): Option[String] = if (PackageReuseContext.isReused(name, packageReuse)) {
-      val inheritedImpl = s"${packageReuse.depPkg}.${objName}JsonSerdes"
+    def circeParentImpl(name: String): Option[String] = if (PackageReuseContext.isReusedSchema(name, packageReuse)) {
+      val inheritedImpl = s"${packageReuse.dependencyModelPath}JsonSerdes"
       val uncapitalisedName = RootGenerator.uncapitalise(name)
       val decoderName = s"${uncapitalisedName}JsonDecoder"
       val encoderName = s"${uncapitalisedName}JsonEncoder"
@@ -298,7 +295,6 @@ object JsonSerdeGenerator {
       validateNonDiscriminatedOneOfs: Boolean,
       schemasContainAny: Boolean,
       useCustomJsoniterSerdes: Boolean,
-      objName: String,
       packageReuse: PackageReuseContext
   ): SerdeGenResponse = {
     // if schemas contain an 'any' (i.e. any json), we assume jsoniter-scala-circe is a dependency
@@ -318,7 +314,7 @@ object JsonSerdeGenerator {
     val explicitNonObjTypes = jsonParamRefs.toSeq
       .filter(x => !allSchemas.contains(x) && x != "io.circe.Json")
 
-    lazy val inheritedImpl = s"${packageReuse.depPkg}.${objName}JsonSerdes"
+    lazy val inheritedImpl = s"${packageReuse.dependencyModelPath}JsonSerdes"
     // For jsoniter-scala, we define explicit serdes for any 'primitive' params (e.g. List[java.util.UUID]) that we reference.
     // This should be the set of all json param refs not included in our schema definitions
     val additionalExplicitSerdes = (explicitNonObjTypes.map { s =>
@@ -346,7 +342,7 @@ object JsonSerdeGenerator {
            |""".stripMargin
     val docSchemas = doc.components.toSeq.flatMap(_.schemas)
     val pathSchemas = inlineEndpointSchemas(doc)
-    def jsoniterParentImpl(name: String): Option[Seq[String]] = if (PackageReuseContext.isReused(name, packageReuse)) {
+    def jsoniterParentImpl(name: String): Option[Seq[String]] = if (PackageReuseContext.isReusedSchema(name, packageReuse)) {
       val codecName = getJsoniterName(name)
       Some(Seq(s"implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $inheritedImpl.$codecName"))
     } else None
@@ -358,7 +354,7 @@ object JsonSerdeGenerator {
         // inline objects/arrays/maps to reach enums at any depth, naming each to match the class ClassDefinitionGenerator
         // generates for it.
         val inlinedEnumDefns =
-          if (allTransitiveJsonParamRefs.contains(name) && !PackageReuseContext.isReused(name, packageReuse))
+          if (allTransitiveJsonParamRefs.contains(name) && !PackageReuseContext.isReusedSchema(name, packageReuse))
             collectInlineEnumNames(RootGenerator.addName("", name), o).distinct.map(genJsoniterEnumSerde(useCustomJsoniterSerdes, _))
           else Nil
         val supertypes =
@@ -562,13 +558,12 @@ object JsonSerdeGenerator {
       allTransitiveJsonParamRefs: Set[String],
       validateNonDiscriminatedOneOfs: Boolean,
       targetScala3: Boolean,
-      objName: String,
       packageReuse: PackageReuseContext
   ): SerdeGenResponse = {
     val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
     val pathSchemas = inlineEndpointSchemas(doc)
-    lazy val inheritedImpl = s"${packageReuse.depPkg}.${objName}JsonSerdes"
-    def zioParentImpl(name: String): Option[String] = if (PackageReuseContext.isReused(name, packageReuse)) {
+    lazy val inheritedImpl = s"${packageReuse.dependencyModelPath}JsonSerdes"
+    def zioParentImpl(name: String): Option[String] = if (PackageReuseContext.isReusedSchema(name, packageReuse)) {
       val uncapitalisedName = RootGenerator.uncapitalise(name)
       val codecName = s"${uncapitalisedName}JsonCodec"
       Some(s"implicit lazy val $codecName: zio.json.JsonCodec[$name] = $inheritedImpl.$codecName")
