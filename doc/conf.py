@@ -96,6 +96,8 @@ exclude_patterns = [
     '_build', 'Thumbs.db', '.DS_Store',
     '.venv', 'venv', 'env',
     '**/site-packages/**',
+    '**/node_modules/**',
+    '_templates',
     'requirements.txt',
     'includes/*',
 ]
