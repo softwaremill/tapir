@@ -41,9 +41,13 @@ if os.environ.get("READTHEDOCS", "") == "True":
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['myst_parser', 'sphinx_rtd_theme']
+extensions = ['myst_parser', 'sphinx_rtd_theme', 'sphinx_llms_txt']
 
 myst_enable_extensions = ['attrs_block']
+
+llms_txt_title = "Tapir"
+llms_txt_summary = "Declarative, type-safe web endpoints library for Scala"
+llms_txt_full_file = True
 myst_heading_anchors = 3
 
 # Add any paths that contain templates here, relative to this directory.
@@ -86,7 +90,7 @@ language = 'en'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '.venv']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'default'
