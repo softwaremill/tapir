@@ -18,7 +18,7 @@ object Versions {
   val akkaStreams = "2.6.20"
   val pekkoHttp = "1.3.0"
   val pekkoStreams = "1.6.0"
-  val swaggerUi = "5.32.6"
+  val swaggerUi = "5.32.8"
   val upickle = "4.4.3"
   val upickle3 = "3.3.1"
   val playJson = "3.0.1"
