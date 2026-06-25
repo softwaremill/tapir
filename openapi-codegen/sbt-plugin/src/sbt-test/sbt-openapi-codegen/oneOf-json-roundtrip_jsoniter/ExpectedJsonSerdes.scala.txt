@@ -46,7 +46,7 @@ object TapirGeneratedEndpointsJsonSerdes {
           case (None, next) =>
             in.setMark()
             scala.util.Try(next.asInstanceOf[com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithoutDiscriminator]].decodeValue(in, default))
-              .fold(_ => { in.rollbackToMark(); None }, Some(_))
+              .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(succ) })
         }.getOrElse(throw new RuntimeException("Unable to decode json to untagged ADT type ADTWithoutDiscriminator"))
     }
     def encodeValue(x: ADTWithoutDiscriminator, out: com.github.plokhotnyuk.jsoniter_scala.core.JsonWriter): Unit = x match {

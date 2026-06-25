@@ -49,11 +49,11 @@ class ClassDefinitionGenerator {
         9 -> "obj"
       )
     (0 to 8).foreach(i => if (grouped.getOrElse(i, Nil).size > 1) bail(s"more than one ${tps(i)} variant found"))
-    grouped.getOrElse(9, Nil) match {
-      case Nil                                   =>
-      case h +: Nil                              =>
-      case seq: Seq[OpenapiSchemaRef @unchecked] =>
-        JsonSerdeGenerator.checkForSoundness(schemaName, doc.components.map(_.schemas).getOrElse(Map.empty))(seq)
+    grouped.getOrElse(9, Seq.empty[(OpenapiSchemaSimpleType, Int)]) match {
+      case Nil      =>
+      case h +: Nil =>
+      case seq      =>
+        JsonSerdeGenerator.checkForSoundness(schemaName, doc.components.map(_.schemas).getOrElse(Map.empty))(seq.map(_._1))
     }
     val maxes = grouped.map { case (k, vs) => k -> vs.map(_._2).max }
     (0 to 4).foreach(i =>

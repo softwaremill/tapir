@@ -72,7 +72,9 @@ object JsonSerdeGenerator {
   ///
   /// Helpers
   ///
-  def checkForSoundness(name: String, allSchemas: Map[String, OpenapiSchemaType])(variants: Seq[OpenapiSchemaRef]) = if (variants.size <= 1)
+  def checkForSoundness(name: String, allSchemas: Map[String, OpenapiSchemaType])(variants: Seq[OpenapiSchemaSimpleType]) = if (
+    variants.size <= 1
+  )
     false
   else {
     @tailrec def resolve(variant: OpenapiSchemaRef): OpenapiSchemaType = allSchemas(variant.stripped) match {
@@ -120,12 +122,16 @@ object JsonSerdeGenerator {
       // I think at this point we're ok
       case _ => false
     }
-    val withAllSubsequent = variants.scanRight(Seq.empty[OpenapiSchemaRef])(_ +: _).collect {
+    val withAllSubsequent = variants.scanRight(Seq.empty[OpenapiSchemaSimpleType])(_ +: _).collect {
       case h +: t if t.nonEmpty => (h, t)
+    }
+    def getName(s: OpenapiSchemaSimpleType) = s match {
+      case r: OpenapiSchemaRef => r.name
+      case o                   => o.getClass.getSimpleName
     }
     val problems = withAllSubsequent
       .flatMap { case (variant, fallbacks) => fallbacks.filter(rCanLookLikeL(variant, _)).map(variant -> _) }
-      .map { case (l, r) => s"${l.name} appears before ${r.name}, but a ${r.name} can be a valid ${l.name}" }
+      .map { case (l, r) => s"${getName(l)} appears before ${getName(r)}, but a ${getName(r)} can be a valid ${getName(l)}" }
     if (problems.nonEmpty)
       throw new IllegalArgumentException(problems.mkString(s"Problems in non-discriminated oneOf '$name' declaration: (", "; ", ")"))
   }
@@ -379,6 +385,12 @@ object JsonSerdeGenerator {
         val codecName = getJsoniterName(name)
         Some(Seq(s"implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $inheritedImpl.$codecName"))
       } else None
+
+    val wrappedOneOfNames = resolvableNonClassyOneOfSchemas
+      .filter { case (name, _) => allTransitiveJsonParamRefs.contains(name) }
+      .flatMap(_._2.types.collect { case o: OpenapiSchemaRef => o.name })
+      .toSet
+
     def getSerdeString(name: String, t: OpenapiSchemaType, isJson: Boolean): Seq[String] = (name, t, isJson) match {
       // For standard objects, generate the schema if it's a 'top level' json schema or if it's referenced as a subtype of an ADT without a discriminator
       case (name, o: OpenapiSchemaObject, isJson) =>
@@ -392,11 +404,13 @@ object JsonSerdeGenerator {
           else Nil
         val supertypes =
           adtInheritanceMap.getOrElse(name, Nil).map(allSchemas.apply).collect { case oneOf: OpenapiSchemaOneOf => oneOf }
-        val topLevelDefn =
-          if (isJson || jsonParamRefs.contains(name) || supertypes.exists(_.discriminator.isEmpty))
-            jsoniterParentImpl(name, skipCheck = isJson || supertypes.exists(_.discriminator.isEmpty))
+        val topLevelDefn = {
+          val forceDefn = isJson || supertypes.exists(_.discriminator.isEmpty) || wrappedOneOfNames.contains(name)
+          if (jsonParamRefs.contains(name) || forceDefn) {
+            jsoniterParentImpl(name, skipCheck = forceDefn)
               .getOrElse(Seq(genJsoniterClassSerde(useCustomJsoniterSerdes, supertypes)(name)))
-          else Nil
+          } else Nil
+        }
         topLevelDefn ++ inlinedEnumDefns
       // For named maps and arrays, only generate the schema if it's a 'top level' json schema
       case (name, _: OpenapiSchemaMap, isJson) if jsonParamRefs.contains(name) || isJson =>
@@ -435,7 +449,9 @@ object JsonSerdeGenerator {
          |}
          |""".stripMargin
 
-    val wrappedOneOfSerdes = resolvableNonClassyOneOfSchemas.map { case (name, schema) => generateJsoniterWrappedOneOfSerde(name, schema) }
+    val wrappedOneOfSerdes = resolvableNonClassyOneOfSchemas.collect {
+      case (name, schema) if allTransitiveJsonParamRefs.contains(name) => generateJsoniterWrappedOneOfSerde(name, schema)
+    }
     val serdesDefn = ((docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
       .flatMap { (getSerdeString _).tupled } ++ wrappedOneOfSerdes)
       // an inline enum can be reached by multiple paths (or also be emitted at top level); duplicate decls won't compile
@@ -589,7 +605,7 @@ object JsonSerdeGenerator {
       schema: OpenapiSchemaOneOf
   ): String = {
     val codecName = getJsoniterName(name)
-    val (otherSchemas, refSchemas) = schema.types.partition(_.isInstanceOf[OpenapiSchemaRef])
+    val (refSchemas, otherSchemas) = schema.types.partition(_.isInstanceOf[OpenapiSchemaRef])
     val maybeBoolSchema = otherSchemas.collectFirst { case b: OpenapiSchemaBoolean => b }
     val maybeNumericSchema = otherSchemas.collectFirst { case n: OpenapiSchemaNumericType => n }
     val maybeAnySchema = otherSchemas.collectFirst { case a: OpenapiSchemaAny => a }
@@ -611,33 +627,37 @@ object JsonSerdeGenerator {
          |  scala.util.Try(in.read${s.scalaType}()).fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some($name${s.scalaType}(succ)) })
          |}""".stripMargin
     }.toSeq
-    val doStringDecodes = {
-      val tries = stringSchemas.zipWithIndex
-        .map { case (s, i) =>
-          val (parseImpl, wrapper) = s match {
-            case _: OpenapiSchemaDate     => "java.time.LocalDate.parse(succ)" -> s"${name}Date"
-            case _: OpenapiSchemaDateTime => "java.time.Instant.parse(succ)" -> s"${name}DateTime"
-            case _: OpenapiSchemaDuration => "java.time.Duration.parse(succ)" -> s"${name}Duration"
-            case _: OpenapiSchemaUUID     => "java.util.UUID.fromString(succ)" -> s"${name}UUID"
-            case _                        => "succ" -> s"${name}String"
+    val doStringDecodes =
+      if (stringSchemas.isEmpty) None
+      else {
+        val tries = stringSchemas.zipWithIndex
+          .map { case (s, i) =>
+            val (parseImpl, wrapper) = s match {
+              case _: OpenapiSchemaDate     => "java.time.LocalDate.parse(succ)" -> s"${name}Date"
+              case _: OpenapiSchemaDateTime => "java.time.Instant.parse(succ)" -> s"${name}DateTime"
+              case _: OpenapiSchemaDuration => "java.time.Duration.parse(succ)" -> s"${name}Duration"
+              case _: OpenapiSchemaUUID     => "java.util.UUID.fromString(succ)" -> s"${name}UUID"
+              case _                        => "succ" -> s"${name}String"
+            }
+            if (i == 0) s"Some(scala.util.Try($parseImpl).map($wrapper(_))" else s".orElse(scala.util.Try($parseImpl).map($wrapper(_)))"
           }
-          if (i == 0) s"Some(scala.util.Try($parseImpl).map($wrapper(_))" else s".orElse(scala.util.Try($parseImpl).map($wrapper(_)))"
-        }
-        .mkString("\n        ")
-      s"""() => {
-         |  in.setMark()
-         |  scala.util.Try(in.readString(null))
-         |    .fold(
-         |      _ => { in.rollbackToMark(); None },
-         |      succ => {
-         |        in.resetMark();
-         |        {
-         |          $tries
-         |            .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
-         |        }
-         |      })
-         |}""".stripMargin
-    }.toSeq
+          .mkString("\n        ")
+        val decode =
+          s"""() => {
+           |  in.setMark()
+           |  scala.util.Try(in.readString(null))
+           |    .fold(
+           |      _ => { in.rollbackToMark(); None },
+           |      succ => {
+           |        in.resetMark();
+           |        {
+           |          $tries
+           |            .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
+           |        }
+           |      })
+           |}""".stripMargin
+        Some(decode)
+      }
 
     val doRefDecodes = childNameAndSerde
       .map { case (typeName, serdeName) =>
@@ -669,7 +689,7 @@ object JsonSerdeGenerator {
          |          case (None, next) => next()
          |        }.getOrElse(throw new RuntimeException("Unable to decode json to wrapped oneOf type $name"))
          |    }
-         |    def encodeValue(x: $name, out: JsonWriter): Unit = x match {
+         |    def encodeValue(x: $name, out: $jsoniterPkgCore.JsonWriter): Unit = x match {
          |${indent(6)(doEncode)}
          |    }
          |

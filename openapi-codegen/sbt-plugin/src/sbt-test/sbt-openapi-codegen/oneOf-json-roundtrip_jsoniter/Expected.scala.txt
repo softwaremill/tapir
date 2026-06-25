@@ -113,6 +113,12 @@ object TapirGeneratedEndpoints {
     case object B extends SubtypeWithoutD3E2
     case object C extends SubtypeWithoutD3E2
   }
+  case class Abrdvark (
+    b: Boolean
+  )
+  case class Acrdvark (
+    c: Boolean
+  )
   case class Category (
     id: Option[Long] = None,
     name: Option[String] = None
@@ -169,6 +175,14 @@ object TapirGeneratedEndpoints {
   )
   type ListType = List[ByteString]
   type SomeBinaryType = io.circe.JsonObject
+  sealed trait Aardvark
+  case class AardvarkUUID(v: java.util.UUID) extends Aardvark
+  case class AardvarkDate(v: java.time.LocalDate) extends Aardvark
+  case class AardvarkDateTime(v: java.time.Instant) extends Aardvark
+  case class AardvarkDuration(v: java.time.Duration) extends Aardvark
+  case class AardvarkDouble(v: Double) extends Aardvark
+  case class AardvarkAbrdvark(v: Abrdvark) extends Aardvark
+  case class AardvarkAcrdvark(v: Acrdvark) extends Aardvark
   sealed trait GetRedirectTestResponseHeader
   case class GetRedirectTestResponseHeader307(redirectHeader: String) extends GetRedirectTestResponseHeader
   case object GetRedirectTestResponseHeader204 extends GetRedirectTestResponseHeader
