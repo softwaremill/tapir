@@ -18,7 +18,6 @@ import sttp.tapir.generated.chain.leaf.TapirGeneratedEndpoints.{LegacyPet => Cha
 import sttp.tapir.generated.shared.a.TapirGeneratedEndpoints.{Holder => SharedHolderA, Widget => SharedWidgetA}
 import sttp.tapir.generated.shared.b.TapirGeneratedEndpoints.{Container => SharedContainerB, Widget => SharedWidgetB}
 
-import sttp.tapir.generated.merge.TapirGeneratedEndpoints.{Alpha, Beta, Gamma}
 import sttp.tapir.generated.inline.pet.TapirGeneratedEndpoints.{Pet => InlinePet}
 
 /** Positive compile-time checks: reuse assignments that must typecheck when aliasing works. */
@@ -65,10 +64,6 @@ object Main extends App {
   val holderA: SharedHolderA = SharedHolderA(coreWidget)
   val containerB: SharedContainerB = SharedContainerB(sharedWidgetA)
 
-  val alpha: Alpha = Alpha("x")
-  val beta: Beta = Beta(1)
-  val gamma: Gamma = Gamma(alpha, beta)
-
   val inlinePet: InlinePet = corePet
 
   println(Seq(
@@ -77,7 +72,6 @@ object Main extends App {
     coreOrder,
     v1Order,
     reuseAllOrder,
-    gamma,
     coreDog,
     coreCat
   ).mkString("\n"))

@@ -45,8 +45,6 @@ lazy val root = (project in file("."))
         // multiple consumers of same core type
         "sttp.tapir.generated.shared.a" -> (specs / "shared_consumer_a.yaml"),
         "sttp.tapir.generated.shared.b" -> (specs / "shared_consumer_b.yaml"),
-        // directory merge (no package dependency)
-        "sttp.tapir.generated.merge" -> (specs / "merge"),
         // inline body vs named schema
         "sttp.tapir.generated.inline.pet" -> (specs / "inline_pet.yaml")
       )

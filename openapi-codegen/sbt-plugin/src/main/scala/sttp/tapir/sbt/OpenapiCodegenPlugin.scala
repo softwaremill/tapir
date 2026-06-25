@@ -28,15 +28,18 @@ object OpenapiCodegenPlugin extends AutoPlugin {
         val hashFile = cacheDir / "tapir-config-hash"
         hashFile.delete()
         java.nio.file.Files.write(hashFile.toPath, configHash)
-        val inputFiles = allInputFiles(c).filter(_.exists()).toSet + hashFile
+        val swaggerFiles = (c.swaggerFile +: c.additionalPackages.map(_._2)).filter(_.exists()).toSet + hashFile
         FileFunction
           .cached(cacheDir / s"scala-$sv" / "openapi-inputs", FileInfo.hash) { _ =>
             log.info("Generating OpenAPI sources...")
             codegen(c, srcDir, sv).toSet
-          }(inputFiles)
+          }(swaggerFiles)
           .toSeq
       }.value,
-      generateTapirDefinitions / fileInputs ++= allInputFiles(openapiOpenApiConfiguration.value).map(f => Glob(f.toPath)),
+      generateTapirDefinitions / fileInputs ++= {
+        (openapiSwaggerFile.value +: openapiAdditionalPackages.value.map(_._2))
+          .map(f => Glob(f.toPath))
+      },
       sourceGenerators += generateTapirDefinitions.taskValue
     )
   )
@@ -75,17 +78,6 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiUseCustomJsoniterSerdes := false,
     standardParamSetting
   )
-
-  private def allInputFiles(c: OpenApiConfiguration): Seq[File] = {
-    val declared = (c.swaggerFile +: c.additionalPackages.map(_._2)).filter(_.exists())
-    declared.flatMap(listInputFiles)
-  }
-
-  private def listInputFiles(file: File): Seq[File] =
-    if (!file.exists()) Nil
-    else if (file.isDirectory)
-      Option(file.listFiles()).getOrElse(Array.empty[File]).toSeq.flatMap(listInputFiles)
-    else Seq(file)
 
   private def codegen(c: OpenApiConfiguration, srcDir: File, sv: String): Seq[File] = {
     val packageToFile = packageFileMapping(c)
