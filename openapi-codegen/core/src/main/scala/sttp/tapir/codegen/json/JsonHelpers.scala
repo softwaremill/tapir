@@ -19,9 +19,8 @@ import scala.annotation.tailrec
 
 object JsonHelpers {
 
-  ///
-  /// Helpers
-  ///
+  // Checks whether deserialization of this seq can be achieved just by iterating through the candidates.
+  // Returns false if empty, true if valid, and throws if non-empty and containing issues.
   def checkForSoundness(name: String, allSchemas: Map[String, OpenapiSchemaType])(variants: Seq[OpenapiSchemaSimpleType]) = if (
     variants.size <= 1
   )

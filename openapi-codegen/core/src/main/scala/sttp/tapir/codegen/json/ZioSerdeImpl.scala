@@ -27,9 +27,6 @@ import sttp.tapir.codegen.util.NameHelpers.{indent, uncapitalise}
 
 object ZioSerdeImpl {
 
-  ///
-  /// Zio
-  ///
   private[json] def genZioSerdes(
       doc: OpenapiDocument,
       allSchemas: Map[String, OpenapiSchemaType],

@@ -27,9 +27,6 @@ import sttp.tapir.codegen.util.NameHelpers.{addName, indent, uncapitalise}
 
 object JsoniterSerdeImpl {
 
-  ///
-  /// Jsoniter
-  ///
   private val jsoniterPkgRoot = "com.github.plokhotnyuk.jsoniter_scala"
   private val jsoniterPkgCore = s"$jsoniterPkgRoot.core"
   private val jsoniterPkgMacros = s"$jsoniterPkgRoot.macros"

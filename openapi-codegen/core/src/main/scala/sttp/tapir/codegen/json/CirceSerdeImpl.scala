@@ -27,9 +27,6 @@ import sttp.tapir.codegen.util.NameHelpers.{indent, uncapitalise}
 
 object CirceSerdeImpl {
 
-  ///
-  /// Circe
-  ///
   private[json] def genCirceSerdes(
       doc: OpenapiDocument,
       allSchemas: Map[String, OpenapiSchemaType],
