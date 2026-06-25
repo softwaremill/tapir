@@ -7,6 +7,7 @@ import io.circe.generic.auto._
 import org.scalatest.Succeeded
 import org.scalatest.matchers.should.Matchers._
 import scala.util.Properties
+import scala.util.control.NonFatal
 import sttp.client4._
 import sttp.model._
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
@@ -908,7 +909,11 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
             files <- optFiles
             file <- files.filter(_.isFile)
           } {
-            val txt = java.nio.file.Files.readString(file.toPath)
+            // The file may be deleted concurrently by another test/backend between listing and reading; treat a
+            // missing/unreadable file as already cleaned up rather than failing the test.
+            val txt =
+              try java.nio.file.Files.readString(file.toPath)
+              catch { case NonFatal(_) => "" }
             if (txt.startsWith(tooLargeMarker)) {
               fail(s"File has not be deleted after ${StatusCode.PayloadTooLarge} error: ${file.getAbsolutePath}")
             }

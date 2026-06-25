@@ -49,12 +49,13 @@ private[pekkohttp] class PekkoRequestBody(serverOptions: PekkoHttpServerOptions)
           .flatMap(file =>
             body.dataBytes
               .runWith(FileIO.toPath(file.toPath))
-              .recoverWith {
-                // We need to dig out EntityStreamSizeException from an external wrapper applied by FileIO sink
-                case e: Exception if e.getCause.isInstanceOf[EntityStreamSizeException] =>
-                  serverOptions.deleteFile(file).flatMap { _ =>
-                    Future.failed(e.getCause)
-                  }
+              .recoverWith { case e: Exception =>
+                // Any mid-stream failure leaves a partially-written temp file behind, so always delete it
+                serverOptions.deleteFile(file).flatMap { _ =>
+                  // We need to dig out EntityStreamSizeException from an external wrapper applied by FileIO sink
+                  if (e.getCause.isInstanceOf[EntityStreamSizeException]) Future.failed(e.getCause)
+                  else Future.failed(e)
+                }
               }
               .map(_ => FileRange(file))
               .map(f => RawValue(f, Seq(f)))
