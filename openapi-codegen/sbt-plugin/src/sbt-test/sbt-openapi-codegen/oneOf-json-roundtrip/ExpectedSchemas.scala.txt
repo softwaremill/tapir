@@ -1,15 +1,18 @@
 package sttp.tapir.generated
 
+
 object TapirGeneratedEndpointsSchemas {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
   implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)
+  implicit lazy val abrdvarkTapirSchema: sttp.tapir.Schema[Abrdvark] = sttp.tapir.Schema.derived
+  implicit lazy val acrdvarkTapirSchema: sttp.tapir.Schema[Acrdvark] = sttp.tapir.Schema.derived
   implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derived
   implicit lazy val hasBarTapirSchema: sttp.tapir.Schema[HasBar] = sttp.tapir.Schema.derived
   implicit lazy val hasBazTapirSchema: sttp.tapir.Schema[HasBaz] = sttp.tapir.Schema.derived
   implicit lazy val hasFooTapirSchema: sttp.tapir.Schema[HasFoo] = sttp.tapir.Schema.derived
   implicit lazy val hasFooBarBazQuuxTapirSchema: sttp.tapir.Schema[HasFooBarBazQuux] = sttp.tapir.Schema.derived
-
+  
   implicit lazy val notFoundErrorTapirSchema: sttp.tapir.Schema[NotFoundError] = sttp.tapir.Schema.derived
   implicit lazy val notNullableThingyTapirSchema: sttp.tapir.Schema[NotNullableThingy] = sttp.tapir.Schema.derived
   implicit lazy val nullableThingyTapirSchema: sttp.tapir.Schema[NullableThingy] = sttp.tapir.Schema.derived
@@ -56,6 +59,7 @@ object TapirGeneratedEndpointsSchemas {
       case _ => throw new IllegalStateException("Derived schema for ADTWithDiscriminatorNoMapping should be a coproduct")
     }
   }
+  implicit lazy val aardvarkTapirSchema: sttp.tapir.Schema[Aardvark] = sttp.tapir.Schema.derived
   implicit lazy val anyObjectWithInlineEnumTapirSchema: sttp.tapir.Schema[AnyObjectWithInlineEnum] = sttp.tapir.Schema.derived
   implicit lazy val errorTapirSchema: sttp.tapir.Schema[Error] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD3TapirSchema: sttp.tapir.Schema[SubtypeWithoutD3] = sttp.tapir.Schema.derived

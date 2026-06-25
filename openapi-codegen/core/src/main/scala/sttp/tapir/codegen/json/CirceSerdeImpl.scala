@@ -7,13 +7,21 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaArray,
+  OpenapiSchemaBoolean,
+  OpenapiSchemaDate,
+  OpenapiSchemaDateTime,
+  OpenapiSchemaDuration,
   OpenapiSchemaEnum,
   OpenapiSchemaField,
   OpenapiSchemaMap,
+  OpenapiSchemaNumericType,
   OpenapiSchemaObject,
   OpenapiSchemaOneOf,
   OpenapiSchemaRef,
-  OpenapiSchemaSimpleType
+  OpenapiSchemaSimpleType,
+  OpenapiSchemaString,
+  OpenapiSchemaStringType,
+  OpenapiSchemaUUID
 }
 import sttp.tapir.codegen.util.NameHelpers.{indent, uncapitalise}
 
@@ -65,7 +73,12 @@ object CirceSerdeImpl {
         case (name, schema: OpenapiSchemaArray, true) =>
           circeParentImpl(name) orElse Some(genCirceMapOrArraySerde(name, schema.items))
         case (name, schema: OpenapiSchemaOneOf, true) =>
-          circeParentImpl(name) orElse Some(genCirceAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
+          circeParentImpl(name) orElse Some(
+            if (schema.types.exists(!_.isInstanceOf[OpenapiSchemaRef]))
+              genCirceWrappedOneOfSerde(name, schema)
+            else
+              genCirceAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs)
+          )
         case (
               _,
               _: OpenapiSchemaObject | _: OpenapiSchemaArray | _: OpenapiSchemaMap | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf |
@@ -171,5 +184,74 @@ object CirceSerdeImpl {
            |${indent(4)(decoders)}
            |  ).reduceLeft(_ or _)""".stripMargin
     }
+  }
+
+  private def genCirceWrappedOneOfSerde(
+      name: String,
+      schema: OpenapiSchemaOneOf
+  ): String = {
+    val uncapitalisedName = uncapitalise(name)
+    val (refSchemas, otherSchemas) = schema.types.partition(_.isInstanceOf[OpenapiSchemaRef])
+    val maybeBoolSchema = otherSchemas.collectFirst { case b: OpenapiSchemaBoolean => b }
+    val maybeNumericSchema = otherSchemas.collectFirst { case n: OpenapiSchemaNumericType => n }
+    val maybeAnySchema = otherSchemas.collectFirst { case a: OpenapiSchemaAny => a }
+    val stringSchemas = otherSchemas.collect { case a: OpenapiSchemaStringType => a }
+
+    val childNameAndSerde = refSchemas.map { case ref: OpenapiSchemaRef =>
+      val typeName = ref.stripped
+      typeName -> s"${uncapitalise(typeName)}JsonDecoder"
+    }
+    val doBoolDecode = maybeBoolSchema.map { _ =>
+      s"io.circe.Decoder[Boolean].map(${name}Boolean(_)).asInstanceOf[io.circe.Decoder[$name]]"
+    }.toSeq
+    val doNumericDecode = maybeNumericSchema.map { s =>
+      s"io.circe.Decoder[${s.scalaType}].map($name${s.scalaType}(_)).asInstanceOf[io.circe.Decoder[$name]]"
+    }.toSeq
+    val doStringDecodes =
+      if (stringSchemas.isEmpty) None
+      else {
+        val tries = stringSchemas.zipWithIndex
+          .map { case (s, i) =>
+            val (parseImpl, wrapper) = s match {
+              case _: OpenapiSchemaDate     => "java.time.LocalDate.parse(succ)" -> s"${name}Date"
+              case _: OpenapiSchemaDateTime => "java.time.Instant.parse(succ)" -> s"${name}DateTime"
+              case _: OpenapiSchemaDuration => "java.time.Duration.parse(succ)" -> s"${name}Duration"
+              case _: OpenapiSchemaUUID     => "java.util.UUID.fromString(succ)" -> s"${name}UUID"
+              case _                        => "succ" -> s"${name}String"
+            }
+            if (i == 0) s"scala.util.Try($parseImpl).map($wrapper(_))" else s".orElse(scala.util.Try($parseImpl).map($wrapper(_)))"
+          }
+          .mkString("\n        ")
+        val decode =
+          s"""io.circe.Decoder[String].emap { succ =>
+             |  $tries
+             |    .toEither.left.map(_ => "unable to parse string to acceptable type")
+             |}.asInstanceOf[io.circe.Decoder[$name]]""".stripMargin
+        Some(decode)
+      }
+    val doRefDecodes = childNameAndSerde.map { case (typeName, decoderName) =>
+      s"io.circe.Decoder[$typeName].map($name${typeName.capitalize}(_)).asInstanceOf[io.circe.Decoder[$name]]"
+    }
+    val doAnyDecode = maybeAnySchema.map { _ =>
+      s"io.circe.Decoder[io.circe.Json].map(${name}Json(_)).asInstanceOf[io.circe.Decoder[$name]]"
+    }.toSeq
+    val decoders = (doBoolDecode ++ doNumericDecode ++ doStringDecodes ++ doRefDecodes ++ doAnyDecode).mkString(",\n    ")
+    val encoders =
+      (maybeBoolSchema.map { _ => s"case x: ${name}Boolean => io.circe.Encoder[Boolean].apply(x.v)" }.toSeq ++
+        maybeNumericSchema.map { s => s"case x: $name${s.scalaType} => io.circe.Encoder[${s.scalaType}].apply(x.v)" }.toSeq ++
+        maybeAnySchema.map { _ => s"case x: ${name}Json => io.circe.Encoder[io.circe.Json].apply(x.v)" }.toSeq ++
+        stringSchemas.map {
+          case s: OpenapiSchemaString => s"case x: ${name}String => io.circe.Encoder[String].apply(x.v)"
+          case s                      =>
+            s"case x: ${name}${s.disambiguationSuffix} => io.circe.Encoder[String].apply(x.v.toString)"
+        } ++
+        childNameAndSerde.map { case (subName, _) => s"case x: $name${subName} => io.circe.Encoder[$subName].apply(x.v)" }).mkString("\n    ")
+    s"""implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.Encoder.instance {
+       |    $encoders
+       |  }
+       |  implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] =
+       |    List[io.circe.Decoder[$name]](
+       |    $decoders
+       |    ).reduceLeft(_ or _)""".stripMargin
   }
 }

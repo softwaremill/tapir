@@ -7,7 +7,8 @@ object TapirGeneratedEndpointsJsonSerdes {
     zio.json.JsonEncoder[String].contramap[ByteString](java.util.Base64.getEncoder.encodeToString),
     zio.json.JsonDecoder[String].mapOrFail(s => scala.util.Try(java.util.Base64.getDecoder.decode(s)).toEither.map(toByteString).left.map(error => error.getMessage)),
   )
-
+  
+  
   implicit lazy val anEnumJsonCodec: zio.json.JsonCodec[AnEnum] = zio.json.JsonCodec[AnEnum](
     zio.json.JsonEncoder[String].contramap[AnEnum](_.entryName),
     zio.json.JsonDecoder[String].mapOrFail(name => AnEnum.withNameEither(name).left.map(error => error.getMessage)),
@@ -59,6 +60,34 @@ object TapirGeneratedEndpointsJsonSerdes {
       zio.json.JsonDecoder[SubtypeWithoutD2].asInstanceOf[zio.json.JsonDecoder[ADTWithoutDiscriminator]],
       zio.json.JsonDecoder[SubtypeWithoutD3].asInstanceOf[zio.json.JsonDecoder[ADTWithoutDiscriminator]]
     ).reduceLeft(_ orElse _)
+  implicit lazy val aardvarkJsonEncoder: zio.json.JsonEncoder[Aardvark] = new zio.json.JsonEncoder[Aardvark] {
+      override def unsafeEncode(v: Aardvark, indent: Option[Int], out: zio.json.internal.Write): Unit = v match {
+        case x: AardvarkDouble => zio.json.JsonEncoder[Double].unsafeEncode(x.v, indent, out)
+        case x: AardvarkUUID => zio.json.JsonEncoder[String].unsafeEncode(x.v.toString, indent, out)
+        case x: AardvarkDate => zio.json.JsonEncoder[String].unsafeEncode(x.v.toString, indent, out)
+        case x: AardvarkDateTime => zio.json.JsonEncoder[String].unsafeEncode(x.v.toString, indent, out)
+        case x: AardvarkDuration => zio.json.JsonEncoder[String].unsafeEncode(x.v.toString, indent, out)
+        case x: AardvarkAbrdvark => zio.json.JsonEncoder[Abrdvark].unsafeEncode(x.v, indent, out)
+        case x: AardvarkAcrdvark => zio.json.JsonEncoder[Acrdvark].unsafeEncode(x.v, indent, out)
+      }
+    }
+    implicit lazy val aardvarkJsonDecoder: zio.json.JsonDecoder[Aardvark] =
+      List[zio.json.JsonDecoder[Aardvark]](
+      zio.json.JsonDecoder[Double].map(AardvarkDouble(_)).asInstanceOf[zio.json.JsonDecoder[Aardvark]],
+      zio.json.JsonDecoder[String].mapOrFail { succ =>
+    scala.util.Try(java.util.UUID.fromString(succ)).map(AardvarkUUID(_))
+          .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
+          .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
+          .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
+      .toEither.left.map(_.getMessage)
+  }.asInstanceOf[zio.json.JsonDecoder[Aardvark]],
+      zio.json.JsonDecoder[Abrdvark].map(AardvarkAbrdvark(_)).asInstanceOf[zio.json.JsonDecoder[Aardvark]],
+      zio.json.JsonDecoder[Acrdvark].map(AardvarkAcrdvark(_)).asInstanceOf[zio.json.JsonDecoder[Aardvark]]
+      ).reduceLeft(_ orElse _)
+  implicit lazy val abrdvarkJsonDecoder: zio.json.JsonDecoder[Abrdvark] = zio.json.DeriveJsonDecoder.gen[Abrdvark]
+  implicit lazy val abrdvarkJsonEncoder: zio.json.JsonEncoder[Abrdvark] = zio.json.DeriveJsonEncoder.gen[Abrdvark]
+  implicit lazy val acrdvarkJsonDecoder: zio.json.JsonDecoder[Acrdvark] = zio.json.DeriveJsonDecoder.gen[Acrdvark]
+  implicit lazy val acrdvarkJsonEncoder: zio.json.JsonEncoder[Acrdvark] = zio.json.DeriveJsonEncoder.gen[Acrdvark]
   implicit lazy val hasASetJsonDecoder: zio.json.JsonDecoder[HasASet] = zio.json.DeriveJsonDecoder.gen[HasASet]
   implicit lazy val hasASetJsonEncoder: zio.json.JsonEncoder[HasASet] = zio.json.DeriveJsonEncoder.gen[HasASet]
   implicit lazy val postInlineSimpleObjectRequestJsonDecoder: zio.json.JsonDecoder[PostInlineSimpleObjectRequest] = zio.json.DeriveJsonDecoder.gen[PostInlineSimpleObjectRequest]

@@ -153,6 +153,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HasASet'
+  '/wrapped-one-of':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Aardvark'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aardvark'
 
 components:
   schemas:
@@ -281,3 +295,31 @@ components:
           uniqueItems: true
           items:
             type: integer
+    Aardvark:
+      oneOf:
+        - type: string
+          format: uuid
+        - type: string
+          format: date
+        - type: string
+          format: date-time
+        - type: string
+          format: duration
+        - type: number
+          format: double
+        - $ref: '#/components/schemas/Abrdvark'
+        - $ref: '#/components/schemas/Acrdvark'
+    Abrdvark:
+      type: object
+      required:
+        - b
+      properties:
+        b:
+          type: boolean
+    Acrdvark:
+      type: object
+      required:
+        - c
+      properties:
+        c:
+          type: boolean

@@ -5,14 +5,23 @@ import sttp.tapir.codegen.json.JsonHelpers.{checkForSoundness, inlineEndpointSch
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaAny,
   OpenapiSchemaArray,
+  OpenapiSchemaBoolean,
+  OpenapiSchemaDate,
+  OpenapiSchemaDateTime,
+  OpenapiSchemaDuration,
   OpenapiSchemaEnum,
   OpenapiSchemaField,
   OpenapiSchemaMap,
+  OpenapiSchemaNumericType,
   OpenapiSchemaObject,
   OpenapiSchemaOneOf,
   OpenapiSchemaRef,
-  OpenapiSchemaSimpleType
+  OpenapiSchemaSimpleType,
+  OpenapiSchemaString,
+  OpenapiSchemaStringType,
+  OpenapiSchemaUUID
 }
 import sttp.tapir.codegen.util.NameHelpers.{indent, uncapitalise}
 
@@ -53,7 +62,12 @@ object ZioSerdeImpl {
         case (name, schema: OpenapiSchemaArray, true) =>
           zioParentImpl(name) orElse Some(genZioMapOrArraySerde(name, schema.items))
         case (name, schema: OpenapiSchemaOneOf, true) =>
-          zioParentImpl(name) orElse Some(genZioAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs))
+          zioParentImpl(name) orElse Some(
+            if (schema.types.exists(!_.isInstanceOf[OpenapiSchemaRef]))
+              genZioWrappedOneOfSerde(name, schema)
+            else
+              genZioAdtSerde(allSchemas, schema, name, validateNonDiscriminatedOneOfs)
+          )
         case (_, _: OpenapiSchemaObject | _: OpenapiSchemaMap | _: OpenapiSchemaArray | _: OpenapiSchemaEnum | _: OpenapiSchemaOneOf, _) =>
           None
         case (_, t: OpenapiSchemaSimpleType, _) if !t.isInstanceOf[OpenapiSchemaRef] => None
@@ -173,5 +187,78 @@ object ZioSerdeImpl {
            |${indent(4)(decoders)}
            |  ).reduceLeft(_ orElse _)""".stripMargin
     }
+  }
+
+  private def genZioWrappedOneOfSerde(
+      name: String,
+      schema: OpenapiSchemaOneOf
+  ): String = {
+    val uncapitalisedName = uncapitalise(name)
+    val (refSchemas, otherSchemas) = schema.types.partition(_.isInstanceOf[OpenapiSchemaRef])
+    val maybeBoolSchema = otherSchemas.collectFirst { case b: OpenapiSchemaBoolean => b }
+    val maybeNumericSchema = otherSchemas.collectFirst { case n: OpenapiSchemaNumericType => n }
+    val maybeAnySchema = otherSchemas.collectFirst { case a: OpenapiSchemaAny => a }
+    if (maybeAnySchema.isDefined)
+      throw new NotImplementedError(s"any not implemented for zio-json in wrapped oneOf type $name")
+    val stringSchemas = otherSchemas.collect { case a: OpenapiSchemaStringType => a }
+
+    val childNameAndSerde = refSchemas.map { case ref: OpenapiSchemaRef =>
+      val typeName = ref.stripped
+      typeName -> s"${uncapitalise(typeName)}JsonDecoder"
+    }
+    val doBoolDecode = maybeBoolSchema.map { _ =>
+      s"zio.json.JsonDecoder[Boolean].map(${name}Boolean(_)).asInstanceOf[zio.json.JsonDecoder[$name]]"
+    }.toSeq
+    val doNumericDecode = maybeNumericSchema.map { s =>
+      s"zio.json.JsonDecoder[${s.scalaType}].map($name${s.scalaType}(_)).asInstanceOf[zio.json.JsonDecoder[$name]]"
+    }.toSeq
+    val doStringDecodes =
+      if (stringSchemas.isEmpty) None
+      else {
+        val tries = stringSchemas.zipWithIndex
+          .map { case (s, i) =>
+            val (parseImpl, wrapper) = s match {
+              case _: OpenapiSchemaDate     => "java.time.LocalDate.parse(succ)" -> s"${name}Date"
+              case _: OpenapiSchemaDateTime => "java.time.Instant.parse(succ)" -> s"${name}DateTime"
+              case _: OpenapiSchemaDuration => "java.time.Duration.parse(succ)" -> s"${name}Duration"
+              case _: OpenapiSchemaUUID     => "java.util.UUID.fromString(succ)" -> s"${name}UUID"
+              case _                        => "succ" -> s"${name}String"
+            }
+            if (i == 0) s"scala.util.Try($parseImpl).map($wrapper(_))" else s".orElse(scala.util.Try($parseImpl).map($wrapper(_)))"
+          }
+          .mkString("\n        ")
+        val decode =
+          s"""zio.json.JsonDecoder[String].mapOrFail { succ =>
+             |  $tries
+             |    .toEither.left.map(_.getMessage)
+             |}.asInstanceOf[zio.json.JsonDecoder[$name]]""".stripMargin
+        Some(decode)
+      }
+    val doRefDecodes = childNameAndSerde.map { case (typeName, _) =>
+      s"zio.json.JsonDecoder[$typeName].map($name${typeName.capitalize}(_)).asInstanceOf[zio.json.JsonDecoder[$name]]"
+    }
+    val decoders = (doBoolDecode ++ doNumericDecode ++ doStringDecodes ++ doRefDecodes).mkString(",\n    ")
+    val encoders =
+      (maybeBoolSchema.map { _ => s"case x: ${name}Boolean => zio.json.JsonEncoder[Boolean].unsafeEncode(x.v, indent, out)" }.toSeq ++
+        maybeNumericSchema.map { s =>
+          s"case x: $name${s.scalaType} => zio.json.JsonEncoder[${s.scalaType}].unsafeEncode(x.v, indent, out)"
+        }.toSeq ++
+        stringSchemas.map {
+          case s: OpenapiSchemaString => s"case x: ${name}String => zio.json.JsonEncoder[String].unsafeEncode(x.v, indent, out)"
+          case s                      =>
+            s"case x: ${name}${s.disambiguationSuffix} => zio.json.JsonEncoder[String].unsafeEncode(x.v.toString, indent, out)"
+        } ++
+        childNameAndSerde.map { case (subName, _) =>
+          s"case x: $name${subName} => zio.json.JsonEncoder[$subName].unsafeEncode(x.v, indent, out)"
+        }).mkString("\n      ")
+    s"""implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = new zio.json.JsonEncoder[$name] {
+       |    override def unsafeEncode(v: $name, indent: Option[Int], out: zio.json.internal.Write): Unit = v match {
+       |      $encoders
+       |    }
+       |  }
+       |  implicit lazy val ${uncapitalisedName}JsonDecoder: zio.json.JsonDecoder[$name] =
+       |    List[zio.json.JsonDecoder[$name]](
+       |    $decoders
+       |    ).reduceLeft(_ orElse _)""".stripMargin
   }
 }

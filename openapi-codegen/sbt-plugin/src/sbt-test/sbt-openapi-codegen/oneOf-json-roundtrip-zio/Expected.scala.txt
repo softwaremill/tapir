@@ -8,12 +8,14 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generic.auto._
   import sttp.tapir.json.zio._
   import zio.json._
-
+  
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
 
 
-
+  
+  
+  
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -57,7 +59,7 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
-
+  
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] {
     val values = findValues
@@ -65,6 +67,12 @@ object TapirGeneratedEndpoints {
     case object Bar extends AnEnum
     case object Baz extends AnEnum
   }
+  case class Abrdvark (
+    b: Boolean
+  )
+  case class Acrdvark (
+    c: Boolean
+  )
   case class HasASet (
     setA: Set[String],
     setB: Option[Set[Int]] = None
@@ -98,6 +106,14 @@ object TapirGeneratedEndpoints {
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
   type ListType = List[String]
+  sealed trait Aardvark
+  case class AardvarkUUID(v: java.util.UUID) extends Aardvark
+  case class AardvarkDate(v: java.time.LocalDate) extends Aardvark
+  case class AardvarkDateTime(v: java.time.Instant) extends Aardvark
+  case class AardvarkDuration(v: java.time.Duration) extends Aardvark
+  case class AardvarkDouble(v: Double) extends Aardvark
+  case class AardvarkAbrdvark(v: Abrdvark) extends Aardvark
+  case class AardvarkAcrdvark(v: Acrdvark) extends Aardvark
   case class PutInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -120,7 +136,7 @@ object TapirGeneratedEndpoints {
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
-
+  
   type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
   lazy val postAdtTest: PostAdtTestEndpoint =
     endpoint
@@ -128,7 +144,7 @@ object TapirGeneratedEndpoints {
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
-
+  
   type PutInlineSimpleObjectEndpoint = Endpoint[Unit, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
@@ -139,14 +155,14 @@ object TapirGeneratedEndpoints {
         oneOfVariant[Array[Byte]](sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position")),
         oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2"))))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
-
+  
   type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, Unit, Any]
   lazy val postInlineSimpleObject: PostInlineSimpleObjectEndpoint =
     endpoint
       .post
       .in(("inline" / "simple" / "object"))
       .in(jsonBody[Option[PostInlineSimpleObjectRequest]])
-
+  
   type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
   lazy val deleteInlineSimpleObject: DeleteInlineSimpleObjectEndpoint =
     endpoint
@@ -158,7 +174,7 @@ object TapirGeneratedEndpoints {
       .out(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2"))(())))
-
+  
   type PatchInlineSimpleObjectEndpoint = Endpoint[Unit, Option[ListType], ListType, ListType, Any]
   lazy val patchInlineSimpleObject: PatchInlineSimpleObjectEndpoint =
     endpoint
@@ -167,7 +183,7 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[ListType]].description("list type in"))
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
-
+  
   type PostUniqueItemsEndpoint = Endpoint[Unit, Option[HasASet], Unit, HasASet, Any]
   lazy val postUniqueItems: PostUniqueItemsEndpoint =
     endpoint
@@ -175,15 +191,23 @@ object TapirGeneratedEndpoints {
       .in(("unique-items"))
       .in(jsonBody[Option[HasASet]])
       .out(jsonBody[HasASet].description("OK"))
-
-
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postUniqueItems)
-
-
+  
+  type PostWrappedOneOfEndpoint = Endpoint[Unit, Option[Aardvark], Unit, Aardvark, Any]
+  lazy val postWrappedOneOf: PostWrappedOneOfEndpoint =
+    endpoint
+      .post
+      .in(("wrapped-one-of"))
+      .in(jsonBody[Option[Aardvark]])
+      .out(jsonBody[Aardvark].description("OK"))
+  
+  
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postUniqueItems, postWrappedOneOf)
+  
+  
   object Servers {
     import sttp.model.Uri.UriContext
-
+  
     val `/v3`: sttp.model.Uri = uri"/v3"
-
+  
   }
 }
