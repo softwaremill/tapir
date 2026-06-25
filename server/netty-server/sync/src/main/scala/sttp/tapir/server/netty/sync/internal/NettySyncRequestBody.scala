@@ -22,6 +22,7 @@ import java.nio.file.Files
 
 private[sync] class NettySyncRequestBody(
     val createFile: ServerRequest => TapirFile,
+    val deleteFile: TapirFile => Unit,
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
 ) extends NettyRequestBody[Identity, OxStreams]:
@@ -62,9 +63,14 @@ private[sync] class NettySyncRequestBody(
   }
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =
-    serverRequest.underlying match
-      case r: StreamedHttpRequest => FileWriterSubscriber.processAllBlocking(r, file.toPath, maxBytes)
-      case _                      => () // Empty request
+    try
+      serverRequest.underlying match
+        case r: StreamedHttpRequest => FileWriterSubscriber.processAllBlocking(r, file.toPath, maxBytes)
+        case _                      => ()     // Empty request
+    catch
+      case e =>
+        deleteFile(file)
+        throw e
 
   override def writeBytesToFile(bytes: Array[Byte], file: TapirFile): Unit = Files.write(file.toPath, bytes): Unit
 

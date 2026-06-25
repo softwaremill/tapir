@@ -16,6 +16,7 @@ import scala.concurrent.Future
 
 private[cats] class NettyCatsRequestBody[F[_]: Async](
     val createFile: ServerRequest => F[TapirFile],
+    val deleteFile: TapirFile => F[Unit],
     val streamCompatible: StreamCompatible[Fs2Streams[F]],
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
@@ -32,9 +33,9 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
   override def publisherToBytes(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): F[Array[Byte]] =
     streamCompatible.fromPublisher(publisher, maxBytes).compile.to(Chunk).map(_.toArray[Byte])
 
-  override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit] =
-    (toStream(serverRequest, maxBytes)
-      .asInstanceOf[streamCompatible.streams.BinaryStream])
+  override protected def writeToFileUnsafe(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit] =
+    toStream(serverRequest, maxBytes)
+      .asInstanceOf[streamCompatible.streams.BinaryStream]
       .through(
         Files[F](Files.forAsync[F]).writeAll(Path.fromNioPath(file.toPath))
       )

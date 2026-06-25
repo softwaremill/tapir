@@ -35,6 +35,7 @@ trait NettyCatsServerInterpreter[F[_]] {
       FilterServerEndpoints(ses),
       new NettyCatsRequestBody(
         createFile,
+        deleteFile,
         Fs2StreamCompatible[F](nettyServerOptions.dispatcher),
         nettyServerOptions.multipartTempDirectory,
         nettyServerOptions.multipartMinSizeForDisk
