@@ -426,6 +426,7 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     testCase(AardvarkDate(LocalDate.now()))
     testCase(AardvarkDateTime(Instant.now()))
     testCase(AardvarkDuration(Duration.ofMillis(1234566)))
+    testCase(AardvarkString("asd"))
     testCase(AardvarkDouble(1.23d))
     testCase(AardvarkAbrdvark(Abrdvark(true)))
     testCase(AardvarkAcrdvark(Acrdvark(false)))

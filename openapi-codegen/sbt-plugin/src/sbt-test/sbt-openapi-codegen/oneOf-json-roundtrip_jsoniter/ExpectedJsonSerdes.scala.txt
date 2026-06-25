@@ -76,6 +76,7 @@ object TapirGeneratedEndpointsJsonSerdes {
                   .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
                   .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
                   .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
+                  .orElse(scala.util.Try(succ).map(AardvarkString(_)))
                       .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
                   }
                 })
@@ -103,6 +104,7 @@ object TapirGeneratedEndpointsJsonSerdes {
         case x: AardvarkDate => out.writeVal(x.v.toString)
         case x: AardvarkDateTime => out.writeVal(x.v.toString)
         case x: AardvarkDuration => out.writeVal(x.v.toString)
+        case x: AardvarkString => out.writeVal(x.v)
         case x: AardvarkAbrdvark => abrdvarkJsonCodec.encodeValue(x.v, out)
         case x: AardvarkAcrdvark => acrdvarkJsonCodec.encodeValue(x.v, out)
       }

@@ -305,6 +305,7 @@ components:
           format: date-time
         - type: string
           format: duration
+        - type: string
         - type: number
           format: double
         - $ref: '#/components/schemas/Abrdvark'

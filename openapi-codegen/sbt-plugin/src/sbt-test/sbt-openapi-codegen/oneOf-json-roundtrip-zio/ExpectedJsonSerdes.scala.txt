@@ -67,6 +67,7 @@ object TapirGeneratedEndpointsJsonSerdes {
         case x: AardvarkDate => zio.json.JsonEncoder[String].unsafeEncode(x.v.toString, indent, out)
         case x: AardvarkDateTime => zio.json.JsonEncoder[String].unsafeEncode(x.v.toString, indent, out)
         case x: AardvarkDuration => zio.json.JsonEncoder[String].unsafeEncode(x.v.toString, indent, out)
+        case x: AardvarkString => zio.json.JsonEncoder[String].unsafeEncode(x.v, indent, out)
         case x: AardvarkAbrdvark => zio.json.JsonEncoder[Abrdvark].unsafeEncode(x.v, indent, out)
         case x: AardvarkAcrdvark => zio.json.JsonEncoder[Acrdvark].unsafeEncode(x.v, indent, out)
       }
@@ -79,6 +80,7 @@ object TapirGeneratedEndpointsJsonSerdes {
           .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
           .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
           .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
+          .orElse(scala.util.Try(succ).map(AardvarkString(_)))
       .toEither.left.map(_.getMessage)
   }.asInstanceOf[zio.json.JsonDecoder[Aardvark]],
       zio.json.JsonDecoder[Abrdvark].map(AardvarkAbrdvark(_)).asInstanceOf[zio.json.JsonDecoder[Aardvark]],

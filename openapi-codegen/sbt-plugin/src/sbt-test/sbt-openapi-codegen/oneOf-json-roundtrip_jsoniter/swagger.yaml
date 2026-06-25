@@ -583,6 +583,7 @@ components:
           format: duration
         - type: number
           format: double
+        - type: string
         - $ref: '#/components/schemas/Abrdvark'
         - $ref: '#/components/schemas/Acrdvark'
     #        - {}

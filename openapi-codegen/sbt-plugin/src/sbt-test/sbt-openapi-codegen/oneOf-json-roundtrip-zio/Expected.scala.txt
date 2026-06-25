@@ -111,6 +111,7 @@ object TapirGeneratedEndpoints {
   case class AardvarkDate(v: java.time.LocalDate) extends Aardvark
   case class AardvarkDateTime(v: java.time.Instant) extends Aardvark
   case class AardvarkDuration(v: java.time.Duration) extends Aardvark
+  case class AardvarkString(v: String) extends Aardvark
   case class AardvarkDouble(v: Double) extends Aardvark
   case class AardvarkAbrdvark(v: Abrdvark) extends Aardvark
   case class AardvarkAcrdvark(v: Acrdvark) extends Aardvark

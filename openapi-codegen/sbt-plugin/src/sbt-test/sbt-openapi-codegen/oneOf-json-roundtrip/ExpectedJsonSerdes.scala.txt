@@ -54,6 +54,7 @@ object TapirGeneratedEndpointsJsonSerdes {
       case x: AardvarkDate => io.circe.Encoder[String].apply(x.v.toString)
       case x: AardvarkDateTime => io.circe.Encoder[String].apply(x.v.toString)
       case x: AardvarkDuration => io.circe.Encoder[String].apply(x.v.toString)
+      case x: AardvarkString => io.circe.Encoder[String].apply(x.v)
       case x: AardvarkAbrdvark => io.circe.Encoder[Abrdvark].apply(x.v)
       case x: AardvarkAcrdvark => io.circe.Encoder[Acrdvark].apply(x.v)
     }
@@ -65,6 +66,7 @@ object TapirGeneratedEndpointsJsonSerdes {
           .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
           .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
           .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
+          .orElse(scala.util.Try(succ).map(AardvarkString(_)))
       .toEither.left.map(_ => "unable to parse string to acceptable type")
   }.asInstanceOf[io.circe.Decoder[Aardvark]],
       io.circe.Decoder[Abrdvark].map(AardvarkAbrdvark(_)).asInstanceOf[io.circe.Decoder[Aardvark]],
