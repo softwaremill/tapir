@@ -139,7 +139,8 @@ class EndpointGenerator {
       streamingImplementation: StreamingImplementation,
       generateEndpointTypes: Boolean,
       validators: ValidationDefns,
-      generateValidators: Boolean
+      generateValidators: Boolean,
+      packageReuse: PackageReuseContext
   ): EndpointDefs = {
     val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
@@ -160,16 +161,19 @@ class EndpointGenerator {
             streamingImplementation,
             doc,
             validators,
-            generateValidators
+            generateValidators,
+            packageReuse
           )
         )
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
-    val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(k, ge) =>
+    val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(maybeFileName, ge) =>
       val definitions = ge
         .map { case GeneratedEndpoint(name, definition, maybeInlineDefns, types) =>
           val theCapabilities = if (definition.contains(".capabilities.")) capabilities else "Any"
           val endpointTypeDecl =
-            if (generateEndpointTypes)
+            if (generateEndpointTypes && packageReuse.reusedEndpointNames.contains(name))
+              s"type ${name.capitalize}Endpoint = ${packageReuse.depPkg}.${maybeFileName.getOrElse(packageReuse.dependencyObjectName)}.${name.capitalize}Endpoint\n"
+            else if (generateEndpointTypes)
               s"type ${name.capitalize}Endpoint = Endpoint[${types.securityTypes}, ${types.inTypes}, ${types.errTypes}, ${types.outTypes}, $theCapabilities]\n"
             else ""
 
@@ -181,10 +185,10 @@ class EndpointGenerator {
         .mkString("\n")
       val allEP = s"lazy val $allEndpoints = List(${ge.map(_.name).mkString(", ")})"
 
-      k -> s"""|$definitions
-          |
-          |$allEP
-          |""".stripMargin
+      maybeFileName -> s"""|$definitions
+                           |
+                           |$allEP
+                           |""".stripMargin
     }.toMap
     EndpointDefs(endpointDecls, queryOrPathParamRefs, definesEnumQueryParam, details)
   }
@@ -198,7 +202,8 @@ class EndpointGenerator {
       streamingImplementation: StreamingImplementation,
       doc: OpenapiDocument,
       validators: ValidationDefns,
-      generateValidators: Boolean
+      generateValidators: Boolean,
+      packageReuse: PackageReuseContext
   )(p: OpenapiPath): GeneratedEndpoints = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
@@ -208,7 +213,7 @@ class EndpointGenerator {
       .map { m =>
         implicit val location: Location = Location(p.url, m.methodType)
         try {
-          val attributeString = {
+          def attributeString = {
             val pathAttributes = attributes(p.specificationExtensions)
             val operationAttributes = attributes(m.specificationExtensions)
             (pathAttributes, operationAttributes) match {
@@ -220,7 +225,8 @@ class EndpointGenerator {
           }
 
           val name = m.name(p.url)
-          val maybeName = m.operationId.map(n => s"""\n  .name("${JavaEscape.escapeString(n)}")""").getOrElse("")
+          val isReused = packageReuse.reusedEndpointNames.contains(name)
+          def maybeName = m.operationId.map(n => s"""\n  .name("${JavaEscape.escapeString(n)}")""").getOrElse("")
           val UrlMapResponse(pathDecl, pathTypes, maybeSecurityPath, inlineUrlDefs) = urlMapper(
             p.url,
             name,
@@ -229,7 +235,9 @@ class EndpointGenerator {
             m.resolvedParameters,
             doc.pathsExtensions.get(securityPrefixKey).flatMap(_.asArray).toSeq.flatMap(_.flatMap(_.asString)),
             doc,
-            generateValidators
+            generateValidators,
+            isReused,
+            packageReuse
           )
           val SecurityDefn(securityDecl, securityTypes, securityWrappers) =
             SecurityGenerator.security(securitySchemes, m.security.getOrElse(doc.security))
@@ -245,7 +253,9 @@ class EndpointGenerator {
               doc,
               m.tapirCodegenDirectives,
               validators,
-              generateValidators
+              generateValidators,
+              isReused,
+              packageReuse
             )
           val (outDecl, outTypes, errTypes, inlineDefns) =
             outs(
@@ -258,7 +268,9 @@ class EndpointGenerator {
               xmlSerdeLib,
               m.tapirCodegenDirectives,
               validators,
-              generateValidators
+              generateValidators,
+              isReused,
+              packageReuse
             )
           val allTypes = EndpointTypes(
             maybeSecurityPath.toSeq.flatMap(_._2) ++ securityTypes.toSeq,
@@ -270,17 +282,20 @@ class EndpointGenerator {
           val inlineDefn = combine(maybeInlineUrlDefs, combine(inlineInDefns, inlineDefns))
           val sec = securityDecl.map(indent(2)(_) + "\n").getOrElse("")
           val securityPathDecl = maybeSecurityPath.map("\n  " + _._1).getOrElse("")
-          val definition =
-            s"""|endpoint$maybeName
-                |  .${m.methodType}
-                |  $pathDecl
-                |$sec${indent(2)(inParams)}$securityPathDecl
-                |${indent(2)(outDecl)}
-                |${indent(2)(tags(m.tags))}
-                |$attributeString
-                |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
-
           val maybeTargetFileName = if (useHeadTagForObjectNames) m.tags.flatMap(_.headOption) else None
+          val definition =
+            if (isReused)
+              s"${packageReuse.depPkg}.${maybeTargetFileName.getOrElse(packageReuse.dependencyObjectName)}.$name"
+            else
+              s"""|endpoint$maybeName
+                  |  .${m.methodType}
+                  |  $pathDecl
+                  |$sec${indent(2)(inParams)}$securityPathDecl
+                  |${indent(2)(outDecl)}
+                  |${indent(2)(tags(m.tags))}
+                  |$attributeString
+                  |""".stripMargin.linesIterator.filterNot(_.trim.isEmpty).mkString("\n")
+
           val queryOrPathParamRefs = m.resolvedParameters
             .collect {
               case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" || queryParam.in == "header" =>
@@ -314,9 +329,9 @@ class EndpointGenerator {
             }
             .toSet
           (
-            (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums, allTypes)),
+            (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums.filterNot(_ => isReused), allTypes)),
             (queryOrPathParamRefs, jsonParamRefs, xmlParamRefs),
-            (maybeLocalEnums.isDefined, inlineDefn, securityWrappers)
+            (maybeLocalEnums.isDefined && !isReused, inlineDefn, securityWrappers)
           )
         } catch {
           case e: NotImplementedError => throw e
@@ -351,7 +366,9 @@ class EndpointGenerator {
       parameters: Seq[OpenapiParameter],
       securityPathPrefixes: Seq[String],
       doc: OpenapiDocument,
-      generateValidators: Boolean
+      generateValidators: Boolean,
+      isReused: Boolean,
+      packageReuse: PackageReuseContext
   )(implicit
       location: Location
   ): UrlMapResponse = {
@@ -374,8 +391,14 @@ class EndpointGenerator {
                 val validations = if (generateValidators) ValidationGenerator.mkValidations(doc, st, true) else ""
                 (s"""path[$t]("$name")$validations$desc""", Some(t), None)
               case e: OpenapiSchemaEnum =>
-                val (param, inlineDefn, tpe) = getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, p, e, false)
-                (param, Some(tpe), inlineDefn.map(_.mkString("\n")))
+                val (param, inlineDefn, tpe, enumName) = getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, p, e, false)
+                val defns =
+                  if (isReused)
+                    Some(
+                      s"type $enumName = ${packageReuse.dependencyModelPath}.$enumName\nval $enumName = ${packageReuse.dependencyModelPath}.$enumName"
+                    )
+                  else inlineDefn.map(_.mkString("\n"))
+                (param, Some(tpe), defns)
               case _ => bail("Can't create non-simple params to url yet")
             }
           }
@@ -410,7 +433,7 @@ class EndpointGenerator {
       param: OpenapiParameter,
       e: OpenapiSchemaEnum,
       isArray: Boolean
-  ): (String, Some[Seq[String]], String) = {
+  ): (String, Some[Seq[String]], String, String) = {
     val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
     val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
     val enumDefn = EnumGenerator.generateEnum(
@@ -435,7 +458,7 @@ class EndpointGenerator {
       if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
 
     val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-    (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", Some(enumDefn), outType)
+    (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", Some(enumDefn), outType, enumName)
   }
 
   private def genParamDefn(
@@ -470,11 +493,19 @@ class EndpointGenerator {
         val desc = param.description.map(JavaEscape.escapeString).fold("")(d => s""".description("$d")""")
         val outType = toOutType(t, true, noOptionWrapper)
         (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", None, outType)
-      case e @ OpenapiSchemaEnum(_, _, _) => getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = false)
+      case e @ OpenapiSchemaEnum(_, _, _) =>
+        getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = false) match {
+          case (a, b, c, _) => (a, b, c)
+        }
       case OpenapiSchemaArray(e: OpenapiSchemaEnum, _, _, _) =>
-        getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = true)
+        getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = true) match {
+          case (a, b, c, _) => (a, b, c)
+        }
       case x => bail(s"Can't create non-simple params - found $x")
     }
+
+  private def aliases(packageReuse: PackageReuseContext, types: Seq[String]): String =
+    types.map(s => s"type $s = ${packageReuse.dependencyModelPath}.$s").mkString("\n")
 
   private def ins(
       parameters: Seq[OpenapiParameter],
@@ -487,7 +518,9 @@ class EndpointGenerator {
       doc: OpenapiDocument,
       tapirCodegenDirectives: Set[String],
       validators: ValidationDefns,
-      generateValidators: Boolean
+      generateValidators: Boolean,
+      isReused: Boolean,
+      packageReuse: PackageReuseContext
   )(implicit location: Location): (String, Option[String], Seq[String], Option[String]) = {
 
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
@@ -510,7 +543,7 @@ class EndpointGenerator {
           doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
         case _ => false
       })
-      val MappedContentType(decl, tpe, maybeInlineDefn) =
+      val MappedContentType(decl, tpe, maybeInlineDefn, inlineTypes) =
         contentTypeMapper(
           content.contentType,
           content.schema,
@@ -523,7 +556,9 @@ class EndpointGenerator {
           tapirCodegenDirectives,
           validators
         )
-      (decl, tpe, maybeInlineDefn)
+
+      val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes) else d)
+      (decl, tpe, inlineDefn)
     }
     val (rqBody, maybeReqType, maybeInlineDefns) = requestBody.flatMap { b =>
       if (b.content.isEmpty) None
@@ -557,7 +592,19 @@ class EndpointGenerator {
           }
           .groupBy(_._1)
         val aliasDefns =
-          if (needsAliases) {
+          if (needsAliases && isReused) {
+            val wrappers = declsByWrapperClassName
+              .map { case (name, _) =>
+                s"type $name = ${packageReuse.dependencyModelPath}.$name\nval $name = ${packageReuse.dependencyModelPath}.$name\n"
+              }
+              .toSeq
+              .sorted
+              .mkString("\n")
+            Some(s"""
+                    |type $traitName = ${packageReuse.dependencyModelPath}.$traitName
+                    |$wrappers
+                    |""".stripMargin)
+          } else if (needsAliases) {
             val wrappers = declsByWrapperClassName
               .map { case (name, seq) => s"""case class ${name}(value: ${seq.head._2}) extends $traitName""" }
               .toSeq
@@ -587,7 +634,7 @@ class EndpointGenerator {
             s""".in(oneOfBody[$tpe](
              |${indent(2)(bodies.mkString(",\n"))}))""".stripMargin,
             tpe,
-            combine(didO, aliasDefns)
+            combine(didO.filterNot(_ => isReused), aliasDefns)
           )
         )
       }
@@ -636,7 +683,9 @@ class EndpointGenerator {
       xmlSerdeLib: XmlSerdeLib,
       tapirCodegenDirectives: Set[String],
       validators: ValidationDefns,
-      generateValidators: Boolean
+      generateValidators: Boolean,
+      isReused: Boolean,
+      packageReuse: PackageReuseContext
   )(implicit
       location: Location
   ) = {
@@ -658,7 +707,7 @@ class EndpointGenerator {
             doc.components.flatMap(_.schemas.get(ref.stripped).map(_.nullable)).contains(true)
           case _ => false
         })
-        val MappedContentType(decl, tpe, maybeInlineDefn) =
+        val MappedContentType(decl, tpe, maybeInlineDefn, inlineTypes) = {
           contentTypeMapper(
             content.contentType,
             content.schema,
@@ -671,7 +720,9 @@ class EndpointGenerator {
             tapirCodegenDirectives,
             validators
           )
-        (decl, tpe, maybeInlineDefn)
+        }
+        val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes) else d)
+        (decl, tpe, inlineDefn)
       }
       resp.content match {
         case Nil            => ("", None, None)
@@ -706,7 +757,21 @@ class EndpointGenerator {
             }
             .groupBy(_._1)
           val aliasDefns =
-            if (needsAliases) {
+            if (needsAliases && isReused) {
+              val wrappers = declsByWrapperClassName
+                .map { case (name, seq) =>
+                  s"type $name = ${packageReuse.dependencyModelPath}.$name\nval $name = ${packageReuse.dependencyModelPath}.$name\n"
+                }
+                .toSeq
+                .sorted
+                .mkString("\n")
+              Some(s"""
+                      |type $traitName = ${packageReuse.dependencyModelPath}.$traitName
+                      |type ${traitName}Full = ${packageReuse.dependencyModelPath}.${traitName}Full
+                      |val ${traitName}Full = ${packageReuse.dependencyModelPath}.${traitName}Full
+                      |$wrappers
+                      |""".stripMargin)
+            } else if (needsAliases) {
               def callers(tpe: String, impl: Boolean) = declsByWrapperClassName
                 .flatMap { case (_, seq) =>
                   seq.map { case (_, t, _, ct) =>
@@ -757,7 +822,7 @@ class EndpointGenerator {
             s"""oneOfBody[$tpe](
                |${indent(2)(bodies.mkString(",\n"))})""".stripMargin,
             Some(tpe),
-            combine(didO, aliasDefns)
+            combine(didO.filterNot(_ => isReused), aliasDefns)
           )
       }
     }
@@ -1081,20 +1146,21 @@ class EndpointGenerator {
       case "text/html" =>
         MappedContentType("htmlBodyUtf8", "String")
       case "application/xml" if xmlSerdeLib != XmlSerdeLib.NoSupport =>
-        val (outT, maybeInline, maybeAlias) = schema match {
+        val (outT: String, maybeInline: Option[String], maybeAlias: Option[String], maybeTpe: Seq[String]) = schema match {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            (t, None, None)
+            (t, None, None, Nil)
           case a @ OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
-            val xmlSeqConfig = XmlSerdeGenerator.genTopLevelSeqSerdes(xmlSerdeLib, a, endpointName, position.toString)
-            (s"List[$t]", xmlSeqConfig, Some(endpointName.capitalize + position))
+            val tpeName = endpointName.capitalize + position
+            val xmlSeqConfig = XmlSerdeGenerator.genTopLevelSeqSerdes(xmlSerdeLib, a, endpointName, position.toString).map(_._2)
+            (s"List[$t]", xmlSeqConfig, Some(tpeName), xmlSeqConfig.toSeq.map(_ => tpeName))
           case x => bail(s"Only ref, primitive (and arrays of either) schemas supported for xml body (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
         def toList = if (required) ".toList" else ".map(_.toList)"
         val bodyType = maybeAlias.map(a => s"xmlBody[$a].map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(s"xmlBody[$req]")
-        MappedContentType(bodyType + v(required), req, maybeInline)
+        MappedContentType(bodyType + v(required), req, maybeInline, maybeTpe)
       case "application/json" if tapirCodegenDirectives.contains(jsonBodyAsString) =>
         if (required) MappedContentType("stringJsonBody", "String", None)
         else MappedContentType("stringJsonBody.map(Option(_))(_.orNull)", "Option[String]", None)
@@ -1114,7 +1180,7 @@ class EndpointGenerator {
           case x => bail(s"Can't create non-simple or array params as output (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
-        MappedContentType(s"jsonBody[$req]" + v(required), req, maybeInline)
+        MappedContentType(s"jsonBody[$req]" + v(required), req, maybeInline, maybeInline.map(_ => outT).toSeq)
 
       case "multipart/form-data" =>
         schema match {
@@ -1125,7 +1191,12 @@ class EndpointGenerator {
             MappedContentType(s"multipartBody[$t]" + v(required), t)
           case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]) =>
             val (inlineClassName, inlineClassDefn) = inlineDefn(endpointName, position, schemaRef)
-            MappedContentType(s"multipartBody[$inlineClassName]" + v(required), inlineClassName, inlineClassDefn)
+            MappedContentType(
+              s"multipartBody[$inlineClassName]" + v(required),
+              inlineClassName,
+              inlineClassDefn,
+              inlineClassDefn.map(_ => inlineClassName).toSeq
+            )
           case x => bail(s"$contentType only supports schema ref or binary, or simple inline property maps with string values. Found $x")
         }
       case other =>
@@ -1137,7 +1208,6 @@ class EndpointGenerator {
           eager,
           streamingImplementation
         )
-      case x => bail(s"Not all content types supported! Found $x")
     }
   }
   private def failoverBinaryCase(
@@ -1194,12 +1264,17 @@ class EndpointGenerator {
             case o: OpenapiSchemaObject => inlineDefn(endpointName, position, o)
             case x                      => bail(s"Can't create this param as output (found $x)")
           }
-          MappedContentType(s"streamBody($capability)(Schema.binary[$outT], $streamingBody)", tpe, inlineDefns = maybeInlineDefn)
+          MappedContentType(
+            s"streamBody($capability)(Schema.binary[$outT], $streamingBody)",
+            tpe,
+            inlineDefns = maybeInlineDefn,
+            inlineTypes = maybeInlineDefn.map(_ => outT).toSeq
+          )
       }
     }
   }
 
 }
 
-case class MappedContentType(bodyImpl: String, bodyType: String, inlineDefns: Option[String] = None)
+case class MappedContentType(bodyImpl: String, bodyType: String, inlineDefns: Option[String] = None, inlineTypes: Seq[String] = Nil)
 case class MappedOutGroup(decls: Option[String], types: Option[String], defns: Option[String])

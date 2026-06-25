@@ -1,0 +1,21 @@
+# Simple alias redefined: PetName is int not string.
+openapi: 3.1.0
+info:
+  title: Redefine simple type alias
+  version: '1.0'
+paths:
+  /redefine/alias:
+    get:
+      operationId: redefinePetName
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetName'
+components:
+  schemas:
+    PetName:
+      type: integer
+      format: int64

@@ -30,12 +30,12 @@ object TapirGeneratedEndpointsJsonSerdes {
   implicit lazy val listTypeJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ListType] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
 
   implicit lazy val subtypeWithoutD3E2JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD3E2] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLikeWithoutDiscriminator
-  implicit lazy val aDTWithDiscriminatorCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithDiscriminator] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type", {  
+  implicit lazy val aDTWithDiscriminatorJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithDiscriminator] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type", {
     case "SubtypeWithD1" => "SubA"
     case "SubtypeWithD2" => "SubB"})
 
-  implicit lazy val aDTWithDiscriminatorNoMappingCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithDiscriminatorNoMapping] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type")
-  implicit lazy val aDTWithoutDiscriminatorCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithoutDiscriminator] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithoutDiscriminator] {
+  implicit lazy val aDTWithDiscriminatorNoMappingJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithDiscriminatorNoMapping] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type")
+  implicit lazy val aDTWithoutDiscriminatorJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithoutDiscriminator] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithoutDiscriminator] {
     def decodeValue(in: com.github.plokhotnyuk.jsoniter_scala.core.JsonReader, default: ADTWithoutDiscriminator): ADTWithoutDiscriminator = {
       List(
         subtypeWithoutD1JsonCodec,

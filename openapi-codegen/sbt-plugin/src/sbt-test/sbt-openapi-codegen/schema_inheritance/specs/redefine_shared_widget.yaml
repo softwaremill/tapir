@@ -1,0 +1,30 @@
+# Widget redefined: extra version field — two consumers of core should not alias this.
+openapi: 3.1.0
+info:
+  title: Redefine shared Widget
+  version: '1.0'
+paths:
+  /shared/redefine/widget:
+    get:
+      operationId: redefineSharedWidget
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Widget'
+components:
+  schemas:
+    Widget:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        version:
+          type: integer
+          format: int32

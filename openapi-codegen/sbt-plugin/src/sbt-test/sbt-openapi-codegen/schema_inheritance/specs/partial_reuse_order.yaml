@@ -1,0 +1,49 @@
+# Order identical to core but Pet redefined inline (extra tag field) — mixed reuse in one package.
+openapi: 3.1.0
+info:
+  title: Partial reuse (Order matches, Pet does not)
+  version: '1.0'
+paths:
+  /partial/order:
+    post:
+      operationId: partialReuseOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        species:
+          type: string
+        tag:
+          type: string
+    Order:
+      type: object
+      required:
+        - id
+        - pet
+      properties:
+        id:
+          type: integer
+          format: int64
+        pet:
+          $ref: '#/components/schemas/Pet'
+        note:
+          type: string
+          default: pending

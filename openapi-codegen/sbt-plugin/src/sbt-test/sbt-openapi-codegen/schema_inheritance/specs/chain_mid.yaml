@@ -1,0 +1,29 @@
+# Middle link in dependency chain: depends on core, adds LegacyPet identical to Pet.
+openapi: 3.1.0
+info:
+  title: Chain middle (v1)
+  version: '1.0'
+paths:
+  /chain/mid/pets:
+    get:
+      operationId: chainMidListLegacyPets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LegacyPet'
+components:
+  schemas:
+    LegacyPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        species:
+          type: string

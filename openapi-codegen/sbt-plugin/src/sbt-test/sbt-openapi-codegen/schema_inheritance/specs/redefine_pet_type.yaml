@@ -1,0 +1,30 @@
+# Pet redefined: `name` is integer instead of string.
+openapi: 3.1.0
+info:
+  title: Redefine Pet (property type change)
+  version: '1.0'
+paths:
+  /redefine/pet-type:
+    post:
+      operationId: createPetNumericName
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        '204':
+          description: OK
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: integer
+          format: int64
+        species:
+          type: string

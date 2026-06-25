@@ -1,7 +1,8 @@
 package sttp.tapir.sbt
 
 import sbt._
-import sttp.tapir.codegen.{RootGenerator, YamlParser}
+import sttp.tapir.codegen.{GenerationMeta, OpenApiInputParser, PackageReuseContext, RootGenerator}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 
 case class OpenapiCodegenTask(
     inputYaml: File,
@@ -18,20 +19,23 @@ case class OpenapiCodegenTask(
     useCustomJsoniterSerdes: Boolean,
     dir: File,
     targetScala3: Boolean,
-    overrideDirectoryName: Option[String]
+    overrideDirectoryName: Option[String],
+    preParsedDoc: Option[OpenapiDocument] = None,
+    packageReuse: PackageReuseContext = PackageReuseContext.none
 ) {
 
   private val directoryName: String = overrideDirectoryName.getOrElse("sbt-openapi-codegen")
   val outDirectory = dir / directoryName
 
-  def file: Seq[File] = {
-    val parsed = YamlParser
-      .parseFile(IO.readLines(inputYaml).mkString("\n"))
-      .left
-      .map(d => new RuntimeException(_root_.io.circe.Error.showError.show(d)))
-    RootGenerator
+  def filesAndMeta: (Seq[File], GenerationMeta) = {
+    val doc = preParsedDoc.getOrElse {
+      OpenApiInputParser
+        .parse(inputYaml)
+        .fold(err => throw new RuntimeException(_root_.io.circe.Error.showError.show(err)), identity)
+    }
+    val generationInfo = RootGenerator
       .generateObjects(
-        parsed.toTry.get,
+        doc.resolveAllOfSchemas,
         packageName,
         objectName,
         targetScala3,
@@ -43,14 +47,14 @@ case class OpenapiCodegenTask(
         maxSchemasPerFile,
         generateEndpointTypes,
         !disableValidatorGeneration,
-        useCustomJsoniterSerdes
+        useCustomJsoniterSerdes,
+        packageReuse
       )
-      .map { case (objectName, fileBody) =>
-        val file = outDirectory / s"$objectName.scala"
-        val lines = fileBody.linesIterator.toSeq
-        IO.writeLines(file, lines, IO.utf8)
-        file
-      }
-      .toSeq
+    generationInfo.allFiles.map { case (objectName, fileBody) =>
+      val file = outDirectory / s"$objectName.scala"
+      val lines = fileBody.linesIterator.toSeq
+      IO.writeLines(file, lines, IO.utf8)
+      file
+    }.toSeq -> generationInfo.meta
   }
 }

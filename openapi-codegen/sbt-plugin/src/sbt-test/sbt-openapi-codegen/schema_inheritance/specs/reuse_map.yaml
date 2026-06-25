@@ -1,0 +1,22 @@
+# Map alias identical to core TagMap.
+openapi: 3.1.0
+info:
+  title: Reuse map schema
+  version: '1.0'
+paths:
+  /reuse/map:
+    get:
+      operationId: reuseTagMap
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagMap'
+components:
+  schemas:
+    TagMap:
+      type: object
+      additionalProperties:
+        type: string

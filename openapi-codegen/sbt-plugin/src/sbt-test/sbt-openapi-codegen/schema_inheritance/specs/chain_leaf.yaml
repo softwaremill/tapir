@@ -1,0 +1,29 @@
+# Leaf in chain: depends on chain_mid; LegacyPet identical to chain_mid's LegacyPet.
+openapi: 3.1.0
+info:
+  title: Chain leaf (v0)
+  version: '1.0'
+paths:
+  /chain/leaf/pets:
+    get:
+      operationId: chainLeafListLegacyPets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LegacyPet'
+components:
+  schemas:
+    LegacyPet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        species:
+          type: string

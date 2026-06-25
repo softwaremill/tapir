@@ -10,8 +10,11 @@ import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
 case class GeneratedClassDefinitions(
     classRepr: String,
     jsonSerdeRepr: Option[String],
-    schemaRepr: Seq[String],
-    xmlSerdeRepr: Option[String]
+    schemaRepr: Seq[(Option[String], String)],
+    xmlSerdeRepr: Option[String],
+    schemasContainAny: Boolean,
+    explicitNonObjTypes: Seq[String],
+    allTransitiveJsonParamRefs: Set[String]
 )
 
 case class InlineEnumDefn(enumName: String, impl: String)
@@ -30,7 +33,9 @@ class ClassDefinitionGenerator {
       maxSchemasPerFile: Int = 400,
       enumsDefinedOnEndpointParams: Boolean = false,
       xmlParamRefs: Set[String] = Set.empty,
-      useCustomJsoniterSerdes: Boolean = true
+      useCustomJsoniterSerdes: Boolean = true,
+      objName: String = "TapirGeneratedEndpoints",
+      packageReuse: PackageReuseContext = PackageReuseContext.none
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -51,7 +56,15 @@ class ClassDefinitionGenerator {
     )
 
     val adtTypes =
-      adtInheritanceMap.flatMap(_._2).toSeq.map(_._1).distinct.map(name => s"sealed trait $name").sorted.mkString("", "\n", "\n")
+      adtInheritanceMap
+        .flatMap(_._2)
+        .toSeq
+        .map(_._1)
+        .distinct
+        .filterNot(PackageReuseContext.isReusedSchema(_, packageReuse))
+        .map(name => s"sealed trait $name")
+        .sorted
+        .mkString("", "\n", "\n")
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
     val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
@@ -59,9 +72,18 @@ class ClassDefinitionGenerator {
       throw new NotImplementedError(
         s"any not implemented for json libs other than circe and jsoniter (problematic models: ${schemasWithAny.keys})"
       )
-    val schemas = SchemaGenerator
-      .generateSchemas(doc, allSchemas, fullModelPath, jsonSerdeLib, maxSchemasPerFile, schemasContainAny, targetScala3)
-    val jsonSerdes = JsonSerdeGenerator.serdeDefs(
+    val shimsAndSchemas = SchemaGenerator
+      .generateSchemas(
+        doc,
+        allSchemas,
+        fullModelPath,
+        jsonSerdeLib,
+        maxSchemasPerFile,
+        schemasContainAny,
+        targetScala3,
+        packageReuse
+      )
+    val SerdeGenResponse(jsonSerdes, explicitNonObjTypes) = JsonSerdeGenerator.serdeDefs(
       doc,
       jsonSerdeLib,
       jsonParamRefs,
@@ -70,15 +92,20 @@ class ClassDefinitionGenerator {
       adtInheritanceMap.mapValues(_.map(_._1)).toMap,
       targetScala3,
       schemasContainAny,
-      useCustomJsoniterSerdes
+      useCustomJsoniterSerdes,
+      packageReuse
     )
     val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
       xmlParamRefs,
       xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
-    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3)
+    val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3, packageReuse)
     val defns = doc.components
       .map(_.schemas.flatMap {
+        case (name, _: OpenapiSchemaEnum) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
+          Seq(PackageReuseContext.enumAliasType(name, packageReuse))
+        case (name, _) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
+          Seq(PackageReuseContext.aliasType(name, packageReuse))
         case (name, obj: OpenapiSchemaObject) =>
           generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
         case (name, obj: OpenapiSchemaEnum) =>
@@ -94,7 +121,19 @@ class ClassDefinitionGenerator {
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
     // Json serdes & schemas live in separate files from the class defns
-    defns.map(helpers + "\n" + _).map(defStr => GeneratedClassDefinitions(defStr, jsonSerdes, schemas, xmlSerdes))
+    defns
+      .map(helpers + "\n" + _)
+      .map(defStr =>
+        GeneratedClassDefinitions(
+          defStr,
+          jsonSerdes,
+          shimsAndSchemas,
+          xmlSerdes,
+          schemasContainAny,
+          explicitNonObjTypes,
+          allTransitiveJsonParamRefs
+        )
+      )
   }
 
   private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[(String, OpenapiSchemaOneOf)]] =
@@ -216,33 +255,35 @@ class ClassDefinitionGenerator {
       targetScala3: Boolean
   ): Seq[String] = try {
     val isJson = jsonParamRefs contains name
-    def rec(name: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
+    def rec(className: String, schemaKey: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
       val innerClasses = obj.properties
         .collect {
           case (propName, OpenapiSchemaField(st: OpenapiSchemaObject, _, _)) =>
-            val newName = addName(name, propName)
-            rec(newName, st, Nil)
+            val newName = addName(className, propName)
+            rec(newName, newName, st, Nil)
 
           case (propName, OpenapiSchemaField(OpenapiSchemaMap(st: OpenapiSchemaObject, _, _), _, _)) =>
-            val newName = addName(addName(name, propName), "item")
-            rec(newName, st, Nil)
+            val newName = addName(addName(className, propName), "item")
+            rec(newName, newName, st, Nil)
 
           case (propName, OpenapiSchemaField(OpenapiSchemaArray(st: OpenapiSchemaObject, _, _, _), _, _)) =>
-            val newName = addName(addName(name, propName), "item")
-            rec(newName, st, Nil)
+            val newName = addName(addName(className, propName), "item")
+            rec(newName, newName, st, Nil)
         }
         .flatten
         .toList
 
-      val parents = adtInheritanceMap.getOrElse(name, Nil) match {
+      val parents = adtInheritanceMap.getOrElse(schemaKey, Nil) match {
         case Nil => ""
         case ps  => ps.map(_._1).mkString(" extends ", " with ", "")
       }
       val discriminatorDefFields = adtInheritanceMap
-        .getOrElse(name, Nil)
+        .getOrElse(schemaKey, Nil)
         .flatMap { case (_, parent) =>
           parent.discriminator.map { d =>
-            d.propertyName -> d.mapping.flatMap(_.find(_._2.stripPrefix("#/components/schemas/") == name).map(_._1)).getOrElse(name)
+            d.propertyName -> d.mapping
+              .flatMap(_.find(_._2.stripPrefix("#/components/schemas/") == schemaKey).map(_._1))
+              .getOrElse(schemaKey)
           }
         }
         .distinct
@@ -258,7 +299,7 @@ class ClassDefinitionGenerator {
       val (properties, maybeEnums) = obj.properties
         .filterNot(discriminatorDefFields.map(_._1) contains _._1)
         .map { case (key, OpenapiSchemaField(schemaType, maybeDefault, _)) =>
-          val (tpe, maybeEnum) = mapSchemaTypeToType(name, key, obj.required.contains(key), schemaType, isJson, jsonSerdeLib, targetScala3)
+          val (tpe, maybeEnum) = mapSchemaTypeToType(className, key, obj.required.contains(key), schemaType, isJson, jsonSerdeLib, targetScala3)
           val fixedKey = fixKey(key)
           val optional = schemaType.nullable || !obj.required.contains(key)
           val maybeExplicitDefault =
@@ -273,12 +314,12 @@ class ClassDefinitionGenerator {
         .unzip
 
       val enumDefn = maybeEnums.flatten.toList
-      s"""|case class $name (
+      s"""|case class $className (
           |${indent(2)(properties.mkString(",\n"))}
           |)$parents$discriminatorDefBody""".stripMargin :: innerClasses ::: enumDefn ::: acc
     }
 
-    rec(addName("", name), obj, Nil)
+    rec(addName("", name), name, obj, Nil)
   } catch {
     case t: Throwable => throw new NotImplementedError(s"Generating class for $name: ${t.getMessage}")
   }

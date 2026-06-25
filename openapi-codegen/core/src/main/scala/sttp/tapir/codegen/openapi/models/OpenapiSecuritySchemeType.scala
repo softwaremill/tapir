@@ -71,6 +71,7 @@ object OpenapiSecuritySchemeType {
           case ("implicit", v)          => v.as[OAuth2Flow].map(OAuth2FlowType.`implicit` -> _)
           case ("password", v)          => v.as[OAuth2Flow].map(OAuth2FlowType.password -> _)
           case ("clientCredentials", v) => v.as[OAuth2Flow].map(OAuth2FlowType.clientCredentials -> _)
+          case (o, _)                   => throw new IllegalStateException(s"Match should be exhaustive on legal keys -- saw $o")
         }
         .map(_.toMap)
     } yield {

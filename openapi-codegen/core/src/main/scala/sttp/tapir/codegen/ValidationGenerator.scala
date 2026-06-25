@@ -24,9 +24,17 @@ import scala.annotation.tailrec
 
 case class ValidationDefn(name: String, tpe: String, construct: Set[String] => Option[String], refOnly: Boolean = false)
 case class ValidationDefns(defns: Map[String, ValidationDefn]) {
-  def render: String = defns.values.toSeq
+  def render(packageReuse: PackageReuseContext): String = defns.values.toSeq
     .sortBy(_.name)
-    .flatMap { d => d.construct(defns.keySet).map(impl => s"lazy val ${d.name}Validator: Validator[${d.tpe}] = $impl") }
+    .flatMap { d =>
+      d.construct(defns.keySet)
+        .map { impl =>
+          val vName = s"${d.name}Validator"
+          if (packageReuse.reusedSchemas.contains(d.tpe))
+            s"def $vName: Validator[${d.tpe}] = ${packageReuse.dependencyModelPath}Validators.$vName"
+          else s"lazy val $vName: Validator[${d.tpe}] = $impl"
+        }
+    }
     .mkString("\n")
 }
 object ValidationDefns {
@@ -83,7 +91,7 @@ object ValidationGenerator {
 
   // The `ignoreRefs` boolean is a hack to avoid generating trivial validators for recursive schemas without genuine validation.
   // See comments on `mkValidators`.
-  private def validationExists(defns: Set[String])(schema: OpenapiSchemaType, ignoreRefs: Boolean = false): Boolean =
+  private def validationExists(defns: Set[String])(schema: OpenapiSchemaType, ignoreRefs: Boolean): Boolean =
     schema match {
       case OpenapiSchemaAllOf(Seq(singleType)) => validationExists(defns)(singleType, ignoreRefs)
       case ref: OpenapiSchemaRef               => !ignoreRefs && defns.contains(ref.stripped)
@@ -96,7 +104,7 @@ object ValidationGenerator {
       case _                                   => false
     }
 
-  private def genRefDef(name: String, r: OpenapiSchemaRef): Seq[ValidationDefn] = {
+  private def genRefDef(r: OpenapiSchemaRef): Seq[ValidationDefn] = {
     Seq(
       ValidationDefn(
         r.stripped.capitalize,
@@ -366,7 +374,7 @@ object ValidationGenerator {
   )(name: String, schema: OpenapiSchemaType): Seq[ValidationDefn] =
     schema match {
       case OpenapiSchemaAllOf(Seq(singleType)) => genValidationDefn(schemas, ignoreRefs)(name, singleType)
-      case r: OpenapiSchemaRef                 => genRefDef(name, r)
+      case r: OpenapiSchemaRef                 => genRefDef(r)
       case s: OpenapiSchemaString              => genStrDef(name, s)
       case numeric: OpenapiSchemaNumericType   => genNumDef(name, numeric)
       case a: OpenapiSchemaArray               => genArrDef(schemas, ignoreRefs)(name, a)

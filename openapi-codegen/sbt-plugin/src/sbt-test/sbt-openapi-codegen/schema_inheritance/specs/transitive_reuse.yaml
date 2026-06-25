@@ -1,0 +1,47 @@
+# Order + Pet both identical to core (full transitive reuse).
+openapi: 3.1.0
+info:
+  title: Transitive reuse (Order refs Pet, both match)
+  version: '1.0'
+paths:
+  /transitive/order:
+    post:
+      operationId: transitiveReuseOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        species:
+          type: string
+    Order:
+      type: object
+      required:
+        - id
+        - pet
+      properties:
+        id:
+          type: integer
+          format: int64
+        pet:
+          $ref: '#/components/schemas/Pet'
+        note:
+          type: string
+          default: pending

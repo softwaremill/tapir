@@ -1,0 +1,30 @@
+# Pet redefined: `species` required here but optional in core.
+openapi: 3.1.0
+info:
+  title: Redefine Pet (required field diff)
+  version: '1.0'
+paths:
+  /redefine/pet-required:
+    post:
+      operationId: createPetSpeciesRequired
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        '204':
+          description: OK
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - name
+        - species
+      properties:
+        name:
+          type: string
+        species:
+          type: string

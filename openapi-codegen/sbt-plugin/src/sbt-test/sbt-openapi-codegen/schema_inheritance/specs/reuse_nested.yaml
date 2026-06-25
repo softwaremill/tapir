@@ -1,0 +1,36 @@
+# Address + Person identical to core (transitive ref reuse).
+openapi: 3.1.0
+info:
+  title: Reuse nested refs
+  version: '1.0'
+paths:
+  /reuse/nested:
+    get:
+      operationId: reuseNestedPerson
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+components:
+  schemas:
+    Address:
+      type: object
+      required:
+        - city
+      properties:
+        city:
+          type: string
+        postcode:
+          type: string
+    Person:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        home:
+          $ref: '#/components/schemas/Address'

@@ -6,10 +6,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiParameter,
   OpenapiPath,
   OpenapiPathMethod,
-  OpenapiRequestBody,
   OpenapiRequestBodyContent,
   OpenapiRequestBodyDefn,
-  OpenapiResponse,
   OpenapiResponseContent,
   OpenapiResponseDef,
   Resolved
@@ -78,7 +76,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
-          generateValidators = true
+          generateValidators = true,
+          packageReuse = PackageReuseContext.none,
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -169,7 +168,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
-          generateValidators = true
+          generateValidators = true,
+          packageReuse = PackageReuseContext.none,
         )
         .endpointDecls(None)).shouldCompile()
   }
@@ -227,7 +227,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           streamingImplementation = FS2(),
           generateEndpointTypes = false,
           validators = ValidationDefns.empty,
-          generateValidators = true
+          generateValidators = true,
+          packageReuse = PackageReuseContext.none,
         )
         .endpointDecls(None)
     generatedCode should include(
@@ -301,7 +302,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       generateEndpointTypes = false,
       generateValidators = true,
       useCustomJsoniterSerdes = true
-    )
+    ).allFiles
     val schemas = objs("TapirGeneratedEndpointsSchemas")
     val generatedCode = objs("TapirGeneratedEndpoints")
     generatedCode should include(
@@ -329,7 +330,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       generateEndpointTypes = false,
       generateValidators = true,
       useCustomJsoniterSerdes = true
-    )("TapirGeneratedEndpoints")
+    ).allFiles("TapirGeneratedEndpoints")
     generatedCode.shouldCompile()
     val expectedAttrDecls = Seq(
       """.attribute[CustomStringExtensionOnPathExtension](customStringExtensionOnPathExtensionKey, "another string")""",

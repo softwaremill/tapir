@@ -1,0 +1,30 @@
+# allOf single-element wrapper around Pet ref — resolves to same object as core Pet.
+openapi: 3.1.0
+info:
+  title: Reuse allOf-wrapped Pet
+  version: '1.0'
+paths:
+  /reuse/allof-pet:
+    post:
+      operationId: reuseAllOfPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        '204':
+          description: OK
+components:
+  schemas:
+    Pet:
+      allOf:
+        - type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            species:
+              type: string

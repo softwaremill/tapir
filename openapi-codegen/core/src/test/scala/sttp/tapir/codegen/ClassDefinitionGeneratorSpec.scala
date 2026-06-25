@@ -467,7 +467,8 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
             streamingImplementation = FS2(),
             generateEndpointTypes = false,
             validators = ValidationDefns.empty,
-            generateValidators = true
+            generateValidators = true,
+            packageReuse = PackageReuseContext.none,
           )
           .endpointDecls(None)
     }
@@ -573,7 +574,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(useCustomMacros: Boolean, doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _, _) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _, _, _, _, _) =
         gen
           .classDefs(
             doc,
@@ -590,11 +591,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       fullRes.shouldCompile()
       if (useCustomMacros)
         jsonSerdes.get should include(
-          """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type")"""
+          """implicit lazy val reqWithVariantsJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike("type")"""
         )
       else
         jsonSerdes.get should include(
-          """implicit lazy val reqWithVariantsCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
+          """implicit lazy val reqWithVariantsJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ReqWithVariants] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.make(com.github.plokhotnyuk.jsoniter_scala.macros.CodecMakerConfig.withAllowRecursiveTypes(true).withTransientEmpty(false).withTransientDefault(false).withRequireCollectionFields(true).withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("type")))"""
         )
     }
     testOK(false, TestHelpers.oneOfDocsWithMapping)
@@ -616,7 +617,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _, _) =
+      val GeneratedClassDefinitions(res, jsonSerdes, _, _, _, _, _) =
         gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
 
       val fullRes = (res + "\n" + jsonSerdes.get)
