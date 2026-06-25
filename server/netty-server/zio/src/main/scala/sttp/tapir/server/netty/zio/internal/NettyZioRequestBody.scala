@@ -15,6 +15,7 @@ import scala.concurrent.Future
 
 private[zio] class NettyZioRequestBody[Env](
     val createFile: ServerRequest => RIO[Env, TapirFile],
+    val deleteFile: TapirFile => RIO[Env, Unit],
     val streamCompatible: StreamCompatible[ZioStreams],
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
@@ -34,7 +35,7 @@ private[zio] class NettyZioRequestBody[Env](
   ): RIO[Env, Array[Byte]] =
     streamCompatible.fromPublisher(publisher, maxBytes).run(ZSink.collectAll[Byte]).map(_.toArray)
 
-  override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): RIO[Env, Unit] =
+  override protected def writeToFileUnsafe(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): RIO[Env, Unit] =
     toStream(serverRequest, maxBytes).run(ZSink.fromFile(file)).map(_ => ())
 
 }

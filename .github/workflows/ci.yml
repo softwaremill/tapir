@@ -37,8 +37,8 @@ jobs:
             java: "21"
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
-    - uses: sbt/setup-sbt@18c5326132e2b0900fd6bd70f8b2b212364d11c8 # v1, specifically v1.3.0
+      uses: actions/checkout@v7
+    - uses: sbt/setup-sbt@3afe9cf056c5d139bfc46579af1192d77a2f0821 # v1, specifically v1.4.0
     - name: Set up JDK 
       uses: actions/setup-java@v5
       with:
@@ -104,7 +104,9 @@ jobs:
       if: matrix.target-platform != 'JS'
       uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v3, specifically v4.0.0
       with:
-        timeout_minutes: 10
+        # this step runs every server-backend suite; on a slower runner the total wall-clock approaches 10 min and 
+        # flakily trips the timeout, with both attempts then timing out, so allow more room
+        timeout_minutes: 15
         max_attempts: 2
         # the netty server interpreter tests include some which run a large number of requests, to detect potential leaks
         # storing the output to verify it in the next step
@@ -145,7 +147,7 @@ jobs:
         path: '**/test-reports/TEST*.xml'
     - name: Prepare release notes
       if: github.ref == 'refs/heads/master' # this should not run on PR builds
-      uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v6, specifically v7.3.1
+      uses: release-drafter/release-drafter@ed4bc48ec97379be2258e7b7ac2624a3e26ab809 # v6, specifically v7.4.0
       with:
         config-name: release-drafter.yml
       env:
@@ -168,8 +170,8 @@ jobs:
         java: [ "11", "21" ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-      - uses: sbt/setup-sbt@18c5326132e2b0900fd6bd70f8b2b212364d11c8 # v1, specifically v1.3.0
+        uses: actions/checkout@v7
+      - uses: sbt/setup-sbt@3afe9cf056c5d139bfc46579af1192d77a2f0821 # v1, specifically v1.4.0
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
@@ -207,7 +209,7 @@ jobs:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - name: Publish release notes
         if: matrix.java == '11'
-        uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v6, specifically v7.3.1
+        uses: release-drafter/release-drafter@ed4bc48ec97379be2258e7b7ac2624a3e26ab809 # v6, specifically v7.4.0
         with:
           config-name: release-drafter.yml
           publish: true
