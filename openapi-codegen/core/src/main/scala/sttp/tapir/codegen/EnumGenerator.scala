@@ -1,6 +1,7 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.RootGenerator.indent
+import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaEnum
 
 object EnumGenerator {

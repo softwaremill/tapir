@@ -1,7 +1,8 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.RootGenerator.indent
-import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
+import sttp.tapir.codegen.json.JsonSerdeLib
+import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
@@ -331,7 +332,11 @@ object SchemaGenerator {
       recursionParams: (Boolean, Seq[String]),
       fullModelPath: Option[String]
   ): String = {
+    val schemaIsWrapped = schema.types.exists(!_.isInstanceOf[OpenapiSchemaRef])
     val schemaImpl = schema match {
+      case OpenapiSchemaOneOf(types, None) if schemaIsWrapped =>
+        // TODO: this
+        "sttp.tapir.Schema.derived"
       case OpenapiSchemaOneOf(_, None)                                            => "sttp.tapir.Schema.derived"
       case OpenapiSchemaOneOf(_, Some(Discriminator(propertyName, maybeMapping))) =>
         val mapping =

@@ -320,6 +320,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HasASet'
+  '/wrapped-one-of':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Aardvark'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aardvark'
 
 components:
   parameters:

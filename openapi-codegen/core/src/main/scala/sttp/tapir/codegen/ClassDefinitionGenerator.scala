@@ -1,7 +1,8 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType}
-import sttp.tapir.codegen.JsonSerdeLib.{Circe, Jsoniter}
+import sttp.tapir.codegen.json.{JsonHelpers, JsonSerdeLib, JsonSerdeGenerator, SerdeGenResponse}
+import sttp.tapir.codegen.json.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
@@ -53,7 +54,7 @@ class ClassDefinitionGenerator {
       case Nil      =>
       case h +: Nil =>
       case seq      =>
-        JsonSerdeGenerator.checkForSoundness(schemaName, doc.components.map(_.schemas).getOrElse(Map.empty))(seq.map(_._1))
+        JsonHelpers.checkForSoundness(schemaName, doc.components.map(_.schemas).getOrElse(Map.empty))(seq.map(_._1))
     }
     val maxes = grouped.map { case (k, vs) => k -> vs.map(_._2).max }
     (0 to 4).foreach(i =>

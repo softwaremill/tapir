@@ -2,7 +2,7 @@ package sttp.tapir.codegen
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.codegen.JsonSerdeLib.Circe
+import sttp.tapir.codegen.json.JsonSerdeLib.Circe
 
 class DiscriminatorCodegenSpec extends AnyFlatSpec with Matchers {
 
