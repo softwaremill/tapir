@@ -27,6 +27,7 @@ trait NettyZioServerInterpreter[R] {
         FilterServerEndpoints(widenedSes),
         new NettyZioRequestBody(
           widenedServerOptions.createFile,
+          widenedServerOptions.deleteFile,
           ZioStreamCompatible(runtime),
           widenedServerOptions.multipartTempDirectory,
           widenedServerOptions.multipartMinSizeForDisk

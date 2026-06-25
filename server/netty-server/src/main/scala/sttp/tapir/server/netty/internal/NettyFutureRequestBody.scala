@@ -14,6 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 private[netty] class NettyFutureRequestBody(
     val createFile: ServerRequest => Future[TapirFile],
+    val deleteFile: TapirFile => Future[Unit],
     val multipartTempDirectory: Option[TapirFile],
     val multipartMinSizeForDisk: Option[Long]
 )(implicit ec: ExecutionContext)
@@ -33,7 +34,7 @@ private[netty] class NettyFutureRequestBody(
   ): Future[Array[Byte]] =
     SimpleSubscriber.processAll(publisher, contentLength, maxBytes)
 
-  override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Future[Unit] =
+  override protected def writeToFileUnsafe(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Future[Unit] =
     serverRequest.underlying match {
       case r: StreamedHttpRequest => FileWriterSubscriber.processAll(r, file.toPath, maxBytes)
       case _                      => monad.unit(()) // Empty request

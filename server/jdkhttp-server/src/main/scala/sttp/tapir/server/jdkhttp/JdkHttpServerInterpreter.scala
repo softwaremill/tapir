@@ -16,7 +16,11 @@ trait JdkHttpServerInterpreter {
 
   def toHandler(ses: List[ServerEndpoint[Any, Identity]]): HttpHandler = {
     val filteredEndpoints = FilterServerEndpoints[Any, Identity](ses)
-    val requestBody = new JdkHttpRequestBody(jdkHttpServerOptions.createFile, jdkHttpServerOptions.multipartFileThresholdBytes)
+    val requestBody = new JdkHttpRequestBody(
+      jdkHttpServerOptions.createFile,
+      jdkHttpServerOptions.deleteFile,
+      jdkHttpServerOptions.multipartFileThresholdBytes
+    )
     val responseBody = new JdkHttpToResponseBody
     val interceptors = jdkHttpServerOptions.interceptors
 
