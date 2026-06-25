@@ -104,7 +104,9 @@ jobs:
       if: matrix.target-platform != 'JS'
       uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v3, specifically v4.0.0
       with:
-        timeout_minutes: 10
+        # this step runs every server-backend suite; on a slower runner the total wall-clock approaches 10 min and 
+        # flakily trips the timeout, with both attempts then timing out, so allow more room
+        timeout_minutes: 15
         max_attempts: 2
         # the netty server interpreter tests include some which run a large number of requests, to detect potential leaks
         # storing the output to verify it in the next step
