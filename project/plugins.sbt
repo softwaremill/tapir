@@ -1,7 +1,7 @@
 // https://github.com/sbt/sbt/issues/6997
 ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
 
-val sbtSoftwareMillVersion = "2.1.1"
+val sbtSoftwareMillVersion = "2.1.2"
 addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-common" % sbtSoftwareMillVersion)
 addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-publish" % sbtSoftwareMillVersion)
 addSbtPlugin("com.softwaremill.sbt-softwaremill" % "sbt-softwaremill-browser-test-js" % sbtSoftwareMillVersion)
@@ -11,7 +11,7 @@ addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "2.0.9")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.9.0")
 addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.11.0")
 addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.4")
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.21.0")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.22.0")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.10.0")
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.3.1")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.8")

@@ -3,6 +3,7 @@ package internal
 
 import com.sun.net.httpserver.HttpExchange
 import sttp.capabilities
+import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.model.Part
 import sttp.shared.Identity
 import sttp.tapir.capabilities.NoStreams
@@ -16,8 +17,11 @@ import java.io._
 import java.nio.ByteBuffer
 import java.nio.file.{Files, StandardCopyOption}
 
-private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile, multipartFileThresholdBytes: Long)
-    extends RequestBody[Identity, NoStreams] {
+private[jdkhttp] class JdkHttpRequestBody(
+    createFile: ServerRequest => TapirFile,
+    deleteFile: TapirFile => Unit,
+    multipartFileThresholdBytes: Long
+) extends RequestBody[Identity, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {
@@ -42,8 +46,14 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
       case RawBodyType.InputStreamBody      => RawValue(asInputStream)
       case RawBodyType.FileBody             =>
         val file = createFile(serverRequest)
-        Files.copy(asInputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
-        RawValue(FileRange(file), Seq(FileRange(file)))
+        try {
+          Files.copy(asInputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
+          RawValue(FileRange(file), Seq(FileRange(file)))
+        } catch {
+          case e: Exception =>
+            deleteFile(file)
+            throw e
+        }
       case m: RawBodyType.MultipartBody => RawValue.fromParts(multiPartRequestToRawBody(serverRequest, asInputStream, m))
     }
   }
@@ -84,7 +94,7 @@ private[jdkhttp] class JdkHttpRequestBody(createFile: ServerRequest => TapirFile
         )
       )
     } catch {
-      case e: Exception if e.getMessage().contains("Parsing multipart failed") => throw InvalidMultipartBodyException(e)
+      case e: Exception if e.getMessage.contains("Parsing multipart failed") => throw InvalidMultipartBodyException(e)
     }
   }
 

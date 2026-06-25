@@ -27,6 +27,9 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
   /** Backend-specific implementation for creating a file. */
   def createFile: ServerRequest => F[TapirFile]
 
+  /** Backend-specific implementation for deleting a file. */
+  def deleteFile: TapirFile => F[Unit]
+
   /** Directory in which multipart parts that don't fit in memory are buffered as temporary files. */
   val multipartTempDirectory: Option[TapirFile]
 

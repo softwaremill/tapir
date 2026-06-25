@@ -14,6 +14,6 @@ jobs:
     name: Update Dependency Graph
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
-      - uses: sbt/setup-sbt@18c5326132e2b0900fd6bd70f8b2b212364d11c8 # v1, specifically v1.3.0
+      - uses: actions/checkout@v7
+      - uses: sbt/setup-sbt@3afe9cf056c5d139bfc46579af1192d77a2f0821 # v1, specifically v1.4.0
       - uses: scalacenter/sbt-dependency-submission@d84eef4c09e633bcf5f113bcad7fd5e9af1baee9 # v3, specifically v3.1.1
