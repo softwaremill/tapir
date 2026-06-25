@@ -22,6 +22,7 @@ trait NettyFutureServerInterpreter {
       nettyServerOptions.interceptors,
       new NettyFutureRequestBody(
         nettyServerOptions.createFile,
+        nettyServerOptions.deleteFile,
         nettyServerOptions.multipartTempDirectory,
         nettyServerOptions.multipartMinSizeForDisk
       ),
