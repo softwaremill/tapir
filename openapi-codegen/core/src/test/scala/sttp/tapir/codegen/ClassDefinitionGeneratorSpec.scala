@@ -606,7 +606,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       gen.classDefs(TestHelpers.oneOfDocsNoDiscriminator, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants"))
     )
     failed.isFailure shouldEqual true
-    failed.failed.get.getMessage shouldEqual "Problems in non-discriminated oneOf declaration (#/components/schemas/ReqSubtype2 appears before #/components/schemas/ReqSubtype3, but a #/components/schemas/ReqSubtype3 can be a valid #/components/schemas/ReqSubtype2)"
+    failed.failed.get.getMessage shouldEqual "Problems in non-discriminated oneOf 'ReqWithVariants' declaration: (#/components/schemas/ReqSubtype2 appears before #/components/schemas/ReqSubtype3, but a #/components/schemas/ReqSubtype3 can be a valid #/components/schemas/ReqSubtype2)"
   }
 
   it should "generate ADTs for oneOf schemas (circe)" in {
@@ -637,6 +637,6 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       gen.classDefs(TestHelpers.oneOfDocsNoDiscriminator, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants"))
     )
     failed.isFailure shouldEqual true
-    failed.failed.get.getMessage shouldEqual "Problems in non-discriminated oneOf declaration (#/components/schemas/ReqSubtype2 appears before #/components/schemas/ReqSubtype3, but a #/components/schemas/ReqSubtype3 can be a valid #/components/schemas/ReqSubtype2)"
+    failed.failed.get.getMessage shouldEqual "Problems in non-discriminated oneOf 'ReqWithVariants' declaration: (#/components/schemas/ReqSubtype2 appears before #/components/schemas/ReqSubtype3, but a #/components/schemas/ReqSubtype3 can be a valid #/components/schemas/ReqSubtype2)"
   }
 }

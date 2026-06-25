@@ -180,7 +180,6 @@ object RootGenerator {
           enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams,
           xmlParamRefs = xmlParamRefs,
           useCustomJsoniterSerdes = useCustomJsoniterSerdes,
-          objName = objName,
           packageReuse = packageReuse
         )
         .getOrElse(GeneratedClassDefinitions("", None, Nil, None, false, Nil, Set.empty))

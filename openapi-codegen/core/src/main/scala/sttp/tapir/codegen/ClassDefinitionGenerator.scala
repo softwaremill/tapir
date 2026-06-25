@@ -20,6 +20,48 @@ case class GeneratedClassDefinitions(
 case class InlineEnumDefn(enumName: String, impl: String)
 
 class ClassDefinitionGenerator {
+  private def canBeDisambiguated(doc: OpenapiDocument, schemaName: String, s: Seq[OpenapiSchemaSimpleType]): Boolean = {
+    def bail(msg: String) = throw new RuntimeException(s"Unable to constructing internal representation for oneOf '$schemaName': $msg'")
+    val classify: OpenapiSchemaSimpleType => Int = {
+      case _: OpenapiSchemaBinary | _: OpenapiSchemaByte => bail("Binary/byte variants not supported on oneOf")
+      case _: OpenapiSchemaDate                          => 1
+      case _: OpenapiSchemaDateTime                      => 2
+      case _: OpenapiSchemaDuration                      => 3
+      case _: OpenapiSchemaUUID                          => 4
+      case _: OpenapiSchemaBoolean                       => 5
+      case _: OpenapiSchemaNumericType                   => 6
+      case _: OpenapiSchemaStringType                    => 7
+      case _: OpenapiSchemaAny                           => 8
+      case _: OpenapiSchemaRef                           => 9
+    }
+    val grouped = s.zipWithIndex.groupBy(p => classify(p._1))
+    val tps =
+      Map(
+        0 -> "binary",
+        1 -> "date",
+        2 -> "datetime",
+        3 -> "duration",
+        4 -> "uuid",
+        5 -> "bool",
+        6 -> "number",
+        7 -> "string",
+        8 -> "any",
+        9 -> "obj"
+      )
+    (0 to 8).foreach(i => if (grouped.getOrElse(i, Nil).size > 1) bail(s"more than one ${tps(i)} variant found"))
+    grouped.getOrElse(9, Nil) match {
+      case Nil                                   =>
+      case h +: Nil                              =>
+      case seq: Seq[OpenapiSchemaRef @unchecked] =>
+        JsonSerdeGenerator.checkForSoundness(schemaName, doc.components.map(_.schemas).getOrElse(Map.empty))(seq)
+    }
+    val maxes = grouped.map { case (k, vs) => k -> vs.map(_._2).max }
+    (0 to 4).foreach(i =>
+      if (maxes.get(i).exists(m => maxes.get(7).exists(m2 => m > m2))) bail(s"${tps(i)} variant hidden by string variant")
+    )
+    (0 to 9).foreach(i => if (maxes.get(i).exists(m => maxes.get(8).exists(m2 => m > m2))) bail(s"${tps(i)} variant hidden by any variant"))
+    true
+  }
 
   def classDefs(
       doc: OpenapiDocument,
@@ -34,12 +76,45 @@ class ClassDefinitionGenerator {
       enumsDefinedOnEndpointParams: Boolean = false,
       xmlParamRefs: Set[String] = Set.empty,
       useCustomJsoniterSerdes: Boolean = true,
-      objName: String = "TapirGeneratedEndpoints",
       packageReuse: PackageReuseContext = PackageReuseContext.none
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
-    val adtInheritanceMap: Map[String, Seq[(String, OpenapiSchemaOneOf)]] = mkMapParentsByChild(allOneOfSchemas)
+    val (allClassyOneOfSchemas, allOtherOneOfSchemas) = allOneOfSchemas.partition(_._2.types.forall {
+      case r: OpenapiSchemaRef => r.maybeResolved(doc).forall(_.isInstanceOf[OpenapiSchemaObject])
+      case _                   => false
+    })
+    val (resolvableNonClassyOneOfSchemas, unresolvableNCOOS) = allOtherOneOfSchemas.partition { p =>
+      p._2.discriminator.isEmpty && canBeDisambiguated(doc, p._1, p._2.types)
+    }
+    if (unresolvableNCOOS.nonEmpty) // we throw on disambiguation errors, so this is the correct error message
+      throw new RuntimeException(
+        s"Unable to constructing internal representation for oneOf(s) '${unresolvableNCOOS.map(_._1)}': discriminator provided, but not all variants are objects!"
+      )
+
+    val nonClassyOneOfReprs = resolvableNonClassyOneOfSchemas
+      .map { case (name, st) =>
+        val tt = name.capitalize
+        val variants = st.types
+          .map {
+            case _: OpenapiSchemaBinary | _: OpenapiSchemaByte => s"case class ${tt}Bin(v: Array[Byte]) extends $tt"
+            case _: OpenapiSchemaDate                          => s"case class ${tt}Date(v: java.time.LocalDate) extends $tt"
+            case _: OpenapiSchemaDateTime                      => s"case class ${tt}DateTime(v: java.time.Instant) extends $tt"
+            case _: OpenapiSchemaDuration                      => s"case class ${tt}Duration(v: java.time.Duration) extends $tt"
+            case _: OpenapiSchemaUUID                          => s"case class ${tt}UUID(v: java.util.UUID) extends $tt"
+            case _: OpenapiSchemaBoolean                       => s"case class ${tt}Boolean(v: Boolean) extends $tt"
+            case t: OpenapiSchemaNumericType                   => s"case class $tt${t.scalaType}(v: ${t.scalaType}) extends $tt"
+            case _: OpenapiSchemaStringType                    => s"case class ${tt}String(v: String) extends $tt"
+            case _: OpenapiSchemaAny                           => s"case class ${tt}Json(v: io.circe.Json) extends $tt"
+            case r: OpenapiSchemaRef                           => s"case class $tt${r.stripped}(v: ${r.stripped}) extends $tt"
+          }
+          .mkString("\n")
+        s"""
+         |sealed trait $tt
+         |$variants""".stripMargin
+      }
+      .mkString("\n")
+    val adtInheritanceMap: Map[String, Seq[(String, OpenapiSchemaOneOf)]] = mkMapParentsByChild(allClassyOneOfSchemas)
     val generatesQueryOrPathParamEnums = enumsDefinedOnEndpointParams ||
       allSchemas
         .collect { case (name, _: OpenapiSchemaEnum) => name }
@@ -93,7 +168,8 @@ class ClassDefinitionGenerator {
       targetScala3,
       schemasContainAny,
       useCustomJsoniterSerdes,
-      packageReuse
+      packageReuse,
+      resolvableNonClassyOneOfSchemas
     )
     val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
       xmlParamRefs,
@@ -116,7 +192,7 @@ class ClassDefinitionGenerator {
         case (name, r: OpenapiSchemaSimpleType)                => generateAlias(name, r)
         case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
       })
-      .map(_.toSeq.sorted.mkString("\n"))
+      .map(_.toSeq.sorted.mkString("\n") + nonClassyOneOfReprs)
     val helpers = (enumSerdeHelper + adtTypes).linesIterator
       .filterNot(_.forall(_.isWhitespace))
       .mkString("\n")
@@ -299,7 +375,8 @@ class ClassDefinitionGenerator {
       val (properties, maybeEnums) = obj.properties
         .filterNot(discriminatorDefFields.map(_._1) contains _._1)
         .map { case (key, OpenapiSchemaField(schemaType, maybeDefault, _)) =>
-          val (tpe, maybeEnum) = mapSchemaTypeToType(className, key, obj.required.contains(key), schemaType, isJson, jsonSerdeLib, targetScala3)
+          val (tpe, maybeEnum) =
+            mapSchemaTypeToType(className, key, obj.required.contains(key), schemaType, isJson, jsonSerdeLib, targetScala3)
           val fixedKey = fixKey(key)
           val optional = schemaType.nullable || !obj.required.contains(key)
           val maybeExplicitDefault =

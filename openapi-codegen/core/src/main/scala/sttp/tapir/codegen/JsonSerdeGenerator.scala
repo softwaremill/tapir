@@ -7,7 +7,11 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAllOf,
   OpenapiSchemaAny,
   OpenapiSchemaArray,
+  OpenapiSchemaBinary,
   OpenapiSchemaBoolean,
+  OpenapiSchemaDate,
+  OpenapiSchemaDateTime,
+  OpenapiSchemaDuration,
   OpenapiSchemaEnum,
   OpenapiSchemaField,
   OpenapiSchemaMap,
@@ -17,7 +21,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaRef,
   OpenapiSchemaSimpleType,
   OpenapiSchemaString,
-  OpenapiSchemaStringType
+  OpenapiSchemaStringType,
+  OpenapiSchemaUUID
 }
 
 import scala.annotation.tailrec
@@ -38,7 +43,8 @@ object JsonSerdeGenerator {
       targetScala3: Boolean,
       schemasContainAny: Boolean,
       useCustomJsoniterSerdes: Boolean,
-      packageReuse: PackageReuseContext = PackageReuseContext.none
+      packageReuse: PackageReuseContext,
+      resolvableNonClassyOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]
   ): SerdeGenResponse = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
 
@@ -55,7 +61,8 @@ object JsonSerdeGenerator {
           validateNonDiscriminatedOneOfs,
           schemasContainAny,
           useCustomJsoniterSerdes,
-          packageReuse
+          packageReuse,
+          resolvableNonClassyOneOfSchemas
         )
       case JsonSerdeLib.Zio =>
         genZioSerdes(doc, allSchemas, allTransitiveJsonParamRefs, validateNonDiscriminatedOneOfs, targetScala3, packageReuse)
@@ -65,7 +72,8 @@ object JsonSerdeGenerator {
   ///
   /// Helpers
   ///
-  private def checkForSoundness(allSchemas: Map[String, OpenapiSchemaType])(variants: Seq[OpenapiSchemaRef]) = if (variants.size <= 1) false
+  def checkForSoundness(name: String, allSchemas: Map[String, OpenapiSchemaType])(variants: Seq[OpenapiSchemaRef]) = if (variants.size <= 1)
+    false
   else {
     @tailrec def resolve(variant: OpenapiSchemaRef): OpenapiSchemaType = allSchemas(variant.stripped) match {
       case ref: OpenapiSchemaRef => resolve(ref)
@@ -119,7 +127,7 @@ object JsonSerdeGenerator {
       .flatMap { case (variant, fallbacks) => fallbacks.filter(rCanLookLikeL(variant, _)).map(variant -> _) }
       .map { case (l, r) => s"${l.name} appears before ${r.name}, but a ${r.name} can be a valid ${l.name}" }
     if (problems.nonEmpty)
-      throw new IllegalArgumentException(problems.mkString("Problems in non-discriminated oneOf declaration (", "; ", ")"))
+      throw new IllegalArgumentException(problems.mkString(s"Problems in non-discriminated oneOf '$name' declaration: (", "; ", ")"))
   }
 
   private def inlineEndpointSchemas(doc: OpenapiDocument): Seq[(String, OpenapiSchemaType, Boolean)] =
@@ -278,7 +286,7 @@ object JsonSerdeGenerator {
           case ref: OpenapiSchemaRef => ref.stripped
           case other => throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
         }
-        if (validateNonDiscriminatedOneOfs) checkForSoundness(allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
+        if (validateNonDiscriminatedOneOfs) checkForSoundness(name, allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
         val encoders = subtypeNames.map(t => s"case x: $t => io.circe.Encoder[$t].apply(x)").mkString("\n")
         val decoders = subtypeNames.map(t => s"io.circe.Decoder[$t].asInstanceOf[io.circe.Decoder[$name]]").mkString(",\n")
         s"""implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.Encoder.instance {
@@ -314,7 +322,8 @@ object JsonSerdeGenerator {
       validateNonDiscriminatedOneOfs: Boolean,
       schemasContainAny: Boolean,
       useCustomJsoniterSerdes: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      resolvableNonClassyOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]
   ): SerdeGenResponse = {
     // if schemas contain an 'any' (i.e. any json), we assume jsoniter-scala-circe is a dependency
     val maybeAnySerde =
@@ -425,11 +434,12 @@ object JsonSerdeGenerator {
          |    out.writeVal(java.util.Base64.getEncoder.encodeToString(x))
          |}
          |""".stripMargin
-    val serdesDefn = (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
-      .flatMap { (getSerdeString _).tupled }
+
+    val wrappedOneOfSerdes = resolvableNonClassyOneOfSchemas.map { case (name, schema) => generateJsoniterWrappedOneOfSerde(name, schema) }
+    val serdesDefn = ((docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
+      .flatMap { (getSerdeString _).tupled } ++ wrappedOneOfSerdes)
       // an inline enum can be reached by multiple paths (or also be emitted at top level); duplicate decls won't compile
-      .distinct
-      .sorted
+      .distinct.sorted
       .foldLeft(Option.empty[String]) {
         case (Some(a), b) => Some(a + "\n" + b)
         case (None, a)    => Some(a)
@@ -544,7 +554,7 @@ object JsonSerdeGenerator {
         body
 
       case OpenapiSchemaOneOf(schemas, None) =>
-        if (validateNonDiscriminatedOneOfs) checkForSoundness(allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
+        if (validateNonDiscriminatedOneOfs) checkForSoundness(name, allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
         val childNameAndSerde = schemas.collect { case ref: OpenapiSchemaRef =>
           val name = ref.stripped
           name -> s"${RootGenerator.uncapitalise(name)}JsonCodec"
@@ -556,7 +566,7 @@ object JsonSerdeGenerator {
           |  case (None, next) =>
           |    in.setMark()
           |    scala.util.Try(next.asInstanceOf[$jsoniterPkgCore.JsonValueCodec[$name]].decodeValue(in, default))
-          |      .fold(_ => { in.rollbackToMark(); None }, Some(_))
+          |      .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(succ) })
           |}.getOrElse(throw new RuntimeException("Unable to decode json to untagged ADT type ${name}"))""".stripMargin)
         val doEncode = childNameAndSerde.map { case (name, serdeName) => s"case x: $name => $serdeName.encodeValue(x, out)" }.mkString("\n")
         val serde =
@@ -572,6 +582,100 @@ object JsonSerdeGenerator {
              |}""".stripMargin
         serde
     }
+  }
+
+  private def generateJsoniterWrappedOneOfSerde(
+      name: String,
+      schema: OpenapiSchemaOneOf
+  ): String = {
+    val codecName = getJsoniterName(name)
+    val (otherSchemas, refSchemas) = schema.types.partition(_.isInstanceOf[OpenapiSchemaRef])
+    val maybeBoolSchema = otherSchemas.collectFirst { case b: OpenapiSchemaBoolean => b }
+    val maybeNumericSchema = otherSchemas.collectFirst { case n: OpenapiSchemaNumericType => n }
+    val maybeAnySchema = otherSchemas.collectFirst { case a: OpenapiSchemaAny => a }
+    val stringSchemas = otherSchemas.collect { case a: OpenapiSchemaStringType => a }
+
+    val childNameAndSerde = refSchemas.map { case ref: OpenapiSchemaRef =>
+      val name = ref.stripped
+      name -> s"${RootGenerator.uncapitalise(name)}JsonCodec"
+    }
+    val doBoolDecode = maybeBoolSchema.map { _ =>
+      s"""() => {
+         |  in.setMark()
+         |  scala.util.Try(in.readBoolean()).fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(${name}Boolean(succ)) })
+         |}""".stripMargin
+    }.toSeq
+    val doNumericDecode = maybeNumericSchema.map { s =>
+      s"""() => {
+         |  in.setMark()
+         |  scala.util.Try(in.read${s.scalaType}()).fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some($name${s.scalaType}(succ)) })
+         |}""".stripMargin
+    }.toSeq
+    val doStringDecodes = {
+      val tries = stringSchemas.zipWithIndex
+        .map { case (s, i) =>
+          val (parseImpl, wrapper) = s match {
+            case _: OpenapiSchemaDate     => "java.time.LocalDate.parse(succ)" -> s"${name}Date"
+            case _: OpenapiSchemaDateTime => "java.time.Instant.parse(succ)" -> s"${name}DateTime"
+            case _: OpenapiSchemaDuration => "java.time.Duration.parse(succ)" -> s"${name}Duration"
+            case _: OpenapiSchemaUUID     => "java.util.UUID.fromString(succ)" -> s"${name}UUID"
+            case _                        => "succ" -> s"${name}String"
+          }
+          if (i == 0) s"Some(scala.util.Try($parseImpl).map($wrapper(_))" else s".orElse(scala.util.Try($parseImpl).map($wrapper(_)))"
+        }
+        .mkString("\n        ")
+      s"""() => {
+         |  in.setMark()
+         |  scala.util.Try(in.readString(null))
+         |    .fold(
+         |      _ => { in.rollbackToMark(); None },
+         |      succ => {
+         |        in.resetMark();
+         |        {
+         |          $tries
+         |            .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
+         |        }
+         |      })
+         |}""".stripMargin
+    }.toSeq
+
+    val doRefDecodes = childNameAndSerde
+      .map { case (typeName, serdeName) =>
+        s"""
+           |() => {
+           |  in.setMark()
+           |  scala.util.Try($serdeName.decodeValue(in, null.asInstanceOf[$typeName]))
+           |    .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some($name${typeName.capitalize}(succ)) })
+           |}""".stripMargin
+      }
+    val doAnyDecode = maybeAnySchema.map { _ => s"() => Some(${name}Json(anyJsonSupport.decodeValue(in, io.circe.Json.Null)))" }
+    val doDecode = (doBoolDecode ++ doNumericDecode ++ doStringDecodes ++ doRefDecodes ++ doAnyDecode).mkString(",\n")
+    val doEncode =
+      (maybeBoolSchema.map { s => s"case x: ${name}Boolean => out.writeVal(x.v)" }.toSeq ++
+        maybeNumericSchema.map { s => s"case x: $name${s.scalaType} => out.writeVal(x.v)" }.toSeq ++
+        maybeAnySchema.map { s => s"case x: ${name}Json => anyJsonSupport.encodeValue(x.v, out)" }.toSeq ++
+        stringSchemas.map {
+          case s: OpenapiSchemaString => s"case x: ${name}Json => out.writeVal(x.v)"
+          case s                      => s"case x: ${name}Json => out.writeVal(x.v.toString)"
+        } ++
+        childNameAndSerde.map { case (name, serdeName) => s"case x: $name => $serdeName.encodeValue(x, out)" }).mkString("\n")
+    val serde =
+      s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = new $jsoniterPkgCore.JsonValueCodec[$name] {
+         |    def decodeValue(in: $jsoniterPkgCore.JsonReader, default: $name): $name = {
+         |      List[() => Option[$name]](
+         |${indent(8)(doDecode)})
+         |        .foldLeft(Option.empty[$name]) {
+         |          case (Some(v), _) => Some(v)
+         |          case (None, next) => next()
+         |        }.getOrElse(throw new RuntimeException("Unable to decode json to wrapped oneOf type $name"))
+         |    }
+         |    def encodeValue(x: $name, out: JsonWriter): Unit = x match {
+         |${indent(6)(doEncode)}
+         |    }
+         |
+         |    def nullValue: $name = null.asInstanceOf[$name]
+         |  }""".stripMargin
+    serde
   }
 
   ///
@@ -714,7 +818,7 @@ object JsonSerdeGenerator {
           case ref: OpenapiSchemaRef => ref.stripped
           case other => throw new IllegalArgumentException(s"oneOf subtypes must be refs to explicit schema models, found $other for $name")
         }
-        if (validateNonDiscriminatedOneOfs) checkForSoundness(allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
+        if (validateNonDiscriminatedOneOfs) checkForSoundness(name, allSchemas)(schema.types.map(_.asInstanceOf[OpenapiSchemaRef]))
         val encoders = subtypeNames.map(t => s"case x: $t => zio.json.JsonEncoder[$t].unsafeEncode(x, indent, out)").mkString("\n")
         val decoders = subtypeNames.map(t => s"zio.json.JsonDecoder[$t].asInstanceOf[zio.json.JsonDecoder[$name]]").mkString(",\n")
         s"""implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = new zio.json.JsonEncoder[$name] {
