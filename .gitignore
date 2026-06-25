@@ -35,3 +35,6 @@ file-uploads
 .claude/settings.local.json
 
 .orca
+
+# Superpowers design specs and plans — local only
+docs/superpowers/
