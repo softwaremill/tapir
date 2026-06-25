@@ -414,8 +414,16 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[HasASet]])
       .out(jsonBody[HasASet].description("OK"))
 
+  type PostWrappedOneOfEndpoint = Endpoint[Unit, Option[Aardvark], Unit, Aardvark, Any]
+  lazy val postWrappedOneOf: PostWrappedOneOfEndpoint =
+    endpoint
+      .post
+      .in(("wrapped-one-of"))
+      .in(jsonBody[Option[Aardvark]])
+      .out(jsonBody[Aardvark].description("OK"))
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getDynamicContentTypeTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems)
+
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getDynamicContentTypeTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems, postWrappedOneOf)
 
 
   object Servers {

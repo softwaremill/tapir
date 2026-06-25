@@ -8,9 +8,11 @@ import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJso
 import TapirGeneratedEndpointsJsonSerdes._
 import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.generated.TapirGeneratedEndpoints.SubtypeWithoutD3E2.A
-import sttp.tapir.generated.TapirGeneratedEndpoints._
+import sttp.tapir.generated.TapirGeneratedEndpoints.{Aardvark, _}
 import sttp.tapir.server.stub.TapirStubInterpreter
 
+import java.time.{Duration, Instant, LocalDate}
+import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -206,5 +208,39 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
         },
       1.second
     )
+  }
+
+  "wrapped one-of roundtrip" in {
+    val route = TapirGeneratedEndpoints.postWrappedOneOf.serverLogic[Future]({
+      case None =>
+        Future successful Right(AardvarkUUID(UUID.randomUUID()))
+      case Some(aardvark) =>
+        Future successful Right(aardvark)
+    })
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+    def testCase(reqBody: Aardvark) = {
+      val reqJsonBody = writeToString(reqBody)
+      Await.result(
+        sttp.client3.basicRequest
+          .post(uri"http://test.com/wrapped-one-of")
+          .body(reqJsonBody)
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual 200
+            resp.body shouldEqual Right(reqJsonBody)
+          },
+        1.second
+      )
+    }
+    testCase(AardvarkUUID(UUID.randomUUID()))
+    testCase(AardvarkDate(LocalDate.now()))
+    testCase(AardvarkDateTime(Instant.now()))
+    testCase(AardvarkDuration(Duration.ofMillis(1234566)))
+    testCase(AardvarkDouble(1.23d))
+    testCase(AardvarkAbrdvark(Abrdvark(true)))
+    testCase(AardvarkAcrdvark(Acrdvark(false)))
   }
 }

@@ -402,7 +402,7 @@ object JsoniterSerdeImpl {
           case s                      =>
             s"case x: ${name}${s.disambiguationSuffix} => out.writeVal(x.v.toString)"
         } ++
-        childNameAndSerde.map { case (name, serdeName) => s"case x: $name => $serdeName.encodeValue(x, out)" }).mkString("\n")
+        childNameAndSerde.map { case (subName, serdeName) => s"case x: $name${subName} => $serdeName.encodeValue(x.v, out)" }).mkString("\n")
     val serde =
       s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = new $jsoniterPkgCore.JsonValueCodec[$name] {
          |    def decodeValue(in: $jsoniterPkgCore.JsonReader, default: $name): $name = {

@@ -57,6 +57,60 @@ object TapirGeneratedEndpointsJsonSerdes {
 
     def nullValue: ADTWithoutDiscriminator = subtypeWithoutD1JsonCodec.nullValue
   }
+  implicit lazy val aardvarkJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Aardvark] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Aardvark] {
+      def decodeValue(in: com.github.plokhotnyuk.jsoniter_scala.core.JsonReader, default: Aardvark): Aardvark = {
+        List[() => Option[Aardvark]](
+          () => {
+            in.setMark()
+            scala.util.Try(in.readDouble()).fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(AardvarkDouble(succ)) })
+          },
+          () => {
+            in.setMark()
+            scala.util.Try(in.readString(null))
+              .fold(
+                _ => { in.rollbackToMark(); None },
+                succ => {
+                  in.resetMark();
+                  {
+                    Some(scala.util.Try(java.util.UUID.fromString(succ)).map(AardvarkUUID(_))
+                  .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
+                  .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
+                  .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
+                      .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
+                  }
+                })
+          },
+
+          () => {
+            in.setMark()
+            scala.util.Try(abrdvarkJsonCodec.decodeValue(in, null.asInstanceOf[Abrdvark]))
+              .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(AardvarkAbrdvark(succ)) })
+          },
+
+          () => {
+            in.setMark()
+            scala.util.Try(acrdvarkJsonCodec.decodeValue(in, null.asInstanceOf[Acrdvark]))
+              .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(AardvarkAcrdvark(succ)) })
+          })
+          .foldLeft(Option.empty[Aardvark]) {
+            case (Some(v), _) => Some(v)
+            case (None, next) => next()
+          }.getOrElse(throw new RuntimeException("Unable to decode json to wrapped oneOf type Aardvark"))
+      }
+      def encodeValue(x: Aardvark, out: com.github.plokhotnyuk.jsoniter_scala.core.JsonWriter): Unit = x match {
+        case x: AardvarkDouble => out.writeVal(x.v)
+        case x: AardvarkUUID => out.writeVal(x.v.toString)
+        case x: AardvarkDate => out.writeVal(x.v.toString)
+        case x: AardvarkDateTime => out.writeVal(x.v.toString)
+        case x: AardvarkDuration => out.writeVal(x.v.toString)
+        case x: AardvarkAbrdvark => abrdvarkJsonCodec.encodeValue(x.v, out)
+        case x: AardvarkAcrdvark => acrdvarkJsonCodec.encodeValue(x.v, out)
+      }
+
+      def nullValue: Aardvark = null.asInstanceOf[Aardvark]
+    }
+  implicit lazy val abrdvarkJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Abrdvark] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
+  implicit lazy val acrdvarkJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Acrdvark] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
   implicit lazy val hasASetJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[HasASet] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
   implicit lazy val postInlineSimpleObjectRequestJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[PostInlineSimpleObjectRequest] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
   implicit lazy val postInlineSimpleObjectResponseJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[PostInlineSimpleObjectResponse] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
