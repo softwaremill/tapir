@@ -11,7 +11,7 @@ incorrectly-implemented functionality are highly encouraged.
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.13.23")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "1.13.24")
 ```
 
 Enable the plugin for your project in the `build.sbt`:
@@ -52,6 +52,10 @@ openapiStreamingImplementation        fs2                                  Imple
 openapiGenerateEndpointTypes          false                                Whether to emit explicit types for endpoint defns
 openapiDisableValidatorGeneration     false                                If true, we will not generate validation for constraints (min, max, pattern etc)
 openapiUseCustomJsoniterSerdes        false                                If true and openapiJsonSerdeLib = jsoniter, serdes will be generated to use custom 'openapi' make defns. May help with flaky compilation, but requires jsoniter-scala >= 2.36.0+
+openapiPackageDependencies            Map.empty[String, String]            Allows the generated code for a key package to 'depend on' the generated package in the value. This will deduplicate
+                                                                           repeated schema declarations between the openapis, with the generated code for the 'key' package defining type (and sometimes val)
+                                                                           aliases to the duplicates in the 'value' package. This is still experimental - significantly, the type is likely to change
+                                                                           to a Map[String, Seq[String]] in the near future to permit multiple 'inheritance', and there may be bugs in the implementation.
 ===================================== ==================================== ==================================================================================================
 ```
 
