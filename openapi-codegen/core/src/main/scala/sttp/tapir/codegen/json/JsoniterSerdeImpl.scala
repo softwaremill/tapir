@@ -302,7 +302,7 @@ object JsoniterSerdeImpl {
                        |  case (None, next) =>
                        |    in.setMark()
                        |    scala.util.Try(next.asInstanceOf[$jsoniterPkgCore.JsonValueCodec[$name]].decodeValue(in, default))
-                       |      .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(succ) })
+                       |      .fold(_ => { in.rollbackToMark(); None }, succ => Some(succ))
                        |}.getOrElse(throw new RuntimeException("Unable to decode json to untagged ADT type ${name}"))""".stripMargin)
         val doEncode = childNameAndSerde.map { case (name, serdeName) => s"case x: $name => $serdeName.encodeValue(x, out)" }.mkString("\n")
         val serde =
@@ -338,13 +338,13 @@ object JsoniterSerdeImpl {
     val doBoolDecode = maybeBoolSchema.map { _ =>
       s"""() => {
          |  in.setMark()
-         |  scala.util.Try(in.readBoolean()).fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(${name}Boolean(succ)) })
+         |  scala.util.Try(in.readBoolean()).fold(_ => { in.rollbackToMark(); None }, succ => Some(${name}Boolean(succ)))
          |}""".stripMargin
     }.toSeq
     val doNumericDecode = maybeNumericSchema.map { s =>
       s"""() => {
          |  in.setMark()
-         |  scala.util.Try(in.read${s.scalaType}()).fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some($name${s.scalaType}(succ)) })
+         |  scala.util.Try(in.read${s.scalaType}()).fold(_ => { in.rollbackToMark(); None }, succ => Some($name${s.scalaType}(succ)))
          |}""".stripMargin
     }.toSeq
     val doStringDecodes =
@@ -361,7 +361,7 @@ object JsoniterSerdeImpl {
             }
             if (i == 0) s"Some(scala.util.Try($parseImpl).map($wrapper(_))" else s".orElse(scala.util.Try($parseImpl).map($wrapper(_)))"
           }
-          .mkString("\n        ")
+          .mkString("\n      ")
         val decode =
           s"""() => {
              |  in.setMark()
@@ -369,11 +369,8 @@ object JsoniterSerdeImpl {
              |    .fold(
              |      _ => { in.rollbackToMark(); None },
              |      succ => {
-             |        in.resetMark();
-             |        {
-             |          $tries
-             |            .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
-             |        }
+             |        $tries
+             |          .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
              |      })
              |}""".stripMargin
         Some(decode)
@@ -385,7 +382,7 @@ object JsoniterSerdeImpl {
            |() => {
            |  in.setMark()
            |  scala.util.Try($serdeName.decodeValue(in, null.asInstanceOf[$typeName]))
-           |    .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some($name${typeName.capitalize}(succ)) })
+           |    .fold(_ => { in.rollbackToMark(); None }, succ => Some($name${typeName.capitalize}(succ)))
            |}""".stripMargin
       }
     val doAnyDecode = maybeAnySchema.map { _ => s"() => Some(${name}Json(anyJsonSupport.decodeValue(in, io.circe.Json.Null)))" }

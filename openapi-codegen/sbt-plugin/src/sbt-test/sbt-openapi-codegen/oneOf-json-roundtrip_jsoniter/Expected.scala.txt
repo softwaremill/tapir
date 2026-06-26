@@ -173,8 +173,18 @@ object TapirGeneratedEndpoints {
     id: Option[Long] = None,
     name: Option[String] = None
   )
+  case class WrapA (
+    v: StringOrInt
+  )
+  case class WrapB (
+    w: AnEnum
+  )
   type ListType = List[ByteString]
   type SomeBinaryType = io.circe.JsonObject
+  sealed trait StringOrInt
+  case class StringOrIntString(v: String) extends StringOrInt
+  case class StringOrIntInt(v: Int) extends StringOrInt
+
   sealed trait Aardvark
   case class AardvarkUUID(v: java.util.UUID) extends Aardvark
   case class AardvarkDate(v: java.time.LocalDate) extends Aardvark
@@ -184,6 +194,11 @@ object TapirGeneratedEndpoints {
   case class AardvarkString(v: String) extends Aardvark
   case class AardvarkAbrdvark(v: Abrdvark) extends Aardvark
   case class AardvarkAcrdvark(v: Acrdvark) extends Aardvark
+
+  sealed trait FooOrStringOrInt
+  case class FooOrStringOrIntWrapA(v: WrapA) extends FooOrStringOrInt
+  case class FooOrStringOrIntWrapB(v: WrapB) extends FooOrStringOrInt
+  case class FooOrStringOrIntInt(v: Int) extends FooOrStringOrInt
   sealed trait GetRedirectTestResponseHeader
   case class GetRedirectTestResponseHeader307(redirectHeader: String) extends GetRedirectTestResponseHeader
   case object GetRedirectTestResponseHeader204 extends GetRedirectTestResponseHeader
@@ -415,6 +430,14 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[HasASet]])
       .out(jsonBody[HasASet].description("OK"))
 
+  type PutWrappedOneOfEndpoint = Endpoint[Unit, Option[List[FooOrStringOrInt]], Unit, List[FooOrStringOrInt], Any]
+  lazy val putWrappedOneOf: PutWrappedOneOfEndpoint =
+    endpoint
+      .put
+      .in(("wrapped-one-of"))
+      .in(jsonBody[Option[List[FooOrStringOrInt]]])
+      .out(jsonBody[List[FooOrStringOrInt]].description("OK"))
+
   type PostWrappedOneOfEndpoint = Endpoint[Unit, Option[Aardvark], Unit, Aardvark, Any]
   lazy val postWrappedOneOf: PostWrappedOneOfEndpoint =
     endpoint
@@ -424,7 +447,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[Aardvark].description("OK"))
 
 
-  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getDynamicContentTypeTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems, postWrappedOneOf)
+  lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getDynamicContentTypeTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems, putWrappedOneOf, postWrappedOneOf)
 
 
   object Servers {

@@ -46,7 +46,7 @@ object TapirGeneratedEndpointsJsonSerdes {
           case (None, next) =>
             in.setMark()
             scala.util.Try(next.asInstanceOf[com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[ADTWithoutDiscriminator]].decodeValue(in, default))
-              .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(succ) })
+              .fold(_ => { in.rollbackToMark(); None }, succ => Some(succ))
         }.getOrElse(throw new RuntimeException("Unable to decode json to untagged ADT type ADTWithoutDiscriminator"))
     }
     def encodeValue(x: ADTWithoutDiscriminator, out: com.github.plokhotnyuk.jsoniter_scala.core.JsonWriter): Unit = x match {
@@ -62,7 +62,7 @@ object TapirGeneratedEndpointsJsonSerdes {
         List[() => Option[Aardvark]](
           () => {
             in.setMark()
-            scala.util.Try(in.readDouble()).fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(AardvarkDouble(succ)) })
+            scala.util.Try(in.readDouble()).fold(_ => { in.rollbackToMark(); None }, succ => Some(AardvarkDouble(succ)))
           },
           () => {
             in.setMark()
@@ -70,28 +70,25 @@ object TapirGeneratedEndpointsJsonSerdes {
               .fold(
                 _ => { in.rollbackToMark(); None },
                 succ => {
-                  in.resetMark();
-                  {
-                    Some(scala.util.Try(java.util.UUID.fromString(succ)).map(AardvarkUUID(_))
-                  .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
-                  .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
-                  .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
-                  .orElse(scala.util.Try(succ).map(AardvarkString(_)))
-                      .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
-                  }
+                  Some(scala.util.Try(java.util.UUID.fromString(succ)).map(AardvarkUUID(_))
+                .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
+                .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
+                .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
+                .orElse(scala.util.Try(succ).map(AardvarkString(_)))
+                    .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
                 })
           },
 
           () => {
             in.setMark()
             scala.util.Try(abrdvarkJsonCodec.decodeValue(in, null.asInstanceOf[Abrdvark]))
-              .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(AardvarkAbrdvark(succ)) })
+              .fold(_ => { in.rollbackToMark(); None }, succ => Some(AardvarkAbrdvark(succ)))
           },
 
           () => {
             in.setMark()
             scala.util.Try(acrdvarkJsonCodec.decodeValue(in, null.asInstanceOf[Acrdvark]))
-              .fold(_ => { in.rollbackToMark(); None }, succ => { in.resetMark(); Some(AardvarkAcrdvark(succ)) })
+              .fold(_ => { in.rollbackToMark(); None }, succ => Some(AardvarkAcrdvark(succ)))
           })
           .foldLeft(Option.empty[Aardvark]) {
             case (Some(v), _) => Some(v)
@@ -113,10 +110,73 @@ object TapirGeneratedEndpointsJsonSerdes {
     }
   implicit lazy val abrdvarkJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Abrdvark] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
   implicit lazy val acrdvarkJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[Acrdvark] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
+  implicit lazy val fooOrStringOrIntJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[FooOrStringOrInt] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[FooOrStringOrInt] {
+      def decodeValue(in: com.github.plokhotnyuk.jsoniter_scala.core.JsonReader, default: FooOrStringOrInt): FooOrStringOrInt = {
+        List[() => Option[FooOrStringOrInt]](
+          () => {
+            in.setMark()
+            scala.util.Try(in.readInt()).fold(_ => { in.rollbackToMark(); None }, succ => Some(FooOrStringOrIntInt(succ)))
+          },
+
+          () => {
+            in.setMark()
+            scala.util.Try(wrapAJsonCodec.decodeValue(in, null.asInstanceOf[WrapA]))
+              .fold(_ => { in.rollbackToMark(); None }, succ => Some(FooOrStringOrIntWrapA(succ)))
+          },
+
+          () => {
+            in.setMark()
+            scala.util.Try(wrapBJsonCodec.decodeValue(in, null.asInstanceOf[WrapB]))
+              .fold(_ => { in.rollbackToMark(); None }, succ => Some(FooOrStringOrIntWrapB(succ)))
+          })
+          .foldLeft(Option.empty[FooOrStringOrInt]) {
+            case (Some(v), _) => Some(v)
+            case (None, next) => next()
+          }.getOrElse(throw new RuntimeException("Unable to decode json to wrapped oneOf type FooOrStringOrInt"))
+      }
+      def encodeValue(x: FooOrStringOrInt, out: com.github.plokhotnyuk.jsoniter_scala.core.JsonWriter): Unit = x match {
+        case x: FooOrStringOrIntInt => out.writeVal(x.v)
+        case x: FooOrStringOrIntWrapA => wrapAJsonCodec.encodeValue(x.v, out)
+        case x: FooOrStringOrIntWrapB => wrapBJsonCodec.encodeValue(x.v, out)
+      }
+
+      def nullValue: FooOrStringOrInt = null.asInstanceOf[FooOrStringOrInt]
+    }
   implicit lazy val hasASetJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[HasASet] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
   implicit lazy val postInlineSimpleObjectRequestJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[PostInlineSimpleObjectRequest] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
   implicit lazy val postInlineSimpleObjectResponseJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[PostInlineSimpleObjectResponse] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
+  implicit lazy val stringOrIntJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[StringOrInt] = new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[StringOrInt] {
+      def decodeValue(in: com.github.plokhotnyuk.jsoniter_scala.core.JsonReader, default: StringOrInt): StringOrInt = {
+        List[() => Option[StringOrInt]](
+          () => {
+            in.setMark()
+            scala.util.Try(in.readInt()).fold(_ => { in.rollbackToMark(); None }, succ => Some(StringOrIntInt(succ)))
+          },
+          () => {
+            in.setMark()
+            scala.util.Try(in.readString(null))
+              .fold(
+                _ => { in.rollbackToMark(); None },
+                succ => {
+                  Some(scala.util.Try(succ).map(StringOrIntString(_))
+                    .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
+                })
+          })
+          .foldLeft(Option.empty[StringOrInt]) {
+            case (Some(v), _) => Some(v)
+            case (None, next) => next()
+          }.getOrElse(throw new RuntimeException("Unable to decode json to wrapped oneOf type StringOrInt"))
+      }
+      def encodeValue(x: StringOrInt, out: com.github.plokhotnyuk.jsoniter_scala.core.JsonWriter): Unit = x match {
+        case x: StringOrIntInt => out.writeVal(x.v)
+        case x: StringOrIntString => out.writeVal(x.v)
+      }
+
+      def nullValue: StringOrInt = null.asInstanceOf[StringOrInt]
+    }
   implicit lazy val subtypeWithoutD1JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD1] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
   implicit lazy val subtypeWithoutD2JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD2] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
   implicit lazy val subtypeWithoutD3JsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SubtypeWithoutD3] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
+  implicit lazy val wrapAJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[WrapA] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
+  implicit lazy val wrapBJsonCodec: com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[WrapB] = com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.makeOpenapiLike
 }

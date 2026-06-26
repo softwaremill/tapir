@@ -8,7 +8,7 @@ import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJso
 import TapirGeneratedEndpointsJsonSerdes._
 import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.generated.TapirGeneratedEndpoints.SubtypeWithoutD3E2.A
-import sttp.tapir.generated.TapirGeneratedEndpoints.{Aardvark, _}
+import sttp.tapir.generated.TapirGeneratedEndpoints.{Aardvark, FooOrStringOrIntInt, StringOrInt, _}
 import sttp.tapir.server.stub.TapirStubInterpreter
 
 import java.time.{Duration, Instant, LocalDate}
@@ -243,5 +243,40 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     testCase(AardvarkDouble(1.23d))
     testCase(AardvarkAbrdvark(Abrdvark(true)))
     testCase(AardvarkAcrdvark(Acrdvark(false)))
+  }
+
+  "wrapped one-of roundtrip (list)" in {
+    val route = TapirGeneratedEndpoints.putWrappedOneOf.serverLogic[Future]({
+      case None    => Future successful Right(List(FooOrStringOrIntInt(123)))
+      case Some(s) => Future successful Right(s)
+    })
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+    def testCase(reqBody: Option[List[FooOrStringOrInt]]) = {
+//      val wrapped: Option[List[FooOrStringOrInt]] = reqBody.map(_.map(b => FooOrStringOrIntWrapA(WrapA(b))))
+      val reqJsonBody = writeToString(reqBody)
+      println(s"reqJsonBody = $reqJsonBody")
+      Await.result(
+        sttp.client3.basicRequest
+          .put(uri"http://test.com/wrapped-one-of")
+          .body(reqJsonBody)
+          .send(stub)
+          .map { resp =>
+            if (reqBody.isDefined) resp.body shouldEqual Right(reqJsonBody)
+            resp.code.code shouldEqual 200
+          },
+        1.second
+      )
+    }
+    testCase(None)
+    testCase(Some(Nil))
+    testCase(Some(List(FooOrStringOrIntInt(123))))
+    testCase(Some(List(FooOrStringOrIntWrapA(WrapA(StringOrIntInt(123))))))
+    val list = List(StringOrIntInt(21), StringOrIntString("asd"), StringOrIntInt(12), StringOrIntString("dsa"))
+    val list2 = List(AnEnum.Foo, AnEnum.Bar, AnEnum.Baz)
+    val ints = List(FooOrStringOrIntInt(123), FooOrStringOrIntInt(987))
+    testCase(Some(list.map(i => FooOrStringOrIntWrapA(WrapA(i))) ++ list2.map(i => FooOrStringOrIntWrapB(WrapB(i))) ++ ints))
   }
 }
