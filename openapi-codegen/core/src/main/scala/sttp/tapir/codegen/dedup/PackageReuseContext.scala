@@ -14,6 +14,7 @@ case class PackageReuseContext(
     reusedEndpointNames: Set[String]
 ) {
   lazy val depPkg: String = dependencyModelPath.split('.').dropRight(1).mkString(".")
+  def modelRoot(seperateFilesForModels: Boolean) = if (seperateFilesForModels) s"$depPkg.models" else dependencyModelPath
 }
 
 object PackageReuseContext {
@@ -41,30 +42,33 @@ object PackageReuseContext {
     )
   }
 
-  def aliasType(name: String, ctx: PackageReuseContext): String =
-    s"type $name = ${ctx.dependencyModelPath}.$name"
-  def enumAliasType(name: String, ctx: PackageReuseContext): String =
-    s"""type $name = ${ctx.dependencyModelPath}.$name
-       |val $name = ${ctx.dependencyModelPath}.$name""".stripMargin
+  def aliasType(name: String, ctx: PackageReuseContext, separateFilesForModels: Boolean): String =
+    s"type $name = ${ctx.modelRoot(separateFilesForModels)}.$name"
+  def enumAliasType(name: String, ctx: PackageReuseContext, separateFilesForModels: Boolean): String = {
+    val parentPkg = ctx.modelRoot(separateFilesForModels )
+    s"""type $name = $parentPkg.$name
+       |val $name = $parentPkg.$name""".stripMargin
+  }
 
   def isReusedSchema(name: String, ctx: PackageReuseContext): Boolean = ctx.reusedSchemas.contains(name)
 }
 
-
 object GenerationMeta {
-  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, Set.empty, Nil, 0, Set.empty, Set.empty)
+  val default: GenerationMeta =
+    GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, Set.empty, Nil, 0, Set.empty, Set.empty, Set.empty)
 }
 case class GenerationMeta(
-                           schemaFiles: Seq[String],
-                           hasValidators: Boolean,
-                           schemasContainAny: Boolean,
-                           explicitNonObjTypes: Seq[String],
-                           security: Set[SecurityWrapperDefn],
-                           extensions: Seq[(String, String, String)],
-                           schemaObjectCount: Int,
-                           allTransitiveJsonParamRefs: Set[String],
-                           jsonParamRefs: Set[String],
-                         ) {
+    schemaFiles: Seq[String],
+    hasValidators: Boolean,
+    schemasContainAny: Boolean,
+    explicitNonObjTypes: Seq[String],
+    security: Set[SecurityWrapperDefn],
+    extensions: Seq[(String, String, String)],
+    schemaObjectCount: Int,
+    allTransitiveJsonParamRefs: Set[String],
+    jsonParamRefs: Set[String],
+    aliasedNames: Set[String]
+) {
   def partition(securityWrappers: Set[SecurityWrapperDefn]): (Set[SecurityWrapperDefn], Set[SecurityWrapperDefn]) = {
     val changed = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
     val m = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
