@@ -48,7 +48,7 @@ object ZioSerdeImpl {
     } else None
     val serdesDefn = (docSchemas ++ pathSchemas)
       .flatMap {
-        // Only enumeratum (scala 2) enum types currently supported for zio-json
+        // enumeratum enums (scala 2) get explicit serdes; scala 3 enums derive JsonCodec at declaration site
         case (name, _: OpenapiSchemaEnum, true) if !targetScala3 =>
           zioParentImpl(name) orElse Some(genZioEnumSerde(name))
         // We generate the serde if it's referenced in any json model

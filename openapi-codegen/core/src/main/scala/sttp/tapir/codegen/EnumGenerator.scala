@@ -38,8 +38,8 @@ object EnumGenerator {
         case JsonSerdeLib.Circe => " derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror"
         case JsonSerdeLib.Jsoniter if !queryParamRefs.contains(name) => ""
         case JsonSerdeLib.Jsoniter                                   => " derives enumextensions.EnumMirror"
-        case JsonSerdeLib.Zio if !queryParamRefs.contains(name)      => s" extends java.lang.Enum[$name]"
-        case JsonSerdeLib.Zio                                        => s" extends java.lang.Enum[$name] derives enumextensions.EnumMirror"
+        case JsonSerdeLib.Zio if !queryParamRefs.contains(name)      => " derives zio.json.JsonCodec"
+        case JsonSerdeLib.Zio                                        => " derives zio.json.JsonCodec, enumextensions.EnumMirror"
       }
       s"""$maybeCompanion
          |enum $name$maybeCodecExtensions {
