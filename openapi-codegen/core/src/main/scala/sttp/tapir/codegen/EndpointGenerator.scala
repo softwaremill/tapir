@@ -122,7 +122,8 @@ class EndpointGenerator {
       generateEndpointTypes: Boolean,
       validators: ValidationDefns,
       generateValidators: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean
   ): EndpointDefs = {
     val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
@@ -144,7 +145,8 @@ class EndpointGenerator {
             doc,
             validators,
             generateValidators,
-            packageReuse
+            packageReuse,
+            seperateFilesForModels
           )
         )
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
@@ -185,7 +187,8 @@ class EndpointGenerator {
       doc: OpenapiDocument,
       validators: ValidationDefns,
       generateValidators: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean
   )(p: OpenapiPath): GeneratedEndpoints = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
@@ -252,7 +255,8 @@ class EndpointGenerator {
               validators,
               generateValidators,
               isReused,
-              packageReuse
+              packageReuse,
+              seperateFilesForModels
             )
           val allTypes = EndpointTypes(
             maybeSecurityPath.toSeq.flatMap(_._2) ++ securityTypes.toSeq,
@@ -667,7 +671,8 @@ class EndpointGenerator {
       validators: ValidationDefns,
       generateValidators: Boolean,
       isReused: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean
   )(implicit
       location: Location
   ) = {
@@ -740,17 +745,18 @@ class EndpointGenerator {
             .groupBy(_._1)
           val aliasDefns =
             if (needsAliases && isReused) {
+              val parentModelPath = packageReuse.modelRoot(seperateFilesForModels) 
               val wrappers = declsByWrapperClassName
                 .map { case (name, seq) =>
-                  s"type $name = ${packageReuse.dependencyModelPath}.$name\nval $name = ${packageReuse.dependencyModelPath}.$name\n"
+                  s"type $name = $parentModelPath.$name\nval $name = $parentModelPath.$name\n"
                 }
                 .toSeq
                 .sorted
                 .mkString("\n")
               Some(s"""
-                      |type $traitName = ${packageReuse.dependencyModelPath}.$traitName
-                      |type ${traitName}Full = ${packageReuse.dependencyModelPath}.${traitName}Full
-                      |val ${traitName}Full = ${packageReuse.dependencyModelPath}.${traitName}Full
+                      |type $traitName = $parentModelPath.$traitName
+                      |type ${traitName}Full = $parentModelPath.${traitName}Full
+                      |val ${traitName}Full = $parentModelPath.${traitName}Full
                       |$wrappers
                       |""".stripMargin)
             } else if (needsAliases) {

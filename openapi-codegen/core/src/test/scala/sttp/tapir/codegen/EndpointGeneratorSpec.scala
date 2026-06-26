@@ -80,6 +80,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           validators = ValidationDefns.empty,
           generateValidators = true,
           packageReuse = PackageReuseContext.none,
+          seperateFilesForModels = false,
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -172,6 +173,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           validators = ValidationDefns.empty,
           generateValidators = true,
           packageReuse = PackageReuseContext.none,
+          seperateFilesForModels = false,
         )
         .endpointDecls(None)).shouldCompile()
   }
@@ -231,6 +233,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           validators = ValidationDefns.empty,
           generateValidators = true,
           packageReuse = PackageReuseContext.none,
+          seperateFilesForModels = false,
         )
         .endpointDecls(None)
     generatedCode should include(

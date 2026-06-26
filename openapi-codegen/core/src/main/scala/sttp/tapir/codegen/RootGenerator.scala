@@ -98,7 +98,8 @@ object RootGenerator {
         generateEndpointTypes,
         validators,
         generateValidators,
-        packageReuse
+        packageReuse,
+        seperateFilesForModels
       )
     val modelPackagePath = s"$packagePath.models"
     val GeneratedClassDefinitions(
@@ -284,7 +285,7 @@ object RootGenerator {
          |}""".stripMargin
     val queryParamSupport =
       s"""
-      |$paramListHelpers
+      |${if (!seperateFilesForModels) paramListHelpers else ""}
       |implicit def makePathCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[String, T, sttp.tapir.CodecFormat.TextPlain] = {
       |  sttp.tapir.Codec.string.mapDecode(support.decode)(support.encode)
       |}
@@ -320,6 +321,25 @@ object RootGenerator {
     val mainClassDefns =
       if (seperateFilesForModels) classDefns.getOrElse("", "")
       else classDefns.toSeq.sortBy(_._1).map(_._2).mkString("\n")
+
+    val maybeModelPackage =
+      if (seperateFilesForModels) Some(s"""
+         |package $packagePath
+         |
+         |package object models {
+         |${indent(2)(paramListHelpers)}
+         |${indent(2)(mainClassDefns)}
+         |${indent(2)(inlineDefns.mkString("\n"))}
+         |}""".stripMargin)
+      else None
+
+    val maybeModels =
+      if (seperateFilesForModels) None
+      else
+        Some(s"""${indent(2)(mainClassDefns)}
+                |${indent(2)(inlineDefns.mkString("\n"))}
+                |""".stripMargin)
+
     val mainObj = s"""
         |package $packagePath
         |
@@ -339,9 +359,7 @@ object RootGenerator {
         |  $byteStringDecl
         |  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
         |
-        |${indent(2)(mainClassDefns)}
-        |${indent(2)(inlineDefns.mkString("\n"))}
-        |
+        |$maybeModels
         |${indent(2)(maybeSpecificationExtensionKeys)}
         |
         |${indent(2)(endpointsInMain)}
@@ -354,14 +372,14 @@ object RootGenerator {
           s"models.$fn" ->
             s"""package $modelPackagePath
                |
-               |import $packagePath.$objName._
+               |//import $packagePath.$objName._
                |
                |$body
                |""".stripMargin
         }
       else Map.empty
     val allFiles = taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ xmlSerdeObj.map(s"${objName}XmlSerdes" -> _) ++
-      validationObj ++ schemaObjs ++ modelFiles + (objName -> mainObj)
+      validationObj ++ schemaObjs ++ modelFiles ++ maybeModelPackage.map("models.package" -> _) + (objName -> mainObj)
     GenerationInfo(
       allFiles,
       GenerationMeta(
