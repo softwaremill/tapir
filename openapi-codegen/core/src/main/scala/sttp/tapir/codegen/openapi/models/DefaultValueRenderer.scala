@@ -25,7 +25,7 @@ case class RenderConfig(maybeEnumName: Option[String] = None)
 
 object DefaultValueRenderer {
   private def lookup(allModels: Map[String, OpenapiSchemaType], ref: OpenapiSchemaRef): OpenapiSchemaType = allModels(
-    ref.name.stripPrefix("#/components/schemas/")
+    ref.stripped
   )
 
   private def renderStringWithName(
@@ -33,7 +33,7 @@ object DefaultValueRenderer {
   )(allModels: Map[String, OpenapiSchemaType], thisType: OpenapiSchemaType, name: String): String =
     thisType match {
       case ref: OpenapiSchemaRef =>
-        renderStringWithName(value)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
+        renderStringWithName(value)(allModels, lookup(allModels, ref), ref.stripped)
       case OpenapiSchemaString(_, _, _, _) => '"' +: value :+ '"'
       case OpenapiSchemaEnum(_, _, _)      => s"$name.$value"
       case OpenapiSchemaDate(_)            => s"""java.time.LocalDate.parse("$value")"""
@@ -50,7 +50,7 @@ object DefaultValueRenderer {
       s"Cannot find property $k in schema $name when constructing default value"
     )
     thisType match {
-      case ref: OpenapiSchemaRef => renderMapWithName(kvs)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
+      case ref: OpenapiSchemaRef => renderMapWithName(kvs)(allModels, lookup(allModels, ref), ref.stripped)
       case OpenapiSchemaMap(types, _, _) =>
         s"Map(${kvs.map { case (k, v) => s""""$k" -> ${render(allModels, types, isOptional = false, RenderConfig())(v)}""" }.mkString(", ")})"
       case OpenapiSchemaObject(properties, required, _, _) =>
@@ -96,7 +96,7 @@ object DefaultValueRenderer {
         jsonString =>
           thisType match {
             case ref: OpenapiSchemaRef =>
-              renderStringWithName(jsonString)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
+              renderStringWithName(jsonString)(allModels, lookup(allModels, ref), ref.stripped)
             case OpenapiSchemaString(_, _, _, _)                              => '"' +: jsonString :+ '"'
             case OpenapiSchemaDate(_)                                         => s"""java.time.LocalDate.parse("$jsonString")"""
             case OpenapiSchemaDateTime(_)                                     => s"""java.time.Instant.parse("$jsonString")"""
@@ -121,7 +121,7 @@ object DefaultValueRenderer {
         jsonObject =>
           thisType match {
             case ref: OpenapiSchemaRef =>
-              renderMapWithName(jsonObject.toMap)(allModels, lookup(allModels, ref), ref.name.stripPrefix("#/components/schemas/"))
+              renderMapWithName(jsonObject.toMap)(allModels, lookup(allModels, ref), ref.stripped)
             case OpenapiSchemaAllOf(Seq(singleElement)) => render(allModels, singleElement, isOptional = false, config)(json)
             case OpenapiSchemaMap(types, _, _)          =>
               s"Map(${jsonObject.toMap.map { case (k, v) => s""""$k" -> ${render(allModels, types, isOptional = false, config)(v)}""" }.mkString(", ")})"

@@ -22,6 +22,7 @@ import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
 }
 
 import scala.collection.mutable
+
 // https://swagger.io/specification/
 object OpenapiModels {
 
@@ -82,6 +83,7 @@ object OpenapiModels {
                         throw new IllegalStateException(
                           s"Non-matching conflicting fields found on allOf declaration. For $n.$fieldName found both $l and $r"
                         )
+                      case (_, _) =>
                     }
                   }
                   (accReq ++ nextReq, accProp ++ nextProp)

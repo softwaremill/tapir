@@ -20,4 +20,16 @@ object NameHelpers {
 
   def safeVariableName(s: String): String =
     if ((reservedKeys ++ Set("enum", "given", "using")).contains(s) || !s.matches("[A-Za-z_$][A-Za-z_$0-9]*")) s"`$s`" else s
+
+  // Derives the class name of a schema nested under `parentName` at property `key`. Shared by the class generator and
+  // the json serde generators so that emitted codec types cannot drift from the generated class names.
+  def addName(parentName: String, key: String): String =
+    parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
+
+
+  def indent(i: Int)(str: String): String = {
+    str.linesIterator.map(" " * i + _).mkString("\n")
+  }
+
+  def uncapitalise(name: String): String = name.head.toLower +: name.tail
 }

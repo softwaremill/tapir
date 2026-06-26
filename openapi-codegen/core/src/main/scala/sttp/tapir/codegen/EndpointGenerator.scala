@@ -1,7 +1,7 @@
 package sttp.tapir.codegen
 import io.circe.Json
 import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
-import sttp.tapir.codegen.JsonSerdeLib.JsonSerdeLib
+import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,

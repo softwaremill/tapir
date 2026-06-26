@@ -10,7 +10,7 @@ object TapirGeneratedEndpointsJsonSerdes {
   implicit val byteStringJsonEncoder: io.circe.Encoder[ByteString] =
     io.circe.Encoder.encodeString
       .contramap(java.util.Base64.getEncoder.encodeToString)
-
+  
   implicit lazy val aDTWithDiscriminatorJsonEncoder: io.circe.Encoder[ADTWithDiscriminator] = io.circe.Encoder.instance {
     case x: SubtypeWithD1 => io.circe.Encoder[SubtypeWithD1].apply(x).mapObject(_.add("type", io.circe.Json.fromString("SubA")))
     case x: SubtypeWithD2 => io.circe.Encoder[SubtypeWithD2].apply(x).mapObject(_.add("type", io.circe.Json.fromString("SubB")))
@@ -48,6 +48,34 @@ object TapirGeneratedEndpointsJsonSerdes {
       io.circe.Decoder[SubtypeWithoutD2].asInstanceOf[io.circe.Decoder[ADTWithoutDiscriminator]],
       io.circe.Decoder[SubtypeWithoutD3].asInstanceOf[io.circe.Decoder[ADTWithoutDiscriminator]]
     ).reduceLeft(_ or _)
+  implicit lazy val aardvarkJsonEncoder: io.circe.Encoder[Aardvark] = io.circe.Encoder.instance {
+      case x: AardvarkDouble => io.circe.Encoder[Double].apply(x.v)
+      case x: AardvarkUUID => io.circe.Encoder[String].apply(x.v.toString)
+      case x: AardvarkDate => io.circe.Encoder[String].apply(x.v.toString)
+      case x: AardvarkDateTime => io.circe.Encoder[String].apply(x.v.toString)
+      case x: AardvarkDuration => io.circe.Encoder[String].apply(x.v.toString)
+      case x: AardvarkString => io.circe.Encoder[String].apply(x.v)
+      case x: AardvarkAbrdvark => io.circe.Encoder[Abrdvark].apply(x.v)
+      case x: AardvarkAcrdvark => io.circe.Encoder[Acrdvark].apply(x.v)
+    }
+    implicit lazy val aardvarkJsonDecoder: io.circe.Decoder[Aardvark] =
+      List[io.circe.Decoder[Aardvark]](
+      io.circe.Decoder[Double].map(AardvarkDouble(_)).asInstanceOf[io.circe.Decoder[Aardvark]],
+      io.circe.Decoder[String].emap { succ =>
+    scala.util.Try(java.util.UUID.fromString(succ)).map(AardvarkUUID(_))
+          .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
+          .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
+          .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
+          .orElse(scala.util.Try(succ).map(AardvarkString(_)))
+      .toEither.left.map(_ => "unable to parse string to acceptable type")
+  }.asInstanceOf[io.circe.Decoder[Aardvark]],
+      io.circe.Decoder[Abrdvark].map(AardvarkAbrdvark(_)).asInstanceOf[io.circe.Decoder[Aardvark]],
+      io.circe.Decoder[Acrdvark].map(AardvarkAcrdvark(_)).asInstanceOf[io.circe.Decoder[Aardvark]]
+      ).reduceLeft(_ or _)
+  implicit lazy val abrdvarkJsonDecoder: io.circe.Decoder[Abrdvark] = io.circe.generic.semiauto.deriveDecoder[Abrdvark]
+  implicit lazy val abrdvarkJsonEncoder: io.circe.Encoder[Abrdvark] = io.circe.generic.semiauto.deriveEncoder[Abrdvark]
+  implicit lazy val acrdvarkJsonDecoder: io.circe.Decoder[Acrdvark] = io.circe.generic.semiauto.deriveDecoder[Acrdvark]
+  implicit lazy val acrdvarkJsonEncoder: io.circe.Encoder[Acrdvark] = io.circe.generic.semiauto.deriveEncoder[Acrdvark]
   implicit lazy val getForceStreamingRequestJsonDecoder: io.circe.Decoder[GetForceStreamingRequest] = io.circe.generic.semiauto.deriveDecoder[GetForceStreamingRequest]
   implicit lazy val getForceStreamingRequestJsonEncoder: io.circe.Encoder[GetForceStreamingRequest] = io.circe.generic.semiauto.deriveEncoder[GetForceStreamingRequest]
   implicit lazy val getForceStreamingResponseJsonDecoder: io.circe.Decoder[GetForceStreamingResponse] = io.circe.generic.semiauto.deriveDecoder[GetForceStreamingResponse]

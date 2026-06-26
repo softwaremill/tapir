@@ -1,30 +1,11 @@
 package sttp.tapir.codegen
 
+import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  AnyType,
-  OpenapiSchemaAny,
-  OpenapiSchemaBinary,
-  OpenapiSchemaBoolean,
-  OpenapiSchemaByte,
-  OpenapiSchemaDate,
-  OpenapiSchemaDateTime,
-  OpenapiSchemaDuration,
-  OpenapiSchemaDouble,
-  OpenapiSchemaFloat,
-  OpenapiSchemaInt,
-  OpenapiSchemaLong,
-  OpenapiSchemaRef,
-  OpenapiSchemaSimpleType,
-  OpenapiSchemaString,
-  OpenapiSchemaUUID
-}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{AnyType, OpenapiSchemaAny, OpenapiSchemaBinary, OpenapiSchemaBoolean, OpenapiSchemaByte, OpenapiSchemaDate, OpenapiSchemaDateTime, OpenapiSchemaDouble, OpenapiSchemaDuration, OpenapiSchemaFloat, OpenapiSchemaInt, OpenapiSchemaLong, OpenapiSchemaRef, OpenapiSchemaSimpleType, OpenapiSchemaString, OpenapiSchemaUUID}
 import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
+import sttp.tapir.codegen.util.NameHelpers
 
-object JsonSerdeLib extends Enumeration {
-  val Circe, Jsoniter, Zio = Value
-  type JsonSerdeLib = Value
-}
 object XmlSerdeLib extends Enumeration {
   val CatsXml, NoSupport = Value
   type XmlSerdeLib = Value
@@ -180,7 +161,6 @@ object RootGenerator {
           enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams,
           xmlParamRefs = xmlParamRefs,
           useCustomJsoniterSerdes = useCustomJsoniterSerdes,
-          objName = objName,
           packageReuse = packageReuse
         )
         .getOrElse(GeneratedClassDefinitions("", None, Nil, None, false, Nil, Set.empty))
@@ -426,9 +406,7 @@ object RootGenerator {
        |""".stripMargin
   }
 
-  def indent(i: Int)(str: String): String = {
-    str.linesIterator.map(" " * i + _).mkString("\n")
-  }
+  def indent(i: Int)(str: String): String = NameHelpers.indent(i)(str)
 
   def mapSchemaSimpleTypeToType(osst: OpenapiSchemaSimpleType, multipartForm: Boolean = false): (String, Boolean) = {
     osst match {
@@ -473,12 +451,9 @@ object RootGenerator {
     .map { case (part, 0) => part; case (part, _) => part.capitalize }
     .mkString
 
-  def uncapitalise(name: String): String = name.head.toLower +: name.tail
+  def uncapitalise(name: String): String = NameHelpers.uncapitalise(name)
 
-  // Derives the class name of a schema nested under `parentName` at property `key`. Shared by the class generator and
-  // the json serde generators so that emitted codec types cannot drift from the generated class names.
-  def addName(parentName: String, key: String): String =
-    parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
+  def addName(parentName: String, key: String): String = NameHelpers.addName(parentName, key)
 
   private def schemaDependencyImportsFor(packageReuse: PackageReuseContext): String =
     if (packageReuse.reusedSchemas.isEmpty) ""

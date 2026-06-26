@@ -5,32 +5,23 @@ object TapirGeneratedEndpointsSchemas {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
   implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)
+  implicit lazy val anyTapirSchema: sttp.tapir.Schema[io.circe.Json] = sttp.tapir.Schema.any[io.circe.Json]
+  implicit lazy val anyObjTapirSchema: sttp.tapir.Schema[io.circe.JsonObject] = sttp.tapir.Schema.any[io.circe.JsonObject]
+  implicit lazy val anyArrTapirSchema: sttp.tapir.Schema[Vector[io.circe.Json]] = sttp.tapir.Schema.any[Vector[io.circe.Json]]
   implicit lazy val abrdvarkTapirSchema: sttp.tapir.Schema[Abrdvark] = sttp.tapir.Schema.derived
   implicit lazy val acrdvarkTapirSchema: sttp.tapir.Schema[Acrdvark] = sttp.tapir.Schema.derived
   implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derived
-  implicit lazy val hasBarTapirSchema: sttp.tapir.Schema[HasBar] = sttp.tapir.Schema.derived
-  implicit lazy val hasBazTapirSchema: sttp.tapir.Schema[HasBaz] = sttp.tapir.Schema.derived
-  implicit lazy val hasFooTapirSchema: sttp.tapir.Schema[HasFoo] = sttp.tapir.Schema.derived
-  implicit lazy val hasFooBarBazQuuxTapirSchema: sttp.tapir.Schema[HasFooBarBazQuux] = sttp.tapir.Schema.derived
+  implicit lazy val categoryTapirSchema: sttp.tapir.Schema[Category] = sttp.tapir.Schema.derived
+  implicit lazy val hasASetTapirSchema: sttp.tapir.Schema[HasASet] = sttp.tapir.Schema.derived
   
-  implicit lazy val notFoundErrorTapirSchema: sttp.tapir.Schema[NotFoundError] = sttp.tapir.Schema.derived
   implicit lazy val notNullableThingyTapirSchema: sttp.tapir.Schema[NotNullableThingy] = sttp.tapir.Schema.derived
-  implicit lazy val nullableThingyTapirSchema: sttp.tapir.Schema[NullableThingy] = sttp.tapir.Schema.derived
-  implicit lazy val nullableThingy2TapirSchema: sttp.tapir.Schema[NullableThingy2] = sttp.tapir.Schema.derived
-  implicit lazy val objectWithInlineEnumInlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnumInlineEnum] = sttp.tapir.Schema.derived
-  implicit lazy val objectWithInlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnum] = sttp.tapir.Schema.derived
-  implicit lazy val objectWithInlineEnum2InlineEnumTapirSchema: sttp.tapir.Schema[ObjectWithInlineEnum2InlineEnum] = sttp.tapir.Schema.derived
-  implicit lazy val objectWithInlineEnum2TapirSchema: sttp.tapir.Schema[ObjectWithInlineEnum2] = sttp.tapir.Schema.derived
-  implicit lazy val simpleErrorTapirSchema: sttp.tapir.Schema[SimpleError] = sttp.tapir.Schema.derived
+  implicit lazy val petStatusTapirSchema: sttp.tapir.Schema[PetStatus] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithD1TapirSchema: sttp.tapir.Schema[SubtypeWithD1] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithD2TapirSchema: sttp.tapir.Schema[SubtypeWithD2] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD1TapirSchema: sttp.tapir.Schema[SubtypeWithoutD1] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD2TapirSchema: sttp.tapir.Schema[SubtypeWithoutD2] = sttp.tapir.Schema.derived
-  implicit lazy val validatedOneOfATapirSchema: sttp.tapir.Schema[ValidatedOneOfA] = sttp.tapir.Schema.derived
-  implicit lazy val validatedOneOfBTapirSchema: sttp.tapir.Schema[ValidatedOneOfB] = sttp.tapir.Schema.derived
-  implicit lazy val validatedOneOfCTapirSchema: sttp.tapir.Schema[ValidatedOneOfC] = sttp.tapir.Schema.derived
-  implicit lazy val validatedRecursiveTapirSchema: sttp.tapir.Schema[ValidatedRecursive] = sttp.tapir.Schema.derived
-  implicit lazy val validatedSubObjTapirSchema: sttp.tapir.Schema[ValidatedSubObj] = sttp.tapir.Schema.derived
+  implicit lazy val tagTapirSchema: sttp.tapir.Schema[Tag] = sttp.tapir.Schema.derived
+  implicit lazy val tag2TapirSchema: sttp.tapir.Schema[Tag2] = sttp.tapir.Schema.derived
   implicit lazy val aDTWithDiscriminatorTapirSchema: sttp.tapir.Schema[ADTWithDiscriminator] = {
     val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[ADTWithDiscriminator]]].value
     derived.schemaType match {
@@ -49,7 +40,7 @@ object TapirGeneratedEndpointsSchemas {
     val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[ADTWithDiscriminatorNoMapping]]].value
     derived.schemaType match {
       case s: sttp.tapir.SchemaType.SCoproduct[_] => derived.copy(schemaType = s.addDiscriminatorField(
-        sttp.tapir.FieldName("noMapType"),
+        sttp.tapir.FieldName("type"),
         sttp.tapir.Schema.string,
         Map(
           "SubtypeWithD1" -> sttp.tapir.SchemaType.SRef(sttp.tapir.Schema.SName("sttp.tapir.generated.TapirGeneratedEndpoints.SubtypeWithD1")),
@@ -65,8 +56,8 @@ object TapirGeneratedEndpointsSchemas {
       sttp.tapir.Schema.schemaForLocalDate,
       sttp.tapir.Schema.schemaForInstant,
       sttp.tapir.Schema.schemaForJavaDuration,
-      sttp.tapir.Schema.schemaForString,
       sttp.tapir.Schema.schemaForDouble,
+      sttp.tapir.Schema.schemaForString,
       abrdvarkTapirSchema,
       acrdvarkTapirSchema
     )
@@ -76,32 +67,16 @@ object TapirGeneratedEndpointsSchemas {
         case x: AardvarkDate => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForLocalDate, x.v))
         case x: AardvarkDateTime => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForInstant, x.v))
         case x: AardvarkDuration => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForJavaDuration, x.v))
-        case x: AardvarkString => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForString, x.v))
         case x: AardvarkDouble => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForDouble, x.v))
+        case x: AardvarkString => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForString, x.v))
         case x: AardvarkAbrdvark => Some(sttp.tapir.SchemaType.SchemaWithValue(abrdvarkTapirSchema, x.v))
         case x: AardvarkAcrdvark => Some(sttp.tapir.SchemaType.SchemaWithValue(acrdvarkTapirSchema, x.v))
       },
       name = Some(sttp.tapir.Schema.SName("sttp.tapir.generated.TapirGeneratedEndpoints.Aardvark"))
     )
   }
-  implicit lazy val anyObjectWithInlineEnumTapirSchema: sttp.tapir.Schema[AnyObjectWithInlineEnum] = sttp.tapir.Schema.derived
-  implicit lazy val errorTapirSchema: sttp.tapir.Schema[Error] = sttp.tapir.Schema.derived
+  implicit lazy val petTapirSchema: sttp.tapir.Schema[Pet] = sttp.tapir.Schema.derived
+  implicit lazy val subtypeWithoutD3E2TapirSchema: sttp.tapir.Schema[SubtypeWithoutD3E2] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD3TapirSchema: sttp.tapir.Schema[SubtypeWithoutD3] = sttp.tapir.Schema.derived
-  implicit lazy val validatedOneOfTapirSchema: sttp.tapir.Schema[ValidatedOneOf] = {
-    val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[ValidatedOneOf]]].value
-    derived.schemaType match {
-      case s: sttp.tapir.SchemaType.SCoproduct[_] => derived.copy(schemaType = s.addDiscriminatorField(
-        sttp.tapir.FieldName("type"),
-        sttp.tapir.Schema.string,
-        Map(
-          "ValidatedOneOfA" -> sttp.tapir.SchemaType.SRef(sttp.tapir.Schema.SName("sttp.tapir.generated.TapirGeneratedEndpoints.ValidatedOneOfA")),
-          "ValidatedOneOfB" -> sttp.tapir.SchemaType.SRef(sttp.tapir.Schema.SName("sttp.tapir.generated.TapirGeneratedEndpoints.ValidatedOneOfB")),
-          "ValidatedOneOfC" -> sttp.tapir.SchemaType.SRef(sttp.tapir.Schema.SName("sttp.tapir.generated.TapirGeneratedEndpoints.ValidatedOneOfC"))
-        )
-      ))
-      case _ => throw new IllegalStateException("Derived schema for ValidatedOneOf should be a coproduct")
-    }
-  }
   implicit lazy val aDTWithoutDiscriminatorTapirSchema: sttp.tapir.Schema[ADTWithoutDiscriminator] = sttp.tapir.Schema.derived
-  implicit lazy val validatedObjTapirSchema: sttp.tapir.Schema[ValidatedObj] = sttp.tapir.Schema.derived
 }

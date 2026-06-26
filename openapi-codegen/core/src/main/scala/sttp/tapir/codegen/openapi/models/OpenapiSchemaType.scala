@@ -1,6 +1,7 @@
 package sttp.tapir.codegen.openapi.models
 
 import io.circe.{Json, JsonNumber}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 
 import scala.collection.mutable
 
@@ -77,7 +78,9 @@ object OpenapiSchemaType {
 
   // https://swagger.io/docs/specification/data-models/data-types/#string
   // no minLength/maxLength, pattern support on 'formatted' subtypes.
-  sealed trait OpenapiSchemaStringType extends OpenapiSchemaSimpleType
+  sealed trait OpenapiSchemaStringType extends OpenapiSchemaSimpleType {
+    def disambiguationSuffix: String
+  }
 
   case class OpenapiSchemaString(
       nullable: Boolean,
@@ -86,25 +89,38 @@ object OpenapiSchemaType {
       maxLength: Option[Int] = None
   ) extends OpenapiSchemaStringType {
     def hasRestriction: Boolean = pattern.isDefined || minLength.isDefined || maxLength.isDefined
+    def disambiguationSuffix: String = "String"
   }
   case class OpenapiSchemaDate(
       nullable: Boolean
-  ) extends OpenapiSchemaStringType
+  ) extends OpenapiSchemaStringType {
+    def disambiguationSuffix: String = "Date"
+  }
   case class OpenapiSchemaDateTime(
       nullable: Boolean
-  ) extends OpenapiSchemaStringType
+  ) extends OpenapiSchemaStringType {
+    def disambiguationSuffix: String = "DateTime"
+  }
   case class OpenapiSchemaDuration(
       nullable: Boolean
-  ) extends OpenapiSchemaStringType
+  ) extends OpenapiSchemaStringType {
+    def disambiguationSuffix: String = "Duration"
+  }
   case class OpenapiSchemaByte(
       nullable: Boolean
-  ) extends OpenapiSchemaStringType
+  ) extends OpenapiSchemaStringType {
+    def disambiguationSuffix: String = "Bin"
+  }
   case class OpenapiSchemaBinary(
       nullable: Boolean
-  ) extends OpenapiSchemaStringType
+  ) extends OpenapiSchemaStringType {
+    def disambiguationSuffix: String = "Bin"
+  }
   case class OpenapiSchemaUUID(
       nullable: Boolean
-  ) extends OpenapiSchemaStringType
+  ) extends OpenapiSchemaStringType {
+    def disambiguationSuffix: String = "UUID"
+  }
 
   case class OpenapiSchemaBoolean(
       nullable: Boolean
@@ -116,6 +132,10 @@ object OpenapiSchemaType {
     val nullable = false
     def isSchema: Boolean = name.startsWith("#/components/schemas/")
     def stripped: String = name.stripPrefix("#/components/schemas/")
+    def maybeResolved(doc: OpenapiDocument): Option[OpenapiSchemaType] =
+      doc.components
+        .flatMap(_.schemas.get(stripped))
+        .flatMap { case r: OpenapiSchemaRef => r.maybeResolved(doc); case r => Some(r) }
   }
 
   object AnyType extends Enumeration {

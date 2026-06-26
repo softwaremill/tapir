@@ -320,6 +320,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HasASet'
+  '/wrapped-one-of':
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Aardvark'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aardvark'
+    put:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/FooOrStringOrInt'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FooOrStringOrInt'
 
 components:
   parameters:
@@ -557,3 +588,57 @@ components:
           uniqueItems: true
           items:
             type: integer
+    Aardvark:
+      oneOf:
+        - type: string
+          format: uuid
+        - type: string
+          format: date
+        - type: string
+          format: date-time
+        - type: string
+          format: duration
+        - type: number
+          format: double
+        - type: string
+        - $ref: '#/components/schemas/Abrdvark'
+        - $ref: '#/components/schemas/Acrdvark'
+    #        - {}
+    Abrdvark:
+      type: object
+      required:
+        - b
+      properties:
+        b:
+          type: boolean
+    Acrdvark:
+      type: object
+      required:
+        - c
+      properties:
+        c:
+          type: boolean
+    StringOrInt:
+      oneOf:
+        - type: string
+        - type: integer
+
+    WrapA:
+      type: object
+      required:
+        - v
+      properties:
+        v:
+          $ref: '#/components/schemas/StringOrInt'
+    WrapB:
+      type: object
+      required:
+        - w
+      properties:
+        w:
+          $ref: '#/components/schemas/AnEnum'
+    FooOrStringOrInt:
+      oneOf:
+        - $ref: '#/components/schemas/WrapA'
+        - $ref: '#/components/schemas/WrapB'
+        - type: integer
