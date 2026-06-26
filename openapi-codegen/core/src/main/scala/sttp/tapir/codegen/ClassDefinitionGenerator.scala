@@ -123,6 +123,7 @@ class ClassDefinitionGenerator {
       allSchemas
         .collect { case (name, _: OpenapiSchemaEnum) => name }
         .exists(queryOrPathParamRefs.contains)
+    val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else EnumGenerator.enumSerdeHelperDefn(targetScala3)
 
     def fetchTransitiveParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
@@ -144,7 +145,6 @@ class ClassDefinitionGenerator {
         .map(name => s"sealed trait $name")
         .sorted
         .mkString("", "\n", "\n")
-    val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
     val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
     if (schemasContainAny && !Set(Circe, Jsoniter).contains(jsonSerdeLib))
@@ -204,18 +204,9 @@ class ClassDefinitionGenerator {
       .map(
         _.schemas.map {
           case (name, _: OpenapiSchemaEnum) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
-            def parentIsAlias = packageReuse.dependencyMeta.aliasedNames.contains(name)
-            name -> Seq(PackageReuseContext.enumAliasType(name, packageReuse, seperateFilesForModels && !parentIsAlias))
+            name -> Seq(PackageReuseContext.enumAliasType(name, packageReuse, seperateFilesForModels))
           case (name, s) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
-            val resolvedType = s match {
-              case s: OpenapiSchemaRef => s.maybeResolved(doc).getOrElse(s)
-              case s => s
-            }
-            def parentIsAlias = packageReuse.dependencyMeta.aliasedNames.contains(name) ||
-              resolvedType.isInstanceOf[OpenapiSchemaMap] ||
-              resolvedType.isInstanceOf[OpenapiSchemaArray] ||
-              resolvedType.isInstanceOf[OpenapiSchemaSimpleType]
-            name -> Seq(PackageReuseContext.aliasType(name, packageReuse, seperateFilesForModels && !parentIsAlias))
+            name -> Seq(PackageReuseContext.aliasType(name, packageReuse, seperateFilesForModels))
           case (name, obj: OpenapiSchemaObject) =>
             name -> generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
           case (name, obj: OpenapiSchemaEnum) =>
@@ -323,56 +314,6 @@ class ClassDefinitionGenerator {
       .groupBy(_._1)
       .mapValues(_.map(_._2))
       .toMap
-
-  private def enumSerdeHelperDefn(targetScala3: Boolean): String = {
-    if (targetScala3)
-      """
-        |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
-        |  Map.from(
-        |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
-        |  )
-        |case class EnumExtraParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends ExtraParamSupport[T] {
-        |  // Case-insensitive mapping
-        |  def decode(s: String): sttp.tapir.DecodeResult[T] =
-        |    scala.util
-        |      .Try(eMap(s.toUpperCase))
-        |      .fold(
-        |        _ =>
-        |          sttp.tapir.DecodeResult.Error(
-        |            s,
-        |            new NoSuchElementException(
-        |              s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
-        |            )
-        |          ),
-        |        sttp.tapir.DecodeResult.Value(_)
-        |      )
-        |  def encode(t: T): String = t.name
-        |}
-        |def extraCodecSupport[T: enumextensions.EnumMirror]: ExtraParamSupport[T] =
-        |  EnumExtraParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
-        |""".stripMargin
-    else
-      """
-        |case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
-        |  // Case-insensitive mapping
-        |  def decode(s: String): sttp.tapir.DecodeResult[T] =
-        |    scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
-        |      .fold(
-        |        _ =>
-        |          sttp.tapir.DecodeResult.Error(
-        |            s,
-        |            new NoSuchElementException(
-        |              s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
-        |            )
-        |          ),
-        |        sttp.tapir.DecodeResult.Value(_)
-        |      )
-        |  def encode(t: T): String = t.entryName
-        |}
-        |def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
-        |  EnumExtraParamSupport(enumName, T)
-        |""".stripMargin
-  }
 
   private[codegen] def generateMap(
       name: String,
