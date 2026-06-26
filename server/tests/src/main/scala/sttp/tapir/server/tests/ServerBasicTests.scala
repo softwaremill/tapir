@@ -886,6 +886,28 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     }
   )
 
+  // The request-body temp file is deleted once the response body has been fully written
+  // (ServerInterpreter, #4886), which can complete slightly after the client observes the response.
+  // Poll for a bounded time, failing only if the file holding *our* request body survives the window.
+  private def assertRequestBodyTempFileDeleted(marker: String): Unit = {
+    val tmpDir = new TapirFile(Properties.tmpDir)
+    def leakedFile: Option[TapirFile] =
+      Option(tmpDir.listFiles((_, name) => name.startsWith(Defaults.Prefix))).toList.flatten
+        .filter(_.isFile)
+        .find { file =>
+          // The file may be deleted concurrently between listing and reading; treat a missing/unreadable
+          // file as already cleaned up rather than as a match.
+          val txt =
+            try java.nio.file.Files.readString(file.toPath)
+            catch { case NonFatal(_) => "" }
+          txt.startsWith(marker)
+        }
+
+    val deadline = System.currentTimeMillis() + 5000
+    while (leakedFile.isDefined && System.currentTimeMillis() < deadline) Thread.sleep(50)
+    leakedFile.foreach(file => fail(s"File has not been deleted after ${StatusCode.PayloadTooLarge} error: ${file.getAbsolutePath}"))
+  }
+
   def testPayloadTooLarge[I](
       testedEndpoint: PublicEndpoint[I, Unit, I, Any],
       maxLength: Int,
@@ -894,7 +916,10 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testedEndpoint.maxRequestBodyLength(maxLength.toLong),
     "checks payload limit and returns 413 on exceeded max content length (request)"
   )(i => pureResult(i.asRight[Unit])) { (backend, baseUri) =>
-    val tooLargeMarker = "tooLargeMarker"
+    // The marker is unique per test run so this assertion only inspects the temp file created for *this*
+    // request. Many server backends run this same test concurrently against the shared system temp
+    // directory; with a constant marker a backend could trip over another backend's in-flight file.
+    val tooLargeMarker = "tooLargeMarker-" + java.util.UUID.randomUUID().toString
     val tooLargeBody: String = tooLargeMarker + List.fill(maxLength - tooLargeMarker.length + 1)('x').mkString
     basicRequest
       .post(uri"$baseUri/api/echo")
@@ -902,23 +927,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       .send(backend)
       .map(_.code shouldBe StatusCode.PayloadTooLarge)
       .map { r =>
-        if (fileBased) {
-          val tmpDir = new TapirFile(Properties.tmpDir)
-          val optFiles = Option(tmpDir.listFiles((_, name) => name.startsWith(Defaults.Prefix)))
-          for {
-            files <- optFiles
-            file <- files.filter(_.isFile)
-          } {
-            // The file may be deleted concurrently by another test/backend between listing and reading; treat a
-            // missing/unreadable file as already cleaned up rather than failing the test.
-            val txt =
-              try java.nio.file.Files.readString(file.toPath)
-              catch { case NonFatal(_) => "" }
-            if (txt.startsWith(tooLargeMarker)) {
-              fail(s"File has not be deleted after ${StatusCode.PayloadTooLarge} error: ${file.getAbsolutePath}")
-            }
-          }
-        }
+        if (fileBased) assertRequestBodyTempFileDeleted(tooLargeMarker)
         r
       }
       // The server may reject the over-limit body by closing the connection before the client has
