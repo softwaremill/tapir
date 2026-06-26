@@ -43,7 +43,31 @@ object TapirGeneratedEndpointsSchemas {
       case _ => throw new IllegalStateException("Derived schema for ADTWithDiscriminatorNoMapping should be a coproduct")
     }
   }
-  implicit lazy val aardvarkTapirSchema: sttp.tapir.Schema[Aardvark] = sttp.tapir.Schema.derived
+  implicit lazy val aardvarkTapirSchema: sttp.tapir.Schema[Aardvark] = {
+    val subtypes = List[sttp.tapir.Schema[_]](
+      sttp.tapir.Schema.schemaForUUID,
+      sttp.tapir.Schema.schemaForLocalDate,
+      sttp.tapir.Schema.schemaForInstant,
+      sttp.tapir.Schema.schemaForJavaDuration,
+      sttp.tapir.Schema.schemaForString,
+      sttp.tapir.Schema.schemaForDouble,
+      abrdvarkTapirSchema,
+      acrdvarkTapirSchema
+    )
+    sttp.tapir.Schema(
+      schemaType = sttp.tapir.SchemaType.SCoproduct[Aardvark](subtypes, None) {
+        case x: AardvarkUUID => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForUUID, x.v))
+        case x: AardvarkDate => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForLocalDate, x.v))
+        case x: AardvarkDateTime => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForInstant, x.v))
+        case x: AardvarkDuration => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForJavaDuration, x.v))
+        case x: AardvarkString => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForString, x.v))
+        case x: AardvarkDouble => Some(sttp.tapir.SchemaType.SchemaWithValue(sttp.tapir.Schema.schemaForDouble, x.v))
+        case x: AardvarkAbrdvark => Some(sttp.tapir.SchemaType.SchemaWithValue(abrdvarkTapirSchema, x.v))
+        case x: AardvarkAcrdvark => Some(sttp.tapir.SchemaType.SchemaWithValue(acrdvarkTapirSchema, x.v))
+      },
+      name = Some(sttp.tapir.Schema.SName("sttp.tapir.generated.TapirGeneratedEndpoints.Aardvark"))
+    )
+  }
   implicit lazy val subtypeWithoutD3TapirSchema: sttp.tapir.Schema[SubtypeWithoutD3] = sttp.tapir.Schema.derived
   implicit lazy val aDTWithoutDiscriminatorTapirSchema: sttp.tapir.Schema[ADTWithoutDiscriminator] = sttp.tapir.Schema.derived
 }

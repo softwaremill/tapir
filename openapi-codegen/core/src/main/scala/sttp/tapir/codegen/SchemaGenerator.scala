@@ -12,16 +12,25 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAny,
   OpenapiSchemaAnyOf,
   OpenapiSchemaArray,
+  OpenapiSchemaBinary,
+  OpenapiSchemaBoolean,
   OpenapiSchemaByte,
   OpenapiSchemaConstantString,
+  OpenapiSchemaDate,
+  OpenapiSchemaDateTime,
+  OpenapiSchemaDuration,
   OpenapiSchemaEnum,
   OpenapiSchemaField,
   OpenapiSchemaMap,
   OpenapiSchemaNot,
+  OpenapiSchemaNumericType,
   OpenapiSchemaObject,
   OpenapiSchemaOneOf,
   OpenapiSchemaRef,
-  OpenapiSchemaSimpleType
+  OpenapiSchemaSimpleType,
+  OpenapiSchemaString,
+  OpenapiSchemaStringType,
+  OpenapiSchemaUUID
 }
 
 import scala.collection.mutable
@@ -335,8 +344,7 @@ object SchemaGenerator {
     val schemaIsWrapped = schema.types.exists(!_.isInstanceOf[OpenapiSchemaRef])
     val schemaImpl = schema match {
       case OpenapiSchemaOneOf(types, None) if schemaIsWrapped =>
-        // TODO: this
-        "sttp.tapir.Schema.derived"
+        generateWrappedOneOfSchema(name, schema, fullModelPath)
       case OpenapiSchemaOneOf(_, None)                                            => "sttp.tapir.Schema.derived"
       case OpenapiSchemaOneOf(_, Some(Discriminator(propertyName, maybeMapping))) =>
         val mapping =
@@ -371,5 +379,50 @@ object SchemaGenerator {
 
     val (isRecursive, mutualRefs) = recursionParams
     s"implicit ${decl(isRecursive)} ${schemaName(name)}: sttp.tapir.Schema[$name] = ${blockingMutualRefs(mutualRefs)(schemaImpl)}"
+  }
+
+  private def generateWrappedOneOfSchema(name: String, schema: OpenapiSchemaOneOf, fullModelPath: Option[String]): String = {
+    def tapirSchemaFor(t: OpenapiSchemaSimpleType): String = t match {
+      case _: OpenapiSchemaBoolean                       => "sttp.tapir.Schema.schemaForBoolean"
+      case n: OpenapiSchemaNumericType                   => s"sttp.tapir.Schema.schemaFor${n.scalaType}"
+      case _: OpenapiSchemaString                        => "sttp.tapir.Schema.schemaForString"
+      case _: OpenapiSchemaDate                          => "sttp.tapir.Schema.schemaForLocalDate"
+      case _: OpenapiSchemaDateTime                      => "sttp.tapir.Schema.schemaForInstant"
+      case _: OpenapiSchemaDuration                      => "sttp.tapir.Schema.schemaForJavaDuration"
+      case _: OpenapiSchemaUUID                          => "sttp.tapir.Schema.schemaForUUID"
+      case _: OpenapiSchemaByte | _: OpenapiSchemaBinary => "sttp.tapir.Schema.schemaForByteArray"
+      case r: OpenapiSchemaRef                           => schemaName(r.stripped)
+      case _: OpenapiSchemaAny                           => "anyTapirSchema"
+      case other                                         =>
+        throw new IllegalArgumentException(s"Unsupported wrapped oneOf type $other for $name")
+    }
+    def wrapperCaseName(t: OpenapiSchemaSimpleType): String = t match {
+      case _: OpenapiSchemaBoolean     => s"${name}Boolean"
+      case n: OpenapiSchemaNumericType => s"$name${n.scalaType}"
+      case s: OpenapiSchemaStringType  => s"$name${s.disambiguationSuffix}"
+      case r: OpenapiSchemaRef         => s"$name${r.stripped}"
+      case _: OpenapiSchemaAny         => s"${name}Json"
+      case other                       =>
+        throw new IllegalArgumentException(s"Unsupported wrapped oneOf type $other for $name")
+    }
+    val variants = schema.types.map(t => wrapperCaseName(t) -> tapirSchemaFor(t))
+    val subtypes = variants.map(_._2).mkString(",\n    ")
+    val cases = variants
+      .map { case (caseName, schemaExpr) =>
+        s"case x: $caseName => Some(sttp.tapir.SchemaType.SchemaWithValue($schemaExpr, x.v))"
+      }
+      .mkString("\n      ")
+    val fullName = fullModelPath.map(_ + "." + name).getOrElse(name)
+    s"""{
+       |  val subtypes = List[sttp.tapir.Schema[_]](
+       |    $subtypes
+       |  )
+       |  sttp.tapir.Schema(
+       |    schemaType = sttp.tapir.SchemaType.SCoproduct[$name](subtypes, None) {
+       |      $cases
+       |    },
+       |    name = Some(sttp.tapir.Schema.SName("$fullName"))
+       |  )
+       |}""".stripMargin
   }
 }
