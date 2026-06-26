@@ -60,7 +60,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiDisableValidatorGeneration.value,
       openapiUseCustomJsoniterSerdes.value,
       openapiAdditionalPackages.value,
-      openapiPackageDependencies.value
+      openapiPackageDependencies.value,
+      openapiSeperateFilesForModels.value
     )
   def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
     openapiSwaggerFile := baseDirectory.value / "swagger.yaml",
@@ -77,6 +78,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiGenerateEndpointTypes := false,
     openapiDisableValidatorGeneration := false,
     openapiUseCustomJsoniterSerdes := false,
+    openapiSeperateFilesForModels := false,
     standardParamSetting
   )
 
@@ -165,6 +167,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       sv.startsWith("3"),
       directoryName,
       Some(doc),
-      packageReuse
+      packageReuse,
+      c.seperateFilesForModels
     )
 }

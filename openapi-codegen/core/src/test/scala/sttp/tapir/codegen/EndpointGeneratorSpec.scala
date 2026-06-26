@@ -318,7 +318,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
 
   it should "generate attributes for specification extensions on path and operation objects" in {
     val doc = TestHelpers.specificationExtensionDocs
-    val generatedCode = RootGenerator.generateObjects(
+    val generatedObj = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
@@ -332,7 +332,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       generateEndpointTypes = false,
       generateValidators = true,
       useCustomJsoniterSerdes = true
-    ).allFiles("TapirGeneratedEndpoints")
+    )
+    val generatedCode = generatedObj.allFiles("TapirGeneratedEndpointsSchemas") + "\n" + generatedObj.allFiles("TapirGeneratedEndpoints")
     generatedCode.shouldCompile()
     val expectedAttrDecls = Seq(
       """.attribute[CustomStringExtensionOnPathExtension](customStringExtensionOnPathExtensionKey, "another string")""",

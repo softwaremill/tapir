@@ -576,7 +576,7 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(useCustomMacros: Boolean, doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _, _, _, _, _) =
+      val generated =
         gen
           .classDefs(
             doc,
@@ -588,8 +588,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
           )
           .get
 
-      val fullRes = imports + res + "\n" + jsonSerdes.get
-      res.shouldCompile()
+      val classRepr = generated.classRepr
+      val jsonSerdes = generated.jsonSerdeRepr
+      val fullRes = imports + classRepr + "\n" + jsonSerdes.get
+      classRepr.shouldCompile()
       fullRes.shouldCompile()
       if (useCustomMacros)
         jsonSerdes.get should include(
@@ -619,10 +621,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         |""".stripMargin
     val gen = new ClassDefinitionGenerator()
     def testOK(doc: OpenapiDocument) = {
-      val GeneratedClassDefinitions(res, jsonSerdes, _, _, _, _, _) =
-        gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
+      val generated = gen.classDefs(doc, false, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("ReqWithVariants")).get
+      val classRepr = generated.classRepr
+      val jsonSerdes = generated.jsonSerdeRepr
 
-      val fullRes = (res + "\n" + jsonSerdes.get)
+      val fullRes = (classRepr + "\n" + jsonSerdes.get)
       (imports + fullRes).shouldCompile()
       val expectedLines = Seq(
         """implicit lazy val reqWithVariantsJsonEncoder: io.circe.Encoder[ReqWithVariants]""",
@@ -640,5 +643,22 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     )
     failed.isFailure shouldEqual true
     failed.failed.get.getMessage shouldEqual "Problems in non-discriminated oneOf 'ReqWithVariants' declaration: (#/components/schemas/ReqSubtype2 appears before #/components/schemas/ReqSubtype3, but a #/components/schemas/ReqSubtype3 can be a valid #/components/schemas/ReqSubtype2)"
+  }
+
+  it should "split models into separate files when seperateFilesForModels is true" in {
+    val result = new ClassDefinitionGenerator().classDefs(
+      TestHelpers.oneOfDocsWithMapping,
+      targetScala3 = isScala3,
+      jsonSerdeLib = JsonSerdeLib.Circe,
+      jsonParamRefs = Set("ReqWithVariants"),
+      fullModelPath = "foo.bar.models",
+      seperateFilesForModels = true
+    ).get
+
+    result.classReprs.keys should contain("")
+    result.classReprs.keys should contain("ReqWithVariants")
+    result.classReprs("ReqWithVariants") should include("sealed trait ReqWithVariants")
+    result.classReprs("ReqWithVariants") should include("case class ReqSubtype1")
+    result.classReprs.getOrElse("", "") should not include "sealed trait ReqWithVariants"
   }
 }
