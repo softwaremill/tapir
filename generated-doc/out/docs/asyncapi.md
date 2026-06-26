@@ -3,7 +3,7 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "1.13.24"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "1.13.25"
 "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
