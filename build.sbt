@@ -16,7 +16,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.21"
 val scala2_13 = "2.13.18"
-val scala3 = "3.3.8"
+val scala3 = "3.8.4"
 val scala3_7 = "3.7.4"
 
 val scala2Versions = List(scala2_12, scala2_13)
