@@ -361,7 +361,7 @@ object JsoniterSerdeImpl {
             }
             if (i == 0) s"Some(scala.util.Try($parseImpl).map($wrapper(_))" else s".orElse(scala.util.Try($parseImpl).map($wrapper(_)))"
           }
-          .mkString("\n      ")
+          .mkString("\n          ")
         val decode =
           s"""() => {
              |  in.setMark()

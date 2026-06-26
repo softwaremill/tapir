@@ -71,10 +71,10 @@ object TapirGeneratedEndpointsJsonSerdes {
                 _ => { in.rollbackToMark(); None },
                 succ => {
                   Some(scala.util.Try(java.util.UUID.fromString(succ)).map(AardvarkUUID(_))
-                .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
-                .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
-                .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
-                .orElse(scala.util.Try(succ).map(AardvarkString(_)))
+                    .orElse(scala.util.Try(java.time.LocalDate.parse(succ)).map(AardvarkDate(_)))
+                    .orElse(scala.util.Try(java.time.Instant.parse(succ)).map(AardvarkDateTime(_)))
+                    .orElse(scala.util.Try(java.time.Duration.parse(succ)).map(AardvarkDuration(_)))
+                    .orElse(scala.util.Try(succ).map(AardvarkString(_)))
                     .getOrElse(throw new RuntimeException("unable to parse string to acceptable type")))
                 })
           },
