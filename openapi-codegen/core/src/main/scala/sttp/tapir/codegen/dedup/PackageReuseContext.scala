@@ -45,7 +45,7 @@ object PackageReuseContext {
   def aliasType(name: String, ctx: PackageReuseContext, separateFilesForModels: Boolean): String =
     s"type $name = ${ctx.modelRoot(separateFilesForModels)}.$name"
   def enumAliasType(name: String, ctx: PackageReuseContext, separateFilesForModels: Boolean): String = {
-    val parentPkg = ctx.modelRoot(separateFilesForModels )
+    val parentPkg = ctx.modelRoot(separateFilesForModels)
     s"""type $name = $parentPkg.$name
        |val $name = $parentPkg.$name""".stripMargin
   }
