@@ -2,6 +2,7 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType}
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,

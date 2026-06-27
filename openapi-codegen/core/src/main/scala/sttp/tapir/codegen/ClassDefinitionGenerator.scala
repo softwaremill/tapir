@@ -1,11 +1,13 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType}
+import sttp.tapir.codegen.RootGenerator.mapSchemaSimpleTypeToType
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.json.{JsonHelpers, JsonSerdeLib, JsonSerdeGenerator, SerdeGenResponse}
 import sttp.tapir.codegen.json.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
+import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
 
 case class GeneratedClassDefinitions(
