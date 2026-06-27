@@ -1,7 +1,8 @@
 package sttp.tapir.sbt
 
 import sbt._
-import sttp.tapir.codegen.{GenerationMeta, OpenApiInputParser, PackageReuseContext, RootGenerator}
+import sttp.tapir.codegen.{OpenApiInputParser, RootGenerator}
+import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 
 case class OpenapiCodegenTask(

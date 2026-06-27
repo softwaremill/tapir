@@ -1,23 +1,11 @@
 package sttp.tapir.codegen
 
 import io.circe.JsonNumber
-import sttp.tapir.codegen.RootGenerator.indent
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  ArrayRestrictions,
-  ObjectRestrictions,
-  OpenapiSchemaAllOf,
-  OpenapiSchemaArray,
-  OpenapiSchemaEnum,
-  OpenapiSchemaMap,
-  OpenapiSchemaNumericType,
-  OpenapiSchemaObject,
-  OpenapiSchemaOneOf,
-  OpenapiSchemaRef,
-  OpenapiSchemaSimpleType,
-  OpenapiSchemaString
-}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
+import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.util.JavaEscape
 
 import scala.annotation.tailrec

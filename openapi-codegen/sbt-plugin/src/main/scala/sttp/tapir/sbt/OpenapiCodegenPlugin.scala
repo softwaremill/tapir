@@ -3,7 +3,8 @@ package sttp.tapir.sbt
 import sbt._
 import Keys._
 import sbt.nio.Keys.fileInputs
-import sttp.tapir.codegen.{GenerationMeta, OpenApiInputParser, PackageReuseContext}
+import sttp.tapir.codegen.OpenApiInputParser
+import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 
 object OpenapiCodegenPlugin extends AutoPlugin {
