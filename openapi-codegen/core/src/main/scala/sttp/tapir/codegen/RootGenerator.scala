@@ -270,11 +270,11 @@ object RootGenerator {
     val paramListHelpers =
       if (packageReuse.reusedSchemas.nonEmpty)
         s"""
-           |type CommaSeparatedValues[T] = ${packageReuse.dependencyModelPath}.CommaSeparatedValues[T]
-           |def CommaSeparatedValues[T](values: List[T]) = ${packageReuse.dependencyModelPath}.CommaSeparatedValues[T](values)
-           |type ExplodedValues[T] = ${packageReuse.dependencyModelPath}.ExplodedValues[T]
-           |def ExplodedValues[T](values: List[T]) = ${packageReuse.dependencyModelPath}.ExplodedValues[T](values)
-           |type ExtraParamSupport[T] = ${packageReuse.dependencyModelPath}.ExtraParamSupport[T]""".stripMargin
+           |type CommaSeparatedValues[T] = ${packageReuse.modelRoot(seperateFilesForModels)}.CommaSeparatedValues[T]
+           |def CommaSeparatedValues[T](values: List[T]) = ${packageReuse.modelRoot(seperateFilesForModels)}.CommaSeparatedValues[T](values)
+           |type ExplodedValues[T] = ${packageReuse.modelRoot(seperateFilesForModels)}.ExplodedValues[T]
+           |def ExplodedValues[T](values: List[T]) = ${packageReuse.modelRoot(seperateFilesForModels)}.ExplodedValues[T](values)
+           |type ExtraParamSupport[T] = ${packageReuse.modelRoot(seperateFilesForModels)}.ExtraParamSupport[T]""".stripMargin
       else
         s"""
          |case class CommaSeparatedValues[T](values: List[T])
