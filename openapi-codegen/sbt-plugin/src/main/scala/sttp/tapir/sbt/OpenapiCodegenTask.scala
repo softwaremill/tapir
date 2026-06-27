@@ -1,7 +1,8 @@
 package sttp.tapir.sbt
 
 import sbt._
-import sttp.tapir.codegen.{GenerationMeta, OpenApiInputParser, PackageReuseContext, RootGenerator}
+import sttp.tapir.codegen.{OpenApiInputParser, RootGenerator}
+import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 
 case class OpenapiCodegenTask(
@@ -21,7 +22,8 @@ case class OpenapiCodegenTask(
     targetScala3: Boolean,
     overrideDirectoryName: Option[String],
     preParsedDoc: Option[OpenapiDocument] = None,
-    packageReuse: PackageReuseContext = PackageReuseContext.none
+    packageReuse: PackageReuseContext = PackageReuseContext.none,
+    seperateFilesForModels: Boolean = false
 ) {
 
   private val directoryName: String = overrideDirectoryName.getOrElse("sbt-openapi-codegen")
@@ -48,10 +50,15 @@ case class OpenapiCodegenTask(
         generateEndpointTypes,
         !disableValidatorGeneration,
         useCustomJsoniterSerdes,
-        packageReuse
+        packageReuse,
+        seperateFilesForModels
       )
     generationInfo.allFiles.map { case (objectName, fileBody) =>
-      val file = outDirectory / s"$objectName.scala"
+      val segments = objectName.split('.')
+      val file = segments.toList match {
+        case name :: Nil => outDirectory / s"$name.scala"
+        case init :+ last => init.foldLeft(outDirectory)(_ / _) / s"$last.scala"
+      }
       val lines = fileBody.linesIterator.toSeq
       IO.writeLines(file, lines, IO.utf8)
       file

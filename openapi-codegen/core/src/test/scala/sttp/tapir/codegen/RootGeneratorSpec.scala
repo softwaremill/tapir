@@ -130,5 +130,30 @@ class RootGeneratorSpec extends CompileCheckTestBase {
     )
   }
 
+  it should "split models into separate files when seperateFilesForModels is true" in {
+    val info = RootGenerator.generateObjects(
+      TestHelpers.myBookshopDoc,
+      "sttp.tapir.generated",
+      "TapirGeneratedEndpoints",
+      targetScala3 = isScala3,
+      useHeadTagForObjectNames = false,
+      jsonSerdeLib = "circe",
+      xmlSerdeLib = "none",
+      streamingImplementation = "fs2",
+      validateNonDiscriminatedOneOfs = true,
+      maxSchemasPerFile = 400,
+      generateEndpointTypes = false,
+      generateValidators = true,
+      useCustomJsoniterSerdes = true,
+      seperateFilesForModels = true
+    )
+    val files = info.allFiles
+    files.keys.exists(_.startsWith("models.")) shouldBe true
+    files.keys should contain("models.Book")
+    files("TapirGeneratedEndpoints") should not include "case class Book"
+    files("models.Book") should include("case class Book")
+    files.filter(_._1.startsWith("models.")).values.foreach(_ should include("package sttp.tapir.generated.models"))
+  }
+
   Seq("circe", "jsoniter", "zio") foreach testJsonLib
 }

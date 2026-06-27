@@ -1,6 +1,5 @@
 package sttp.tapir.codegen.json
 
-import sttp.tapir.codegen.PackageReuseContext
 import sttp.tapir.codegen.json.JsonHelpers.{checkForSoundness, inlineEndpointSchemas}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
@@ -23,6 +22,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaStringType,
   OpenapiSchemaUUID
 }
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.util.NameHelpers.{indent, uncapitalise}
 
 object CirceSerdeImpl {

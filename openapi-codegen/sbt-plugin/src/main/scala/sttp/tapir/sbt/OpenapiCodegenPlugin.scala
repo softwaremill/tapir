@@ -3,7 +3,8 @@ package sttp.tapir.sbt
 import sbt._
 import Keys._
 import sbt.nio.Keys.fileInputs
-import sttp.tapir.codegen.{GenerationMeta, OpenApiInputParser, PackageReuseContext}
+import sttp.tapir.codegen.OpenApiInputParser
+import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 
 object OpenapiCodegenPlugin extends AutoPlugin {
@@ -59,7 +60,8 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiDisableValidatorGeneration.value,
       openapiUseCustomJsoniterSerdes.value,
       openapiAdditionalPackages.value,
-      openapiPackageDependencies.value
+      openapiPackageDependencies.value,
+      openapiSeperateFilesForModels.value
     )
   def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
     openapiSwaggerFile := baseDirectory.value / "swagger.yaml",
@@ -76,6 +78,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiGenerateEndpointTypes := false,
     openapiDisableValidatorGeneration := false,
     openapiUseCustomJsoniterSerdes := false,
+    openapiSeperateFilesForModels := false,
     standardParamSetting
   )
 
@@ -164,6 +167,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       sv.startsWith("3"),
       directoryName,
       Some(doc),
-      packageReuse
+      packageReuse,
+      c.seperateFilesForModels
     )
 }
