@@ -240,7 +240,8 @@ class EndpointGenerator {
               validators,
               generateValidators,
               isReused,
-              packageReuse
+              packageReuse,
+              seperateFilesForModels
             )
           val (outDecl, outTypes, errTypes, inlineDefns) =
             outs(
@@ -490,8 +491,8 @@ class EndpointGenerator {
       case x => bail(s"Can't create non-simple params - found $x")
     }
 
-  private def aliases(packageReuse: PackageReuseContext, types: Seq[String]): String =
-    types.map(s => s"type $s = ${packageReuse.dependencyModelPath}.$s").mkString("\n")
+  private def aliases(packageReuse: PackageReuseContext, types: Seq[String], seperateFilesForModels: Boolean): String =
+    types.map(PackageReuseContext.enumAliasType(_, packageReuse, seperateFilesForModels)).mkString("\n")
 
   private def ins(
       parameters: Seq[OpenapiParameter],
@@ -506,7 +507,8 @@ class EndpointGenerator {
       validators: ValidationDefns,
       generateValidators: Boolean,
       isReused: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean
   )(implicit location: Location): (String, Option[String], Seq[String], Option[String]) = {
 
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
@@ -543,7 +545,7 @@ class EndpointGenerator {
           validators
         )
 
-      val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes) else d)
+      val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes, seperateFilesForModels) else d)
       (decl, tpe, inlineDefn)
     }
     val (rqBody, maybeReqType, maybeInlineDefns) = requestBody.flatMap { b =>
@@ -708,7 +710,7 @@ class EndpointGenerator {
             validators
           )
         }
-        val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes) else d)
+        val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes, seperateFilesForModels) else d)
         (decl, tpe, inlineDefn)
       }
       resp.content match {
@@ -745,7 +747,7 @@ class EndpointGenerator {
             .groupBy(_._1)
           val aliasDefns =
             if (needsAliases && isReused) {
-              val parentModelPath = packageReuse.modelRoot(seperateFilesForModels) 
+              val parentModelPath = packageReuse.modelRoot(seperateFilesForModels)
               val wrappers = declsByWrapperClassName
                 .map { case (name, seq) =>
                   s"type $name = $parentModelPath.$name\nval $name = $parentModelPath.$name\n"

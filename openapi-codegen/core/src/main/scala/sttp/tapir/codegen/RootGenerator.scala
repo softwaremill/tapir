@@ -334,11 +334,10 @@ object RootGenerator {
       else None
 
     val maybeModels =
-      if (seperateFilesForModels) None
-      else
-        Some(s"""${indent(2)(mainClassDefns)}
-                |${indent(2)(inlineDefns.mkString("\n"))}
-                |""".stripMargin)
+      if (seperateFilesForModels) ""
+      else s"""${indent(2)(mainClassDefns)}
+              |${indent(2)(inlineDefns.mkString("\n"))}
+              |""".stripMargin
 
     val mainObj = s"""
         |package $packagePath
