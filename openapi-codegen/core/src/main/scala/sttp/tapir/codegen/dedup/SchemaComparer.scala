@@ -1,8 +1,8 @@
-package sttp.tapir.codegen
+package sttp.tapir.codegen.dedup
 
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiPath, OpenapiPathMethod, OpenapiRequestBodyDefn, OpenapiResponseDef}
+import sttp.tapir.codegen.openapi.models.OpenapiModels._
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.{OpenapiModels, OpenapiSchemaType}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{Discriminator, OpenapiSchemaAllOf, OpenapiSchemaAny, OpenapiSchemaAnyOf, OpenapiSchemaArray, OpenapiSchemaBoolean, OpenapiSchemaByte, OpenapiSchemaConstantString, OpenapiSchemaDate, OpenapiSchemaDateTime, OpenapiSchemaDouble, OpenapiSchemaDuration, OpenapiSchemaEnum, OpenapiSchemaField, OpenapiSchemaFloat, OpenapiSchemaInt, OpenapiSchemaLong, OpenapiSchemaMap, OpenapiSchemaNot, OpenapiSchemaObject, OpenapiSchemaOneOf, OpenapiSchemaRef, OpenapiSchemaSimpleType, OpenapiSchemaString, OpenapiSchemaUUID}
 
 object SchemaComparer {
   private def resolved(doc: OpenapiDocument, ps: Map[String, OpenapiModels.OpenapiParameter])(

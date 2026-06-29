@@ -1,9 +1,11 @@
 package sttp.tapir.codegen
 
+import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{AnyType, OpenapiSchemaAny, OpenapiSchemaBinary, OpenapiSchemaBoolean, OpenapiSchemaByte, OpenapiSchemaDate, OpenapiSchemaDateTime, OpenapiSchemaDouble, OpenapiSchemaDuration, OpenapiSchemaFloat, OpenapiSchemaInt, OpenapiSchemaLong, OpenapiSchemaRef, OpenapiSchemaSimpleType, OpenapiSchemaString, OpenapiSchemaUUID}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
+import sttp.tapir.codegen.security.SecurityGenerator
 import sttp.tapir.codegen.util.NameHelpers
 
 object XmlSerdeLib extends Enumeration {
@@ -16,47 +18,6 @@ case class FS2(effectType: String = "cats.effect.IO") extends StreamingImplement
 object Pekko extends StreamingImplementation
 object Zio extends StreamingImplementation
 
-object GenerationMeta {
-  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, Set.empty, Nil, 0, Set.empty, Set.empty)
-}
-case class GenerationMeta(
-    schemaFiles: Seq[String],
-    hasValidators: Boolean,
-    schemasContainAny: Boolean,
-    explicitNonObjTypes: Seq[String],
-    security: Set[SecurityWrapperDefn],
-    extensions: Seq[(String, String, String)],
-    schemaObjectCount: Int,
-    allTransitiveJsonParamRefs: Set[String],
-    jsonParamRefs: Set[String],
-) {
-  def partition(securityWrappers: Set[SecurityWrapperDefn]): (Set[SecurityWrapperDefn], Set[SecurityWrapperDefn]) = {
-    val changed = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
-    val m = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
-    val ct = scala.collection.mutable.Set.empty[String]
-    securityWrappers.foreach(w =>
-      if (!security.contains(w)) {
-        changed += w
-        w.schemas.map(_.typeName).foreach(t => ct += t)
-      } else m += w
-    )
-    def checkChanged: Unit = {
-      var changedCount = 0
-      val mSnapshot = m.toSet
-      mSnapshot.foreach(w =>
-        if (w.schemas.map(_.typeName).exists(ct.contains)) {
-          changedCount += 1
-          w.schemas.map(_.typeName).foreach(t => ct += t)
-          changed += w
-          m.remove(w)
-        }
-      )
-      if (changedCount != 0) checkChanged
-    }
-    checkChanged
-    m.toSet -> changed.toSet
-  }
-}
 case class GenerationInfo(allFiles: Map[String, String], meta: GenerationMeta)
 
 object RootGenerator {
@@ -78,7 +39,8 @@ object RootGenerator {
       generateEndpointTypes: Boolean,
       generateValidators: Boolean,
       useCustomJsoniterSerdes: Boolean,
-      packageReuse: PackageReuseContext = PackageReuseContext.none
+      packageReuse: PackageReuseContext = PackageReuseContext.none,
+      seperateFilesForModels: Boolean = false
   ): GenerationInfo = {
     val doc = unNormalisedDoc.resolveAllOfSchemas
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
@@ -136,8 +98,10 @@ object RootGenerator {
         generateEndpointTypes,
         validators,
         generateValidators,
-        packageReuse
+        packageReuse,
+        seperateFilesForModels
       )
+    val modelPackagePath = s"$packagePath.models"
     val GeneratedClassDefinitions(
       classDefns,
       jsonSerdes,
@@ -155,15 +119,16 @@ object RootGenerator {
           jsonSerdeLib = normalisedJsonLib,
           xmlSerdeLib = normalisedXmlLib,
           jsonParamRefs = jsonParamRefs,
-          fullModelPath = s"$packagePath.$objName",
+          fullModelPath = if (seperateFilesForModels) modelPackagePath else s"$packagePath.$objName",
           validateNonDiscriminatedOneOfs = validateNonDiscriminatedOneOfs,
           maxSchemasPerFile = maxSchemasPerFile,
           enumsDefinedOnEndpointParams = enumsDefinedOnEndpointParams,
           xmlParamRefs = xmlParamRefs,
           useCustomJsoniterSerdes = useCustomJsoniterSerdes,
-          packageReuse = packageReuse
+          packageReuse = packageReuse,
+          seperateFilesForModels = seperateFilesForModels
         )
-        .getOrElse(GeneratedClassDefinitions("", None, Nil, None, false, Nil, Set.empty))
+        .getOrElse(GeneratedClassDefinitions(Map.empty, None, Nil, None, false, Nil, Set.empty))
 
     val schemas = shimsAndSchemas.map(_._2)
     val hasJsonSerdes = jsonSerdes.nonEmpty
@@ -172,12 +137,13 @@ object RootGenerator {
     val maybeValidatorImport = if (validators.defns.nonEmpty) s"\nimport $packagePath.${objName}Validators._" else ""
     val maybeJsonImport = if (hasJsonSerdes) s"\nimport $packagePath.${objName}JsonSerdes._" else ""
     val maybeXmlImport = if (hasXmlSerdes) s"\nimport $packagePath.${objName}XmlSerdes._" else ""
+    val maybeModelImport = if (seperateFilesForModels) s"\nimport $modelPackagePath._" else ""
     val maybeSchemaImport =
       if (schemas.size > 1) (1 to schemas.size).map(i => s"import ${objName}Schemas$i._").mkString("\n", "\n", "")
       else if (schemas.size == 1) s"\nimport ${objName}Schemas._"
       else ""
     val internalImports =
-      s"import $packagePath.$objName._$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
+      s"import $packagePath.$objName._$maybeModelImport$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
 
     val taggedObjs = endpointsByTag.collect {
       case (Some(headTag), body) if body.nonEmpty =>
@@ -202,7 +168,7 @@ object RootGenerator {
           s"""package $packagePath
              |
              |object ${objName}Validators {
-             |  import $packagePath.$objName._
+             |${indent(2)(s"import $packagePath.$objName._$maybeModelImport")}
              |  import sttp.tapir.{ValidationResult, Validator}
              |
              |${indent(2)(validators.render(packageReuse))}
@@ -214,13 +180,13 @@ object RootGenerator {
       s"""package $packagePath
          |
          |object ${objName}JsonSerdes {
-         |  import $packagePath.$objName._
+         |${indent(2)(s"import $packagePath.$objName._$maybeModelImport")}
          |  import sttp.tapir.generic.auto._
          |${indent(2)(body)}
          |}""".stripMargin
     }
 
-    val xmlSerdeObj = xmlSerdes.map(XmlSerdeGenerator.wrapBody(normalisedXmlLib, packagePath, objName, targetScala3, _))
+    val xmlSerdeObj = xmlSerdes.map(XmlSerdeGenerator.wrapBody(normalisedXmlLib, packagePath, objName, targetScala3, _, seperateFilesForModels))
 
     val schemaObjs = if (schemas.size > 1) shimsAndSchemas.zipWithIndex.map { case ((shims, body), idx) =>
       val priorImports = (0 until idx).map { i => s"import $packagePath.${objName}Schemas${i + 1}._" }.mkString("\n")
@@ -230,7 +196,7 @@ object RootGenerator {
          |
          |${shims.map(_.replace("object Refs ", s"object Refs$suffix ")).getOrElse("")}
          |object $name {
-         |  import $packagePath.$objName._
+         |${indent(2)(s"import $packagePath.$objName._$maybeModelImport")}
          |  import sttp.tapir.generic.auto._
          |${indent(2)(priorImports)}
          |${indent(2)(body.replace(" Refs.", s" Refs$suffix."))}
@@ -241,7 +207,7 @@ object RootGenerator {
          |
          |${shimsAndSchemas.head._1.getOrElse("")}
          |object ${objName}Schemas {
-         |  import $packagePath.$objName._
+         |${indent(2)(s"import $packagePath.$objName._$maybeModelImport")}
          |  import sttp.tapir.generic.auto._
          |${indent(2)(schemas.head)}
          |}""".stripMargin)
@@ -298,16 +264,28 @@ object RootGenerator {
       }
       .mkString("\n")
     val extraImports =
-      if (endpointsInMain.nonEmpty) s"$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
+      if (endpointsInMain.nonEmpty) s"$maybeModelImport$maybeValidatorImport$maybeJsonImport$maybeXmlImport$maybeSchemaImport"
       else ""
+
+    val paramListHelpers =
+      if (packageReuse.reusedSchemas.nonEmpty)
+        s"""
+           |type CommaSeparatedValues[T] = ${packageReuse.modelRoot(seperateFilesForModels)}.CommaSeparatedValues[T]
+           |def CommaSeparatedValues[T](values: List[T]) = ${packageReuse.modelRoot(seperateFilesForModels)}.CommaSeparatedValues[T](values)
+           |type ExplodedValues[T] = ${packageReuse.modelRoot(seperateFilesForModels)}.ExplodedValues[T]
+           |def ExplodedValues[T](values: List[T]) = ${packageReuse.modelRoot(seperateFilesForModels)}.ExplodedValues[T](values)
+           |type ExtraParamSupport[T] = ${packageReuse.modelRoot(seperateFilesForModels)}.ExtraParamSupport[T]""".stripMargin
+      else
+        s"""
+         |case class CommaSeparatedValues[T](values: List[T])
+         |case class ExplodedValues[T](values: List[T])
+         |trait ExtraParamSupport[T] {
+         |  def decode(s: String): sttp.tapir.DecodeResult[T]
+         |  def encode(t: T): String
+         |}""".stripMargin
     val queryParamSupport =
-      """
-      |case class CommaSeparatedValues[T](values: List[T])
-      |case class ExplodedValues[T](values: List[T])
-      |trait ExtraParamSupport[T] {
-      |  def decode(s: String): sttp.tapir.DecodeResult[T]
-      |  def encode(t: T): String
-      |}
+      s"""
+      |${if (!seperateFilesForModels) paramListHelpers else ""}
       |implicit def makePathCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[String, T, sttp.tapir.CodecFormat.TextPlain] = {
       |  sttp.tapir.Codec.string.mapDecode(support.decode)(support.encode)
       |}
@@ -340,12 +318,33 @@ object RootGenerator {
       if (packageReuse.reusedSchemas.nonEmpty)
         s"type ByteString = ${packageReuse.depPkg}.$objName.ByteString"
       else "type ByteString <: Array[Byte]"
+    val mainClassDefns =
+      if (seperateFilesForModels) classDefns.getOrElse("", "")
+      else classDefns.toSeq.sortBy(_._1).map(_._2).mkString("\n")
+
+    val maybeModelPackage =
+      if (seperateFilesForModels) Some(s"""
+         |package $packagePath
+         |
+         |package object models {
+         |${indent(2)(paramListHelpers)}
+         |${indent(2)(mainClassDefns)}
+         |${indent(2)(inlineDefns.mkString("\n"))}
+         |}""".stripMargin)
+      else None
+
+    val maybeModels =
+      if (seperateFilesForModels) ""
+      else s"""${indent(2)(mainClassDefns)}
+              |${indent(2)(inlineDefns.mkString("\n"))}
+              |""".stripMargin
+
     val mainObj = s"""
         |package $packagePath
         |
         |object $objName {
         |
-        |${indent(2)(imports(normalisedJsonLib) + extraImports)}
+        |${indent(2)(imports(normalisedJsonLib) + extraImports + maybeModelImport)}
         |
         |${indent(2)(customTypes)}
         |${indent(2)(securityTypes)}
@@ -359,17 +358,25 @@ object RootGenerator {
         |  $byteStringDecl
         |  implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
         |
-        |${indent(2)(classDefns)}
-        |${indent(2)(inlineDefns.mkString("\n"))}
-        |
+        |$maybeModels
         |${indent(2)(maybeSpecificationExtensionKeys)}
         |
         |${indent(2)(endpointsInMain)}
         |${indent(2)(ServersGenerator.genServerDefinitions(doc.servers, targetScala3).getOrElse(""))}
         |}
         |""".stripMargin
+    val modelFiles =
+      if (seperateFilesForModels)
+        classDefns.filter(_._1.nonEmpty).map { case (fn, body) =>
+          s"models.$fn" ->
+            s"""package $modelPackagePath
+               |
+               |$body
+               |""".stripMargin
+        }
+      else Map.empty
     val allFiles = taggedObjs ++ jsonSerdeObj.map(s"${objName}JsonSerdes" -> _) ++ xmlSerdeObj.map(s"${objName}XmlSerdes" -> _) ++
-      validationObj ++ schemaObjs + (objName -> mainObj)
+      validationObj ++ schemaObjs ++ modelFiles ++ maybeModelPackage.map("models.package" -> _) + (objName -> mainObj)
     GenerationInfo(
       allFiles,
       GenerationMeta(
@@ -381,7 +388,8 @@ object RootGenerator {
         extensions,
         schemaObjs.size,
         allTransitiveJsonParamRefs,
-        jsonParamRefs
+        jsonParamRefs,
+        packageReuse.reusedSchemas
       )
     )
   }

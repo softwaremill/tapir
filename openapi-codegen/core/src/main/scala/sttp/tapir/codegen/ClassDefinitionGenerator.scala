@@ -1,22 +1,26 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType}
+import sttp.tapir.codegen.RootGenerator.mapSchemaSimpleTypeToType
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.json.{JsonHelpers, JsonSerdeLib, JsonSerdeGenerator, SerdeGenResponse}
 import sttp.tapir.codegen.json.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
+import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
 
 case class GeneratedClassDefinitions(
-    classRepr: String,
+    classReprs: Map[String, String],
     jsonSerdeRepr: Option[String],
     schemaRepr: Seq[(Option[String], String)],
     xmlSerdeRepr: Option[String],
     schemasContainAny: Boolean,
     explicitNonObjTypes: Seq[String],
     allTransitiveJsonParamRefs: Set[String]
-)
+) {
+  def classRepr: String = classReprs.toSeq.sortBy(_._1).map(_._2).filter(_.nonEmpty).mkString("\n")
+}
 
 case class InlineEnumDefn(enumName: String, impl: String)
 
@@ -77,7 +81,8 @@ class ClassDefinitionGenerator {
       enumsDefinedOnEndpointParams: Boolean = false,
       xmlParamRefs: Set[String] = Set.empty,
       useCustomJsoniterSerdes: Boolean = true,
-      packageReuse: PackageReuseContext = PackageReuseContext.none
+      packageReuse: PackageReuseContext = PackageReuseContext.none,
+      seperateFilesForModels: Boolean = false
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -93,33 +98,33 @@ class ClassDefinitionGenerator {
         s"Unable to constructing internal representation for oneOf(s) '${unresolvableNCOOS.map(_._1)}': discriminator provided, but not all variants are objects!"
       )
 
-    val nonClassyOneOfReprs = resolvableNonClassyOneOfSchemas
-      .map { case (name, st) =>
-        val tt = name.capitalize
-        val variants = st.types
-          .map {
-            case _: OpenapiSchemaBinary | _: OpenapiSchemaByte => s"case class ${tt}Bin(v: Array[Byte]) extends $tt"
-            case _: OpenapiSchemaDate                          => s"case class ${tt}Date(v: java.time.LocalDate) extends $tt"
-            case _: OpenapiSchemaDateTime                      => s"case class ${tt}DateTime(v: java.time.Instant) extends $tt"
-            case _: OpenapiSchemaDuration                      => s"case class ${tt}Duration(v: java.time.Duration) extends $tt"
-            case _: OpenapiSchemaUUID                          => s"case class ${tt}UUID(v: java.util.UUID) extends $tt"
-            case _: OpenapiSchemaBoolean                       => s"case class ${tt}Boolean(v: Boolean) extends $tt"
-            case t: OpenapiSchemaNumericType                   => s"case class $tt${t.scalaType}(v: ${t.scalaType}) extends $tt"
-            case _: OpenapiSchemaStringType                    => s"case class ${tt}String(v: String) extends $tt"
-            case _: OpenapiSchemaAny                           => s"case class ${tt}Json(v: io.circe.Json) extends $tt"
-            case r: OpenapiSchemaRef                           => s"case class $tt${r.stripped}(v: ${r.stripped}) extends $tt"
-          }
-          .mkString("\n")
-        s"""
+    def nonClassyOneOfRepr(name: String, st: OpenapiSchemaOneOf): String = {
+      val tt = name.capitalize
+      val variants = st.types
+        .map {
+          case _: OpenapiSchemaBinary | _: OpenapiSchemaByte => s"case class ${tt}Bin(v: Array[Byte]) extends $tt"
+          case _: OpenapiSchemaDate                          => s"case class ${tt}Date(v: java.time.LocalDate) extends $tt"
+          case _: OpenapiSchemaDateTime                      => s"case class ${tt}DateTime(v: java.time.Instant) extends $tt"
+          case _: OpenapiSchemaDuration                      => s"case class ${tt}Duration(v: java.time.Duration) extends $tt"
+          case _: OpenapiSchemaUUID                          => s"case class ${tt}UUID(v: java.util.UUID) extends $tt"
+          case _: OpenapiSchemaBoolean                       => s"case class ${tt}Boolean(v: Boolean) extends $tt"
+          case t: OpenapiSchemaNumericType                   => s"case class $tt${t.scalaType}(v: ${t.scalaType}) extends $tt"
+          case _: OpenapiSchemaStringType                    => s"case class ${tt}String(v: String) extends $tt"
+          case _: OpenapiSchemaAny                           => s"case class ${tt}Json(v: io.circe.Json) extends $tt"
+          case r: OpenapiSchemaRef                           => s"case class $tt${r.stripped}(v: ${r.stripped}) extends $tt"
+        }
+        .mkString("\n")
+      s"""
          |sealed trait $tt
          |$variants""".stripMargin
-      }
-      .mkString("\n")
+    }
+    val nonClassyOneOfReprs = resolvableNonClassyOneOfSchemas.map { case (name, st) => nonClassyOneOfRepr(name, st) }.mkString("\n")
     val adtInheritanceMap: Map[String, Seq[(String, OpenapiSchemaOneOf)]] = mkMapParentsByChild(allClassyOneOfSchemas)
     val generatesQueryOrPathParamEnums = enumsDefinedOnEndpointParams ||
       allSchemas
         .collect { case (name, _: OpenapiSchemaEnum) => name }
         .exists(queryOrPathParamRefs.contains)
+    val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else EnumGenerator.enumSerdeHelperDefn(targetScala3)
 
     def fetchTransitiveParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
       case Nil          => initialSet
@@ -141,7 +146,6 @@ class ClassDefinitionGenerator {
         .map(name => s"sealed trait $name")
         .sorted
         .mkString("", "\n", "\n")
-    val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else enumSerdeHelperDefn(targetScala3)
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
     val schemasContainAny = schemasWithAny.nonEmpty || allTransitiveJsonParamRefs.contains("io.circe.Json")
     if (schemasContainAny && !Set(Circe, Jsoniter).contains(jsonSerdeLib))
@@ -177,40 +181,114 @@ class ClassDefinitionGenerator {
       xmlParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
     val xmlSerdes = XmlSerdeGenerator.generateSerdes(xmlSerdeLib, doc, allTransitiveXmlParamRefs, targetScala3, packageReuse)
-    val defns = doc.components
-      .map(_.schemas.flatMap {
-        case (name, _: OpenapiSchemaEnum) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
-          Seq(PackageReuseContext.enumAliasType(name, packageReuse))
-        case (name, _) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
-          Seq(PackageReuseContext.aliasType(name, packageReuse))
-        case (name, obj: OpenapiSchemaObject) =>
-          generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
-        case (name, obj: OpenapiSchemaEnum) =>
-          EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
-        case (name, OpenapiSchemaMap(valueSchema, _, _))       => generateMap(name, valueSchema)
-        case (name, OpenapiSchemaArray(valueSchema, _, _, rs)) => generateArray(name, valueSchema, rs)
-        case (_, _: OpenapiSchemaOneOf)                        => Nil
-        case (name, r: OpenapiSchemaSimpleType)                => generateAlias(name, r)
-        case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
-      })
-      .map(_.toSeq.sorted.mkString("\n") + nonClassyOneOfReprs)
-    val helpers = (enumSerdeHelper + adtTypes).linesIterator
-      .filterNot(_.forall(_.isWhitespace))
-      .mkString("\n")
-    // Json serdes & schemas live in separate files from the class defns
-    defns
-      .map(helpers + "\n" + _)
-      .map(defStr =>
-        GeneratedClassDefinitions(
-          defStr,
-          jsonSerdes,
-          shimsAndSchemas,
-          xmlSerdes,
-          schemasContainAny,
-          explicitNonObjTypes,
-          allTransitiveJsonParamRefs
-        )
+
+    def variantRefNames(oneOf: OpenapiSchemaOneOf): Set[String] =
+      oneOf.types.collect { case r: OpenapiSchemaRef => r.stripped }.toSet
+
+    val adtGroups: Map[String, Seq[String]] = allClassyOneOfSchemas
+      .groupBy { case (_, st) => variantRefNames(st) }
+      .map { case (_, group) =>
+        val parents = group.map(_._1).sorted.distinct
+        parents.head -> parents
+      }
+
+    val childToAdtFile: Map[String, String] = adtInheritanceMap.map { case (child, parents) =>
+      val parentNames = parents.map(_._1)
+      val fileName = adtGroups
+        .find { case (_, ps) => parentNames.forall(ps.contains) }
+        .map(_._1)
+        .getOrElse(parentNames.sorted.head)
+      child -> fileName
+    }
+
+    val schemaDefns: Map[String, (Int, Seq[String])] = doc.components
+      .map(
+        _.schemas.map {
+          case (name, _: OpenapiSchemaEnum) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
+            (name, (0, Seq(PackageReuseContext.enumAliasType(name, packageReuse, seperateFilesForModels))))
+          case (name, s) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
+            (name, (0, Seq(PackageReuseContext.aliasType(name, packageReuse, seperateFilesForModels))))
+          case (name, obj: OpenapiSchemaObject) =>
+            (name, (2, generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)))
+          case (name, obj: OpenapiSchemaEnum) =>
+            (name, (1, EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)))
+          case (name, OpenapiSchemaMap(valueSchema, _, _)) =>
+            (name, (0, generateMap(name, valueSchema)))
+          case (name, OpenapiSchemaArray(valueSchema, _, _, rs)) =>
+            (name, (0, generateArray(name, valueSchema, rs)))
+          case (name, _: OpenapiSchemaOneOf) =>
+            (name, (-1, Nil))
+          case (name, r: OpenapiSchemaSimpleType) =>
+            (name, (0, generateAlias(name, r)))
+          case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
+        }
       )
+      .getOrElse(Map.empty)
+
+    def isTypeAlias(name: String): Boolean = allSchemas.get(name) match {
+      case Some(_: OpenapiSchemaMap) | Some(_: OpenapiSchemaArray) | Some(_: OpenapiSchemaSimpleType) => true
+      case Some(_: OpenapiSchemaEnum) if PackageReuseContext.isReusedSchema(name, packageReuse)       => true
+      case _ if PackageReuseContext.isReusedSchema(name, packageReuse)                                => true
+      case _                                                                                          => false
+    }
+
+    val classReprs: Map[String, String] = if (!seperateFilesForModels) {
+      val defStr = adtTypes + "\n" +
+        schemaDefns.toSeq.sortBy(d => (d._2._1, d._1)).flatMap(_._2._2).mkString("\n") + "\n" +
+        nonClassyOneOfReprs
+      val helpers = enumSerdeHelper.linesIterator.filterNot(_.forall(_.isWhitespace)).mkString("\n")
+      Map("" -> (helpers + "\n" + defStr))
+    } else {
+      val (typeAliases, explicitDefns) = schemaDefns.toSeq.partition(_._2._1 == 0)
+      val mainContent =
+        enumSerdeHelper + "\n" + typeAliases.sortBy(_._1).flatMap(_._2._2).filterNot(_.forall(_.isWhitespace)).mkString("\n")
+
+      val modelFiles = scala.collection.mutable.Map.empty[String, Vector[String]]
+
+      def addModel(file: String, content: String): Unit =
+        if (content.nonEmpty) modelFiles.update(file, modelFiles.getOrElse(file, Vector.empty) :+ content)
+
+      explicitDefns.foreach { case (name, (_, defns)) =>
+        if (childToAdtFile.contains(name)) ()
+        else if (allSchemas.get(name).exists(_.isInstanceOf[OpenapiSchemaEnum]))
+          addModel(name, defns.mkString("\n"))
+        else if (allSchemas.get(name).exists(_.isInstanceOf[OpenapiSchemaObject]))
+          addModel(name, defns.mkString("\n"))
+      }
+
+      adtGroups.toSeq.filterNot(p => isTypeAlias(p._1)).foreach { case (fileName, parentTraits) =>
+        val traits = parentTraits.map(p => s"sealed trait $p").mkString("\n")
+        val children = childToAdtFile.filter(_._2 == fileName).keys.toSeq.sorted
+        val childContent = children
+          .flatMap { child =>
+            allSchemas.get(child).collect { case obj: OpenapiSchemaObject =>
+              generateClass(allSchemas, child, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
+                .mkString("\n")
+            }
+          }
+          .mkString("\n")
+        addModel(fileName, Seq(traits, childContent).filter(_.nonEmpty).mkString("\n"))
+      }
+
+      resolvableNonClassyOneOfSchemas.filterNot(p => isTypeAlias(p._1)).foreach { case (name, st) =>
+        addModel(name.capitalize, nonClassyOneOfRepr(name, st))
+      }
+
+      Map("" -> mainContent) ++ modelFiles.map { case (k, v) => k -> v.mkString("\n") }.filter(_._2.nonEmpty)
+    }
+
+    // Json serdes & schemas live in separate files from the class defns
+    Some(
+      GeneratedClassDefinitions(
+        classReprs,
+        jsonSerdes,
+        shimsAndSchemas,
+        xmlSerdes,
+        schemasContainAny,
+        explicitNonObjTypes,
+        allTransitiveJsonParamRefs
+      )
+    )
   }
 
   private def mkMapParentsByChild(allOneOfSchemas: Seq[(String, OpenapiSchemaOneOf)]): Map[String, Seq[(String, OpenapiSchemaOneOf)]] =
@@ -239,56 +317,6 @@ class ClassDefinitionGenerator {
       .groupBy(_._1)
       .mapValues(_.map(_._2))
       .toMap
-
-  private def enumSerdeHelperDefn(targetScala3: Boolean): String = {
-    if (targetScala3)
-      """
-        |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
-        |  Map.from(
-        |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
-        |  )
-        |case class EnumExtraParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends ExtraParamSupport[T] {
-        |  // Case-insensitive mapping
-        |  def decode(s: String): sttp.tapir.DecodeResult[T] =
-        |    scala.util
-        |      .Try(eMap(s.toUpperCase))
-        |      .fold(
-        |        _ =>
-        |          sttp.tapir.DecodeResult.Error(
-        |            s,
-        |            new NoSuchElementException(
-        |              s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
-        |            )
-        |          ),
-        |        sttp.tapir.DecodeResult.Value(_)
-        |      )
-        |  def encode(t: T): String = t.name
-        |}
-        |def extraCodecSupport[T: enumextensions.EnumMirror]: ExtraParamSupport[T] =
-        |  EnumExtraParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
-        |""".stripMargin
-    else
-      """
-        |case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
-        |  // Case-insensitive mapping
-        |  def decode(s: String): sttp.tapir.DecodeResult[T] =
-        |    scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
-        |      .fold(
-        |        _ =>
-        |          sttp.tapir.DecodeResult.Error(
-        |            s,
-        |            new NoSuchElementException(
-        |              s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
-        |            )
-        |          ),
-        |        sttp.tapir.DecodeResult.Value(_)
-        |      )
-        |  def encode(t: T): String = t.entryName
-        |}
-        |def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
-        |  EnumExtraParamSupport(enumName, T)
-        |""".stripMargin
-  }
 
   private[codegen] def generateMap(
       name: String,

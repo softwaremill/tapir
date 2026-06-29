@@ -19,6 +19,7 @@ object TapirGeneratedEndpoints {
   case class BasicSecurityIn(value: UsernamePassword) extends Basic_or_Bearer_SecurityIn
   case class BearerSecurityIn(value: String) extends Basic_or_Bearer_SecurityIn
 
+
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -87,16 +88,10 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithoutDiscriminator
   sealed trait AnyObjectWithInlineEnum
 
+  type ListType = List[String]
+
   enum AnEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
     case Foo, Bar, Baz
-  }
-
-  enum ObjectWithInlineEnum2InlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
-    case bar1, bar2
-  }
-
-  enum ObjectWithInlineEnumInlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
-    case foo1, foo2, foo3, foo4
   }
   case class NotNullableThingy (
     uuid: java.util.UUID
@@ -105,9 +100,17 @@ object TapirGeneratedEndpoints {
     id: java.util.UUID,
     inlineEnum: ObjectWithInlineEnumInlineEnum
   ) extends AnyObjectWithInlineEnum
+
+  enum ObjectWithInlineEnumInlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    case foo1, foo2, foo3, foo4
+  }
   case class ObjectWithInlineEnum2 (
     inlineEnum: ObjectWithInlineEnum2InlineEnum
   ) extends AnyObjectWithInlineEnum
+
+  enum ObjectWithInlineEnum2InlineEnum derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec {
+    case bar1, bar2
+  }
   case class SubtypeWithD1 (
     s: String,
     i: Option[Int] = None,
@@ -133,7 +136,6 @@ object TapirGeneratedEndpoints {
     e: Option[AnEnum] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
-  type ListType = List[String]
   case class PutInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -321,5 +323,6 @@ object TapirGeneratedEndpoints {
       Locally
     */
     val `/`: sttp.model.Uri = uri"/"
+
   }
 }

@@ -1,0 +1,25 @@
+openapi: 3.0.0
+info:
+  title: separate files for models test
+  version: 1.0.0
+paths:
+  /books:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Books'
+components:
+  schemas:
+    Book:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+    Books:
+      type: array
+      items:
+        $ref: '#/components/schemas/Book'

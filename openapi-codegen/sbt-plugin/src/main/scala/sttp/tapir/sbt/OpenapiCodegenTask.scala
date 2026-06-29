@@ -1,8 +1,13 @@
 package sttp.tapir.sbt
 
 import sbt._
-import sttp.tapir.codegen.{GenerationMeta, OpenApiInputParser, PackageReuseContext, RootGenerator}
+import sttp.tapir.codegen.{OpenApiInputParser, RootGenerator}
+import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 case class OpenapiCodegenTask(
     inputYaml: File,
@@ -21,7 +26,8 @@ case class OpenapiCodegenTask(
     targetScala3: Boolean,
     overrideDirectoryName: Option[String],
     preParsedDoc: Option[OpenapiDocument] = None,
-    packageReuse: PackageReuseContext = PackageReuseContext.none
+    packageReuse: PackageReuseContext = PackageReuseContext.none,
+    seperateFilesForModels: Boolean = false
 ) {
 
   private val directoryName: String = overrideDirectoryName.getOrElse("sbt-openapi-codegen")
@@ -48,13 +54,23 @@ case class OpenapiCodegenTask(
         generateEndpointTypes,
         !disableValidatorGeneration,
         useCustomJsoniterSerdes,
-        packageReuse
+        packageReuse,
+        seperateFilesForModels
       )
-    generationInfo.allFiles.map { case (objectName, fileBody) =>
-      val file = outDirectory / s"$objectName.scala"
-      val lines = fileBody.linesIterator.toSeq
-      IO.writeLines(file, lines, IO.utf8)
-      file
-    }.toSeq -> generationInfo.meta
+    Await.result(
+      Future.traverse(generationInfo.allFiles.toSeq) { case (objectName, fileBody) =>
+        Future[File] {
+          val segments = objectName.split('.')
+          val file = segments.toList match {
+            case name :: Nil  => outDirectory / s"$name.scala"
+            case init :+ last => init.foldLeft(outDirectory)(_ / _) / s"$last.scala"
+          }
+          val lines = fileBody.linesIterator.toSeq
+          IO.writeLines(file, lines, IO.utf8)
+          file
+        }
+      },
+      Duration.Inf
+    ) -> generationInfo.meta
   }
 }

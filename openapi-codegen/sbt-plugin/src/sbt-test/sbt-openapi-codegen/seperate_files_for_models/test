@@ -1,0 +1,4 @@
+> clean
+> generateTapirDefinitions
+> compile
+> check

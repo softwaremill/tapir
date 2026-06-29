@@ -1,37 +1,12 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.RootGenerator.indent
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  AnyType,
-  Discriminator,
-  OpenapiSchemaAllOf,
-  OpenapiSchemaAny,
-  OpenapiSchemaAnyOf,
-  OpenapiSchemaArray,
-  OpenapiSchemaBinary,
-  OpenapiSchemaBoolean,
-  OpenapiSchemaByte,
-  OpenapiSchemaConstantString,
-  OpenapiSchemaDate,
-  OpenapiSchemaDateTime,
-  OpenapiSchemaDuration,
-  OpenapiSchemaEnum,
-  OpenapiSchemaField,
-  OpenapiSchemaMap,
-  OpenapiSchemaNot,
-  OpenapiSchemaNumericType,
-  OpenapiSchemaObject,
-  OpenapiSchemaOneOf,
-  OpenapiSchemaRef,
-  OpenapiSchemaSimpleType,
-  OpenapiSchemaString,
-  OpenapiSchemaStringType,
-  OpenapiSchemaUUID
-}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
+import sttp.tapir.codegen.util.NameHelpers.indent
 
 import scala.collection.mutable
 
