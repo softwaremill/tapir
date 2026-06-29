@@ -35,7 +35,10 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
     val tpe = TypeRepr.of[T]
     val typeInfo = TypeInfo.forType(tpe)
     val annotations = Annotations.onType(tpe)
-    '{ Schema[T](schemaType = ${ productSchemaType(childSchemas) }, name = Some(${ typeNameToSchemaName(typeInfo, annotations) })) }
+    val schema = '{
+      Schema[T](schemaType = ${ productSchemaType(childSchemas) }, name = Some(${ typeNameToSchemaName(typeInfo, annotations) }))
+    }
+    enrichSchema(schema, annotations)
 
   private def productSchemaType[T: Type, TFields <: Tuple](
       childSchemas: Expr[Tuple.Map[TFields, Schema]]
