@@ -20,6 +20,7 @@ object TapirGeneratedEndpoints {
   case class Api_keySecurityIn(value: String) extends Bearer_or_api_key_SecurityIn
   case class BearerSecurityIn(value: String) extends Bearer_or_api_key_SecurityIn
 
+
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -79,21 +80,7 @@ object TapirGeneratedEndpoints {
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
 
-  sealed trait OrderStatus extends enumeratum.EnumEntry
-  object OrderStatus extends enumeratum.Enum[OrderStatus] with enumeratum.CirceEnum[OrderStatus] {
-    val values = findValues
-    case object placed extends OrderStatus
-    case object approved extends OrderStatus
-    case object delivered extends OrderStatus
-  }
 
-  sealed trait PetStatus extends enumeratum.EnumEntry
-  object PetStatus extends enumeratum.Enum[PetStatus] with enumeratum.CirceEnum[PetStatus] {
-    val values = findValues
-    case object available extends PetStatus
-    case object pending extends PetStatus
-    case object sold extends PetStatus
-  }
   case class ApiResponse (
     code: Option[Int] = None,
     `type`: Option[String] = None,
@@ -111,6 +98,14 @@ object TapirGeneratedEndpoints {
     status: Option[OrderStatus] = None,
     complete: Option[Boolean] = None
   )
+
+  sealed trait OrderStatus extends enumeratum.EnumEntry
+  object OrderStatus extends enumeratum.Enum[OrderStatus] with enumeratum.CirceEnum[OrderStatus] {
+    val values = findValues
+    case object placed extends OrderStatus
+    case object approved extends OrderStatus
+    case object delivered extends OrderStatus
+  }
   case class Pet (
     id: Option[Long] = None,
     name: String,
@@ -119,6 +114,14 @@ object TapirGeneratedEndpoints {
     tags: Option[Seq[Tag]] = None,
     status: Option[PetStatus] = None
   )
+
+  sealed trait PetStatus extends enumeratum.EnumEntry
+  object PetStatus extends enumeratum.Enum[PetStatus] with enumeratum.CirceEnum[PetStatus] {
+    val values = findValues
+    case object available extends PetStatus
+    case object pending extends PetStatus
+    case object sold extends PetStatus
+  }
   case class Tag (
     id: Option[Long] = None,
     name: Option[String] = None
@@ -484,11 +487,14 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
       .tags(List("user"))
 
+
   lazy val generatedEndpoints = List(updatePet, addPet, findPetsByStatus, findPetsByTags, getPetById, updatePetWithForm, deletePet, uploadFile, getInventory, placeOrder, getOrderById, deleteOrder, createUser, createUsersWithListInput, loginUser, logoutUser, getUserByName, updateUser, deleteUser)
+
 
   object Servers {
     import sttp.model.Uri.UriContext
 
     val `https://petstore3.swagger.io/api/v3`: sttp.model.Uri = uri"https://petstore3.swagger.io/api/v3"
+
   }
 }

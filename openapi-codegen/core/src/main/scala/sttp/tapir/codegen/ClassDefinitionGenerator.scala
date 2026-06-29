@@ -114,7 +114,8 @@ class ClassDefinitionGenerator {
           case r: OpenapiSchemaRef                           => s"case class $tt${r.stripped}(v: ${r.stripped}) extends $tt"
         }
         .mkString("\n")
-      s"""sealed trait $tt
+      s"""
+         |sealed trait $tt
          |$variants""".stripMargin
     }
     val nonClassyOneOfReprs = resolvableNonClassyOneOfSchemas.map { case (name, st) => nonClassyOneOfRepr(name, st) }.mkString("\n")
@@ -200,25 +201,25 @@ class ClassDefinitionGenerator {
       child -> fileName
     }
 
-    val schemaDefns: Map[String, Seq[String]] = doc.components
+    val schemaDefns: Map[String, (Int, Seq[String])] = doc.components
       .map(
         _.schemas.map {
           case (name, _: OpenapiSchemaEnum) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
-            name -> Seq(PackageReuseContext.enumAliasType(name, packageReuse, seperateFilesForModels))
+            (name, (0, Seq(PackageReuseContext.enumAliasType(name, packageReuse, seperateFilesForModels))))
           case (name, s) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
-            name -> Seq(PackageReuseContext.aliasType(name, packageReuse, seperateFilesForModels))
+            (name, (0, Seq(PackageReuseContext.aliasType(name, packageReuse, seperateFilesForModels))))
           case (name, obj: OpenapiSchemaObject) =>
-            name -> generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
+            (name, (2, generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)))
           case (name, obj: OpenapiSchemaEnum) =>
-            name -> EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)
+            (name, (1, EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)))
           case (name, OpenapiSchemaMap(valueSchema, _, _)) =>
-            name -> generateMap(name, valueSchema)
+            (name, (0, generateMap(name, valueSchema)))
           case (name, OpenapiSchemaArray(valueSchema, _, _, rs)) =>
-            name -> generateArray(name, valueSchema, rs)
+            (name, (0, generateArray(name, valueSchema, rs)))
           case (name, _: OpenapiSchemaOneOf) =>
-            name -> Nil
+            (name, (-1, Nil))
           case (name, r: OpenapiSchemaSimpleType) =>
-            name -> generateAlias(name, r)
+            (name, (0, generateAlias(name, r)))
           case (n, x) => throw new NotImplementedError(s"Only objects, enums and maps supported! (for $n found ${x})")
         }
       )
@@ -232,19 +233,23 @@ class ClassDefinitionGenerator {
     }
 
     val classReprs: Map[String, String] = if (!seperateFilesForModels) {
-      val defStr = schemaDefns.toSeq.sortBy(_._1).flatMap(_._2).mkString("\n") + nonClassyOneOfReprs
-      val helpers = (enumSerdeHelper + adtTypes).linesIterator.filterNot(_.forall(_.isWhitespace)).mkString("\n")
+      val defStr = adtTypes + "\n" +
+        schemaDefns.toSeq.sortBy(d => (d._2._1, d._1)).flatMap(_._2._2).mkString("\n") + "\n" +
+        nonClassyOneOfReprs
+      val helpers = enumSerdeHelper.linesIterator.filterNot(_.forall(_.isWhitespace)).mkString("\n")
       Map("" -> (helpers + "\n" + defStr))
     } else {
-      val mainOnly = scala.collection.mutable.ArrayBuffer[String]()
+      val (typeAliases, explicitDefns) = schemaDefns.toSeq.partition(_._2._1 == 0)
+      val mainContent =
+        enumSerdeHelper + "\n" + typeAliases.sortBy(_._1).flatMap(_._2._2).filterNot(_.forall(_.isWhitespace)).mkString("\n")
+
       val modelFiles = scala.collection.mutable.Map.empty[String, Vector[String]]
 
       def addModel(file: String, content: String): Unit =
         if (content.nonEmpty) modelFiles.update(file, modelFiles.getOrElse(file, Vector.empty) :+ content)
 
-      schemaDefns.foreach { case (name, defns) =>
-        if (isTypeAlias(name)) mainOnly ++= defns
-        else if (childToAdtFile.contains(name)) ()
+      explicitDefns.foreach { case (name, (_, defns)) =>
+        if (childToAdtFile.contains(name)) ()
         else if (allSchemas.get(name).exists(_.isInstanceOf[OpenapiSchemaEnum]))
           addModel(name, defns.mkString("\n"))
         else if (allSchemas.get(name).exists(_.isInstanceOf[OpenapiSchemaObject]))
@@ -257,9 +262,8 @@ class ClassDefinitionGenerator {
         val childContent = children
           .flatMap { child =>
             allSchemas.get(child).collect { case obj: OpenapiSchemaObject =>
-              generateClass(allSchemas, child, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3).mkString(
-                "\n"
-              )
+              generateClass(allSchemas, child, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
+                .mkString("\n")
             }
           }
           .mkString("\n")
@@ -270,7 +274,6 @@ class ClassDefinitionGenerator {
         addModel(name.capitalize, nonClassyOneOfRepr(name, st))
       }
 
-      val mainContent = (enumSerdeHelper.linesIterator ++ mainOnly).filterNot(_.forall(_.isWhitespace)).mkString("\n")
       Map("" -> mainContent) ++ modelFiles.map { case (k, v) => k -> v.mkString("\n") }.filter(_._2.nonEmpty)
     }
 

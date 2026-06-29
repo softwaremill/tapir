@@ -15,10 +15,10 @@ import scala.util.Using
 
 TaskKey[Unit]("check") := {
   val base = sourceManaged.value / "main/sbt-openapi-codegen"
-  val main = Using(Source.fromFile(base / "TapirGeneratedEndpoints.scala"))(_.mkString).get
+  val main = Using(Source.fromFile(base / "models/package.scala"))(_.mkString).get
   val book = Using(Source.fromFile(base / "models/Book.scala"))(_.mkString).get
   if (main.contains("case class Book")) sys.error("Book model should not be in the main object")
   if (!book.contains("case class Book")) sys.error("Book model should be in models/Book.scala")
-  if (!main.contains("type Books =")) sys.error("type alias Books should remain in the main object")
+  if (!main.contains("type Books =")) sys.error("type alias Books should be defined in package object")
   ()
 }

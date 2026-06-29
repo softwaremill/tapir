@@ -23,6 +23,7 @@ object TapirGeneratedEndpoints {
 
 
 
+
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -82,915 +83,15 @@ object TapirGeneratedEndpoints {
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
 
-  sealed trait AccessPolicyDTOAction extends enumeratum.EnumEntry
-  object AccessPolicyDTOAction extends enumeratum.Enum[AccessPolicyDTOAction] with enumeratum.CirceEnum[AccessPolicyDTOAction] {
-    val values = findValues
-    case object read extends AccessPolicyDTOAction
-  }
 
-  sealed trait AccessPolicySummaryDTOAction extends enumeratum.EnumEntry
-  object AccessPolicySummaryDTOAction extends enumeratum.Enum[AccessPolicySummaryDTOAction] with enumeratum.CirceEnum[AccessPolicySummaryDTOAction] {
-    val values = findValues
-    case object read extends AccessPolicySummaryDTOAction
-  }
-
-  sealed trait ActivateControllerServicesEntityState extends enumeratum.EnumEntry
-  object ActivateControllerServicesEntityState extends enumeratum.Enum[ActivateControllerServicesEntityState] with enumeratum.CirceEnum[ActivateControllerServicesEntityState] {
-    val values = findValues
-    case object ENABLED extends ActivateControllerServicesEntityState
-    case object DISABLED extends ActivateControllerServicesEntityState
-  }
-
-  sealed trait AffectedComponentDTOReferenceType extends enumeratum.EnumEntry
-  object AffectedComponentDTOReferenceType extends enumeratum.Enum[AffectedComponentDTOReferenceType] with enumeratum.CirceEnum[AffectedComponentDTOReferenceType] {
-    val values = findValues
-    case object PROCESSOR extends AffectedComponentDTOReferenceType
-    case object CONTROLLER_SERVICE extends AffectedComponentDTOReferenceType
-    case object INPUT_PORT extends AffectedComponentDTOReferenceType
-    case object OUTPUT_PORT extends AffectedComponentDTOReferenceType
-    case object REMOTE_INPUT_PORT extends AffectedComponentDTOReferenceType
-    case object REMOTE_OUTPUT_PORT extends AffectedComponentDTOReferenceType
-    case object STATELESS_GROUP extends AffectedComponentDTOReferenceType
-  }
-
-  sealed trait AffectedComponentEntityReferenceType extends enumeratum.EnumEntry
-  object AffectedComponentEntityReferenceType extends enumeratum.Enum[AffectedComponentEntityReferenceType] with enumeratum.CirceEnum[AffectedComponentEntityReferenceType] {
-    val values = findValues
-    case object PROCESSOR extends AffectedComponentEntityReferenceType
-    case object CONTROLLER_SERVICE extends AffectedComponentEntityReferenceType
-    case object INPUT_PORT extends AffectedComponentEntityReferenceType
-    case object OUTPUT_PORT extends AffectedComponentEntityReferenceType
-    case object REMOTE_INPUT_PORT extends AffectedComponentEntityReferenceType
-    case object REMOTE_OUTPUT_PORT extends AffectedComponentEntityReferenceType
-  }
-
-  sealed trait ComponentValidationResultDTOReferenceType extends enumeratum.EnumEntry
-  object ComponentValidationResultDTOReferenceType extends enumeratum.Enum[ComponentValidationResultDTOReferenceType] with enumeratum.CirceEnum[ComponentValidationResultDTOReferenceType] {
-    val values = findValues
-    case object PROCESSOR extends ComponentValidationResultDTOReferenceType
-    case object CONTROLLER_SERVICE extends ComponentValidationResultDTOReferenceType
-    case object INPUT_PORT extends ComponentValidationResultDTOReferenceType
-    case object OUTPUT_PORT extends ComponentValidationResultDTOReferenceType
-    case object REMOTE_INPUT_PORT extends ComponentValidationResultDTOReferenceType
-    case object REMOTE_OUTPUT_PORT extends ComponentValidationResultDTOReferenceType
-    case object STATELESS_GROUP extends ComponentValidationResultDTOReferenceType
-  }
-
-  sealed trait ConfigVerificationResultDTOOutcome extends enumeratum.EnumEntry
-  object ConfigVerificationResultDTOOutcome extends enumeratum.Enum[ConfigVerificationResultDTOOutcome] with enumeratum.CirceEnum[ConfigVerificationResultDTOOutcome] {
-    val values = findValues
-    case object SUCCESSFUL extends ConfigVerificationResultDTOOutcome
-    case object FAILED extends ConfigVerificationResultDTOOutcome
-    case object SKIPPED extends ConfigVerificationResultDTOOutcome
-  }
-
-  sealed trait ConnectableComponentType extends enumeratum.EnumEntry
-  object ConnectableComponentType extends enumeratum.Enum[ConnectableComponentType] with enumeratum.CirceEnum[ConnectableComponentType] {
-    val values = findValues
-    case object PROCESSOR extends ConnectableComponentType
-    case object REMOTE_INPUT_PORT extends ConnectableComponentType
-    case object REMOTE_OUTPUT_PORT extends ConnectableComponentType
-    case object INPUT_PORT extends ConnectableComponentType
-    case object OUTPUT_PORT extends ConnectableComponentType
-    case object FUNNEL extends ConnectableComponentType
-  }
-
-  sealed trait ConnectableDTOType extends enumeratum.EnumEntry
-  object ConnectableDTOType extends enumeratum.Enum[ConnectableDTOType] with enumeratum.CirceEnum[ConnectableDTOType] {
-    val values = findValues
-    case object PROCESSOR extends ConnectableDTOType
-    case object REMOTE_INPUT_PORT extends ConnectableDTOType
-    case object REMOTE_OUTPUT_PORT extends ConnectableDTOType
-    case object INPUT_PORT extends ConnectableDTOType
-    case object OUTPUT_PORT extends ConnectableDTOType
-    case object FUNNEL extends ConnectableDTOType
-  }
-
-  sealed trait ConnectionEntityDestinationType extends enumeratum.EnumEntry
-  object ConnectionEntityDestinationType extends enumeratum.Enum[ConnectionEntityDestinationType] with enumeratum.CirceEnum[ConnectionEntityDestinationType] {
-    val values = findValues
-    case object PROCESSOR extends ConnectionEntityDestinationType
-    case object REMOTE_INPUT_PORT extends ConnectionEntityDestinationType
-    case object REMOTE_OUTPUT_PORT extends ConnectionEntityDestinationType
-    case object INPUT_PORT extends ConnectionEntityDestinationType
-    case object OUTPUT_PORT extends ConnectionEntityDestinationType
-    case object FUNNEL extends ConnectionEntityDestinationType
-  }
-
-  sealed trait ConnectionEntitySourceType extends enumeratum.EnumEntry
-  object ConnectionEntitySourceType extends enumeratum.Enum[ConnectionEntitySourceType] with enumeratum.CirceEnum[ConnectionEntitySourceType] {
-    val values = findValues
-    case object PROCESSOR extends ConnectionEntitySourceType
-    case object REMOTE_INPUT_PORT extends ConnectionEntitySourceType
-    case object REMOTE_OUTPUT_PORT extends ConnectionEntitySourceType
-    case object INPUT_PORT extends ConnectionEntitySourceType
-    case object OUTPUT_PORT extends ConnectionEntitySourceType
-    case object FUNNEL extends ConnectionEntitySourceType
-  }
-
-  sealed trait ConnectionStatusSnapshotDTOLoadBalanceStatus extends enumeratum.EnumEntry
-  object ConnectionStatusSnapshotDTOLoadBalanceStatus extends enumeratum.Enum[ConnectionStatusSnapshotDTOLoadBalanceStatus] with enumeratum.CirceEnum[ConnectionStatusSnapshotDTOLoadBalanceStatus] {
-    val values = findValues
-    case object LOAD_BALANCE_NOT_CONFIGURED extends ConnectionStatusSnapshotDTOLoadBalanceStatus
-    case object LOAD_BALANCE_ACTIVE extends ConnectionStatusSnapshotDTOLoadBalanceStatus
-    case object LOAD_BALANCE_INACTIVE extends ConnectionStatusSnapshotDTOLoadBalanceStatus
-  }
-
-  sealed trait ControllerServiceDTOState extends enumeratum.EnumEntry
-  object ControllerServiceDTOState extends enumeratum.Enum[ControllerServiceDTOState] with enumeratum.CirceEnum[ControllerServiceDTOState] {
-    val values = findValues
-    case object ENABLED extends ControllerServiceDTOState
-    case object ENABLING extends ControllerServiceDTOState
-    case object DISABLED extends ControllerServiceDTOState
-    case object DISABLING extends ControllerServiceDTOState
-  }
-
-  sealed trait ControllerServiceDTOValidationStatus extends enumeratum.EnumEntry
-  object ControllerServiceDTOValidationStatus extends enumeratum.Enum[ControllerServiceDTOValidationStatus] with enumeratum.CirceEnum[ControllerServiceDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends ControllerServiceDTOValidationStatus
-    case object INVALID extends ControllerServiceDTOValidationStatus
-    case object VALIDATING extends ControllerServiceDTOValidationStatus
-  }
-
-  sealed trait ControllerServiceReferencingComponentDTOReferenceType extends enumeratum.EnumEntry
-  object ControllerServiceReferencingComponentDTOReferenceType extends enumeratum.Enum[ControllerServiceReferencingComponentDTOReferenceType] with enumeratum.CirceEnum[ControllerServiceReferencingComponentDTOReferenceType] {
-    val values = findValues
-    case object Processor extends ControllerServiceReferencingComponentDTOReferenceType
-    case object ControllerService extends ControllerServiceReferencingComponentDTOReferenceType
-    case object ReportingTask extends ControllerServiceReferencingComponentDTOReferenceType
-    case object FlowRegistryClient extends ControllerServiceReferencingComponentDTOReferenceType
-  }
-
-  sealed trait ControllerServiceRunStatusEntityState extends enumeratum.EnumEntry
-  object ControllerServiceRunStatusEntityState extends enumeratum.Enum[ControllerServiceRunStatusEntityState] with enumeratum.CirceEnum[ControllerServiceRunStatusEntityState] {
-    val values = findValues
-    case object ENABLED extends ControllerServiceRunStatusEntityState
-    case object DISABLED extends ControllerServiceRunStatusEntityState
-  }
-
-  sealed trait ControllerServiceStatusDTORunStatus extends enumeratum.EnumEntry
-  object ControllerServiceStatusDTORunStatus extends enumeratum.Enum[ControllerServiceStatusDTORunStatus] with enumeratum.CirceEnum[ControllerServiceStatusDTORunStatus] {
-    val values = findValues
-    case object ENABLED extends ControllerServiceStatusDTORunStatus
-    case object ENABLING extends ControllerServiceStatusDTORunStatus
-    case object DISABLED extends ControllerServiceStatusDTORunStatus
-    case object DISABLING extends ControllerServiceStatusDTORunStatus
-  }
-
-  sealed trait ControllerServiceStatusDTOValidationStatus extends enumeratum.EnumEntry
-  object ControllerServiceStatusDTOValidationStatus extends enumeratum.Enum[ControllerServiceStatusDTOValidationStatus] with enumeratum.CirceEnum[ControllerServiceStatusDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends ControllerServiceStatusDTOValidationStatus
-    case object INVALID extends ControllerServiceStatusDTOValidationStatus
-    case object VALIDATING extends ControllerServiceStatusDTOValidationStatus
-  }
-
-  sealed trait DynamicPropertyExpressionLanguageScope extends enumeratum.EnumEntry
-  object DynamicPropertyExpressionLanguageScope extends enumeratum.Enum[DynamicPropertyExpressionLanguageScope] with enumeratum.CirceEnum[DynamicPropertyExpressionLanguageScope] {
-    val values = findValues
-    case object NONE extends DynamicPropertyExpressionLanguageScope
-    case object ENVIRONMENT extends DynamicPropertyExpressionLanguageScope
-    case object FLOWFILE_ATTRIBUTES extends DynamicPropertyExpressionLanguageScope
-  }
-
-  sealed trait FlowAnalysisRuleDTOState extends enumeratum.EnumEntry
-  object FlowAnalysisRuleDTOState extends enumeratum.Enum[FlowAnalysisRuleDTOState] with enumeratum.CirceEnum[FlowAnalysisRuleDTOState] {
-    val values = findValues
-    case object ENABLED extends FlowAnalysisRuleDTOState
-    case object DISABLED extends FlowAnalysisRuleDTOState
-  }
-
-  sealed trait FlowAnalysisRuleDTOValidationStatus extends enumeratum.EnumEntry
-  object FlowAnalysisRuleDTOValidationStatus extends enumeratum.Enum[FlowAnalysisRuleDTOValidationStatus] with enumeratum.CirceEnum[FlowAnalysisRuleDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends FlowAnalysisRuleDTOValidationStatus
-    case object INVALID extends FlowAnalysisRuleDTOValidationStatus
-    case object VALIDATING extends FlowAnalysisRuleDTOValidationStatus
-  }
-
-  sealed trait FlowAnalysisRuleRunStatusEntityState extends enumeratum.EnumEntry
-  object FlowAnalysisRuleRunStatusEntityState extends enumeratum.Enum[FlowAnalysisRuleRunStatusEntityState] with enumeratum.CirceEnum[FlowAnalysisRuleRunStatusEntityState] {
-    val values = findValues
-    case object ENABLED extends FlowAnalysisRuleRunStatusEntityState
-    case object DISABLED extends FlowAnalysisRuleRunStatusEntityState
-  }
-
-  sealed trait FlowAnalysisRuleStatusDTORunStatus extends enumeratum.EnumEntry
-  object FlowAnalysisRuleStatusDTORunStatus extends enumeratum.Enum[FlowAnalysisRuleStatusDTORunStatus] with enumeratum.CirceEnum[FlowAnalysisRuleStatusDTORunStatus] {
-    val values = findValues
-    case object ENABLED extends FlowAnalysisRuleStatusDTORunStatus
-    case object DISABLED extends FlowAnalysisRuleStatusDTORunStatus
-  }
-
-  sealed trait FlowAnalysisRuleStatusDTOValidationStatus extends enumeratum.EnumEntry
-  object FlowAnalysisRuleStatusDTOValidationStatus extends enumeratum.Enum[FlowAnalysisRuleStatusDTOValidationStatus] with enumeratum.CirceEnum[FlowAnalysisRuleStatusDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends FlowAnalysisRuleStatusDTOValidationStatus
-    case object INVALID extends FlowAnalysisRuleStatusDTOValidationStatus
-    case object VALIDATING extends FlowAnalysisRuleStatusDTOValidationStatus
-  }
-
-  sealed trait FlowBreadcrumbEntityVersionedFlowState extends enumeratum.EnumEntry
-  object FlowBreadcrumbEntityVersionedFlowState extends enumeratum.Enum[FlowBreadcrumbEntityVersionedFlowState] with enumeratum.CirceEnum[FlowBreadcrumbEntityVersionedFlowState] {
-    val values = findValues
-    case object LOCALLY_MODIFIED extends FlowBreadcrumbEntityVersionedFlowState
-    case object STALE extends FlowBreadcrumbEntityVersionedFlowState
-    case object LOCALLY_MODIFIED_AND_STALE extends FlowBreadcrumbEntityVersionedFlowState
-    case object UP_TO_DATE extends FlowBreadcrumbEntityVersionedFlowState
-    case object SYNC_FAILURE extends FlowBreadcrumbEntityVersionedFlowState
-  }
-
-  sealed trait FlowRegistryClientDTOValidationStatus extends enumeratum.EnumEntry
-  object FlowRegistryClientDTOValidationStatus extends enumeratum.Enum[FlowRegistryClientDTOValidationStatus] with enumeratum.CirceEnum[FlowRegistryClientDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends FlowRegistryClientDTOValidationStatus
-    case object INVALID extends FlowRegistryClientDTOValidationStatus
-    case object VALIDATING extends FlowRegistryClientDTOValidationStatus
-  }
-
-  sealed trait LineageRequestDTOLineageRequestType extends enumeratum.EnumEntry
-  object LineageRequestDTOLineageRequestType extends enumeratum.Enum[LineageRequestDTOLineageRequestType] with enumeratum.CirceEnum[LineageRequestDTOLineageRequestType] {
-    val values = findValues
-    case object PARENTS extends LineageRequestDTOLineageRequestType
-    case object CHILDREN extends LineageRequestDTOLineageRequestType
-    case object FLOWFILE extends LineageRequestDTOLineageRequestType
-  }
-
-  sealed trait ParameterGroupConfigurationEntityParameterSensitivitiesItem extends enumeratum.EnumEntry
-  object ParameterGroupConfigurationEntityParameterSensitivitiesItem extends enumeratum.Enum[ParameterGroupConfigurationEntityParameterSensitivitiesItem] with enumeratum.CirceEnum[ParameterGroupConfigurationEntityParameterSensitivitiesItem] {
-    val values = findValues
-    case object SENSITIVE extends ParameterGroupConfigurationEntityParameterSensitivitiesItem
-    case object NON_SENSITIVE extends ParameterGroupConfigurationEntityParameterSensitivitiesItem
-  }
-
-  sealed trait ParameterProviderDTOValidationStatus extends enumeratum.EnumEntry
-  object ParameterProviderDTOValidationStatus extends enumeratum.Enum[ParameterProviderDTOValidationStatus] with enumeratum.CirceEnum[ParameterProviderDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends ParameterProviderDTOValidationStatus
-    case object INVALID extends ParameterProviderDTOValidationStatus
-    case object VALIDATING extends ParameterProviderDTOValidationStatus
-  }
-
-  sealed trait ParameterStatusDTOStatus extends enumeratum.EnumEntry
-  object ParameterStatusDTOStatus extends enumeratum.Enum[ParameterStatusDTOStatus] with enumeratum.CirceEnum[ParameterStatusDTOStatus] {
-    val values = findValues
-    case object NEW extends ParameterStatusDTOStatus
-    case object CHANGED extends ParameterStatusDTOStatus
-    case object REMOVED extends ParameterStatusDTOStatus
-    case object MISSING_BUT_REFERENCED extends ParameterStatusDTOStatus
-    case object UNCHANGED extends ParameterStatusDTOStatus
-  }
-
-  sealed trait PortDTOPortFunction extends enumeratum.EnumEntry
-  object PortDTOPortFunction extends enumeratum.Enum[PortDTOPortFunction] with enumeratum.CirceEnum[PortDTOPortFunction] {
-    val values = findValues
-    case object STANDARD extends PortDTOPortFunction
-    case object FAILURE extends PortDTOPortFunction
-  }
-
-  sealed trait PortDTOState extends enumeratum.EnumEntry
-  object PortDTOState extends enumeratum.Enum[PortDTOState] with enumeratum.CirceEnum[PortDTOState] {
-    val values = findValues
-    case object RUNNING extends PortDTOState
-    case object STOPPED extends PortDTOState
-    case object DISABLED extends PortDTOState
-  }
-
-  sealed trait PortDTOType extends enumeratum.EnumEntry
-  object PortDTOType extends enumeratum.Enum[PortDTOType] with enumeratum.CirceEnum[PortDTOType] {
-    val values = findValues
-    case object INPUT_PORT extends PortDTOType
-    case object OUTPUT_PORT extends PortDTOType
-  }
-
-  sealed trait PortRunStatusEntityState extends enumeratum.EnumEntry
-  object PortRunStatusEntityState extends enumeratum.Enum[PortRunStatusEntityState] with enumeratum.CirceEnum[PortRunStatusEntityState] {
-    val values = findValues
-    case object RUNNING extends PortRunStatusEntityState
-    case object STOPPED extends PortRunStatusEntityState
-    case object DISABLED extends PortRunStatusEntityState
-  }
-
-  sealed trait PortStatusDTORunStatus extends enumeratum.EnumEntry
-  object PortStatusDTORunStatus extends enumeratum.Enum[PortStatusDTORunStatus] with enumeratum.CirceEnum[PortStatusDTORunStatus] {
-    val values = findValues
-    case object Running extends PortStatusDTORunStatus
-    case object Stopped extends PortStatusDTORunStatus
-    case object Validating extends PortStatusDTORunStatus
-    case object Disabled extends PortStatusDTORunStatus
-    case object Invalid extends PortStatusDTORunStatus
-  }
-
-  sealed trait PortStatusSnapshotDTORunStatus extends enumeratum.EnumEntry
-  object PortStatusSnapshotDTORunStatus extends enumeratum.Enum[PortStatusSnapshotDTORunStatus] with enumeratum.CirceEnum[PortStatusSnapshotDTORunStatus] {
-    val values = findValues
-    case object Running extends PortStatusSnapshotDTORunStatus
-    case object Stopped extends PortStatusSnapshotDTORunStatus
-    case object Validating extends PortStatusSnapshotDTORunStatus
-    case object Disabled extends PortStatusSnapshotDTORunStatus
-    case object Invalid extends PortStatusSnapshotDTORunStatus
-  }
-
-  sealed trait ProcessGroupDTOExecutionEngine extends enumeratum.EnumEntry
-  object ProcessGroupDTOExecutionEngine extends enumeratum.Enum[ProcessGroupDTOExecutionEngine] with enumeratum.CirceEnum[ProcessGroupDTOExecutionEngine] {
-    val values = findValues
-    case object STATELESS extends ProcessGroupDTOExecutionEngine
-    case object STANDARD extends ProcessGroupDTOExecutionEngine
-    case object INHERITED extends ProcessGroupDTOExecutionEngine
-  }
-
-  sealed trait ProcessGroupDTOFlowfileConcurrency extends enumeratum.EnumEntry
-  object ProcessGroupDTOFlowfileConcurrency extends enumeratum.Enum[ProcessGroupDTOFlowfileConcurrency] with enumeratum.CirceEnum[ProcessGroupDTOFlowfileConcurrency] {
-    val values = findValues
-    case object UNBOUNDED extends ProcessGroupDTOFlowfileConcurrency
-    case object SINGLE_FLOWFILE_PER_NODE extends ProcessGroupDTOFlowfileConcurrency
-    case object SINGLE_BATCH_PER_NODE extends ProcessGroupDTOFlowfileConcurrency
-  }
-
-  sealed trait ProcessGroupDTOFlowfileOutboundPolicy extends enumeratum.EnumEntry
-  object ProcessGroupDTOFlowfileOutboundPolicy extends enumeratum.Enum[ProcessGroupDTOFlowfileOutboundPolicy] with enumeratum.CirceEnum[ProcessGroupDTOFlowfileOutboundPolicy] {
-    val values = findValues
-    case object STREAM_WHEN_AVAILABLE extends ProcessGroupDTOFlowfileOutboundPolicy
-    case object BATCH_OUTPUT extends ProcessGroupDTOFlowfileOutboundPolicy
-  }
-
-  sealed trait ProcessGroupDTOStatelessGroupScheduledState extends enumeratum.EnumEntry
-  object ProcessGroupDTOStatelessGroupScheduledState extends enumeratum.Enum[ProcessGroupDTOStatelessGroupScheduledState] with enumeratum.CirceEnum[ProcessGroupDTOStatelessGroupScheduledState] {
-    val values = findValues
-    case object STOPPED extends ProcessGroupDTOStatelessGroupScheduledState
-    case object RUNNING extends ProcessGroupDTOStatelessGroupScheduledState
-  }
-
-  sealed trait ProcessGroupEntityProcessGroupUpdateStrategy extends enumeratum.EnumEntry
-  object ProcessGroupEntityProcessGroupUpdateStrategy extends enumeratum.Enum[ProcessGroupEntityProcessGroupUpdateStrategy] with enumeratum.CirceEnum[ProcessGroupEntityProcessGroupUpdateStrategy] {
-    val values = findValues
-    case object CURRENT_GROUP extends ProcessGroupEntityProcessGroupUpdateStrategy
-    case object CURRENT_GROUP_WITH_CHILDREN extends ProcessGroupEntityProcessGroupUpdateStrategy
-  }
-
-  sealed trait ProcessGroupEntityVersionedFlowState extends enumeratum.EnumEntry
-  object ProcessGroupEntityVersionedFlowState extends enumeratum.Enum[ProcessGroupEntityVersionedFlowState] with enumeratum.CirceEnum[ProcessGroupEntityVersionedFlowState] {
-    val values = findValues
-    case object LOCALLY_MODIFIED extends ProcessGroupEntityVersionedFlowState
-    case object STALE extends ProcessGroupEntityVersionedFlowState
-    case object LOCALLY_MODIFIED_AND_STALE extends ProcessGroupEntityVersionedFlowState
-    case object UP_TO_DATE extends ProcessGroupEntityVersionedFlowState
-    case object SYNC_FAILURE extends ProcessGroupEntityVersionedFlowState
-  }
-
-  sealed trait ProcessGroupStatusSnapshotDTOVersionedFlowState extends enumeratum.EnumEntry
-  object ProcessGroupStatusSnapshotDTOVersionedFlowState extends enumeratum.Enum[ProcessGroupStatusSnapshotDTOVersionedFlowState] with enumeratum.CirceEnum[ProcessGroupStatusSnapshotDTOVersionedFlowState] {
-    val values = findValues
-    case object LOCALLY_MODIFIED extends ProcessGroupStatusSnapshotDTOVersionedFlowState
-    case object STALE extends ProcessGroupStatusSnapshotDTOVersionedFlowState
-    case object LOCALLY_MODIFIED_AND_STALE extends ProcessGroupStatusSnapshotDTOVersionedFlowState
-    case object UP_TO_DATE extends ProcessGroupStatusSnapshotDTOVersionedFlowState
-    case object SYNC_FAILURE extends ProcessGroupStatusSnapshotDTOVersionedFlowState
-  }
-
-  sealed trait ProcessorDTOState extends enumeratum.EnumEntry
-  object ProcessorDTOState extends enumeratum.Enum[ProcessorDTOState] with enumeratum.CirceEnum[ProcessorDTOState] {
-    val values = findValues
-    case object RUNNING extends ProcessorDTOState
-    case object STOPPED extends ProcessorDTOState
-    case object DISABLED extends ProcessorDTOState
-  }
-
-  sealed trait ProcessorDTOValidationStatus extends enumeratum.EnumEntry
-  object ProcessorDTOValidationStatus extends enumeratum.Enum[ProcessorDTOValidationStatus] with enumeratum.CirceEnum[ProcessorDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends ProcessorDTOValidationStatus
-    case object INVALID extends ProcessorDTOValidationStatus
-    case object VALIDATING extends ProcessorDTOValidationStatus
-  }
-
-  sealed trait ProcessorDefinitionInputRequirement extends enumeratum.EnumEntry
-  object ProcessorDefinitionInputRequirement extends enumeratum.Enum[ProcessorDefinitionInputRequirement] with enumeratum.CirceEnum[ProcessorDefinitionInputRequirement] {
-    val values = findValues
-    case object INPUT_REQUIRED extends ProcessorDefinitionInputRequirement
-    case object INPUT_ALLOWED extends ProcessorDefinitionInputRequirement
-    case object INPUT_FORBIDDEN extends ProcessorDefinitionInputRequirement
-  }
-
-  sealed trait ProcessorRunStatusDetailsDTORunStatus extends enumeratum.EnumEntry
-  object ProcessorRunStatusDetailsDTORunStatus extends enumeratum.Enum[ProcessorRunStatusDetailsDTORunStatus] with enumeratum.CirceEnum[ProcessorRunStatusDetailsDTORunStatus] {
-    val values = findValues
-    case object Running extends ProcessorRunStatusDetailsDTORunStatus
-    case object Stopped extends ProcessorRunStatusDetailsDTORunStatus
-    case object Invalid extends ProcessorRunStatusDetailsDTORunStatus
-    case object Validating extends ProcessorRunStatusDetailsDTORunStatus
-    case object Disabled extends ProcessorRunStatusDetailsDTORunStatus
-  }
-
-  sealed trait ProcessorRunStatusEntityState extends enumeratum.EnumEntry
-  object ProcessorRunStatusEntityState extends enumeratum.Enum[ProcessorRunStatusEntityState] with enumeratum.CirceEnum[ProcessorRunStatusEntityState] {
-    val values = findValues
-    case object RUNNING extends ProcessorRunStatusEntityState
-    case object STOPPED extends ProcessorRunStatusEntityState
-    case object DISABLED extends ProcessorRunStatusEntityState
-    case object RUN_ONCE extends ProcessorRunStatusEntityState
-  }
-
-  sealed trait ProcessorStatusDTORunStatus extends enumeratum.EnumEntry
-  object ProcessorStatusDTORunStatus extends enumeratum.Enum[ProcessorStatusDTORunStatus] with enumeratum.CirceEnum[ProcessorStatusDTORunStatus] {
-    val values = findValues
-    case object Running extends ProcessorStatusDTORunStatus
-    case object Stopped extends ProcessorStatusDTORunStatus
-    case object Validating extends ProcessorStatusDTORunStatus
-    case object Disabled extends ProcessorStatusDTORunStatus
-    case object Invalid extends ProcessorStatusDTORunStatus
-  }
-
-  sealed trait ProcessorStatusSnapshotDTOExecutionNode extends enumeratum.EnumEntry
-  object ProcessorStatusSnapshotDTOExecutionNode extends enumeratum.Enum[ProcessorStatusSnapshotDTOExecutionNode] with enumeratum.CirceEnum[ProcessorStatusSnapshotDTOExecutionNode] {
-    val values = findValues
-    case object ALL extends ProcessorStatusSnapshotDTOExecutionNode
-    case object PRIMARY extends ProcessorStatusSnapshotDTOExecutionNode
-  }
-
-  sealed trait ProcessorStatusSnapshotDTORunStatus extends enumeratum.EnumEntry
-  object ProcessorStatusSnapshotDTORunStatus extends enumeratum.Enum[ProcessorStatusSnapshotDTORunStatus] with enumeratum.CirceEnum[ProcessorStatusSnapshotDTORunStatus] {
-    val values = findValues
-    case object Running extends ProcessorStatusSnapshotDTORunStatus
-    case object Stopped extends ProcessorStatusSnapshotDTORunStatus
-    case object Validating extends ProcessorStatusSnapshotDTORunStatus
-    case object Disabled extends ProcessorStatusSnapshotDTORunStatus
-    case object Invalid extends ProcessorStatusSnapshotDTORunStatus
-  }
-
-  sealed trait PropertyDescriptorExpressionLanguageScope extends enumeratum.EnumEntry
-  object PropertyDescriptorExpressionLanguageScope extends enumeratum.Enum[PropertyDescriptorExpressionLanguageScope] with enumeratum.CirceEnum[PropertyDescriptorExpressionLanguageScope] {
-    val values = findValues
-    case object NONE extends PropertyDescriptorExpressionLanguageScope
-    case object ENVIRONMENT extends PropertyDescriptorExpressionLanguageScope
-    case object FLOWFILE_ATTRIBUTES extends PropertyDescriptorExpressionLanguageScope
-  }
-
-  sealed trait PropertyResourceDefinitionCardinality extends enumeratum.EnumEntry
-  object PropertyResourceDefinitionCardinality extends enumeratum.Enum[PropertyResourceDefinitionCardinality] with enumeratum.CirceEnum[PropertyResourceDefinitionCardinality] {
-    val values = findValues
-    case object SINGLE extends PropertyResourceDefinitionCardinality
-    case object MULTIPLE extends PropertyResourceDefinitionCardinality
-  }
-
-  sealed trait PropertyResourceDefinitionResourceTypesItem extends enumeratum.EnumEntry
-  object PropertyResourceDefinitionResourceTypesItem extends enumeratum.Enum[PropertyResourceDefinitionResourceTypesItem] with enumeratum.CirceEnum[PropertyResourceDefinitionResourceTypesItem] {
-    val values = findValues
-    case object FILE extends PropertyResourceDefinitionResourceTypesItem
-    case object DIRECTORY extends PropertyResourceDefinitionResourceTypesItem
-    case object TEXT extends PropertyResourceDefinitionResourceTypesItem
-    case object URL extends PropertyResourceDefinitionResourceTypesItem
-  }
-
-  sealed trait ProvenanceNodeDTOType extends enumeratum.EnumEntry
-  object ProvenanceNodeDTOType extends enumeratum.Enum[ProvenanceNodeDTOType] with enumeratum.CirceEnum[ProvenanceNodeDTOType] {
-    val values = findValues
-    case object FLOWFILE extends ProvenanceNodeDTOType
-    case object EVENT extends ProvenanceNodeDTOType
-  }
-
-  sealed trait RemotePortRunStatusEntityState extends enumeratum.EnumEntry
-  object RemotePortRunStatusEntityState extends enumeratum.Enum[RemotePortRunStatusEntityState] with enumeratum.CirceEnum[RemotePortRunStatusEntityState] {
-    val values = findValues
-    case object TRANSMITTING extends RemotePortRunStatusEntityState
-    case object STOPPED extends RemotePortRunStatusEntityState
-  }
-
-  sealed trait RemoteProcessGroupStatusDTOValidationStatus extends enumeratum.EnumEntry
-  object RemoteProcessGroupStatusDTOValidationStatus extends enumeratum.Enum[RemoteProcessGroupStatusDTOValidationStatus] with enumeratum.CirceEnum[RemoteProcessGroupStatusDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends RemoteProcessGroupStatusDTOValidationStatus
-    case object INVALID extends RemoteProcessGroupStatusDTOValidationStatus
-    case object VALIDATING extends RemoteProcessGroupStatusDTOValidationStatus
-  }
-
-  sealed trait ReplayLastEventRequestEntityNodes extends enumeratum.EnumEntry
-  object ReplayLastEventRequestEntityNodes extends enumeratum.Enum[ReplayLastEventRequestEntityNodes] with enumeratum.CirceEnum[ReplayLastEventRequestEntityNodes] {
-    val values = findValues
-    case object ALL extends ReplayLastEventRequestEntityNodes
-    case object PRIMARY extends ReplayLastEventRequestEntityNodes
-  }
-
-  sealed trait ReplayLastEventResponseEntityNodes extends enumeratum.EnumEntry
-  object ReplayLastEventResponseEntityNodes extends enumeratum.Enum[ReplayLastEventResponseEntityNodes] with enumeratum.CirceEnum[ReplayLastEventResponseEntityNodes] {
-    val values = findValues
-    case object ALL extends ReplayLastEventResponseEntityNodes
-    case object PRIMARY extends ReplayLastEventResponseEntityNodes
-  }
-
-  sealed trait ReportingTaskDTOState extends enumeratum.EnumEntry
-  object ReportingTaskDTOState extends enumeratum.Enum[ReportingTaskDTOState] with enumeratum.CirceEnum[ReportingTaskDTOState] {
-    val values = findValues
-    case object RUNNING extends ReportingTaskDTOState
-    case object STOPPED extends ReportingTaskDTOState
-    case object DISABLED extends ReportingTaskDTOState
-  }
-
-  sealed trait ReportingTaskDTOValidationStatus extends enumeratum.EnumEntry
-  object ReportingTaskDTOValidationStatus extends enumeratum.Enum[ReportingTaskDTOValidationStatus] with enumeratum.CirceEnum[ReportingTaskDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends ReportingTaskDTOValidationStatus
-    case object INVALID extends ReportingTaskDTOValidationStatus
-    case object VALIDATING extends ReportingTaskDTOValidationStatus
-  }
-
-  sealed trait ReportingTaskRunStatusEntityState extends enumeratum.EnumEntry
-  object ReportingTaskRunStatusEntityState extends enumeratum.Enum[ReportingTaskRunStatusEntityState] with enumeratum.CirceEnum[ReportingTaskRunStatusEntityState] {
-    val values = findValues
-    case object RUNNING extends ReportingTaskRunStatusEntityState
-    case object STOPPED extends ReportingTaskRunStatusEntityState
-  }
-
-  sealed trait ReportingTaskStatusDTORunStatus extends enumeratum.EnumEntry
-  object ReportingTaskStatusDTORunStatus extends enumeratum.Enum[ReportingTaskStatusDTORunStatus] with enumeratum.CirceEnum[ReportingTaskStatusDTORunStatus] {
-    val values = findValues
-    case object RUNNING extends ReportingTaskStatusDTORunStatus
-    case object STOPPED extends ReportingTaskStatusDTORunStatus
-    case object DISABLED extends ReportingTaskStatusDTORunStatus
-  }
-
-  sealed trait ReportingTaskStatusDTOValidationStatus extends enumeratum.EnumEntry
-  object ReportingTaskStatusDTOValidationStatus extends enumeratum.Enum[ReportingTaskStatusDTOValidationStatus] with enumeratum.CirceEnum[ReportingTaskStatusDTOValidationStatus] {
-    val values = findValues
-    case object VALID extends ReportingTaskStatusDTOValidationStatus
-    case object INVALID extends ReportingTaskStatusDTOValidationStatus
-    case object VALIDATING extends ReportingTaskStatusDTOValidationStatus
-  }
-
-  sealed trait ScheduleComponentsEntityState extends enumeratum.EnumEntry
-  object ScheduleComponentsEntityState extends enumeratum.Enum[ScheduleComponentsEntityState] with enumeratum.CirceEnum[ScheduleComponentsEntityState] {
-    val values = findValues
-    case object RUNNING extends ScheduleComponentsEntityState
-    case object STOPPED extends ScheduleComponentsEntityState
-    case object ENABLED extends ScheduleComponentsEntityState
-    case object DISABLED extends ScheduleComponentsEntityState
-  }
-
-  sealed trait SchedulingDefaultsDefaultSchedulingStrategy extends enumeratum.EnumEntry
-  object SchedulingDefaultsDefaultSchedulingStrategy extends enumeratum.Enum[SchedulingDefaultsDefaultSchedulingStrategy] with enumeratum.CirceEnum[SchedulingDefaultsDefaultSchedulingStrategy] {
-    val values = findValues
-    case object TIMER_DRIVEN extends SchedulingDefaultsDefaultSchedulingStrategy
-    case object CRON_DRIVEN extends SchedulingDefaultsDefaultSchedulingStrategy
-  }
-
-  sealed trait StatefulScopesItem extends enumeratum.EnumEntry
-  object StatefulScopesItem extends enumeratum.Enum[StatefulScopesItem] with enumeratum.CirceEnum[StatefulScopesItem] {
-    val values = findValues
-    case object CLUSTER extends StatefulScopesItem
-    case object LOCAL extends StatefulScopesItem
-  }
-
-  sealed trait UpdateControllerServiceReferenceRequestEntityState extends enumeratum.EnumEntry
-  object UpdateControllerServiceReferenceRequestEntityState extends enumeratum.Enum[UpdateControllerServiceReferenceRequestEntityState] with enumeratum.CirceEnum[UpdateControllerServiceReferenceRequestEntityState] {
-    val values = findValues
-    case object ENABLED extends UpdateControllerServiceReferenceRequestEntityState
-    case object DISABLED extends UpdateControllerServiceReferenceRequestEntityState
-    case object RUNNING extends UpdateControllerServiceReferenceRequestEntityState
-    case object STOPPED extends UpdateControllerServiceReferenceRequestEntityState
-  }
-
-  sealed trait UseCaseInputRequirement extends enumeratum.EnumEntry
-  object UseCaseInputRequirement extends enumeratum.Enum[UseCaseInputRequirement] with enumeratum.CirceEnum[UseCaseInputRequirement] {
-    val values = findValues
-    case object INPUT_REQUIRED extends UseCaseInputRequirement
-    case object INPUT_ALLOWED extends UseCaseInputRequirement
-    case object INPUT_FORBIDDEN extends UseCaseInputRequirement
-  }
-
-  sealed trait VersionControlInformationDTOState extends enumeratum.EnumEntry
-  object VersionControlInformationDTOState extends enumeratum.Enum[VersionControlInformationDTOState] with enumeratum.CirceEnum[VersionControlInformationDTOState] {
-    val values = findValues
-    case object LOCALLY_MODIFIED extends VersionControlInformationDTOState
-    case object STALE extends VersionControlInformationDTOState
-    case object LOCALLY_MODIFIED_AND_STALE extends VersionControlInformationDTOState
-    case object UP_TO_DATE extends VersionControlInformationDTOState
-    case object SYNC_FAILURE extends VersionControlInformationDTOState
-  }
-
-  sealed trait VersionedConnectionComponentType extends enumeratum.EnumEntry
-  object VersionedConnectionComponentType extends enumeratum.Enum[VersionedConnectionComponentType] with enumeratum.CirceEnum[VersionedConnectionComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedConnectionComponentType
-    case object PROCESSOR extends VersionedConnectionComponentType
-    case object PROCESS_GROUP extends VersionedConnectionComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedConnectionComponentType
-    case object INPUT_PORT extends VersionedConnectionComponentType
-    case object OUTPUT_PORT extends VersionedConnectionComponentType
-    case object REMOTE_INPUT_PORT extends VersionedConnectionComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedConnectionComponentType
-    case object FUNNEL extends VersionedConnectionComponentType
-    case object LABEL extends VersionedConnectionComponentType
-    case object CONTROLLER_SERVICE extends VersionedConnectionComponentType
-    case object REPORTING_TASK extends VersionedConnectionComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedConnectionComponentType
-    case object PARAMETER_CONTEXT extends VersionedConnectionComponentType
-    case object PARAMETER_PROVIDER extends VersionedConnectionComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedConnectionComponentType
-  }
-
-  sealed trait VersionedControllerServiceComponentType extends enumeratum.EnumEntry
-  object VersionedControllerServiceComponentType extends enumeratum.Enum[VersionedControllerServiceComponentType] with enumeratum.CirceEnum[VersionedControllerServiceComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedControllerServiceComponentType
-    case object PROCESSOR extends VersionedControllerServiceComponentType
-    case object PROCESS_GROUP extends VersionedControllerServiceComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedControllerServiceComponentType
-    case object INPUT_PORT extends VersionedControllerServiceComponentType
-    case object OUTPUT_PORT extends VersionedControllerServiceComponentType
-    case object REMOTE_INPUT_PORT extends VersionedControllerServiceComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedControllerServiceComponentType
-    case object FUNNEL extends VersionedControllerServiceComponentType
-    case object LABEL extends VersionedControllerServiceComponentType
-    case object CONTROLLER_SERVICE extends VersionedControllerServiceComponentType
-    case object REPORTING_TASK extends VersionedControllerServiceComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedControllerServiceComponentType
-    case object PARAMETER_CONTEXT extends VersionedControllerServiceComponentType
-    case object PARAMETER_PROVIDER extends VersionedControllerServiceComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedControllerServiceComponentType
-  }
-
-  sealed trait VersionedControllerServiceScheduledState extends enumeratum.EnumEntry
-  object VersionedControllerServiceScheduledState extends enumeratum.Enum[VersionedControllerServiceScheduledState] with enumeratum.CirceEnum[VersionedControllerServiceScheduledState] {
-    val values = findValues
-    case object ENABLED extends VersionedControllerServiceScheduledState
-    case object DISABLED extends VersionedControllerServiceScheduledState
-    case object RUNNING extends VersionedControllerServiceScheduledState
-  }
-
-  sealed trait VersionedFlowDTOAction extends enumeratum.EnumEntry
-  object VersionedFlowDTOAction extends enumeratum.Enum[VersionedFlowDTOAction] with enumeratum.CirceEnum[VersionedFlowDTOAction] {
-    val values = findValues
-    case object COMMIT extends VersionedFlowDTOAction
-    case object FORCE_COMMIT extends VersionedFlowDTOAction
-  }
-
-  sealed trait VersionedFunnelComponentType extends enumeratum.EnumEntry
-  object VersionedFunnelComponentType extends enumeratum.Enum[VersionedFunnelComponentType] with enumeratum.CirceEnum[VersionedFunnelComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedFunnelComponentType
-    case object PROCESSOR extends VersionedFunnelComponentType
-    case object PROCESS_GROUP extends VersionedFunnelComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedFunnelComponentType
-    case object INPUT_PORT extends VersionedFunnelComponentType
-    case object OUTPUT_PORT extends VersionedFunnelComponentType
-    case object REMOTE_INPUT_PORT extends VersionedFunnelComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedFunnelComponentType
-    case object FUNNEL extends VersionedFunnelComponentType
-    case object LABEL extends VersionedFunnelComponentType
-    case object CONTROLLER_SERVICE extends VersionedFunnelComponentType
-    case object REPORTING_TASK extends VersionedFunnelComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedFunnelComponentType
-    case object PARAMETER_CONTEXT extends VersionedFunnelComponentType
-    case object PARAMETER_PROVIDER extends VersionedFunnelComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedFunnelComponentType
-  }
-
-  sealed trait VersionedLabelComponentType extends enumeratum.EnumEntry
-  object VersionedLabelComponentType extends enumeratum.Enum[VersionedLabelComponentType] with enumeratum.CirceEnum[VersionedLabelComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedLabelComponentType
-    case object PROCESSOR extends VersionedLabelComponentType
-    case object PROCESS_GROUP extends VersionedLabelComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedLabelComponentType
-    case object INPUT_PORT extends VersionedLabelComponentType
-    case object OUTPUT_PORT extends VersionedLabelComponentType
-    case object REMOTE_INPUT_PORT extends VersionedLabelComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedLabelComponentType
-    case object FUNNEL extends VersionedLabelComponentType
-    case object LABEL extends VersionedLabelComponentType
-    case object CONTROLLER_SERVICE extends VersionedLabelComponentType
-    case object REPORTING_TASK extends VersionedLabelComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedLabelComponentType
-    case object PARAMETER_CONTEXT extends VersionedLabelComponentType
-    case object PARAMETER_PROVIDER extends VersionedLabelComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedLabelComponentType
-  }
-
-  sealed trait VersionedParameterContextComponentType extends enumeratum.EnumEntry
-  object VersionedParameterContextComponentType extends enumeratum.Enum[VersionedParameterContextComponentType] with enumeratum.CirceEnum[VersionedParameterContextComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedParameterContextComponentType
-    case object PROCESSOR extends VersionedParameterContextComponentType
-    case object PROCESS_GROUP extends VersionedParameterContextComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedParameterContextComponentType
-    case object INPUT_PORT extends VersionedParameterContextComponentType
-    case object OUTPUT_PORT extends VersionedParameterContextComponentType
-    case object REMOTE_INPUT_PORT extends VersionedParameterContextComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedParameterContextComponentType
-    case object FUNNEL extends VersionedParameterContextComponentType
-    case object LABEL extends VersionedParameterContextComponentType
-    case object CONTROLLER_SERVICE extends VersionedParameterContextComponentType
-    case object REPORTING_TASK extends VersionedParameterContextComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedParameterContextComponentType
-    case object PARAMETER_CONTEXT extends VersionedParameterContextComponentType
-    case object PARAMETER_PROVIDER extends VersionedParameterContextComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedParameterContextComponentType
-  }
-
-  sealed trait VersionedPortComponentType extends enumeratum.EnumEntry
-  object VersionedPortComponentType extends enumeratum.Enum[VersionedPortComponentType] with enumeratum.CirceEnum[VersionedPortComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedPortComponentType
-    case object PROCESSOR extends VersionedPortComponentType
-    case object PROCESS_GROUP extends VersionedPortComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedPortComponentType
-    case object INPUT_PORT extends VersionedPortComponentType
-    case object OUTPUT_PORT extends VersionedPortComponentType
-    case object REMOTE_INPUT_PORT extends VersionedPortComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedPortComponentType
-    case object FUNNEL extends VersionedPortComponentType
-    case object LABEL extends VersionedPortComponentType
-    case object CONTROLLER_SERVICE extends VersionedPortComponentType
-    case object REPORTING_TASK extends VersionedPortComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedPortComponentType
-    case object PARAMETER_CONTEXT extends VersionedPortComponentType
-    case object PARAMETER_PROVIDER extends VersionedPortComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedPortComponentType
-  }
-
-  sealed trait VersionedPortPortFunction extends enumeratum.EnumEntry
-  object VersionedPortPortFunction extends enumeratum.Enum[VersionedPortPortFunction] with enumeratum.CirceEnum[VersionedPortPortFunction] {
-    val values = findValues
-    case object STANDARD extends VersionedPortPortFunction
-    case object FAILURE extends VersionedPortPortFunction
-  }
-
-  sealed trait VersionedPortScheduledState extends enumeratum.EnumEntry
-  object VersionedPortScheduledState extends enumeratum.Enum[VersionedPortScheduledState] with enumeratum.CirceEnum[VersionedPortScheduledState] {
-    val values = findValues
-    case object ENABLED extends VersionedPortScheduledState
-    case object DISABLED extends VersionedPortScheduledState
-    case object RUNNING extends VersionedPortScheduledState
-  }
-
-  sealed trait VersionedPortType extends enumeratum.EnumEntry
-  object VersionedPortType extends enumeratum.Enum[VersionedPortType] with enumeratum.CirceEnum[VersionedPortType] {
-    val values = findValues
-    case object INPUT_PORT extends VersionedPortType
-    case object OUTPUT_PORT extends VersionedPortType
-  }
-
-  sealed trait VersionedProcessGroupComponentType extends enumeratum.EnumEntry
-  object VersionedProcessGroupComponentType extends enumeratum.Enum[VersionedProcessGroupComponentType] with enumeratum.CirceEnum[VersionedProcessGroupComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedProcessGroupComponentType
-    case object PROCESSOR extends VersionedProcessGroupComponentType
-    case object PROCESS_GROUP extends VersionedProcessGroupComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedProcessGroupComponentType
-    case object INPUT_PORT extends VersionedProcessGroupComponentType
-    case object OUTPUT_PORT extends VersionedProcessGroupComponentType
-    case object REMOTE_INPUT_PORT extends VersionedProcessGroupComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedProcessGroupComponentType
-    case object FUNNEL extends VersionedProcessGroupComponentType
-    case object LABEL extends VersionedProcessGroupComponentType
-    case object CONTROLLER_SERVICE extends VersionedProcessGroupComponentType
-    case object REPORTING_TASK extends VersionedProcessGroupComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedProcessGroupComponentType
-    case object PARAMETER_CONTEXT extends VersionedProcessGroupComponentType
-    case object PARAMETER_PROVIDER extends VersionedProcessGroupComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedProcessGroupComponentType
-  }
-
-  sealed trait VersionedProcessGroupExecutionEngine extends enumeratum.EnumEntry
-  object VersionedProcessGroupExecutionEngine extends enumeratum.Enum[VersionedProcessGroupExecutionEngine] with enumeratum.CirceEnum[VersionedProcessGroupExecutionEngine] {
-    val values = findValues
-    case object STANDARD extends VersionedProcessGroupExecutionEngine
-    case object STATELESS extends VersionedProcessGroupExecutionEngine
-    case object INHERITED extends VersionedProcessGroupExecutionEngine
-  }
-
-  sealed trait VersionedProcessGroupScheduledState extends enumeratum.EnumEntry
-  object VersionedProcessGroupScheduledState extends enumeratum.Enum[VersionedProcessGroupScheduledState] with enumeratum.CirceEnum[VersionedProcessGroupScheduledState] {
-    val values = findValues
-    case object ENABLED extends VersionedProcessGroupScheduledState
-    case object DISABLED extends VersionedProcessGroupScheduledState
-    case object RUNNING extends VersionedProcessGroupScheduledState
-  }
-
-  sealed trait VersionedProcessorComponentType extends enumeratum.EnumEntry
-  object VersionedProcessorComponentType extends enumeratum.Enum[VersionedProcessorComponentType] with enumeratum.CirceEnum[VersionedProcessorComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedProcessorComponentType
-    case object PROCESSOR extends VersionedProcessorComponentType
-    case object PROCESS_GROUP extends VersionedProcessorComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedProcessorComponentType
-    case object INPUT_PORT extends VersionedProcessorComponentType
-    case object OUTPUT_PORT extends VersionedProcessorComponentType
-    case object REMOTE_INPUT_PORT extends VersionedProcessorComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedProcessorComponentType
-    case object FUNNEL extends VersionedProcessorComponentType
-    case object LABEL extends VersionedProcessorComponentType
-    case object CONTROLLER_SERVICE extends VersionedProcessorComponentType
-    case object REPORTING_TASK extends VersionedProcessorComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedProcessorComponentType
-    case object PARAMETER_CONTEXT extends VersionedProcessorComponentType
-    case object PARAMETER_PROVIDER extends VersionedProcessorComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedProcessorComponentType
-  }
-
-  sealed trait VersionedProcessorScheduledState extends enumeratum.EnumEntry
-  object VersionedProcessorScheduledState extends enumeratum.Enum[VersionedProcessorScheduledState] with enumeratum.CirceEnum[VersionedProcessorScheduledState] {
-    val values = findValues
-    case object ENABLED extends VersionedProcessorScheduledState
-    case object DISABLED extends VersionedProcessorScheduledState
-    case object RUNNING extends VersionedProcessorScheduledState
-  }
-
-  sealed trait VersionedRemoteGroupPortComponentType extends enumeratum.EnumEntry
-  object VersionedRemoteGroupPortComponentType extends enumeratum.Enum[VersionedRemoteGroupPortComponentType] with enumeratum.CirceEnum[VersionedRemoteGroupPortComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedRemoteGroupPortComponentType
-    case object PROCESSOR extends VersionedRemoteGroupPortComponentType
-    case object PROCESS_GROUP extends VersionedRemoteGroupPortComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedRemoteGroupPortComponentType
-    case object INPUT_PORT extends VersionedRemoteGroupPortComponentType
-    case object OUTPUT_PORT extends VersionedRemoteGroupPortComponentType
-    case object REMOTE_INPUT_PORT extends VersionedRemoteGroupPortComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedRemoteGroupPortComponentType
-    case object FUNNEL extends VersionedRemoteGroupPortComponentType
-    case object LABEL extends VersionedRemoteGroupPortComponentType
-    case object CONTROLLER_SERVICE extends VersionedRemoteGroupPortComponentType
-    case object REPORTING_TASK extends VersionedRemoteGroupPortComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedRemoteGroupPortComponentType
-    case object PARAMETER_CONTEXT extends VersionedRemoteGroupPortComponentType
-    case object PARAMETER_PROVIDER extends VersionedRemoteGroupPortComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedRemoteGroupPortComponentType
-  }
-
-  sealed trait VersionedRemoteGroupPortScheduledState extends enumeratum.EnumEntry
-  object VersionedRemoteGroupPortScheduledState extends enumeratum.Enum[VersionedRemoteGroupPortScheduledState] with enumeratum.CirceEnum[VersionedRemoteGroupPortScheduledState] {
-    val values = findValues
-    case object ENABLED extends VersionedRemoteGroupPortScheduledState
-    case object DISABLED extends VersionedRemoteGroupPortScheduledState
-    case object RUNNING extends VersionedRemoteGroupPortScheduledState
-  }
-
-  sealed trait VersionedRemoteProcessGroupComponentType extends enumeratum.EnumEntry
-  object VersionedRemoteProcessGroupComponentType extends enumeratum.Enum[VersionedRemoteProcessGroupComponentType] with enumeratum.CirceEnum[VersionedRemoteProcessGroupComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedRemoteProcessGroupComponentType
-    case object PROCESSOR extends VersionedRemoteProcessGroupComponentType
-    case object PROCESS_GROUP extends VersionedRemoteProcessGroupComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedRemoteProcessGroupComponentType
-    case object INPUT_PORT extends VersionedRemoteProcessGroupComponentType
-    case object OUTPUT_PORT extends VersionedRemoteProcessGroupComponentType
-    case object REMOTE_INPUT_PORT extends VersionedRemoteProcessGroupComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedRemoteProcessGroupComponentType
-    case object FUNNEL extends VersionedRemoteProcessGroupComponentType
-    case object LABEL extends VersionedRemoteProcessGroupComponentType
-    case object CONTROLLER_SERVICE extends VersionedRemoteProcessGroupComponentType
-    case object REPORTING_TASK extends VersionedRemoteProcessGroupComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedRemoteProcessGroupComponentType
-    case object PARAMETER_CONTEXT extends VersionedRemoteProcessGroupComponentType
-    case object PARAMETER_PROVIDER extends VersionedRemoteProcessGroupComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedRemoteProcessGroupComponentType
-  }
-
-  sealed trait VersionedReportingTaskComponentType extends enumeratum.EnumEntry
-  object VersionedReportingTaskComponentType extends enumeratum.Enum[VersionedReportingTaskComponentType] with enumeratum.CirceEnum[VersionedReportingTaskComponentType] {
-    val values = findValues
-    case object CONNECTION extends VersionedReportingTaskComponentType
-    case object PROCESSOR extends VersionedReportingTaskComponentType
-    case object PROCESS_GROUP extends VersionedReportingTaskComponentType
-    case object REMOTE_PROCESS_GROUP extends VersionedReportingTaskComponentType
-    case object INPUT_PORT extends VersionedReportingTaskComponentType
-    case object OUTPUT_PORT extends VersionedReportingTaskComponentType
-    case object REMOTE_INPUT_PORT extends VersionedReportingTaskComponentType
-    case object REMOTE_OUTPUT_PORT extends VersionedReportingTaskComponentType
-    case object FUNNEL extends VersionedReportingTaskComponentType
-    case object LABEL extends VersionedReportingTaskComponentType
-    case object CONTROLLER_SERVICE extends VersionedReportingTaskComponentType
-    case object REPORTING_TASK extends VersionedReportingTaskComponentType
-    case object FLOW_ANALYSIS_RULE extends VersionedReportingTaskComponentType
-    case object PARAMETER_CONTEXT extends VersionedReportingTaskComponentType
-    case object PARAMETER_PROVIDER extends VersionedReportingTaskComponentType
-    case object FLOW_REGISTRY_CLIENT extends VersionedReportingTaskComponentType
-  }
-
-  sealed trait VersionedReportingTaskScheduledState extends enumeratum.EnumEntry
-  object VersionedReportingTaskScheduledState extends enumeratum.Enum[VersionedReportingTaskScheduledState] with enumeratum.CirceEnum[VersionedReportingTaskScheduledState] {
-    val values = findValues
-    case object ENABLED extends VersionedReportingTaskScheduledState
-    case object DISABLED extends VersionedReportingTaskScheduledState
-    case object RUNNING extends VersionedReportingTaskScheduledState
-  }
-
-  sealed trait VersionedResourceDefinitionCardinality extends enumeratum.EnumEntry
-  object VersionedResourceDefinitionCardinality extends enumeratum.Enum[VersionedResourceDefinitionCardinality] with enumeratum.CirceEnum[VersionedResourceDefinitionCardinality] {
-    val values = findValues
-    case object SINGLE extends VersionedResourceDefinitionCardinality
-    case object MULTIPLE extends VersionedResourceDefinitionCardinality
-  }
-
-  sealed trait VersionedResourceDefinitionResourceTypesItem extends enumeratum.EnumEntry
-  object VersionedResourceDefinitionResourceTypesItem extends enumeratum.Enum[VersionedResourceDefinitionResourceTypesItem] with enumeratum.CirceEnum[VersionedResourceDefinitionResourceTypesItem] {
-    val values = findValues
-    case object FILE extends VersionedResourceDefinitionResourceTypesItem
-    case object DIRECTORY extends VersionedResourceDefinitionResourceTypesItem
-    case object TEXT extends VersionedResourceDefinitionResourceTypesItem
-    case object URL extends VersionedResourceDefinitionResourceTypesItem
-  }
+  type ActionDetailsDTO = io.circe.JsonObject
+  type BulletinBoardPatternParameterStr = String
+  type ClientIdParameterStr = String
+  type ComponentDetailsDTO = io.circe.JsonObject
+  type DateTimeParameterDT = java.time.Instant
+  type IntegerParameterInt = Int
+  type LongParameterInt = Long
+  type StreamingOutput = io.circe.JsonObject
   case class AboutDTO (
     buildBranch: Option[String] = None,
     buildRevision: Option[String] = None,
@@ -1017,6 +118,12 @@ object TapirGeneratedEndpoints {
     users: Option[Set[TenantEntity]] = None,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait AccessPolicyDTOAction extends enumeratum.EnumEntry
+  object AccessPolicyDTOAction extends enumeratum.Enum[AccessPolicyDTOAction] with enumeratum.CirceEnum[AccessPolicyDTOAction] {
+    val values = findValues
+    case object read extends AccessPolicyDTOAction
+  }
   case class AccessPolicyEntity (
     bulletins: Option[Seq[BulletinEntity]] = None,
     component: Option[AccessPolicyDTO] = None,
@@ -1038,6 +145,12 @@ object TapirGeneratedEndpoints {
     resource: Option[String] = None,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait AccessPolicySummaryDTOAction extends enumeratum.EnumEntry
+  object AccessPolicySummaryDTOAction extends enumeratum.Enum[AccessPolicySummaryDTOAction] with enumeratum.CirceEnum[AccessPolicySummaryDTOAction] {
+    val values = findValues
+    case object read extends AccessPolicySummaryDTOAction
+  }
   case class AccessPolicySummaryEntity (
     bulletins: Option[Seq[BulletinEntity]] = None,
     component: Option[AccessPolicySummaryDTO] = None,
@@ -1072,6 +185,13 @@ object TapirGeneratedEndpoints {
     id: Option[String] = None,
     state: Option[ActivateControllerServicesEntityState] = None
   )
+
+  sealed trait ActivateControllerServicesEntityState extends enumeratum.EnumEntry
+  object ActivateControllerServicesEntityState extends enumeratum.Enum[ActivateControllerServicesEntityState] with enumeratum.CirceEnum[ActivateControllerServicesEntityState] {
+    val values = findValues
+    case object ENABLED extends ActivateControllerServicesEntityState
+    case object DISABLED extends ActivateControllerServicesEntityState
+  }
   case class AdditionalDetailsEntity (
     additionalDetails: Option[String] = None
   )
@@ -1084,6 +204,18 @@ object TapirGeneratedEndpoints {
     state: Option[String] = None,
     validationErrors: Option[Seq[String]] = None
   )
+
+  sealed trait AffectedComponentDTOReferenceType extends enumeratum.EnumEntry
+  object AffectedComponentDTOReferenceType extends enumeratum.Enum[AffectedComponentDTOReferenceType] with enumeratum.CirceEnum[AffectedComponentDTOReferenceType] {
+    val values = findValues
+    case object PROCESSOR extends AffectedComponentDTOReferenceType
+    case object CONTROLLER_SERVICE extends AffectedComponentDTOReferenceType
+    case object INPUT_PORT extends AffectedComponentDTOReferenceType
+    case object OUTPUT_PORT extends AffectedComponentDTOReferenceType
+    case object REMOTE_INPUT_PORT extends AffectedComponentDTOReferenceType
+    case object REMOTE_OUTPUT_PORT extends AffectedComponentDTOReferenceType
+    case object STATELESS_GROUP extends AffectedComponentDTOReferenceType
+  }
   case class AffectedComponentEntity (
     bulletins: Option[Seq[BulletinEntity]] = None,
     component: Option[AffectedComponentDTO] = None,
@@ -1096,6 +228,17 @@ object TapirGeneratedEndpoints {
     revision: Option[RevisionDTO] = None,
     uri: Option[String] = None
   )
+
+  sealed trait AffectedComponentEntityReferenceType extends enumeratum.EnumEntry
+  object AffectedComponentEntityReferenceType extends enumeratum.Enum[AffectedComponentEntityReferenceType] with enumeratum.CirceEnum[AffectedComponentEntityReferenceType] {
+    val values = findValues
+    case object PROCESSOR extends AffectedComponentEntityReferenceType
+    case object CONTROLLER_SERVICE extends AffectedComponentEntityReferenceType
+    case object INPUT_PORT extends AffectedComponentEntityReferenceType
+    case object OUTPUT_PORT extends AffectedComponentEntityReferenceType
+    case object REMOTE_INPUT_PORT extends AffectedComponentEntityReferenceType
+    case object REMOTE_OUTPUT_PORT extends AffectedComponentEntityReferenceType
+  }
   case class AllowableValueDTO (
     description: Option[String] = None,
     displayName: Option[String] = None,
@@ -1303,6 +446,18 @@ object TapirGeneratedEndpoints {
     state: Option[String] = None,
     validationErrors: Option[Seq[String]] = None
   )
+
+  sealed trait ComponentValidationResultDTOReferenceType extends enumeratum.EnumEntry
+  object ComponentValidationResultDTOReferenceType extends enumeratum.Enum[ComponentValidationResultDTOReferenceType] with enumeratum.CirceEnum[ComponentValidationResultDTOReferenceType] {
+    val values = findValues
+    case object PROCESSOR extends ComponentValidationResultDTOReferenceType
+    case object CONTROLLER_SERVICE extends ComponentValidationResultDTOReferenceType
+    case object INPUT_PORT extends ComponentValidationResultDTOReferenceType
+    case object OUTPUT_PORT extends ComponentValidationResultDTOReferenceType
+    case object REMOTE_INPUT_PORT extends ComponentValidationResultDTOReferenceType
+    case object REMOTE_OUTPUT_PORT extends ComponentValidationResultDTOReferenceType
+    case object STATELESS_GROUP extends ComponentValidationResultDTOReferenceType
+  }
   case class ComponentValidationResultEntity (
     bulletins: Option[Seq[BulletinEntity]] = None,
     component: Option[ComponentValidationResultDTO] = None,
@@ -1321,6 +476,14 @@ object TapirGeneratedEndpoints {
     outcome: Option[ConfigVerificationResultDTOOutcome] = None,
     verificationStepName: Option[String] = None
   )
+
+  sealed trait ConfigVerificationResultDTOOutcome extends enumeratum.EnumEntry
+  object ConfigVerificationResultDTOOutcome extends enumeratum.Enum[ConfigVerificationResultDTOOutcome] with enumeratum.CirceEnum[ConfigVerificationResultDTOOutcome] {
+    val values = findValues
+    case object SUCCESSFUL extends ConfigVerificationResultDTOOutcome
+    case object FAILED extends ConfigVerificationResultDTOOutcome
+    case object SKIPPED extends ConfigVerificationResultDTOOutcome
+  }
   case class ConfigurationAnalysisDTO (
     componentId: Option[String] = None,
     properties: Option[Map[String, String]] = None,
@@ -1338,6 +501,17 @@ object TapirGeneratedEndpoints {
     name: Option[String] = None,
     `type`: Option[ConnectableComponentType] = None
   )
+
+  sealed trait ConnectableComponentType extends enumeratum.EnumEntry
+  object ConnectableComponentType extends enumeratum.Enum[ConnectableComponentType] with enumeratum.CirceEnum[ConnectableComponentType] {
+    val values = findValues
+    case object PROCESSOR extends ConnectableComponentType
+    case object REMOTE_INPUT_PORT extends ConnectableComponentType
+    case object REMOTE_OUTPUT_PORT extends ConnectableComponentType
+    case object INPUT_PORT extends ConnectableComponentType
+    case object OUTPUT_PORT extends ConnectableComponentType
+    case object FUNNEL extends ConnectableComponentType
+  }
   case class ConnectableDTO (
     comments: Option[String] = None,
     exists: Option[Boolean] = None,
@@ -1349,6 +523,17 @@ object TapirGeneratedEndpoints {
     `type`: ConnectableDTOType,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait ConnectableDTOType extends enumeratum.EnumEntry
+  object ConnectableDTOType extends enumeratum.Enum[ConnectableDTOType] with enumeratum.CirceEnum[ConnectableDTOType] {
+    val values = findValues
+    case object PROCESSOR extends ConnectableDTOType
+    case object REMOTE_INPUT_PORT extends ConnectableDTOType
+    case object REMOTE_OUTPUT_PORT extends ConnectableDTOType
+    case object INPUT_PORT extends ConnectableDTOType
+    case object OUTPUT_PORT extends ConnectableDTOType
+    case object FUNNEL extends ConnectableDTOType
+  }
   case class ConnectionDTO (
     availableRelationships: Option[Set[String]] = None,
     backPressureDataSizeThreshold: Option[String] = None,
@@ -1392,6 +577,28 @@ object TapirGeneratedEndpoints {
     status: Option[ConnectionStatusDTO] = None,
     uri: Option[String] = None
   )
+
+  sealed trait ConnectionEntityDestinationType extends enumeratum.EnumEntry
+  object ConnectionEntityDestinationType extends enumeratum.Enum[ConnectionEntityDestinationType] with enumeratum.CirceEnum[ConnectionEntityDestinationType] {
+    val values = findValues
+    case object PROCESSOR extends ConnectionEntityDestinationType
+    case object REMOTE_INPUT_PORT extends ConnectionEntityDestinationType
+    case object REMOTE_OUTPUT_PORT extends ConnectionEntityDestinationType
+    case object INPUT_PORT extends ConnectionEntityDestinationType
+    case object OUTPUT_PORT extends ConnectionEntityDestinationType
+    case object FUNNEL extends ConnectionEntityDestinationType
+  }
+
+  sealed trait ConnectionEntitySourceType extends enumeratum.EnumEntry
+  object ConnectionEntitySourceType extends enumeratum.Enum[ConnectionEntitySourceType] with enumeratum.CirceEnum[ConnectionEntitySourceType] {
+    val values = findValues
+    case object PROCESSOR extends ConnectionEntitySourceType
+    case object REMOTE_INPUT_PORT extends ConnectionEntitySourceType
+    case object REMOTE_OUTPUT_PORT extends ConnectionEntitySourceType
+    case object INPUT_PORT extends ConnectionEntitySourceType
+    case object OUTPUT_PORT extends ConnectionEntitySourceType
+    case object FUNNEL extends ConnectionEntitySourceType
+  }
   case class ConnectionStatisticsDTO (
     aggregateSnapshot: Option[ConnectionStatisticsSnapshotDTO] = None,
     id: Option[String] = None,
@@ -1462,6 +669,14 @@ object TapirGeneratedEndpoints {
     sourceId: Option[String] = None,
     sourceName: Option[String] = None
   )
+
+  sealed trait ConnectionStatusSnapshotDTOLoadBalanceStatus extends enumeratum.EnumEntry
+  object ConnectionStatusSnapshotDTOLoadBalanceStatus extends enumeratum.Enum[ConnectionStatusSnapshotDTOLoadBalanceStatus] with enumeratum.CirceEnum[ConnectionStatusSnapshotDTOLoadBalanceStatus] {
+    val values = findValues
+    case object LOAD_BALANCE_NOT_CONFIGURED extends ConnectionStatusSnapshotDTOLoadBalanceStatus
+    case object LOAD_BALANCE_ACTIVE extends ConnectionStatusSnapshotDTOLoadBalanceStatus
+    case object LOAD_BALANCE_INACTIVE extends ConnectionStatusSnapshotDTOLoadBalanceStatus
+  }
   case class ConnectionStatusSnapshotEntity (
     canRead: Option[Boolean] = None,
     connectionStatusSnapshot: Option[ConnectionStatusSnapshotDTO] = None,
@@ -1552,6 +767,23 @@ object TapirGeneratedEndpoints {
     validationStatus: Option[ControllerServiceDTOValidationStatus] = None,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait ControllerServiceDTOState extends enumeratum.EnumEntry
+  object ControllerServiceDTOState extends enumeratum.Enum[ControllerServiceDTOState] with enumeratum.CirceEnum[ControllerServiceDTOState] {
+    val values = findValues
+    case object ENABLED extends ControllerServiceDTOState
+    case object ENABLING extends ControllerServiceDTOState
+    case object DISABLED extends ControllerServiceDTOState
+    case object DISABLING extends ControllerServiceDTOState
+  }
+
+  sealed trait ControllerServiceDTOValidationStatus extends enumeratum.EnumEntry
+  object ControllerServiceDTOValidationStatus extends enumeratum.Enum[ControllerServiceDTOValidationStatus] with enumeratum.CirceEnum[ControllerServiceDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends ControllerServiceDTOValidationStatus
+    case object INVALID extends ControllerServiceDTOValidationStatus
+    case object VALIDATING extends ControllerServiceDTOValidationStatus
+  }
   case class ControllerServiceDefinition (
     additionalDetails: Option[Boolean] = None,
     artifact: Option[String] = None,
@@ -1603,6 +835,15 @@ object TapirGeneratedEndpoints {
     `type`: Option[String] = None,
     validationErrors: Option[Seq[String]] = None
   )
+
+  sealed trait ControllerServiceReferencingComponentDTOReferenceType extends enumeratum.EnumEntry
+  object ControllerServiceReferencingComponentDTOReferenceType extends enumeratum.Enum[ControllerServiceReferencingComponentDTOReferenceType] with enumeratum.CirceEnum[ControllerServiceReferencingComponentDTOReferenceType] {
+    val values = findValues
+    case object Processor extends ControllerServiceReferencingComponentDTOReferenceType
+    case object ControllerService extends ControllerServiceReferencingComponentDTOReferenceType
+    case object ReportingTask extends ControllerServiceReferencingComponentDTOReferenceType
+    case object FlowRegistryClient extends ControllerServiceReferencingComponentDTOReferenceType
+  }
   case class ControllerServiceReferencingComponentEntity (
     bulletins: Option[Seq[BulletinEntity]] = None,
     component: Option[ControllerServiceReferencingComponentDTO] = None,
@@ -1623,11 +864,35 @@ object TapirGeneratedEndpoints {
     state: Option[ControllerServiceRunStatusEntityState] = None,
     uiOnly: Option[Boolean] = None
   )
+
+  sealed trait ControllerServiceRunStatusEntityState extends enumeratum.EnumEntry
+  object ControllerServiceRunStatusEntityState extends enumeratum.Enum[ControllerServiceRunStatusEntityState] with enumeratum.CirceEnum[ControllerServiceRunStatusEntityState] {
+    val values = findValues
+    case object ENABLED extends ControllerServiceRunStatusEntityState
+    case object DISABLED extends ControllerServiceRunStatusEntityState
+  }
   case class ControllerServiceStatusDTO (
     activeThreadCount: Option[Int] = None,
     runStatus: Option[ControllerServiceStatusDTORunStatus] = None,
     validationStatus: Option[ControllerServiceStatusDTOValidationStatus] = None
   )
+
+  sealed trait ControllerServiceStatusDTORunStatus extends enumeratum.EnumEntry
+  object ControllerServiceStatusDTORunStatus extends enumeratum.Enum[ControllerServiceStatusDTORunStatus] with enumeratum.CirceEnum[ControllerServiceStatusDTORunStatus] {
+    val values = findValues
+    case object ENABLED extends ControllerServiceStatusDTORunStatus
+    case object ENABLING extends ControllerServiceStatusDTORunStatus
+    case object DISABLED extends ControllerServiceStatusDTORunStatus
+    case object DISABLING extends ControllerServiceStatusDTORunStatus
+  }
+
+  sealed trait ControllerServiceStatusDTOValidationStatus extends enumeratum.EnumEntry
+  object ControllerServiceStatusDTOValidationStatus extends enumeratum.Enum[ControllerServiceStatusDTOValidationStatus] with enumeratum.CirceEnum[ControllerServiceStatusDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends ControllerServiceStatusDTOValidationStatus
+    case object INVALID extends ControllerServiceStatusDTOValidationStatus
+    case object VALIDATING extends ControllerServiceStatusDTOValidationStatus
+  }
   case class ControllerServiceTypesEntity (
     controllerServiceTypes: Option[Set[DocumentedTypeDTO]] = None
   )
@@ -1783,6 +1048,14 @@ object TapirGeneratedEndpoints {
     name: Option[String] = None,
     value: Option[String] = None
   )
+
+  sealed trait DynamicPropertyExpressionLanguageScope extends enumeratum.EnumEntry
+  object DynamicPropertyExpressionLanguageScope extends enumeratum.Enum[DynamicPropertyExpressionLanguageScope] with enumeratum.CirceEnum[DynamicPropertyExpressionLanguageScope] {
+    val values = findValues
+    case object NONE extends DynamicPropertyExpressionLanguageScope
+    case object ENVIRONMENT extends DynamicPropertyExpressionLanguageScope
+    case object FLOWFILE_ATTRIBUTES extends DynamicPropertyExpressionLanguageScope
+  }
   case class DynamicRelationship (
     description: Option[String] = None,
     name: Option[String] = None
@@ -1823,6 +1096,21 @@ object TapirGeneratedEndpoints {
     validationStatus: Option[FlowAnalysisRuleDTOValidationStatus] = None,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait FlowAnalysisRuleDTOState extends enumeratum.EnumEntry
+  object FlowAnalysisRuleDTOState extends enumeratum.Enum[FlowAnalysisRuleDTOState] with enumeratum.CirceEnum[FlowAnalysisRuleDTOState] {
+    val values = findValues
+    case object ENABLED extends FlowAnalysisRuleDTOState
+    case object DISABLED extends FlowAnalysisRuleDTOState
+  }
+
+  sealed trait FlowAnalysisRuleDTOValidationStatus extends enumeratum.EnumEntry
+  object FlowAnalysisRuleDTOValidationStatus extends enumeratum.Enum[FlowAnalysisRuleDTOValidationStatus] with enumeratum.CirceEnum[FlowAnalysisRuleDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends FlowAnalysisRuleDTOValidationStatus
+    case object INVALID extends FlowAnalysisRuleDTOValidationStatus
+    case object VALIDATING extends FlowAnalysisRuleDTOValidationStatus
+  }
   case class FlowAnalysisRuleDefinition (
     additionalDetails: Option[Boolean] = None,
     artifact: Option[String] = None,
@@ -1864,11 +1152,33 @@ object TapirGeneratedEndpoints {
     revision: Option[RevisionDTO] = None,
     state: Option[FlowAnalysisRuleRunStatusEntityState] = None
   )
+
+  sealed trait FlowAnalysisRuleRunStatusEntityState extends enumeratum.EnumEntry
+  object FlowAnalysisRuleRunStatusEntityState extends enumeratum.Enum[FlowAnalysisRuleRunStatusEntityState] with enumeratum.CirceEnum[FlowAnalysisRuleRunStatusEntityState] {
+    val values = findValues
+    case object ENABLED extends FlowAnalysisRuleRunStatusEntityState
+    case object DISABLED extends FlowAnalysisRuleRunStatusEntityState
+  }
   case class FlowAnalysisRuleStatusDTO (
     activeThreadCount: Option[Int] = None,
     runStatus: Option[FlowAnalysisRuleStatusDTORunStatus] = None,
     validationStatus: Option[FlowAnalysisRuleStatusDTOValidationStatus] = None
   )
+
+  sealed trait FlowAnalysisRuleStatusDTORunStatus extends enumeratum.EnumEntry
+  object FlowAnalysisRuleStatusDTORunStatus extends enumeratum.Enum[FlowAnalysisRuleStatusDTORunStatus] with enumeratum.CirceEnum[FlowAnalysisRuleStatusDTORunStatus] {
+    val values = findValues
+    case object ENABLED extends FlowAnalysisRuleStatusDTORunStatus
+    case object DISABLED extends FlowAnalysisRuleStatusDTORunStatus
+  }
+
+  sealed trait FlowAnalysisRuleStatusDTOValidationStatus extends enumeratum.EnumEntry
+  object FlowAnalysisRuleStatusDTOValidationStatus extends enumeratum.Enum[FlowAnalysisRuleStatusDTOValidationStatus] with enumeratum.CirceEnum[FlowAnalysisRuleStatusDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends FlowAnalysisRuleStatusDTOValidationStatus
+    case object INVALID extends FlowAnalysisRuleStatusDTOValidationStatus
+    case object VALIDATING extends FlowAnalysisRuleStatusDTOValidationStatus
+  }
   case class FlowAnalysisRuleTypesEntity (
     flowAnalysisRuleTypes: Option[Set[DocumentedTypeDTO]] = None
   )
@@ -1901,6 +1211,16 @@ object TapirGeneratedEndpoints {
     permissions: Option[PermissionsDTO] = None,
     versionedFlowState: Option[FlowBreadcrumbEntityVersionedFlowState] = None
   )
+
+  sealed trait FlowBreadcrumbEntityVersionedFlowState extends enumeratum.EnumEntry
+  object FlowBreadcrumbEntityVersionedFlowState extends enumeratum.Enum[FlowBreadcrumbEntityVersionedFlowState] with enumeratum.CirceEnum[FlowBreadcrumbEntityVersionedFlowState] {
+    val values = findValues
+    case object LOCALLY_MODIFIED extends FlowBreadcrumbEntityVersionedFlowState
+    case object STALE extends FlowBreadcrumbEntityVersionedFlowState
+    case object LOCALLY_MODIFIED_AND_STALE extends FlowBreadcrumbEntityVersionedFlowState
+    case object UP_TO_DATE extends FlowBreadcrumbEntityVersionedFlowState
+    case object SYNC_FAILURE extends FlowBreadcrumbEntityVersionedFlowState
+  }
   case class FlowComparisonEntity (
     componentDifferences: Option[Set[ComponentDifferenceDTO]] = None
   )
@@ -2016,6 +1336,14 @@ object TapirGeneratedEndpoints {
     validationErrors: Option[Seq[String]] = None,
     validationStatus: Option[FlowRegistryClientDTOValidationStatus] = None
   )
+
+  sealed trait FlowRegistryClientDTOValidationStatus extends enumeratum.EnumEntry
+  object FlowRegistryClientDTOValidationStatus extends enumeratum.Enum[FlowRegistryClientDTOValidationStatus] with enumeratum.CirceEnum[FlowRegistryClientDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends FlowRegistryClientDTOValidationStatus
+    case object INVALID extends FlowRegistryClientDTOValidationStatus
+    case object VALIDATING extends FlowRegistryClientDTOValidationStatus
+  }
   case class FlowRegistryClientEntity (
     bulletins: Option[Seq[BulletinEntity]] = None,
     component: Option[FlowRegistryClientDTO] = None,
@@ -2149,6 +1477,14 @@ object TapirGeneratedEndpoints {
     lineageRequestType: Option[LineageRequestDTOLineageRequestType] = None,
     uuid: Option[String] = None
   )
+
+  sealed trait LineageRequestDTOLineageRequestType extends enumeratum.EnumEntry
+  object LineageRequestDTOLineageRequestType extends enumeratum.Enum[LineageRequestDTOLineageRequestType] with enumeratum.CirceEnum[LineageRequestDTOLineageRequestType] {
+    val values = findValues
+    case object PARENTS extends LineageRequestDTOLineageRequestType
+    case object CHILDREN extends LineageRequestDTOLineageRequestType
+    case object FLOWFILE extends LineageRequestDTOLineageRequestType
+  }
   case class LineageResultsDTO (
     errors: Option[Set[String]] = None,
     links: Option[Seq[ProvenanceLinkDTO]] = None,
@@ -2411,6 +1747,13 @@ object TapirGeneratedEndpoints {
     parameterSensitivities: Option[Map[String, ParameterGroupConfigurationEntityParameterSensitivitiesItem]] = None,
     synchronized: Option[Boolean] = None
   )
+
+  sealed trait ParameterGroupConfigurationEntityParameterSensitivitiesItem extends enumeratum.EnumEntry
+  object ParameterGroupConfigurationEntityParameterSensitivitiesItem extends enumeratum.Enum[ParameterGroupConfigurationEntityParameterSensitivitiesItem] with enumeratum.CirceEnum[ParameterGroupConfigurationEntityParameterSensitivitiesItem] {
+    val values = findValues
+    case object SENSITIVE extends ParameterGroupConfigurationEntityParameterSensitivitiesItem
+    case object NON_SENSITIVE extends ParameterGroupConfigurationEntityParameterSensitivitiesItem
+  }
   case class ParameterProviderApplyParametersRequestDTO (
     complete: Option[Boolean] = None,
     failureReason: Option[String] = None,
@@ -2469,6 +1812,14 @@ object TapirGeneratedEndpoints {
     validationStatus: Option[ParameterProviderDTOValidationStatus] = None,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait ParameterProviderDTOValidationStatus extends enumeratum.EnumEntry
+  object ParameterProviderDTOValidationStatus extends enumeratum.Enum[ParameterProviderDTOValidationStatus] with enumeratum.CirceEnum[ParameterProviderDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends ParameterProviderDTOValidationStatus
+    case object INVALID extends ParameterProviderDTOValidationStatus
+    case object VALIDATING extends ParameterProviderDTOValidationStatus
+  }
   case class ParameterProviderDefinition (
     additionalDetails: Option[Boolean] = None,
     artifact: Option[String] = None,
@@ -2548,6 +1899,16 @@ object TapirGeneratedEndpoints {
     parameter: Option[ParameterEntity] = None,
     status: Option[ParameterStatusDTOStatus] = None
   )
+
+  sealed trait ParameterStatusDTOStatus extends enumeratum.EnumEntry
+  object ParameterStatusDTOStatus extends enumeratum.Enum[ParameterStatusDTOStatus] with enumeratum.CirceEnum[ParameterStatusDTOStatus] {
+    val values = findValues
+    case object NEW extends ParameterStatusDTOStatus
+    case object CHANGED extends ParameterStatusDTOStatus
+    case object REMOVED extends ParameterStatusDTOStatus
+    case object MISSING_BUT_REFERENCED extends ParameterStatusDTOStatus
+    case object UNCHANGED extends ParameterStatusDTOStatus
+  }
   case class PasteRequestEntity (
     copyResponse: Option[CopyResponseEntity] = None,
     disconnectedNodeAcknowledged: Option[Boolean] = None,
@@ -2585,6 +1946,28 @@ object TapirGeneratedEndpoints {
     validationErrors: Option[Seq[String]] = None,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait PortDTOPortFunction extends enumeratum.EnumEntry
+  object PortDTOPortFunction extends enumeratum.Enum[PortDTOPortFunction] with enumeratum.CirceEnum[PortDTOPortFunction] {
+    val values = findValues
+    case object STANDARD extends PortDTOPortFunction
+    case object FAILURE extends PortDTOPortFunction
+  }
+
+  sealed trait PortDTOState extends enumeratum.EnumEntry
+  object PortDTOState extends enumeratum.Enum[PortDTOState] with enumeratum.CirceEnum[PortDTOState] {
+    val values = findValues
+    case object RUNNING extends PortDTOState
+    case object STOPPED extends PortDTOState
+    case object DISABLED extends PortDTOState
+  }
+
+  sealed trait PortDTOType extends enumeratum.EnumEntry
+  object PortDTOType extends enumeratum.Enum[PortDTOType] with enumeratum.CirceEnum[PortDTOType] {
+    val values = findValues
+    case object INPUT_PORT extends PortDTOType
+    case object OUTPUT_PORT extends PortDTOType
+  }
   case class PortEntity (
     allowRemoteAccess: Option[Boolean] = None,
     bulletins: Option[Seq[BulletinEntity]] = None,
@@ -2604,6 +1987,14 @@ object TapirGeneratedEndpoints {
     revision: Option[RevisionDTO] = None,
     state: Option[PortRunStatusEntityState] = None
   )
+
+  sealed trait PortRunStatusEntityState extends enumeratum.EnumEntry
+  object PortRunStatusEntityState extends enumeratum.Enum[PortRunStatusEntityState] with enumeratum.CirceEnum[PortRunStatusEntityState] {
+    val values = findValues
+    case object RUNNING extends PortRunStatusEntityState
+    case object STOPPED extends PortRunStatusEntityState
+    case object DISABLED extends PortRunStatusEntityState
+  }
   case class PortStatusDTO (
     aggregateSnapshot: Option[PortStatusSnapshotDTO] = None,
     groupId: Option[String] = None,
@@ -2614,6 +2005,16 @@ object TapirGeneratedEndpoints {
     statsLastRefreshed: Option[String] = None,
     transmitting: Option[Boolean] = None
   )
+
+  sealed trait PortStatusDTORunStatus extends enumeratum.EnumEntry
+  object PortStatusDTORunStatus extends enumeratum.Enum[PortStatusDTORunStatus] with enumeratum.CirceEnum[PortStatusDTORunStatus] {
+    val values = findValues
+    case object Running extends PortStatusDTORunStatus
+    case object Stopped extends PortStatusDTORunStatus
+    case object Validating extends PortStatusDTORunStatus
+    case object Disabled extends PortStatusDTORunStatus
+    case object Invalid extends PortStatusDTORunStatus
+  }
   case class PortStatusEntity (
     canRead: Option[Boolean] = None,
     portStatus: Option[PortStatusDTO] = None
@@ -2632,6 +2033,16 @@ object TapirGeneratedEndpoints {
     runStatus: Option[PortStatusSnapshotDTORunStatus] = None,
     transmitting: Option[Boolean] = None
   )
+
+  sealed trait PortStatusSnapshotDTORunStatus extends enumeratum.EnumEntry
+  object PortStatusSnapshotDTORunStatus extends enumeratum.Enum[PortStatusSnapshotDTORunStatus] with enumeratum.CirceEnum[PortStatusSnapshotDTORunStatus] {
+    val values = findValues
+    case object Running extends PortStatusSnapshotDTORunStatus
+    case object Stopped extends PortStatusSnapshotDTORunStatus
+    case object Validating extends PortStatusSnapshotDTORunStatus
+    case object Disabled extends PortStatusSnapshotDTORunStatus
+    case object Invalid extends PortStatusSnapshotDTORunStatus
+  }
   case class PortStatusSnapshotEntity (
     canRead: Option[Boolean] = None,
     id: Option[String] = None,
@@ -2691,6 +2102,36 @@ object TapirGeneratedEndpoints {
     versionControlInformation: Option[VersionControlInformationDTO] = None,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait ProcessGroupDTOExecutionEngine extends enumeratum.EnumEntry
+  object ProcessGroupDTOExecutionEngine extends enumeratum.Enum[ProcessGroupDTOExecutionEngine] with enumeratum.CirceEnum[ProcessGroupDTOExecutionEngine] {
+    val values = findValues
+    case object STATELESS extends ProcessGroupDTOExecutionEngine
+    case object STANDARD extends ProcessGroupDTOExecutionEngine
+    case object INHERITED extends ProcessGroupDTOExecutionEngine
+  }
+
+  sealed trait ProcessGroupDTOFlowfileConcurrency extends enumeratum.EnumEntry
+  object ProcessGroupDTOFlowfileConcurrency extends enumeratum.Enum[ProcessGroupDTOFlowfileConcurrency] with enumeratum.CirceEnum[ProcessGroupDTOFlowfileConcurrency] {
+    val values = findValues
+    case object UNBOUNDED extends ProcessGroupDTOFlowfileConcurrency
+    case object SINGLE_FLOWFILE_PER_NODE extends ProcessGroupDTOFlowfileConcurrency
+    case object SINGLE_BATCH_PER_NODE extends ProcessGroupDTOFlowfileConcurrency
+  }
+
+  sealed trait ProcessGroupDTOFlowfileOutboundPolicy extends enumeratum.EnumEntry
+  object ProcessGroupDTOFlowfileOutboundPolicy extends enumeratum.Enum[ProcessGroupDTOFlowfileOutboundPolicy] with enumeratum.CirceEnum[ProcessGroupDTOFlowfileOutboundPolicy] {
+    val values = findValues
+    case object STREAM_WHEN_AVAILABLE extends ProcessGroupDTOFlowfileOutboundPolicy
+    case object BATCH_OUTPUT extends ProcessGroupDTOFlowfileOutboundPolicy
+  }
+
+  sealed trait ProcessGroupDTOStatelessGroupScheduledState extends enumeratum.EnumEntry
+  object ProcessGroupDTOStatelessGroupScheduledState extends enumeratum.Enum[ProcessGroupDTOStatelessGroupScheduledState] with enumeratum.CirceEnum[ProcessGroupDTOStatelessGroupScheduledState] {
+    val values = findValues
+    case object STOPPED extends ProcessGroupDTOStatelessGroupScheduledState
+    case object RUNNING extends ProcessGroupDTOStatelessGroupScheduledState
+  }
   case class ProcessGroupEntity (
     activeRemotePortCount: Option[Int] = None,
     bulletins: Option[Seq[BulletinEntity]] = None,
@@ -2723,6 +2164,23 @@ object TapirGeneratedEndpoints {
     versionedFlowSnapshot: Option[RegisteredFlowSnapshot] = None,
     versionedFlowState: Option[ProcessGroupEntityVersionedFlowState] = None
   )
+
+  sealed trait ProcessGroupEntityProcessGroupUpdateStrategy extends enumeratum.EnumEntry
+  object ProcessGroupEntityProcessGroupUpdateStrategy extends enumeratum.Enum[ProcessGroupEntityProcessGroupUpdateStrategy] with enumeratum.CirceEnum[ProcessGroupEntityProcessGroupUpdateStrategy] {
+    val values = findValues
+    case object CURRENT_GROUP extends ProcessGroupEntityProcessGroupUpdateStrategy
+    case object CURRENT_GROUP_WITH_CHILDREN extends ProcessGroupEntityProcessGroupUpdateStrategy
+  }
+
+  sealed trait ProcessGroupEntityVersionedFlowState extends enumeratum.EnumEntry
+  object ProcessGroupEntityVersionedFlowState extends enumeratum.Enum[ProcessGroupEntityVersionedFlowState] with enumeratum.CirceEnum[ProcessGroupEntityVersionedFlowState] {
+    val values = findValues
+    case object LOCALLY_MODIFIED extends ProcessGroupEntityVersionedFlowState
+    case object STALE extends ProcessGroupEntityVersionedFlowState
+    case object LOCALLY_MODIFIED_AND_STALE extends ProcessGroupEntityVersionedFlowState
+    case object UP_TO_DATE extends ProcessGroupEntityVersionedFlowState
+    case object SYNC_FAILURE extends ProcessGroupEntityVersionedFlowState
+  }
   case class ProcessGroupFlowDTO (
     breadcrumb: Option[FlowBreadcrumbEntity] = None,
     flow: Option[FlowDTO] = None,
@@ -2812,6 +2270,16 @@ object TapirGeneratedEndpoints {
     versionedFlowState: Option[ProcessGroupStatusSnapshotDTOVersionedFlowState] = None,
     written: Option[String] = None
   )
+
+  sealed trait ProcessGroupStatusSnapshotDTOVersionedFlowState extends enumeratum.EnumEntry
+  object ProcessGroupStatusSnapshotDTOVersionedFlowState extends enumeratum.Enum[ProcessGroupStatusSnapshotDTOVersionedFlowState] with enumeratum.CirceEnum[ProcessGroupStatusSnapshotDTOVersionedFlowState] {
+    val values = findValues
+    case object LOCALLY_MODIFIED extends ProcessGroupStatusSnapshotDTOVersionedFlowState
+    case object STALE extends ProcessGroupStatusSnapshotDTOVersionedFlowState
+    case object LOCALLY_MODIFIED_AND_STALE extends ProcessGroupStatusSnapshotDTOVersionedFlowState
+    case object UP_TO_DATE extends ProcessGroupStatusSnapshotDTOVersionedFlowState
+    case object SYNC_FAILURE extends ProcessGroupStatusSnapshotDTOVersionedFlowState
+  }
   case class ProcessGroupStatusSnapshotEntity (
     canRead: Option[Boolean] = None,
     id: Option[String] = None,
@@ -2890,6 +2358,22 @@ object TapirGeneratedEndpoints {
     validationStatus: Option[ProcessorDTOValidationStatus] = None,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait ProcessorDTOState extends enumeratum.EnumEntry
+  object ProcessorDTOState extends enumeratum.Enum[ProcessorDTOState] with enumeratum.CirceEnum[ProcessorDTOState] {
+    val values = findValues
+    case object RUNNING extends ProcessorDTOState
+    case object STOPPED extends ProcessorDTOState
+    case object DISABLED extends ProcessorDTOState
+  }
+
+  sealed trait ProcessorDTOValidationStatus extends enumeratum.EnumEntry
+  object ProcessorDTOValidationStatus extends enumeratum.Enum[ProcessorDTOValidationStatus] with enumeratum.CirceEnum[ProcessorDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends ProcessorDTOValidationStatus
+    case object INVALID extends ProcessorDTOValidationStatus
+    case object VALIDATING extends ProcessorDTOValidationStatus
+  }
   case class ProcessorDefinition (
     additionalDetails: Option[Boolean] = None,
     artifact: Option[String] = None,
@@ -2935,6 +2419,14 @@ object TapirGeneratedEndpoints {
     version: Option[String] = None,
     writesAttributes: Option[Seq[Attribute]] = None
   )
+
+  sealed trait ProcessorDefinitionInputRequirement extends enumeratum.EnumEntry
+  object ProcessorDefinitionInputRequirement extends enumeratum.Enum[ProcessorDefinitionInputRequirement] with enumeratum.CirceEnum[ProcessorDefinitionInputRequirement] {
+    val values = findValues
+    case object INPUT_REQUIRED extends ProcessorDefinitionInputRequirement
+    case object INPUT_ALLOWED extends ProcessorDefinitionInputRequirement
+    case object INPUT_FORBIDDEN extends ProcessorDefinitionInputRequirement
+  }
   case class ProcessorEntity (
     bulletins: Option[Seq[BulletinEntity]] = None,
     component: Option[ProcessorDTO] = None,
@@ -2955,6 +2447,16 @@ object TapirGeneratedEndpoints {
     runStatus: Option[ProcessorRunStatusDetailsDTORunStatus] = None,
     validationErrors: Option[Set[String]] = None
   )
+
+  sealed trait ProcessorRunStatusDetailsDTORunStatus extends enumeratum.EnumEntry
+  object ProcessorRunStatusDetailsDTORunStatus extends enumeratum.Enum[ProcessorRunStatusDetailsDTORunStatus] with enumeratum.CirceEnum[ProcessorRunStatusDetailsDTORunStatus] {
+    val values = findValues
+    case object Running extends ProcessorRunStatusDetailsDTORunStatus
+    case object Stopped extends ProcessorRunStatusDetailsDTORunStatus
+    case object Invalid extends ProcessorRunStatusDetailsDTORunStatus
+    case object Validating extends ProcessorRunStatusDetailsDTORunStatus
+    case object Disabled extends ProcessorRunStatusDetailsDTORunStatus
+  }
   case class ProcessorRunStatusDetailsEntity (
     permissions: Option[PermissionsDTO] = None,
     revision: Option[RevisionDTO] = None,
@@ -2965,6 +2467,15 @@ object TapirGeneratedEndpoints {
     revision: Option[RevisionDTO] = None,
     state: Option[ProcessorRunStatusEntityState] = None
   )
+
+  sealed trait ProcessorRunStatusEntityState extends enumeratum.EnumEntry
+  object ProcessorRunStatusEntityState extends enumeratum.Enum[ProcessorRunStatusEntityState] with enumeratum.CirceEnum[ProcessorRunStatusEntityState] {
+    val values = findValues
+    case object RUNNING extends ProcessorRunStatusEntityState
+    case object STOPPED extends ProcessorRunStatusEntityState
+    case object DISABLED extends ProcessorRunStatusEntityState
+    case object RUN_ONCE extends ProcessorRunStatusEntityState
+  }
   case class ProcessorStatusDTO (
     aggregateSnapshot: Option[ProcessorStatusSnapshotDTO] = None,
     groupId: Option[String] = None,
@@ -2975,6 +2486,16 @@ object TapirGeneratedEndpoints {
     statsLastRefreshed: Option[String] = None,
     `type`: Option[String] = None
   )
+
+  sealed trait ProcessorStatusDTORunStatus extends enumeratum.EnumEntry
+  object ProcessorStatusDTORunStatus extends enumeratum.Enum[ProcessorStatusDTORunStatus] with enumeratum.CirceEnum[ProcessorStatusDTORunStatus] {
+    val values = findValues
+    case object Running extends ProcessorStatusDTORunStatus
+    case object Stopped extends ProcessorStatusDTORunStatus
+    case object Validating extends ProcessorStatusDTORunStatus
+    case object Disabled extends ProcessorStatusDTORunStatus
+    case object Invalid extends ProcessorStatusDTORunStatus
+  }
   case class ProcessorStatusEntity (
     canRead: Option[Boolean] = None,
     processorStatus: Option[ProcessorStatusDTO] = None
@@ -3004,6 +2525,23 @@ object TapirGeneratedEndpoints {
     `type`: Option[String] = None,
     written: Option[String] = None
   )
+
+  sealed trait ProcessorStatusSnapshotDTOExecutionNode extends enumeratum.EnumEntry
+  object ProcessorStatusSnapshotDTOExecutionNode extends enumeratum.Enum[ProcessorStatusSnapshotDTOExecutionNode] with enumeratum.CirceEnum[ProcessorStatusSnapshotDTOExecutionNode] {
+    val values = findValues
+    case object ALL extends ProcessorStatusSnapshotDTOExecutionNode
+    case object PRIMARY extends ProcessorStatusSnapshotDTOExecutionNode
+  }
+
+  sealed trait ProcessorStatusSnapshotDTORunStatus extends enumeratum.EnumEntry
+  object ProcessorStatusSnapshotDTORunStatus extends enumeratum.Enum[ProcessorStatusSnapshotDTORunStatus] with enumeratum.CirceEnum[ProcessorStatusSnapshotDTORunStatus] {
+    val values = findValues
+    case object Running extends ProcessorStatusSnapshotDTORunStatus
+    case object Stopped extends ProcessorStatusSnapshotDTORunStatus
+    case object Validating extends ProcessorStatusSnapshotDTORunStatus
+    case object Disabled extends ProcessorStatusSnapshotDTORunStatus
+    case object Invalid extends ProcessorStatusSnapshotDTORunStatus
+  }
   case class ProcessorStatusSnapshotEntity (
     canRead: Option[Boolean] = None,
     id: Option[String] = None,
@@ -3049,6 +2587,14 @@ object TapirGeneratedEndpoints {
     validRegex: Option[String] = None,
     validator: Option[String] = None
   )
+
+  sealed trait PropertyDescriptorExpressionLanguageScope extends enumeratum.EnumEntry
+  object PropertyDescriptorExpressionLanguageScope extends enumeratum.Enum[PropertyDescriptorExpressionLanguageScope] with enumeratum.CirceEnum[PropertyDescriptorExpressionLanguageScope] {
+    val values = findValues
+    case object NONE extends PropertyDescriptorExpressionLanguageScope
+    case object ENVIRONMENT extends PropertyDescriptorExpressionLanguageScope
+    case object FLOWFILE_ATTRIBUTES extends PropertyDescriptorExpressionLanguageScope
+  }
   case class PropertyDescriptorDTO (
     allowableValues: Option[Seq[AllowableValueEntity]] = None,
     defaultValue: Option[String] = None,
@@ -3074,6 +2620,22 @@ object TapirGeneratedEndpoints {
     cardinality: Option[PropertyResourceDefinitionCardinality] = None,
     resourceTypes: Option[Set[PropertyResourceDefinitionResourceTypesItem]] = None
   )
+
+  sealed trait PropertyResourceDefinitionCardinality extends enumeratum.EnumEntry
+  object PropertyResourceDefinitionCardinality extends enumeratum.Enum[PropertyResourceDefinitionCardinality] with enumeratum.CirceEnum[PropertyResourceDefinitionCardinality] {
+    val values = findValues
+    case object SINGLE extends PropertyResourceDefinitionCardinality
+    case object MULTIPLE extends PropertyResourceDefinitionCardinality
+  }
+
+  sealed trait PropertyResourceDefinitionResourceTypesItem extends enumeratum.EnumEntry
+  object PropertyResourceDefinitionResourceTypesItem extends enumeratum.Enum[PropertyResourceDefinitionResourceTypesItem] with enumeratum.CirceEnum[PropertyResourceDefinitionResourceTypesItem] {
+    val values = findValues
+    case object FILE extends PropertyResourceDefinitionResourceTypesItem
+    case object DIRECTORY extends PropertyResourceDefinitionResourceTypesItem
+    case object TEXT extends PropertyResourceDefinitionResourceTypesItem
+    case object URL extends PropertyResourceDefinitionResourceTypesItem
+  }
   case class ProvenanceDTO (
     expiration: Option[String] = None,
     finished: Option[Boolean] = None,
@@ -3151,6 +2713,13 @@ object TapirGeneratedEndpoints {
     timestamp: Option[String] = None,
     `type`: Option[ProvenanceNodeDTOType] = None
   )
+
+  sealed trait ProvenanceNodeDTOType extends enumeratum.EnumEntry
+  object ProvenanceNodeDTOType extends enumeratum.Enum[ProvenanceNodeDTOType] with enumeratum.CirceEnum[ProvenanceNodeDTOType] {
+    val values = findValues
+    case object FLOWFILE extends ProvenanceNodeDTOType
+    case object EVENT extends ProvenanceNodeDTOType
+  }
   case class ProvenanceOptionsDTO (
     searchableFields: Option[Seq[ProvenanceSearchableFieldDTO]] = None
   )
@@ -3245,6 +2814,13 @@ object TapirGeneratedEndpoints {
     revision: Option[RevisionDTO] = None,
     state: Option[RemotePortRunStatusEntityState] = None
   )
+
+  sealed trait RemotePortRunStatusEntityState extends enumeratum.EnumEntry
+  object RemotePortRunStatusEntityState extends enumeratum.Enum[RemotePortRunStatusEntityState] with enumeratum.CirceEnum[RemotePortRunStatusEntityState] {
+    val values = findValues
+    case object TRANSMITTING extends RemotePortRunStatusEntityState
+    case object STOPPED extends RemotePortRunStatusEntityState
+  }
   case class RemoteProcessGroupContentsDTO (
     inputPorts: Option[Set[RemoteProcessGroupPortDTO]] = None,
     outputPorts: Option[Set[RemoteProcessGroupPortDTO]] = None
@@ -3330,6 +2906,14 @@ object TapirGeneratedEndpoints {
     transmissionStatus: Option[String] = None,
     validationStatus: Option[RemoteProcessGroupStatusDTOValidationStatus] = None
   )
+
+  sealed trait RemoteProcessGroupStatusDTOValidationStatus extends enumeratum.EnumEntry
+  object RemoteProcessGroupStatusDTOValidationStatus extends enumeratum.Enum[RemoteProcessGroupStatusDTOValidationStatus] with enumeratum.CirceEnum[RemoteProcessGroupStatusDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends RemoteProcessGroupStatusDTOValidationStatus
+    case object INVALID extends RemoteProcessGroupStatusDTOValidationStatus
+    case object VALIDATING extends RemoteProcessGroupStatusDTOValidationStatus
+  }
   case class RemoteProcessGroupStatusEntity (
     canRead: Option[Boolean] = None,
     remoteProcessGroupStatus: Option[RemoteProcessGroupStatusDTO] = None
@@ -3360,12 +2944,26 @@ object TapirGeneratedEndpoints {
     componentId: Option[String] = None,
     nodes: Option[ReplayLastEventRequestEntityNodes] = None
   )
+
+  sealed trait ReplayLastEventRequestEntityNodes extends enumeratum.EnumEntry
+  object ReplayLastEventRequestEntityNodes extends enumeratum.Enum[ReplayLastEventRequestEntityNodes] with enumeratum.CirceEnum[ReplayLastEventRequestEntityNodes] {
+    val values = findValues
+    case object ALL extends ReplayLastEventRequestEntityNodes
+    case object PRIMARY extends ReplayLastEventRequestEntityNodes
+  }
   case class ReplayLastEventResponseEntity (
     aggregateSnapshot: Option[ReplayLastEventSnapshotDTO] = None,
     componentId: Option[String] = None,
     nodeSnapshots: Option[Seq[NodeReplayLastEventSnapshotDTO]] = None,
     nodes: Option[ReplayLastEventResponseEntityNodes] = None
   )
+
+  sealed trait ReplayLastEventResponseEntityNodes extends enumeratum.EnumEntry
+  object ReplayLastEventResponseEntityNodes extends enumeratum.Enum[ReplayLastEventResponseEntityNodes] with enumeratum.CirceEnum[ReplayLastEventResponseEntityNodes] {
+    val values = findValues
+    case object ALL extends ReplayLastEventResponseEntityNodes
+    case object PRIMARY extends ReplayLastEventResponseEntityNodes
+  }
   case class ReplayLastEventSnapshotDTO (
     eventAvailable: Option[Boolean] = None,
     eventsReplayed: Option[Seq[Long]] = None,
@@ -3399,6 +2997,22 @@ object TapirGeneratedEndpoints {
     validationStatus: Option[ReportingTaskDTOValidationStatus] = None,
     versionedComponentId: Option[String] = None
   )
+
+  sealed trait ReportingTaskDTOState extends enumeratum.EnumEntry
+  object ReportingTaskDTOState extends enumeratum.Enum[ReportingTaskDTOState] with enumeratum.CirceEnum[ReportingTaskDTOState] {
+    val values = findValues
+    case object RUNNING extends ReportingTaskDTOState
+    case object STOPPED extends ReportingTaskDTOState
+    case object DISABLED extends ReportingTaskDTOState
+  }
+
+  sealed trait ReportingTaskDTOValidationStatus extends enumeratum.EnumEntry
+  object ReportingTaskDTOValidationStatus extends enumeratum.Enum[ReportingTaskDTOValidationStatus] with enumeratum.CirceEnum[ReportingTaskDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends ReportingTaskDTOValidationStatus
+    case object INVALID extends ReportingTaskDTOValidationStatus
+    case object VALIDATING extends ReportingTaskDTOValidationStatus
+  }
   case class ReportingTaskDefinition (
     additionalDetails: Option[Boolean] = None,
     artifact: Option[String] = None,
@@ -3443,11 +3057,34 @@ object TapirGeneratedEndpoints {
     revision: Option[RevisionDTO] = None,
     state: Option[ReportingTaskRunStatusEntityState] = None
   )
+
+  sealed trait ReportingTaskRunStatusEntityState extends enumeratum.EnumEntry
+  object ReportingTaskRunStatusEntityState extends enumeratum.Enum[ReportingTaskRunStatusEntityState] with enumeratum.CirceEnum[ReportingTaskRunStatusEntityState] {
+    val values = findValues
+    case object RUNNING extends ReportingTaskRunStatusEntityState
+    case object STOPPED extends ReportingTaskRunStatusEntityState
+  }
   case class ReportingTaskStatusDTO (
     activeThreadCount: Option[Int] = None,
     runStatus: Option[ReportingTaskStatusDTORunStatus] = None,
     validationStatus: Option[ReportingTaskStatusDTOValidationStatus] = None
   )
+
+  sealed trait ReportingTaskStatusDTORunStatus extends enumeratum.EnumEntry
+  object ReportingTaskStatusDTORunStatus extends enumeratum.Enum[ReportingTaskStatusDTORunStatus] with enumeratum.CirceEnum[ReportingTaskStatusDTORunStatus] {
+    val values = findValues
+    case object RUNNING extends ReportingTaskStatusDTORunStatus
+    case object STOPPED extends ReportingTaskStatusDTORunStatus
+    case object DISABLED extends ReportingTaskStatusDTORunStatus
+  }
+
+  sealed trait ReportingTaskStatusDTOValidationStatus extends enumeratum.EnumEntry
+  object ReportingTaskStatusDTOValidationStatus extends enumeratum.Enum[ReportingTaskStatusDTOValidationStatus] with enumeratum.CirceEnum[ReportingTaskStatusDTOValidationStatus] {
+    val values = findValues
+    case object VALID extends ReportingTaskStatusDTOValidationStatus
+    case object INVALID extends ReportingTaskStatusDTOValidationStatus
+    case object VALIDATING extends ReportingTaskStatusDTOValidationStatus
+  }
   case class ReportingTaskTypesEntity (
     reportingTaskTypes: Option[Set[DocumentedTypeDTO]] = None
   )
@@ -3504,6 +3141,15 @@ object TapirGeneratedEndpoints {
     id: Option[String] = None,
     state: Option[ScheduleComponentsEntityState] = None
   )
+
+  sealed trait ScheduleComponentsEntityState extends enumeratum.EnumEntry
+  object ScheduleComponentsEntityState extends enumeratum.Enum[ScheduleComponentsEntityState] with enumeratum.CirceEnum[ScheduleComponentsEntityState] {
+    val values = findValues
+    case object RUNNING extends ScheduleComponentsEntityState
+    case object STOPPED extends ScheduleComponentsEntityState
+    case object ENABLED extends ScheduleComponentsEntityState
+    case object DISABLED extends ScheduleComponentsEntityState
+  }
   case class SchedulingDefaults (
     defaultConcurrentTasksBySchedulingStrategy: Option[Map[String, Int]] = None,
     defaultMaxConcurrentTasks: Option[String] = None,
@@ -3514,6 +3160,13 @@ object TapirGeneratedEndpoints {
     penalizationPeriodMillis: Option[Long] = None,
     yieldDurationMillis: Option[Long] = None
   )
+
+  sealed trait SchedulingDefaultsDefaultSchedulingStrategy extends enumeratum.EnumEntry
+  object SchedulingDefaultsDefaultSchedulingStrategy extends enumeratum.Enum[SchedulingDefaultsDefaultSchedulingStrategy] with enumeratum.CirceEnum[SchedulingDefaultsDefaultSchedulingStrategy] {
+    val values = findValues
+    case object TIMER_DRIVEN extends SchedulingDefaultsDefaultSchedulingStrategy
+    case object CRON_DRIVEN extends SchedulingDefaultsDefaultSchedulingStrategy
+  }
   case class SearchResultGroupDTO (
     id: String,
     name: Option[String] = None
@@ -3572,6 +3225,13 @@ object TapirGeneratedEndpoints {
     description: Option[String] = None,
     scopes: Option[Set[StatefulScopesItem]] = None
   )
+
+  sealed trait StatefulScopesItem extends enumeratum.EnumEntry
+  object StatefulScopesItem extends enumeratum.Enum[StatefulScopesItem] with enumeratum.CirceEnum[StatefulScopesItem] {
+    val values = findValues
+    case object CLUSTER extends StatefulScopesItem
+    case object LOCAL extends StatefulScopesItem
+  }
   case class StatusDescriptorDTO (
     description: Option[String] = None,
     field: Option[String] = None,
@@ -3688,6 +3348,15 @@ object TapirGeneratedEndpoints {
     state: Option[UpdateControllerServiceReferenceRequestEntityState] = None,
     uiOnly: Option[Boolean] = None
   )
+
+  sealed trait UpdateControllerServiceReferenceRequestEntityState extends enumeratum.EnumEntry
+  object UpdateControllerServiceReferenceRequestEntityState extends enumeratum.Enum[UpdateControllerServiceReferenceRequestEntityState] with enumeratum.CirceEnum[UpdateControllerServiceReferenceRequestEntityState] {
+    val values = findValues
+    case object ENABLED extends UpdateControllerServiceReferenceRequestEntityState
+    case object DISABLED extends UpdateControllerServiceReferenceRequestEntityState
+    case object RUNNING extends UpdateControllerServiceReferenceRequestEntityState
+    case object STOPPED extends UpdateControllerServiceReferenceRequestEntityState
+  }
   case class UseCase (
     configuration: Option[String] = None,
     description: Option[String] = None,
@@ -3695,6 +3364,14 @@ object TapirGeneratedEndpoints {
     keywords: Option[Seq[String]] = None,
     notes: Option[String] = None
   )
+
+  sealed trait UseCaseInputRequirement extends enumeratum.EnumEntry
+  object UseCaseInputRequirement extends enumeratum.Enum[UseCaseInputRequirement] with enumeratum.CirceEnum[UseCaseInputRequirement] {
+    val values = findValues
+    case object INPUT_REQUIRED extends UseCaseInputRequirement
+    case object INPUT_ALLOWED extends UseCaseInputRequirement
+    case object INPUT_FORBIDDEN extends UseCaseInputRequirement
+  }
   case class UserDTO (
     accessPolicies: Option[Set[AccessPolicySummaryEntity]] = None,
     configurable: Option[Boolean] = None,
@@ -3786,6 +3463,16 @@ object TapirGeneratedEndpoints {
     storageLocation: Option[String] = None,
     version: Option[String] = None
   )
+
+  sealed trait VersionControlInformationDTOState extends enumeratum.EnumEntry
+  object VersionControlInformationDTOState extends enumeratum.Enum[VersionControlInformationDTOState] with enumeratum.CirceEnum[VersionControlInformationDTOState] {
+    val values = findValues
+    case object LOCALLY_MODIFIED extends VersionControlInformationDTOState
+    case object STALE extends VersionControlInformationDTOState
+    case object LOCALLY_MODIFIED_AND_STALE extends VersionControlInformationDTOState
+    case object UP_TO_DATE extends VersionControlInformationDTOState
+    case object SYNC_FAILURE extends VersionControlInformationDTOState
+  }
   case class VersionControlInformationEntity (
     disconnectedNodeAcknowledged: Option[Boolean] = None,
     processGroupRevision: Option[RevisionDTO] = None,
@@ -3829,6 +3516,27 @@ object TapirGeneratedEndpoints {
     source: Option[ConnectableComponent] = None,
     zIndex: Option[Long] = None
   )
+
+  sealed trait VersionedConnectionComponentType extends enumeratum.EnumEntry
+  object VersionedConnectionComponentType extends enumeratum.Enum[VersionedConnectionComponentType] with enumeratum.CirceEnum[VersionedConnectionComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedConnectionComponentType
+    case object PROCESSOR extends VersionedConnectionComponentType
+    case object PROCESS_GROUP extends VersionedConnectionComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedConnectionComponentType
+    case object INPUT_PORT extends VersionedConnectionComponentType
+    case object OUTPUT_PORT extends VersionedConnectionComponentType
+    case object REMOTE_INPUT_PORT extends VersionedConnectionComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedConnectionComponentType
+    case object FUNNEL extends VersionedConnectionComponentType
+    case object LABEL extends VersionedConnectionComponentType
+    case object CONTROLLER_SERVICE extends VersionedConnectionComponentType
+    case object REPORTING_TASK extends VersionedConnectionComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedConnectionComponentType
+    case object PARAMETER_CONTEXT extends VersionedConnectionComponentType
+    case object PARAMETER_PROVIDER extends VersionedConnectionComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedConnectionComponentType
+  }
   case class VersionedControllerService (
     annotationData: Option[String] = None,
     bulletinLevel: Option[String] = None,
@@ -3846,6 +3554,35 @@ object TapirGeneratedEndpoints {
     scheduledState: Option[VersionedControllerServiceScheduledState] = None,
     `type`: Option[String] = None
   )
+
+  sealed trait VersionedControllerServiceComponentType extends enumeratum.EnumEntry
+  object VersionedControllerServiceComponentType extends enumeratum.Enum[VersionedControllerServiceComponentType] with enumeratum.CirceEnum[VersionedControllerServiceComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedControllerServiceComponentType
+    case object PROCESSOR extends VersionedControllerServiceComponentType
+    case object PROCESS_GROUP extends VersionedControllerServiceComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedControllerServiceComponentType
+    case object INPUT_PORT extends VersionedControllerServiceComponentType
+    case object OUTPUT_PORT extends VersionedControllerServiceComponentType
+    case object REMOTE_INPUT_PORT extends VersionedControllerServiceComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedControllerServiceComponentType
+    case object FUNNEL extends VersionedControllerServiceComponentType
+    case object LABEL extends VersionedControllerServiceComponentType
+    case object CONTROLLER_SERVICE extends VersionedControllerServiceComponentType
+    case object REPORTING_TASK extends VersionedControllerServiceComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedControllerServiceComponentType
+    case object PARAMETER_CONTEXT extends VersionedControllerServiceComponentType
+    case object PARAMETER_PROVIDER extends VersionedControllerServiceComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedControllerServiceComponentType
+  }
+
+  sealed trait VersionedControllerServiceScheduledState extends enumeratum.EnumEntry
+  object VersionedControllerServiceScheduledState extends enumeratum.Enum[VersionedControllerServiceScheduledState] with enumeratum.CirceEnum[VersionedControllerServiceScheduledState] {
+    val values = findValues
+    case object ENABLED extends VersionedControllerServiceScheduledState
+    case object DISABLED extends VersionedControllerServiceScheduledState
+    case object RUNNING extends VersionedControllerServiceScheduledState
+  }
   case class VersionedFlowCoordinates (
     branch: Option[String] = None,
     bucketId: Option[String] = None,
@@ -3865,6 +3602,13 @@ object TapirGeneratedEndpoints {
     flowName: Option[String] = None,
     registryId: Option[String] = None
   )
+
+  sealed trait VersionedFlowDTOAction extends enumeratum.EnumEntry
+  object VersionedFlowDTOAction extends enumeratum.Enum[VersionedFlowDTOAction] with enumeratum.CirceEnum[VersionedFlowDTOAction] {
+    val values = findValues
+    case object COMMIT extends VersionedFlowDTOAction
+    case object FORCE_COMMIT extends VersionedFlowDTOAction
+  }
   case class VersionedFlowEntity (
     versionedFlow: Option[VersionedFlowDTO] = None
   )
@@ -3910,6 +3654,27 @@ object TapirGeneratedEndpoints {
     name: Option[String] = None,
     position: Option[Position] = None
   )
+
+  sealed trait VersionedFunnelComponentType extends enumeratum.EnumEntry
+  object VersionedFunnelComponentType extends enumeratum.Enum[VersionedFunnelComponentType] with enumeratum.CirceEnum[VersionedFunnelComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedFunnelComponentType
+    case object PROCESSOR extends VersionedFunnelComponentType
+    case object PROCESS_GROUP extends VersionedFunnelComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedFunnelComponentType
+    case object INPUT_PORT extends VersionedFunnelComponentType
+    case object OUTPUT_PORT extends VersionedFunnelComponentType
+    case object REMOTE_INPUT_PORT extends VersionedFunnelComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedFunnelComponentType
+    case object FUNNEL extends VersionedFunnelComponentType
+    case object LABEL extends VersionedFunnelComponentType
+    case object CONTROLLER_SERVICE extends VersionedFunnelComponentType
+    case object REPORTING_TASK extends VersionedFunnelComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedFunnelComponentType
+    case object PARAMETER_CONTEXT extends VersionedFunnelComponentType
+    case object PARAMETER_PROVIDER extends VersionedFunnelComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedFunnelComponentType
+  }
   case class VersionedLabel (
     comments: Option[String] = None,
     componentType: Option[VersionedLabelComponentType] = None,
@@ -3924,6 +3689,27 @@ object TapirGeneratedEndpoints {
     width: Option[Double] = None,
     zIndex: Option[Long] = None
   )
+
+  sealed trait VersionedLabelComponentType extends enumeratum.EnumEntry
+  object VersionedLabelComponentType extends enumeratum.Enum[VersionedLabelComponentType] with enumeratum.CirceEnum[VersionedLabelComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedLabelComponentType
+    case object PROCESSOR extends VersionedLabelComponentType
+    case object PROCESS_GROUP extends VersionedLabelComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedLabelComponentType
+    case object INPUT_PORT extends VersionedLabelComponentType
+    case object OUTPUT_PORT extends VersionedLabelComponentType
+    case object REMOTE_INPUT_PORT extends VersionedLabelComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedLabelComponentType
+    case object FUNNEL extends VersionedLabelComponentType
+    case object LABEL extends VersionedLabelComponentType
+    case object CONTROLLER_SERVICE extends VersionedLabelComponentType
+    case object REPORTING_TASK extends VersionedLabelComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedLabelComponentType
+    case object PARAMETER_CONTEXT extends VersionedLabelComponentType
+    case object PARAMETER_PROVIDER extends VersionedLabelComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedLabelComponentType
+  }
   case class VersionedParameter (
     description: Option[String] = None,
     name: Option[String] = None,
@@ -3947,6 +3733,27 @@ object TapirGeneratedEndpoints {
     position: Option[Position] = None,
     synchronized: Option[Boolean] = None
   )
+
+  sealed trait VersionedParameterContextComponentType extends enumeratum.EnumEntry
+  object VersionedParameterContextComponentType extends enumeratum.Enum[VersionedParameterContextComponentType] with enumeratum.CirceEnum[VersionedParameterContextComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedParameterContextComponentType
+    case object PROCESSOR extends VersionedParameterContextComponentType
+    case object PROCESS_GROUP extends VersionedParameterContextComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedParameterContextComponentType
+    case object INPUT_PORT extends VersionedParameterContextComponentType
+    case object OUTPUT_PORT extends VersionedParameterContextComponentType
+    case object REMOTE_INPUT_PORT extends VersionedParameterContextComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedParameterContextComponentType
+    case object FUNNEL extends VersionedParameterContextComponentType
+    case object LABEL extends VersionedParameterContextComponentType
+    case object CONTROLLER_SERVICE extends VersionedParameterContextComponentType
+    case object REPORTING_TASK extends VersionedParameterContextComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedParameterContextComponentType
+    case object PARAMETER_CONTEXT extends VersionedParameterContextComponentType
+    case object PARAMETER_PROVIDER extends VersionedParameterContextComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedParameterContextComponentType
+  }
   case class VersionedPort (
     allowRemoteAccess: Option[Boolean] = None,
     comments: Option[String] = None,
@@ -3961,6 +3768,49 @@ object TapirGeneratedEndpoints {
     scheduledState: Option[VersionedPortScheduledState] = None,
     `type`: Option[VersionedPortType] = None
   )
+
+  sealed trait VersionedPortComponentType extends enumeratum.EnumEntry
+  object VersionedPortComponentType extends enumeratum.Enum[VersionedPortComponentType] with enumeratum.CirceEnum[VersionedPortComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedPortComponentType
+    case object PROCESSOR extends VersionedPortComponentType
+    case object PROCESS_GROUP extends VersionedPortComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedPortComponentType
+    case object INPUT_PORT extends VersionedPortComponentType
+    case object OUTPUT_PORT extends VersionedPortComponentType
+    case object REMOTE_INPUT_PORT extends VersionedPortComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedPortComponentType
+    case object FUNNEL extends VersionedPortComponentType
+    case object LABEL extends VersionedPortComponentType
+    case object CONTROLLER_SERVICE extends VersionedPortComponentType
+    case object REPORTING_TASK extends VersionedPortComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedPortComponentType
+    case object PARAMETER_CONTEXT extends VersionedPortComponentType
+    case object PARAMETER_PROVIDER extends VersionedPortComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedPortComponentType
+  }
+
+  sealed trait VersionedPortPortFunction extends enumeratum.EnumEntry
+  object VersionedPortPortFunction extends enumeratum.Enum[VersionedPortPortFunction] with enumeratum.CirceEnum[VersionedPortPortFunction] {
+    val values = findValues
+    case object STANDARD extends VersionedPortPortFunction
+    case object FAILURE extends VersionedPortPortFunction
+  }
+
+  sealed trait VersionedPortScheduledState extends enumeratum.EnumEntry
+  object VersionedPortScheduledState extends enumeratum.Enum[VersionedPortScheduledState] with enumeratum.CirceEnum[VersionedPortScheduledState] {
+    val values = findValues
+    case object ENABLED extends VersionedPortScheduledState
+    case object DISABLED extends VersionedPortScheduledState
+    case object RUNNING extends VersionedPortScheduledState
+  }
+
+  sealed trait VersionedPortType extends enumeratum.EnumEntry
+  object VersionedPortType extends enumeratum.Enum[VersionedPortType] with enumeratum.CirceEnum[VersionedPortType] {
+    val values = findValues
+    case object INPUT_PORT extends VersionedPortType
+    case object OUTPUT_PORT extends VersionedPortType
+  }
   case class VersionedProcessGroup (
     comments: Option[String] = None,
     componentType: Option[VersionedProcessGroupComponentType] = None,
@@ -3991,6 +3841,43 @@ object TapirGeneratedEndpoints {
     statelessFlowTimeout: Option[String] = None,
     versionedFlowCoordinates: Option[VersionedFlowCoordinates] = None
   )
+
+  sealed trait VersionedProcessGroupComponentType extends enumeratum.EnumEntry
+  object VersionedProcessGroupComponentType extends enumeratum.Enum[VersionedProcessGroupComponentType] with enumeratum.CirceEnum[VersionedProcessGroupComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedProcessGroupComponentType
+    case object PROCESSOR extends VersionedProcessGroupComponentType
+    case object PROCESS_GROUP extends VersionedProcessGroupComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedProcessGroupComponentType
+    case object INPUT_PORT extends VersionedProcessGroupComponentType
+    case object OUTPUT_PORT extends VersionedProcessGroupComponentType
+    case object REMOTE_INPUT_PORT extends VersionedProcessGroupComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedProcessGroupComponentType
+    case object FUNNEL extends VersionedProcessGroupComponentType
+    case object LABEL extends VersionedProcessGroupComponentType
+    case object CONTROLLER_SERVICE extends VersionedProcessGroupComponentType
+    case object REPORTING_TASK extends VersionedProcessGroupComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedProcessGroupComponentType
+    case object PARAMETER_CONTEXT extends VersionedProcessGroupComponentType
+    case object PARAMETER_PROVIDER extends VersionedProcessGroupComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedProcessGroupComponentType
+  }
+
+  sealed trait VersionedProcessGroupExecutionEngine extends enumeratum.EnumEntry
+  object VersionedProcessGroupExecutionEngine extends enumeratum.Enum[VersionedProcessGroupExecutionEngine] with enumeratum.CirceEnum[VersionedProcessGroupExecutionEngine] {
+    val values = findValues
+    case object STANDARD extends VersionedProcessGroupExecutionEngine
+    case object STATELESS extends VersionedProcessGroupExecutionEngine
+    case object INHERITED extends VersionedProcessGroupExecutionEngine
+  }
+
+  sealed trait VersionedProcessGroupScheduledState extends enumeratum.EnumEntry
+  object VersionedProcessGroupScheduledState extends enumeratum.Enum[VersionedProcessGroupScheduledState] with enumeratum.CirceEnum[VersionedProcessGroupScheduledState] {
+    val values = findValues
+    case object ENABLED extends VersionedProcessGroupScheduledState
+    case object DISABLED extends VersionedProcessGroupScheduledState
+    case object RUNNING extends VersionedProcessGroupScheduledState
+  }
   case class VersionedProcessor (
     annotationData: Option[String] = None,
     autoTerminatedRelationships: Option[Set[String]] = None,
@@ -4020,6 +3907,35 @@ object TapirGeneratedEndpoints {
     `type`: Option[String] = None,
     yieldDuration: Option[String] = None
   )
+
+  sealed trait VersionedProcessorComponentType extends enumeratum.EnumEntry
+  object VersionedProcessorComponentType extends enumeratum.Enum[VersionedProcessorComponentType] with enumeratum.CirceEnum[VersionedProcessorComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedProcessorComponentType
+    case object PROCESSOR extends VersionedProcessorComponentType
+    case object PROCESS_GROUP extends VersionedProcessorComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedProcessorComponentType
+    case object INPUT_PORT extends VersionedProcessorComponentType
+    case object OUTPUT_PORT extends VersionedProcessorComponentType
+    case object REMOTE_INPUT_PORT extends VersionedProcessorComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedProcessorComponentType
+    case object FUNNEL extends VersionedProcessorComponentType
+    case object LABEL extends VersionedProcessorComponentType
+    case object CONTROLLER_SERVICE extends VersionedProcessorComponentType
+    case object REPORTING_TASK extends VersionedProcessorComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedProcessorComponentType
+    case object PARAMETER_CONTEXT extends VersionedProcessorComponentType
+    case object PARAMETER_PROVIDER extends VersionedProcessorComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedProcessorComponentType
+  }
+
+  sealed trait VersionedProcessorScheduledState extends enumeratum.EnumEntry
+  object VersionedProcessorScheduledState extends enumeratum.Enum[VersionedProcessorScheduledState] with enumeratum.CirceEnum[VersionedProcessorScheduledState] {
+    val values = findValues
+    case object ENABLED extends VersionedProcessorScheduledState
+    case object DISABLED extends VersionedProcessorScheduledState
+    case object RUNNING extends VersionedProcessorScheduledState
+  }
   case class VersionedPropertyDescriptor (
     displayName: Option[String] = None,
     dynamic: Option[Boolean] = None,
@@ -4043,6 +3959,35 @@ object TapirGeneratedEndpoints {
     targetId: Option[String] = None,
     useCompression: Option[Boolean] = None
   )
+
+  sealed trait VersionedRemoteGroupPortComponentType extends enumeratum.EnumEntry
+  object VersionedRemoteGroupPortComponentType extends enumeratum.Enum[VersionedRemoteGroupPortComponentType] with enumeratum.CirceEnum[VersionedRemoteGroupPortComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedRemoteGroupPortComponentType
+    case object PROCESSOR extends VersionedRemoteGroupPortComponentType
+    case object PROCESS_GROUP extends VersionedRemoteGroupPortComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedRemoteGroupPortComponentType
+    case object INPUT_PORT extends VersionedRemoteGroupPortComponentType
+    case object OUTPUT_PORT extends VersionedRemoteGroupPortComponentType
+    case object REMOTE_INPUT_PORT extends VersionedRemoteGroupPortComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedRemoteGroupPortComponentType
+    case object FUNNEL extends VersionedRemoteGroupPortComponentType
+    case object LABEL extends VersionedRemoteGroupPortComponentType
+    case object CONTROLLER_SERVICE extends VersionedRemoteGroupPortComponentType
+    case object REPORTING_TASK extends VersionedRemoteGroupPortComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedRemoteGroupPortComponentType
+    case object PARAMETER_CONTEXT extends VersionedRemoteGroupPortComponentType
+    case object PARAMETER_PROVIDER extends VersionedRemoteGroupPortComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedRemoteGroupPortComponentType
+  }
+
+  sealed trait VersionedRemoteGroupPortScheduledState extends enumeratum.EnumEntry
+  object VersionedRemoteGroupPortScheduledState extends enumeratum.Enum[VersionedRemoteGroupPortScheduledState] with enumeratum.CirceEnum[VersionedRemoteGroupPortScheduledState] {
+    val values = findValues
+    case object ENABLED extends VersionedRemoteGroupPortScheduledState
+    case object DISABLED extends VersionedRemoteGroupPortScheduledState
+    case object RUNNING extends VersionedRemoteGroupPortScheduledState
+  }
   case class VersionedRemoteProcessGroup (
     comments: Option[String] = None,
     communicationsTimeout: Option[String] = None,
@@ -4063,6 +4008,27 @@ object TapirGeneratedEndpoints {
     transportProtocol: Option[String] = None,
     yieldDuration: Option[String] = None
   )
+
+  sealed trait VersionedRemoteProcessGroupComponentType extends enumeratum.EnumEntry
+  object VersionedRemoteProcessGroupComponentType extends enumeratum.Enum[VersionedRemoteProcessGroupComponentType] with enumeratum.CirceEnum[VersionedRemoteProcessGroupComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedRemoteProcessGroupComponentType
+    case object PROCESSOR extends VersionedRemoteProcessGroupComponentType
+    case object PROCESS_GROUP extends VersionedRemoteProcessGroupComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedRemoteProcessGroupComponentType
+    case object INPUT_PORT extends VersionedRemoteProcessGroupComponentType
+    case object OUTPUT_PORT extends VersionedRemoteProcessGroupComponentType
+    case object REMOTE_INPUT_PORT extends VersionedRemoteProcessGroupComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedRemoteProcessGroupComponentType
+    case object FUNNEL extends VersionedRemoteProcessGroupComponentType
+    case object LABEL extends VersionedRemoteProcessGroupComponentType
+    case object CONTROLLER_SERVICE extends VersionedRemoteProcessGroupComponentType
+    case object REPORTING_TASK extends VersionedRemoteProcessGroupComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedRemoteProcessGroupComponentType
+    case object PARAMETER_CONTEXT extends VersionedRemoteProcessGroupComponentType
+    case object PARAMETER_PROVIDER extends VersionedRemoteProcessGroupComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedRemoteProcessGroupComponentType
+  }
   case class VersionedReportingTask (
     annotationData: Option[String] = None,
     bundle: Option[Bundle] = None,
@@ -4080,6 +4046,35 @@ object TapirGeneratedEndpoints {
     schedulingStrategy: Option[String] = None,
     `type`: Option[String] = None
   )
+
+  sealed trait VersionedReportingTaskComponentType extends enumeratum.EnumEntry
+  object VersionedReportingTaskComponentType extends enumeratum.Enum[VersionedReportingTaskComponentType] with enumeratum.CirceEnum[VersionedReportingTaskComponentType] {
+    val values = findValues
+    case object CONNECTION extends VersionedReportingTaskComponentType
+    case object PROCESSOR extends VersionedReportingTaskComponentType
+    case object PROCESS_GROUP extends VersionedReportingTaskComponentType
+    case object REMOTE_PROCESS_GROUP extends VersionedReportingTaskComponentType
+    case object INPUT_PORT extends VersionedReportingTaskComponentType
+    case object OUTPUT_PORT extends VersionedReportingTaskComponentType
+    case object REMOTE_INPUT_PORT extends VersionedReportingTaskComponentType
+    case object REMOTE_OUTPUT_PORT extends VersionedReportingTaskComponentType
+    case object FUNNEL extends VersionedReportingTaskComponentType
+    case object LABEL extends VersionedReportingTaskComponentType
+    case object CONTROLLER_SERVICE extends VersionedReportingTaskComponentType
+    case object REPORTING_TASK extends VersionedReportingTaskComponentType
+    case object FLOW_ANALYSIS_RULE extends VersionedReportingTaskComponentType
+    case object PARAMETER_CONTEXT extends VersionedReportingTaskComponentType
+    case object PARAMETER_PROVIDER extends VersionedReportingTaskComponentType
+    case object FLOW_REGISTRY_CLIENT extends VersionedReportingTaskComponentType
+  }
+
+  sealed trait VersionedReportingTaskScheduledState extends enumeratum.EnumEntry
+  object VersionedReportingTaskScheduledState extends enumeratum.Enum[VersionedReportingTaskScheduledState] with enumeratum.CirceEnum[VersionedReportingTaskScheduledState] {
+    val values = findValues
+    case object ENABLED extends VersionedReportingTaskScheduledState
+    case object DISABLED extends VersionedReportingTaskScheduledState
+    case object RUNNING extends VersionedReportingTaskScheduledState
+  }
   case class VersionedReportingTaskImportRequestEntity (
     disconnectedNodeAcknowledged: Option[Boolean] = None,
     reportingTaskSnapshot: Option[VersionedReportingTaskSnapshot] = None
@@ -4096,14 +4091,22 @@ object TapirGeneratedEndpoints {
     cardinality: Option[VersionedResourceDefinitionCardinality] = None,
     resourceTypes: Option[Set[VersionedResourceDefinitionResourceTypesItem]] = None
   )
-  type ActionDetailsDTO = io.circe.JsonObject
-  type BulletinBoardPatternParameterStr = String
-  type ClientIdParameterStr = String
-  type ComponentDetailsDTO = io.circe.JsonObject
-  type DateTimeParameterDT = java.time.Instant
-  type IntegerParameterInt = Int
-  type LongParameterInt = Long
-  type StreamingOutput = io.circe.JsonObject
+
+  sealed trait VersionedResourceDefinitionCardinality extends enumeratum.EnumEntry
+  object VersionedResourceDefinitionCardinality extends enumeratum.Enum[VersionedResourceDefinitionCardinality] with enumeratum.CirceEnum[VersionedResourceDefinitionCardinality] {
+    val values = findValues
+    case object SINGLE extends VersionedResourceDefinitionCardinality
+    case object MULTIPLE extends VersionedResourceDefinitionCardinality
+  }
+
+  sealed trait VersionedResourceDefinitionResourceTypesItem extends enumeratum.EnumEntry
+  object VersionedResourceDefinitionResourceTypesItem extends enumeratum.Enum[VersionedResourceDefinitionResourceTypesItem] with enumeratum.CirceEnum[VersionedResourceDefinitionResourceTypesItem] {
+    val values = findValues
+    case object FILE extends VersionedResourceDefinitionResourceTypesItem
+    case object DIRECTORY extends VersionedResourceDefinitionResourceTypesItem
+    case object TEXT extends VersionedResourceDefinitionResourceTypesItem
+    case object URL extends VersionedResourceDefinitionResourceTypesItem
+  }
   case class CreateAccessTokenRequest (
     password: Option[String] = None,
     username: Option[String] = None

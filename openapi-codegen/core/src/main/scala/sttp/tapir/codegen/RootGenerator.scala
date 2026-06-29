@@ -371,8 +371,6 @@ object RootGenerator {
           s"models.$fn" ->
             s"""package $modelPackagePath
                |
-               |//import $packagePath.$objName._
-               |
                |$body
                |""".stripMargin
         }
