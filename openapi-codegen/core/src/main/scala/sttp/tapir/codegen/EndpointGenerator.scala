@@ -1,6 +1,7 @@
 package sttp.tapir.codegen
 import io.circe.Json
-import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
+import sttp.tapir.codegen.RootGenerator.{mapSchemaSimpleTypeToType, strippedToCamelCase}
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
@@ -12,31 +13,12 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiResponseContent,
   OpenapiResponseDef
 }
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  AnyType,
-  OpenapiSchemaAny,
-  OpenapiSchemaArray,
-  OpenapiSchemaBinary,
-  OpenapiSchemaEnum,
-  OpenapiSchemaMap,
-  OpenapiSchemaObject,
-  OpenapiSchemaOneOf,
-  OpenapiSchemaRef,
-  OpenapiSchemaSimpleType,
-  OpenapiSchemaString
-}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models._
-import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
-  forceEager,
-  forceReqEager,
-  forceReqStreaming,
-  forceRespEager,
-  forceRespStreaming,
-  forceStreaming,
-  jsonBodyAsString,
-  securityPrefixKey
-}
+import sttp.tapir.codegen.openapi.models.GenerationDirectives._
+import sttp.tapir.codegen.security.{SecurityDefn, SecurityGenerator, SecurityWrapperDefn}
 import sttp.tapir.codegen.util.ErrUtils.bail
+import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.util.{JavaEscape, Location, NameHelpers}
 
 case class EndpointTypes(security: Seq[String], in: Seq[String], err: Seq[String], out: Seq[String]) {

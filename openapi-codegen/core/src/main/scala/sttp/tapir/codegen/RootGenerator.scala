@@ -1,9 +1,11 @@
 package sttp.tapir.codegen
 
+import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{AnyType, OpenapiSchemaAny, OpenapiSchemaBinary, OpenapiSchemaBoolean, OpenapiSchemaByte, OpenapiSchemaDate, OpenapiSchemaDateTime, OpenapiSchemaDouble, OpenapiSchemaDuration, OpenapiSchemaFloat, OpenapiSchemaInt, OpenapiSchemaLong, OpenapiSchemaRef, OpenapiSchemaSimpleType, OpenapiSchemaString, OpenapiSchemaUUID}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
+import sttp.tapir.codegen.security.SecurityGenerator
 import sttp.tapir.codegen.util.NameHelpers
 
 object XmlSerdeLib extends Enumeration {
@@ -16,47 +18,6 @@ case class FS2(effectType: String = "cats.effect.IO") extends StreamingImplement
 object Pekko extends StreamingImplementation
 object Zio extends StreamingImplementation
 
-object GenerationMeta {
-  val default: GenerationMeta = GenerationMeta(Seq("TapirGeneratedEndpointsSchemas"), false, false, Nil, Set.empty, Nil, 0, Set.empty, Set.empty)
-}
-case class GenerationMeta(
-    schemaFiles: Seq[String],
-    hasValidators: Boolean,
-    schemasContainAny: Boolean,
-    explicitNonObjTypes: Seq[String],
-    security: Set[SecurityWrapperDefn],
-    extensions: Seq[(String, String, String)],
-    schemaObjectCount: Int,
-    allTransitiveJsonParamRefs: Set[String],
-    jsonParamRefs: Set[String],
-) {
-  def partition(securityWrappers: Set[SecurityWrapperDefn]): (Set[SecurityWrapperDefn], Set[SecurityWrapperDefn]) = {
-    val changed = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
-    val m = scala.collection.mutable.Set.empty[SecurityWrapperDefn]
-    val ct = scala.collection.mutable.Set.empty[String]
-    securityWrappers.foreach(w =>
-      if (!security.contains(w)) {
-        changed += w
-        w.schemas.map(_.typeName).foreach(t => ct += t)
-      } else m += w
-    )
-    def checkChanged: Unit = {
-      var changedCount = 0
-      val mSnapshot = m.toSet
-      mSnapshot.foreach(w =>
-        if (w.schemas.map(_.typeName).exists(ct.contains)) {
-          changedCount += 1
-          w.schemas.map(_.typeName).foreach(t => ct += t)
-          changed += w
-          m.remove(w)
-        }
-      )
-      if (changedCount != 0) checkChanged
-    }
-    checkChanged
-    m.toSet -> changed.toSet
-  }
-}
 case class GenerationInfo(allFiles: Map[String, String], meta: GenerationMeta)
 
 object RootGenerator {

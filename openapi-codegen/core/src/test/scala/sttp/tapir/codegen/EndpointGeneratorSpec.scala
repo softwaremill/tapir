@@ -1,6 +1,7 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.json.JsonSerdeLib
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
