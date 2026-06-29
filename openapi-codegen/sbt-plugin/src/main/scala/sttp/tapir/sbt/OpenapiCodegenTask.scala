@@ -5,6 +5,10 @@ import sttp.tapir.codegen.{OpenApiInputParser, RootGenerator}
 import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
+
 case class OpenapiCodegenTask(
     inputYaml: File,
     packageName: String,
@@ -53,15 +57,20 @@ case class OpenapiCodegenTask(
         packageReuse,
         seperateFilesForModels
       )
-    generationInfo.allFiles.map { case (objectName, fileBody) =>
-      val segments = objectName.split('.')
-      val file = segments.toList match {
-        case name :: Nil => outDirectory / s"$name.scala"
-        case init :+ last => init.foldLeft(outDirectory)(_ / _) / s"$last.scala"
-      }
-      val lines = fileBody.linesIterator.toSeq
-      IO.writeLines(file, lines, IO.utf8)
-      file
-    }.toSeq -> generationInfo.meta
+    Await.result(
+      Future.traverse(generationInfo.allFiles.toSeq) { case (objectName, fileBody) =>
+        Future[File] {
+          val segments = objectName.split('.')
+          val file = segments.toList match {
+            case name :: Nil  => outDirectory / s"$name.scala"
+            case init :+ last => init.foldLeft(outDirectory)(_ / _) / s"$last.scala"
+          }
+          val lines = fileBody.linesIterator.toSeq
+          IO.writeLines(file, lines, IO.utf8)
+          file
+        }
+      },
+      Duration.Inf
+    ) -> generationInfo.meta
   }
 }
