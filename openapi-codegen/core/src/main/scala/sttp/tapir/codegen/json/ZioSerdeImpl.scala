@@ -55,9 +55,9 @@ object ZioSerdeImpl {
         case (name, schema: OpenapiSchemaObject, true) =>
           zioParentImpl(name) orElse Some(genZioObjectSerde(name, schema))
         case (name, schema: OpenapiSchemaMap, true) =>
-          zioParentImpl(name) orElse Some(genZioMapOrArraySerde(name, schema.items))
+          genZioMapOrArraySerde(name, schema.items).map { case (n, impl) => zioParentImpl(n).getOrElse(impl) }
         case (name, schema: OpenapiSchemaArray, true) =>
-          zioParentImpl(name) orElse Some(genZioMapOrArraySerde(name, schema.items))
+          genZioMapOrArraySerde(name, schema.items).map { case (n, impl) => zioParentImpl(n).getOrElse(impl) }
         case (name, schema: OpenapiSchemaOneOf, true) =>
           zioParentImpl(name) orElse Some(
             if (schema.types.exists(!_.isInstanceOf[OpenapiSchemaRef]))
@@ -105,12 +105,13 @@ object ZioSerdeImpl {
        |implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = zio.json.DeriveJsonEncoder.gen[$name]""".stripMargin
   }
 
-  private def genZioMapOrArraySerde(name: String, schema: OpenapiSchemaType): String = {
-    val subs = schema match {
-      case `type`: OpenapiSchemaObject => Some(genZioObjectSerde(s"${name}ObjectsItem", `type`))
-      case _                           => None
+  private def genZioMapOrArraySerde(name: String, schema: OpenapiSchemaType): Option[(String, String)] = {
+    schema match {
+      case `type`: OpenapiSchemaObject =>
+        val itemName = s"${name}ObjectsItem"
+        Some(itemName -> ("\n" + genZioObjectSerde(itemName, `type`)))
+      case _ => None
     }
-    subs.fold("")("\n" + _)
   }
 
   private def genZioEnumSerde(name: String): String = {
