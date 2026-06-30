@@ -1,8 +1,7 @@
-package sttp.tapir.codegen
+package sttp.tapir.codegen.xml
 
-import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType}
-import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.dedup.PackageReuseContext
+import sttp.tapir.codegen.endpoints.SimpleTypes.mapSchemaSimpleTypeToType
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
@@ -13,12 +12,20 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaSimpleType
 }
 import sttp.tapir.codegen.openapi.models.OpenapiXml
+import sttp.tapir.codegen.util.NameHelpers.indent
+
+object XmlSerdeLib extends Enumeration {
+  val CatsXml, NoSupport = Value
+  type XmlSerdeLib = Value
+}
+import sttp.tapir.codegen.xml.XmlSerdeLib._
 
 object SchemaTypeType extends Enumeration {
   val EnumType, ArrayType, OtherType = Value
   type SchemaTypeType = Value
 }
-import SchemaTypeType._
+import sttp.tapir.codegen.xml.SchemaTypeType._
+
 case class ScopedAuxCodecParams(
     fieldName: String,
     wrappedType: String,
@@ -79,7 +86,7 @@ object XmlSerdeGenerator {
                     _.collect {
                       case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _, _)), r)
                           if doc.components.exists(_.schemas.get(t.stripped).exists(_.isInstanceOf[OpenapiSchemaEnum])) =>
-                        val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
+                        val tpe = mapSchemaSimpleTypeToType(t)._1
                         val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                         ScopedAuxCodecParams(n, d, tpe, EnumType, None)
                       case (ref, (n, OpenapiSchemaField(t: OpenapiSchemaEnum, _, _)), r) =>
@@ -87,10 +94,10 @@ object XmlSerdeGenerator {
                         val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                         ScopedAuxCodecParams(n, d, tpe, EnumType, None)
                       case (_, (n, OpenapiSchemaField(OpenapiSchemaArray(t: OpenapiSchemaSimpleType, _, maybeXml, _), _, _)), _) =>
-                        val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
+                        val tpe = mapSchemaSimpleTypeToType(t)._1
                         ScopedAuxCodecParams(n, tpe, tpe, ArrayType, maybeXml)
                       case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _, _)), r) =>
-                        val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
+                        val tpe = mapSchemaSimpleTypeToType(t)._1
                         val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                         ScopedAuxCodecParams(n, d, tpe, OtherType, None)
                     }

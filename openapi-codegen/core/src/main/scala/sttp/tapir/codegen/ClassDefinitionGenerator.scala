@@ -1,14 +1,16 @@
 package sttp.tapir.codegen
 
-import sttp.tapir.codegen.RootGenerator.mapSchemaSimpleTypeToType
+import sttp.tapir.codegen.endpoints.SimpleTypes.mapSchemaSimpleTypeToType
 import sttp.tapir.codegen.dedup.PackageReuseContext
-import sttp.tapir.codegen.json.{JsonHelpers, JsonSerdeLib, JsonSerdeGenerator, SerdeGenResponse}
+import sttp.tapir.codegen.endpoints.EnumGenerator
+import sttp.tapir.codegen.json.{JsonHelpers, JsonSerdeGenerator, JsonSerdeLib, SerdeGenResponse}
 import sttp.tapir.codegen.json.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
+import sttp.tapir.codegen.xml.{XmlSerdeGenerator, XmlSerdeLib}
 
 case class GeneratedClassDefinitions(
     classReprs: Map[String, String],
@@ -323,7 +325,7 @@ class ClassDefinitionGenerator {
       valueSchema: OpenapiSchemaType
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
-      case simpleType: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(simpleType)._1
+      case simpleType: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(simpleType)._1
       case otherType => throw new NotImplementedError(s"Only simple value types and refs are implemented for named maps (found $otherType)")
     }
     Seq(s"""type $name = Map[String, $valueSchemaName]""")
@@ -335,7 +337,7 @@ class ClassDefinitionGenerator {
       rs: ArrayRestrictions
   ): Seq[String] = {
     val valueSchemaName = valueSchema match {
-      case simpleType: OpenapiSchemaSimpleType => RootGenerator.mapSchemaSimpleTypeToType(simpleType)._1
+      case simpleType: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(simpleType)._1
       case otherType                           =>
         throw new NotImplementedError(s"Only simple value types and refs are implemented for named arrays (found $otherType)")
     }

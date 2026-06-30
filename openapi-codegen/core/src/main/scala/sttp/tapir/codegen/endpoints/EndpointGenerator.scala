@@ -1,9 +1,11 @@
-package sttp.tapir.codegen
+package sttp.tapir.codegen.endpoints
+
 import io.circe.Json
-import sttp.tapir.codegen.RootGenerator.{mapSchemaSimpleTypeToType, strippedToCamelCase}
 import sttp.tapir.codegen.dedup.PackageReuseContext
+import sttp.tapir.codegen.endpoints.SimpleTypes.mapSchemaSimpleTypeToType
 import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
-import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
+import sttp.tapir.codegen.openapi.models._
+import sttp.tapir.codegen.openapi.models.GenerationDirectives._
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
   OpenapiParameter,
@@ -14,12 +16,14 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiResponseDef
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.openapi.models._
-import sttp.tapir.codegen.openapi.models.GenerationDirectives._
 import sttp.tapir.codegen.security.{SecurityDefn, SecurityGenerator, SecurityWrapperDefn}
 import sttp.tapir.codegen.util.ErrUtils.bail
-import sttp.tapir.codegen.util.NameHelpers.indent
+import sttp.tapir.codegen.util.NameHelpers.{indent, strippedToCamelCase}
 import sttp.tapir.codegen.util.{JavaEscape, Location, NameHelpers}
+import sttp.tapir.codegen.validation.{ValidationDefns, ValidationGenerator}
+import sttp.tapir.codegen.xml.XmlSerdeGenerator
+import sttp.tapir.codegen.xml.XmlSerdeLib
+import sttp.tapir.codegen.xml.XmlSerdeLib.XmlSerdeLib
 
 case class EndpointTypes(security: Seq[String], in: Seq[String], err: Seq[String], out: Seq[String]) {
   private def toType(types: Seq[String]) = types match {
@@ -39,7 +43,7 @@ object Position extends Enumeration {
   val Request, Response, Err = Value
   type Position = Value
 }
-import Position._
+import sttp.tapir.codegen.endpoints.Position._
 
 case class EndpointDetails(
     jsonParamRefs: Set[String],
@@ -306,12 +310,11 @@ class EndpointGenerator {
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
               case OpenapiSchemaArray(OpenapiSchemaAny(_, tpe), _, _, _)              => AnyType.toCirceTpe(tpe)
               case OpenapiSchemaArray(simple: OpenapiSchemaSimpleType, _, _, _)       =>
-                val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
+                val name = mapSchemaSimpleTypeToType(simple)._1
                 s"List[$name]"
-              case simple: OpenapiSchemaSimpleType =>
-                RootGenerator.mapSchemaSimpleTypeToType(simple)._1
+              case simple: OpenapiSchemaSimpleType => mapSchemaSimpleTypeToType(simple)._1
               case OpenapiSchemaMap(simple: OpenapiSchemaSimpleType, _, _) =>
-                val name = RootGenerator.mapSchemaSimpleTypeToType(simple)._1
+                val name = mapSchemaSimpleTypeToType(simple)._1
                 s"Map[String, $name]"
             }
             .toSet

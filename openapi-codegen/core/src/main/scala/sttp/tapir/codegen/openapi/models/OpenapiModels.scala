@@ -11,7 +11,7 @@ import OpenapiSchemaType.{
   OpenapiSchemaString
 }
 import io.circe.Json
-import sttp.tapir.codegen.RootGenerator.strippedToCamelCase
+import sttp.tapir.codegen.util.NameHelpers.strippedToCamelCase
 import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
   forceEager,
   forceReqEager,

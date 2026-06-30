@@ -1,22 +1,15 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
+import sttp.tapir.codegen.endpoints.{Akka, EndpointDefs, EndpointDetails, EndpointGenerator, FS2, Pekko, StreamingImplementation, Zio}
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
 import sttp.tapir.codegen.security.SecurityGenerator
 import sttp.tapir.codegen.util.NameHelpers
-
-object XmlSerdeLib extends Enumeration {
-  val CatsXml, NoSupport = Value
-  type XmlSerdeLib = Value
-}
-sealed trait StreamingImplementation
-object Akka extends StreamingImplementation
-case class FS2(effectType: String = "cats.effect.IO") extends StreamingImplementation
-object Pekko extends StreamingImplementation
-object Zio extends StreamingImplementation
+import sttp.tapir.codegen.validation.{ValidationDefns, ValidationGenerator}
+import sttp.tapir.codegen.xml.{XmlSerdeGenerator, XmlSerdeLib}
 
 case class GenerationInfo(allFiles: Map[String, String], meta: GenerationMeta)
 
@@ -186,7 +179,8 @@ object RootGenerator {
          |}""".stripMargin
     }
 
-    val xmlSerdeObj = xmlSerdes.map(XmlSerdeGenerator.wrapBody(normalisedXmlLib, packagePath, objName, targetScala3, _, seperateFilesForModels))
+    val xmlSerdeObj =
+      xmlSerdes.map(XmlSerdeGenerator.wrapBody(normalisedXmlLib, packagePath, objName, targetScala3, _, seperateFilesForModels))
 
     val schemaObjs = if (schemas.size > 1) shimsAndSchemas.zipWithIndex.map { case ((shims, body), idx) =>
       val priorImports = (0 until idx).map { i => s"import $packagePath.${objName}Schemas${i + 1}._" }.mkString("\n")
@@ -223,7 +217,7 @@ object RootGenerator {
       .map { case (keyName, pairs) =>
         val values = pairs.map(_._2)
         val `type` = SpecificationExtensionRenderer.renderCombinedType(values)
-        val name = strippedToCamelCase(keyName)
+        val name = NameHelpers.strippedToCamelCase(keyName)
         val uncapitalisedName = uncapitalise(name)
         val capitalisedName = uncapitalisedName.capitalize
         (s"${capitalisedName}Extension", s"${uncapitalisedName}ExtensionKey", `type`)
@@ -415,49 +409,6 @@ object RootGenerator {
   }
 
   def indent(i: Int)(str: String): String = NameHelpers.indent(i)(str)
-
-  def mapSchemaSimpleTypeToType(osst: OpenapiSchemaSimpleType, multipartForm: Boolean = false): (String, Boolean) = {
-    osst match {
-      case OpenapiSchemaDouble(nb, _) =>
-        ("Double", nb)
-      case OpenapiSchemaFloat(nb, _) =>
-        ("Float", nb)
-      case OpenapiSchemaInt(nb, _) =>
-        ("Int", nb)
-      case OpenapiSchemaLong(nb, _) =>
-        ("Long", nb)
-      case OpenapiSchemaDate(nb) =>
-        ("java.time.LocalDate", nb)
-      case OpenapiSchemaDateTime(nb) =>
-        ("java.time.Instant", nb)
-      case OpenapiSchemaDuration(nb) =>
-        ("java.time.Duration", nb)
-      case OpenapiSchemaUUID(nb) =>
-        ("java.util.UUID", nb)
-      case OpenapiSchemaString(nb, _, _, _) =>
-        ("String", nb)
-      case OpenapiSchemaBoolean(nb) =>
-        ("Boolean", nb)
-      case OpenapiSchemaBinary(nb) if multipartForm =>
-        ("sttp.model.Part[java.io.File]", nb)
-      case OpenapiSchemaBinary(nb) =>
-        ("Array[Byte]", nb)
-      case OpenapiSchemaByte(nb) =>
-        ("ByteString", nb)
-      case OpenapiSchemaAny(nb, t) =>
-        (AnyType.toCirceTpe(t), nb)
-      case OpenapiSchemaRef(t) =>
-        (t.split('/').last, false)
-      case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")
-    }
-  }
-
-  def strippedToCamelCase(string: String): String = string
-    .split("[^0-9a-zA-Z$_]")
-    .filter(_.nonEmpty)
-    .zipWithIndex
-    .map { case (part, 0) => part; case (part, _) => part.capitalize }
-    .mkString
 
   def uncapitalise(name: String): String = NameHelpers.uncapitalise(name)
 
