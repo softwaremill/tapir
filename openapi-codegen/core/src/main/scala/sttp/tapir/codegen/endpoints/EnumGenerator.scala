@@ -1,6 +1,6 @@
-package sttp.tapir.codegen
+package sttp.tapir.codegen.endpoints
 
-import sttp.tapir.codegen.RootGenerator.indent
+import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaEnum
 

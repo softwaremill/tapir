@@ -32,4 +32,11 @@ object NameHelpers {
   }
 
   def uncapitalise(name: String): String = name.head.toLower +: name.tail
+
+  def strippedToCamelCase(string: String): String = string
+    .split("[^0-9a-zA-Z$_]")
+    .filter(_.nonEmpty)
+    .zipWithIndex
+    .map { case (part, 0) => part; case (part, _) => part.capitalize }
+    .mkString
 }

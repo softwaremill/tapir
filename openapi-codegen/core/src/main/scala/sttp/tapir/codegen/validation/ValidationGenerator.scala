@@ -1,12 +1,13 @@
-package sttp.tapir.codegen
+package sttp.tapir.codegen.validation
 
 import io.circe.JsonNumber
 import sttp.tapir.codegen.dedup.PackageReuseContext
+import sttp.tapir.codegen.endpoints.SimpleTypes.mapSchemaSimpleTypeToType
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.util.JavaEscape
+import sttp.tapir.codegen.util.NameHelpers.indent
 
 import scala.annotation.tailrec
 
@@ -152,7 +153,7 @@ object ValidationGenerator {
 
     def genTypeName(t: OpenapiSchemaType): String = t match {
       case OpenapiSchemaAllOf(Seq(singleType)) => genTypeName(singleType)
-      case s: OpenapiSchemaSimpleType          => RootGenerator.mapSchemaSimpleTypeToType(s)._1
+      case s: OpenapiSchemaSimpleType          => mapSchemaSimpleTypeToType(s)._1
       case e: OpenapiSchemaEnum                => e.`type`
       case a: OpenapiSchemaArray               => s"Seq[${genTypeName(a.items)}]"
       case a: OpenapiSchemaMap                 => s"Map[String, ${genTypeName(a.items)}]"

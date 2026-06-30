@@ -4,7 +4,16 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext, SchemaComparer}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{NumericRestrictions, OpenapiSchemaConstantString, OpenapiSchemaEnum, OpenapiSchemaField, OpenapiSchemaInt, OpenapiSchemaObject, OpenapiSchemaRef, OpenapiSchemaString}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  NumericRestrictions,
+  OpenapiSchemaConstantString,
+  OpenapiSchemaEnum,
+  OpenapiSchemaField,
+  OpenapiSchemaInt,
+  OpenapiSchemaObject,
+  OpenapiSchemaRef,
+  OpenapiSchemaString
+}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiInfo
