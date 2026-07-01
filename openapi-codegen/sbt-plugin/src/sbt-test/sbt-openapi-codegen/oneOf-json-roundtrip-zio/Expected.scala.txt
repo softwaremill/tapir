@@ -168,8 +168,8 @@ object TapirGeneratedEndpoints {
       .in(("inline" / "simple" / "object"))
       .in(multipartBody[PutInlineSimpleObjectRequest])
       .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode400))){ case (_, PutInlineSimpleObjectResponseErrCode400) => true },
-        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode401))){ case (_, PutInlineSimpleObjectResponseErrCode401) => true }))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode400))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode401))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode401) => true }))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
 
   type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, Unit, Any]
