@@ -311,8 +311,9 @@ object OutComponent {
                 )
               } else if (noHeaders && ambiguous) {
                 val (_, tpe, _) = bodyFmt(m, isErrorPosition)
+                val tt = tpe.map("_: " + _).getOrElse("_")
                 (
-                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeStrict$h){ case ${matchBodyAndHeaders("_")} => true }",
+                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeStrict$h){ case ${matchBodyAndHeaders(tt)} => true }",
                   maybeBodyType,
                   inlineDefn1
                 )

@@ -246,8 +246,8 @@ object TapirGeneratedEndpoints {
       .get
       .in(("inline" / "simple" / "object"))
       .errorOut(oneOf[(Array[Byte], GetInlineSimpleObjectResponseErrCode)](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(400), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/something-unrecognisedCodecFormat`](`application/something-unrecognisedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("application/something-unrecognised in error position").and(emptyOutputAs(GetInlineSimpleObjectResponseErrCode400))){ case (_, GetInlineSimpleObjectResponseErrCode400) => true },
-        oneOfVariantValueMatcher(sttp.model.StatusCode(401), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/something-unrecognisedCodecFormat`](`application/something-unrecognisedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("application/something-unrecognised in error position 2").and(emptyOutputAs(GetInlineSimpleObjectResponseErrCode401))){ case (_, GetInlineSimpleObjectResponseErrCode401) => true }))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/something-unrecognisedCodecFormat`](`application/something-unrecognisedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("application/something-unrecognised in error position").and(emptyOutputAs(GetInlineSimpleObjectResponseErrCode400))){ case (_: Array[Byte], GetInlineSimpleObjectResponseErrCode400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/something-unrecognisedCodecFormat`](`application/something-unrecognisedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("application/something-unrecognised in error position 2").and(emptyOutputAs(GetInlineSimpleObjectResponseErrCode401))){ case (_: Array[Byte], GetInlineSimpleObjectResponseErrCode401) => true }))
       .out(oneOf[GetInlineSimpleObjectResponseCode](
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1").and(emptyOutputAs(GetInlineSimpleObjectResponseCode200))){ case GetInlineSimpleObjectResponseCode200 => true},
         oneOfVariantValueMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2").and(emptyOutputAs(GetInlineSimpleObjectResponseCode201))){ case GetInlineSimpleObjectResponseCode201 => true}))
@@ -271,8 +271,8 @@ object TapirGeneratedEndpoints {
       }
       .in(multipartBody[PutInlineSimpleObjectRequest])
       .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode400))){ case (_, PutInlineSimpleObjectResponseErrCode400) => true },
-        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode401))){ case (_, PutInlineSimpleObjectResponseErrCode401) => true }))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode400))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode401))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode401) => true }))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
 
   type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, Unit, Any]
@@ -326,7 +326,7 @@ object TapirGeneratedEndpoints {
       def uri(_environment: environment = environment.default, _port: String = defaultPort, _customer: String = defaultCustomer): sttp.model.Uri =
         uri"https://${_environment}.my-co.org:${_port}/api/${_customer}/prefix"
     }
-
+    
     /*
       Legacy endpoint that doesn't require TLS
       Doesn't work, retained for completely mysterious reasons lost to the winds of time
@@ -337,7 +337,7 @@ object TapirGeneratedEndpoints {
       def uri(_port: String = defaultPort, _scoped: String = defaultScoped): sttp.model.Uri =
         uri"http://testing.my-co.org:${_port}/api/${_scoped}/prefix"
     }
-
+    
     /*
       Locally
     */

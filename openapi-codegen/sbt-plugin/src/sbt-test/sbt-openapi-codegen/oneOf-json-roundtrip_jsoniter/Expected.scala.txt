@@ -24,9 +24,9 @@ object TapirGeneratedEndpoints {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "text", subType = "csv")
   }
 
+  
 
-
-
+  
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -242,12 +242,12 @@ object TapirGeneratedEndpoints {
   case object DeleteInlineSimpleObjectResponseErrCode401 extends DeleteInlineSimpleObjectResponseErrCode
   case object DeleteInlineSimpleObjectResponseErrCode402 extends DeleteInlineSimpleObjectResponseErrCode
 
-
+  
   sealed trait PostCustomContentNegotiationBodyIn extends Product with java.io.Serializable
   case class PostCustomContentNegotiationBody0In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
   case class PostCustomContentNegotiationBody1In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
 
-
+  
   sealed trait PostCustomContentNegotiationBodyOut extends Product with java.io.Serializable {
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
     def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
@@ -263,7 +263,7 @@ object TapirGeneratedEndpoints {
     override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
   }
 
-
+  
   sealed trait PostCustomContentNegotiationBodyErr extends Product with java.io.Serializable {
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
     def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
@@ -365,8 +365,8 @@ object TapirGeneratedEndpoints {
       .in(("inline" / "simple" / "object"))
       .in(multipartBody[PutInlineSimpleObjectRequest])
       .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode400))){ case (_, PutInlineSimpleObjectResponseErrCode400) => true },
-        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode401))){ case (_, PutInlineSimpleObjectResponseErrCode401) => true }))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode400))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode401))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode401) => true }))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
 
   type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, PostInlineSimpleObjectResponse, Any]
@@ -461,10 +461,10 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[Aardvark]])
       .out(jsonBody[Aardvark].description("OK"))
 
-
+  
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getDynamicContentTypeTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems, putWrappedOneOf, postWrappedOneOf)
 
-
+  
   object Servers {
     import sttp.model.Uri.UriContext
 

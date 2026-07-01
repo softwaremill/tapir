@@ -8,7 +8,7 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generic.auto._
   import sttp.tapir.json.circe._
   import io.circe.generic.semiauto._
-  
+
   import sttp.tapir.generated.TapirGeneratedEndpointsValidators._
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
@@ -32,8 +32,8 @@ object TapirGeneratedEndpoints {
       case Some((v0: String, v1: String)) => (Some(v0: String), Some(v1: String))
       case None => (None, None)
     }
-  
 
+  
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -237,7 +237,7 @@ object TapirGeneratedEndpoints {
   case class PostJsonStringJsonBodyBody1In(value: Array[Byte]) extends PostJsonStringJsonBodyBodyIn
   case class PostJsonStringJsonBodyBodyOption_String_In(value: Option[String]) extends PostJsonStringJsonBodyBodyIn
 
-
+  
   sealed trait PostJsonStringJsonBodyBodyOut extends Product with java.io.Serializable {
     def `application/json`: () => Option[String] = () => throw new RuntimeException("Body for content type application/json not provided")
     def `application/zip`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/zip not provided")
@@ -712,8 +712,8 @@ object TapirGeneratedEndpoints {
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(multipartBody[PutInlineSimpleObjectRequest])
       .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode400))){ case (_, PutInlineSimpleObjectResponseErrCode400) => true },
-        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode401))){ case (_, PutInlineSimpleObjectResponseErrCode401) => true }))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode400))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode401))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode401) => true }))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
 
   type PostInlineSimpleObjectEndpoint = Endpoint[String, Option[PostInlineSimpleObjectRequest], Unit, (PostInlineSimpleObjectResponse, String), Any]
@@ -737,7 +737,7 @@ object TapirGeneratedEndpoints {
       .out(oneOf[DeleteInlineSimpleObjectResponseCode](
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1").and(emptyOutputAs(DeleteInlineSimpleObjectResponseCode200))){ case DeleteInlineSimpleObjectResponseCode200 => true},
         oneOfVariantValueMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2").and(emptyOutputAs(DeleteInlineSimpleObjectResponseCode201))){ case DeleteInlineSimpleObjectResponseCode201 => true}))
-  
+
   type PatchInlineSimpleObjectEndpoint = Endpoint[String, Option[ListType], ListType, ListType, Any]
   lazy val patchInlineSimpleObject: PatchInlineSimpleObjectEndpoint =
     endpoint
@@ -747,7 +747,7 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[ListType]].description("list type in"))
       .errorOut(jsonBody[ListType].description("list type error").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[ListType].description("list type out"))
-  
+
   type PostAllOfEndpoint = Endpoint[String, Option[HasFooBarBazQuux], Unit, Unit, Any]
   lazy val postAllOf: PostAllOfEndpoint =
     endpoint
@@ -756,7 +756,7 @@ object TapirGeneratedEndpoints {
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(jsonBody[Option[HasFooBarBazQuux]].description("list type in"))
       .out(statusCode(sttp.model.StatusCode(204)).description("fine"))
-  
+
   type PostValidationTestEndpoint = Endpoint[String, Option[ValidatedObj], Unit, Unit, Any]
   lazy val postValidationTest: PostValidationTestEndpoint =
     endpoint
@@ -765,7 +765,7 @@ object TapirGeneratedEndpoints {
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(jsonBody[Option[ValidatedObj]].validateOption(ValidatedObjValidator))
       .out(statusCode(sttp.model.StatusCode(204)).description("ok"))
-  
+
   type PostWrappedOneOfEndpoint = Endpoint[Unit, Option[Aardvark], Unit, Aardvark, Any]
   lazy val postWrappedOneOf: PostWrappedOneOfEndpoint =
     endpoint
@@ -773,14 +773,14 @@ object TapirGeneratedEndpoints {
       .in(("wrapped-one-of"))
       .in(jsonBody[Option[Aardvark]])
       .out(jsonBody[Aardvark].description("OK"))
-  
+
   
   lazy val generatedEndpoints = List(getSecurityGroupSecurityGroupName, getSecurityGroupSecurityGroupNameMorePath, getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, postInlineEnumTest, getOneofErrorSecParamTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getOneofOptionTest, getHeadersTests, getPatternRestrictedObject, getForceEager, putForceEager, postForceEager, patchForceEager, getForceStreaming, putForceStreaming, postForceStreaming, patchForceStreaming, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postAllOf, postValidationTest, postWrappedOneOf)
-  
+
   
   object Servers {
     import sttp.model.Uri.UriContext
-  
+
     /*
       These are the main endpoints.
       The environments are self-documenting!
@@ -815,6 +815,6 @@ object TapirGeneratedEndpoints {
       Locally
     */
     val `/`: sttp.model.Uri = uri"/"
-  
+
   }
 }
