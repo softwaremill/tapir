@@ -86,7 +86,8 @@ class EndpointGenerator {
       validators: ValidationDefns,
       generateValidators: Boolean,
       packageReuse: PackageReuseContext,
-      seperateFilesForModels: Boolean
+      seperateFilesForModels: Boolean,
+      addDisambiguationCodes: Boolean
   ): EndpointDefs = {
     val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
@@ -109,7 +110,8 @@ class EndpointGenerator {
             validators,
             generateValidators,
             packageReuse,
-            seperateFilesForModels
+            seperateFilesForModels,
+            addDisambiguationCodes
           )
         )
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
@@ -151,7 +153,8 @@ class EndpointGenerator {
       validators: ValidationDefns,
       generateValidators: Boolean,
       packageReuse: PackageReuseContext,
-      seperateFilesForModels: Boolean
+      seperateFilesForModels: Boolean,
+      addDisambiguationCodes: Boolean
   )(p: OpenapiPath): GeneratedEndpoints = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
@@ -220,7 +223,8 @@ class EndpointGenerator {
               generateValidators,
               isReused,
               packageReuse,
-              seperateFilesForModels
+              seperateFilesForModels,
+              addDisambiguationCodes
             )
           val allTypes = EndpointTypes(
             maybeSecurityPath.toSeq.flatMap(_._2) ++ securityTypes.toSeq,

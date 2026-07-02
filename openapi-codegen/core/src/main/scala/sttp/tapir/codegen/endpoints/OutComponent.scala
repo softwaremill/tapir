@@ -38,7 +38,8 @@ object OutComponent {
       generateValidators: Boolean,
       isReused: Boolean,
       packageReuse: PackageReuseContext,
-      seperateFilesForModels: Boolean
+      seperateFilesForModels: Boolean,
+      addDisambiguationCodes: Boolean
   )(implicit
       location: Location
   ) = {
@@ -249,7 +250,7 @@ object OutComponent {
           val allResponsesAreEmpty = allBodiesAreEmpty && many.forall(_.getHeaders.isEmpty)
 
           val manyIndexed = many.zipWithIndex
-          val ambiguous = manyIndexed.exists { case (r, i) =>
+          val ambiguous = addDisambiguationCodes && manyIndexed.exists { case (r, i) =>
             manyIndexed.filterNot(_._2 == i).map(_._1).exists(_.content.map(_.schema) == r.content.map(_.schema))
           }
 
