@@ -1,7 +1,7 @@
-package sttp.tapir.codegen
+package sttp.tapir.codegen.xml
 
-import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType}
-import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
+import sttp.tapir.codegen.dedup.PackageReuseContext
+import sttp.tapir.codegen.endpoints.SimpleTypes.mapSchemaSimpleTypeToType
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
@@ -12,12 +12,20 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaSimpleType
 }
 import sttp.tapir.codegen.openapi.models.OpenapiXml
+import sttp.tapir.codegen.util.NameHelpers.indent
+
+object XmlSerdeLib extends Enumeration {
+  val CatsXml, NoSupport = Value
+  type XmlSerdeLib = Value
+}
+import sttp.tapir.codegen.xml.XmlSerdeLib._
 
 object SchemaTypeType extends Enumeration {
   val EnumType, ArrayType, OtherType = Value
   type SchemaTypeType = Value
 }
-import SchemaTypeType._
+import sttp.tapir.codegen.xml.SchemaTypeType._
+
 case class ScopedAuxCodecParams(
     fieldName: String,
     wrappedType: String,
@@ -27,7 +35,12 @@ case class ScopedAuxCodecParams(
 )
 
 object XmlSerdeGenerator {
-  def genTopLevelSeqSerdes(xmlSerdeLib: XmlSerdeLib, schema: OpenapiSchemaArray, endpointName: String, position: String): Option[(String, String)] =
+  def genTopLevelSeqSerdes(
+      xmlSerdeLib: XmlSerdeLib,
+      schema: OpenapiSchemaArray,
+      endpointName: String,
+      position: String
+  ): Option[(String, String)] =
     schema match {
       case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, c, _) if xmlSerdeLib == XmlSerdeLib.CatsXml =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
@@ -59,13 +72,12 @@ object XmlSerdeGenerator {
           .map { ref =>
             val decoderName = s"${ref}XmlDecoder"
             val encoderName = s"${ref}XmlEncoder"
-            if (PackageReuseContext.isReusedSchema(ref, packageReuse)){
+            if (PackageReuseContext.isReusedSchema(ref, packageReuse)) {
               val inheritedImpl = s"${packageReuse.dependencyModelPath}XmlSerdes"
               s"""
                  |implicit lazy val $decoderName: Decoder[$ref] = $inheritedImpl.$decoderName
                  |implicit lazy val $encoderName: Encoder[$ref] = $inheritedImpl.$encoderName""".stripMargin
-            }
-            else {
+            } else {
               val mappedArraysOfSimpleSchemas: Seq[ScopedAuxCodecParams] =
                 doc.components.toSeq
                   .flatMap(_.schemas.get(ref).map(ref -> _))
@@ -74,7 +86,7 @@ object XmlSerdeGenerator {
                     _.collect {
                       case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _, _)), r)
                           if doc.components.exists(_.schemas.get(t.stripped).exists(_.isInstanceOf[OpenapiSchemaEnum])) =>
-                        val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
+                        val tpe = mapSchemaSimpleTypeToType(t)._1
                         val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                         ScopedAuxCodecParams(n, d, tpe, EnumType, None)
                       case (ref, (n, OpenapiSchemaField(t: OpenapiSchemaEnum, _, _)), r) =>
@@ -82,10 +94,10 @@ object XmlSerdeGenerator {
                         val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                         ScopedAuxCodecParams(n, d, tpe, EnumType, None)
                       case (_, (n, OpenapiSchemaField(OpenapiSchemaArray(t: OpenapiSchemaSimpleType, _, maybeXml, _), _, _)), _) =>
-                        val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
+                        val tpe = mapSchemaSimpleTypeToType(t)._1
                         ScopedAuxCodecParams(n, tpe, tpe, ArrayType, maybeXml)
                       case (_, (n, OpenapiSchemaField(t: OpenapiSchemaRef, _, _)), r) =>
-                        val tpe = RootGenerator.mapSchemaSimpleTypeToType(t)._1
+                        val tpe = mapSchemaSimpleTypeToType(t)._1
                         val d = if (!r || t.nullable) s"Option[$tpe]" else tpe
                         ScopedAuxCodecParams(n, d, tpe, OtherType, None)
                     }
@@ -179,11 +191,19 @@ object XmlSerdeGenerator {
       }
   }
 
-  def wrapBody(xmlSerdeLib: XmlSerdeLib, packagePath: String, objName: String, targetScala3: Boolean, body: String): String =
+  def wrapBody(
+      xmlSerdeLib: XmlSerdeLib,
+      packagePath: String,
+      objName: String,
+      targetScala3: Boolean,
+      body: String,
+      seperateFilesForModels: Boolean
+  ): String =
     xmlSerdeLib match {
       case XmlSerdeLib.NoSupport =>
         throw new IllegalStateException("Codegen should not be attempting to generate serdes when specified xml lib is 'none'")
       case XmlSerdeLib.CatsXml =>
+        val maybeModelImport = if (seperateFilesForModels) s"\n  import $packagePath.models._" else ""
         val enumDecoder =
           if (targetScala3)
             """  def enumDecoder[T: scala.reflect.ClassTag](fn: String => T): Decoder[T] =
@@ -218,7 +238,7 @@ object XmlSerdeGenerator {
         s"""package $packagePath
        |
        |object ${objName}XmlSerdes {
-       |  import $packagePath.$objName._
+       |  import $packagePath.$objName._$maybeModelImport
        |  import sttp.tapir.generic.auto._
        |  import cats.data.NonEmptyList
        |  import cats.xml.{NodeContent, Xml, XmlData, XmlNode}

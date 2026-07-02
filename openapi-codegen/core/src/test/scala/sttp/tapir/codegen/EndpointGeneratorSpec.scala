@@ -1,6 +1,8 @@
 package sttp.tapir.codegen
 
 import sttp.tapir.codegen.json.JsonSerdeLib
+import sttp.tapir.codegen.dedup.PackageReuseContext
+import sttp.tapir.codegen.endpoints.{EndpointGenerator, FS2}
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
@@ -27,6 +29,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaString
 }
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
+import sttp.tapir.codegen.validation.ValidationDefns
+import sttp.tapir.codegen.xml.XmlSerdeLib
 
 import scala.collection.mutable
 
@@ -79,6 +83,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           validators = ValidationDefns.empty,
           generateValidators = true,
           packageReuse = PackageReuseContext.none,
+          seperateFilesForModels = false
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -171,6 +176,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           validators = ValidationDefns.empty,
           generateValidators = true,
           packageReuse = PackageReuseContext.none,
+          seperateFilesForModels = false
         )
         .endpointDecls(None)).shouldCompile()
   }
@@ -230,6 +236,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           validators = ValidationDefns.empty,
           generateValidators = true,
           packageReuse = PackageReuseContext.none,
+          seperateFilesForModels = false
         )
         .endpointDecls(None)
     generatedCode should include(
@@ -289,21 +296,23 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    val objs: Map[String, String] = RootGenerator.generateObjects(
-      doc,
-      "sttp.tapir.generated",
-      "TapirGeneratedEndpoints",
-      targetScala3 = isScala3,
-      useHeadTagForObjectNames = false,
-      jsonSerdeLib = "circe",
-      xmlSerdeLib = "cats-xml",
-      validateNonDiscriminatedOneOfs = true,
-      maxSchemasPerFile = 400,
-      streamingImplementation = "fs2",
-      generateEndpointTypes = false,
-      generateValidators = true,
-      useCustomJsoniterSerdes = true
-    ).allFiles
+    val objs: Map[String, String] = RootGenerator
+      .generateObjects(
+        doc,
+        "sttp.tapir.generated",
+        "TapirGeneratedEndpoints",
+        targetScala3 = isScala3,
+        useHeadTagForObjectNames = false,
+        jsonSerdeLib = "circe",
+        xmlSerdeLib = "cats-xml",
+        validateNonDiscriminatedOneOfs = true,
+        maxSchemasPerFile = 400,
+        streamingImplementation = "fs2",
+        generateEndpointTypes = false,
+        generateValidators = true,
+        useCustomJsoniterSerdes = true
+      )
+      .allFiles
     val schemas = objs("TapirGeneratedEndpointsSchemas")
     val generatedCode = objs("TapirGeneratedEndpoints")
     generatedCode should include(
@@ -317,7 +326,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
 
   it should "generate attributes for specification extensions on path and operation objects" in {
     val doc = TestHelpers.specificationExtensionDocs
-    val generatedCode = RootGenerator.generateObjects(
+    val generatedObj = RootGenerator.generateObjects(
       doc,
       "sttp.tapir.generated",
       "TapirGeneratedEndpoints",
@@ -331,7 +340,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       generateEndpointTypes = false,
       generateValidators = true,
       useCustomJsoniterSerdes = true
-    ).allFiles("TapirGeneratedEndpoints")
+    )
+    val generatedCode = generatedObj.allFiles("TapirGeneratedEndpointsSchemas") + "\n" + generatedObj.allFiles("TapirGeneratedEndpoints")
     generatedCode.shouldCompile()
     val expectedAttrDecls = Seq(
       """.attribute[CustomStringExtensionOnPathExtension](customStringExtensionOnPathExtensionKey, "another string")""",

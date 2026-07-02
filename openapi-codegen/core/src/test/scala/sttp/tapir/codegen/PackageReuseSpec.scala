@@ -2,6 +2,7 @@ package sttp.tapir.codegen
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext, SchemaComparer}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   NumericRestrictions,
@@ -79,12 +80,14 @@ class PackageReuseContextSpec extends AnyFlatSpec with Matchers {
       petDoc(),
       "sttp.tapir.generated.core",
       "TapirGeneratedEndpoints",
-      GenerationMeta.default,
+      GenerationMeta.default
     )
     ctx.reusedSchemas shouldBe Set("Pet")
     ctx.dependencyModelPath shouldBe "sttp.tapir.generated.core.TapirGeneratedEndpoints"
-    PackageReuseContext.aliasType("Pet", ctx) shouldBe
+    PackageReuseContext.aliasType("Pet", ctx, false) shouldBe
       "type Pet = sttp.tapir.generated.core.TapirGeneratedEndpoints.Pet"
+    PackageReuseContext.aliasType("Pet", ctx, true) shouldBe
+      "type Pet = sttp.tapir.generated.core.models.Pet"
   }
 
   it should "reuse Pet from schema_inheritance sbt-test specs" in {

@@ -2,6 +2,7 @@ package sttp.tapir.generated
 
 object TapirGeneratedEndpointsXmlSerdes {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
+  import sttp.tapir.generated.models._
   import sttp.tapir.generic.auto._
   import cats.data.NonEmptyList
   import cats.xml.{NodeContent, Xml, XmlData, XmlNode}
@@ -115,7 +116,7 @@ object TapirGeneratedEndpointsXmlSerdes {
     }
     case Left(t) => sttp.tapir.DecodeResult.Error(s, t)
   }
-  
+
   implicit lazy val PeerDTOXmlTypeInterpreter: XmlTypeInterpreter[PeerDTO] = XmlTypeInterpreter.auto[PeerDTO]((_, _) => false, (_, _) => false)
   implicit lazy val PeerDTOXmlDecoder: Decoder[PeerDTO] = deriveConfiguredDecoder[PeerDTO]
   implicit lazy val PeerDTOXmlEncoder: Encoder[PeerDTO] = deriveConfiguredEncoder[PeerDTO]

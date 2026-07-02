@@ -1,6 +1,6 @@
-package sttp.tapir.codegen
+package sttp.tapir.codegen.endpoints
 
-import sttp.tapir.codegen.RootGenerator.indent
+import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaEnum
 
@@ -66,4 +66,55 @@ object EnumGenerator {
          |}""".stripMargin :: Nil
     }
   }
+
+  def enumSerdeHelperDefn(targetScala3: Boolean): String = {
+    if (targetScala3)
+      """
+        |def enumMap[E: enumextensions.EnumMirror]: Map[String, E] =
+        |  Map.from(
+        |    for e <- enumextensions.EnumMirror[E].values yield e.name.toUpperCase -> e
+        |  )
+        |case class EnumExtraParamSupport[T: enumextensions.EnumMirror](eMap: Map[String, T]) extends ExtraParamSupport[T] {
+        |  // Case-insensitive mapping
+        |  def decode(s: String): sttp.tapir.DecodeResult[T] =
+        |    scala.util
+        |      .Try(eMap(s.toUpperCase))
+        |      .fold(
+        |        _ =>
+        |          sttp.tapir.DecodeResult.Error(
+        |            s,
+        |            new NoSuchElementException(
+        |              s"Could not find value $s for enum ${enumextensions.EnumMirror[T].mirroredName}, available values: ${enumextensions.EnumMirror[T].values.mkString(", ")}"
+        |            )
+        |          ),
+        |        sttp.tapir.DecodeResult.Value(_)
+        |      )
+        |  def encode(t: T): String = t.name
+        |}
+        |def extraCodecSupport[T: enumextensions.EnumMirror]: ExtraParamSupport[T] =
+        |  EnumExtraParamSupport(enumMap[T](using enumextensions.EnumMirror[T]))
+        |""".stripMargin
+    else
+      """
+        |case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
+        |  // Case-insensitive mapping
+        |  def decode(s: String): sttp.tapir.DecodeResult[T] =
+        |    scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
+        |      .fold(
+        |        _ =>
+        |          sttp.tapir.DecodeResult.Error(
+        |            s,
+        |            new NoSuchElementException(
+        |              s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
+        |            )
+        |          ),
+        |        sttp.tapir.DecodeResult.Value(_)
+        |      )
+        |  def encode(t: T): String = t.entryName
+        |}
+        |def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
+        |  EnumExtraParamSupport(enumName, T)
+        |""".stripMargin
+  }
+
 }

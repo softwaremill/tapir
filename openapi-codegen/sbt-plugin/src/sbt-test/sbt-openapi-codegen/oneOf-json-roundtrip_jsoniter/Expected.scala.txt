@@ -24,8 +24,9 @@ object TapirGeneratedEndpoints {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "text", subType = "csv")
   }
 
+  
 
-
+  
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -88,6 +89,9 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
 
+  type ListType = List[ByteString]
+  type SomeBinaryType = io.circe.JsonObject
+
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] {
     val values = findValues
@@ -104,14 +108,6 @@ object TapirGeneratedEndpoints {
     case object available extends PetStatus
     case object pending extends PetStatus
     case object sold extends PetStatus
-  }
-
-  sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry
-  object SubtypeWithoutD3E2 extends enumeratum.Enum[SubtypeWithoutD3E2] {
-    val values = findValues
-    case object A extends SubtypeWithoutD3E2
-    case object B extends SubtypeWithoutD3E2
-    case object C extends SubtypeWithoutD3E2
   }
   case class Abrdvark (
     b: Boolean
@@ -165,6 +161,14 @@ object TapirGeneratedEndpoints {
     e2: Option[SubtypeWithoutD3E2] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+
+  sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry
+  object SubtypeWithoutD3E2 extends enumeratum.Enum[SubtypeWithoutD3E2] {
+    val values = findValues
+    case object A extends SubtypeWithoutD3E2
+    case object B extends SubtypeWithoutD3E2
+    case object C extends SubtypeWithoutD3E2
+  }
   case class Tag (
     id: Option[Long] = None,
     name: Option[String] = None
@@ -179,8 +183,7 @@ object TapirGeneratedEndpoints {
   case class WrapB (
     w: AnEnum
   )
-  type ListType = List[ByteString]
-  type SomeBinaryType = io.circe.JsonObject
+
   sealed trait StringOrInt
   case class StringOrIntString(v: String) extends StringOrInt
   case class StringOrIntInt(v: Int) extends StringOrInt
@@ -219,6 +222,10 @@ object TapirGeneratedEndpoints {
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  sealed trait PutInlineSimpleObjectResponseErrCode
+  case object PutInlineSimpleObjectResponseErrCode400 extends PutInlineSimpleObjectResponseErrCode
+  case object PutInlineSimpleObjectResponseErrCode401 extends PutInlineSimpleObjectResponseErrCode
+
   case class PostInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -227,12 +234,20 @@ object TapirGeneratedEndpoints {
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  sealed trait DeleteInlineSimpleObjectResponseCode
+  case object DeleteInlineSimpleObjectResponseCode200 extends DeleteInlineSimpleObjectResponseCode
+  case object DeleteInlineSimpleObjectResponseCode201 extends DeleteInlineSimpleObjectResponseCode
 
+  sealed trait DeleteInlineSimpleObjectResponseErrCode
+  case object DeleteInlineSimpleObjectResponseErrCode401 extends DeleteInlineSimpleObjectResponseErrCode
+  case object DeleteInlineSimpleObjectResponseErrCode402 extends DeleteInlineSimpleObjectResponseErrCode
+
+  
   sealed trait PostCustomContentNegotiationBodyIn extends Product with java.io.Serializable
   case class PostCustomContentNegotiationBody0In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
   case class PostCustomContentNegotiationBody1In(value: sttp.capabilities.pekko.PekkoStreams.BinaryStream) extends PostCustomContentNegotiationBodyIn
 
-
+  
   sealed trait PostCustomContentNegotiationBodyOut extends Product with java.io.Serializable {
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
     def `text/csv`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => throw new RuntimeException("Body for content type text/csv not provided")
@@ -248,7 +263,7 @@ object TapirGeneratedEndpoints {
     override def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => sttp.capabilities.pekko.PekkoStreams.BinaryStream = () => value
   }
 
-
+  
   sealed trait PostCustomContentNegotiationBodyErr extends Product with java.io.Serializable {
     def `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet not provided")
     def `text/csv`: () => String = () => throw new RuntimeException("Body for content type text/csv not provided")
@@ -343,15 +358,15 @@ object TapirGeneratedEndpoints {
       .in(xmlBody[Pet])
       .out(xmlBody[Pet].description("An object"))
 
-  type PutInlineSimpleObjectEndpoint = Endpoint[Unit, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
+  type PutInlineSimpleObjectEndpoint = Endpoint[Unit, PutInlineSimpleObjectRequest, (Array[Byte], PutInlineSimpleObjectResponseErrCode), PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
       .put
       .in(("inline" / "simple" / "object"))
       .in(multipartBody[PutInlineSimpleObjectRequest])
-      .errorOut(oneOf[Array[Byte]](
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position")),
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2"))))
+      .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode400))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(PutInlineSimpleObjectResponseErrCode401))){ case (_: Array[Byte], PutInlineSimpleObjectResponseErrCode401) => true }))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
 
   type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, PostInlineSimpleObjectResponse, Any]
@@ -362,17 +377,17 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[PostInlineSimpleObjectRequest]])
       .out(jsonBody[PostInlineSimpleObjectResponse].description("An object"))
 
-  type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
+  type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, DeleteInlineSimpleObjectResponseErrCode, DeleteInlineSimpleObjectResponseCode, Any]
   lazy val deleteInlineSimpleObject: DeleteInlineSimpleObjectEndpoint =
     endpoint
       .delete
       .in(("inline" / "simple" / "object"))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("empty response 3"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(402), emptyOutput.description("empty response 4"))(())))
-      .out(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2"))(())))
+      .errorOut(oneOf[DeleteInlineSimpleObjectResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), emptyOutput.description("empty response 3").and(emptyOutputAs(DeleteInlineSimpleObjectResponseErrCode401))){ case DeleteInlineSimpleObjectResponseErrCode401 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(402), emptyOutput.description("empty response 4").and(emptyOutputAs(DeleteInlineSimpleObjectResponseErrCode402))){ case DeleteInlineSimpleObjectResponseErrCode402 => true}))
+      .out(oneOf[DeleteInlineSimpleObjectResponseCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1").and(emptyOutputAs(DeleteInlineSimpleObjectResponseCode200))){ case DeleteInlineSimpleObjectResponseCode200 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2").and(emptyOutputAs(DeleteInlineSimpleObjectResponseCode201))){ case DeleteInlineSimpleObjectResponseCode201 => true}))
 
   type PatchInlineSimpleObjectEndpoint = Endpoint[Unit, Option[ListType], ListType, ListType, Any]
   lazy val patchInlineSimpleObject: PatchInlineSimpleObjectEndpoint =
@@ -446,10 +461,10 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[Aardvark]])
       .out(jsonBody[Aardvark].description("OK"))
 
-
+  
   lazy val generatedEndpoints = List(putAdtTest, postAdtTest, getDynamicContentTypeTest, getOneofOptionTest, getRedirectTest, putRedirectTest, deleteRedirectTest, postGenericJson, postXmlEndpoint, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postCustomContentNegotiation, putCustomContentTypes, postCustomContentTypes, postUniqueItems, putWrappedOneOf, postWrappedOneOf)
 
-
+  
   object Servers {
     import sttp.model.Uri.UriContext
 
