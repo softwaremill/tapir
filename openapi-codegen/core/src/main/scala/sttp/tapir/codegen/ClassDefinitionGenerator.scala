@@ -136,14 +136,27 @@ class ClassDefinitionGenerator {
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
 
+    def allChildrenDefineDiscriminator(d: String, s: OpenapiSchemaOneOf): Boolean =
+      s.types.forall {
+        case t: OpenapiSchemaRef =>
+          t.maybeResolved(doc).exists {
+            case o: OpenapiSchemaObject => o.properties.contains(d)
+            case _                      => false
+          }
+        case _ => false
+      }
+
     val adtTypes =
       adtInheritanceMap
         .flatMap(_._2)
         .toSeq
-        .map(_._1)
+        .map { s => s._1 -> s._2.discriminator.map(_.propertyName).filter(d => allChildrenDefineDiscriminator(d, s._2)) }
         .distinct
-        .filterNot(PackageReuseContext.isReusedSchema(_, packageReuse))
-        .map(name => s"sealed trait $name")
+        .filterNot(s => PackageReuseContext.isReusedSchema(s._1, packageReuse))
+        .map { case (name, maybeDiscriminator) =>
+          val maybeBody = maybeDiscriminator.map(d => s" { def ${NameHelpers.safeVariableName(d)}: String }").getOrElse("")
+          s"sealed trait $name$maybeBody"
+        }
         .sorted
         .mkString("", "\n", "\n")
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
