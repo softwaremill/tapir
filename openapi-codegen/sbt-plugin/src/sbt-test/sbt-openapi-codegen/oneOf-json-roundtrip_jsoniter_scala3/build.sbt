@@ -19,7 +19,7 @@ libraryDependencies ++= Seq(
   "com.beachape" %% "enumeratum" % "1.9.8",
   "co.fs2" %% "fs2-core" % "3.12.2",
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.16",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.16" % "compile-internal",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.17" % "compile-internal",
   "org.scalatest" %% "scalatest" % "3.2.20" % Test,
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0" % Test,
   "com.softwaremill.sttp.client3" %% "http4s-backend" % "3.11.0" % Test
