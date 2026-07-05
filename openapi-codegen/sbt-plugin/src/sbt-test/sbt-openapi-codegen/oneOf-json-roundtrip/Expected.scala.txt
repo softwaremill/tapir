@@ -92,7 +92,7 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
-  sealed trait ADTWithDiscriminator
+  sealed trait ADTWithDiscriminator { def `type`: String }
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
   sealed trait AnyObjectWithInlineEnum
