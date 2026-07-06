@@ -185,6 +185,15 @@ object TapirRequestTest16 {
 @endpointInput("some/path")
 final case class TapirRequestTest17()
 
+object TapirRequestTest18 {
+  final case class Nested(
+      @query
+      field1: Int,
+      @query
+      field2: String
+  )
+}
+
 class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks with Tapir {
 
   "@endpointInput" should "derive correct input for @query, @cookie, @header" in {
@@ -200,6 +209,12 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
       .mapTo[TapirRequestTest1]
 
     compareTransputs(EndpointInput.derived[TapirRequestTest1], expectedInput) shouldBe true
+  }
+
+  it should "derive correct input for a case class defined inside an object" in {
+    val expectedInput = query[Int]("field1").and(query[String]("field2")).mapTo[TapirRequestTest18.Nested]
+
+    compareTransputs(EndpointInput.derived[TapirRequestTest18.Nested], expectedInput) shouldBe true
   }
 
   it should "derive correct input for dealiased bodies" in {

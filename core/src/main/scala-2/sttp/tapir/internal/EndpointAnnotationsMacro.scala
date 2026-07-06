@@ -95,7 +95,7 @@ private[tapir] abstract class EndpointAnnotationsMacro(val c: blackbox.Context) 
   }
 
   protected def mapToTargetFunc[A](inputIdxToFieldIdx: mutable.Map[Int, Int], util: CaseClassUtil[c.type, A]): Tree = {
-    val className = util.className
+    val companion = util.companion
     if (inputIdxToFieldIdx.size > 1) {
       val tupleTypeComponents = (0 until inputIdxToFieldIdx.size) map { idx =>
         val field = util.fields(inputIdxToFieldIdx(idx))
@@ -110,11 +110,11 @@ private[tapir] abstract class EndpointAnnotationsMacro(val c: blackbox.Context) 
         q"t.$fieldName"
       }
 
-      q"(t: $tupleType) => $className(..$ctorArgs)"
+      q"(t: $tupleType) => $companion(..$ctorArgs)"
     } else if (inputIdxToFieldIdx.size == 1) {
-      q"(t: ${util.fields.head.info}) => $className(t)"
+      q"(t: ${util.fields.head.info}) => $companion(t)"
     } else {
-      q"(t: ${}) => $className()"
+      q"(t: ${}) => $companion()"
     }
   }
 
