@@ -29,10 +29,11 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
     }
   }
 
-  lazy val instanceFromValues: Tree = if (fields.size == 1) {
-    q"$companion.apply(values.head.asInstanceOf[${fields.head.typeSignature}])"
-  } else {
-    q"($companion.apply _).tupled.asInstanceOf[Any => $t].apply(sttp.tapir.internal.SeqToParams(values))"
+  // apply is called with explicit arguments instead of eta-expansion (`(apply _).tupled`), as the latter fails to
+  // compile when the companion defines additional apply overloads
+  lazy val instanceFromValues: Tree = {
+    val args = fields.zipWithIndex.map { case (field, i) => q"values($i).asInstanceOf[${field.typeSignature}]" }
+    q"$companion.apply(..$args)"
   }
 
   lazy val schema: Tree = c.typecheck(q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Schema[$t]]")
