@@ -18,7 +18,16 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
     .paramLists
     .head
 
-  lazy val companion: Ident = Ident(TermName(t.typeSymbol.name.decodedName.toString))
+  // the reference to the companion object must be qualified with the case class's prefix, as a bare-name identifier
+  // doesn't resolve for classes nested in objects or classes (see: https://github.com/softwaremill/tapir/issues/4354);
+  // local classes have no prefix, but there a bare name is in scope
+  lazy val companion: Tree = {
+    val name = TermName(t.typeSymbol.name.decodedName.toString)
+    t.dealias match {
+      case TypeRef(pre, _, _) if pre != NoPrefix => Select(c.internal.gen.mkAttributedQualifier(pre), name)
+      case _                                     => Ident(name)
+    }
+  }
 
   lazy val instanceFromValues: Tree = if (fields.size == 1) {
     q"$companion.apply(values.head.asInstanceOf[${fields.head.typeSignature}])"
