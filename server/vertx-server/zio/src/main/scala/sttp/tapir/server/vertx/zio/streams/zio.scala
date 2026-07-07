@@ -144,10 +144,11 @@ package object streams {
             } yield result.map((_, ()))
           })
           .mapZIO({
+            // Vert.x 5 throws an IllegalStateException when pausing/resuming a fully-read request; it's safe to ignore (Vert.x 4 treated it as a no-op)
             case Pause =>
-              ZIO.attempt(readStream.pause())
+              ZIO.attempt(readStream.pause()).ignore
             case Resume =>
-              ZIO.attempt(readStream.resume())
+              ZIO.attempt(readStream.resume()).ignore
           })
           .runDrain
           .forkDaemon
