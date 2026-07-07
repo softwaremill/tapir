@@ -49,7 +49,14 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
       case RawBodyType.FileBody =>
         serverOptions.createFile(serverRequest).flatMap { file =>
           val fileSink = Files[F].writeAll(file.toPath)
-          body.through(fileSink).compile.drain.map(_ => RawValue(FileRange(file), Seq(FileRange(file))))
+          body
+            .through(fileSink)
+            .compile
+            .drain
+            // a mid-stream failure (e.g. StreamMaxLengthExceededException, when the max content length is exceeded)
+            // means that the file is never returned as a raw value, so it would never be cleaned up - delete it here
+            .onError { case _ => serverOptions.deleteFile(file).attempt.void }
+            .map(_ => RawValue(FileRange(file), Seq(FileRange(file))))
         }
       case m: RawBodyType.MultipartBody =>
         // TODO: use MultipartDecoder.mixedMultipart once available?

@@ -3,6 +3,8 @@ package sttp.tapir.server.netty
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import io.netty.channel.EventLoopGroup
+import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers.*
 import ox.*
 import sttp.capabilities.fs2.Fs2Streams
@@ -22,6 +24,12 @@ import org.slf4j.LoggerFactory
 
 class NettySyncRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]]):
   val logger = LoggerFactory.getLogger(getClass.getName)
+
+  // increase the patience for `eventually` for slow CI tests
+  implicit val patienceConfig: Eventually.PatienceConfig = Eventually.PatienceConfig(
+    timeout = org.scalatest.time.Span(15, org.scalatest.time.Seconds),
+    interval = org.scalatest.time.Span(150, org.scalatest.time.Millis)
+  )
 
   def tests(): List[Test] = List(
     Test("properly update metrics when a request times out") {
@@ -77,10 +85,12 @@ class NettySyncRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebS
             .map: response =>
               response.body should matchPattern { case Left(_) => }
               response.code shouldBe StatusCode.ServiceUnavailable
-              // unlike in NettyFutureRequestTimeoutTest, here interruption works properly, and the metrics should be updated quickly
-              Thread.sleep(100)
-              activeRequests.get() shouldBe 0
-              totalRequests.get() shouldBe 1
+              // unlike in NettyFutureRequestTimeoutTest, here interruption works properly, and the metrics should be updated
+              // quickly; however, on a loaded CI machine this might still take some time
+              eventually {
+                activeRequests.get() shouldBe 0
+                totalRequests.get() shouldBe 1
+              }
             .unsafeRunSync()
     }
   )
