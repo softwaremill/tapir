@@ -439,6 +439,9 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
+      // blaze-server is versioned independently and pulls in an older http4s-server; pin it to the core version so
+      // the server and core bytecode stay consistent (mixing them caused a NoSuchMethodError with core 0.23.35)
+      "org.http4s" %% "http4s-server" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       logback
     ),
