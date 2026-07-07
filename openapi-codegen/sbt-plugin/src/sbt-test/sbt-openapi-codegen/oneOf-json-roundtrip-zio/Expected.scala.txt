@@ -16,6 +16,7 @@ object TapirGeneratedEndpoints {
   
   
   
+  
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -56,9 +57,12 @@ object TapirGeneratedEndpoints {
   type ByteString <: Array[Byte]
   implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
+  
   sealed trait ADTWithDiscriminator
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
+  
+  type ListType = List[String]
   
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] {
@@ -105,7 +109,7 @@ object TapirGeneratedEndpoints {
     e: Option[AnEnum] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
-  type ListType = List[String]
+  
   sealed trait Aardvark
   case class AardvarkUUID(v: java.util.UUID) extends Aardvark
   case class AardvarkDate(v: java.time.LocalDate) extends Aardvark
