@@ -13,7 +13,7 @@ import sttp.tapir.server.interceptor.CustomiseInterceptors
 import sttp.tapir.tests._
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 trait CreateServerTest[F[_], +R, OPTIONS, ROUTE] {
   protected type Interceptors = CustomiseInterceptors[F, OPTIONS] => CustomiseInterceptors[F, OPTIONS]
@@ -115,6 +115,9 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
         .use { case (port, stopServer) =>
           runTest(stopServer)(backend, uri"http://localhost:$port").guarantee(IO(logger.info(s"Tests completed on port $port")))
         }
+        // bound a hung test (e.g. a stuck WebSocket/stream wait), so that it's cancelled (closing the server)
+        // instead of stalling the whole serial CI test run
+        .timeout(3.minutes)
         .unsafeToFuture()
     )
   }
@@ -134,6 +137,9 @@ class DefaultCreateServerTest[F[_], +R, OPTIONS, ROUTE](
           runTest(backend, uri"http://localhost:$port")
             .guaranteeCase(exitCase => IO(logger.info(s"Test on port $port: ${exitCase.getClass.getSimpleName}")))
         }
+        // bound a hung test (e.g. a stuck WebSocket/stream wait), so that it's cancelled (closing the server)
+        // instead of stalling the whole serial CI test run
+        .timeout(3.minutes)
         .unsafeToFuture()
     )
   }
