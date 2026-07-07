@@ -1,6 +1,5 @@
 package sttp.tapir.codegen.json
 
-import sttp.tapir.codegen.PackageReuseContext
 import sttp.tapir.codegen.json.JsonHelpers.{checkForSoundness, inlineEndpointSchemas}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
@@ -23,6 +22,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaStringType,
   OpenapiSchemaUUID
 }
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.util.NameHelpers.{indent, uncapitalise}
 
 object CirceSerdeImpl {
@@ -66,9 +66,9 @@ object CirceSerdeImpl {
         case (name, schema: OpenapiSchemaObject, true) =>
           circeParentImpl(name) orElse Some(genCirceObjectSerde(name, schema))
         case (name, schema: OpenapiSchemaMap, true) =>
-          circeParentImpl(name) orElse Some(genCirceMapOrArraySerde(name, schema.items))
+          genCirceMapOrArraySerde(name, schema.items).map { case (n, impl) => circeParentImpl(n).getOrElse(impl) }
         case (name, schema: OpenapiSchemaArray, true) =>
-          circeParentImpl(name) orElse Some(genCirceMapOrArraySerde(name, schema.items))
+          genCirceMapOrArraySerde(name, schema.items).map { case (n, impl) => circeParentImpl(n).getOrElse(impl) }
         case (name, schema: OpenapiSchemaOneOf, true) =>
           circeParentImpl(name) orElse Some(
             if (schema.types.exists(!_.isInstanceOf[OpenapiSchemaRef]))
@@ -118,12 +118,13 @@ object CirceSerdeImpl {
     s"""${subs}implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.generic.semiauto.deriveDecoder[$name]
        |implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.generic.semiauto.deriveEncoder[$name]""".stripMargin
   }
-  private def genCirceMapOrArraySerde(name: String, schema: OpenapiSchemaType): String = {
-    val subs = schema match {
-      case `type`: OpenapiSchemaObject => Some(genCirceObjectSerde(s"${name}ObjectsItem", `type`))
-      case _                           => None
+  private def genCirceMapOrArraySerde(name: String, schema: OpenapiSchemaType): Option[(String, String)] = {
+    schema match {
+      case `type`: OpenapiSchemaObject =>
+        val inlineItemName = s"${name}ObjectsItem"
+        Some(inlineItemName -> ("\n" + genCirceObjectSerde(inlineItemName, `type`)))
+      case _ => None
     }
-    subs.fold("")("\n" + _)
   }
 
   private def genCirceAdtSerde(
@@ -242,7 +243,8 @@ object CirceSerdeImpl {
           case s                      =>
             s"case x: ${name}${s.disambiguationSuffix} => io.circe.Encoder[String].apply(x.v.toString)"
         } ++
-        childNameAndSerde.map { case (subName, _) => s"case x: $name${subName} => io.circe.Encoder[$subName].apply(x.v)" }).mkString("\n    ")
+        childNameAndSerde.map { case (subName, _) => s"case x: $name${subName} => io.circe.Encoder[$subName].apply(x.v)" })
+        .mkString("\n    ")
     s"""implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.Encoder.instance {
        |    $encoders
        |  }

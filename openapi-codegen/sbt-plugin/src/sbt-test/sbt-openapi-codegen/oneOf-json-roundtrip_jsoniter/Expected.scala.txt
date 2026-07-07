@@ -88,6 +88,9 @@ object TapirGeneratedEndpoints {
   sealed trait ADTWithDiscriminatorNoMapping
   sealed trait ADTWithoutDiscriminator
 
+  type ListType = List[ByteString]
+  type SomeBinaryType = io.circe.JsonObject
+
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] {
     val values = findValues
@@ -106,13 +109,6 @@ object TapirGeneratedEndpoints {
     case object sold extends PetStatus
   }
 
-  sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry
-  object SubtypeWithoutD3E2 extends enumeratum.Enum[SubtypeWithoutD3E2] {
-    val values = findValues
-    case object A extends SubtypeWithoutD3E2
-    case object B extends SubtypeWithoutD3E2
-    case object C extends SubtypeWithoutD3E2
-  }
   case class Abrdvark (
     b: Boolean
   )
@@ -158,6 +154,7 @@ object TapirGeneratedEndpoints {
     a: Seq[String],
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+
   case class SubtypeWithoutD3 (
     s: String,
     i: Option[Int] = None,
@@ -165,6 +162,14 @@ object TapirGeneratedEndpoints {
     e2: Option[SubtypeWithoutD3E2] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  sealed trait SubtypeWithoutD3E2 extends enumeratum.EnumEntry
+  object SubtypeWithoutD3E2 extends enumeratum.Enum[SubtypeWithoutD3E2] {
+    val values = findValues
+    case object A extends SubtypeWithoutD3E2
+    case object B extends SubtypeWithoutD3E2
+    case object C extends SubtypeWithoutD3E2
+  }
+
   case class Tag (
     id: Option[Long] = None,
     name: Option[String] = None
@@ -179,8 +184,7 @@ object TapirGeneratedEndpoints {
   case class WrapB (
     w: AnEnum
   )
-  type ListType = List[ByteString]
-  type SomeBinaryType = io.circe.JsonObject
+
   sealed trait StringOrInt
   case class StringOrIntString(v: String) extends StringOrInt
   case class StringOrIntInt(v: Int) extends StringOrInt

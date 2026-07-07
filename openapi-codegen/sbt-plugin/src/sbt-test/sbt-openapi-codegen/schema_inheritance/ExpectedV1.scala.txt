@@ -14,14 +14,11 @@ object TapirGeneratedEndpoints {
 
 
 
-
-
-  case class CommaSeparatedValues[T](values: List[T])
-  case class ExplodedValues[T](values: List[T])
-  trait ExtraParamSupport[T] {
-    def decode(s: String): sttp.tapir.DecodeResult[T]
-    def encode(t: T): String
-  }
+  type CommaSeparatedValues[T] = sttp.tapir.generated.v2.TapirGeneratedEndpoints.CommaSeparatedValues[T]
+  def CommaSeparatedValues[T](values: List[T]) = sttp.tapir.generated.v2.TapirGeneratedEndpoints.CommaSeparatedValues[T](values)
+  type ExplodedValues[T] = sttp.tapir.generated.v2.TapirGeneratedEndpoints.ExplodedValues[T]
+  def ExplodedValues[T](values: List[T]) = sttp.tapir.generated.v2.TapirGeneratedEndpoints.ExplodedValues[T](values)
+  type ExtraParamSupport[T] = sttp.tapir.generated.v2.TapirGeneratedEndpoints.ExtraParamSupport[T]
   implicit def makePathCodecFromSupport[T](implicit support: ExtraParamSupport[T]): sttp.tapir.Codec[String, T, sttp.tapir.CodecFormat.TextPlain] = {
     sttp.tapir.Codec.string.mapDecode(support.decode)(support.encode)
   }
@@ -56,12 +53,12 @@ object TapirGeneratedEndpoints {
   type ByteString = sttp.tapir.generated.v2.TapirGeneratedEndpoints.ByteString
   implicit def toByteString(ba: Array[Byte]): ByteString = ba.asInstanceOf[ByteString]
 
-  
+
+  type Pet = sttp.tapir.generated.v2.TapirGeneratedEndpoints.Pet
   case class Order (
     id: Long,
     pet: Pet
   )
-  type Pet = sttp.tapir.generated.v2.TapirGeneratedEndpoints.Pet
 
 
 
