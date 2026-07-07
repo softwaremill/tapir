@@ -1,0 +1,70 @@
+package sttp.tapir.generated.models
+
+case class ProcessGroupDTO (
+  activeRemotePortCount: Option[Int] = None,
+  comments: Option[String] = None,
+  contents: Option[FlowSnippetDTO] = None,
+  defaultBackPressureDataSizeThreshold: Option[String] = None,
+  defaultBackPressureObjectThreshold: Option[Long] = None,
+  defaultFlowFileExpiration: Option[String] = None,
+  disabledCount: Option[Int] = None,
+  executionEngine: Option[ProcessGroupDTOExecutionEngine] = None,
+  flowfileConcurrency: Option[ProcessGroupDTOFlowfileConcurrency] = None,
+  flowfileOutboundPolicy: Option[ProcessGroupDTOFlowfileOutboundPolicy] = None,
+  id: Option[String] = None,
+  inactiveRemotePortCount: Option[Int] = None,
+  inputPortCount: Option[Int] = None,
+  invalidCount: Option[Int] = None,
+  localInputPortCount: Option[Int] = None,
+  localOutputPortCount: Option[Int] = None,
+  locallyModifiedAndStaleCount: Option[Int] = None,
+  locallyModifiedCount: Option[Int] = None,
+  logFileSuffix: Option[String] = None,
+  maxConcurrentTasks: Option[Int] = None,
+  name: Option[String] = None,
+  outputPortCount: Option[Int] = None,
+  parameterContext: Option[ParameterContextReferenceEntity] = None,
+  parentGroupId: Option[String] = None,
+  position: Option[PositionDTO] = None,
+  publicInputPortCount: Option[Int] = None,
+  publicOutputPortCount: Option[Int] = None,
+  runningCount: Option[Int] = None,
+  staleCount: Option[Int] = None,
+  statelessFlowTimeout: Option[String] = None,
+  statelessGroupScheduledState: Option[ProcessGroupDTOStatelessGroupScheduledState] = None,
+  stoppedCount: Option[Int] = None,
+  syncFailureCount: Option[Int] = None,
+  upToDateCount: Option[Int] = None,
+  versionControlInformation: Option[VersionControlInformationDTO] = None,
+  versionedComponentId: Option[String] = None
+)
+
+sealed trait ProcessGroupDTOExecutionEngine extends enumeratum.EnumEntry
+object ProcessGroupDTOExecutionEngine extends enumeratum.Enum[ProcessGroupDTOExecutionEngine] with enumeratum.CirceEnum[ProcessGroupDTOExecutionEngine] {
+  val values = findValues
+  case object STATELESS extends ProcessGroupDTOExecutionEngine
+  case object STANDARD extends ProcessGroupDTOExecutionEngine
+  case object INHERITED extends ProcessGroupDTOExecutionEngine
+}
+
+sealed trait ProcessGroupDTOFlowfileConcurrency extends enumeratum.EnumEntry
+object ProcessGroupDTOFlowfileConcurrency extends enumeratum.Enum[ProcessGroupDTOFlowfileConcurrency] with enumeratum.CirceEnum[ProcessGroupDTOFlowfileConcurrency] {
+  val values = findValues
+  case object UNBOUNDED extends ProcessGroupDTOFlowfileConcurrency
+  case object SINGLE_FLOWFILE_PER_NODE extends ProcessGroupDTOFlowfileConcurrency
+  case object SINGLE_BATCH_PER_NODE extends ProcessGroupDTOFlowfileConcurrency
+}
+
+sealed trait ProcessGroupDTOFlowfileOutboundPolicy extends enumeratum.EnumEntry
+object ProcessGroupDTOFlowfileOutboundPolicy extends enumeratum.Enum[ProcessGroupDTOFlowfileOutboundPolicy] with enumeratum.CirceEnum[ProcessGroupDTOFlowfileOutboundPolicy] {
+  val values = findValues
+  case object STREAM_WHEN_AVAILABLE extends ProcessGroupDTOFlowfileOutboundPolicy
+  case object BATCH_OUTPUT extends ProcessGroupDTOFlowfileOutboundPolicy
+}
+
+sealed trait ProcessGroupDTOStatelessGroupScheduledState extends enumeratum.EnumEntry
+object ProcessGroupDTOStatelessGroupScheduledState extends enumeratum.Enum[ProcessGroupDTOStatelessGroupScheduledState] with enumeratum.CirceEnum[ProcessGroupDTOStatelessGroupScheduledState] {
+  val values = findValues
+  case object STOPPED extends ProcessGroupDTOStatelessGroupScheduledState
+  case object RUNNING extends ProcessGroupDTOStatelessGroupScheduledState
+}

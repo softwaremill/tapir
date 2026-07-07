@@ -154,8 +154,9 @@ object fs2 {
                   } yield result.map((_, ()))
                 })
                 .evalMap({
-                  case Pause  => Sync[F].delay(readStream.pause())
-                  case Resume => Sync[F].delay(readStream.resume())
+                  // Vert.x 5 throws an IllegalStateException when pausing/resuming a fully-read request; it's safe to ignore (Vert.x 4 treated it as a no-op)
+                  case Pause  => Sync[F].delay(readStream.pause()).attempt.void
+                  case Resume => Sync[F].delay(readStream.resume()).attempt.void
                 })
                 .compile
                 .drain
