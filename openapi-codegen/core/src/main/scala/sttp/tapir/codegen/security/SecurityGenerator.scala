@@ -1,9 +1,10 @@
-package sttp.tapir.codegen
+package sttp.tapir.codegen.security
 
-import sttp.tapir.codegen.RootGenerator.indent
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.OAuth2FlowType
 import sttp.tapir.codegen.util.ErrUtils.bail
+import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.util.Location
 
 import scala.collection.immutable

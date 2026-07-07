@@ -158,7 +158,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
     }
   }
 
-  ignore should "add meta-data to schema from annotations" in { // TODO https://github.com/softwaremill/tapir/issues/3167
+  it should "add meta-data to schema from annotations" in {
     val schema = implicitlySchema[I]
     schema shouldBe Schema[I](
       SProduct(
@@ -187,9 +187,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
         )
       ),
       Some(SName("sttp.tapir.json.pickler.I"))
-    ).description(
-      "class I"
-    ) // TODO this causes test to fail, because SchemaDerivation doesn't support @description annotation on case classes
+    ).description("class I")
   }
 
   it should "find the right schema for a case class with simple types" in {
@@ -263,7 +261,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
     )
   }
 
-  ignore should "customise the schema using the given function" in { // TODO https://github.com/softwaremill/tapir/issues/3166
+  it should "customise the schema using the given function" in {
     val schema = implicitlySchema[M]
     schema.attribute(M.testAttributeKey) shouldBe Some("test")
   }

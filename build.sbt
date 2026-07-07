@@ -439,6 +439,9 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
+      // blaze-server is versioned independently and pulls in an older http4s-server; pin it to the core version so
+      // the server and core bytecode stay consistent (mixing them caused a NoSuchMethodError with core 0.23.35)
+      "org.http4s" %% "http4s-server" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       logback
     ),
@@ -2279,7 +2282,7 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.16" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.16" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.17" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)

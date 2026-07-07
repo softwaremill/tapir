@@ -1,5 +1,5 @@
 object Versions {
-  val http4s = "0.23.34"
+  val http4s = "0.23.36"
   val http4sBlazeServer = "0.23.17"
   val http4sBlazeClient = "0.23.17"
   val catsCore = "2.13.0"
@@ -36,7 +36,7 @@ object Versions {
   val scalaTags = "0.13.1"
   val scalaTestPlusScalaCheck = "3.2.20.0"
   val refined = "0.11.4"
-  val iron = "3.3.1"
+  val iron = "3.3.2"
   val enumeratum = "1.9.8"
   val zio = "2.1.26"
   val zioHttp = "3.11.3"
@@ -71,6 +71,6 @@ object Versions {
   val nettyAll = "4.2.15.Final"
   val logback = "1.5.36"
   val slf4j = "2.0.18"
-  val jsoniter = "2.38.16"
+  val jsoniter = "2.38.17"
   val otel4s = "1.0.1"
 }

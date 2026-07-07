@@ -18,6 +18,12 @@ object Pipe {
   private case object Pause extends Command
   private case object Resume extends Command
 
+  // Vert.x 5 throws an IllegalStateException when pausing/resuming a fully-read request; it's safe to ignore (Vert.x 4 treated it as a no-op)
+  private def ignoringReadEnded[T](f: => T): Unit = {
+    try { val _ = f }
+    catch { case _: IllegalStateException => () }
+  }
+
   @tailrec
   def modify[A, B](ref: AtomicReference[A], f: A => (A, B)): B = {
     val oldA = ref.get
@@ -68,7 +74,7 @@ object Pipe {
       case Stop =>
         ()
       case act =>
-        if (act == Resume) request.resume() else if (act == Pause) request.pause() else ()
+        if (act == Resume) ignoringReadEnded(request.resume()) else if (act == Pause) ignoringReadEnded(request.pause()) else ()
         ref updateAndGet {
           case BackpressureState(true, i, commands) => BackpressureState(inProgress = false, i, commands)
           case unexpected                           => throw new Exception(s"Unexpected state $unexpected")
@@ -116,7 +122,7 @@ object Pipe {
       ()
     }
 
-    request.resume()
+    ignoringReadEnded(request.resume())
     ()
   }
 
@@ -170,7 +176,7 @@ object Pipe {
       ()
     }
 
-    request.resume()
+    ignoringReadEnded(request.resume())
     ()
   }
 }
