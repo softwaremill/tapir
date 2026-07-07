@@ -215,6 +215,16 @@ class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestEx
     codec2.decode("f1=v1&f2=10") shouldBe DecodeResult.Value(FormCodecDerivationTestFixtures.NestedTest2("v1", 10))
   }
 
+  it should "generate a codec for a case class defined inside an object nested inside another object" in {
+    // given
+    val codec =
+      implicitly[Codec[String, FormCodecDerivationTestFixtures.Inner.DoublyNestedTest1, CodecFormat.XWwwFormUrlencoded]]
+
+    // when
+    codec.encode(FormCodecDerivationTestFixtures.Inner.DoublyNestedTest1("v1", 10)) shouldBe "f1=v1&f2=10"
+    codec.decode("f1=v1&f2=10") shouldBe DecodeResult.Value(FormCodecDerivationTestFixtures.Inner.DoublyNestedTest1("v1", 10))
+  }
+
   it should "generate a codec with custom field name" in {
     // given
     case class Test1(@encodedName("g1") f1: Int)
@@ -231,4 +241,8 @@ case class CaseClassWithComplicatedName(complicatedName: Int)
 object FormCodecDerivationTestFixtures {
   case class NestedTest1(f1: Int)
   case class NestedTest2(f1: String, f2: Int)
+
+  object Inner {
+    case class DoublyNestedTest1(f1: String, f2: Int)
+  }
 }

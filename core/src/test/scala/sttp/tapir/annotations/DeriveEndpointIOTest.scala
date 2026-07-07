@@ -192,6 +192,15 @@ object TapirRequestTest18 {
       @query
       field2: String
   )
+
+  object Inner {
+    final case class DoublyNested(
+        @query
+        field1: Int,
+        @query
+        field2: String
+    )
+  }
 }
 
 class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks with Tapir {
@@ -215,6 +224,12 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with TableDrivenPro
     val expectedInput = query[Int]("field1").and(query[String]("field2")).mapTo[TapirRequestTest18.Nested]
 
     compareTransputs(EndpointInput.derived[TapirRequestTest18.Nested], expectedInput) shouldBe true
+  }
+
+  it should "derive correct input for a case class defined inside an object nested inside another object" in {
+    val expectedInput = query[Int]("field1").and(query[String]("field2")).mapTo[TapirRequestTest18.Inner.DoublyNested]
+
+    compareTransputs(EndpointInput.derived[TapirRequestTest18.Inner.DoublyNested], expectedInput) shouldBe true
   }
 
   it should "derive correct input for dealiased bodies" in {

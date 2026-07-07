@@ -426,6 +426,29 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     mapping.decode((10, "x")) shouldBe DecodeResult.Value(EndpointTestFixtures.NestedWrapper2(10, "x"))
   }
 
+  "mapTo" should "properly map to a case class defined inside an object nested inside another object (arity 1)" in {
+    // given
+    val mapped = plainBody[String].mapTo[EndpointTestFixtures.Inner.DoublyNestedWrapper]
+    val codec: Codec[String, EndpointTestFixtures.Inner.DoublyNestedWrapper, CodecFormat] = mapped.codec
+
+    // when
+    codec.encode(EndpointTestFixtures.Inner.DoublyNestedWrapper("x")) shouldBe "x"
+    codec.decode("x") shouldBe DecodeResult.Value(EndpointTestFixtures.Inner.DoublyNestedWrapper("x"))
+  }
+
+  "mapTo" should "properly map to a case class defined inside an object nested inside another object (arity 2)" in {
+    // given
+    val mapped = query[Int]("q1").and(query[String]("q2")).mapTo[EndpointTestFixtures.Inner.DoublyNestedWrapper2]
+    val mapping: Mapping[(Int, String), EndpointTestFixtures.Inner.DoublyNestedWrapper2] = mapped match {
+      case EndpointInput.MappedPair(_, m) => m.asInstanceOf[Mapping[(Int, String), EndpointTestFixtures.Inner.DoublyNestedWrapper2]]
+      case _                              => fail()
+    }
+
+    // when
+    mapping.encode(EndpointTestFixtures.Inner.DoublyNestedWrapper2(10, "x")) shouldBe ((10, "x"))
+    mapping.decode((10, "x")) shouldBe DecodeResult.Value(EndpointTestFixtures.Inner.DoublyNestedWrapper2(10, "x"))
+  }
+
   object ClassNestedFixtures {
     case class NestedWrapper(x: String)
   }
@@ -461,6 +484,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint
       .in(query[String]("q1"))
       .mapInTo[EndpointTestFixtures.NestedWrapper]: PublicEndpoint[EndpointTestFixtures.NestedWrapper, Unit, Unit, Any]
+    endpoint
+      .in(query[String]("q1"))
+      .mapInTo[EndpointTestFixtures.Inner.DoublyNestedWrapper]: PublicEndpoint[EndpointTestFixtures.Inner.DoublyNestedWrapper, Unit, Unit, Any]
     endpoint
       .in(query[String]("q1"))
       .mapInTo[ClassNestedFixtures.NestedWrapper]: PublicEndpoint[ClassNestedFixtures.NestedWrapper, Unit, Unit, Any]
@@ -519,4 +545,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 object EndpointTestFixtures {
   case class NestedWrapper(x: String)
   case class NestedWrapper2(i: Int, s: String)
+
+  object Inner {
+    case class DoublyNestedWrapper(x: String)
+    case class DoublyNestedWrapper2(i: Int, s: String)
+  }
 }
