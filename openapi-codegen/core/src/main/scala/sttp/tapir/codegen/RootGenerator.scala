@@ -39,8 +39,9 @@ object RootGenerator {
       generateEndpointTypes: Boolean,
       generateValidators: Boolean,
       useCustomJsoniterSerdes: Boolean,
-      packageReuse: PackageReuseContext = PackageReuseContext.none,
-      seperateFilesForModels: Boolean = false
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean,
+      alwaysGenerateParamSupport: Boolean
   ): GenerationInfo = {
     val doc = unNormalisedDoc.resolveAllOfSchemas
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
@@ -126,7 +127,8 @@ object RootGenerator {
           xmlParamRefs = xmlParamRefs,
           useCustomJsoniterSerdes = useCustomJsoniterSerdes,
           packageReuse = packageReuse,
-          seperateFilesForModels = seperateFilesForModels
+          seperateFilesForModels = seperateFilesForModels,
+          alwaysGenerateParamSupport = alwaysGenerateParamSupport
         )
         .getOrElse(GeneratedClassDefinitions(Map.empty, None, Nil, None, false, Nil, Set.empty))
 
@@ -186,7 +188,8 @@ object RootGenerator {
          |}""".stripMargin
     }
 
-    val xmlSerdeObj = xmlSerdes.map(XmlSerdeGenerator.wrapBody(normalisedXmlLib, packagePath, objName, targetScala3, _, seperateFilesForModels))
+    val xmlSerdeObj =
+      xmlSerdes.map(XmlSerdeGenerator.wrapBody(normalisedXmlLib, packagePath, objName, targetScala3, _, seperateFilesForModels))
 
     val schemaObjs = if (schemas.size > 1) shimsAndSchemas.zipWithIndex.map { case ((shims, body), idx) =>
       val priorImports = (0 until idx).map { i => s"import $packagePath.${objName}Schemas${i + 1}._" }.mkString("\n")

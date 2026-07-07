@@ -419,7 +419,7 @@ class EndpointGenerator {
       jsonSerdeLib: JsonSerdeLib,
       param: OpenapiParameter,
       e: OpenapiSchemaEnum,
-      isArray: Boolean
+      isArray: Boolean,
   ): (String, Some[Seq[String]], String, String) = {
     val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
     val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
@@ -429,7 +429,8 @@ class EndpointGenerator {
       targetScala3,
       enumParamRefs,
       jsonSerdeLib,
-      Set.empty
+      Set.empty,
+      false
     )
 
     def arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"

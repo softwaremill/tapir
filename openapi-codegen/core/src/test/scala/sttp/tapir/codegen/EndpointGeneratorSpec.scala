@@ -293,21 +293,26 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Nil
     )
-    val objs: Map[String, String] = RootGenerator.generateObjects(
-      doc,
-      "sttp.tapir.generated",
-      "TapirGeneratedEndpoints",
-      targetScala3 = isScala3,
-      useHeadTagForObjectNames = false,
-      jsonSerdeLib = "circe",
-      xmlSerdeLib = "cats-xml",
-      validateNonDiscriminatedOneOfs = true,
-      maxSchemasPerFile = 400,
-      streamingImplementation = "fs2",
-      generateEndpointTypes = false,
-      generateValidators = true,
-      useCustomJsoniterSerdes = true
-    ).allFiles
+    val objs: Map[String, String] = RootGenerator
+      .generateObjects(
+        doc,
+        "sttp.tapir.generated",
+        "TapirGeneratedEndpoints",
+        targetScala3 = isScala3,
+        useHeadTagForObjectNames = false,
+        jsonSerdeLib = "circe",
+        xmlSerdeLib = "cats-xml",
+        validateNonDiscriminatedOneOfs = true,
+        maxSchemasPerFile = 400,
+        streamingImplementation = "fs2",
+        generateEndpointTypes = false,
+        generateValidators = true,
+        useCustomJsoniterSerdes = true,
+        packageReuse = PackageReuseContext.none,
+        seperateFilesForModels = false,
+        alwaysGenerateParamSupport = false
+      )
+      .allFiles
     val schemas = objs("TapirGeneratedEndpointsSchemas")
     val generatedCode = objs("TapirGeneratedEndpoints")
     generatedCode should include(
@@ -334,7 +339,10 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       streamingImplementation = "fs2",
       generateEndpointTypes = false,
       generateValidators = true,
-      useCustomJsoniterSerdes = true
+      useCustomJsoniterSerdes = true,
+      packageReuse = PackageReuseContext.none,
+      seperateFilesForModels = false,
+      alwaysGenerateParamSupport = false,
     )
     val generatedCode = generatedObj.allFiles("TapirGeneratedEndpointsSchemas") + "\n" + generatedObj.allFiles("TapirGeneratedEndpoints")
     generatedCode.shouldCompile()

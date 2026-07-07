@@ -145,7 +145,9 @@ object GenScala {
                 maxSchemasPerFile.getOrElse(400),
                 generateEndpointTypes,
                 !disableValidatorGeneration,
-                useCustomJsoniterSerdes
+                useCustomJsoniterSerdes,
+                PackageReuseContext.none,
+                false
               )
             )
             destFiles <- contents.allFiles.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }

@@ -54,7 +54,7 @@ class DiscriminatorCodegenSpec extends AnyFlatSpec with Matchers with CompileChe
     out should include("case class Dog (")
     out should include("barks: Boolean")
     out should include(" { def kind: String }")
-    out should include("""def `kind`: String = "dog"""")
+    out should include("""def kind: String = "dog"""")
     out should not include regex("case class Dog \\([^)]*kind".r)
     out.shouldCompile()
   }
@@ -91,7 +91,7 @@ class DiscriminatorCodegenSpec extends AnyFlatSpec with Matchers with CompileChe
     out should include("case class Mydog (")
     out should include("barks: Boolean")
     out should include(" { def kind: String }")
-    out should include("""def `kind`: String = "dog"""")
+    out should include("""def kind: String = "dog"""")
     out.shouldCompile()
   }
 }
