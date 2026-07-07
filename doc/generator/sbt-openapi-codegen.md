@@ -57,6 +57,7 @@ openapiPackageDependencies            Map.empty[String, String]            Allow
                                                                            aliases to the duplicates in the 'value' package. This is still experimental - significantly, the type is likely to change
                                                                            to a Map[String, Seq[String]] in the near future to permit multiple 'inheritance', and there may be bugs in the implementation.
 openapiSeperateFilesForModels         false                                When true, models will be written to individual files under $pkg.models, with type aliases and helpers living under `package.scala` in a package object
+openapiAlwaysGenerateParamSupport     false                                When true, all enums will be generated with param & json support, even if not used in those positions. This is useful for definitions that will be reused with `openapiPackageDependencies`
 ===================================== ==================================== ==================================================================================================
 ```
 
