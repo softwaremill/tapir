@@ -6,6 +6,7 @@ import cats.implicits._
 
 import com.monovore.decline._
 
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.{RootGenerator, YamlParser}
 
@@ -147,6 +148,7 @@ object GenScala {
                 !disableValidatorGeneration,
                 useCustomJsoniterSerdes,
                 PackageReuseContext.none,
+                false,
                 false
               )
             )
