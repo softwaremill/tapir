@@ -1,5 +1,6 @@
 package sttp.tapir.codegen
 
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.testutils.{CompileCheckTestBase, VersionCheck}
 
@@ -22,7 +23,10 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       streamingImplementation = "fs2",
       generateEndpointTypes = false,
       generateValidators = true,
-      useCustomJsoniterSerdes = true
+      useCustomJsoniterSerdes = true,
+      packageReuse = PackageReuseContext.none,
+      seperateFilesForModels = false,
+      alwaysGenerateParamSupport = false
     ).allFiles
   }
   def gen(
@@ -145,7 +149,9 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       generateEndpointTypes = false,
       generateValidators = true,
       useCustomJsoniterSerdes = true,
-      seperateFilesForModels = true
+      packageReuse = PackageReuseContext.none,
+      seperateFilesForModels = true,
+      alwaysGenerateParamSupport = false
     )
     val files = info.allFiles
     files.keys.exists(_.startsWith("models.")) shouldBe true

@@ -310,7 +310,10 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
         streamingImplementation = "fs2",
         generateEndpointTypes = false,
         generateValidators = true,
-        useCustomJsoniterSerdes = true
+        useCustomJsoniterSerdes = true,
+        packageReuse = PackageReuseContext.none,
+        seperateFilesForModels = false,
+        alwaysGenerateParamSupport = false
       )
       .allFiles
     val schemas = objs("TapirGeneratedEndpointsSchemas")
@@ -339,7 +342,10 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       streamingImplementation = "fs2",
       generateEndpointTypes = false,
       generateValidators = true,
-      useCustomJsoniterSerdes = true
+      useCustomJsoniterSerdes = true,
+      packageReuse = PackageReuseContext.none,
+      seperateFilesForModels = false,
+      alwaysGenerateParamSupport = false
     )
     val generatedCode = generatedObj.allFiles("TapirGeneratedEndpointsSchemas") + "\n" + generatedObj.allFiles("TapirGeneratedEndpoints")
     generatedCode.shouldCompile()

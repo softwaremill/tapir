@@ -14,7 +14,8 @@ object EnumGenerator {
       targetScala3: Boolean,
       queryParamRefs: Set[String],
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
-      jsonParamRefs: Set[String]
+      jsonParamRefs: Set[String],
+      alwaysGenerateParamSupport: Boolean
   ): Seq[String] = {
     def maybeEscaped(s: String) = s match {
       case legalEnumName(l) => l
@@ -22,7 +23,7 @@ object EnumGenerator {
     }
     if (targetScala3) {
       val maybeCompanion =
-        if (queryParamRefs contains name) {
+        if (alwaysGenerateParamSupport || queryParamRefs.contains(name)) {
           def helperImpls =
             s"""  given enumCodecSupport${name.capitalize}: ExtraParamSupport[$name] =
                |    extraCodecSupport[$name]""".stripMargin
@@ -32,14 +33,22 @@ object EnumGenerator {
              |}""".stripMargin
         } else ""
       val maybeCodecExtensions = jsonSerdeLib match {
-        case _ if !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) => ""
-        case _ if !jsonParamRefs.contains(name)                                   => " derives enumextensions.EnumMirror"
-        case JsonSerdeLib.Circe if !queryParamRefs.contains(name) => " derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec"
-        case JsonSerdeLib.Circe => " derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror"
-        case JsonSerdeLib.Jsoniter if !queryParamRefs.contains(name) => ""
-        case JsonSerdeLib.Jsoniter                                   => " derives enumextensions.EnumMirror"
-        case JsonSerdeLib.Zio if !queryParamRefs.contains(name)      => " derives zio.json.JsonCodec"
-        case JsonSerdeLib.Zio                                        => " derives zio.json.JsonCodec, enumextensions.EnumMirror"
+        case _ if !alwaysGenerateParamSupport && !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) =>
+          ""
+        case _ if !alwaysGenerateParamSupport && !jsonParamRefs.contains(name) =>
+          " derives enumextensions.EnumMirror"
+        case JsonSerdeLib.Circe if !alwaysGenerateParamSupport && !queryParamRefs.contains(name) =>
+          " derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec"
+        case JsonSerdeLib.Circe =>
+          " derives org.latestbit.circe.adt.codec.JsonTaggedAdt.PureCodec, enumextensions.EnumMirror"
+        case JsonSerdeLib.Jsoniter if !alwaysGenerateParamSupport && !queryParamRefs.contains(name) =>
+          ""
+        case JsonSerdeLib.Jsoniter =>
+          " derives enumextensions.EnumMirror"
+        case JsonSerdeLib.Zio if !alwaysGenerateParamSupport && !queryParamRefs.contains(name) =>
+          " derives zio.json.JsonCodec"
+        case JsonSerdeLib.Zio =>
+          " derives zio.json.JsonCodec, enumextensions.EnumMirror"
       }
       s"""$maybeCompanion
          |enum $name$maybeCodecExtensions {
@@ -48,12 +57,15 @@ object EnumGenerator {
     } else {
       val members = obj.items.map { i => s"case object ${maybeEscaped(i.value)} extends $name" }
       val maybeCodecExtension = jsonSerdeLib match {
-        case _ if !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) => ""
-        case JsonSerdeLib.Circe                                                   => s" with enumeratum.CirceEnum[$name]"
-        case JsonSerdeLib.Jsoniter | JsonSerdeLib.Zio                             => ""
+        case _ if !alwaysGenerateParamSupport && !jsonParamRefs.contains(name) && !queryParamRefs.contains(name) =>
+          ""
+        case JsonSerdeLib.Circe =>
+          s" with enumeratum.CirceEnum[$name]"
+        case JsonSerdeLib.Jsoniter | JsonSerdeLib.Zio =>
+          ""
       }
       val maybeQueryCodecDefn =
-        if (queryParamRefs contains name) {
+        if (alwaysGenerateParamSupport || queryParamRefs.contains(name)) {
           s"""
                |  implicit val enumCodecSupport${name.capitalize}: ExtraParamSupport[$name] =
                |    extraCodecSupport[$name]("${name}", ${name})""".stripMargin

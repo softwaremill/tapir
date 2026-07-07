@@ -34,7 +34,8 @@ object ParamComponent {
       targetScala3,
       enumParamRefs,
       jsonSerdeLib,
-      Set.empty
+      Set.empty,
+      false
     )
 
     def arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"

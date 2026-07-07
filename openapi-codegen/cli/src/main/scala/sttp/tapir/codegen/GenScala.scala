@@ -6,6 +6,7 @@ import cats.implicits._
 
 import com.monovore.decline._
 
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.{RootGenerator, YamlParser}
 
@@ -145,7 +146,10 @@ object GenScala {
                 maxSchemasPerFile.getOrElse(400),
                 generateEndpointTypes,
                 !disableValidatorGeneration,
-                useCustomJsoniterSerdes
+                useCustomJsoniterSerdes,
+                PackageReuseContext.none,
+                false,
+                false
               )
             )
             destFiles <- contents.allFiles.toVector.traverse { case (fileName, content) => writeGeneratedFile(destDir, fileName, content) }

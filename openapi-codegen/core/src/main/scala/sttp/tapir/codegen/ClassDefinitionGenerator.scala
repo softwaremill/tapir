@@ -8,7 +8,7 @@ import sttp.tapir.codegen.json.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.util.NameHelpers.indent
+import sttp.tapir.codegen.util.NameHelpers.{indent, safeVariableName}
 import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
 import sttp.tapir.codegen.xml.{XmlSerdeGenerator, XmlSerdeLib}
 
@@ -84,7 +84,8 @@ class ClassDefinitionGenerator {
       xmlParamRefs: Set[String] = Set.empty,
       useCustomJsoniterSerdes: Boolean = true,
       packageReuse: PackageReuseContext = PackageReuseContext.none,
-      seperateFilesForModels: Boolean = false
+      seperateFilesForModels: Boolean = false,
+      alwaysGenerateParamSupport: Boolean = false
   ): Option[GeneratedClassDefinitions] = {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
@@ -125,7 +126,7 @@ class ClassDefinitionGenerator {
     val generatesQueryOrPathParamEnums = enumsDefinedOnEndpointParams ||
       allSchemas
         .collect { case (name, _: OpenapiSchemaEnum) => name }
-        .exists(queryOrPathParamRefs.contains)
+        .exists(alwaysGenerateParamSupport || queryOrPathParamRefs.contains(_))
     val enumSerdeHelper = if (!generatesQueryOrPathParamEnums) "" else EnumGenerator.enumSerdeHelperDefn(targetScala3)
 
     def fetchTransitiveParamRefs(initialSet: Set[String], toCheck: Seq[OpenapiSchemaType]): Set[String] = toCheck match {
@@ -138,14 +139,27 @@ class ClassDefinitionGenerator {
       jsonParamRefs.toSeq.flatMap(ref => allSchemas.get(ref.stripPrefix("#/components/schemas/")))
     )
 
+    def allChildrenDefineDiscriminator(d: String, s: OpenapiSchemaOneOf): Boolean =
+      s.types.forall {
+        case t: OpenapiSchemaRef =>
+          t.maybeResolved(doc).exists {
+            case o: OpenapiSchemaObject => o.properties.contains(d)
+            case _                      => false
+          }
+        case _ => false
+      }
+
     val adtTypes =
       adtInheritanceMap
         .flatMap(_._2)
         .toSeq
-        .map(_._1)
+        .map { s => s._1 -> s._2.discriminator.map(_.propertyName).filter(d => allChildrenDefineDiscriminator(d, s._2)) }
         .distinct
-        .filterNot(PackageReuseContext.isReusedSchema(_, packageReuse))
-        .map(name => s"sealed trait $name")
+        .filterNot(s => PackageReuseContext.isReusedSchema(s._1, packageReuse))
+        .map { case (name, maybeDiscriminator) =>
+          val maybeBody = maybeDiscriminator.map(d => s" { def ${safeVariableName(d)}: String }").getOrElse("")
+          s"sealed trait $name$maybeBody"
+        }
         .sorted
         .mkString("", "\n", "\n")
     val schemasWithAny = allSchemas.filter { case (_, schema) => schemaContainsAny(schema) }
@@ -176,7 +190,8 @@ class ClassDefinitionGenerator {
       schemasContainAny,
       useCustomJsoniterSerdes,
       packageReuse,
-      resolvableNonClassyOneOfSchemas
+      resolvableNonClassyOneOfSchemas,
+      seperateFilesForModels
     )
     val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
       xmlParamRefs,
@@ -208,12 +223,45 @@ class ClassDefinitionGenerator {
         _.schemas.map {
           case (name, _: OpenapiSchemaEnum) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
             (name, (0, Seq(PackageReuseContext.enumAliasType(name, packageReuse, seperateFilesForModels))))
+          case (name, obj: OpenapiSchemaObject) =>
+            val isReusedSchema = PackageReuseContext.isReusedSchema(name, packageReuse)
+            (
+              name,
+              (
+                if (isReusedSchema) 0 else 2,
+                generateClass(
+                  allSchemas,
+                  name,
+                  obj,
+                  allTransitiveJsonParamRefs,
+                  adtInheritanceMap,
+                  jsonSerdeLib,
+                  targetScala3,
+                  isReusedSchema,
+                  packageReuse,
+                  seperateFilesForModels,
+                  alwaysGenerateParamSupport
+                )
+              )
+            )
           case (name, s) if PackageReuseContext.isReusedSchema(name, packageReuse) =>
             (name, (0, Seq(PackageReuseContext.aliasType(name, packageReuse, seperateFilesForModels))))
-          case (name, obj: OpenapiSchemaObject) =>
-            (name, (2, generateClass(allSchemas, name, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)))
           case (name, obj: OpenapiSchemaEnum) =>
-            (name, (1, EnumGenerator.generateEnum(name, obj, targetScala3, queryOrPathParamRefs, jsonSerdeLib, allTransitiveJsonParamRefs)))
+            (
+              name,
+              (
+                1,
+                EnumGenerator.generateEnum(
+                  name,
+                  obj,
+                  targetScala3,
+                  queryOrPathParamRefs,
+                  jsonSerdeLib,
+                  allTransitiveJsonParamRefs,
+                  alwaysGenerateParamSupport
+                )
+              )
+            )
           case (name, OpenapiSchemaMap(valueSchema, _, _)) =>
             (name, (0, generateMap(name, valueSchema)))
           case (name, OpenapiSchemaArray(valueSchema, _, _, rs)) =>
@@ -258,14 +306,28 @@ class ClassDefinitionGenerator {
           addModel(name, defns.mkString("\n"))
       }
 
-      adtGroups.toSeq.filterNot(p => isTypeAlias(p._1)).foreach { case (fileName, parentTraits) =>
-        val traits = parentTraits.map(p => s"sealed trait $p").mkString("\n")
+      adtGroups.toSeq.foreach { case (fileName, parentTraits) =>
+        val isReused = isTypeAlias(fileName)
+        val traits =
+          if (isReused) parentTraits.map(p => s"type $p = ${packageReuse.modelRoot(seperateFilesForModels)}.$p").mkString("\n")
+          else parentTraits.map(p => s"sealed trait $p").mkString("\n")
         val children = childToAdtFile.filter(_._2 == fileName).keys.toSeq.sorted
         val childContent = children
           .flatMap { child =>
             allSchemas.get(child).collect { case obj: OpenapiSchemaObject =>
-              generateClass(allSchemas, child, obj, allTransitiveJsonParamRefs, adtInheritanceMap, jsonSerdeLib, targetScala3)
-                .mkString("\n")
+              generateClass(
+                allSchemas,
+                child,
+                obj,
+                allTransitiveJsonParamRefs,
+                adtInheritanceMap,
+                jsonSerdeLib,
+                targetScala3,
+                isReused,
+                packageReuse,
+                seperateFilesForModels,
+                alwaysGenerateParamSupport
+              ).mkString("\n")
             }
           }
           .mkString("\n")
@@ -359,7 +421,11 @@ class ClassDefinitionGenerator {
       jsonParamRefs: Set[String],
       adtInheritanceMap: Map[String, Seq[(String, OpenapiSchemaOneOf)]],
       jsonSerdeLib: JsonSerdeLib.JsonSerdeLib,
-      targetScala3: Boolean
+      targetScala3: Boolean,
+      isReused: Boolean,
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean,
+      alwaysGenerateParamSupport: Boolean
   ): Seq[String] = try {
     val isJson = jsonParamRefs contains name
     def rec(className: String, schemaKey: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
@@ -397,7 +463,7 @@ class ClassDefinitionGenerator {
       val discriminatorDefBody = discriminatorDefFields.filter { case (n, _) => obj.properties.map(_._1).toSet.contains(n) } match {
         case Nil    => ""
         case fields =>
-          val fs = fields.map { case (k, v) => s"""def `$k`: String = "$v"""" }.mkString("\n")
+          val fs = fields.map { case (k, v) => s"""def ${safeVariableName(k)}: String = "$v"""" }.mkString("\n")
           s""" {
              |${indent(2)(fs)}
              |}""".stripMargin
@@ -408,7 +474,7 @@ class ClassDefinitionGenerator {
         .map { case (key, OpenapiSchemaField(schemaType, maybeDefault, _)) =>
           val (tpe, maybeEnum) =
             mapSchemaTypeToType(className, key, obj.required.contains(key), schemaType, isJson, jsonSerdeLib, targetScala3)
-          val fixedKey = fixKey(key)
+          val fixedKey = safeVariableName(key)
           val optional = schemaType.nullable || !obj.required.contains(key)
           val maybeExplicitDefault =
             maybeDefault.map(
@@ -417,14 +483,24 @@ class ClassDefinitionGenerator {
                   .render(allModels = allSchemas, thisType = schemaType, optional, RenderConfig(maybeEnum.map(_.enumName)))(_)
             )
           val default = maybeExplicitDefault getOrElse (if (optional) " = None" else "")
-          s"$fixedKey: $tpe$default" -> maybeEnum.map(_.impl)
+          if (isReused) "" -> maybeEnum.map { e =>
+            val alias = s"${e.enumName} = ${packageReuse.modelRoot(seperateFilesForModels)}.${e.enumName}"
+            s"type $alias\nval $alias"
+          }
+          else s"$fixedKey: $tpe$default" -> maybeEnum.map(_.impl)
         }
         .unzip
 
       val enumDefn = maybeEnums.flatten.toList
-      s"""|case class $className (
-          |${indent(2)(properties.mkString(",\n"))}
-          |)$parents$discriminatorDefBody""".stripMargin :: innerClasses ::: enumDefn ::: acc
+      val modelDefn =
+        if (isReused) {
+          val alias = s"$className = ${packageReuse.modelRoot(seperateFilesForModels)}.$className"
+          s"type $alias\nval $alias"
+        } else
+          s"""|case class $className (
+              |${indent(2)(properties.mkString(",\n"))}
+              |)$parents$discriminatorDefBody""".stripMargin
+      modelDefn :: innerClasses ::: enumDefn ::: acc
     }
 
     rec(addName("", name), name, obj, Nil)
@@ -487,7 +563,8 @@ class ClassDefinitionGenerator {
             targetScala3,
             Set.empty,
             jsonSerdeLib,
-            if (isJson) Set(enumName) else Set.empty
+            if (isJson) Set(enumName) else Set.empty,
+            false
           )
           (enumName -> e.nullable, Some(InlineEnumDefn(enumName, enumDefn.mkString("\n"))))
 
@@ -501,13 +578,6 @@ class ClassDefinitionGenerator {
   private def addName(parentName: String, key: String) = RootGenerator.addName(parentName, key)
 
   private val reservedKeys = VersionedHelpers.reservedKeys
-
-  private def fixKey(key: String) = {
-    if (reservedKeys.contains(key))
-      s"`$key`"
-    else
-      key
-  }
 
   private def schemaContainsAny(schema: OpenapiSchemaType): Boolean = schema match {
     case _: OpenapiSchemaAny                => true

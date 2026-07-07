@@ -3,6 +3,7 @@ package sttp.tapir.server.akkahttp
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.HttpEntity
 import akka.http.scaladsl.server.{Directives, RequestContext}
+import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
@@ -27,6 +28,7 @@ import sttp.tapir.tests.{Test, TestSuite}
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.util.Random
 
 class AkkaHttpServerTest extends TestSuite with EitherValues {
@@ -64,6 +66,12 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
               Future.successful(Source(List(sse1, sse2)))
             })
           val route = AkkaHttpServerInterpreter().toRoute(e)
+          // the default 1s response-entity-subscription-timeout can be exceeded on a loaded CI runner before the
+          // SSE-parsing stream is materialized, failing the entity stream; hence raising the timeout
+          val clientBackend = AkkaHttpBackend.usingActorSystem(
+            actorSystem,
+            customConnectionPoolSettings = Some(ConnectionPoolSettings(actorSystem).withResponseEntitySubscriptionTimeout(1.minute))
+          )
           interpreter
             .server(route)
             .use { port =>
@@ -78,8 +86,9 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
                         )
                       )
                     )
-                    .send(AkkaHttpBackend.usingActorSystem(actorSystem))
-                    .flatMap(_.body.value.transform(sse => sse shouldBe List(sse1, sse2), ex => fail(ex)))
+                    .send(clientBackend)
+                    .flatMap(_.body.value.map(sse => sse shouldBe List(sse1, sse2)))
+                    .andThen { case _ => clientBackend.close() }
                 )
               }
             }

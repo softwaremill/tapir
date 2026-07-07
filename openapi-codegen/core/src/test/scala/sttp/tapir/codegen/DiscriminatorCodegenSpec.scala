@@ -3,8 +3,9 @@ package sttp.tapir.codegen
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.codegen.json.JsonSerdeLib.Circe
+import sttp.tapir.codegen.testutils.CompileCheckTestBase
 
-class DiscriminatorCodegenSpec extends AnyFlatSpec with Matchers {
+class DiscriminatorCodegenSpec extends AnyFlatSpec with Matchers with CompileCheckTestBase {
 
   private val animalYaml =
     """openapi: 3.1.0
@@ -52,9 +53,10 @@ class DiscriminatorCodegenSpec extends AnyFlatSpec with Matchers {
     val out = gen.classDefs(doc, targetScala3 = false, jsonSerdeLib = Circe).get.classRepr
     out should include("case class Dog (")
     out should include("barks: Boolean")
-    out should not include "kind: String"
-    out should include("""def `kind`: String = "dog"""")
+    out should include(" { def kind: String }")
+    out should include("""def kind: String = "dog"""")
     out should not include regex("case class Dog \\([^)]*kind".r)
+    out.shouldCompile()
   }
 
   it should "omit discriminator fields when schema key differs from generated class name" in {
@@ -88,7 +90,8 @@ class DiscriminatorCodegenSpec extends AnyFlatSpec with Matchers {
     val out = new ClassDefinitionGenerator().classDefs(doc, targetScala3 = false, jsonSerdeLib = Circe).get.classRepr
     out should include("case class Mydog (")
     out should include("barks: Boolean")
-    out should not include "kind: String"
-    out should include("""def `kind`: String = "dog"""")
+    out should include(" { def kind: String }")
+    out should include("""def kind: String = "dog"""")
+    out.shouldCompile()
   }
 }

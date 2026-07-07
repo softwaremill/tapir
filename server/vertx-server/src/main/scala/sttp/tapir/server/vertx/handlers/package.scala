@@ -21,7 +21,9 @@ package object handlers {
   }
 
   private[vertx] lazy val streamPauseHandler: Handler[RoutingContext] = { rc =>
-    rc.request.pause()
+    // Vert.x 5 throws an IllegalStateException when pausing a fully-read request; it's safe to ignore (Vert.x 4 treated it as a no-op)
+    try rc.request.pause()
+    catch { case _: IllegalStateException => () }
     rc.next()
   }
 

@@ -9,10 +9,19 @@ import sttp.tapir.server.tests._
 import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.CatsFFromVFuture
 import sttp.tapir.tests.{Test, TestSuite}
 
+import scala.concurrent.duration._
+
 class CatsVertxServerTest extends TestSuite {
 
   def vertxResource: Resource[IO, Vertx] =
-    Resource.make(IO.delay(Vertx.vertx()))(vertx => new CatsFFromVFuture[IO]().apply(vertx.close).void)
+    Resource.make(IO.delay(Vertx.vertx()))(vertx =>
+      // vertx.close sometimes never completes; bound the wait so suite cleanup can't hang the (non-forked) test JVM
+      new CatsFFromVFuture[IO]()
+        .apply(vertx.close)
+        .void
+        .timeout(30.seconds)
+        .handleErrorWith(e => IO(println(s"Vertx close failed or timed out: $e")))
+    )
 
   def drainFs2(stream: Fs2Streams[IO]#BinaryStream): IO[Unit] =
     stream.compile.drain.void

@@ -32,8 +32,9 @@ object RootGenerator {
       generateEndpointTypes: Boolean,
       generateValidators: Boolean,
       useCustomJsoniterSerdes: Boolean,
-      packageReuse: PackageReuseContext = PackageReuseContext.none,
-      seperateFilesForModels: Boolean = false
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean,
+      alwaysGenerateParamSupport: Boolean
   ): GenerationInfo = {
     val doc = unNormalisedDoc.resolveAllOfSchemas
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
@@ -119,7 +120,8 @@ object RootGenerator {
           xmlParamRefs = xmlParamRefs,
           useCustomJsoniterSerdes = useCustomJsoniterSerdes,
           packageReuse = packageReuse,
-          seperateFilesForModels = seperateFilesForModels
+          seperateFilesForModels = seperateFilesForModels,
+          alwaysGenerateParamSupport = alwaysGenerateParamSupport
         )
         .getOrElse(GeneratedClassDefinitions(Map.empty, None, Nil, None, false, Nil, Set.empty))
 
@@ -293,14 +295,14 @@ object RootGenerator {
       |}
       |implicit def makeUnexplodedQuerySeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], CommaSeparatedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
       |  sttp.tapir.Codec.listHead[String, String, sttp.tapir.CodecFormat.TextPlain]
-      |    .mapDecode(values => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(s => CommaSeparatedValues(s.toList)))(_.values.map(support.encode).mkString(","))
+      |    .mapDecode(values => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(s => CommaSeparatedValues(s.toList)))(_.values.flatMap(support.encode).mkString(","))
       |}
       |implicit def makeUnexplodedQueryOptSeqCodecFromListHead[T](implicit support: sttp.tapir.Codec[List[String], T, sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], Option[CommaSeparatedValues[T]], sttp.tapir.CodecFormat.TextPlain] = {
       |  sttp.tapir.Codec.listHeadOption[String, String, sttp.tapir.CodecFormat.TextPlain]
       |    .mapDecode{
       |      case None => DecodeResult.Value(None)
       |      case Some(values) => DecodeResult.sequence(values.split(',').toSeq.map(e => support.rawDecode(List(e)))).map(r => Some(CommaSeparatedValues(r.toList)))
-      |    }(_.map(_.values.map(support.encode).mkString(",")))
+      |    }(_.map(_.values.flatMap(support.encode).mkString(",")))
       |}
       |implicit def makeExplodedQuerySeqCodecFromListSeq[T](implicit support: sttp.tapir.Codec[List[String], List[T], sttp.tapir.CodecFormat.TextPlain]): sttp.tapir.Codec[List[String], ExplodedValues[T], sttp.tapir.CodecFormat.TextPlain] = {
       |  support.mapDecode(l => DecodeResult.Value(ExplodedValues(l)))(_.values)
