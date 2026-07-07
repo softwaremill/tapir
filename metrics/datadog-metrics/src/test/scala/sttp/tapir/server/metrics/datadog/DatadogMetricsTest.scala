@@ -2,12 +2,14 @@ package sttp.tapir.server.metrics.datadog
 
 import com.timgroup.statsd._
 import org.scalatest.Retries.isRetryable
+import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.tagobjects.Retryable
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Canceled, Failed, Outcome}
 import sttp.shared.Identity
 import sttp.tapir.TestUtil._
@@ -25,7 +27,6 @@ import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
 import java.nio.charset.StandardCharsets
 import java.time._
-import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Success, Try}
@@ -34,6 +35,11 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
 
   private val statsdServerPort = 17254
   private val statsdServer = new MockStatsDServer(statsdServerPort)
+
+  // increase the patience for `eventually` for slow CI tests; the statsd client aggregates metrics client-side and
+  // flushes them every 2 seconds, so datagrams arrive with a delay
+  implicit val patienceConfig: Eventually.PatienceConfig =
+    Eventually.PatienceConfig(timeout = Span(15, Seconds), interval = Span(150, Millis))
 
   override def beforeAll(): Unit = statsdServer.start()
   override def afterAll(): Unit = statsdServer.close()
@@ -65,7 +71,9 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
   }
   //
 
-  "default metrics" should "collect requests active" in {
+  // retryable, as the statsd client aggregates metrics client-side in 2-second flush windows, so counter increments
+  // can in rare cases be split or merged across windows, which no amount of waiting can heal
+  "default metrics" should "collect requests active" taggedAs Retryable in {
     // given
     val serverEp = PersonsApi { name =>
       Thread.sleep(2000)
@@ -75,6 +83,9 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
       new NonBlockingStatsDClientBuilder()
         .hostname("localhost")
         .port(statsdServerPort)
+        // origin detection appends |c:<container-id> to datagrams on machines where a container id resolves,
+        // breaking exact-match assertions
+        .originDetectionEnabled(false)
         .build()
 
     val metrics = DatadogMetrics[Identity](client).addRequestsActive()
@@ -90,26 +101,30 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     // when
     val response = Future { interpreter.apply(PersonsApi.request("Jacob")) }
 
-    waitReceiveMessage(statsdServer)
-
     // then
-    statsdServer.getReceivedMessages should contain("""tapir.request_active.count:1|c|#method:GET""")
+    eventually {
+      statsdServer.getReceivedMessages should contain("""tapir.request_active.count:1|c|#method:GET""")
+    }
 
     statsdServer.clear()
 
     ScalaFutures.whenReady(response, Timeout(Span(3, Seconds))) { _ =>
-      waitReceiveMessage(statsdServer)
-      statsdServer.getReceivedMessages should contain("""tapir.request_active.count:-1|c|#method:GET""")
+      eventually {
+        statsdServer.getReceivedMessages should contain("""tapir.request_active.count:-1|c|#method:GET""")
+      }
     }
   }
 
-  "default metrics" should "collect requests total" in {
+  // retryable, as the statsd client aggregates metrics client-side in 2-second flush windows, so counter increments
+  // can in rare cases be split or merged across windows, which no amount of waiting can heal
+  "default metrics" should "collect requests total" taggedAs Retryable in {
     // given
     val serverEp = PersonsApi().serverEp
     val client =
       new NonBlockingStatsDClientBuilder()
         .hostname("localhost")
         .port(statsdServerPort)
+        .originDetectionEnabled(false)
         .build()
 
     val metrics = DatadogMetrics[Identity](client).addRequestsTotal()
@@ -128,11 +143,11 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     interpreter.apply(PersonsApi.request("Mike"))
     interpreter.apply(PersonsApi.request(""))
 
-    waitReceiveMessage(statsdServer, "4xx")
-
     // then
-    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:2xx,path:/person,method:GET""")
-    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:4xx,path:/person,method:GET""")
+    eventually {
+      statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:2xx,path:/person,method:GET""")
+      statsdServer.getReceivedMessages should contain("""tapir.request_total.count:2|c|#status:4xx,path:/person,method:GET""")
+    }
   }
 
   "default metrics" should "collect requests duration" taggedAs Retryable in {
@@ -157,6 +172,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
       new NonBlockingStatsDClientBuilder()
         .hostname("localhost")
         .port(statsdServerPort)
+        .originDetectionEnabled(false)
         .build()
 
     val metrics = DatadogMetrics[Identity](client).addRequestsDuration(clock = clock)
@@ -174,31 +190,32 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     interpret(200, 2000)
     interpret(300, 3000)
 
-    waitReceiveMessage(statsdServer, "0.3")
-
     // then
     // headers
-
-    statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.1|h|#phase:headers,status:2xx,path:/person,method:GET"""
-    )
-    statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.2|h|#phase:headers,status:2xx,path:/person,method:GET"""
-    )
-    statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:0.3|h|#phase:headers,status:2xx,path:/person,method:GET"""
-    )
+    eventually {
+      statsdServer.getReceivedMessages should contain(
+        """tapir.request_duration_seconds:0.1|h|#phase:headers,status:2xx,path:/person,method:GET"""
+      )
+      statsdServer.getReceivedMessages should contain(
+        """tapir.request_duration_seconds:0.2|h|#phase:headers,status:2xx,path:/person,method:GET"""
+      )
+      statsdServer.getReceivedMessages should contain(
+        """tapir.request_duration_seconds:0.3|h|#phase:headers,status:2xx,path:/person,method:GET"""
+      )
+    }
 
     // body
-    statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:1.1|h|#phase:body,status:2xx,path:/person,method:GET"""
-    )
-    statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:2.2|h|#phase:body,status:2xx,path:/person,method:GET"""
-    )
-    statsdServer.getReceivedMessages should contain(
-      """tapir.request_duration_seconds:3.3|h|#phase:body,status:2xx,path:/person,method:GET"""
-    )
+    eventually {
+      statsdServer.getReceivedMessages should contain(
+        """tapir.request_duration_seconds:1.1|h|#phase:body,status:2xx,path:/person,method:GET"""
+      )
+      statsdServer.getReceivedMessages should contain(
+        """tapir.request_duration_seconds:2.2|h|#phase:body,status:2xx,path:/person,method:GET"""
+      )
+      statsdServer.getReceivedMessages should contain(
+        """tapir.request_duration_seconds:3.3|h|#phase:body,status:2xx,path:/person,method:GET"""
+      )
+    }
   }
 
   "default metrics" should "customize labels" taggedAs Retryable in {
@@ -209,6 +226,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
       new NonBlockingStatsDClientBuilder()
         .hostname("localhost")
         .port(statsdServerPort)
+        .originDetectionEnabled(false)
         .build()
 
     val metrics = DatadogMetrics[Identity](client).addRequestsTotal(labels)
@@ -224,10 +242,10 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     // when
     interpreter.apply(PersonsApi.request("Jacob"))
 
-    waitReceiveMessage(statsdServer)
-
     // then
-    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:1|c|#key:value""")
+    eventually {
+      statsdServer.getReceivedMessages should contain("""tapir.request_total.count:1|c|#key:value""")
+    }
   }
 
   "metrics" should "be collected on exception when response from exception handler" taggedAs Retryable in {
@@ -237,6 +255,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
       new NonBlockingStatsDClientBuilder()
         .hostname("localhost")
         .port(statsdServerPort)
+        .originDetectionEnabled(false)
         .build()
 
     val metrics = DatadogMetrics[Identity](client).addRequestsTotal()
@@ -251,30 +270,17 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
     // when
     interpreter.apply(PersonsApi.request("Jacob"))
 
-    waitReceiveMessage(statsdServer)
-
     // then
-    statsdServer.getReceivedMessages should contain("""tapir.request_total.count:1|c|#status:5xx,path:/person,method:GET""")
+    eventually {
+      statsdServer.getReceivedMessages should contain("""tapir.request_total.count:1|c|#status:5xx,path:/person,method:GET""")
+    }
   }
 }
 
 object DatadogMetricsTest {
-  val Tries = 5
-
-  @tailrec
-  private def waitReceiveMessage(statsdServer: MockStatsDServer, expected: String = "method", tries: Int = Tries): Unit = {
-    if (
-      statsdServer.getReceivedMessages
-        .count(m => !m.startsWith("datadog")) == 0 || (tries > 0 && statsdServer.getReceivedMessages
-        .count(m => m.startsWith(expected)) > 0)
-    ) {
-      Thread.sleep(100)
-      waitReceiveMessage(statsdServer, expected, tries - 1)
-    }
-  }
-
   class MockStatsDServer(port: Int) {
-    private var receivedMessages: List[String] = Nil
+    // written by the receiver thread, read by the test thread
+    @volatile private var receivedMessages: List[String] = Nil
     private val server = DatagramChannel.open()
 
     def clear(): Unit = receivedMessages = Nil
