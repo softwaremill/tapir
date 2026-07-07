@@ -14,6 +14,8 @@ import cats.effect.kernel.Resource
 import scala.concurrent.ExecutionContext
 import sttp.client4._
 import sttp.capabilities.fs2.Fs2Streams
+import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
@@ -21,6 +23,12 @@ import sttp.model.StatusCode
 class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]])(implicit
     ec: ExecutionContext
 ) {
+  // increase the patience for `eventually` for slow CI tests
+  implicit val patienceConfig: Eventually.PatienceConfig = Eventually.PatienceConfig(
+    timeout = org.scalatest.time.Span(15, org.scalatest.time.Seconds),
+    interval = org.scalatest.time.Span(150, org.scalatest.time.Millis)
+  )
+
   def tests(): List[Test] = List(
     Test("properly update metrics when a request times out") {
       val e = endpoint.post
@@ -68,10 +76,12 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
           basicRequest.post(uri"http://localhost:$port").body("test").send(backend).map { response =>
             response.body should matchPattern { case Left(_) => }
             response.code shouldBe StatusCode.ServiceUnavailable
-            // the metrics will only be updated when the endpoint's logic completes, which is 1 second after receiving the timeout response
-            Thread.sleep(1100)
-            activeRequests.get() shouldBe 0
-            totalRequests.get() shouldBe 1
+            // the metrics will only be updated when the endpoint's logic completes, which is ~1 second
+            // after receiving the timeout response (and possibly later on a loaded CI machine)
+            eventually {
+              activeRequests.get() shouldBe 0
+              totalRequests.get() shouldBe 1
+            }
           }
         }
         .unsafeToFuture()
