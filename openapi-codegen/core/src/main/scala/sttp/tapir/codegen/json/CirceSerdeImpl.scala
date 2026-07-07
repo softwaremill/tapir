@@ -32,7 +32,8 @@ object CirceSerdeImpl {
       allSchemas: Map[String, OpenapiSchemaType],
       allTransitiveJsonParamRefs: Set[String],
       validateNonDiscriminatedOneOfs: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean,
   ): SerdeGenResponse = {
     val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
     val pathSchemas = inlineEndpointSchemas(doc)
@@ -51,7 +52,7 @@ object CirceSerdeImpl {
       val uncapitalisedName = uncapitalise(name)
       val decoderName = s"${uncapitalisedName}JsonDecoder"
       val encoderName = s"${uncapitalisedName}JsonEncoder"
-      val companion = s"${packageReuse.dependencyModelPath}.$name"
+      val companion = s"${packageReuse.modelRoot(seperateFilesForModels)}.$name"
       s"""implicit lazy val $decoderName: io.circe.Decoder[$name] = enumeratum.Circe.decoder($companion)
          |implicit lazy val $encoderName: io.circe.Encoder[$name] = enumeratum.Circe.encoder($companion)"""
     }

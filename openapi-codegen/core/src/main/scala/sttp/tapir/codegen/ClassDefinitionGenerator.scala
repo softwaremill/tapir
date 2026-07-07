@@ -188,7 +188,8 @@ class ClassDefinitionGenerator {
       schemasContainAny,
       useCustomJsoniterSerdes,
       packageReuse,
-      resolvableNonClassyOneOfSchemas
+      resolvableNonClassyOneOfSchemas,
+      seperateFilesForModels
     )
     val allTransitiveXmlParamRefs = fetchTransitiveParamRefs(
       xmlParamRefs,
@@ -236,6 +237,7 @@ class ClassDefinitionGenerator {
                   targetScala3,
                   isReusedSchema,
                   packageReuse,
+                  seperateFilesForModels,
                   alwaysGenerateParamSupport
                 )
               )
@@ -321,6 +323,7 @@ class ClassDefinitionGenerator {
                 targetScala3,
                 isReused,
                 packageReuse,
+                seperateFilesForModels,
                 alwaysGenerateParamSupport
               ).mkString("\n")
             }
@@ -419,6 +422,7 @@ class ClassDefinitionGenerator {
       targetScala3: Boolean,
       isReused: Boolean,
       packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean,
       alwaysGenerateParamSupport: Boolean
   ): Seq[String] = try {
     val isJson = jsonParamRefs contains name
@@ -477,15 +481,20 @@ class ClassDefinitionGenerator {
                   .render(allModels = allSchemas, thisType = schemaType, optional, RenderConfig(maybeEnum.map(_.enumName)))(_)
             )
           val default = maybeExplicitDefault getOrElse (if (optional) " = None" else "")
-          if (isReused) "" -> maybeEnum.map(e => s"type ${e.enumName} = ${packageReuse.dependencyModelPath}.${e.enumName}")
+          if (isReused) "" -> maybeEnum.map { e =>
+            val alias = s"${e.enumName} = ${packageReuse.modelRoot(seperateFilesForModels)}.${e.enumName}"
+            s"type $alias\nval $alias"
+          }
           else s"$fixedKey: $tpe$default" -> maybeEnum.map(_.impl)
         }
         .unzip
 
       val enumDefn = maybeEnums.flatten.toList
       val modelDefn =
-        if (isReused) s"type $className = ${packageReuse.dependencyModelPath}.$className"
-        else
+        if (isReused) {
+          val alias = s"$className = ${packageReuse.modelRoot(seperateFilesForModels)}.$className"
+          s"type $alias\nval $alias"
+        } else
           s"""|case class $className (
               |${indent(2)(properties.mkString(",\n"))}
               |)$parents$discriminatorDefBody""".stripMargin
