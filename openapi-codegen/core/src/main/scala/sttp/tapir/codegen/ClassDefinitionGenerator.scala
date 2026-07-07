@@ -7,7 +7,7 @@ import sttp.tapir.codegen.json.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.util.NameHelpers.indent
+import sttp.tapir.codegen.util.NameHelpers.{indent, safeVariableName}
 import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
 
 case class GeneratedClassDefinitions(
@@ -154,7 +154,7 @@ class ClassDefinitionGenerator {
         .distinct
         .filterNot(s => PackageReuseContext.isReusedSchema(s._1, packageReuse))
         .map { case (name, maybeDiscriminator) =>
-          val maybeBody = maybeDiscriminator.map(d => s" { def ${NameHelpers.safeVariableName(d)}: String }").getOrElse("")
+          val maybeBody = maybeDiscriminator.map(d => s" { def ${safeVariableName(d)}: String }").getOrElse("")
           s"sealed trait $name$maybeBody"
         }
         .sorted
