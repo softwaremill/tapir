@@ -1,6 +1,7 @@
 package sttp.tapir.codegen
 import io.circe.Json
-import sttp.tapir.codegen.RootGenerator.{indent, mapSchemaSimpleTypeToType, strippedToCamelCase}
+import sttp.tapir.codegen.RootGenerator.{mapSchemaSimpleTypeToType, strippedToCamelCase}
+import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.XmlSerdeLib.XmlSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
@@ -12,31 +13,12 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiResponseContent,
   OpenapiResponseDef
 }
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  AnyType,
-  OpenapiSchemaAny,
-  OpenapiSchemaArray,
-  OpenapiSchemaBinary,
-  OpenapiSchemaEnum,
-  OpenapiSchemaMap,
-  OpenapiSchemaObject,
-  OpenapiSchemaOneOf,
-  OpenapiSchemaRef,
-  OpenapiSchemaSimpleType,
-  OpenapiSchemaString
-}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models._
-import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
-  forceEager,
-  forceReqEager,
-  forceReqStreaming,
-  forceRespEager,
-  forceRespStreaming,
-  forceStreaming,
-  jsonBodyAsString,
-  securityPrefixKey
-}
+import sttp.tapir.codegen.openapi.models.GenerationDirectives._
+import sttp.tapir.codegen.security.{SecurityDefn, SecurityGenerator, SecurityWrapperDefn}
 import sttp.tapir.codegen.util.ErrUtils.bail
+import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.util.{JavaEscape, Location, NameHelpers}
 
 case class EndpointTypes(security: Seq[String], in: Seq[String], err: Seq[String], out: Seq[String]) {
@@ -140,7 +122,8 @@ class EndpointGenerator {
       generateEndpointTypes: Boolean,
       validators: ValidationDefns,
       generateValidators: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean
   ): EndpointDefs = {
     val capabilities = capabilityImpl(streamingImplementation)
     val components = Option(doc.components).flatten
@@ -162,7 +145,8 @@ class EndpointGenerator {
             doc,
             validators,
             generateValidators,
-            packageReuse
+            packageReuse,
+            seperateFilesForModels
           )
         )
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
@@ -203,7 +187,8 @@ class EndpointGenerator {
       doc: OpenapiDocument,
       validators: ValidationDefns,
       generateValidators: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean
   )(p: OpenapiPath): GeneratedEndpoints = {
     val parameters = components.map(_.parameters).getOrElse(Map.empty)
     val securitySchemes = components.map(_.securitySchemes).getOrElse(Map.empty)
@@ -255,7 +240,8 @@ class EndpointGenerator {
               validators,
               generateValidators,
               isReused,
-              packageReuse
+              packageReuse,
+              seperateFilesForModels
             )
           val (outDecl, outTypes, errTypes, inlineDefns) =
             outs(
@@ -270,7 +256,8 @@ class EndpointGenerator {
               validators,
               generateValidators,
               isReused,
-              packageReuse
+              packageReuse,
+              seperateFilesForModels
             )
           val allTypes = EndpointTypes(
             maybeSecurityPath.toSeq.flatMap(_._2) ++ securityTypes.toSeq,
@@ -504,8 +491,8 @@ class EndpointGenerator {
       case x => bail(s"Can't create non-simple params - found $x")
     }
 
-  private def aliases(packageReuse: PackageReuseContext, types: Seq[String]): String =
-    types.map(s => s"type $s = ${packageReuse.dependencyModelPath}.$s").mkString("\n")
+  private def aliases(packageReuse: PackageReuseContext, types: Seq[String], seperateFilesForModels: Boolean): String =
+    types.map(PackageReuseContext.enumAliasType(_, packageReuse, seperateFilesForModels)).mkString("\n")
 
   private def ins(
       parameters: Seq[OpenapiParameter],
@@ -520,7 +507,8 @@ class EndpointGenerator {
       validators: ValidationDefns,
       generateValidators: Boolean,
       isReused: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean
   )(implicit location: Location): (String, Option[String], Seq[String], Option[String]) = {
 
     // .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
@@ -557,7 +545,7 @@ class EndpointGenerator {
           validators
         )
 
-      val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes) else d)
+      val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes, seperateFilesForModels) else d)
       (decl, tpe, inlineDefn)
     }
     val (rqBody, maybeReqType, maybeInlineDefns) = requestBody.flatMap { b =>
@@ -685,7 +673,8 @@ class EndpointGenerator {
       validators: ValidationDefns,
       generateValidators: Boolean,
       isReused: Boolean,
-      packageReuse: PackageReuseContext
+      packageReuse: PackageReuseContext,
+      seperateFilesForModels: Boolean
   )(implicit
       location: Location
   ) = {
@@ -721,7 +710,7 @@ class EndpointGenerator {
             validators
           )
         }
-        val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes) else d)
+        val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes, seperateFilesForModels) else d)
         (decl, tpe, inlineDefn)
       }
       resp.content match {
@@ -758,17 +747,18 @@ class EndpointGenerator {
             .groupBy(_._1)
           val aliasDefns =
             if (needsAliases && isReused) {
+              val parentModelPath = packageReuse.modelRoot(seperateFilesForModels)
               val wrappers = declsByWrapperClassName
                 .map { case (name, seq) =>
-                  s"type $name = ${packageReuse.dependencyModelPath}.$name\nval $name = ${packageReuse.dependencyModelPath}.$name\n"
+                  s"type $name = $parentModelPath.$name\nval $name = $parentModelPath.$name\n"
                 }
                 .toSeq
                 .sorted
                 .mkString("\n")
               Some(s"""
-                      |type $traitName = ${packageReuse.dependencyModelPath}.$traitName
-                      |type ${traitName}Full = ${packageReuse.dependencyModelPath}.${traitName}Full
-                      |val ${traitName}Full = ${packageReuse.dependencyModelPath}.${traitName}Full
+                      |type $traitName = $parentModelPath.$traitName
+                      |type ${traitName}Full = $parentModelPath.${traitName}Full
+                      |val ${traitName}Full = $parentModelPath.${traitName}Full
                       |$wrappers
                       |""".stripMargin)
             } else if (needsAliases) {

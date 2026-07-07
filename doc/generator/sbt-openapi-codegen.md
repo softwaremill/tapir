@@ -56,6 +56,7 @@ openapiPackageDependencies            Map.empty[String, String]            Allow
                                                                            repeated schema declarations between the openapis, with the generated code for the 'key' package defining type (and sometimes val)
                                                                            aliases to the duplicates in the 'value' package. This is still experimental - significantly, the type is likely to change
                                                                            to a Map[String, Seq[String]] in the near future to permit multiple 'inheritance', and there may be bugs in the implementation.
+openapiSeperateFilesForModels         false                                When true, models will be written to individual files under $pkg.models, with type aliases and helpers living under `package.scala` in a package object
 ===================================== ==================================== ==================================================================================================
 ```
 

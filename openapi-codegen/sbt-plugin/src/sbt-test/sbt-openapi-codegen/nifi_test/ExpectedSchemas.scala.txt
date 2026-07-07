@@ -1,7 +1,9 @@
 package sttp.tapir.generated
 
+
 object TapirGeneratedEndpointsSchemas1 {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
+  import sttp.tapir.generated.models._
   import sttp.tapir.generic.auto._
 
   implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)

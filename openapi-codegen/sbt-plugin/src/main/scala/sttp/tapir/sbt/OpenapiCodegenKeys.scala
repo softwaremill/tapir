@@ -16,7 +16,8 @@ case class OpenApiConfiguration(
     disableValidatorGeneration: Boolean,
     useCustomJsoniterSerdes: Boolean,
     additionalPackages: List[(String, File)],
-    packageDependencies: Map[String, String]
+    packageDependencies: Map[String, String],
+    seperateFilesForModels: Boolean,
 )
 
 trait OpenapiCodegenKeys {
@@ -41,6 +42,7 @@ trait OpenapiCodegenKeys {
   lazy val openapiUseCustomJsoniterSerdes = settingKey[Boolean](
     "Set to true to enable usage of custom jsoniter macros (decreases compilation flakiness, compatible with jsoniter-scala versions >= 2.36.x)"
   )
+  lazy val openapiSeperateFilesForModels = settingKey[Boolean]("When true, each model will be split into a seperate file (excluding ADTS)")
   lazy val openapiOpenApiConfiguration =
     settingKey[OpenApiConfiguration]("Aggregation of other settings. Manually set value will be disregarded.")
 
