@@ -1,0 +1,102 @@
+
+package sttp.tapir.generated
+
+package object models {
+
+  case class CommaSeparatedValues[T](values: List[T])
+  case class ExplodedValues[T](values: List[T])
+  trait ExtraParamSupport[T] {
+    def decode(s: String): sttp.tapir.DecodeResult[T]
+    def encode(t: T): String
+  }
+
+  case class EnumExtraParamSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]) extends ExtraParamSupport[T] {
+    // Case-insensitive mapping
+    def decode(s: String): sttp.tapir.DecodeResult[T] =
+      scala.util.Try(T.upperCaseNameValuesToMap(s.toUpperCase))
+        .fold(
+          _ =>
+            sttp.tapir.DecodeResult.Error(
+              s,
+              new NoSuchElementException(
+                s"Could not find value $s for enum ${enumName}, available values: ${T.values.mkString(", ")}"
+              )
+            ),
+          sttp.tapir.DecodeResult.Value(_)
+        )
+    def encode(t: T): String = t.entryName
+  }
+  def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
+    EnumExtraParamSupport(enumName, T)
+
+  type ActionDetailsDTO = io.circe.JsonObject
+  type BulletinBoardPatternParameterStr = String
+  type ClientIdParameterStr = String
+  type ComponentDetailsDTO = io.circe.JsonObject
+  type DateTimeParameterDT = java.time.Instant
+  type IntegerParameterInt = Int
+  type LongParameterInt = Long
+  type StreamingOutput = io.circe.JsonObject
+  case class CreateAccessTokenRequest (
+    password: Option[String] = None,
+    username: Option[String] = None
+  )
+
+  sealed trait ClearState_1BodyIn extends Product with java.io.Serializable
+  case class ClearState_1Body0In(value: Array[Byte]) extends ClearState_1BodyIn
+  case class ClearState_1BodyOption_ComponentStateEntity_In(value: Option[ComponentStateEntity]) extends ClearState_1BodyIn
+
+
+  sealed trait ClearStateBodyIn extends Product with java.io.Serializable
+  case class ClearStateBody0In(value: Array[Byte]) extends ClearStateBodyIn
+  case class ClearStateBodyOption_ComponentStateEntity_In(value: Option[ComponentStateEntity]) extends ClearStateBodyIn
+
+
+  sealed trait GetFlowMetricsProducer extends enumeratum.EnumEntry
+  object GetFlowMetricsProducer extends enumeratum.Enum[GetFlowMetricsProducer] with enumeratum.CirceEnum[GetFlowMetricsProducer] {
+    val values = findValues
+    case object PROMETHEUS extends GetFlowMetricsProducer
+    case object JSON extends GetFlowMetricsProducer
+    implicit val enumCodecSupportGetFlowMetricsProducer: ExtraParamSupport[GetFlowMetricsProducer] =
+      extraCodecSupport[GetFlowMetricsProducer]("GetFlowMetricsProducer", GetFlowMetricsProducer)
+  }
+  sealed trait DownloadFlowFileContentResponseHeader
+  case class DownloadFlowFileContentResponseHeader200(`Content-Type`: String) extends DownloadFlowFileContentResponseHeader
+  case object DownloadFlowFileContentResponseHeader206 extends DownloadFlowFileContentResponseHeader
+
+
+  sealed trait ClearState_2BodyIn extends Product with java.io.Serializable
+  case class ClearState_2Body0In(value: Array[Byte]) extends ClearState_2BodyIn
+  case class ClearState_2BodyOption_ComponentStateEntity_In(value: Option[ComponentStateEntity]) extends ClearState_2BodyIn
+
+  case class UploadProcessGroupRequest (
+    clientId: String,
+    disconnectedNodeAcknowledged: Option[Boolean] = Some(false),
+    file: Option[sttp.model.Part[java.io.File]] = None,
+    groupName: String,
+    positionX: Double,
+    positionY: Double
+  )
+
+  sealed trait GetProcessorRunStatusDetailsBodyIn extends Product with java.io.Serializable
+  case class GetProcessorRunStatusDetailsBody0In(value: Array[Byte]) extends GetProcessorRunStatusDetailsBodyIn
+  case class GetProcessorRunStatusDetailsBodyOption_RunStatusDetailsRequestEntity_In(value: Option[RunStatusDetailsRequestEntity]) extends GetProcessorRunStatusDetailsBodyIn
+
+
+  sealed trait ClearState_3BodyIn extends Product with java.io.Serializable
+  case class ClearState_3Body0In(value: Array[Byte]) extends ClearState_3BodyIn
+  case class ClearState_3BodyOption_ComponentStateEntity_In(value: Option[ComponentStateEntity]) extends ClearState_3BodyIn
+
+  sealed trait GetInputContentResponseHeader
+  case class GetInputContentResponseHeader200(`Content-Type`: String) extends GetInputContentResponseHeader
+  case object GetInputContentResponseHeader206 extends GetInputContentResponseHeader
+
+  sealed trait GetOutputContentResponseHeader
+  case class GetOutputContentResponseHeader200(`Content-Type`: String) extends GetOutputContentResponseHeader
+  case object GetOutputContentResponseHeader206 extends GetOutputContentResponseHeader
+
+
+  sealed trait ClearState_4BodyIn extends Product with java.io.Serializable
+  case class ClearState_4Body0In(value: Array[Byte]) extends ClearState_4BodyIn
+  case class ClearState_4BodyOption_ComponentStateEntity_In(value: Option[ComponentStateEntity]) extends ClearState_4BodyIn
+}
