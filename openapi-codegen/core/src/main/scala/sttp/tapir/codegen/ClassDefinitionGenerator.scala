@@ -226,7 +226,7 @@ class ClassDefinitionGenerator {
             (
               name,
               (
-                2,
+                if (isReusedSchema) 0 else 2,
                 generateClass(
                   allSchemas,
                   name,

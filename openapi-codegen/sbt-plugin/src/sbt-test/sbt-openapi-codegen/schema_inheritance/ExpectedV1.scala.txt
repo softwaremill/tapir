@@ -55,6 +55,7 @@ object TapirGeneratedEndpoints {
 
 
   type Pet = sttp.tapir.generated.v2.TapirGeneratedEndpoints.Pet
+  val Pet = sttp.tapir.generated.v2.TapirGeneratedEndpoints.Pet
   case class Order (
     id: Long,
     pet: Pet
