@@ -111,10 +111,38 @@ jobs:
         # the netty server interpreter tests include some which run a large number of requests, to detect potential leaks
         # storing the output to verify it in the next step
         command: |
+          # watchdog: the test run sometimes hangs silently (a stuck test or a wedged shutdown); when output.log
+          # hasn't been written to for >240s, capture thread dumps from all JVMs (into thread-dumps.log, uploaded
+          # as an artifact below) so the hang can be diagnosed
+          touch output.log
+          (
+            while true; do
+              sleep 30
+              if [ $(( $(date +%s) - $(stat -c %Y output.log) )) -gt 240 ]; then
+                {
+                  echo "=== $(date -u '+%Y-%m-%d %H:%M:%S') build silent for >240s, dumping threads ==="
+                  for pid in $(jps -q); do
+                    echo "--- jcmd $pid Thread.print ---"
+                    jcmd "$pid" Thread.print || true
+                  done
+                } >> thread-dumps.log 2>&1
+              fi
+            done
+          ) &
+          WATCHDOG_PID=$!
           # reStop the forked client test server while the JVM is healthy; otherwise sbt-revolver's
           # shutdown hook races on JVM exit (IllegalStateException: Shutdown in progress) and can flake the build
           sbt $SBT_JAVA_OPTS -v "testScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}" "clientTestServer/reStop" 2>&1 | tee output.log
-          exit ${PIPESTATUS[0]}
+          SBT_EXIT_CODE=${PIPESTATUS[0]}
+          kill $WATCHDOG_PID 2>/dev/null || true
+          exit $SBT_EXIT_CODE
+    - name: Upload thread dumps (if hang occurred)
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: 'thread-dumps-${{ matrix.scala-version }}-${{ matrix.target-platform }}-${{ matrix.java }}'
+        path: thread-dumps.log
+        if-no-files-found: ignore
     - name: Check for reported leaks
       if: matrix.target-platform != 'JS'
       run: |
