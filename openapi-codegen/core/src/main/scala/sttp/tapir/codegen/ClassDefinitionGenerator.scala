@@ -469,7 +469,7 @@ class ClassDefinitionGenerator {
              |}""".stripMargin
       }
 
-      val (properties, maybeEnums) = obj.properties
+      val (properties, maybeEnums) = obj.properties.toSeq
         .filterNot(discriminatorDefFields.map(_._1) contains _._1)
         .map { case (key, OpenapiSchemaField(schemaType, maybeDefault, _)) =>
           val (tpe, maybeEnum) =

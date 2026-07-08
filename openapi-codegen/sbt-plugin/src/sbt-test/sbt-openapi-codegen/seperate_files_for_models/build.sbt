@@ -10,10 +10,15 @@ lazy val root = (project in file("."))
     ),
     openapiPackageDependencies := Map("sttp.tapir.gen_dup" -> "sttp.tapir.generated")
   )
+val tapirVersion = "1.13.26"
 
-libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.10.0"
-libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.10.0"
-libraryDependencies += "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.8.0"
+libraryDependencies ++= Seq(
+  "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
+  "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % tapirVersion,
+  "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
+  "com.beachape" %% "enumeratum" % "1.9.8",
+  "com.beachape" %% "enumeratum-circe" % "1.9.8"
+)
 
 import scala.io.Source
 import scala.util.Using
@@ -28,5 +33,6 @@ TaskKey[Unit]("check") := {
   if (!main.contains("type Books =")) sys.error("type alias Books should be defined in package object")
   if (!dup.contains("type Books =")) sys.error("type alias Books should be defined in dependent package object")
   if (!dup.contains("type Animal = sttp.tapir.generated.models.Animal")) sys.error("type alias Animal should be defined in package object")
+  if (!dup.contains("type BadgerTypeOfSnuffle =")) sys.error("type alias should be generated for dedupped inline enum defns")
   ()
 }

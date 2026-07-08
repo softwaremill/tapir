@@ -46,6 +46,11 @@ components:
       properties:
         snuffles:
           type: boolean
+        typeOfSnuffle:
+          type: string
+          enum:
+            - Hungry
+            - Noisy
         type:
           type: string
     Ferret:
