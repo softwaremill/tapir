@@ -19,11 +19,14 @@ import scala.io.Source
 import scala.util.Using
 
 TaskKey[Unit]("check") := {
-  val base = sourceManaged.value / "main/sttp/tapir/generated"
-  val main = Using(Source.fromFile(base / "models/package.scala"))(_.mkString).get
-  val book = Using(Source.fromFile(base / "models/Book.scala"))(_.mkString).get
+  val base = sourceManaged.value / "main/sttp/tapir"
+  val main = Using(Source.fromFile(base / "generated/models/package.scala"))(_.mkString).get
+  val book = Using(Source.fromFile(base / "generated/models/Book.scala"))(_.mkString).get
+  val dup = Using(Source.fromFile(base / "gen_dup/models/package.scala"))(_.mkString).get
   if (main.contains("case class Book")) sys.error("Book model should not be in the main object")
   if (!book.contains("case class Book")) sys.error("Book model should be in models/Book.scala")
   if (!main.contains("type Books =")) sys.error("type alias Books should be defined in package object")
+  if (!dup.contains("type Books =")) sys.error("type alias Books should be defined in dependent package object")
+  if (!dup.contains("type Animal = sttp.tapir.generated.models.Animal")) sys.error("type alias Animal should be defined in package object")
   ()
 }
