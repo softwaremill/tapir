@@ -5,6 +5,11 @@ info:
 paths:
   /books:
     get:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Animal'
       responses:
         '200':
           content:
@@ -15,7 +20,7 @@ components:
   schemas:
     Book:
       type: object
-      required: [title]
+      required: [ title ]
       properties:
         title:
           type: string
@@ -23,3 +28,34 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/Book'
+    Animal:
+      required:
+        - type
+      properties:
+        type:
+          type: string
+      oneOf:
+        - $ref: '#/components/schemas/Badger'
+        - $ref: '#/components/schemas/Ferret'
+    Badger:
+      title: Badger
+      type: object
+      required:
+        - snuffles
+        - type
+      properties:
+        snuffles:
+          type: boolean
+        type:
+          type: string
+    Ferret:
+      title: Badger
+      type: object
+      required:
+        - smells
+        - type
+      properties:
+        smells:
+          type: boolean
+        type:
+          type: string

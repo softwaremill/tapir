@@ -277,7 +277,6 @@ class ClassDefinitionGenerator {
 
     def isTypeAlias(name: String): Boolean = allSchemas.get(name) match {
       case Some(_: OpenapiSchemaMap) | Some(_: OpenapiSchemaArray) | Some(_: OpenapiSchemaSimpleType) => true
-      case Some(_: OpenapiSchemaEnum) if PackageReuseContext.isReusedSchema(name, packageReuse)       => true
       case _ if PackageReuseContext.isReusedSchema(name, packageReuse)                                => true
       case _                                                                                          => false
     }
@@ -331,7 +330,8 @@ class ClassDefinitionGenerator {
             }
           }
           .mkString("\n")
-        addModel(fileName, Seq(traits, childContent).filter(_.nonEmpty).mkString("\n"))
+        val defns = Seq(traits, childContent).filter(_.nonEmpty)
+        if (!isReused) addModel(fileName, defns.mkString("\n"))
       }
 
       resolvableNonClassyOneOfSchemas.filterNot(p => isTypeAlias(p._1)).foreach { case (name, st) =>
