@@ -6,8 +6,8 @@ import sttp.tapir.codegen.endpoints.{EndpointGenerator, FS2}
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels._
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.OpenapiSecuritySchemeApiKeyType
-import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiServer, OpenapiXml}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OAuth2Flow, OAuth2FlowType, OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeOAuth2Type}
+import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType, OpenapiServer, OpenapiServerEnum, OpenapiXml}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 import sttp.tapir.codegen.validation.ValidationDefns
 import sttp.tapir.codegen.xml.XmlSerdeLib
@@ -262,6 +262,60 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     out should include("* / ; System.exit(0)")
   }
 
+  it should "reject a security-scheme name that reaches a raw class identifier" in {
+    val evil = """A(v:String)extends AnyRef}; object Evil{ System.exit(0) }; case class B"""
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Nil,
+      Some(OpenapiComponent(Map("Ok" -> OpenapiSchemaObject(mutable.LinkedHashMap("f" -> noDefault(OpenapiSchemaString(false))), Seq("f"), false)),
+        Map(evil -> OpenapiSecuritySchemeApiKeyType("header", "X-A")))),
+      Nil
+    )
+    rejected(doc)
+  }
+
+  it should "escape OAuth2 flow URLs so they cannot break out of the string literal" in {
+    val evil = """https://x") ; sys.error("PWNED") ; auth.oauth2.implicitFlow("z"""
+    val flows = Map[OAuth2FlowType.OAuth2FlowType, OAuth2Flow](
+      OAuth2FlowType.authorizationCode -> OAuth2Flow(Some(evil), Some("https://token"), None, Map.empty)
+    )
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Seq(
+        OpenapiPath(
+          "oauth",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "get",
+              parameters = Nil,
+              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
+              requestBody = None,
+              security = Some(Seq(Map("oauth2" -> Seq())))
+            )
+          )
+        )
+      ),
+      Some(OpenapiComponent(Map(), Map("oauth2" -> OpenapiSecuritySchemeOAuth2Type(flows)))),
+      Nil
+    )
+    val out = endpointDecls(doc)
+    out should include("""https://x\") ; sys.error(\"PWNED\")""") // escaped form present
+    out should not include """authorizationCodeFlow("https://x") ; sys.error("PWNED")""" // not a live break-out
+    out.shouldCompile()
+  }
+
+  it should "escape a server-variable default so it cannot break out of the string literal" in {
+    val evil = """v" ; System.exit(0) ; val x = " """
+    val server = OpenapiServer("https://{env}.example.com", variables = Map("env" -> OpenapiServerEnum(Nil, Some(evil))))
+    val out = ServersGenerator.genServerDefinitions(Seq(server), isScala3).get
+    out should include("""v\" ; System.exit(0)""") // escaped form present
+    out should not include """= "v" ; System.exit(0)""" // not a live break-out
+  }
+
   it should "escape an apiKey security-scheme name so it cannot break out of the string literal" in {
     val evil = """k") ; sys.error("PWNED") ; auth.apiKey(query[String]("z"""
     val doc = OpenapiDocument(
@@ -330,6 +384,7 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     // an inert string literal. (The .attribute references model-level extension keys, so the isolated endpoint decls
     // are not self-contained enough to compile here; the escaped-form assertion is the proof.)
     out should include("""v\" ; sys.error(\"PWNED\")""")
+    out should not include """v" ; sys.error("PWNED")""" // the unescaped break-out form must not appear
   }
 
   it should "reject a server URL containing injection characters" in {
