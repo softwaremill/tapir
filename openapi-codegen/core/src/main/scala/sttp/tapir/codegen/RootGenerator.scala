@@ -256,7 +256,7 @@ object RootGenerator {
       .filterNot(expectedTypes.contains)
       .map {
         case ct @ mediaType(mainType, subType) =>
-          s"""case class ${NameHelpers.safeVariableName(ct + "CodecFormat")}() extends CodecFormat {
+          s"""case class ${NameHelpers.codecFormatName(ct)}() extends CodecFormat {
            |  override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "${JavaEscape
               .escapeString(mainType)}", subType = "${JavaEscape.escapeString(subType)}")
            |}""".stripMargin

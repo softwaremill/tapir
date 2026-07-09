@@ -24,7 +24,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 }
 import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.Location
-import sttp.tapir.codegen.util.NameHelpers.{indent, safeVariableName}
+import sttp.tapir.codegen.util.NameHelpers.{codecFormatName, indent, safeVariableName}
 import sttp.tapir.codegen.validation.ValidationDefns
 import sttp.tapir.codegen.xml.{XmlSerdeGenerator, XmlSerdeLib}
 import sttp.tapir.codegen.xml.XmlSerdeLib.XmlSerdeLib
@@ -170,13 +170,10 @@ object InAndOutComponents {
       isEager: Boolean,
       streamingImplementation: StreamingImplementation
   )(implicit location: Location): MappedContentType = {
-    def codec(baseType: String, contentType: String) = baseType match {
-      case "Array[Byte]" =>
-        val cf = safeVariableName(contentType + "CodecFormat")
-        s"Codec.id[$baseType, $cf]($cf(), Schema.schemaForByteArray)"
-      case "String" =>
-        val cf = safeVariableName(contentType + "CodecFormat")
-        s"Codec.id[$baseType, $cf]($cf(), Schema.schemaForString)"
+    def codec(baseType: String, contentType: String) = {
+      val cf = codecFormatName(contentType)
+      val schema = if (baseType == "Array[Byte]") "Schema.schemaForByteArray" else "Schema.schemaForString"
+      s"Codec.id[$baseType, $cf]($cf(), $schema)"
     }
 
     def eagerBody = contentType match {
@@ -195,7 +192,7 @@ object InAndOutComponents {
       case "application/xml"                   => "CodecFormat.Xml()"
       case "application/x-www-form-urlencoded" => "CodecFormat.XWwwFormUrlencoded()"
       case "application/zip"                   => "CodecFormat.Zip()"
-      case o                                   => s"${safeVariableName(o + "CodecFormat")}()"
+      case o                                   => s"${codecFormatName(o)}()"
     }
     if (isEager) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")
     else {

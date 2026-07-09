@@ -36,8 +36,10 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
   private def classRepr(doc: OpenapiDocument): String =
     new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3, jsonSerdeLib = JsonSerdeLib.Circe).get.classRepr
 
-  // Every injection guard's message mentions the advisory id; class-generation wraps it in a NotImplementedError, so
-  // we catch Throwable and assert the guard fired (rather than an unrelated failure) via the message.
+  // Every injection guard's message mentions the advisory id. Some guards throw directly (NameValidation, before the
+  // class-generation try/catch); others (safeVariableName/safeEnumMemberName inside generateClass) are re-wrapped in a
+  // NotImplementedError that carries the original message. So we catch Throwable and assert on the message, which
+  // distinguishes "an injection guard fired" from an unrelated failure.
   private def rejected(doc: => OpenapiDocument): Unit =
     intercept[Throwable](classRepr(doc)).getMessage should include("GHSA-gpcc")
 
@@ -52,10 +54,16 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     rejected(docWithObject("Ok", evil -> noDefault(OpenapiSchemaString(false))))
   }
 
-  it should "reject a container-typed property name that reaches a derived class identifier" in {
-    val evil = """items: Seq[String] = Nil){ System.exit(0) }; case class X("""
-    val arr = OpenapiSchemaArray(OpenapiSchemaString(false), false)
-    rejected(docWithObject("Ok", evil -> noDefault(arr)))
+  it should "reject an object-typed property name that reaches a derived nested class identifier via addName" in {
+    val evil = """items){ System.exit(0) }; case class X("""
+    val nestedObj = OpenapiSchemaObject(mutable.LinkedHashMap("a" -> noDefault(OpenapiSchemaString(false))), Seq("a"), false)
+    rejected(docWithObject("Ok", evil -> noDefault(nestedObj)))
+  }
+
+  it should "reject an array-of-scalar property name that reaches a derived val identifier in the XML serde" in {
+    // array/map-of-scalar property names are emitted raw as `${n.capitalize}` codec val names in the XML generator.
+    val evil = """items; System.exit(0); val x = "y"""
+    rejected(docWithObject("Ok", evil -> noDefault(OpenapiSchemaArray(OpenapiSchemaString(false), false))))
   }
 
   it should "reject an enum value that would break out of backtick quoting" in {
@@ -140,6 +148,9 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     // The payload's quotes are escaped (`\"`), so it stays a single inert string literal in both the discriminator
     // field body and the circe decoder's downField(...) rather than breaking out into code.
     out should include("""\"); System.exit(0); (\"""")
+    // The class defn (incl. the discriminator field body `def ... = "<escaped value>"`) compiles, proving that sink
+    // holds the payload as inert data rather than injected code.
+    gen.classRepr.shouldCompile()
   }
 
   it should "escape a string default value so it cannot inject at model construction" in {
@@ -177,6 +188,60 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
                 )
               ),
               summary = None
+            )
+          )
+        )
+      ),
+      null,
+      Nil
+    )
+    intercept[Throwable](endpointDecls(doc)).getMessage should include("GHSA-gpcc")
+  }
+
+  it should "escape endpoint tags so they cannot break out of the .tags(List(...)) literal" in {
+    val evil = """pwned")); System.exit(0); //"""
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Seq(
+        OpenapiPath(
+          "tagged",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "get",
+              parameters = Nil,
+              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
+              requestBody = None,
+              tags = Some(Seq(evil))
+            )
+          )
+        )
+      ),
+      null,
+      Nil
+    )
+    val out = endpointDecls(doc)
+    out should include("""pwned\")); System.exit(0); //""") // escaped form present
+    out should not include """.tags(List("pwned")); System.exit(0)""" // not a live break-out
+    out.shouldCompile()
+  }
+
+  it should "reject a content type that would break out of the generated CodecFormat identifier" in {
+    val evilCt = "application/x`;System.exit(0);`json"
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Seq(
+        OpenapiPath(
+          "ct",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "get",
+              parameters = Nil,
+              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent(evilCt, OpenapiSchemaString(false))))),
+              requestBody = None
             )
           )
         )

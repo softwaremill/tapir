@@ -37,6 +37,10 @@ object NameHelpers {
   def safeEnumMemberName(s: String): String =
     if (s.matches("[a-zA-Z][a-zA-Z0-9_]*")) s else backtickQuoteOrReject("enum value", s)
 
+  // The generated `CodecFormat` class name for a content type. The definition site and every reference must produce
+  // the same identifier, so this single derivation is the source of truth (and safely quotes/rejects the content type).
+  def codecFormatName(contentType: String): String = safeVariableName(contentType + "CodecFormat")
+
   // Derives the class name of a schema nested under `parentName` at property `key`. Shared by the class generator and
   // the json serde generators so that emitted codec types cannot drift from the generated class names.
   def addName(parentName: String, key: String): String =

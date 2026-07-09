@@ -34,11 +34,13 @@ object NameValidation {
     case OpenapiSchemaNot(i)                 => namesIn(i)
     case OpenapiSchemaObject(props, _, _, _) =>
       props.toSeq.flatMap { case (propName, field) =>
-        // A property name only reaches a *raw* identifier position (a derived nested class/enum name built by
-        // `addName` string concatenation) when its type is a nested object/array/map/enum. For simple- and
-        // $ref-typed properties the name is only ever emitted as a backtick-quoted field name, which safely
-        // handles any character — validating those here would wrongly reject legitimate names such as
-        // "@odata.type" or names with spaces/non-ASCII letters. So only restrict names that reach `addName`.
+        // A property name reaches a *raw* (string-concatenated, non-backtick-quoted) identifier position when its
+        // type is not simple: a nested class/enum name via `addName` (ClassDefinitionGenerator), and — for array/map
+        // properties — a derived codec `val` name via `${n.capitalize}` in the XML serde generator. For simple- and
+        // $ref-typed properties the name is only ever a backtick-quoted field name, which safely tolerates any
+        // character, so we must NOT restrict those (that would wrongly reject legitimate names like "@odata.type" or
+        // names with spaces/non-ASCII letters). Note this still restricts array/map-of-scalar property names, which
+        // reach the XML `val` sink; that is a deliberate over-approximation (safe, and within GHSA-gpcc-36pq-8qxr).
         val maybeName = if (field.`type`.isInstanceOf[OpenapiSchemaSimpleType]) Nil else Seq("property name" -> propName)
         maybeName ++ namesIn(field.`type`)
       }

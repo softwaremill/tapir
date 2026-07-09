@@ -308,8 +308,9 @@ class EndpointGenerator {
   }
 
   private def tags(openapiTags: Option[Seq[String]]): String = {
-    // .tags(List("A", "B"))
-    openapiTags.map(_.distinct.mkString(".tags(List(\"", "\", \"", "\"))")).mkString
+    // .tags(List("A", "B")) -- tag strings come from the untrusted document and are emitted into a string literal,
+    // so escape each one (as the .name/.description sites do). See GHSA-gpcc-36pq-8qxr.
+    openapiTags.map(_.distinct.map(JavaEscape.escapeString).mkString(".tags(List(\"", "\", \"", "\"))")).mkString
   }
 
   private def attributes(atts: Map[String, Json]): Option[String] = if (atts.nonEmpty) Some {
