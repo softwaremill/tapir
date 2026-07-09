@@ -142,7 +142,8 @@ object OutComponent {
               def callers(tpe: String, impl: Boolean) = declsByWrapperClassName
                 .flatMap { case (_, seq) =>
                   seq.map { case (_, t, _, ct) =>
-                    s"""$tpe `$ct`: () => $t${if (impl) s""" = () => throw new RuntimeException("Body for content type $ct not provided")"""
+                    s"""$tpe ${NameHelpers.safeVariableName(ct)}: () => $t${if (impl)
+                        s""" = () => throw new RuntimeException("Body for content type ${JavaEscape.escapeString(ct)} not provided")"""
                       else ","}"""
                   }
                 }
@@ -152,7 +153,9 @@ object OutComponent {
 
               val wrappers = declsByWrapperClassName
                 .map { case (name, seq) =>
-                  val defns = seq.map { case (_, t, _, ct) => s"""override def `$ct`: () => $t = () => value""" }.sorted.mkString("\n")
+                  val defns =
+                    seq.map { case (_, t, _, ct) => s"""override def ${NameHelpers.safeVariableName(ct)}: () => $t = () => value""" }.sorted
+                      .mkString("\n")
                   s"""case class ${name}(value: ${seq.head._2}) extends $traitName{
                      |${indent(2)(defns)}
                      |}""".stripMargin
@@ -179,8 +182,8 @@ object OutComponent {
             if (needsAliases)
               decls.zip(tpes).zip(seq.map(_.contentType)).map { case ((decl, _), ct) =>
                 wrapBinType(
-                  s"$decl.map(${classNameByDecl(decl)}(_))(_.`$ct`())\n" +
-                    s".map(_.asInstanceOf[$traitName])(p => ${classNameByDecl(decl)}(p.`$ct`()))$d"
+                  s"$decl.map(${classNameByDecl(decl)}(_))(_.${NameHelpers.safeVariableName(ct)}())\n" +
+                    s".map(_.asInstanceOf[$traitName])(p => ${classNameByDecl(decl)}(p.${NameHelpers.safeVariableName(ct)}()))$d"
                 )
               }
             else decls.map(_ + d)

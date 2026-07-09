@@ -6,6 +6,7 @@ import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
+import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers.indent
 
 import scala.collection.mutable
@@ -334,14 +335,15 @@ object SchemaGenerator {
         val fields = mapping
           .map { case (propValue, fullRef) =>
             val fullClassName = fullModelPrefix + fullRef
-            s""""$propValue" -> sttp.tapir.SchemaType.SRef(sttp.tapir.Schema.SName("$fullClassName"))"""
+            s""""${JavaEscape.escapeString(propValue)}" -> sttp.tapir.SchemaType.SRef(sttp.tapir.Schema.SName("${JavaEscape
+                .escapeString(fullClassName)}"))"""
           }
           .mkString(",\n")
         s"""{
            |  val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[$name]]].value
            |  derived.schemaType match {
            |    case s: sttp.tapir.SchemaType.SCoproduct[_] => derived.copy(schemaType = s.addDiscriminatorField(
-           |      sttp.tapir.FieldName("$propertyName"),
+           |      sttp.tapir.FieldName("${JavaEscape.escapeString(propertyName)}"),
            |      sttp.tapir.Schema.string,
            |      Map(
            |${indent(8)(fields)}

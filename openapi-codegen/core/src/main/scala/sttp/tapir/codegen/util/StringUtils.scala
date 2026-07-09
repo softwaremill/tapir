@@ -18,8 +18,24 @@ object JavaEscape {
 object NameHelpers {
   val reservedKeys: Set[String] = VersionedHelpers.reservedKeys.toSet
 
+  // A backtick-quoted Scala identifier can contain almost any character, but NOT a backtick or a line
+  // terminator/control character. A name from an (untrusted) OpenAPI document that contains such a character
+  // therefore cannot be safely emitted as an identifier and could otherwise break out of the quoting to inject
+  // arbitrary code, so we reject it rather than emit it raw. See GHSA-gpcc-36pq-8qxr.
+  private def backtickQuoteOrReject(kind: String, s: String): String =
+    if (s.isEmpty || s.exists(c => c == '`' || c.isControl))
+      throw new IllegalArgumentException(
+        s"Cannot generate a safe Scala identifier from $kind '$s': it must be non-empty and must not contain backticks or control characters"
+      )
+    else s"`$s`"
+
   def safeVariableName(s: String): String =
-    if ((reservedKeys ++ Set("enum", "given", "using")).contains(s) || !s.matches("[A-Za-z_$][A-Za-z_$0-9]*")) s"`$s`" else s
+    if (!(reservedKeys ++ Set("enum", "given", "using")).contains(s) && s.matches("[A-Za-z_$][A-Za-z_$0-9]*")) s
+    else backtickQuoteOrReject("name", s)
+
+  // Enum member values become `case object`/`enum case` identifiers. Same backtick-escape gap as safeVariableName.
+  def safeEnumMemberName(s: String): String =
+    if (s.matches("[a-zA-Z][a-zA-Z0-9_]*")) s else backtickQuoteOrReject("enum value", s)
 
   // Derives the class name of a schema nested under `parentName` at property `key`. Shared by the class generator and
   // the json serde generators so that emitted codec types cannot drift from the generated class names.

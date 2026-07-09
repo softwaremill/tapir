@@ -23,6 +23,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaUUID
 }
 import sttp.tapir.codegen.dedup.PackageReuseContext
+import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers.{indent, uncapitalise}
 
 object ZioSerdeImpl {
@@ -144,12 +145,12 @@ object ZioSerdeImpl {
         }
         val encoders = subtypeNames
           .map { t =>
-            val jsonTypeName = schemaToJsonMapping(t)
-            s"""case x: $t => zio.json.ast.Json.decoder.decodeJson(zio.json.JsonEncoder[$t].encodeJson(x)).getOrElse(throw new RuntimeException("Unable to encode tagged ADT type ${name} to json")).mapObject(_.add("${discriminator.propertyName}", zio.json.ast.Json.Str("$jsonTypeName")))"""
+            val jsonTypeName = JavaEscape.escapeString(schemaToJsonMapping(t))
+            s"""case x: $t => zio.json.ast.Json.decoder.decodeJson(zio.json.JsonEncoder[$t].encodeJson(x)).getOrElse(throw new RuntimeException("Unable to encode tagged ADT type ${name} to json")).mapObject(_.add("${JavaEscape.escapeString(discriminator.propertyName)}", zio.json.ast.Json.Str("$jsonTypeName")))"""
           }
           .mkString("\n")
         val decoders = subtypeNames
-          .map { t => s"""case zio.json.ast.Json.Str("${schemaToJsonMapping(t)}") => zio.json.JsonDecoder[$t].fromJsonAST(json)""" }
+          .map { t => s"""case zio.json.ast.Json.Str("${JavaEscape.escapeString(schemaToJsonMapping(t))}") => zio.json.JsonDecoder[$t].fromJsonAST(json)""" }
           .mkString("\n")
         s"""implicit lazy val ${uncapitalisedName}JsonEncoder: zio.json.JsonEncoder[$name] = zio.json.JsonEncoder[zio.json.ast.Json].contramap {
            |${indent(2)(encoders)}

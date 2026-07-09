@@ -23,6 +23,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaUUID
 }
 import sttp.tapir.codegen.dedup.PackageReuseContext
+import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers.{indent, uncapitalise}
 
 object CirceSerdeImpl {
@@ -149,19 +150,19 @@ object CirceSerdeImpl {
         }
         val encoders = subtypeNames
           .map { t =>
-            val jsonTypeName = schemaToJsonMapping(t)
-            s"""case x: $t => io.circe.Encoder[$t].apply(x).mapObject(_.add("${discriminator.propertyName}", io.circe.Json.fromString("$jsonTypeName")))"""
+            val jsonTypeName = JavaEscape.escapeString(schemaToJsonMapping(t))
+            s"""case x: $t => io.circe.Encoder[$t].apply(x).mapObject(_.add("${JavaEscape.escapeString(discriminator.propertyName)}", io.circe.Json.fromString("$jsonTypeName")))"""
           }
           .mkString("\n")
         val decoders = subtypeNames
-          .map { t => s"""case "${schemaToJsonMapping(t)}" => c.as[$t]""" }
+          .map { t => s"""case "${JavaEscape.escapeString(schemaToJsonMapping(t))}" => c.as[$t]""" }
           .mkString("\n")
         s"""implicit lazy val ${uncapitalisedName}JsonEncoder: io.circe.Encoder[$name] = io.circe.Encoder.instance {
            |${indent(2)(encoders)}
            |}
            |implicit lazy val ${uncapitalisedName}JsonDecoder: io.circe.Decoder[$name] = io.circe.Decoder { (c: io.circe.HCursor) =>
            |  for {
-           |    discriminator <- c.downField("${discriminator.propertyName}").as[String]
+           |    discriminator <- c.downField("${JavaEscape.escapeString(discriminator.propertyName)}").as[String]
            |    res <- discriminator match {
            |${indent(6)(decoders)}
            |    }

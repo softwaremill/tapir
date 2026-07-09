@@ -4,6 +4,7 @@ import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.OAuth2FlowType
 import sttp.tapir.codegen.util.ErrUtils.bail
+import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.util.Location
 
@@ -103,7 +104,7 @@ object SecurityGenerator {
             Seq(("auth.basic[UsernamePassword]()", "Basic", schemeName))
 
           case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeApiKeyType(in, name)) =>
-            Seq((s"""auth.apiKey($in[${wrap("String")}]("$name"))""", schemeName, schemeName))
+            Seq((s"""auth.apiKey($in[${wrap("String")}]("${JavaEscape.escapeString(name)}"))""", schemeName, schemeName))
 
           case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeOAuth2Type(flows)) if flows.isEmpty => Nil
           case Some(OpenapiSecuritySchemeType.OpenapiSecuritySchemeOAuth2Type(flows))                  =>
@@ -111,17 +112,17 @@ object SecurityGenerator {
               case (_, _) if multi                => (s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName)
               case (OAuth2FlowType.password, _)   => (s"auth.bearer[${wrap("String")}]()", "Bearer", schemeName)
               case (OAuth2FlowType.`implicit`, f) =>
-                val authUrl = f.authorizationUrl.getOrElse(bail("authorizationUrl required for implicit flow"))
-                val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
+                val authUrl = JavaEscape.escapeString(f.authorizationUrl.getOrElse(bail("authorizationUrl required for implicit flow")))
+                val refreshUrl = f.refreshUrl.map(u => s"""Some("${JavaEscape.escapeString(u)}")""").getOrElse("None")
                 (s"""auth.oauth2.implicitFlow("$authUrl", $refreshUrl)""", "Bearer", schemeName)
               case (OAuth2FlowType.clientCredentials, f) =>
-                val tokenUrl = f.tokenUrl.getOrElse(bail("tokenUrl required for clientCredentials flow"))
-                val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
+                val tokenUrl = JavaEscape.escapeString(f.tokenUrl.getOrElse(bail("tokenUrl required for clientCredentials flow")))
+                val refreshUrl = f.refreshUrl.map(u => s"""Some("${JavaEscape.escapeString(u)}")""").getOrElse("None")
                 (s"""auth.oauth2.clientCredentialsFlow("$tokenUrl", $refreshUrl)""", "Bearer", schemeName)
               case (OAuth2FlowType.authorizationCode, f) =>
-                val authUrl = f.authorizationUrl.getOrElse(bail("authorizationUrl required for authorizationCode flow"))
-                val tokenUrl = f.tokenUrl.getOrElse(bail("tokenUrl required for authorizationCode flow"))
-                val refreshUrl = f.refreshUrl.map(u => s"""Some("$u")""").getOrElse("None")
+                val authUrl = JavaEscape.escapeString(f.authorizationUrl.getOrElse(bail("authorizationUrl required for authorizationCode flow")))
+                val tokenUrl = JavaEscape.escapeString(f.tokenUrl.getOrElse(bail("tokenUrl required for authorizationCode flow")))
+                val refreshUrl = f.refreshUrl.map(u => s"""Some("${JavaEscape.escapeString(u)}")""").getOrElse("None")
                 (s"""auth.oauth2.authorizationCodeFlow("$authUrl", "$tokenUrl", $refreshUrl)""", "Bearer", schemeName)
             }
 

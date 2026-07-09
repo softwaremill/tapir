@@ -12,6 +12,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaSimpleType
 }
 import sttp.tapir.codegen.openapi.models.OpenapiXml
+import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers.indent
 
 object XmlSerdeLib extends Enumeration {
@@ -49,9 +50,10 @@ object XmlSerdeGenerator {
         val w = c.exists(_.isWrapped)
         val in = c.flatMap(_.itemName).getOrElse(t)
         Some(seqSubtype -> s"""type $seqSubtype <: Seq[$t]
-         |implicit val ${seqSubtype}SeqDecoder: cats.xml.codec.Decoder[$seqSubtype] = seqDecoder[$t]("$name", isWrapped = $w).map(_.asInstanceOf[$seqSubtype])
+         |implicit val ${seqSubtype}SeqDecoder: cats.xml.codec.Decoder[$seqSubtype] = seqDecoder[$t]("${JavaEscape
+              .escapeString(name)}", isWrapped = $w).map(_.asInstanceOf[$seqSubtype])
          |implicit val ${seqSubtype}SeqEncoder: cats.xml.codec.Encoder[$seqSubtype] =
-         |  seqEncoder[$t]("$name", isWrapped = $w, itemName = "$in").contramap(_.asInstanceOf[Seq[$t]])
+         |  seqEncoder[$t]("${JavaEscape.escapeString(name)}", isWrapped = $w, itemName = "${JavaEscape.escapeString(in)}").contramap(_.asInstanceOf[Seq[$t]])
          |implicit val ${seqSubtype}SeqSchema: sttp.tapir.Schema[${seqSubtype}] =
          |  implicitly[Schema[Seq[$t]]].map(x => Some(x.asInstanceOf[${seqSubtype}]))(_.asInstanceOf[Seq[$t]])""".stripMargin)
       case _ => None
@@ -112,7 +114,8 @@ object XmlSerdeGenerator {
                   case ScopedAuxCodecParams(n, t, _, ArrayType, c: Option[OpenapiXml.XmlArrayConfiguration @unchecked]) =>
                     val name = c.flatMap(_.name).getOrElse(n)
                     val w = c.exists(_.isWrapped)
-                    s"""implicit val $ref${n.capitalize}SeqDecoder: Decoder[Seq[$t]] = seqDecoder[$t]("$name", isWrapped = $w)"""
+                    s"""implicit val $ref${n.capitalize}SeqDecoder: Decoder[Seq[$t]] = seqDecoder[$t]("${JavaEscape
+                        .escapeString(name)}", isWrapped = $w)"""
                   case ScopedAuxCodecParams(n, t, _, OtherType, _) =>
                     s"""// implicit val $ref${n.capitalize}Decoder: Decoder[$t] = deriveConfiguredDecoder[$t]"""
                   case ScopedAuxCodecParams(n, t, tpe, EnumType, _) if t == tpe =>
@@ -132,13 +135,15 @@ object XmlSerdeGenerator {
                     val in = c.flatMap(_.itemName).getOrElse(n)
                     val w = c.exists(_.isWrapped)
                     s"""implicit val $ref${n.capitalize}SeqEncoder: Encoder[Seq[$t]] =
-                       |  seqEncoder[$t]("${c.flatMap(_.name).getOrElse(n)}", isWrapped = $w, itemName = "$in")""".stripMargin
+                       |  seqEncoder[$t]("${JavaEscape.escapeString(c.flatMap(_.name).getOrElse(n))}", isWrapped = $w, itemName = "${JavaEscape
+                        .escapeString(in)}")""".stripMargin
                   case ScopedAuxCodecParams(n, t, _, OtherType, _) =>
                     s"""implicit val $ref${n.capitalize}Encoder: Encoder[$t] = deriveConfiguredEncoder[$t]""".stripMargin
                   case ScopedAuxCodecParams(n, t, tpe, EnumType, _) if t == tpe =>
-                    s"""implicit val $ref${n.capitalize}Encoder: Encoder[$tpe] = enumEncoder[$tpe]("$n")""".stripMargin
+                    s"""implicit val $ref${n.capitalize}Encoder: Encoder[$tpe] = enumEncoder[$tpe]("${JavaEscape
+                        .escapeString(n)}")""".stripMargin
                   case ScopedAuxCodecParams(n, t, tpe, EnumType, _) =>
-                    s"""implicit val $ref${n.capitalize}Encoder: Encoder[$tpe] = enumEncoder[$tpe]("$n")
+                    s"""implicit val $ref${n.capitalize}Encoder: Encoder[$tpe] = enumEncoder[$tpe]("${JavaEscape.escapeString(n)}")
                        |implicit val $ref${n.capitalize}OptionEncoder: Encoder[$t] = optionEncoder[$tpe]($ref${n.capitalize}Encoder)""".stripMargin
                 } match {
                 case s if s.isEmpty => None
@@ -170,8 +175,9 @@ object XmlSerdeGenerator {
                 if (renamedFields.nonEmpty) {
                   val cases = renamedFields
                     .map { case (from, to) =>
-                      s"""case (cats.xml.utils.generic.ParamName("$from"), _) =>
-                         |  (XmlElemType.Child, { case "$from" => "$to"; case "$to" => "$from"; case x => x})""".stripMargin
+                      val (ef, et) = (JavaEscape.escapeString(from), JavaEscape.escapeString(to))
+                      s"""case (cats.xml.utils.generic.ParamName("$ef"), _) =>
+                         |  (XmlElemType.Child, { case "$ef" => "$et"; case "$et" => "$ef"; case x => x})""".stripMargin
                     }
                     .mkString("\n")
                   s"""XmlTypeInterpreter.fullOf[$ref]{

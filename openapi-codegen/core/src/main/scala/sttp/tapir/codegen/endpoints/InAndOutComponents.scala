@@ -24,7 +24,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 }
 import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.Location
-import sttp.tapir.codegen.util.NameHelpers.indent
+import sttp.tapir.codegen.util.NameHelpers.{indent, safeVariableName}
 import sttp.tapir.codegen.validation.ValidationDefns
 import sttp.tapir.codegen.xml.{XmlSerdeGenerator, XmlSerdeLib}
 import sttp.tapir.codegen.xml.XmlSerdeLib.XmlSerdeLib
@@ -172,9 +172,11 @@ object InAndOutComponents {
   )(implicit location: Location): MappedContentType = {
     def codec(baseType: String, contentType: String) = baseType match {
       case "Array[Byte]" =>
-        s"Codec.id[$baseType, `${contentType}CodecFormat`](`${contentType}CodecFormat`(), Schema.schemaForByteArray)"
+        val cf = safeVariableName(contentType + "CodecFormat")
+        s"Codec.id[$baseType, $cf]($cf(), Schema.schemaForByteArray)"
       case "String" =>
-        s"Codec.id[$baseType, `${contentType}CodecFormat`](`${contentType}CodecFormat`(), Schema.schemaForString)"
+        val cf = safeVariableName(contentType + "CodecFormat")
+        s"Codec.id[$baseType, $cf]($cf(), Schema.schemaForString)"
     }
 
     def eagerBody = contentType match {
@@ -193,7 +195,7 @@ object InAndOutComponents {
       case "application/xml"                   => "CodecFormat.Xml()"
       case "application/x-www-form-urlencoded" => "CodecFormat.XWwwFormUrlencoded()"
       case "application/zip"                   => "CodecFormat.Zip()"
-      case o                                   => s"`${o}CodecFormat`()"
+      case o                                   => s"${safeVariableName(o + "CodecFormat")}()"
     }
     if (isEager) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")
     else {
