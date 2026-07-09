@@ -129,13 +129,16 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     out.shouldCompile()
   }
 
-  it should "accept in-charset hyphenated names on object-typed and validated properties (addName / validator paths)" in {
-    // Covers the raw-identifier accept paths (not just the backtick-quoted field): a hyphenated object-typed property
-    // reaches a derived nested class name via addName, and a restricted scalar reaches a validator val name.
-    val nested = OpenapiSchemaObject(mutable.LinkedHashMap("a" -> noDefault(OpenapiSchemaString(false))), Seq("a"), false)
+  it should "accept in-charset non-identifier names on object-typed and validated properties (addName / validator paths)" in {
+    // Covers the raw-identifier accept paths (not just the backtick-quoted field): an object-typed property reaches a
+    // derived nested class name via addName, and a restricted scalar reaches a validator val name. addName must turn
+    // every in-charset name (incl. `.`/`-`/`+`) into a valid identifier so generation doesn't emit non-compiling code.
+    def nested = OpenapiSchemaObject(mutable.LinkedHashMap("a" -> noDefault(OpenapiSchemaString(false))), Seq("a"), false)
     val doc = docWithObject(
       "Order",
       "shipping-address" -> noDefault(nested),
+      "meta.data" -> noDefault(nested),
+      "score+1" -> noDefault(nested),
       "order-ref" -> noDefault(OpenapiSchemaString(false, minLength = Some(1)))
     )
     classRepr(doc).shouldCompile()

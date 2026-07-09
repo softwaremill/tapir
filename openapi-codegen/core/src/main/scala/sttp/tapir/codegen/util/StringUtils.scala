@@ -48,8 +48,12 @@ object NameHelpers {
 
   // Derives the class name of a schema nested under `parentName` at property `key`. Shared by the class generator and
   // the json serde generators so that emitted codec types cannot drift from the generated class names.
+  // Derives a nested class/type identifier by camel-casing `key`. Every character the (untrusted) name may legally
+  // contain but that is illegal in a raw Scala identifier — `_`, `-`, `.`, `+` (`$` is a valid identifier char) — is
+  // treated as a word separator, so any name that passes NameValidation's [A-Za-z0-9._$+-] set yields a valid
+  // identifier rather than non-compiling generated code. See GHSA-gpcc-36pq-8qxr.
   def addName(parentName: String, key: String): String =
-    parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
+    parentName + key.replace('_', ' ').replace('-', ' ').replace('.', ' ').replace('+', ' ').capitalize.replace(" ", "")
 
 
   def indent(i: Int)(str: String): String = {
