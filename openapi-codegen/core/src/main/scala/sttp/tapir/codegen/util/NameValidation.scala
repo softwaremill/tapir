@@ -33,25 +33,15 @@ object NameValidation {
     case OpenapiSchemaMap(i, _, _)           => namesIn(i)
     case OpenapiSchemaNot(i)                 => namesIn(i)
     case OpenapiSchemaObject(props, _, _, _) =>
-      props.toSeq.flatMap { case (propName, field) =>
-        // A property name reaches a *raw* (string-concatenated, non-backtick-quoted) identifier position whenever its
-        // type is anything other than a plain scalar: a nested class/enum name via `addName`
-        // (ClassDefinitionGenerator, for object/array/map/enum-typed properties) and a derived codec `val` name via
-        // `${n.capitalize}` in the XML serde generator (for array-typed AND $ref-typed properties — note
-        // OpenapiSchemaRef IS a simple type, but ref-typed property names still reach that raw XML `val` sink). Only a
-        // plain scalar (string/number/date/... i.e. a simple type that is NOT a $ref) leaves the name exclusively in a
-        // backtick-quoted field position, which safely tolerates any character; restricting those would wrongly reject
-        // legitimate names like "@odata.type" or names with spaces/non-ASCII letters. So restrict every property name
-        // except plain scalars. This is a deliberate, fail-closed over-approximation (a name that would in fact
-        // sanitise to a valid identifier may be rejected). See GHSA-gpcc-36pq-8qxr.
-        val isPlainScalar = field.`type` match {
-          case _: OpenapiSchemaRef        => false
-          case _: OpenapiSchemaSimpleType => true
-          case _                          => false
-        }
-        val maybeName = if (isPlainScalar) Nil else Seq("property name" -> propName)
-        maybeName ++ namesIn(field.`type`)
-      }
+      // Every property name can reach a *raw* (string-concatenated, non-backtick-quoted) identifier position under
+      // some feature: nested class/enum names via `addName` (object/array/map/enum properties), derived codec `val`
+      // names via `${n.capitalize}` in the XML serde generator ($ref/array properties), and per-field validator `val`
+      // names in ValidationGenerator (scalar properties with a restriction). Only the plain case-class FIELD position
+      // is backtick-quoted and tolerant. Rather than enumerate which property types reach which raw sink — a census
+      // that has repeatedly proven incomplete — restrict EVERY property name. This is a deliberate, fail-closed
+      // over-approximation: a name that would in fact sanitise to a valid identifier (e.g. "@odata.type", "first
+      // name") is rejected rather than accepted. See GHSA-gpcc-36pq-8qxr.
+      props.toSeq.flatMap { case (propName, field) => ("property name" -> propName) +: namesIn(field.`type`) }
     case OpenapiSchemaOneOf(types, _) => types.flatMap(namesIn)
     case OpenapiSchemaAnyOf(types)    => types.flatMap(namesIn)
     case OpenapiSchemaAllOf(types)    => types.flatMap(namesIn)

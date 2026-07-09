@@ -107,37 +107,34 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
 
   // --- identifier positions: legitimate but non-trivial names still work (regression guards) ---
 
-  it should "backtick-quote reserved-word and hyphenated property names rather than reject them" in {
-    val out = classRepr(docWithObject("Ok", "type" -> noDefault(OpenapiSchemaString(false)), "x-trace" -> noDefault(OpenapiSchemaString(false))))
-    out should include("`type`")
-    out should include("`x-trace`")
-    out.shouldCompile()
-  }
-
-  it should "accept simple-typed property names with '@', dots, spaces and non-ASCII letters (backtick-quoted, not executed)" in {
+  it should "backtick-quote in-charset non-identifier property names (reserved words, dots, hyphens) rather than reject them" in {
+    // Names within the permitted [A-Za-z0-9._-] set that are not plain Scala identifiers are backtick-quoted, not rejected.
     val out = classRepr(
       docWithObject(
         "Ok",
-        "@odata.type" -> noDefault(OpenapiSchemaString(false)),
-        "first name" -> noDefault(OpenapiSchemaString(false)),
-        "名前" -> noDefault(OpenapiSchemaString(false))
+        "type" -> noDefault(OpenapiSchemaString(false)),
+        "x-trace" -> noDefault(OpenapiSchemaString(false)),
+        "a.b" -> noDefault(OpenapiSchemaString(false))
       )
     )
-    out should include("`@odata.type`")
+    out should include("`type`")
+    out should include("`x-trace`")
+    out should include("`a.b`")
     out.shouldCompile()
   }
 
-  it should "safely quote (not execute) a simple-typed property name containing injection characters" in {
-    val evil = """x: String = ""); sys.error("PWNED"); val y = (("""
-    val out = classRepr(docWithObject("Ok", evil -> noDefault(OpenapiSchemaString(false))))
-    // The payload survives only as the content of a single backtick-quoted field identifier, so it is inert.
-    out should include("`" + evil + "`")
-    out.shouldCompile()
+  it should "reject property names with characters outside the safe set (space, '@', non-ASCII, injection chars)" in {
+    // Fail-closed: any property name reaches a raw identifier somewhere (nested class / XML val / validator val), so
+    // every property name is restricted at ingestion — even ones that would only ever be a backtick-quoted field.
+    rejected(docWithObject("Ok", "@odata.type" -> noDefault(OpenapiSchemaString(false))))
+    rejected(docWithObject("Ok", "first name" -> noDefault(OpenapiSchemaString(false))))
+    rejected(docWithObject("Ok", "名前" -> noDefault(OpenapiSchemaString(false))))
+    rejected(docWithObject("Ok", """x = ""); sys.error("PWNED"); val y = ((""" -> noDefault(OpenapiSchemaString(false))))
   }
 
   it should "not let a validated scalar property name inject into the generated validator" in {
-    // A plain-scalar property name is not restricted by NameValidation, but with a validation restriction it reaches
-    // the ValidationGenerator's raw `val` name and `obj.<field>` access. Both must be neutralised.
+    // Defense-in-depth: NameValidation would reject this name in the full generateObjects/classDefs flow, but the
+    // ValidationGenerator itself must also neutralise the raw `val` name and `obj.<field>` access it emits.
     val evil = "evil ; System.exit(0) ; val boom"
     val doc = docWithObject("Obj", evil -> noDefault(OpenapiSchemaString(false, minLength = Some(1))))
     val validators = ValidationGenerator.mkValidators(doc).render(PackageReuseContext.none)
@@ -157,8 +154,9 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     out.shouldCompile()
   }
 
-  it should "escape discriminator property names and mapping values in generated serdes" in {
-    val evilProp = """k"); System.exit(0); ("""" // discriminator propertyName
+  it should "escape discriminator mapping values in generated serdes" in {
+    // The discriminator propertyName is also a property name (rejected at ingestion if unsafe), so the injectable
+    // wire value here is the mapping key/value, which is a string literal escaped at each serde/schema emit site.
     val evilValue = """d"); System.exit(0); ("""" // discriminator mapping value (wire tag)
     val yaml =
       s"""openapi: 3.1.0
@@ -170,14 +168,14 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
          |      oneOf:
          |        - $$ref: '#/components/schemas/Dog'
          |      discriminator:
-         |        propertyName: '$evilProp'
+         |        propertyName: kind
          |        mapping:
          |          '$evilValue': '#/components/schemas/Dog'
          |    Dog:
          |      type: object
-         |      required: ['$evilProp']
+         |      required: ['kind']
          |      properties:
-         |        '$evilProp':
+         |        kind:
          |          type: string
          |""".stripMargin
     val doc = YamlParser.parseFile(yaml).fold(e => fail(e.getMessage), identity).resolveAllOfSchemas
