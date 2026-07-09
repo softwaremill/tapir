@@ -7,7 +7,9 @@ import scala.collection.mutable
 
 object NameValidation {
   val validName = """[a-zA-Z_$][a-zA-Z0-9_$]*"""
-  val validRef = s"""#/components/[a-zA-Z]+/$validName"""
+  val validOrHyphen = """[a-zA-Z_$][a-zA-Z0-9_$-]*"""
+  // Schema refs have stricter validation, since used directly as types; parameters etc can also contain hyphens
+  val validRef = s"""#/components/(schemas/$validName|(?!schemas)[a-zA-Z]+/$validOrHyphen)"""
 }
 import NameValidation._
 
