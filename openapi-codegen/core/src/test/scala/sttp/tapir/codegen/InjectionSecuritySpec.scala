@@ -108,19 +108,23 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
 
   // --- identifier positions: legitimate but non-trivial names still work (regression guards) ---
 
-  it should "backtick-quote in-charset non-identifier property names (reserved words, dots, hyphens) rather than reject them" in {
-    // Names within the permitted [A-Za-z0-9._-] set that are not plain Scala identifiers are backtick-quoted, not rejected.
+  it should "backtick-quote in-charset non-identifier property names (reserved words, dots, hyphens, +, $) rather than reject them" in {
+    // Names within the permitted [A-Za-z0-9._$+-] set that are not plain Scala identifiers are backtick-quoted, not
+    // rejected. `+1` is from GitHub's official REST spec (reaction-rollup); `$type` from .NET-emitted specs.
     val out = classRepr(
       docWithObject(
         "Ok",
         "type" -> noDefault(OpenapiSchemaString(false)),
         "x-trace" -> noDefault(OpenapiSchemaString(false)),
-        "a.b" -> noDefault(OpenapiSchemaString(false))
+        "a.b" -> noDefault(OpenapiSchemaString(false)),
+        "+1" -> noDefault(OpenapiSchemaString(false)),
+        "$type" -> noDefault(OpenapiSchemaString(false))
       )
     )
     out should include("`type`")
     out should include("`x-trace`")
     out should include("`a.b`")
+    out should include("`+1`")
     out.shouldCompile()
   }
 

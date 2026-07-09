@@ -10,20 +10,22 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
   * concatenation (e.g. `${name.capitalize}Decoder`) rather than backtick-quoting, so a name containing characters
   * outside the OpenAPI-permitted identifier set could inject arbitrary Scala code.
   *
-  * We restrict them to the character set OpenAPI itself permits for component names
-  * (https://spec.openapis.org/oas/v3.1.0#components-object), which contains no character able to form executable
-  * Scala. Values that are emitted as string literals instead (parameter names, URLs, descriptions, default values,
-  * discriminator values, enum values, XML names) can legitimately contain other characters and are escaped at their
-  * emission site rather than restricted here. See GHSA-gpcc-36pq-8qxr.
+  * We restrict them to a safe character set: the set OpenAPI permits for component names
+  * (https://spec.openapis.org/oas/v3.1.0#components-object) plus `$` and `+`. None of these can form executable Scala
+  * (`$` is a valid Scala identifier character; `+`/`.`/`-` at worst yield a non-compiling identifier, never a break-out),
+  * while `$`/`+` occur in real-world property names (e.g. GitHub's `+1`, .NET's `$type`). Values that are emitted as
+  * string literals instead (parameter names, URLs, descriptions, default values, discriminator values, enum values,
+  * XML names) can legitimately contain any character and are escaped at their emission site rather than restricted
+  * here. See GHSA-gpcc-36pq-8qxr.
   */
 object NameValidation {
 
-  private val SafeNamePattern = "[A-Za-z0-9._-]+"
+  private val SafeNamePattern = "[A-Za-z0-9._$+-]+"
 
   private def check(kind: String, name: String): Unit =
     if (!name.matches(SafeNamePattern))
       throw new IllegalArgumentException(
-        s"Unsafe $kind '$name' in OpenAPI document: only characters [A-Za-z0-9._-] are permitted (see GHSA-gpcc-36pq-8qxr)"
+        s"Unsafe $kind '$name' in OpenAPI document: only characters [A-Za-z0-9._$$+-] are permitted (see GHSA-gpcc-36pq-8qxr)"
       )
 
   // Collect (kind, name) pairs for every $ref target and (identifier-emitting) property name reachable from a schema.
