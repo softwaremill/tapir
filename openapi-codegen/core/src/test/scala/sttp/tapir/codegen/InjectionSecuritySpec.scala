@@ -9,7 +9,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OAuth2Flow, OAuth2FlowType, OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeOAuth2Type}
 import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType, OpenapiServer, OpenapiServerEnum, OpenapiXml}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
-import sttp.tapir.codegen.validation.ValidationDefns
+import sttp.tapir.codegen.validation.{ValidationDefns, ValidationGenerator}
 import sttp.tapir.codegen.xml.XmlSerdeLib
 
 import scala.collection.mutable
@@ -135,6 +135,18 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     out.shouldCompile()
   }
 
+  it should "not let a validated scalar property name inject into the generated validator" in {
+    // A plain-scalar property name is not restricted by NameValidation, but with a validation restriction it reaches
+    // the ValidationGenerator's raw `val` name and `obj.<field>` access. Both must be neutralised.
+    val evil = "evil ; System.exit(0) ; val boom"
+    val doc = docWithObject("Obj", evil -> noDefault(OpenapiSchemaString(false, minLength = Some(1))))
+    val validators = ValidationGenerator.mkValidators(doc).render(PackageReuseContext.none)
+    // The validator `val` name is a single stripped identifier — no statement break-out.
+    validators should include("ObjEvilSystemExit0ValBoomValidator")
+    // The field access is backtick-quoted to match the (safe) case-class field, not spliced raw.
+    validators should include("""obj.`evil ; System.exit(0) ; val boom`""")
+  }
+
   // --- string-literal positions: escape values ---
 
   it should "escape a query parameter name so it survives as data and cannot break out of the string literal" in {
@@ -175,11 +187,13 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
       val gen = new ClassDefinitionGenerator()
         .classDefs(doc, targetScala3 = isScala3, jsonSerdeLib = lib, jsonParamRefs = Set("Animal"))
         .get
-      val out = gen.classRepr + "\n" + gen.jsonSerdeRepr.getOrElse("") + "\n" + gen.schemaRepr.map(_._2).mkString("\n")
-      // The payload's quotes are escaped (`\"`), so it stays a single inert string literal in the discriminator field
-      // body, the serde emit (downField / discriminator map / makeOpenapiLike) and the tapir Schema, rather than
-      // breaking out into code. Assert per-lib so a regression in any one emit site is caught.
-      withClue(s"serde lib $lib: ") { out should include("""\"); System.exit(0); (\"""") }
+      val escaped = """\"); System.exit(0); (\""""
+      // The payload's quotes are escaped (`\"`), so it stays a single inert string literal, rather than breaking out
+      // into code. Assert on EACH emit site independently (not the concatenation) so a regression confined to one
+      // serde/schema site is caught rather than masked by the lib-independent class body.
+      withClue(s"serde lib $lib serde: ") { gen.jsonSerdeRepr.getOrElse("") should include(escaped) }
+      withClue(s"serde lib $lib schema: ") { gen.schemaRepr.map(_._2).mkString("\n") should include(escaped) }
+      withClue(s"serde lib $lib class: ") { gen.classRepr should include(escaped) }
     }
     // The class defn (incl. the discriminator field body `def ... = "<escaped value>"`) compiles, proving that sink
     // holds the payload as inert data rather than injected code.
@@ -257,6 +271,34 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     val out = endpointDecls(doc)
     out should include("""pwned\")); System.exit(0); //""") // escaped form present
     out should not include """.tags(List("pwned")); System.exit(0)""" // not a live break-out
+    out.shouldCompile()
+  }
+
+  it should "escape a literal URL path segment so it cannot break out of the .in(\"...\") literal" in {
+    val evil = """foo") ; System.exit(0) ; ("bar"""
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Seq(
+        OpenapiPath(
+          evil,
+          Seq(
+            OpenapiPathMethod(
+              methodType = "get",
+              parameters = Nil,
+              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
+              requestBody = None
+            )
+          )
+        )
+      ),
+      null,
+      Nil
+    )
+    val out = endpointDecls(doc)
+    out should include("""foo\") ; System.exit(0) ; (\"bar""") // escaped form present
+    out should not include """("foo") ; System.exit(0) ; ("bar""" // not a live break-out
     out.shouldCompile()
   }
 

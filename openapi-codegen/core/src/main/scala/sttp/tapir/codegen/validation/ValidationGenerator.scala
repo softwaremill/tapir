@@ -7,7 +7,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.util.JavaEscape
-import sttp.tapir.codegen.util.NameHelpers.indent
+import sttp.tapir.codegen.util.NameHelpers.{indent, safeVariableName, strippedToCamelCase}
 
 import scala.annotation.tailrec
 
@@ -261,7 +261,9 @@ object ValidationGenerator {
       val rawTpeName = name.capitalize
       val tpeName = opt(rawTpeName, nb)
       val elemValidators = ts.map { case (fn, f) =>
-        val defns = genValidationDefn(schemas, ignoreRefs)(s"${name}${fn.capitalize}", f.`type`)
+        // `fn` is a property name that may be a plain scalar (not restricted by NameValidation) and is concatenated
+        // into a raw `val` identifier here, so strip it to a safe identifier fragment. See GHSA-gpcc-36pq-8qxr.
+        val defns = genValidationDefn(schemas, ignoreRefs)(s"${name}${strippedToCamelCase(fn).capitalize}", f.`type`)
         defns
           .filterNot(ignoreRefs && _.refOnly)
           .map { defn =>
@@ -280,12 +282,15 @@ object ValidationGenerator {
         .flatMap(_.map { case (fn, (defn, nb, tpe)) => (fn, (defn.name, nb, tpe)) }.headOption)
         .toMap
       def mkElemValidation(fname: String, validatorName: String, nullable: Boolean) = {
-        val applied = if (nullable) s"obj.$fname.toSeq.flatMap($validatorName.apply)" else s"$validatorName.apply(obj.$fname)"
+        // `fname` is a property name (possibly a plain scalar not restricted by NameValidation); quote it for the
+        // field access and escape it for the message literal so it cannot inject. See GHSA-gpcc-36pq-8qxr.
+        val fieldAccess = s"obj.${safeVariableName(fname)}"
+        val applied = if (nullable) s"$fieldAccess.toSeq.flatMap($validatorName.apply)" else s"$validatorName.apply($fieldAccess)"
         s"""Validator.custom(
          |  (obj: $rawTpeName) => $applied match {
          |    case Nil => ValidationResult.Valid
          |    case errs =>
-         |      val msgs: List[String] = "Object element validation failed for $rawTpeName.$fname" +:
+         |      val msgs: List[String] = "Object element validation failed for $rawTpeName.${JavaEscape.escapeString(fname)}" +:
          |        errs.flatMap(_.customMessage).toList
          |      ValidationResult.Invalid(msgs)
          |  }
