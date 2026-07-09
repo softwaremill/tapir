@@ -42,7 +42,7 @@ object ServersGenerator {
       (
         safeVariableName(k),
         vs.`enum`.map(i => safeVariableName(i)),
-        vs.default.map(v => if (vs.`enum`.isEmpty) "\"" + JavaEscape.escapeString(v) + "\"" else safeVariableName(v))
+        vs.default.map(v => if (vs.`enum`.isEmpty) JavaEscape.quote(v) else safeVariableName(v))
       )
     }
     val enums = enumNames

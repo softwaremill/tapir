@@ -66,7 +66,7 @@ object UrlEndpointComponent {
         } else {
           // Literal path segments come from the (untrusted) `paths` keys and are emitted into a string literal, so
           // escape them like the adjacent path-parameter and description sites. See GHSA-gpcc-36pq-8qxr.
-          ("\"" + JavaEscape.escapeString(segment) + "\"", None, None)
+          (JavaEscape.quote(segment), None, None)
         }
       }
       .unzip3

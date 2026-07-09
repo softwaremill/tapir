@@ -40,7 +40,7 @@ object SpecificationExtensionRenderer {
     "null",
     bool => bool.toString,
     n => n.toLong.map(l => s"${l}L") getOrElse s"${n.toDouble}d", // the long repr is fine even if type expanded to Double
-    s => "\"" + JavaEscape.escapeString(s) + "\"",
+    s => JavaEscape.quote(s),
     arr => if (arr.isEmpty) "Vector.empty" else s"Vector(${arr.map(renderValue).mkString(", ")})",
     obj =>
       if (obj.isEmpty) "Map.empty[String, Nothing]"

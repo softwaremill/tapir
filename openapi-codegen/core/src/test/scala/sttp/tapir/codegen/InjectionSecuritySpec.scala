@@ -128,6 +128,19 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     out.shouldCompile()
   }
 
+  it should "accept in-charset hyphenated names on object-typed and validated properties (addName / validator paths)" in {
+    // Covers the raw-identifier accept paths (not just the backtick-quoted field): a hyphenated object-typed property
+    // reaches a derived nested class name via addName, and a restricted scalar reaches a validator val name.
+    val nested = OpenapiSchemaObject(mutable.LinkedHashMap("a" -> noDefault(OpenapiSchemaString(false))), Seq("a"), false)
+    val doc = docWithObject(
+      "Order",
+      "shipping-address" -> noDefault(nested),
+      "order-ref" -> noDefault(OpenapiSchemaString(false, minLength = Some(1)))
+    )
+    classRepr(doc).shouldCompile()
+    ValidationGenerator.mkValidators(doc).render(PackageReuseContext.none) should include("OrderOrderRefValidator")
+  }
+
   it should "reject property names with characters outside the safe set (space, '@', non-ASCII, injection chars)" in {
     // Fail-closed: any property name reaches a raw identifier somewhere (nested class / XML val / validator val), so
     // every property name is restricted at ingestion — even ones that would only ever be a backtick-quoted field.
@@ -154,27 +167,10 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     // type position by mapSchemaSimpleTypeToType; NameValidation must reject it. (endpointDecls bypasses NameValidation,
     // so assert the guard directly.)
     val evil = """Int]("z") ; System.exit(0) ; val x = query[Int"""
-    val doc =
-      OpenapiDocument(
-        "",
-        Nil,
-        null,
-        Seq(
-          OpenapiPath(
-            "p",
-            Seq(
-              OpenapiPathMethod(
-                "get",
-                Seq(Resolved(OpenapiParameter("q", "query", Some(false), None, OpenapiSchemaRef("#/components/schemas/" + evil)))),
-                Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
-                None
-              )
-            )
-          )
-        ),
-        Some(OpenapiComponent(Map.empty)),
-        Nil
-      )
+    val doc = singlePathDoc(
+      getMethod(parameters = Seq(Resolved(OpenapiParameter("q", "query", Some(false), None, OpenapiSchemaRef("#/components/schemas/" + evil))))),
+      components = Some(OpenapiComponent(Map.empty))
+    )
     intercept[Throwable](NameValidation.validateDocumentNames(doc, useHeadTagForObjectNames = false)).getMessage should include("GHSA-gpcc")
   }
 
@@ -242,65 +238,20 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
   it should "guard an inline request-body property name (rejecting a backtick break-out) rather than emit it raw" in {
     // A backtick in the name cannot be safely quoted, so the inline-body path must reject it like the component path.
     val evil = """x`: String = {System.exit(0)}, y"""
-    val doc = OpenapiDocument(
-      "",
-      Nil,
-      null,
-      Seq(
-        OpenapiPath(
-          "post-it",
-          Seq(
-            OpenapiPathMethod(
-              methodType = "post",
-              parameters = Nil,
-              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
-              requestBody = Some(
-                OpenapiRequestBodyDefn(
-                  required = true,
-                  description = None,
-                  content = Seq(
-                    OpenapiRequestBodyContent(
-                      "application/json",
-                      OpenapiSchemaObject(mutable.LinkedHashMap(evil -> noDefault(OpenapiSchemaString(false))), Nil, false)
-                    )
-                  )
-                )
-              ),
-              summary = None
-            )
-          )
-        )
-      ),
-      null,
-      Nil
+    val body = OpenapiRequestBodyDefn(
+      required = true,
+      description = None,
+      content = Seq(
+        OpenapiRequestBodyContent("application/json", OpenapiSchemaObject(mutable.LinkedHashMap(evil -> noDefault(OpenapiSchemaString(false))), Nil, false))
+      )
     )
+    val doc = singlePathDoc(getMethod(requestBody = Some(body), methodType = "post"))
     intercept[Throwable](endpointDecls(doc)).getMessage should include("GHSA-gpcc")
   }
 
   it should "escape endpoint tags so they cannot break out of the .tags(List(...)) literal" in {
     val evil = """pwned")); System.exit(0); //"""
-    val doc = OpenapiDocument(
-      "",
-      Nil,
-      null,
-      Seq(
-        OpenapiPath(
-          "tagged",
-          Seq(
-            OpenapiPathMethod(
-              methodType = "get",
-              parameters = Nil,
-              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
-              requestBody = None,
-              tags = Some(Seq(evil))
-            )
-          )
-        )
-      ),
-      null,
-      Nil
-    )
-    val out = endpointDecls(doc)
+    val out = endpointDecls(singlePathDoc(getMethod(tags = Some(Seq(evil)))))
     out should include("""pwned\")); System.exit(0); //""") // escaped form present
     out should not include """.tags(List("pwned")); System.exit(0)""" // not a live break-out
     out.shouldCompile()
@@ -308,27 +259,7 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
 
   it should "escape a literal URL path segment so it cannot break out of the .in(\"...\") literal" in {
     val evil = """foo") ; System.exit(0) ; ("bar"""
-    val doc = OpenapiDocument(
-      "",
-      Nil,
-      null,
-      Seq(
-        OpenapiPath(
-          evil,
-          Seq(
-            OpenapiPathMethod(
-              methodType = "get",
-              parameters = Nil,
-              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
-              requestBody = None
-            )
-          )
-        )
-      ),
-      null,
-      Nil
-    )
-    val out = endpointDecls(doc)
+    val out = endpointDecls(singlePathDoc(getMethod(), path = evil))
     out should include("""foo\") ; System.exit(0) ; (\"bar""") // escaped form present
     out should not include """("foo") ; System.exit(0) ; ("bar""" // not a live break-out
     out.shouldCompile()
@@ -336,26 +267,7 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
 
   it should "reject a content type that would break out of the generated CodecFormat identifier" in {
     val evilCt = "application/x`;System.exit(0);`json"
-    val doc = OpenapiDocument(
-      "",
-      Nil,
-      null,
-      Seq(
-        OpenapiPath(
-          "ct",
-          Seq(
-            OpenapiPathMethod(
-              methodType = "get",
-              parameters = Nil,
-              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent(evilCt, OpenapiSchemaString(false))))),
-              requestBody = None
-            )
-          )
-        )
-      ),
-      null,
-      Nil
-    )
+    val doc = singlePathDoc(getMethod(responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent(evilCt, OpenapiSchemaString(false)))))))
     intercept[Throwable](endpointDecls(doc)).getMessage should include("GHSA-gpcc")
   }
 
@@ -387,26 +299,9 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     val flows = Map[OAuth2FlowType.OAuth2FlowType, OAuth2Flow](
       OAuth2FlowType.authorizationCode -> OAuth2Flow(Some(evil), Some("https://token"), None, Map.empty)
     )
-    val doc = OpenapiDocument(
-      "",
-      Nil,
-      null,
-      Seq(
-        OpenapiPath(
-          "oauth",
-          Seq(
-            OpenapiPathMethod(
-              methodType = "get",
-              parameters = Nil,
-              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
-              requestBody = None,
-              security = Some(Seq(Map("oauth2" -> Seq())))
-            )
-          )
-        )
-      ),
-      Some(OpenapiComponent(Map(), Map("oauth2" -> OpenapiSecuritySchemeOAuth2Type(flows)))),
-      Nil
+    val doc = singlePathDoc(
+      getMethod(security = Some(Seq(Map("oauth2" -> Seq())))),
+      components = Some(OpenapiComponent(Map(), Map("oauth2" -> OpenapiSecuritySchemeOAuth2Type(flows))))
     )
     val out = endpointDecls(doc)
     out should include("""https://x\") ; sys.error(\"PWNED\")""") // escaped form present
@@ -424,26 +319,9 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
 
   it should "escape an apiKey header name so it cannot break out of the string literal" in {
     val evil = """k") ; sys.error("PWNED") ; auth.apiKey(query[String]("z"""
-    val doc = OpenapiDocument(
-      "",
-      Nil,
-      null,
-      Seq(
-        OpenapiPath(
-          "sec",
-          Seq(
-            OpenapiPathMethod(
-              methodType = "get",
-              parameters = Nil,
-              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
-              requestBody = None,
-              security = Some(Seq(Map("apiKeyHeader" -> Seq())))
-            )
-          )
-        )
-      ),
-      Some(OpenapiComponent(Map(), Map("apiKeyHeader" -> OpenapiSecuritySchemeApiKeyType("header", evil)))),
-      Nil
+    val doc = singlePathDoc(
+      getMethod(security = Some(Seq(Map("apiKeyHeader" -> Seq())))),
+      components = Some(OpenapiComponent(Map(), Map("apiKeyHeader" -> OpenapiSecuritySchemeApiKeyType("header", evil))))
     )
     val out = endpointDecls(doc)
     out should include("""k\") ; sys.error(\"PWNED\")""") // escaped form present
@@ -467,27 +345,7 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
 
   it should "escape a specification-extension string value so it cannot break out of the string literal" in {
     val evil = """v" ; sys.error("PWNED") ; val x = " """
-    val doc = OpenapiDocument(
-      "",
-      Nil,
-      null,
-      Seq(
-        OpenapiPath(
-          "ext",
-          Seq(
-            OpenapiPathMethod(
-              methodType = "get",
-              parameters = Nil,
-              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
-              requestBody = None,
-              specificationExtensions = Map("x-thing" -> Json.fromString(evil))
-            )
-          )
-        )
-      ),
-      null,
-      Nil
-    )
+    val doc = singlePathDoc(getMethod(specificationExtensions = Map("x-thing" -> Json.fromString(evil))))
     val out = endpointDecls(doc)
     // The `.attribute(...)` value goes through SpecificationExtensionRenderer; its quotes must be escaped so it stays
     // an inert string literal. (The .attribute references model-level extension keys, so the isolated endpoint decls
@@ -505,28 +363,25 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
 
   // --- helpers for endpoint generation ---
 
+  private def okResponse: OpenapiResponseDef =
+    OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
+
+  private def getMethod(
+      parameters: Seq[Resolvable[OpenapiParameter]] = Nil,
+      requestBody: Option[OpenapiRequestBody] = None,
+      responses: Seq[OpenapiResponse] = Seq(okResponse),
+      security: Option[Seq[Map[String, Seq[String]]]] = None,
+      tags: Option[Seq[String]] = None,
+      specificationExtensions: Map[String, Json] = Map.empty,
+      methodType: String = "get"
+  ): OpenapiPathMethod =
+    OpenapiPathMethod(methodType, parameters, responses, requestBody, security = security, tags = tags, specificationExtensions = specificationExtensions)
+
+  private def singlePathDoc(method: OpenapiPathMethod, components: Option[OpenapiComponent] = null, path: String = "p"): OpenapiDocument =
+    OpenapiDocument("", Nil, null, Seq(OpenapiPath(path, Seq(method))), components, Nil)
+
   private def endpointWithParam(param: OpenapiParameter): OpenapiDocument =
-    OpenapiDocument(
-      "",
-      Nil,
-      null,
-      Seq(
-        OpenapiPath(
-          "evil",
-          Seq(
-            OpenapiPathMethod(
-              methodType = "get",
-              parameters = Seq(Resolved(param)),
-              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
-              requestBody = None,
-              summary = None
-            )
-          )
-        )
-      ),
-      null,
-      Nil
-    )
+    singlePathDoc(getMethod(parameters = Seq(Resolved(param))))
 
   private def endpointDecls(doc: OpenapiDocument): String =
     RootGenerator.imports(JsonSerdeLib.Circe) +

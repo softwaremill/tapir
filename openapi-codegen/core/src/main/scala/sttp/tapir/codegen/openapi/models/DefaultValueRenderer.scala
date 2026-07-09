@@ -35,7 +35,7 @@ object DefaultValueRenderer {
     thisType match {
       case ref: OpenapiSchemaRef =>
         renderStringWithName(value)(allModels, lookup(allModels, ref), ref.stripped)
-      case OpenapiSchemaString(_, _, _, _) => "\"" + JavaEscape.escapeString(value) + "\""
+      case OpenapiSchemaString(_, _, _, _) => JavaEscape.quote(value)
       case OpenapiSchemaEnum(_, _, _)      => s"$name.${NameHelpers.safeEnumMemberName(value)}"
       case OpenapiSchemaDate(_)            => s"""java.time.LocalDate.parse("${JavaEscape.escapeString(value)}")"""
       case OpenapiSchemaDateTime(_)        => s"""java.time.Instant.parse("${JavaEscape.escapeString(value)}")"""
@@ -100,7 +100,7 @@ object DefaultValueRenderer {
           thisType match {
             case ref: OpenapiSchemaRef =>
               renderStringWithName(jsonString)(allModels, lookup(allModels, ref), ref.stripped)
-            case OpenapiSchemaString(_, _, _, _)        => "\"" + JavaEscape.escapeString(jsonString) + "\""
+            case OpenapiSchemaString(_, _, _, _)        => JavaEscape.quote(jsonString)
             case OpenapiSchemaDate(_)                   => s"""java.time.LocalDate.parse("${JavaEscape.escapeString(jsonString)}")"""
             case OpenapiSchemaDateTime(_)               => s"""java.time.Instant.parse("${JavaEscape.escapeString(jsonString)}")"""
             case OpenapiSchemaDuration(_)               => s"""java.time.Duration.parse("${JavaEscape.escapeString(jsonString)}")"""

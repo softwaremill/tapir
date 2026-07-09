@@ -13,6 +13,11 @@ object JavaEscape {
       case char => char.toString
     }
   }
+
+  /** An untrusted string as a complete, escaped Scala string literal (surrounding quotes included). Prefer this over
+    * hand-writing `"\"" + escapeString(x) + "\""` so the escape and the quotes can't get out of sync.
+    */
+  def quote(str: String): String = "\"" + escapeString(str) + "\""
 }
 
 object NameHelpers {
