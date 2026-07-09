@@ -61,6 +61,31 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     rejected(docWithObject("Ok", evil -> noDefault(nestedObj)))
   }
 
+  it should "reject a $ref-typed property name that reaches a derived val identifier in the XML serde" in {
+    // OpenapiSchemaRef IS a simple type, but ref-typed property names still reach a raw `${n.capitalize}` XML val name.
+    val evil = """x = { System.exit(0) }; val y"""
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Nil,
+      Some(
+        OpenapiComponent(
+          Map(
+            "Color" -> OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("red")), false),
+            "Foo" -> OpenapiSchemaObject(
+              mutable.LinkedHashMap(evil -> noDefault(OpenapiSchemaRef("#/components/schemas/Color"))),
+              Seq(evil),
+              false
+            )
+          )
+        )
+      ),
+      Nil
+    )
+    rejected(doc)
+  }
+
   it should "reject an array-of-scalar property name that reaches a derived val identifier in the XML serde" in {
     // array/map-of-scalar property names are emitted raw as `${n.capitalize}` codec val names in the XML generator.
     val evil = """items; System.exit(0); val x = "y"""
@@ -144,14 +169,21 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
          |          type: string
          |""".stripMargin
     val doc = YamlParser.parseFile(yaml).fold(e => fail(e.getMessage), identity).resolveAllOfSchemas
-    val gen = new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("Animal", "Dog")).get
-    val out = gen.classRepr + "\n" + gen.jsonSerdeRepr.getOrElse("")
-    // The payload's quotes are escaped (`\"`), so it stays a single inert string literal in both the discriminator
-    // field body and the circe decoder's downField(...) rather than breaking out into code.
-    out should include("""\"); System.exit(0); (\"""")
+    // Each JSON serde lib has its own hand-escaped discriminator emit site; the tapir Schema (SchemaGenerator) is a
+    // fourth. Exercise all of them.
+    List(JsonSerdeLib.Circe, JsonSerdeLib.Jsoniter, JsonSerdeLib.Zio).foreach { lib =>
+      val gen = new ClassDefinitionGenerator()
+        .classDefs(doc, targetScala3 = isScala3, jsonSerdeLib = lib, jsonParamRefs = Set("Animal"))
+        .get
+      val out = gen.classRepr + "\n" + gen.jsonSerdeRepr.getOrElse("") + "\n" + gen.schemaRepr.map(_._2).mkString("\n")
+      // The payload's quotes are escaped (`\"`), so it stays a single inert string literal in the discriminator field
+      // body, the serde emit (downField / discriminator map / makeOpenapiLike) and the tapir Schema, rather than
+      // breaking out into code. Assert per-lib so a regression in any one emit site is caught.
+      withClue(s"serde lib $lib: ") { out should include("""\"); System.exit(0); (\"""") }
+    }
     // The class defn (incl. the discriminator field body `def ... = "<escaped value>"`) compiles, proving that sink
     // holds the payload as inert data rather than injected code.
-    gen.classRepr.shouldCompile()
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3, jsonSerdeLib = JsonSerdeLib.Circe).get.classRepr.shouldCompile()
   }
 
   it should "escape a string default value so it cannot inject at model construction" in {
@@ -316,7 +348,7 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     out should not include """= "v" ; System.exit(0)""" // not a live break-out
   }
 
-  it should "escape an apiKey security-scheme name so it cannot break out of the string literal" in {
+  it should "escape an apiKey header name so it cannot break out of the string literal" in {
     val evil = """k") ; sys.error("PWNED") ; auth.apiKey(query[String]("z"""
     val doc = OpenapiDocument(
       "",
@@ -345,15 +377,18 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     out.shouldCompile()
   }
 
-  it should "escape an XML element name so it cannot break out of the string literal" in {
-    val evil = """el") ; sys.error("PWNED") ; seqDecoder[String]("z"""
-    val arr = OpenapiSchemaArray(OpenapiSchemaString(false), false, Some(OpenapiXml.XmlArrayConfiguration(name = Some(evil))))
+  it should "escape XML element and item names so they cannot break out of the string literal" in {
+    val evilName = """el") ; sys.error("NAME") ; seqDecoder[String]("z"""
+    val evilItem = """it") ; sys.error("ITEM") ; seqEncoder[String]("z"""
+    val arr =
+      OpenapiSchemaArray(OpenapiSchemaString(false), false, Some(OpenapiXml.XmlArrayConfiguration(name = Some(evilName), itemName = Some(evilItem))))
     val gen = new ClassDefinitionGenerator()
       .classDefs(docWithObject("Widget", "items" -> noDefault(arr)), targetScala3 = isScala3, xmlParamRefs = Set("Widget"))
       .get
     val out = gen.xmlSerdeRepr.getOrElse("")
-    out should include("""el\") ; sys.error(\"PWNED\")""") // escaped form present
-    out should not include """seqDecoder[String]("el") ; sys.error("PWNED")""" // not a live break-out
+    out should include("""el\") ; sys.error(\"NAME\")""") // name escaped
+    out should include("""it\") ; sys.error(\"ITEM\")""") // itemName escaped
+    out should not include """seqDecoder[String]("el") ; sys.error("NAME")""" // not a live break-out
   }
 
   it should "escape a specification-extension string value so it cannot break out of the string literal" in {
