@@ -26,18 +26,27 @@ object NameValidation {
         s"Unsafe $kind '$name' in OpenAPI document: only characters [A-Za-z0-9._-] are permitted (see GHSA-gpcc-36pq-8qxr)"
       )
 
-  // Collect (kind, name) pairs for every $ref target and property name reachable from a schema.
+  // Collect (kind, name) pairs for every $ref target and (identifier-emitting) property name reachable from a schema.
   private def namesIn(schema: OpenapiSchemaType): Seq[(String, String)] = schema match {
     case r: OpenapiSchemaRef                 => Seq("schema $ref" -> r.stripped)
     case OpenapiSchemaArray(i, _, _, _)      => namesIn(i)
     case OpenapiSchemaMap(i, _, _)           => namesIn(i)
     case OpenapiSchemaNot(i)                 => namesIn(i)
     case OpenapiSchemaObject(props, _, _, _) =>
-      props.toSeq.flatMap { case (propName, field) => ("property name" -> propName) +: namesIn(field.`type`) }
+      props.toSeq.flatMap { case (propName, field) =>
+        // A property name only reaches a *raw* identifier position (a derived nested class/enum name built by
+        // `addName` string concatenation) when its type is a nested object/array/map/enum. For simple- and
+        // $ref-typed properties the name is only ever emitted as a backtick-quoted field name, which safely
+        // handles any character — validating those here would wrongly reject legitimate names such as
+        // "@odata.type" or names with spaces/non-ASCII letters. So only restrict names that reach `addName`.
+        val maybeName = if (field.`type`.isInstanceOf[OpenapiSchemaSimpleType]) Nil else Seq("property name" -> propName)
+        maybeName ++ namesIn(field.`type`)
+      }
     case OpenapiSchemaOneOf(types, _) => types.flatMap(namesIn)
     case OpenapiSchemaAnyOf(types)    => types.flatMap(namesIn)
     case OpenapiSchemaAllOf(types)    => types.flatMap(namesIn)
-    case _                            => Nil
+    // Remaining variants are leaf simple types (validated as $refs above where relevant) with no nested names.
+    case _ => Nil
   }
 
   /** Validate every name in the document that reaches an identifier position. Throws IllegalArgumentException on the

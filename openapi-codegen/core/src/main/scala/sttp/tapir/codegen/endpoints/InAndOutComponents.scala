@@ -238,7 +238,9 @@ object InAndOutComponents {
       val default = v.default
         .map(j => " = " + DefaultValueRenderer.render(Map.empty, v.`type`, optional, RenderConfig())(j))
         .getOrElse(if (optional) " = None" else "")
-      s"$k: $t$default"
+      // `k` is an inline-body property name straight from the (untrusted) document and is not covered by the
+      // component-schema NameValidation pass, so quote/reject it here as the component-class path does. GHSA-gpcc-36pq-8qxr
+      s"${safeVariableName(k)}: $t$default"
     }
     val inlineClassDefn =
       s"""case class $inlineClassName (

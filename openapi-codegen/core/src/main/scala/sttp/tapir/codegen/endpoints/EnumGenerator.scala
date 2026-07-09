@@ -6,7 +6,6 @@ import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaEnum
 
 object EnumGenerator {
-  val legalEnumName = "([a-zA-Z][a-zA-Z0-9_]*)".r
 
   // Uses enumeratum for scala 2, but generates scala 3 enums instead where it can
   private[codegen] def generateEnum(

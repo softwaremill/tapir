@@ -17,7 +17,9 @@ object ParamComponent {
   private val validParamLocations = Set("query", "header", "path", "cookie")
   private def checkParamLocation(param: OpenapiParameter): Unit =
     if (!validParamLocations.contains(param.in))
-      throw new IllegalArgumentException(s"Unsupported parameter location 'in': '${param.in}' (parameter '${param.name}')")
+      throw new IllegalArgumentException(
+        s"Unsupported parameter location 'in': '${param.in}' (parameter '${param.name}') (see GHSA-gpcc-36pq-8qxr)"
+      )
 
   private def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
     case (true, true)   => s"List[$baseType]"

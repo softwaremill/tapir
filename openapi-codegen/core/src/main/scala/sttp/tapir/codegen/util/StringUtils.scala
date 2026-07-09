@@ -25,7 +25,7 @@ object NameHelpers {
   private def backtickQuoteOrReject(kind: String, s: String): String =
     if (s.isEmpty || s.exists(c => c == '`' || c.isControl))
       throw new IllegalArgumentException(
-        s"Cannot generate a safe Scala identifier from $kind '$s': it must be non-empty and must not contain backticks or control characters"
+        s"Cannot generate a safe Scala identifier from $kind '$s': it must be non-empty and must not contain backticks or control characters (see GHSA-gpcc-36pq-8qxr)"
       )
     else s"`$s`"
 

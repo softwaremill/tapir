@@ -90,8 +90,12 @@ object ServersGenerator {
        |}""".stripMargin
   }
   private def genDescription(description: Option[String]): String =
-    // Neutralise any "*/" in the (untrusted) description so it cannot close the emitted block comment early and
-    // inject code that follows. See GHSA-gpcc-36pq-8qxr.
-    description.map(d => s"/*\n${indent(2)(d.replace("*/", "* /"))}\n*/\n").getOrElse("")
+    // Neutralise the (untrusted) description before emitting it into a block comment: double every backslash so a
+    // `*/` unicode escape cannot be reconstructed by Scala 2's unicode pre-scan (which runs before comment
+    // lexing) into a `*/`, and textually break any literal `*/`. Either could otherwise close the comment early and
+    // inject the code that follows. See GHSA-gpcc-36pq-8qxr.
+    description
+      .map(d => s"/*\n${indent(2)(d.replace("\\", "\\\\").replace("*/", "* /"))}\n*/\n")
+      .getOrElse("")
 
 }
