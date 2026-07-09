@@ -111,6 +111,37 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     out.shouldCompile()
   }
 
+  it should "escape discriminator property names and mapping values in generated serdes" in {
+    val evilProp = """k"); System.exit(0); ("""" // discriminator propertyName
+    val evilValue = """d"); System.exit(0); ("""" // discriminator mapping value (wire tag)
+    val yaml =
+      s"""openapi: 3.1.0
+         |info: {title: t, version: '1.0'}
+         |paths: {}
+         |components:
+         |  schemas:
+         |    Animal:
+         |      oneOf:
+         |        - $$ref: '#/components/schemas/Dog'
+         |      discriminator:
+         |        propertyName: '$evilProp'
+         |        mapping:
+         |          '$evilValue': '#/components/schemas/Dog'
+         |    Dog:
+         |      type: object
+         |      required: ['$evilProp']
+         |      properties:
+         |        '$evilProp':
+         |          type: string
+         |""".stripMargin
+    val doc = YamlParser.parseFile(yaml).fold(e => fail(e.getMessage), identity).resolveAllOfSchemas
+    val gen = new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3, jsonSerdeLib = JsonSerdeLib.Circe, jsonParamRefs = Set("Animal", "Dog")).get
+    val out = gen.classRepr + "\n" + gen.jsonSerdeRepr.getOrElse("")
+    // The payload's quotes are escaped (`\"`), so it stays a single inert string literal in both the discriminator
+    // field body and the circe decoder's downField(...) rather than breaking out into code.
+    out should include("""\"); System.exit(0); (\"""")
+  }
+
   it should "escape a string default value so it cannot inject at model construction" in {
     val evilDefault = OpenapiSchemaField(OpenapiSchemaString(false), Some(Json.fromString("""d"; sys.error("PWNED"); "x""")))
     val out = classRepr(docWithObject("Ok", "field" -> evilDefault))
