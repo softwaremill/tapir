@@ -125,6 +125,7 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     out should include("`x-trace`")
     out should include("`a.b`")
     out should include("`+1`")
+    out should include("$type") // `$` is a valid Scala identifier char, so this one is emitted unquoted
     out.shouldCompile()
   }
 
@@ -162,16 +163,21 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     validators should include("""obj.`evil ; System.exit(0) ; val boom`""")
   }
 
-  it should "reject a $ref target in a path-level schema (spliced raw as a type identifier)" in {
-    // A $ref target in a parameter/body schema (not a component schema) is spliced raw into a `query[...]`/`jsonBody[...]`
-    // type position by mapSchemaSimpleTypeToType; NameValidation must reject it. (endpointDecls bypasses NameValidation,
-    // so assert the guard directly.)
+  it should "reject a $ref target spliced raw as a type identifier, whichever path schema it comes from" in {
+    // mapSchemaSimpleTypeToType splices a $ref target raw as a type; it is the single choke point through which every
+    // ref (method- and path-level parameters, resolved or component-indirected, bodies, headers) becomes a type, and
+    // it validates the target. Assert via the FULL generator (endpointDecls) so the guard is exercised at the sink,
+    // not just at ingestion — this covers routes the NameValidation walk does not enumerate (e.g. path-shared params).
     val evil = """Int]("z") ; System.exit(0) ; val x = query[Int"""
-    val doc = singlePathDoc(
-      getMethod(parameters = Seq(Resolved(OpenapiParameter("q", "query", Some(false), None, OpenapiSchemaRef("#/components/schemas/" + evil))))),
-      components = Some(OpenapiComponent(Map.empty))
+    def paramWithRef = Resolved(OpenapiParameter("q", "query", Some(false), None, OpenapiSchemaRef("#/components/schemas/" + evil)))
+    val comps = Some(OpenapiComponent(Map.empty))
+    // method-level parameter
+    intercept[Throwable](endpointDecls(singlePathDoc(getMethod(parameters = Seq(paramWithRef)), components = comps))).getMessage should include(
+      "GHSA-gpcc"
     )
-    intercept[Throwable](NameValidation.validateDocumentNames(doc, useHeadTagForObjectNames = false)).getMessage should include("GHSA-gpcc")
+    // path-item-level (shared) parameter — merged into methods only at generation time, after ingestion validation
+    val pathShared = OpenapiDocument("", Nil, null, Seq(OpenapiPath("p", Seq(getMethod()), Seq(paramWithRef))), comps, Nil)
+    intercept[Throwable](endpointDecls(pathShared)).getMessage should include("GHSA-gpcc")
   }
 
   // --- string-literal positions: escape values ---

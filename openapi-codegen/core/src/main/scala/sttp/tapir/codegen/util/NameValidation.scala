@@ -28,6 +28,12 @@ object NameValidation {
         s"Unsafe $kind '$name' in OpenAPI document: only characters [A-Za-z0-9._$$+-] are permitted (see GHSA-gpcc-36pq-8qxr)"
       )
 
+  /** Validate a single name that is about to be emitted into an identifier position (e.g. a `$ref` target spliced as
+    * a type). Use this as a sink-side guard where a name may not have passed through document-level validation (path
+    * schemas resolved from components, response headers, etc.).
+    */
+  def validateName(kind: String, name: String): Unit = check(kind, name)
+
   // Collect (kind, name) pairs for every $ref target and (identifier-emitting) property name reachable from a schema.
   private def namesIn(schema: OpenapiSchemaType): Seq[(String, String)] = schema match {
     case r: OpenapiSchemaRef                 => Seq("schema $ref" -> r.stripped)
