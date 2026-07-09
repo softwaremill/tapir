@@ -9,6 +9,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OAuth2Flow, OAuth2FlowType, OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeOAuth2Type}
 import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType, OpenapiServer, OpenapiServerEnum, OpenapiXml}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
+import sttp.tapir.codegen.util.NameValidation
 import sttp.tapir.codegen.validation.{ValidationDefns, ValidationGenerator}
 import sttp.tapir.codegen.xml.XmlSerdeLib
 
@@ -142,6 +143,35 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     validators should include("ObjEvilSystemExit0ValBoomValidator")
     // The field access is backtick-quoted to match the (safe) case-class field, not spliced raw.
     validators should include("""obj.`evil ; System.exit(0) ; val boom`""")
+  }
+
+  it should "reject a $ref target in a path-level schema (spliced raw as a type identifier)" in {
+    // A $ref target in a parameter/body schema (not a component schema) is spliced raw into a `query[...]`/`jsonBody[...]`
+    // type position by mapSchemaSimpleTypeToType; NameValidation must reject it. (endpointDecls bypasses NameValidation,
+    // so assert the guard directly.)
+    val evil = """Int]("z") ; System.exit(0) ; val x = query[Int"""
+    val doc =
+      OpenapiDocument(
+        "",
+        Nil,
+        null,
+        Seq(
+          OpenapiPath(
+            "p",
+            Seq(
+              OpenapiPathMethod(
+                "get",
+                Seq(Resolved(OpenapiParameter("q", "query", Some(false), None, OpenapiSchemaRef("#/components/schemas/" + evil)))),
+                Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
+                None
+              )
+            )
+          )
+        ),
+        Some(OpenapiComponent(Map.empty)),
+        Nil
+      )
+    intercept[Throwable](NameValidation.validateDocumentNames(doc, useHeadTagForObjectNames = false)).getMessage should include("GHSA-gpcc")
   }
 
   // --- string-literal positions: escape values ---

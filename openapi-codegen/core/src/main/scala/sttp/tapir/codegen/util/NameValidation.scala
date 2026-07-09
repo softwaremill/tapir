@@ -1,6 +1,6 @@
 package sttp.tapir.codegen.util
 
-import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiRequestBodyDefn, OpenapiResponseDef}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
@@ -55,9 +55,15 @@ object NameValidation {
   def validateDocumentNames(doc: OpenapiDocument, useHeadTagForObjectNames: Boolean): Unit = {
     val schemas = doc.components.toSeq.flatMap(_.schemas)
     schemas.foreach { case (name, _) => check("schema name", name) }
-    // $ref targets between component schemas become type references; property names become field/derived identifiers.
-    // Endpoint request/response bodies reference these same component schemas, whose names are validated above.
-    schemas.flatMap { case (_, s) => namesIn(s) }.distinct.foreach { case (kind, name) => check(kind, name) }
+    // Schemas reachable from paths (parameter schemas, request/response body content) are NOT limited to component
+    // schemas: they can be inline objects or dangling `$ref`s. Their `$ref` targets are spliced raw as type
+    // identifiers (mapSchemaSimpleTypeToType) and their property names reach the same raw sinks, so validate them too.
+    val pathSchemas: Seq[OpenapiSchemaType] = doc.paths.flatMap(_.methods).flatMap { m =>
+      m.resolvedParameters.map(_.schema) ++
+        m.requestBody.collect { case b: OpenapiRequestBodyDefn => b.content.map(_.schema) }.toSeq.flatten ++
+        m.responses.collect { case r: OpenapiResponseDef => r.content.map(_.schema) }.flatten
+    }
+    (schemas.map(_._2) ++ pathSchemas).flatMap(namesIn).distinct.foreach { case (kind, name) => check(kind, name) }
     // Security-scheme names (both the scheme definitions and the per-operation requirement keys that reference them)
     // are emitted as raw class/trait identifiers (e.g. `case class ${name.capitalize}SecurityIn(...)`).
     doc.components.toSeq.flatMap(_.securitySchemes.keys).distinct.foreach(check("security scheme name", _))
