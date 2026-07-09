@@ -6,7 +6,8 @@ import sttp.tapir.codegen.endpoints.{EndpointGenerator, FS2}
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels._
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiServer}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.OpenapiSecuritySchemeApiKeyType
+import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiServer, OpenapiXml}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 import sttp.tapir.codegen.validation.ValidationDefns
 import sttp.tapir.codegen.xml.XmlSerdeLib
@@ -259,6 +260,76 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     // The description lives inside a /* ... */ block; its `*/` must be broken so it cannot close the comment early.
     out should not include "*/ ; System.exit(0)"
     out should include("* / ; System.exit(0)")
+  }
+
+  it should "escape an apiKey security-scheme name so it cannot break out of the string literal" in {
+    val evil = """k") ; sys.error("PWNED") ; auth.apiKey(query[String]("z"""
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Seq(
+        OpenapiPath(
+          "sec",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "get",
+              parameters = Nil,
+              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
+              requestBody = None,
+              security = Some(Seq(Map("apiKeyHeader" -> Seq())))
+            )
+          )
+        )
+      ),
+      Some(OpenapiComponent(Map(), Map("apiKeyHeader" -> OpenapiSecuritySchemeApiKeyType("header", evil)))),
+      Nil
+    )
+    val out = endpointDecls(doc)
+    out should include("""k\") ; sys.error(\"PWNED\")""") // escaped form present
+    out should not include """auth.apiKey(header[String]("k") ; sys.error("PWNED")""" // not a live break-out
+    out.shouldCompile()
+  }
+
+  it should "escape an XML element name so it cannot break out of the string literal" in {
+    val evil = """el") ; sys.error("PWNED") ; seqDecoder[String]("z"""
+    val arr = OpenapiSchemaArray(OpenapiSchemaString(false), false, Some(OpenapiXml.XmlArrayConfiguration(name = Some(evil))))
+    val gen = new ClassDefinitionGenerator()
+      .classDefs(docWithObject("Widget", "items" -> noDefault(arr)), targetScala3 = isScala3, xmlParamRefs = Set("Widget"))
+      .get
+    val out = gen.xmlSerdeRepr.getOrElse("")
+    out should include("""el\") ; sys.error(\"PWNED\")""") // escaped form present
+    out should not include """seqDecoder[String]("el") ; sys.error("PWNED")""" // not a live break-out
+  }
+
+  it should "escape a specification-extension string value so it cannot break out of the string literal" in {
+    val evil = """v" ; sys.error("PWNED") ; val x = " """
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Seq(
+        OpenapiPath(
+          "ext",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "get",
+              parameters = Nil,
+              responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))),
+              requestBody = None,
+              specificationExtensions = Map("x-thing" -> Json.fromString(evil))
+            )
+          )
+        )
+      ),
+      null,
+      Nil
+    )
+    val out = endpointDecls(doc)
+    // The `.attribute(...)` value goes through SpecificationExtensionRenderer; its quotes must be escaped so it stays
+    // an inert string literal. (The .attribute references model-level extension keys, so the isolated endpoint decls
+    // are not self-contained enough to compile here; the escaped-form assertion is the proof.)
+    out should include("""v\" ; sys.error(\"PWNED\")""")
   }
 
   it should "reject a server URL containing injection characters" in {
