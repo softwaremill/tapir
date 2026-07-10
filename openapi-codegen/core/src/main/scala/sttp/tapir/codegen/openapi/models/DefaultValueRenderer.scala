@@ -50,7 +50,7 @@ object DefaultValueRenderer {
       s"Cannot find property $k in schema $name when constructing default value"
     )
     thisType match {
-      case ref: OpenapiSchemaRef => renderMapWithName(kvs)(allModels, lookup(allModels, ref), ref.stripped)
+      case ref: OpenapiSchemaRef         => renderMapWithName(kvs)(allModels, lookup(allModels, ref), ref.stripped)
       case OpenapiSchemaMap(types, _, _) =>
         s"Map(${kvs.map { case (k, v) => s""""$k" -> ${render(allModels, types, isOptional = false, RenderConfig())(v)}""" }.mkString(", ")})"
       case OpenapiSchemaObject(properties, required, _, _) =>

@@ -486,7 +486,12 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       .mapInTo[EndpointTestFixtures.NestedWrapper]: PublicEndpoint[EndpointTestFixtures.NestedWrapper, Unit, Unit, Any]
     endpoint
       .in(query[String]("q1"))
-      .mapInTo[EndpointTestFixtures.Inner.DoublyNestedWrapper]: PublicEndpoint[EndpointTestFixtures.Inner.DoublyNestedWrapper, Unit, Unit, Any]
+      .mapInTo[EndpointTestFixtures.Inner.DoublyNestedWrapper]: PublicEndpoint[
+      EndpointTestFixtures.Inner.DoublyNestedWrapper,
+      Unit,
+      Unit,
+      Any
+    ]
     endpoint
       .in(query[String]("q1"))
       .mapInTo[ClassNestedFixtures.NestedWrapper]: PublicEndpoint[ClassNestedFixtures.NestedWrapper, Unit, Unit, Any]

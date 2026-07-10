@@ -336,10 +336,12 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
         .out(stringBody)
 
     val server = TapirSyncStubInterpreter()
-      .whenServerEndpointRunLogic(e.serverLogic[Identity](multipartData => {
-        val fileContent = Await.result(readFromFile(multipartData.file.body), 3.seconds)
-        IdentityMonad.unit(Right("name: " + multipartData.name + " year: " + multipartData.year + " file: " + fileContent))
-      }))
+      .whenServerEndpointRunLogic(
+        e.serverLogic[Identity](multipartData => {
+          val fileContent = Await.result(readFromFile(multipartData.file.body), 3.seconds)
+          IdentityMonad.unit(Right("name: " + multipartData.name + " year: " + multipartData.year + " file: " + fileContent))
+        })
+      )
       .backend()
 
     // when

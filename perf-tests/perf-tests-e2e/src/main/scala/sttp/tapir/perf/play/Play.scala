@@ -91,14 +91,16 @@ object Play {
     IO(ActorSystem("tapir-play"))
   )(aSystem => IO.fromFuture(IO(aSystem.terminate())).void)
 
-  private def httpServer(routes: Routes, actSys: ActorSystem) = Resource.make(IO {
-    val server = new DefaultPekkoHttpServerComponents {
-      override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(Port), address = "127.0.0.1", mode = Mode.Test)
-      override lazy val actorSystem: ActorSystem = actSys
-      override def router: Router = Router.from(routes)
+  private def httpServer(routes: Routes, actSys: ActorSystem) = Resource.make(
+    IO {
+      val server = new DefaultPekkoHttpServerComponents {
+        override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(Port), address = "127.0.0.1", mode = Mode.Test)
+        override lazy val actorSystem: ActorSystem = actSys
+        override def router: Router = Router.from(routes)
+      }
+      server.server
     }
-    server.server
-  })(server => IO(server.stop()))
+  )(server => IO(server.stop()))
 
   def runServer(routes: ActorSystem => Routes): Resource[IO, Unit] = actorSystem
     .flatMap { aSystem =>

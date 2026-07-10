@@ -415,21 +415,23 @@ val clientTestServerSettings = Seq(
   })
 )
 
-lazy val superMatrixSettings = Seq((Compile / unmanagedSourceDirectories) ++= {
-  val allCombos = List("js", "jvm", "native").combinations(2).toList
-  val dis =
-    virtualAxes.value.collectFirst { case p: VirtualAxis.PlatformAxis =>
-      p.directorySuffix
-    }.get
+lazy val superMatrixSettings = Seq(
+  (Compile / unmanagedSourceDirectories) ++= {
+    val allCombos = List("js", "jvm", "native").combinations(2).toList
+    val dis =
+      virtualAxes.value.collectFirst { case p: VirtualAxis.PlatformAxis =>
+        p.directorySuffix
+      }.get
 
-  allCombos
-    .filter(_.contains(dis))
-    .map { suff =>
-      val suffixes = "scala" + suff.mkString("-", "-", "")
+    allCombos
+      .filter(_.contains(dis))
+      .map { suff =>
+        val suffixes = "scala" + suff.mkString("-", "-", "")
 
-      (Compile / sourceDirectory).value / suffixes
-    }
-})
+        (Compile / sourceDirectory).value / suffixes
+      }
+  }
+)
 
 lazy val clientTestServer = (projectMatrix in file("client/testserver"))
   .settings(commonSettings)

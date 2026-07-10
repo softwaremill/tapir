@@ -26,7 +26,6 @@ object NameHelpers {
   def addName(parentName: String, key: String): String =
     parentName + key.replace('_', ' ').replace('-', ' ').capitalize.replace(" ", "")
 
-
   def indent(i: Int)(str: String): String = {
     str.linesIterator.map(" " * i + _).mkString("\n")
   }

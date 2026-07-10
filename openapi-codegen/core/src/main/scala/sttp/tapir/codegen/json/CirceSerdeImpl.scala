@@ -33,7 +33,7 @@ object CirceSerdeImpl {
       allTransitiveJsonParamRefs: Set[String],
       validateNonDiscriminatedOneOfs: Boolean,
       packageReuse: PackageReuseContext,
-      seperateFilesForModels: Boolean,
+      seperateFilesForModels: Boolean
   ): SerdeGenResponse = {
     val docSchemas = doc.components.toSeq.flatMap(_.schemas).map { case (n, t) => (n, t, allTransitiveJsonParamRefs.contains(n)) }
     val pathSchemas = inlineEndpointSchemas(doc)

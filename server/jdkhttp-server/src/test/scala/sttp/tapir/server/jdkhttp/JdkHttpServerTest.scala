@@ -31,13 +31,15 @@ class JdkHttpServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =
     backendResource.flatMap { backend =>
       Resource
-        .eval(IO.delay {
-          val interpreter = new JdkHttpTestServerInterpreter()
-          val createServerTest = new DefaultCreateServerTest(backend, interpreter)
+        .eval(
+          IO.delay {
+            val interpreter = new JdkHttpTestServerInterpreter()
+            val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-          new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false).tests() ++
-            new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, metrics = false).tests() ++
-            new ServerMultipartTests(createServerTest, utf8FileNameSupport = false).tests()
-        })
+            new ServerBasicTests(createServerTest, interpreter, invulnerableToUnsanitizedHeaders = false).tests() ++
+              new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, metrics = false).tests() ++
+              new ServerMultipartTests(createServerTest, utf8FileNameSupport = false).tests()
+          }
+        )
     }
 }
