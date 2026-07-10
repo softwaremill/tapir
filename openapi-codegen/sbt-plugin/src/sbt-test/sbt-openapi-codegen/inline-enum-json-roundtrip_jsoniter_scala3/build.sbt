@@ -13,6 +13,6 @@ val tapirVersion = "1.11.16"
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % tapirVersion,
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.16",
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.17" % "compile-internal",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.39.0" % "compile-internal",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test
 )
