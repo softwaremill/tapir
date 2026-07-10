@@ -5,6 +5,14 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 
 import scala.collection.mutable
 
+object NameValidation {
+  val validName = """[a-zA-Z_$][a-zA-Z0-9_$]*"""
+  val validOrHyphen = """[a-zA-Z_$][a-zA-Z0-9_$-]*"""
+  // Schema refs have stricter validation, since used directly as types; parameters etc can also contain hyphens
+  val validRef = s"""#/components/(schemas/$validName|(?!schemas)[a-zA-Z]+/$validOrHyphen)"""
+}
+import NameValidation._
+
 sealed trait OpenapiSchemaType {
   def nullable: Boolean
 }
@@ -216,6 +224,7 @@ object OpenapiSchemaType {
   implicit val OpenapiSchemaRefDecoder: Decoder[OpenapiSchemaRef] = { (c: HCursor) =>
     for {
       r <- c.downField("$ref").as[String]
+      _ <- Right(r).ensure(DecodingFailure(s"Ref $r does not match expected regex!", c.history))(_.matches(validRef))
     } yield {
       OpenapiSchemaRef(r)
     }
