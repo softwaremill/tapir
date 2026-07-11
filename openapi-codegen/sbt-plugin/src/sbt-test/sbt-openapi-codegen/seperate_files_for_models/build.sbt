@@ -10,7 +10,7 @@ lazy val root = (project in file("."))
     ),
     openapiPackageDependencies := Map("sttp.tapir.gen_dup" -> "sttp.tapir.generated")
   )
-val tapirVersion = "1.13.26"
+val tapirVersion = "1.13.27"
 
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
