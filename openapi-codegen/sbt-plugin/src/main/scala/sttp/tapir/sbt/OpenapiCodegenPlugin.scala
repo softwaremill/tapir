@@ -82,7 +82,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     openapiUseCustomJsoniterSerdes := false,
     openapiSeperateFilesForModels := false,
     openapiAlwaysGenerateParamSupport := false,
-    openapiAddDisambiguationCodes := true,
+    openapiAddDisambiguationCodes := false,
     standardParamSetting
   )
 

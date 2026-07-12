@@ -4,6 +4,7 @@ import io.circe.Json
 import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.endpoints.SimpleTypes.mapSchemaSimpleTypeToType
 import sttp.tapir.codegen.endpoints.InAndOutComponents._
+import sttp.tapir.codegen.endpoints.OutComponent.{generateSharedStatusCodeDisambiguators, statusCodeDisambigBaseTrait}
 import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models._
 import sttp.tapir.codegen.openapi.models.GenerationDirectives._
@@ -35,13 +36,15 @@ case class EndpointDetails(
     jsonParamRefs: Set[String],
     inlineDefns: Seq[String],
     xmlParamRefs: Set[String],
-    securityWrappers: Set[SecurityWrapperDefn]
+    securityWrappers: Set[SecurityWrapperDefn],
+    statusCodeDisambig: Seq[(String, String)] = Nil
 ) {
   def merge(that: EndpointDetails) = EndpointDetails(
     jsonParamRefs ++ that.jsonParamRefs,
     inlineDefns ++ that.inlineDefns,
     xmlParamRefs ++ that.xmlParamRefs,
-    securityWrappers ++ that.securityWrappers
+    securityWrappers ++ that.securityWrappers,
+    statusCodeDisambig ++ that.statusCodeDisambig
   )
 }
 object EndpointDetails {
@@ -115,6 +118,14 @@ class EndpointGenerator {
           )
         )
         .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
+    val statusCodeDisambig = details.statusCodeDisambig.distinct
+    val inlineDefnsWithStatusCodeDisambig =
+      if (statusCodeDisambig.isEmpty) details.inlineDefns
+      else
+        Seq(s"sealed trait $statusCodeDisambigBaseTrait") ++ details.inlineDefns ++ generateSharedStatusCodeDisambiguators(
+          statusCodeDisambig
+        ).toSeq
+    val enrichedDetails = details.copy(inlineDefns = inlineDefnsWithStatusCodeDisambig)
     val endpointDecls = endpointsByFile.map { case GeneratedEndpointsForFile(maybeFileName, ge) =>
       val definitions = ge
         .map { case GeneratedEndpoint(name, definition, maybeInlineDefns, types) =>
@@ -139,7 +150,7 @@ class EndpointGenerator {
                            |$allEP
                            |""".stripMargin
     }.toMap
-    EndpointDefs(endpointDecls, queryOrPathParamRefs, definesEnumQueryParam, details)
+    EndpointDefs(endpointDecls, queryOrPathParamRefs, definesEnumQueryParam, enrichedDetails)
   }
 
   private[codegen] def generatedEndpoints(
@@ -209,7 +220,7 @@ class EndpointGenerator {
               packageReuse,
               seperateFilesForModels
             )
-          val (outDecl, outTypes, errTypes, inlineDefns) =
+          val (outDecl, outTypes, errTypes, inlineDefns, statusCodeDisambig) =
             OutComponent.outs(
               m.responses.map(_.resolve(doc)),
               streamingImplementation,
@@ -284,7 +295,7 @@ class EndpointGenerator {
           (
             (maybeTargetFileName, GeneratedEndpoint(name, definition, maybeLocalEnums.filterNot(_ => isReused), allTypes)),
             (queryOrPathParamRefs, jsonParamRefs, xmlParamRefs),
-            (maybeLocalEnums.isDefined && !isReused, inlineDefn, securityWrappers)
+            (maybeLocalEnums.isDefined && !isReused, inlineDefn, securityWrappers, statusCodeDisambig)
           )
         } catch {
           case e: NotImplementedError => throw e
@@ -297,7 +308,10 @@ class EndpointGenerator {
       .groupBy(_._1)
       .toSeq
       .map { case (maybeTargetFileName, defns) => GeneratedEndpointsForFile(maybeTargetFileName, defns.map(_._2)) }
-    val (definesParams, inlineDefns, securityWrappers) = inlineParamInfo.unzip3
+    val definesParams = inlineParamInfo.map(_._1)
+    val inlineDefns = inlineParamInfo.map(_._2)
+    val securityWrappers = inlineParamInfo.map(_._3)
+    val statusCodeDisambigs = inlineParamInfo.map(_._4)
     GeneratedEndpoints(
       namesAndParamsByFile,
       unflattenedQueryParamRefs.foldLeft(Set.empty[String])(_ ++ _),
@@ -306,7 +320,8 @@ class EndpointGenerator {
         unflattenedJsonParamRefs.foldLeft(Set.empty[String])(_ ++ _),
         inlineDefns.flatten,
         xmlParamRefs.flatten.toSet,
-        securityWrappers.flatten.toSet
+        securityWrappers.flatten.toSet,
+        statusCodeDisambig = statusCodeDisambigs.flatten
       )
     )
   }
@@ -333,4 +348,4 @@ class EndpointGenerator {
 }
 
 case class MappedContentType(bodyImpl: String, bodyType: String, inlineDefns: Option[String] = None, inlineTypes: Seq[String] = Nil)
-case class MappedOutGroup(decls: Option[String], types: Option[String], defns: Option[String])
+case class MappedOutGroup(decls: Option[String], types: Option[String], defns: Option[String], statusCodeDisambig: Seq[(String, String)] = Nil)

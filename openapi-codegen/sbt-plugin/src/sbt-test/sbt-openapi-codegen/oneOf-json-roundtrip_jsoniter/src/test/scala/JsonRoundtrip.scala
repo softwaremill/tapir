@@ -284,10 +284,10 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     val route = TapirGeneratedEndpoints.deleteInlineSimpleObject.serverLogic[Future]({ _ =>
       val x = i
       i += 1
-      if (x == 0) Future successful Left(DeleteInlineSimpleObjectResponseErrCode401)
-      else if (x == 1) Future successful Left(DeleteInlineSimpleObjectResponseErrCode402)
-      else if (x == 2) Future successful Right(DeleteInlineSimpleObjectResponseCode200)
-      else Future successful Right(DeleteInlineSimpleObjectResponseCode201)
+      if (x == 0) Future successful Left(StatusCodeDisambig401)
+      else if (x == 1) Future successful Left(StatusCodeDisambig402)
+      else if (x == 2) Future successful Right(StatusCodeDisambig200)
+      else Future successful Right(StatusCodeDisambig201)
     })
     val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
       .whenServerEndpoint(route)

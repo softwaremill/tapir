@@ -84,7 +84,7 @@ object RootGenerator {
       endpointsByTag,
       queryOrPathParamRefs,
       enumsDefinedOnEndpointParams,
-      EndpointDetails(jsonParamRefs, inlineDefns, xmlParamRefs, securityWrappers)
+      EndpointDetails(jsonParamRefs, inlineDefns, xmlParamRefs, securityWrappers, _)
     ) =
       endpointGenerator.endpointDefs(
         doc,

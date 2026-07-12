@@ -18,8 +18,8 @@ case class OpenApiConfiguration(
     additionalPackages: List[(String, File)],
     packageDependencies: Map[String, String],
     seperateFilesForModels: Boolean,
-    alwaysGenerateParamSupport: Boolean
-    addDisambiguationCodes: Boolean,
+    alwaysGenerateParamSupport: Boolean,
+    addDisambiguationCodes: Boolean
 )
 
 trait OpenapiCodegenKeys {
