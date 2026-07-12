@@ -53,9 +53,11 @@ object DefaultValueRenderer {
     thisType match {
       case ref: OpenapiSchemaRef         => renderMapWithName(kvs)(allModels, lookup(allModels, ref), ref.stripped)
       case OpenapiSchemaMap(types, _, _) =>
-        s"Map(${kvs.map { case (k, v) =>
-            s""""${JavaEscape.escapeString(k)}" -> ${render(allModels, types, isOptional = false, RenderConfig())(v)}"""
-          }.mkString(", ")})"
+        s"Map(${kvs
+            .map { case (k, v) =>
+              s""""${JavaEscape.escapeString(k)}" -> ${render(allModels, types, isOptional = false, RenderConfig())(v)}"""
+            }
+            .mkString(", ")})"
       case OpenapiSchemaObject(properties, required, _, _) =>
         val kvsWithProps = kvs.map { case (k, v) => (k, (v, properties.get(k).getOrElse(errorForKey(k)))) }
         s"$name(${kvsWithProps
@@ -127,9 +129,11 @@ object DefaultValueRenderer {
               renderMapWithName(jsonObject.toMap)(allModels, lookup(allModels, ref), ref.stripped)
             case OpenapiSchemaAllOf(Seq(singleElement)) => render(allModels, singleElement, isOptional = false, config)(json)
             case OpenapiSchemaMap(types, _, _)          =>
-              s"Map(${jsonObject.toMap.map { case (k, v) =>
-                  s""""${JavaEscape.escapeString(k)}" -> ${render(allModels, types, isOptional = false, config)(v)}"""
-                }.mkString(", ")})"
+              s"Map(${jsonObject.toMap
+                  .map { case (k, v) =>
+                    s""""${JavaEscape.escapeString(k)}" -> ${render(allModels, types, isOptional = false, config)(v)}"""
+                  }
+                  .mkString(", ")})"
             case other => fail("map", other)
           }
       )

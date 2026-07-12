@@ -120,7 +120,8 @@ object SecurityGenerator {
                 val refreshUrl = f.refreshUrl.map(u => s"""Some("${JavaEscape.escapeString(u)}")""").getOrElse("None")
                 (s"""auth.oauth2.clientCredentialsFlow("$tokenUrl", $refreshUrl)""", "Bearer", schemeName)
               case (OAuth2FlowType.authorizationCode, f) =>
-                val authUrl = JavaEscape.escapeString(f.authorizationUrl.getOrElse(bail("authorizationUrl required for authorizationCode flow")))
+                val authUrl =
+                  JavaEscape.escapeString(f.authorizationUrl.getOrElse(bail("authorizationUrl required for authorizationCode flow")))
                 val tokenUrl = JavaEscape.escapeString(f.tokenUrl.getOrElse(bail("tokenUrl required for authorizationCode flow")))
                 val refreshUrl = f.refreshUrl.map(u => s"""Some("${JavaEscape.escapeString(u)}")""").getOrElse("None")
                 (s"""auth.oauth2.authorizationCodeFlow("$authUrl", "$tokenUrl", $refreshUrl)""", "Bearer", schemeName)

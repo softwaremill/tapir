@@ -6,8 +6,20 @@ import sttp.tapir.codegen.endpoints.{EndpointGenerator, FS2}
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels._
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{OAuth2Flow, OAuth2FlowType, OpenapiSecuritySchemeApiKeyType, OpenapiSecuritySchemeOAuth2Type}
-import sttp.tapir.codegen.openapi.models.{OpenapiComponent, OpenapiSchemaType, OpenapiSecuritySchemeType, OpenapiServer, OpenapiServerEnum, OpenapiXml}
+import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
+  OAuth2Flow,
+  OAuth2FlowType,
+  OpenapiSecuritySchemeApiKeyType,
+  OpenapiSecuritySchemeOAuth2Type
+}
+import sttp.tapir.codegen.openapi.models.{
+  OpenapiComponent,
+  OpenapiSchemaType,
+  OpenapiSecuritySchemeType,
+  OpenapiServer,
+  OpenapiServerEnum,
+  OpenapiXml
+}
 import sttp.tapir.codegen.testutils.CompileCheckTestBase
 import sttp.tapir.codegen.util.NameValidation
 import sttp.tapir.codegen.validation.{ValidationDefns, ValidationGenerator}
@@ -15,9 +27,9 @@ import sttp.tapir.codegen.xml.XmlSerdeLib
 
 import scala.collection.mutable
 
-/** Regression tests for GHSA-gpcc-36pq-8qxr: names/values taken from an (untrusted) OpenAPI document must not be able
-  * to inject Scala code into the generated source. Names in raw identifier positions are rejected if unsafe; names
-  * that are only backtick-quoted, and values in string-literal positions, must survive as inert data.
+/** Regression tests for GHSA-gpcc-36pq-8qxr: names/values taken from an (untrusted) OpenAPI document must not be able to inject Scala code
+  * into the generated source. Names in raw identifier positions are rejected if unsafe; names that are only backtick-quoted, and values in
+  * string-literal positions, must survive as inert data.
   *
   * Rejection tests assert the specific `IllegalArgumentException` (all our guards mention the advisory id) rather than
   * `Try(...).isFailure`, so they cannot pass because of an unrelated failure.
@@ -175,7 +187,9 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     def paramWithRef = Resolved(OpenapiParameter("q", "query", Some(false), None, OpenapiSchemaRef("#/components/schemas/" + evil)))
     val comps = Some(OpenapiComponent(Map.empty))
     // method-level parameter
-    intercept[Throwable](endpointDecls(singlePathDoc(getMethod(parameters = Seq(paramWithRef)), components = comps))).getMessage should include(
+    intercept[Throwable](
+      endpointDecls(singlePathDoc(getMethod(parameters = Seq(paramWithRef)), components = comps))
+    ).getMessage should include(
       "GHSA-gpcc"
     )
     // path-item-level (shared) parameter — merged into methods only at generation time, after ingestion validation
@@ -251,7 +265,10 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
       required = true,
       description = None,
       content = Seq(
-        OpenapiRequestBodyContent("application/json", OpenapiSchemaObject(mutable.LinkedHashMap(evil -> noDefault(OpenapiSchemaString(false))), Nil, false))
+        OpenapiRequestBodyContent(
+          "application/json",
+          OpenapiSchemaObject(mutable.LinkedHashMap(evil -> noDefault(OpenapiSchemaString(false))), Nil, false)
+        )
       )
     )
     val doc = singlePathDoc(getMethod(requestBody = Some(body), methodType = "post"))
@@ -276,7 +293,9 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
 
   it should "reject a content type that would break out of the generated CodecFormat identifier" in {
     val evilCt = "application/x`;System.exit(0);`json"
-    val doc = singlePathDoc(getMethod(responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent(evilCt, OpenapiSchemaString(false)))))))
+    val doc = singlePathDoc(
+      getMethod(responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent(evilCt, OpenapiSchemaString(false))))))
+    )
     intercept[Throwable](endpointDecls(doc)).getMessage should include("GHSA-gpcc")
   }
 
@@ -296,8 +315,12 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
       Nil,
       null,
       Nil,
-      Some(OpenapiComponent(Map("Ok" -> OpenapiSchemaObject(mutable.LinkedHashMap("f" -> noDefault(OpenapiSchemaString(false))), Seq("f"), false)),
-        Map(evil -> OpenapiSecuritySchemeApiKeyType("header", "X-A")))),
+      Some(
+        OpenapiComponent(
+          Map("Ok" -> OpenapiSchemaObject(mutable.LinkedHashMap("f" -> noDefault(OpenapiSchemaString(false))), Seq("f"), false)),
+          Map(evil -> OpenapiSecuritySchemeApiKeyType("header", "X-A"))
+        )
+      ),
       Nil
     )
     rejected(doc)
@@ -342,7 +365,11 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     val evilName = """el") ; sys.error("NAME") ; seqDecoder[String]("z"""
     val evilItem = """it") ; sys.error("ITEM") ; seqEncoder[String]("z"""
     val arr =
-      OpenapiSchemaArray(OpenapiSchemaString(false), false, Some(OpenapiXml.XmlArrayConfiguration(name = Some(evilName), itemName = Some(evilItem))))
+      OpenapiSchemaArray(
+        OpenapiSchemaString(false),
+        false,
+        Some(OpenapiXml.XmlArrayConfiguration(name = Some(evilName), itemName = Some(evilItem)))
+      )
     val gen = new ClassDefinitionGenerator()
       .classDefs(docWithObject("Widget", "items" -> noDefault(arr)), targetScala3 = isScala3, xmlParamRefs = Set("Widget"))
       .get
@@ -384,7 +411,15 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
       specificationExtensions: Map[String, Json] = Map.empty,
       methodType: String = "get"
   ): OpenapiPathMethod =
-    OpenapiPathMethod(methodType, parameters, responses, requestBody, security = security, tags = tags, specificationExtensions = specificationExtensions)
+    OpenapiPathMethod(
+      methodType,
+      parameters,
+      responses,
+      requestBody,
+      security = security,
+      tags = tags,
+      specificationExtensions = specificationExtensions
+    )
 
   private def singlePathDoc(method: OpenapiPathMethod, components: Option[OpenapiComponent] = null, path: String = "p"): OpenapiDocument =
     OpenapiDocument("", Nil, null, Seq(OpenapiPath(path, Seq(method))), components, Nil)

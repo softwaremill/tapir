@@ -270,10 +270,13 @@ object JsoniterSerdeImpl {
           val codecName = getJsoniterName(name)
           val serde =
             if (useCustomJsoniterSerdes)
-              s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${JavaEscape.escapeString(discriminator.propertyName)}", {$discriminatorMap})"""
+              s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${JavaEscape
+                  .escapeString(discriminator.propertyName)}", {$discriminatorMap})"""
             else {
               val config =
-                s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${JavaEscape.escapeString(discriminator.propertyName)}")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {$discriminatorMap})"""
+                s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${JavaEscape.escapeString(
+                    discriminator.propertyName
+                  )}")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {$discriminatorMap})"""
               s"implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
             }
 
@@ -281,10 +284,13 @@ object JsoniterSerdeImpl {
              |""".stripMargin
         } else {
           if (useCustomJsoniterSerdes)
-            s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${JavaEscape.escapeString(discriminator.propertyName)}")"""
+            s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${JavaEscape
+                .escapeString(discriminator.propertyName)}")"""
           else {
             val config =
-              s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${JavaEscape.escapeString(discriminator.propertyName)}"))"""
+              s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${JavaEscape.escapeString(
+                  discriminator.propertyName
+                )}"))"""
             s"implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
           }
         }

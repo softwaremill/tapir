@@ -154,7 +154,9 @@ object OutComponent {
               val wrappers = declsByWrapperClassName
                 .map { case (name, seq) =>
                   val defns =
-                    seq.map { case (_, t, _, ct) => s"""override def ${NameHelpers.safeVariableName(ct)}: () => $t = () => value""" }.sorted
+                    seq
+                      .map { case (_, t, _, ct) => s"""override def ${NameHelpers.safeVariableName(ct)}: () => $t = () => value""" }
+                      .sorted
                       .mkString("\n")
                   s"""case class ${name}(value: ${seq.head._2}) extends $traitName{
                      |${indent(2)(defns)}
