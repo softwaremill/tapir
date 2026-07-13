@@ -445,12 +445,12 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     generatedCode should include("sealed trait DeleteDeleteOneResponseCode extends StatusCodeDisambig")
     generatedCode should include("sealed trait DeleteDeleteTwoResponseCode extends StatusCodeDisambig")
     generatedCode should include(
-      "case object StatusCodeDisambig200 extends DeleteDeleteOneResponseCode with DeleteDeleteTwoResponseCode"
+      "case object StatusCodeDisambig200\n  extends DeleteDeleteOneResponseCode\n  with DeleteDeleteTwoResponseCode"
     )
     generatedCode should include(
-      "case object StatusCodeDisambig201 extends DeleteDeleteOneResponseCode with DeleteDeleteTwoResponseCode"
+      "case object StatusCodeDisambig201\n  extends DeleteDeleteOneResponseCode\n  with DeleteDeleteTwoResponseCode"
     )
-    generatedCode should include("case object StatusCodeDisambig401 extends DeleteDeleteOneResponseErrCode")
+    generatedCode should include("case object StatusCodeDisambig401\n  extends DeleteDeleteOneResponseErrCode")
     generatedCode should not include "case object DeleteDeleteOneResponseCode200"
     generatedCode.shouldCompile()
   }

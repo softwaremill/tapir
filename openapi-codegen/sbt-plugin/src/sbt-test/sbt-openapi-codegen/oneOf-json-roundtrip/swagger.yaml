@@ -253,7 +253,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotFoundError'
         default:
-          description: Not found
+          description: Generic error
           content:
             application/json:
               schema:
