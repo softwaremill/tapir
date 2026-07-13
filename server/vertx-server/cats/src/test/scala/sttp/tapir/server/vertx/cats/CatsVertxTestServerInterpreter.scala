@@ -30,11 +30,17 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
       route: Router => Route,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Resource[IO, Port] = {
-    val router = Router.router(vertx)
-    route(router)
-    // the maxFormAttributeSize must be higher than in ServerMultipartTests.maxContentLengthTests
-    val server = vertx.createHttpServer(new HttpServerOptions().setPort(0).setMaxFormAttributeSize(100000)).requestHandler(router)
-    val listenIO = ioFromVFuture(server.listen(0))
+    // The server is created inside the Resource's acquire (not eagerly), so that the Resource can be safely re-run:
+    // the flaky-WebSocket-test retry re-uses this Resource, and Vert.x's CleanableHttpServer.listen throws
+    // IllegalStateException if listen() is called a second time on the same server instance.
+    val listenIO = IO
+      .delay {
+        val router = Router.router(vertx)
+        val _ = route(router)
+        // the maxFormAttributeSize must be higher than in ServerMultipartTests.maxContentLengthTests
+        vertx.createHttpServer(new HttpServerOptions().setPort(0).setMaxFormAttributeSize(100000)).requestHandler(router)
+      }
+      .flatMap(server => ioFromVFuture(server.listen(0)))
     // Vertx doesn't offer graceful shutdown with timeout OOTB
     Resource.make(listenIO)(s => ioFromVFuture(s.close).void).map(_.actualPort())
   }
