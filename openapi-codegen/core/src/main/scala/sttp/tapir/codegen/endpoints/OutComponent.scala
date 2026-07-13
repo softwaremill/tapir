@@ -39,8 +39,9 @@ object OutComponent  {
         .toSeq
         .sortBy(_._1)
         .map { case (code, pairs) =>
-          val extendsClause = pairs.map(_._2).distinct.sorted.mkString(" with ")
-          s"case object ${statusCodeDisambigObjectName(code)} extends $extendsClause"
+          val extendsClause = pairs.map(_._2).distinct.sorted.mkString("\n  with ")
+          s"""case object ${statusCodeDisambigObjectName(code)}
+             |  extends $extendsClause""".stripMargin
         }
         .mkString("\n")
       Some(objects)

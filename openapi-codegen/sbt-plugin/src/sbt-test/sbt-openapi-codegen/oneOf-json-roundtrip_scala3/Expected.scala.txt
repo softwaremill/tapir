@@ -157,11 +157,21 @@ object TapirGeneratedEndpoints {
   sealed trait DeleteInlineSimpleObjectResponseCode extends StatusCodeDisambig
   sealed trait DeleteInlineSimpleObjectResponseErrCode extends StatusCodeDisambig
 
-  case object StatusCodeDisambig200 extends DeleteInlineSimpleObjectResponseCode with GetInlineSimpleObjectResponseCode
-  case object StatusCodeDisambig201 extends DeleteInlineSimpleObjectResponseCode with GetInlineSimpleObjectResponseCode
-  case object StatusCodeDisambig400 extends GetInlineSimpleObjectResponseErrCode with PutInlineSimpleObjectResponseErrCode
-  case object StatusCodeDisambig401 extends DeleteInlineSimpleObjectResponseErrCode with GetInlineSimpleObjectResponseErrCode with PutInlineSimpleObjectResponseErrCode
-  case object StatusCodeDisambig402 extends DeleteInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig200
+    extends DeleteInlineSimpleObjectResponseCode
+    with GetInlineSimpleObjectResponseCode
+  case object StatusCodeDisambig201
+    extends DeleteInlineSimpleObjectResponseCode
+    with GetInlineSimpleObjectResponseCode
+  case object StatusCodeDisambig400
+    extends GetInlineSimpleObjectResponseErrCode
+    with PutInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig401
+    extends DeleteInlineSimpleObjectResponseErrCode
+    with GetInlineSimpleObjectResponseErrCode
+    with PutInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig402
+    extends DeleteInlineSimpleObjectResponseErrCode
 
 
 
