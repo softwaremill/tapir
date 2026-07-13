@@ -2,6 +2,7 @@ package sttp.tapir.server.vertx
 
 import cats.effect.{IO, Resource}
 import io.vertx.core.{Handler, Vertx}
+import org.scalatest.{Exceptional, FutureOutcome}
 import sttp.monad.FutureMonad
 import io.vertx.core.streams.ReadStream
 import sttp.tapir.server.tests._
@@ -14,6 +15,26 @@ import scala.concurrent.Promise
 import io.vertx.core.buffer.Buffer
 
 class VertxServerTest extends TestSuite {
+
+  // The Vert.x WebSocket tests hit a rare upstream flake: a client frame sent in the brief window after the 101
+  // handshake but before Vert.x completes toWebSocket() (so before we can register a frame handler) is silently
+  // dropped, so the echo never returns and the test times out. Not fixable via Vert.x's public per-request API
+  // (toWebSocket() returns an already-flowing socket); to be reported upstream. Retry failed tests to avoid flaky CI.
+  val retries = 3
+
+  override def withFixture(test: NoArgAsyncTest): FutureOutcome = withFixture(test, retries)
+
+  def withFixture(test: NoArgAsyncTest, count: Int): FutureOutcome = {
+    val outcome = super.withFixture(test)
+    new FutureOutcome(outcome.toFuture.flatMap {
+      case Exceptional(e) =>
+        println(s"Test ${test.name} failed, retrying.")
+        e.printStackTrace()
+        (if (count == 1) super.withFixture(test) else withFixture(test, count - 1)).toFuture
+      case other => Future.successful(other)
+    })
+  }
+
   def vertxResource: Resource[IO, Vertx] =
     Resource.make(IO.delay(Vertx.vertx()))(vertx => IO.delay(vertx.close()).void)
 

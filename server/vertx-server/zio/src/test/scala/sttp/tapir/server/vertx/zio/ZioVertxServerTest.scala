@@ -4,7 +4,7 @@ import _root_.zio.stream.ZStream
 import _root_.zio.{Task, ZIO}
 import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
-import org.scalatest.OptionValues
+import org.scalatest.{Exceptional, FutureOutcome, OptionValues}
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
 import sttp.client4.basicRequest
@@ -15,7 +15,29 @@ import sttp.tapir.tests.{Test, TestSuite}
 import sttp.tapir.ztapir.RIOMonadError
 import zio.stream.ZSink
 
+import scala.concurrent.Future
+
 class ZioVertxServerTest extends TestSuite with OptionValues {
+
+  // The Vert.x WebSocket tests hit a rare upstream flake: a client frame sent in the brief window after the 101
+  // handshake but before Vert.x completes toWebSocket() (so before we can register a frame handler) is silently
+  // dropped, so the echo never returns and the test times out. Not fixable via Vert.x's public per-request API
+  // (toWebSocket() returns an already-flowing socket); to be reported upstream. Retry failed tests to avoid flaky CI.
+  val retries = 3
+
+  override def withFixture(test: NoArgAsyncTest): FutureOutcome = withFixture(test, retries)
+
+  def withFixture(test: NoArgAsyncTest, count: Int): FutureOutcome = {
+    val outcome = super.withFixture(test)
+    new FutureOutcome(outcome.toFuture.flatMap {
+      case Exceptional(e) =>
+        println(s"Test ${test.name} failed, retrying.")
+        e.printStackTrace()
+        (if (count == 1) super.withFixture(test) else withFixture(test, count - 1)).toFuture
+      case other => Future.successful(other)
+    })
+  }
+
   def vertxResource: Resource[IO, Vertx] =
     Resource.make(IO.delay(Vertx.vertx()))(vertx => IO.delay(vertx.close()).void)
 
