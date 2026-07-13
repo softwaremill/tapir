@@ -16,6 +16,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.11.16" % Test
 )
 openapiGenerateEndpointTypes := true
+openapiAddDisambiguationCodes := true
 
 import scala.io.Source
 import scala.util.Using

@@ -36,7 +36,8 @@ object RootGenerator {
       useCustomJsoniterSerdes: Boolean,
       packageReuse: PackageReuseContext,
       seperateFilesForModels: Boolean,
-      alwaysGenerateParamSupport: Boolean
+      alwaysGenerateParamSupport: Boolean,
+      addDisambiguationCodes: Boolean = true
   ): GenerationInfo = {
     val doc = unNormalisedDoc.resolveAllOfSchemas
     NameValidation.validateDocumentNames(doc, useHeadTagForObjectNames)
@@ -83,7 +84,7 @@ object RootGenerator {
       endpointsByTag,
       queryOrPathParamRefs,
       enumsDefinedOnEndpointParams,
-      EndpointDetails(jsonParamRefs, inlineDefns, xmlParamRefs, securityWrappers)
+      EndpointDetails(jsonParamRefs, inlineDefns, xmlParamRefs, securityWrappers, _)
     ) =
       endpointGenerator.endpointDefs(
         doc,
@@ -96,7 +97,8 @@ object RootGenerator {
         validators,
         generateValidators,
         packageReuse,
-        seperateFilesForModels
+        seperateFilesForModels,
+        addDisambiguationCodes
       )
     val modelPackagePath = s"$packagePath.models"
     val GeneratedClassDefinitions(

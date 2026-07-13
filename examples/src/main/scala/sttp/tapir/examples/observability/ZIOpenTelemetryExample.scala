@@ -5,9 +5,9 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.26
 //> using dep com.softwaremill.sttp.tapir::tapir-zio-opentelemetry:1.13.26
 //> using dep dev.zio::zio-opentelemetry:3.1.17
-//> using dep io.opentelemetry:opentelemetry-sdk:1.63.0
-//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.63.0
-//> using dep io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.63.0
+//> using dep io.opentelemetry:opentelemetry-sdk:1.64.0
+//> using dep io.opentelemetry:opentelemetry-exporter-otlp:1.64.0
+//> using dep io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.64.0
 
 package sttp.tapir.examples.observability
 

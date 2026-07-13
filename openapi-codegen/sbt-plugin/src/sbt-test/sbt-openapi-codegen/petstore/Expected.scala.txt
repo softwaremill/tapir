@@ -8,7 +8,7 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generic.auto._
   import sttp.tapir.json.circe._
   import io.circe.generic.semiauto._
-
+  
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import sttp.tapir.generated.TapirGeneratedEndpointsXmlSerdes._
   import TapirGeneratedEndpointsSchemas._
@@ -19,8 +19,8 @@ object TapirGeneratedEndpoints {
   sealed trait Bearer_or_api_key_SecurityIn
   case class Api_keySecurityIn(value: String) extends Bearer_or_api_key_SecurityIn
   case class BearerSecurityIn(value: String) extends Bearer_or_api_key_SecurityIn
-
-
+  
+  
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -79,8 +79,8 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
-
-
+  
+  
   case class ApiResponse (
     code: Option[Int] = None,
     `type`: Option[String] = None,
@@ -98,7 +98,7 @@ object TapirGeneratedEndpoints {
     status: Option[OrderStatus] = None,
     complete: Option[Boolean] = None
   )
-
+  
   sealed trait OrderStatus extends enumeratum.EnumEntry
   object OrderStatus extends enumeratum.Enum[OrderStatus] with enumeratum.CirceEnum[OrderStatus] {
     val values = findValues
@@ -114,7 +114,7 @@ object TapirGeneratedEndpoints {
     tags: Option[Seq[Tag]] = None,
     status: Option[PetStatus] = None
   )
-
+  
   sealed trait PetStatus extends enumeratum.EnumEntry
   object PetStatus extends enumeratum.Enum[PetStatus] with enumeratum.CirceEnum[PetStatus] {
     val values = findValues
@@ -136,47 +136,109 @@ object TapirGeneratedEndpoints {
     phone: Option[String] = None,
     userStatus: Option[Int] = None
   )
-
+  sealed trait StatusCodeDisambig
+  
   sealed trait UpdatePetBodyIn extends Product with java.io.Serializable
   case class UpdatePetBody2In(value: Array[Byte]) extends UpdatePetBodyIn
   case class UpdatePetBodyPetIn(value: Pet) extends UpdatePetBodyIn
-
-
+  
+  sealed trait UpdatePetResponseErrCode extends StatusCodeDisambig
+  
   sealed trait AddPetBodyIn extends Product with java.io.Serializable
   case class AddPetBody2In(value: Array[Byte]) extends AddPetBodyIn
   case class AddPetBodyPetIn(value: Pet) extends AddPetBodyIn
-
+  
+  sealed trait AddPetResponseErrCode extends StatusCodeDisambig
   type FindPetsByStatusResponse <: Seq[Pet]
   implicit val FindPetsByStatusResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByStatusResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByStatusResponse])
   implicit val FindPetsByStatusResponseSeqEncoder: cats.xml.codec.Encoder[FindPetsByStatusResponse] =
     seqEncoder[Pet]("Pet", isWrapped = false, itemName = "Pet").contramap(_.asInstanceOf[Seq[Pet]])
   implicit val FindPetsByStatusResponseSeqSchema: sttp.tapir.Schema[FindPetsByStatusResponse] =
     implicitly[Schema[Seq[Pet]]].map(x => Some(x.asInstanceOf[FindPetsByStatusResponse]))(_.asInstanceOf[Seq[Pet]])
+  sealed trait FindPetsByStatusResponseErrCode extends StatusCodeDisambig
   type FindPetsByTagsResponse <: Seq[Pet]
   implicit val FindPetsByTagsResponseSeqDecoder: cats.xml.codec.Decoder[FindPetsByTagsResponse] = seqDecoder[Pet]("Pet", isWrapped = false).map(_.asInstanceOf[FindPetsByTagsResponse])
   implicit val FindPetsByTagsResponseSeqEncoder: cats.xml.codec.Encoder[FindPetsByTagsResponse] =
     seqEncoder[Pet]("Pet", isWrapped = false, itemName = "Pet").contramap(_.asInstanceOf[Seq[Pet]])
   implicit val FindPetsByTagsResponseSeqSchema: sttp.tapir.Schema[FindPetsByTagsResponse] =
     implicitly[Schema[Seq[Pet]]].map(x => Some(x.asInstanceOf[FindPetsByTagsResponse]))(_.asInstanceOf[Seq[Pet]])
-
+  sealed trait FindPetsByTagsResponseErrCode extends StatusCodeDisambig
+  sealed trait GetPetByIdResponseErrCode extends StatusCodeDisambig
+  sealed trait UpdatePetWithFormResponseErrCode extends StatusCodeDisambig
+  sealed trait DeletePetResponseErrCode extends StatusCodeDisambig
+  sealed trait UploadFileResponseErrCode extends StatusCodeDisambig
+  
   sealed trait PlaceOrderBodyIn extends Product with java.io.Serializable
   case class PlaceOrderBody2In(value: Array[Byte]) extends PlaceOrderBodyIn
   case class PlaceOrderBodyOption_Order_In(value: Option[Order]) extends PlaceOrderBodyIn
-
-
+  
+  sealed trait PlaceOrderResponseErrCode extends StatusCodeDisambig
+  sealed trait GetOrderByIdResponseErrCode extends StatusCodeDisambig
+  sealed trait DeleteOrderResponseErrCode extends StatusCodeDisambig
+  
   sealed trait CreateUserBodyIn extends Product with java.io.Serializable
   case class CreateUserBody2In(value: Array[Byte]) extends CreateUserBodyIn
   case class CreateUserBodyOption_User_In(value: Option[User]) extends CreateUserBodyIn
-
-
+  
+  sealed trait LoginUserResponseErrCode extends StatusCodeDisambig
+  sealed trait GetUserByNameResponseErrCode extends StatusCodeDisambig
+  
   sealed trait UpdateUserBodyIn extends Product with java.io.Serializable
   case class UpdateUserBody2In(value: Array[Byte]) extends UpdateUserBodyIn
   case class UpdateUserBodyOption_User_In(value: Option[User]) extends UpdateUserBodyIn
+  
+  sealed trait UpdateUserResponseErrCode extends StatusCodeDisambig
+  sealed trait DeleteUserResponseErrCode extends StatusCodeDisambig
+  case object StatusCodeDisambig400
+    extends AddPetResponseErrCode
+    with DeleteOrderResponseErrCode
+    with DeletePetResponseErrCode
+    with DeleteUserResponseErrCode
+    with FindPetsByStatusResponseErrCode
+    with FindPetsByTagsResponseErrCode
+    with GetOrderByIdResponseErrCode
+    with GetPetByIdResponseErrCode
+    with GetUserByNameResponseErrCode
+    with LoginUserResponseErrCode
+    with PlaceOrderResponseErrCode
+    with UpdatePetResponseErrCode
+    with UpdatePetWithFormResponseErrCode
+    with UpdateUserResponseErrCode
+    with UploadFileResponseErrCode
+  case object StatusCodeDisambig404
+    extends DeleteOrderResponseErrCode
+    with DeleteUserResponseErrCode
+    with GetOrderByIdResponseErrCode
+    with GetPetByIdResponseErrCode
+    with GetUserByNameResponseErrCode
+    with UpdatePetResponseErrCode
+    with UpdateUserResponseErrCode
+    with UploadFileResponseErrCode
+  case object StatusCodeDisambig422
+    extends AddPetResponseErrCode
+    with PlaceOrderResponseErrCode
+    with UpdatePetResponseErrCode
+  case class StatusCodeDisambigDefault(code: sttp.model.StatusCode)
+    extends AddPetResponseErrCode
+    with DeleteOrderResponseErrCode
+    with DeletePetResponseErrCode
+    with DeleteUserResponseErrCode
+    with FindPetsByStatusResponseErrCode
+    with FindPetsByTagsResponseErrCode
+    with GetOrderByIdResponseErrCode
+    with GetPetByIdResponseErrCode
+    with GetUserByNameResponseErrCode
+    with LoginUserResponseErrCode
+    with PlaceOrderResponseErrCode
+    with UpdatePetResponseErrCode
+    with UpdatePetWithFormResponseErrCode
+    with UpdateUserResponseErrCode
+    with UploadFileResponseErrCode
 
   type SwaggerRouterControllerExtension = String
   val swaggerRouterControllerExtensionKey = new sttp.tapir.AttributeKey[SwaggerRouterControllerExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.SwaggerRouterControllerExtension")
 
-  type UpdatePetEndpoint = Endpoint[String, UpdatePetBodyIn, Unit, Pet, Any]
+  type UpdatePetEndpoint = Endpoint[String, UpdatePetBodyIn, UpdatePetResponseErrCode, Pet, Any]
   lazy val updatePet: UpdatePetEndpoint =
     endpoint
       .name("updatePet")
@@ -187,17 +249,17 @@ object TapirGeneratedEndpoints {
         jsonBody[Pet].map(UpdatePetBodyPetIn(_))(_.value).widenBody[UpdatePetBodyIn].description("Update an existent pet in the store"),
         xmlBody[Pet].map(UpdatePetBodyPetIn(_))(_.value).widenBody[UpdatePetBodyIn].description("Update an existent pet in the store"),
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(UpdatePetBody2In(_))(_.value).widenBody[UpdatePetBodyIn].description("Update an existent pet in the store")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[UpdatePetResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found").and(emptyOutputAs(StatusCodeDisambig404))){ case StatusCodeDisambig404 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception").and(emptyOutputAs(StatusCodeDisambig422))){ case StatusCodeDisambig422 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(oneOfBody[Pet](
         jsonBody[Pet].description("Successful operation"),
         xmlBody[Pet].description("Successful operation")))
       .tags(List("pet"))
-
-  type AddPetEndpoint = Endpoint[String, AddPetBodyIn, Unit, Pet, Any]
+  
+  type AddPetEndpoint = Endpoint[String, AddPetBodyIn, AddPetResponseErrCode, Pet, Any]
   lazy val addPet: AddPetEndpoint =
     endpoint
       .name("addPet")
@@ -208,16 +270,16 @@ object TapirGeneratedEndpoints {
         jsonBody[Pet].map(AddPetBodyPetIn(_))(_.value).widenBody[AddPetBodyIn].description("Create a new pet in the store"),
         xmlBody[Pet].map(AddPetBodyPetIn(_))(_.value).widenBody[AddPetBodyIn].description("Create a new pet in the store"),
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(AddPetBody2In(_))(_.value).widenBody[AddPetBodyIn].description("Create a new pet in the store")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[AddPetResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception").and(emptyOutputAs(StatusCodeDisambig422))){ case StatusCodeDisambig422 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(oneOfBody[Pet](
         jsonBody[Pet].description("Successful operation"),
         xmlBody[Pet].description("Successful operation")))
       .tags(List("pet"))
-
-  type FindPetsByStatusEndpoint = Endpoint[String, Option[FindPetsByStatusStatus], Unit, List[Pet], Any]
+  
+  type FindPetsByStatusEndpoint = Endpoint[String, Option[FindPetsByStatusStatus], FindPetsByStatusResponseErrCode, List[Pet], Any]
   lazy val findPetsByStatus: FindPetsByStatusEndpoint =
     endpoint
       .name("findPetsByStatus")
@@ -225,14 +287,14 @@ object TapirGeneratedEndpoints {
       .in(("pet" / "findByStatus"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(query[Option[FindPetsByStatusStatus]]("status").description("Status values that need to be considered for filter"))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid status value"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[FindPetsByStatusResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid status value").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(oneOfBody[List[Pet]](
         jsonBody[List[Pet]].description("successful operation"),
         xmlBody[FindPetsByStatusResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByStatusResponse]).description("successful operation")))
       .tags(List("pet"))
-
+  
   sealed trait FindPetsByStatusStatus extends enumeratum.EnumEntry
   object FindPetsByStatusStatus extends enumeratum.Enum[FindPetsByStatusStatus] with enumeratum.CirceEnum[FindPetsByStatusStatus] {
     val values = findValues
@@ -242,8 +304,8 @@ object TapirGeneratedEndpoints {
     implicit val enumCodecSupportFindPetsByStatusStatus: ExtraParamSupport[FindPetsByStatusStatus] =
       extraCodecSupport[FindPetsByStatusStatus]("FindPetsByStatusStatus", FindPetsByStatusStatus)
   }
-
-  type FindPetsByTagsEndpoint = Endpoint[String, List[String], Unit, List[Pet], Any]
+  
+  type FindPetsByTagsEndpoint = Endpoint[String, List[String], FindPetsByTagsResponseErrCode, List[Pet], Any]
   lazy val findPetsByTags: FindPetsByTagsEndpoint =
     endpoint
       .name("findPetsByTags")
@@ -251,15 +313,15 @@ object TapirGeneratedEndpoints {
       .in(("pet" / "findByTags"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(query[ExplodedValues[String]]("tags").map(_.values)(ExplodedValues(_)).description("Tags to filter by"))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid tag value"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[FindPetsByTagsResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid tag value").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(oneOfBody[List[Pet]](
         jsonBody[List[Pet]].description("successful operation"),
         xmlBody[FindPetsByTagsResponse].map(_.asInstanceOf[List[Pet]].toList)(_.asInstanceOf[FindPetsByTagsResponse]).description("successful operation")))
       .tags(List("pet"))
-
-  type GetPetByIdEndpoint = Endpoint[Bearer_or_api_key_SecurityIn, Long, Unit, Pet, Any]
+  
+  type GetPetByIdEndpoint = Endpoint[Bearer_or_api_key_SecurityIn, Long, GetPetByIdResponseErrCode, Pet, Any]
   lazy val getPetById: GetPetByIdEndpoint =
     endpoint
       .name("getPetById")
@@ -277,16 +339,16 @@ object TapirGeneratedEndpoints {
         case Api_keySecurityIn(x) => (Some(x), None)
         case BearerSecurityIn(x) => (None, Some(x))
       }
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[GetPetByIdResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found").and(emptyOutputAs(StatusCodeDisambig404))){ case StatusCodeDisambig404 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(oneOfBody[Pet](
         jsonBody[Pet].description("successful operation"),
         xmlBody[Pet].description("successful operation")))
       .tags(List("pet"))
-
-  type UpdatePetWithFormEndpoint = Endpoint[String, (Long, Option[String], Option[String]), Unit, Pet, Any]
+  
+  type UpdatePetWithFormEndpoint = Endpoint[String, (Long, Option[String], Option[String]), UpdatePetWithFormResponseErrCode, Pet, Any]
   lazy val updatePetWithForm: UpdatePetWithFormEndpoint =
     endpoint
       .name("updatePetWithForm")
@@ -295,15 +357,15 @@ object TapirGeneratedEndpoints {
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(query[Option[String]]("name").description("Name of pet that needs to be updated"))
       .in(query[Option[String]]("status").description("Status of pet that needs to be updated"))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[UpdatePetWithFormResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(oneOfBody[Pet](
         jsonBody[Pet].description("successful operation"),
         xmlBody[Pet].description("successful operation")))
       .tags(List("pet"))
-
-  type DeletePetEndpoint = Endpoint[String, (Long, Option[String]), Unit, Unit, Any]
+  
+  type DeletePetEndpoint = Endpoint[String, (Long, Option[String]), DeletePetResponseErrCode, Unit, Any]
   lazy val deletePet: DeletePetEndpoint =
     endpoint
       .name("deletePet")
@@ -311,12 +373,12 @@ object TapirGeneratedEndpoints {
       .in(("pet" / path[Long]("petId").description("Pet id to delete")))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(header[Option[String]]("api_key").description(""))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid pet value"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[DeletePetResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid pet value").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .tags(List("pet"))
-
-  type UploadFileEndpoint = Endpoint[String, (Long, Option[String], sttp.capabilities.pekko.PekkoStreams.BinaryStream), Unit, ApiResponse, sttp.capabilities.pekko.PekkoStreams]
+  
+  type UploadFileEndpoint = Endpoint[String, (Long, Option[String], sttp.capabilities.pekko.PekkoStreams.BinaryStream), UploadFileResponseErrCode, ApiResponse, sttp.capabilities.pekko.PekkoStreams]
   lazy val uploadFile: UploadFileEndpoint =
     endpoint
       .name("uploadFile")
@@ -325,25 +387,26 @@ object TapirGeneratedEndpoints {
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(query[Option[String]]("additionalMetadata").description("Additional Metadata"))
       .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[Array[Byte]], CodecFormat.OctetStream()))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("No file uploaded"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[UploadFileResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("No file uploaded").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(404), emptyOutput.description("Pet not found").and(emptyOutputAs(StatusCodeDisambig404))){ case StatusCodeDisambig404 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(jsonBody[ApiResponse].description("successful operation"))
       .tags(List("pet"))
-
-  type GetInventoryEndpoint = Endpoint[String, Unit, Unit, Map[String, Int], Any]
+  
+  type GetInventoryEndpoint = Endpoint[String, Unit, sttp.model.StatusCode, Map[String, Int], Any]
   lazy val getInventory: GetInventoryEndpoint =
     endpoint
       .name("getInventory")
       .get
       .in(("store" / "inventory"))
       .securityIn(auth.apiKey(header[String]("api_key")))
+      .errorOut(statusCode.description("Unexpected error"))
       .out(jsonBody[Map[String, Int]].description("successful operation"))
       .tags(List("store"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
-
-  type PlaceOrderEndpoint = Endpoint[Unit, PlaceOrderBodyIn, Unit, Order, Any]
+  
+  type PlaceOrderEndpoint = Endpoint[Unit, PlaceOrderBodyIn, PlaceOrderResponseErrCode, Order, Any]
   lazy val placeOrder: PlaceOrderEndpoint =
     endpoint
       .name("placeOrder")
@@ -353,44 +416,44 @@ object TapirGeneratedEndpoints {
         jsonBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn],
         xmlBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn],
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PlaceOrderBody2In(_))(_.value).widenBody[PlaceOrderBodyIn]))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[PlaceOrderResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception").and(emptyOutputAs(StatusCodeDisambig422))){ case StatusCodeDisambig422 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(jsonBody[Order].description("successful operation"))
       .tags(List("store"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
-
-  type GetOrderByIdEndpoint = Endpoint[Unit, Long, Unit, Order, Any]
+  
+  type GetOrderByIdEndpoint = Endpoint[Unit, Long, GetOrderByIdResponseErrCode, Order, Any]
   lazy val getOrderById: GetOrderByIdEndpoint =
     endpoint
       .name("getOrderById")
       .get
       .in(("store" / "order" / path[Long]("orderId").description("ID of order that needs to be fetched")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[GetOrderByIdResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found").and(emptyOutputAs(StatusCodeDisambig404))){ case StatusCodeDisambig404 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(oneOfBody[Order](
         jsonBody[Order].description("successful operation"),
         xmlBody[Order].description("successful operation")))
       .tags(List("store"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
-
-  type DeleteOrderEndpoint = Endpoint[Unit, Long, Unit, Unit, Any]
+  
+  type DeleteOrderEndpoint = Endpoint[Unit, Long, DeleteOrderResponseErrCode, Unit, Any]
   lazy val deleteOrder: DeleteOrderEndpoint =
     endpoint
       .name("deleteOrder")
       .delete
       .in(("store" / "order" / path[Long]("orderId").description("ID of the order that needs to be deleted")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[DeleteOrderResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid ID supplied").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(404), emptyOutput.description("Order not found").and(emptyOutputAs(StatusCodeDisambig404))){ case StatusCodeDisambig404 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .tags(List("store"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "OrderController")
-
-  type CreateUserEndpoint = Endpoint[Unit, CreateUserBodyIn, Unit, User, Any]
+  
+  type CreateUserEndpoint = Endpoint[Unit, CreateUserBodyIn, sttp.model.StatusCode, User, Any]
   lazy val createUser: CreateUserEndpoint =
     endpoint
       .name("createUser")
@@ -400,26 +463,28 @@ object TapirGeneratedEndpoints {
         jsonBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"),
         xmlBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"),
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(CreateUserBody2In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object")))
+      .errorOut(statusCode.description("Unexpected error"))
       .out(oneOfBody[User](
         jsonBody[User].description("successful operation"),
         xmlBody[User].description("successful operation")))
       .tags(List("user"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
-
-  type CreateUsersWithListInputEndpoint = Endpoint[Unit, Option[List[User]], Unit, User, Any]
+  
+  type CreateUsersWithListInputEndpoint = Endpoint[Unit, Option[List[User]], sttp.model.StatusCode, User, Any]
   lazy val createUsersWithListInput: CreateUsersWithListInputEndpoint =
     endpoint
       .name("createUsersWithListInput")
       .post
       .in(("user" / "createWithList"))
       .in(jsonBody[Option[List[User]]])
+      .errorOut(statusCode.description("Unexpected error"))
       .out(oneOfBody[User](
         jsonBody[User].description("Successful operation"),
         xmlBody[User].description("Successful operation")))
       .tags(List("user"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
-
-  type LoginUserEndpoint = Endpoint[Unit, (Option[String], Option[String]), Unit, (String, Option[Int], Option[java.time.Instant]), Any]
+  
+  type LoginUserEndpoint = Endpoint[Unit, (Option[String], Option[String]), LoginUserResponseErrCode, (String, Option[Int], Option[java.time.Instant]), Any]
   lazy val loginUser: LoginUserEndpoint =
     endpoint
       .name("loginUser")
@@ -427,38 +492,39 @@ object TapirGeneratedEndpoints {
       .in(("user" / "login"))
       .in(query[Option[String]]("username").description("The user name for login"))
       .in(query[Option[String]]("password").description("The password for login in clear text"))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username/password supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[LoginUserResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username/password supplied").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(oneOfBody[String](
         xmlBody[String].description("successful operation"),
         jsonBody[String].description("successful operation")).and(header[Option[Int]]("X-Rate-Limit").description("calls per hour allowed by the user")).and(header[Option[java.time.Instant]]("X-Expires-After").description("date in UTC when token expires")))
       .tags(List("user"))
-
-  type LogoutUserEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
+  
+  type LogoutUserEndpoint = Endpoint[Unit, Unit, sttp.model.StatusCode, Unit, Any]
   lazy val logoutUser: LogoutUserEndpoint =
     endpoint
       .name("logoutUser")
       .get
       .in(("user" / "logout"))
+      .errorOut(statusCode.description("Unexpected error"))
       .tags(List("user"))
-
-  type GetUserByNameEndpoint = Endpoint[Unit, String, Unit, User, Any]
+  
+  type GetUserByNameEndpoint = Endpoint[Unit, String, GetUserByNameResponseErrCode, User, Any]
   lazy val getUserByName: GetUserByNameEndpoint =
     endpoint
       .name("getUserByName")
       .get
       .in(("user" / path[String]("username").description("The name that needs to be fetched. Use user1 for testing")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[GetUserByNameResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found").and(emptyOutputAs(StatusCodeDisambig404))){ case StatusCodeDisambig404 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .out(oneOfBody[User](
         jsonBody[User].description("successful operation"),
         xmlBody[User].description("successful operation")))
       .tags(List("user"))
-
-  type UpdateUserEndpoint = Endpoint[Unit, (String, UpdateUserBodyIn), Unit, Unit, Any]
+  
+  type UpdateUserEndpoint = Endpoint[Unit, (String, UpdateUserBodyIn), UpdateUserResponseErrCode, Unit, Any]
   lazy val updateUser: UpdateUserEndpoint =
     endpoint
       .name("updateUser")
@@ -468,33 +534,33 @@ object TapirGeneratedEndpoints {
         jsonBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"),
         xmlBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"),
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(UpdateUserBody2In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("bad request"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("user not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[UpdateUserResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("bad request").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(404), emptyOutput.description("user not found").and(emptyOutputAs(StatusCodeDisambig404))){ case StatusCodeDisambig404 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .tags(List("user"))
       .attribute[SwaggerRouterControllerExtension](swaggerRouterControllerExtensionKey, "UserController")
-
-  type DeleteUserEndpoint = Endpoint[Unit, String, Unit, Unit, Any]
+  
+  type DeleteUserEndpoint = Endpoint[Unit, String, DeleteUserResponseErrCode, Unit, Any]
   lazy val deleteUser: DeleteUserEndpoint =
     endpoint
       .name("deleteUser")
       .delete
       .in(("user" / path[String]("username").description("The name that needs to be deleted")))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("Unexpected error"))(())))
+      .errorOut(oneOf[DeleteUserResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid username supplied").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(404), emptyOutput.description("User not found").and(emptyOutputAs(StatusCodeDisambig404))){ case StatusCodeDisambig404 => true},
+        oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))
       .tags(List("user"))
-
-
+  
+  
   lazy val generatedEndpoints = List(updatePet, addPet, findPetsByStatus, findPetsByTags, getPetById, updatePetWithForm, deletePet, uploadFile, getInventory, placeOrder, getOrderById, deleteOrder, createUser, createUsersWithListInput, loginUser, logoutUser, getUserByName, updateUser, deleteUser)
-
-
+  
+  
   object Servers {
     import sttp.model.Uri.UriContext
-
+  
     val `https://petstore3.swagger.io/api/v3`: sttp.model.Uri = uri"https://petstore3.swagger.io/api/v3"
-
+  
   }
 }

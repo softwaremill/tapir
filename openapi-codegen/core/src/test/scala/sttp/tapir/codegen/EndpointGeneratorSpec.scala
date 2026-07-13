@@ -83,7 +83,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           validators = ValidationDefns.empty,
           generateValidators = true,
           packageReuse = PackageReuseContext.none,
-          seperateFilesForModels = false
+          seperateFilesForModels = false,
+          addDisambiguationCodes = true
         )
         .endpointDecls(None)
     generatedCode should include("val getTestAsdId =")
@@ -176,7 +177,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           validators = ValidationDefns.empty,
           generateValidators = true,
           packageReuse = PackageReuseContext.none,
-          seperateFilesForModels = false
+          seperateFilesForModels = false,
+          addDisambiguationCodes = true
         )
         .endpointDecls(None)).shouldCompile()
   }
@@ -236,7 +238,8 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           validators = ValidationDefns.empty,
           generateValidators = true,
           packageReuse = PackageReuseContext.none,
-          seperateFilesForModels = false
+          seperateFilesForModels = false,
+          addDisambiguationCodes = true
         )
         .endpointDecls(None)
     generatedCode should include(
@@ -371,6 +374,85 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       """type CustomStringExtensionOnPathExtension = String"""
     )
     expectedKeyDeclarations foreach (decl => generatedCode should include(decl))
+  }
+
+  it should "share status code disambiguation objects across endpoints" in {
+    val emptyResponse = OpenapiResponseDef("401", "unauthorized", Nil)
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Seq(
+        OpenapiPath(
+          "delete-one",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "delete",
+              parameters = Seq(),
+              responses = Seq(
+                OpenapiResponseDef("200", "ok 1", Nil),
+                OpenapiResponseDef("201", "ok 2", Nil),
+                emptyResponse,
+                OpenapiResponseDef("402", "payment required", Nil)
+              ),
+              requestBody = None,
+              summary = None,
+              tags = None
+            )
+          )
+        ),
+        OpenapiPath(
+          "delete-two",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "delete",
+              parameters = Seq(),
+              responses = Seq(
+                OpenapiResponseDef("200", "ok 1", Nil),
+                OpenapiResponseDef("201", "ok 2", Nil),
+                emptyResponse
+              ),
+              requestBody = None,
+              summary = None,
+              tags = None
+            )
+          )
+        )
+      ),
+      Some(OpenapiComponent(Map(), Map())),
+      Nil
+    )
+    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) +
+      new EndpointGenerator()
+        .endpointDefs(
+          doc,
+          useHeadTagForObjectNames = false,
+          targetScala3 = isScala3,
+          jsonSerdeLib = JsonSerdeLib.Circe,
+          xmlSerdeLib = XmlSerdeLib.CatsXml,
+          streamingImplementation = FS2(),
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true,
+          packageReuse = PackageReuseContext.none,
+          seperateFilesForModels = false,
+          addDisambiguationCodes = true
+        )
+        .details
+        .inlineDefns
+        .mkString("\n")
+    generatedCode should include("sealed trait StatusCodeDisambig")
+    generatedCode should include("sealed trait DeleteDeleteOneResponseCode extends StatusCodeDisambig")
+    generatedCode should include("sealed trait DeleteDeleteTwoResponseCode extends StatusCodeDisambig")
+    generatedCode should include(
+      "case object StatusCodeDisambig200\n  extends DeleteDeleteOneResponseCode\n  with DeleteDeleteTwoResponseCode"
+    )
+    generatedCode should include(
+      "case object StatusCodeDisambig201\n  extends DeleteDeleteOneResponseCode\n  with DeleteDeleteTwoResponseCode"
+    )
+    generatedCode should include("case object StatusCodeDisambig401\n  extends DeleteDeleteOneResponseErrCode")
+    generatedCode should not include "case object DeleteDeleteOneResponseCode200"
+    generatedCode.shouldCompile()
   }
 
 }

@@ -6,7 +6,8 @@ lazy val root = (project in file("."))
     openapiJsonSerdeLib := "jsoniter",
     openapiStreamingImplementation := "pekko",
     openapiGenerateEndpointTypes := true,
-    openapiUseCustomJsoniterSerdes := true
+    openapiUseCustomJsoniterSerdes := true,
+    openapiAddDisambiguationCodes := true,
   )
 
 val catsXmlVersion = "0.0.20"

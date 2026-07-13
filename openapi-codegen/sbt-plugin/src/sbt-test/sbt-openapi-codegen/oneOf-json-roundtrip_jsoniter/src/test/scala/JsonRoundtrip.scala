@@ -8,7 +8,7 @@ import sttp.tapir.generated.{TapirGeneratedEndpoints, TapirGeneratedEndpointsJso
 import TapirGeneratedEndpointsJsonSerdes._
 import sttp.capabilities.pekko.PekkoStreams
 import sttp.tapir.generated.TapirGeneratedEndpoints.SubtypeWithoutD3E2.A
-import sttp.tapir.generated.TapirGeneratedEndpoints.{Aardvark, FooOrStringOrIntInt, StringOrInt, _}
+import sttp.tapir.generated.TapirGeneratedEndpoints._
 import sttp.tapir.server.stub.TapirStubInterpreter
 
 import java.time.{Duration, Instant, LocalDate}
@@ -278,5 +278,35 @@ class JsonRoundtrip extends AnyFreeSpec with Matchers {
     val list2 = List(AnEnum.Foo, AnEnum.Bar, AnEnum.Baz)
     val ints = List(FooOrStringOrIntInt(123), FooOrStringOrIntInt(987))
     testCase(Some(list.map(i => FooOrStringOrIntWrapA(WrapA(i))) ++ list2.map(i => FooOrStringOrIntWrapB(WrapB(i))) ++ ints))
+  }
+  "disambig err" in {
+    var i = 0
+    val route = TapirGeneratedEndpoints.deleteInlineSimpleObject.serverLogic[Future]({ _ =>
+      val x = i
+      i += 1
+      if (x == 0) Future successful Left(StatusCodeDisambig401)
+      else if (x == 1) Future successful Left(StatusCodeDisambig402)
+      else if (x == 2) Future successful Right(StatusCodeDisambig200)
+      else Future successful Right(StatusCodeDisambig201)
+    })
+    val stub = TapirStubInterpreter(SttpBackendStub.asynchronousFuture)
+      .whenServerEndpoint(route)
+      .thenRunLogic()
+      .backend()
+    def testCase(expectStatus: Int) = {
+      Await.result(
+        sttp.client3.basicRequest
+          .delete(uri"http://test.com/inline/simple/object")
+          .send(stub)
+          .map { resp =>
+            resp.code.code shouldEqual expectStatus
+          },
+        1.second
+      )
+    }
+    testCase(401)
+    testCase(402)
+    testCase(200)
+    testCase(201)
   }
 }

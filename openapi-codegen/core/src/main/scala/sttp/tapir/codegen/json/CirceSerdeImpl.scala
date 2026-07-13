@@ -151,7 +151,9 @@ object CirceSerdeImpl {
         val encoders = subtypeNames
           .map { t =>
             val jsonTypeName = JavaEscape.escapeString(schemaToJsonMapping(t))
-            s"""case x: $t => io.circe.Encoder[$t].apply(x).mapObject(_.add("${JavaEscape.escapeString(discriminator.propertyName)}", io.circe.Json.fromString("$jsonTypeName")))"""
+            s"""case x: $t => io.circe.Encoder[$t].apply(x).mapObject(_.add("${JavaEscape.escapeString(
+                discriminator.propertyName
+              )}", io.circe.Json.fromString("$jsonTypeName")))"""
           }
           .mkString("\n")
         val decoders = subtypeNames

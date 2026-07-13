@@ -51,9 +51,11 @@ object XmlSerdeGenerator {
         val in = c.flatMap(_.itemName).getOrElse(t)
         Some(seqSubtype -> s"""type $seqSubtype <: Seq[$t]
          |implicit val ${seqSubtype}SeqDecoder: cats.xml.codec.Decoder[$seqSubtype] = seqDecoder[$t]("${JavaEscape
-              .escapeString(name)}", isWrapped = $w).map(_.asInstanceOf[$seqSubtype])
+                               .escapeString(name)}", isWrapped = $w).map(_.asInstanceOf[$seqSubtype])
          |implicit val ${seqSubtype}SeqEncoder: cats.xml.codec.Encoder[$seqSubtype] =
-         |  seqEncoder[$t]("${JavaEscape.escapeString(name)}", isWrapped = $w, itemName = "${JavaEscape.escapeString(in)}").contramap(_.asInstanceOf[Seq[$t]])
+         |  seqEncoder[$t]("${JavaEscape.escapeString(name)}", isWrapped = $w, itemName = "${JavaEscape.escapeString(
+                               in
+                             )}").contramap(_.asInstanceOf[Seq[$t]])
          |implicit val ${seqSubtype}SeqSchema: sttp.tapir.Schema[${seqSubtype}] =
          |  implicitly[Schema[Seq[$t]]].map(x => Some(x.asInstanceOf[${seqSubtype}]))(_.asInstanceOf[Seq[$t]])""".stripMargin)
       case _ => None
@@ -135,7 +137,9 @@ object XmlSerdeGenerator {
                     val in = c.flatMap(_.itemName).getOrElse(n)
                     val w = c.exists(_.isWrapped)
                     s"""implicit val $ref${n.capitalize}SeqEncoder: Encoder[Seq[$t]] =
-                       |  seqEncoder[$t]("${JavaEscape.escapeString(c.flatMap(_.name).getOrElse(n))}", isWrapped = $w, itemName = "${JavaEscape
+                       |  seqEncoder[$t]("${JavaEscape.escapeString(
+                        c.flatMap(_.name).getOrElse(n)
+                      )}", isWrapped = $w, itemName = "${JavaEscape
                         .escapeString(in)}")""".stripMargin
                   case ScopedAuxCodecParams(n, t, _, OtherType, _) =>
                     s"""implicit val $ref${n.capitalize}Encoder: Encoder[$t] = deriveConfiguredEncoder[$t]""".stripMargin

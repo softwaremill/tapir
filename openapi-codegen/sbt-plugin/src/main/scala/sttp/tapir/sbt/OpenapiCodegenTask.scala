@@ -28,7 +28,8 @@ case class OpenapiCodegenTask(
     preParsedDoc: Option[OpenapiDocument] = None,
     packageReuse: PackageReuseContext = PackageReuseContext.none,
     seperateFilesForModels: Boolean = false,
-    alwaysGenerateParamSupport: Boolean
+    alwaysGenerateParamSupport: Boolean,
+    addDisambiguationCodes: Boolean = true,
 ) {
 
   private val directoryName: String = overrideDirectoryName.getOrElse("sbt-openapi-codegen")
@@ -57,7 +58,8 @@ case class OpenapiCodegenTask(
         useCustomJsoniterSerdes,
         packageReuse,
         seperateFilesForModels,
-        alwaysGenerateParamSupport
+        alwaysGenerateParamSupport,
+        addDisambiguationCodes
       )
     Await.result(
       Future.traverse(generationInfo.allFiles.toSeq) { case (objectName, fileBody) =>

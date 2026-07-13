@@ -4,19 +4,18 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, Openapi
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 
-/** Ingestion-time validation of names taken from an (untrusted) OpenAPI document that the code generator emits into
-  * *identifier* positions — component schema names, `$ref` targets, object property names and (when used for object
-  * names) tags. These become class/trait/type/field/val names in the generated source, frequently by raw string
-  * concatenation (e.g. `${name.capitalize}Decoder`) rather than backtick-quoting, so a name containing characters
-  * outside the OpenAPI-permitted identifier set could inject arbitrary Scala code.
+/** Ingestion-time validation of names taken from an (untrusted) OpenAPI document that the code generator emits into *identifier* positions
+  * — component schema names, `$ref` targets, object property names and (when used for object names) tags. These become
+  * class/trait/type/field/val names in the generated source, frequently by raw string concatenation (e.g. `${name.capitalize}Decoder`)
+  * rather than backtick-quoting, so a name containing characters outside the OpenAPI-permitted identifier set could inject arbitrary Scala
+  * code.
   *
   * We restrict them to a safe character set: the set OpenAPI permits for component names
-  * (https://spec.openapis.org/oas/v3.1.0#components-object) plus `$` and `+`. None of these can form executable Scala
-  * (`$` is a valid Scala identifier character; `+`/`.`/`-` at worst yield a non-compiling identifier, never a break-out),
-  * while `$`/`+` occur in real-world property names (e.g. GitHub's `+1`, .NET's `$type`). Values that are emitted as
-  * string literals instead (parameter names, URLs, descriptions, default values, discriminator values, enum values,
-  * XML names) can legitimately contain any character and are escaped at their emission site rather than restricted
-  * here. See GHSA-gpcc-36pq-8qxr.
+  * (https://spec.openapis.org/oas/v3.1.0#components-object) plus `$` and `+`. None of these can form executable Scala (`$` is a valid Scala
+  * identifier character; `+`/`.`/`-` at worst yield a non-compiling identifier, never a break-out), while `$`/`+` occur in real-world
+  * property names (e.g. GitHub's `+1`, .NET's `$type`). Values that are emitted as string literals instead (parameter names, URLs,
+  * descriptions, default values, discriminator values, enum values, XML names) can legitimately contain any character and are escaped at
+  * their emission site rather than restricted here. See GHSA-gpcc-36pq-8qxr.
   */
 object NameValidation {
 
@@ -28,9 +27,9 @@ object NameValidation {
         s"Unsafe $kind '$name' in OpenAPI document: only characters [A-Za-z0-9._$$+-] are permitted (see GHSA-gpcc-36pq-8qxr)"
       )
 
-  /** Validate a single name that is about to be emitted into an identifier position (e.g. a `$ref` target spliced as
-    * a type). Use this as a sink-side guard where a name may not have passed through document-level validation (path
-    * schemas resolved from components, response headers, etc.).
+  /** Validate a single name that is about to be emitted into an identifier position (e.g. a `$ref` target spliced as a type). Use this as a
+    * sink-side guard where a name may not have passed through document-level validation (path schemas resolved from components, response
+    * headers, etc.).
     */
   def validateName(kind: String, name: String): Unit = check(kind, name)
 
@@ -57,8 +56,8 @@ object NameValidation {
     case _ => Nil
   }
 
-  /** Validate every name in the document that reaches an identifier position. Throws IllegalArgumentException on the
-    * first unsafe name. Idempotent and cheap, so it is safe to call from each public generator entry point.
+  /** Validate every name in the document that reaches an identifier position. Throws IllegalArgumentException on the first unsafe name.
+    * Idempotent and cheap, so it is safe to call from each public generator entry point.
     */
   def validateDocumentNames(doc: OpenapiDocument, useHeadTagForObjectNames: Boolean): Unit = {
     val schemas = doc.components.toSeq.flatMap(_.schemas)

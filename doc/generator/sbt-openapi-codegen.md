@@ -58,6 +58,8 @@ openapiPackageDependencies            Map.empty[String, String]            Allow
                                                                            to a Map[String, Seq[String]] in the near future to permit multiple 'inheritance', and there may be bugs in the implementation.
 openapiSeperateFilesForModels         false                                When true, models will be written to individual files under $pkg.models, with type aliases and helpers living under `package.scala` in a package object
 openapiAlwaysGenerateParamSupport     false                                When true, all enums will be generated with param & json support, even if not used in those positions. This is useful for definitions that will be reused with `openapiPackageDependencies`
+openapiAddDisambiguationCodes         false                                When true, if multiple status codes in same group (i.e. all error, or all success) return the same schema, they will be paired with a status code object as (T, StatusCode).
+                                                                           'Default' codes will map to an additional StatusCode output. When false, the type will remain a T and default codes will be treated as 400s.
 ===================================== ==================================== ==================================================================================================
 ```
 

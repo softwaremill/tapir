@@ -6,8 +6,6 @@ import cats.implicits.toTraverseOps
 import io.netty.channel.ChannelFactory
 import io.netty.channel.ServerChannel
 import org.scalatest.Assertion
-import org.scalatest.Exceptional
-import org.scalatest.FutureOutcome
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.zio.ZioStreams
 import sttp.client4._
@@ -46,7 +44,6 @@ import zio.stream.ZStream
 
 import java.nio.charset.StandardCharsets
 import java.time
-import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import zio.stream.ZSink
 import zio.http.netty.NettyConfig
@@ -58,20 +55,7 @@ class ZioHttpServerTest extends TestSuite {
 
   // zio-http tests often fail with "Cause: java.io.IOException: parsing HTTP/1.1 status line, receiving [DEFAULT], parser state [STATUS_LINE]"
   // until this is fixed, adding retries to avoid flaky tests
-  val retries = 5
-
-  override def withFixture(test: NoArgAsyncTest): FutureOutcome = withFixture(test, retries)
-
-  def withFixture(test: NoArgAsyncTest, count: Int): FutureOutcome = {
-    val outcome = super.withFixture(test)
-    new FutureOutcome(outcome.toFuture.flatMap {
-      case Exceptional(e) =>
-        println(s"Test ${test.name} failed, retrying.")
-        e.printStackTrace()
-        (if (count == 1) super.withFixture(test) else withFixture(test, count - 1)).toFuture
-      case other => Future.successful(other)
-    })
-  }
+  override def retries = 5
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     implicit val r: Runtime[Any] = Runtime.default

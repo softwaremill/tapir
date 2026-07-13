@@ -119,6 +119,7 @@ object TapirGeneratedEndpoints {
   case class AardvarkDouble(v: Double) extends Aardvark
   case class AardvarkAbrdvark(v: Abrdvark) extends Aardvark
   case class AardvarkAcrdvark(v: Acrdvark) extends Aardvark
+  sealed trait StatusCodeDisambig
   case class PutInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -127,10 +128,26 @@ object TapirGeneratedEndpoints {
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  sealed trait PutInlineSimpleObjectResponseErrCode extends StatusCodeDisambig
+
   case class PostInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  sealed trait DeleteInlineSimpleObjectResponseCode extends StatusCodeDisambig
+  sealed trait DeleteInlineSimpleObjectResponseErrCode extends StatusCodeDisambig
+
+  case object StatusCodeDisambig200
+    extends DeleteInlineSimpleObjectResponseCode
+  case object StatusCodeDisambig201
+    extends DeleteInlineSimpleObjectResponseCode
+  case object StatusCodeDisambig400
+    extends PutInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig401
+    extends DeleteInlineSimpleObjectResponseErrCode
+    with PutInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig402
+    extends DeleteInlineSimpleObjectResponseErrCode
 
 
 
@@ -141,7 +158,7 @@ object TapirGeneratedEndpoints {
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithoutDiscriminator].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithoutDiscriminator].description("successful operation"))
-  
+
   type PostAdtTestEndpoint = Endpoint[Unit, ADTWithDiscriminatorNoMapping, Unit, ADTWithDiscriminator, Any]
   lazy val postAdtTest: PostAdtTestEndpoint =
     endpoint
@@ -149,36 +166,36 @@ object TapirGeneratedEndpoints {
       .in(("adt" / "test"))
       .in(jsonBody[ADTWithDiscriminatorNoMapping].description("Update an existent user in the store"))
       .out(jsonBody[ADTWithDiscriminator].description("successful operation"))
-  
-  type PutInlineSimpleObjectEndpoint = Endpoint[Unit, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
+
+  type PutInlineSimpleObjectEndpoint = Endpoint[Unit, PutInlineSimpleObjectRequest, (Array[Byte], PutInlineSimpleObjectResponseErrCode), PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
       .put
       .in(("inline" / "simple" / "object"))
       .in(multipartBody[PutInlineSimpleObjectRequest])
-      .errorOut(oneOf[Array[Byte]](
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position")),
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2"))))
+      .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(StatusCodeDisambig400))){ case (_: Array[Byte], StatusCodeDisambig400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(StatusCodeDisambig401))){ case (_: Array[Byte], StatusCodeDisambig401) => true }))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
-  
+
   type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, Unit, Any]
   lazy val postInlineSimpleObject: PostInlineSimpleObjectEndpoint =
     endpoint
       .post
       .in(("inline" / "simple" / "object"))
       .in(jsonBody[Option[PostInlineSimpleObjectRequest]])
-  
-  type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
+
+  type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, DeleteInlineSimpleObjectResponseErrCode, DeleteInlineSimpleObjectResponseCode, Any]
   lazy val deleteInlineSimpleObject: DeleteInlineSimpleObjectEndpoint =
     endpoint
       .delete
       .in(("inline" / "simple" / "object"))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("empty response 3"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(402), emptyOutput.description("empty response 4"))(())))
-      .out(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2"))(())))
+      .errorOut(oneOf[DeleteInlineSimpleObjectResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), emptyOutput.description("empty response 3").and(emptyOutputAs(StatusCodeDisambig401))){ case StatusCodeDisambig401 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(402), emptyOutput.description("empty response 4").and(emptyOutputAs(StatusCodeDisambig402))){ case StatusCodeDisambig402 => true}))
+      .out(oneOf[DeleteInlineSimpleObjectResponseCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1").and(emptyOutputAs(StatusCodeDisambig200))){ case StatusCodeDisambig200 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2").and(emptyOutputAs(StatusCodeDisambig201))){ case StatusCodeDisambig201 => true}))
   
   type PatchInlineSimpleObjectEndpoint = Endpoint[Unit, Option[ListType], ListType, ListType, Any]
   lazy val patchInlineSimpleObject: PatchInlineSimpleObjectEndpoint =

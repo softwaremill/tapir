@@ -136,6 +136,10 @@ object TapirGeneratedEndpoints {
     e: Option[AnEnum] = None,
     absent: Option[String] = None
   ) extends ADTWithoutDiscriminator
+  sealed trait StatusCodeDisambig
+  sealed trait GetInlineSimpleObjectResponseCode extends StatusCodeDisambig
+  sealed trait GetInlineSimpleObjectResponseErrCode extends StatusCodeDisambig
+
   case class PutInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -144,10 +148,30 @@ object TapirGeneratedEndpoints {
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  sealed trait PutInlineSimpleObjectResponseErrCode extends StatusCodeDisambig
+
   case class PostInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  sealed trait DeleteInlineSimpleObjectResponseCode extends StatusCodeDisambig
+  sealed trait DeleteInlineSimpleObjectResponseErrCode extends StatusCodeDisambig
+
+  case object StatusCodeDisambig200
+    extends DeleteInlineSimpleObjectResponseCode
+    with GetInlineSimpleObjectResponseCode
+  case object StatusCodeDisambig201
+    extends DeleteInlineSimpleObjectResponseCode
+    with GetInlineSimpleObjectResponseCode
+  case object StatusCodeDisambig400
+    extends GetInlineSimpleObjectResponseErrCode
+    with PutInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig401
+    extends DeleteInlineSimpleObjectResponseErrCode
+    with GetInlineSimpleObjectResponseErrCode
+    with PutInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig402
+    extends DeleteInlineSimpleObjectResponseErrCode
 
 
 
@@ -221,19 +245,19 @@ object TapirGeneratedEndpoints {
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), jsonBody[Option[ObjectWithInlineEnum]].description("An object")){ case Some(_: ObjectWithInlineEnum) => true },
         oneOfVariantValueMatcher(sttp.model.StatusCode(201), jsonBody[Option[ObjectWithInlineEnum2]].description("Another object")){ case Some(_: ObjectWithInlineEnum2) => true }))
 
-  type GetInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, Array[Byte], Unit, Any]
+  type GetInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, (Array[Byte], GetInlineSimpleObjectResponseErrCode), GetInlineSimpleObjectResponseCode, Any]
   lazy val getInlineSimpleObject: GetInlineSimpleObjectEndpoint =
     endpoint
       .get
       .in(("inline" / "simple" / "object"))
-      .errorOut(oneOf[Array[Byte]](
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(400), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/something-unrecognisedCodecFormat`](`application/something-unrecognisedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("application/something-unrecognised in error position")),
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/something-unrecognisedCodecFormat`](`application/something-unrecognisedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("application/something-unrecognised in error position 2"))))
-      .out(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2"))(())))
+      .errorOut(oneOf[(Array[Byte], GetInlineSimpleObjectResponseErrCode)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/something-unrecognisedCodecFormat`](`application/something-unrecognisedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("application/something-unrecognised in error position").and(emptyOutputAs(StatusCodeDisambig400))){ case (_: Array[Byte], StatusCodeDisambig400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/something-unrecognisedCodecFormat`](`application/something-unrecognisedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).description("application/something-unrecognised in error position 2").and(emptyOutputAs(StatusCodeDisambig401))){ case (_: Array[Byte], StatusCodeDisambig401) => true }))
+      .out(oneOf[GetInlineSimpleObjectResponseCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1").and(emptyOutputAs(StatusCodeDisambig200))){ case StatusCodeDisambig200 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2").and(emptyOutputAs(StatusCodeDisambig201))){ case StatusCodeDisambig201 => true}))
 
-  type PutInlineSimpleObjectEndpoint = Endpoint[Basic_or_Bearer_SecurityIn, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
+  type PutInlineSimpleObjectEndpoint = Endpoint[Basic_or_Bearer_SecurityIn, PutInlineSimpleObjectRequest, (Array[Byte], PutInlineSimpleObjectResponseErrCode), PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
       .put
@@ -251,9 +275,9 @@ object TapirGeneratedEndpoints {
         case BearerSecurityIn(x) => (None, Some(x))
       }
       .in(multipartBody[PutInlineSimpleObjectRequest])
-      .errorOut(oneOf[Array[Byte]](
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position")),
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2"))))
+      .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(StatusCodeDisambig400))){ case (_: Array[Byte], StatusCodeDisambig400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(StatusCodeDisambig401))){ case (_: Array[Byte], StatusCodeDisambig401) => true }))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
 
   type PostInlineSimpleObjectEndpoint = Endpoint[Unit, Option[PostInlineSimpleObjectRequest], Unit, Unit, Any]
@@ -263,17 +287,17 @@ object TapirGeneratedEndpoints {
       .in(("inline" / "simple" / "object"))
       .in(jsonBody[Option[PostInlineSimpleObjectRequest]])
 
-  type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, Unit, Unit, Any]
+  type DeleteInlineSimpleObjectEndpoint = Endpoint[Unit, Unit, DeleteInlineSimpleObjectResponseErrCode, DeleteInlineSimpleObjectResponseCode, Any]
   lazy val deleteInlineSimpleObject: DeleteInlineSimpleObjectEndpoint =
     endpoint
       .delete
       .in(("inline" / "simple" / "object"))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("empty response 3"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(402), emptyOutput.description("empty response 4"))(())))
-      .out(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2"))(())))
+      .errorOut(oneOf[DeleteInlineSimpleObjectResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), emptyOutput.description("empty response 3").and(emptyOutputAs(StatusCodeDisambig401))){ case StatusCodeDisambig401 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(402), emptyOutput.description("empty response 4").and(emptyOutputAs(StatusCodeDisambig402))){ case StatusCodeDisambig402 => true}))
+      .out(oneOf[DeleteInlineSimpleObjectResponseCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1").and(emptyOutputAs(StatusCodeDisambig200))){ case StatusCodeDisambig200 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2").and(emptyOutputAs(StatusCodeDisambig201))){ case StatusCodeDisambig201 => true}))
 
   type PatchInlineSimpleObjectEndpoint = Endpoint[Unit, Option[ListType], ListType, ListType, Any]
   lazy val patchInlineSimpleObject: PatchInlineSimpleObjectEndpoint =
@@ -307,7 +331,7 @@ object TapirGeneratedEndpoints {
       def uri(_environment: environment = environment.default, _port: String = defaultPort, _customer: String = defaultCustomer): sttp.model.Uri =
         uri"https://${_environment}.my-co.org:${_port}/api/${_customer}/prefix"
     }
-
+    
     /*
       Legacy endpoint that doesn't require TLS
       Doesn't work, retained for completely mysterious reasons lost to the winds of time
@@ -318,7 +342,7 @@ object TapirGeneratedEndpoints {
       def uri(_port: String = defaultPort, _scoped: String = defaultScoped): sttp.model.Uri =
         uri"http://testing.my-co.org:${_port}/api/${_scoped}/prefix"
     }
-
+    
     /*
       Locally
     */
