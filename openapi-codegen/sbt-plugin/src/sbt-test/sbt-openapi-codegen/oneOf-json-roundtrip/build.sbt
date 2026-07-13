@@ -4,7 +4,8 @@ lazy val root = (project in file("."))
     scalaVersion := "2.13.18",
     version := "0.1",
     openapiStreamingImplementation := "pekko",
-    openapiGenerateEndpointTypes := true
+    openapiGenerateEndpointTypes := true,
+    openapiAddDisambiguationCodes := true,
   )
 
 val tapirVersion = "1.13.13"

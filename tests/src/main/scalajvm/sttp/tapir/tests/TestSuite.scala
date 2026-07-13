@@ -4,14 +4,32 @@ import cats.effect.std.Dispatcher
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import org.scalactic.source.Position
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AsyncFunSuite
+import org.scalatest.{BeforeAndAfterAll, Exceptional, FutureOutcome}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 trait TestSuite extends AsyncFunSuite with BeforeAndAfterAll {
   def tests: Resource[IO, List[Test]]
   def testNameFilter: Option[String] = None // define to run a single test (temporarily for debugging)
+
+  /** The number of times a failing test is retried before it is reported as failed. Override with a positive value in
+    * suites whose backend is subject to a known, unavoidable flake (e.g. an upstream bug) to keep CI green; keep the
+    * override well-commented with the reason. `0` (the default) means each test runs exactly once, as usual.
+    */
+  def retries: Int = 0
+
+  override def withFixture(test: NoArgAsyncTest): FutureOutcome = withRetries(test, retries)
+
+  private def withRetries(test: NoArgAsyncTest, remaining: Int): FutureOutcome =
+    new FutureOutcome(super.withFixture(test).toFuture.flatMap {
+      case Exceptional(e) if remaining > 0 =>
+        println(s"Test '${test.name}' failed, retrying ($remaining ${if (remaining == 1) "retry" else "retries"} left).")
+        e.printStackTrace()
+        withRetries(test, remaining - 1).toFuture
+      case other => Future.successful(other)
+    })
 
   protected val (dispatcher, shutdownDispatcher) = Dispatcher.parallel[IO].allocated.unsafeRunSync()
 

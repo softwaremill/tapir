@@ -11,6 +11,16 @@ import sttp.tapir.codegen.validation.ValidationGenerator
 
 object ParamComponent {
 
+  // Valid OpenAPI parameter locations. `param.in` is emitted as a raw method name (e.g. `query[...](...)`),
+  // so an unvalidated value could inject arbitrary code; reject anything outside this allow-list.
+  // See GHSA-gpcc-36pq-8qxr.
+  private val validParamLocations = Set("query", "header", "path", "cookie")
+  private def checkParamLocation(param: OpenapiParameter): Unit =
+    if (!validParamLocations.contains(param.in))
+      throw new IllegalArgumentException(
+        s"Unsupported parameter location 'in': '${param.in}' (parameter '${param.name}') (see GHSA-gpcc-36pq-8qxr)"
+      )
+
   private def toOutType(baseType: String, isArray: Boolean, noOptionWrapper: Boolean) = (isArray, noOptionWrapper) match {
     case (true, true)   => s"List[$baseType]"
     case (true, false)  => s"Option[List[$baseType]]"
@@ -26,6 +36,7 @@ object ParamComponent {
       e: OpenapiSchemaEnum,
       isArray: Boolean
   ): (String, Some[Seq[String]], String, String) = {
+    checkParamLocation(param)
     val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
     val enumParamRefs = if (param.in == "query" || param.in == "path") Set(enumName) else Set.empty[String]
     val enumDefn = EnumGenerator.generateEnum(
@@ -51,7 +62,7 @@ object ParamComponent {
       if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
 
     val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-    (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", Some(enumDefn), outType, enumName)
+    (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$mapToList$desc""", Some(enumDefn), outType, enumName)
   }
   private[endpoints] def genParamDefn(
       endpointName: String,
@@ -62,7 +73,8 @@ object ParamComponent {
       generateValidators: Boolean
   )(implicit
       location: Location
-  ): (String, Option[Seq[String]], String) =
+  ): (String, Option[Seq[String]], String) = {
+    checkParamLocation(param)
     param.schema match {
       case st: OpenapiSchemaSimpleType =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
@@ -70,7 +82,7 @@ object ParamComponent {
         val req = if (required) t else s"Option[$t]"
         val desc = param.description.map(JavaEscape.escapeString).fold("")(d => s""".description("$d")""")
         val validation = if (generateValidators) ValidationGenerator.mkValidations(doc, st, required) else ""
-        (s"""${param.in}[$req]("${param.name}")$validation$desc""", None, req)
+        (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$validation$desc""", None, req)
       case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
         val arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"
@@ -84,7 +96,7 @@ object ParamComponent {
 
         val desc = param.description.map(JavaEscape.escapeString).fold("")(d => s""".description("$d")""")
         val outType = toOutType(t, true, noOptionWrapper)
-        (s"""${param.in}[$req]("${param.name}")$mapToList$desc""", None, outType)
+        (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$mapToList$desc""", None, outType)
       case e @ OpenapiSchemaEnum(_, _, _) =>
         getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = false) match {
           case (a, b, c, _) => (a, b, c)
@@ -95,4 +107,5 @@ object ParamComponent {
         }
       case x => bail(s"Can't create non-simple params - found $x")
     }
+  }
 }

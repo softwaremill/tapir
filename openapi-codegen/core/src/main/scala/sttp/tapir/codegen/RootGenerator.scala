@@ -7,7 +7,9 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
 import sttp.tapir.codegen.security.SecurityGenerator
+import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers
+import sttp.tapir.codegen.util.NameValidation
 import sttp.tapir.codegen.validation.{ValidationDefns, ValidationGenerator}
 import sttp.tapir.codegen.xml.{XmlSerdeGenerator, XmlSerdeLib}
 
@@ -34,9 +36,11 @@ object RootGenerator {
       useCustomJsoniterSerdes: Boolean,
       packageReuse: PackageReuseContext,
       seperateFilesForModels: Boolean,
-      alwaysGenerateParamSupport: Boolean
+      alwaysGenerateParamSupport: Boolean,
+      addDisambiguationCodes: Boolean = true
   ): GenerationInfo = {
     val doc = unNormalisedDoc.resolveAllOfSchemas
+    NameValidation.validateDocumentNames(doc, useHeadTagForObjectNames)
     val normalisedJsonLib = jsonSerdeLib.toLowerCase match {
       case "circe"    => JsonSerdeLib.Circe
       case "jsoniter" => JsonSerdeLib.Jsoniter
@@ -80,7 +84,7 @@ object RootGenerator {
       endpointsByTag,
       queryOrPathParamRefs,
       enumsDefinedOnEndpointParams,
-      EndpointDetails(jsonParamRefs, inlineDefns, xmlParamRefs, securityWrappers)
+      EndpointDetails(jsonParamRefs, inlineDefns, xmlParamRefs, securityWrappers, _)
     ) =
       endpointGenerator.endpointDefs(
         doc,
@@ -93,7 +97,8 @@ object RootGenerator {
         validators,
         generateValidators,
         packageReuse,
-        seperateFilesForModels
+        seperateFilesForModels,
+        addDisambiguationCodes
       )
     val modelPackagePath = s"$packagePath.models"
     val GeneratedClassDefinitions(
@@ -253,8 +258,9 @@ object RootGenerator {
       .filterNot(expectedTypes.contains)
       .map {
         case ct @ mediaType(mainType, subType) =>
-          s"""case class `${ct}CodecFormat`() extends CodecFormat {
-           |  override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "$mainType", subType = "$subType")
+          s"""case class ${NameHelpers.codecFormatName(ct)}() extends CodecFormat {
+           |  override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "${JavaEscape
+              .escapeString(mainType)}", subType = "${JavaEscape.escapeString(subType)}")
            |}""".stripMargin
         case ct => throw new NotImplementedError(s"Cannot handle content type '$ct'")
       }

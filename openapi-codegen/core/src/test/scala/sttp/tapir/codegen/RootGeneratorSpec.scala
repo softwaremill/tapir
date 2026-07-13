@@ -10,24 +10,26 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       useHeadTagForObjectNames: Boolean,
       jsonSerdeLib: String
   ) = {
-    RootGenerator.generateObjects(
-      doc,
-      "sttp.tapir.generated",
-      "TapirGeneratedEndpoints",
-      targetScala3 = isScala3,
-      useHeadTagForObjectNames = useHeadTagForObjectNames,
-      jsonSerdeLib = jsonSerdeLib,
-      xmlSerdeLib = "cats-xml",
-      validateNonDiscriminatedOneOfs = true,
-      maxSchemasPerFile = 400,
-      streamingImplementation = "fs2",
-      generateEndpointTypes = false,
-      generateValidators = true,
-      useCustomJsoniterSerdes = true,
-      packageReuse = PackageReuseContext.none,
-      seperateFilesForModels = false,
-      alwaysGenerateParamSupport = false
-    ).allFiles
+    RootGenerator
+      .generateObjects(
+        doc,
+        "sttp.tapir.generated",
+        "TapirGeneratedEndpoints",
+        targetScala3 = isScala3,
+        useHeadTagForObjectNames = useHeadTagForObjectNames,
+        jsonSerdeLib = jsonSerdeLib,
+        xmlSerdeLib = "cats-xml",
+        validateNonDiscriminatedOneOfs = true,
+        maxSchemasPerFile = 400,
+        streamingImplementation = "fs2",
+        generateEndpointTypes = false,
+        generateValidators = true,
+        useCustomJsoniterSerdes = true,
+        packageReuse = PackageReuseContext.none,
+        seperateFilesForModels = false,
+        alwaysGenerateParamSupport = false
+      )
+      .allFiles
   }
   def gen(
       doc: OpenapiDocument,
@@ -161,7 +163,7 @@ class RootGeneratorSpec extends CompileCheckTestBase {
     val modelFiles = files.filter(_._1.startsWith("models."))
     val packageFile = files.find(_._1.endsWith("package")).get
     modelFiles.filterNot(_._1.endsWith("package")).values.foreach(_ should include("package sttp.tapir.generated.models"))
-    packageFile._2 should not include("package sttp.tapir.generated.models")
+    packageFile._2 should not include ("package sttp.tapir.generated.models")
     packageFile._2 should include("package sttp.tapir.generated")
     packageFile._2 should include("package object models")
   }

@@ -66,13 +66,15 @@ object Main extends App {
 
   val inlinePet: InlinePet = corePet
 
-  println(Seq(
-    createOrder.show,
-    listPets.show,
-    coreOrder,
-    v1Order,
-    reuseAllOrder,
-    coreDog,
-    coreCat
-  ).mkString("\n"))
+  println(
+    Seq(
+      createOrder.show,
+      listPets.show,
+      coreOrder,
+      v1Order,
+      reuseAllOrder,
+      coreDog,
+      coreCat
+    ).mkString("\n")
+  )
 }

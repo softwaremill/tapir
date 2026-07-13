@@ -29,7 +29,7 @@ trait CompileCheckTestBase extends AnyFlatSpec with Matchers with Checkers {
         ()
       case util.Failure(ex) =>
         throw new TestFailedException(
-          (_: StackDepthException) => Some(s"The input string doesn't compile; ${ex.getMessage}"),
+          (_: StackDepthException) => Some(s"The input string doesn't compile; ${ex.getMessage}\nCODE:\n$code"),
           Some(ex),
           pos
         )

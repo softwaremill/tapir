@@ -16,6 +16,13 @@ import sttp.tapir.ztapir.RIOMonadError
 import zio.stream.ZSink
 
 class ZioVertxServerTest extends TestSuite with OptionValues {
+
+  // The Vert.x WebSocket tests hit a rare upstream flake: a client frame sent in the brief window after the 101
+  // handshake but before Vert.x completes toWebSocket() (so before we can register a frame handler) is silently
+  // dropped, so the echo never returns and the test times out. Not fixable via Vert.x's public per-request API
+  // (toWebSocket() returns an already-flowing socket); to be reported upstream. Retry failed tests to avoid flaky CI.
+  override def retries = 3
+
   def vertxResource: Resource[IO, Vertx] =
     Resource.make(IO.delay(Vertx.vertx()))(vertx => IO.delay(vertx.close()).void)
 

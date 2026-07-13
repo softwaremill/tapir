@@ -24,7 +24,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 }
 import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.Location
-import sttp.tapir.codegen.util.NameHelpers.indent
+import sttp.tapir.codegen.util.NameHelpers.{codecFormatName, indent, safeVariableName}
 import sttp.tapir.codegen.validation.ValidationDefns
 import sttp.tapir.codegen.xml.{XmlSerdeGenerator, XmlSerdeLib}
 import sttp.tapir.codegen.xml.XmlSerdeLib.XmlSerdeLib
@@ -170,11 +170,10 @@ object InAndOutComponents {
       isEager: Boolean,
       streamingImplementation: StreamingImplementation
   )(implicit location: Location): MappedContentType = {
-    def codec(baseType: String, contentType: String) = baseType match {
-      case "Array[Byte]" =>
-        s"Codec.id[$baseType, `${contentType}CodecFormat`](`${contentType}CodecFormat`(), Schema.schemaForByteArray)"
-      case "String" =>
-        s"Codec.id[$baseType, `${contentType}CodecFormat`](`${contentType}CodecFormat`(), Schema.schemaForString)"
+    def codec(baseType: String, contentType: String) = {
+      val cf = codecFormatName(contentType)
+      val schema = if (baseType == "Array[Byte]") "Schema.schemaForByteArray" else "Schema.schemaForString"
+      s"Codec.id[$baseType, $cf]($cf(), $schema)"
     }
 
     def eagerBody = contentType match {
@@ -193,7 +192,7 @@ object InAndOutComponents {
       case "application/xml"                   => "CodecFormat.Xml()"
       case "application/x-www-form-urlencoded" => "CodecFormat.XWwwFormUrlencoded()"
       case "application/zip"                   => "CodecFormat.Zip()"
-      case o                                   => s"`${o}CodecFormat`()"
+      case o                                   => s"${codecFormatName(o)}()"
     }
     if (isEager) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")
     else {
@@ -236,7 +235,9 @@ object InAndOutComponents {
       val default = v.default
         .map(j => " = " + DefaultValueRenderer.render(Map.empty, v.`type`, optional, RenderConfig())(j))
         .getOrElse(if (optional) " = None" else "")
-      s"$k: $t$default"
+      // `k` is an inline-body property name straight from the (untrusted) document and is not covered by the
+      // component-schema NameValidation pass, so quote/reject it here as the component-class path does. GHSA-gpcc-36pq-8qxr
+      s"${safeVariableName(k)}: $t$default"
     }
     val inlineClassDefn =
       s"""case class $inlineClassName (

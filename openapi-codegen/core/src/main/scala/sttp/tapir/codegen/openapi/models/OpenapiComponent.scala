@@ -12,10 +12,16 @@ case class OpenapiComponent(
 
 object OpenapiComponent {
   import io.circe._
+  import NameValidation._
+  import cats.implicits._
 
   implicit val OpenapiComponentDecoder: Decoder[OpenapiComponent] = { (c: HCursor) =>
     for {
       schemas <- c.getOrElse[Map[String, OpenapiSchemaType]]("schemas")(Map.empty)
+      nonMatching = schemas.keySet.filter(!_.matches(validName))
+      _ <- Right(()).ensure(
+        DecodingFailure(s"Schema names ${nonMatching} do not match expected regex! Expecting legal scala type names", c.history)
+      )(_ => nonMatching.isEmpty)
       securitySchemes <- c.getOrElse[Map[String, OpenapiSecuritySchemeType]]("securitySchemes")(Map.empty)
       parameters <- c.getOrElse[Map[String, OpenapiParameter]]("parameters")(Map.empty)
       responses <- c.getOrElse[Map[String, OpenapiResponseDefn]]("responses")(Map.empty)

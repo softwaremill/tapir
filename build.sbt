@@ -415,21 +415,23 @@ val clientTestServerSettings = Seq(
   })
 )
 
-lazy val superMatrixSettings = Seq((Compile / unmanagedSourceDirectories) ++= {
-  val allCombos = List("js", "jvm", "native").combinations(2).toList
-  val dis =
-    virtualAxes.value.collectFirst { case p: VirtualAxis.PlatformAxis =>
-      p.directorySuffix
-    }.get
+lazy val superMatrixSettings = Seq(
+  (Compile / unmanagedSourceDirectories) ++= {
+    val allCombos = List("js", "jvm", "native").combinations(2).toList
+    val dis =
+      virtualAxes.value.collectFirst { case p: VirtualAxis.PlatformAxis =>
+        p.directorySuffix
+      }.get
 
-  allCombos
-    .filter(_.contains(dis))
-    .map { suff =>
-      val suffixes = "scala" + suff.mkString("-", "-", "")
+    allCombos
+      .filter(_.contains(dis))
+      .map { suff =>
+        val suffixes = "scala" + suff.mkString("-", "-", "")
 
-      (Compile / sourceDirectory).value / suffixes
-    }
-})
+        (Compile / sourceDirectory).value / suffixes
+      }
+  }
+)
 
 lazy val clientTestServer = (projectMatrix in file("client/testserver"))
   .settings(commonSettings)
@@ -475,7 +477,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.21")
+          Seq("com.softwaremill.magnolia1_3" %%% "magnolia" % "1.3.22")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %%% "magnolia" % "1.1.14",
@@ -2282,7 +2284,7 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.16" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.17" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.39.0" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)

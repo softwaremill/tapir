@@ -1,6 +1,7 @@
 package sttp.tapir.codegen.endpoints
 
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
+import sttp.tapir.codegen.util.NameValidation
 
 object SimpleTypes {
 
@@ -35,7 +36,13 @@ object SimpleTypes {
       case OpenapiSchemaAny(nb, t) =>
         (AnyType.toCirceTpe(t), nb)
       case OpenapiSchemaRef(t) =>
-        (t.split('/').last, false)
+        // The ref target is spliced raw as a type identifier here, and this is the single choke point through which
+        // every $ref (in component schemas, parameters — method- and path-level, resolved or component-indirected —
+        // request/response bodies, and response headers) becomes a type. Validate it here rather than relying on
+        // every document location being enumerated by NameValidation. See GHSA-gpcc-36pq-8qxr.
+        val name = t.split('/').last
+        NameValidation.validateName("schema $ref", name)
+        (name, false)
       case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")
     }
   }

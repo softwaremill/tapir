@@ -13,16 +13,7 @@ import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
   jsonBodyAsString
 }
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiResponseContent, OpenapiResponseDef}
-import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  OpenapiSchemaArray,
-  OpenapiSchemaMap,
-  OpenapiSchemaObject,
-  OpenapiSchemaOneOf,
-  OpenapiSchemaRef,
-  OpenapiSchemaSimpleType,
-  OpenapiSchemaString
-}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaOneOf, OpenapiSchemaRef, OpenapiSchemaSimpleType}
 import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.{JavaEscape, Location, NameHelpers}
 import sttp.tapir.codegen.util.NameHelpers.indent
@@ -33,6 +24,31 @@ object OutComponent {
   // treats redirects as ok
   private val okStatus = """([23]\d\d)""".r
   private val errorStatus = """([45]\d\d)""".r
+
+  private[endpoints] val statusCodeDisambigBaseTrait = "StatusCodeDisambig"
+
+  private def statusCodeDisambigObjectName(code: String): String =
+    s"$statusCodeDisambigBaseTrait${if (code.equalsIgnoreCase("default")) "Default"
+      else if (code.matches("\\d+")) code
+      else throw new RuntimeException(s"Unknown status code $code")}"
+
+  private[endpoints] def generateSharedStatusCodeDisambiguators(registrations: Seq[(String, String)]): Option[String] = {
+    if (registrations.isEmpty) None
+    else {
+      val objects = registrations.distinct
+        .groupBy(_._1)
+        .toSeq
+        .sortBy(_._1)
+        .map { case (code, pairs) =>
+          val extendsClause = pairs.map(_._2).distinct.sorted.mkString("\n  extends ", "\n  with ", "")
+          if (code.equalsIgnoreCase("default"))
+            s"case class ${statusCodeDisambigObjectName(code)}(code: sttp.model.StatusCode)$extendsClause"
+          else s"case object ${statusCodeDisambigObjectName(code)}$extendsClause"
+        }
+        .mkString("\n")
+      Some(objects)
+    }
+  }
 
   private[endpoints] def outs(
       responses: Seq[OpenapiResponseDef],
@@ -47,10 +63,9 @@ object OutComponent {
       generateValidators: Boolean,
       isReused: Boolean,
       packageReuse: PackageReuseContext,
-      seperateFilesForModels: Boolean
-  )(implicit
-      location: Location
-  ) = {
+      seperateFilesForModels: Boolean,
+      addDisambiguationCodes: Boolean
+  )(implicit location: Location) = {
     // .errorOut(stringBody)
     // .out(oneOfBody(jsonBody[List[Book]]))
 
@@ -142,7 +157,8 @@ object OutComponent {
               def callers(tpe: String, impl: Boolean) = declsByWrapperClassName
                 .flatMap { case (_, seq) =>
                   seq.map { case (_, t, _, ct) =>
-                    s"""$tpe `$ct`: () => $t${if (impl) s""" = () => throw new RuntimeException("Body for content type $ct not provided")"""
+                    s"""$tpe ${NameHelpers.safeVariableName(ct)}: () => $t${if (impl)
+                        s""" = () => throw new RuntimeException("Body for content type ${JavaEscape.escapeString(ct)} not provided")"""
                       else ","}"""
                   }
                 }
@@ -152,7 +168,11 @@ object OutComponent {
 
               val wrappers = declsByWrapperClassName
                 .map { case (name, seq) =>
-                  val defns = seq.map { case (_, t, _, ct) => s"""override def `$ct`: () => $t = () => value""" }.sorted.mkString("\n")
+                  val defns =
+                    seq
+                      .map { case (_, t, _, ct) => s"""override def ${NameHelpers.safeVariableName(ct)}: () => $t = () => value""" }
+                      .sorted
+                      .mkString("\n")
                   s"""case class ${name}(value: ${seq.head._2}) extends $traitName{
                      |${indent(2)(defns)}
                      |}""".stripMargin
@@ -179,8 +199,8 @@ object OutComponent {
             if (needsAliases)
               decls.zip(tpes).zip(seq.map(_.contentType)).map { case ((decl, _), ct) =>
                 wrapBinType(
-                  s"$decl.map(${classNameByDecl(decl)}(_))(_.`$ct`())\n" +
-                    s".map(_.asInstanceOf[$traitName])(p => ${classNameByDecl(decl)}(p.`$ct`()))$d"
+                  s"$decl.map(${classNameByDecl(decl)}(_))(_.${NameHelpers.safeVariableName(ct)}())\n" +
+                    s".map(_.asInstanceOf[$traitName])(p => ${classNameByDecl(decl)}(p.${NameHelpers.safeVariableName(ct)}()))$d"
                 )
               }
             else decls.map(_ + d)
@@ -197,18 +217,24 @@ object OutComponent {
 
     def mappedGroup(group: Seq[OpenapiResponseDef], isErrorPosition: Boolean): MappedOutGroup =
       group match {
-        case Nil         => MappedOutGroup(None, None, None)
+        case Nil         => MappedOutGroup(None, None, None, Nil)
         case resp +: Nil =>
           val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = resp.getHeaders.map { case (name, defn) =>
             ParamComponent.genParamDefn(endpointName, targetScala3, jsonSerdeLib, defn.resolved(name, doc).param, doc, generateValidators)
           }.unzip3
           val hs = outHeaderDefns.map(d => s".and($d)").mkString
 
-          def ht(wrap: Boolean = true) =
-            if (outHeaderTypes.isEmpty) None
-            else if (outHeaderTypes.size == 1) Some(outHeaderTypes.head)
-            else if (!wrap) Some(outHeaderTypes.mkString(", "))
-            else Some(s"(${outHeaderTypes.mkString(", ")})")
+          val addStatusCode = addDisambiguationCodes && resp.code == "default"
+          val noHeaders = outHeaderTypes.isEmpty && !addStatusCode
+
+          def ht(wrap: Boolean = true) = {
+            def maybeCode: Seq[String] = if (addStatusCode) Seq("sttp.model.StatusCode") else Nil
+            if (noHeaders) None
+            else if (outHeaderTypes.isEmpty && addStatusCode) maybeCode.headOption
+            else if (outHeaderTypes.size == 1 && !addStatusCode) Some(outHeaderTypes.head)
+            else if (!wrap) Some((maybeCode ++ outHeaderTypes).mkString(", "))
+            else Some(s"(${(maybeCode ++ outHeaderTypes).mkString(", ")})")
+          }
 
           def inlineHeaderEnumDefns = outHeaderInlineEnums.foldLeft(Seq.empty[String]) { (acc, next) => acc ++ next.toSeq.flatten } match {
             case Nil => None
@@ -220,32 +246,38 @@ object OutComponent {
               val d = s""".description("${JavaEscape.escapeString(resp.description)}")"""
               MappedOutGroup(
                 resp.code match {
-                  case "200" | "default" if outHeaderDefns.isEmpty => None
-                  case "200"                                       => Some(s"statusCode(sttp.model.StatusCode(200))$d$hs")
-                  case "default"                                   => Some(s"statusCode(sttp.model.StatusCode(400))$d$hs")
-                  case okStatus(s)                                 => Some(s"statusCode(sttp.model.StatusCode($s))$d$hs")
-                  case errorStatus(s)                              => Some(s"statusCode(sttp.model.StatusCode($s))$d$hs")
+                  case "default" if addDisambiguationCodes && outHeaderDefns.isEmpty => Some(s"statusCode$d$hs")
+                  case "default" if addDisambiguationCodes                           => Some(s"statusCode$d$hs")
+                  case "200" | "default" if outHeaderDefns.isEmpty                   => None
+                  case "200"                                                         => Some(s"statusCode(sttp.model.StatusCode(200))$d$hs")
+                  case "default"                                                     => Some(s"statusCode(sttp.model.StatusCode(400))$d$hs")
+                  case okStatus(s)                                                   => Some(s"statusCode(sttp.model.StatusCode($s))$d$hs")
+                  case errorStatus(s)                                                => Some(s"statusCode(sttp.model.StatusCode($s))$d$hs")
                 },
                 ht(),
-                inlineHeaderEnumDefns
+                inlineHeaderEnumDefns,
+                Nil
               )
             case _ =>
               val (decl, maybeBodyType, inlineDefn) = bodyFmt(resp, isErrorPosition)
               val tpe =
-                if (outHeaderTypes.isEmpty) maybeBodyType
+                if (noHeaders) maybeBodyType
                 else if (maybeBodyType.isEmpty) ht()
                 else maybeBodyType.map(t => s"($t, ${ht(false).get})")
               val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
               MappedOutGroup(
                 Some(resp.code match {
-                  case "200" | "default" if !tpeIsBin || hs.isEmpty => s"$decl$hs"
-                  case "200" | "default"                            => s"$decl.toEndpointIO$hs"
-                  case okStatus(s) if tpeIsBin                      => s"$decl.toEndpointIO$hs.and(statusCode(sttp.model.StatusCode($s)))"
-                  case okStatus(s)                                  => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
-                  case errorStatus(s)                               => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case "default" if addDisambiguationCodes && (!tpeIsBin || hs.isEmpty) => s"$decl.and(statusCode)$hs"
+                  case "default" if addDisambiguationCodes                              => s"$decl.toEndpointIO.and(statusCode)$hs"
+                  case "200" | "default" if !tpeIsBin || hs.isEmpty                     => s"$decl$hs"
+                  case "200" | "default"                                                => s"$decl.toEndpointIO$hs"
+                  case okStatus(s) if tpeIsBin => s"$decl.toEndpointIO$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case okStatus(s)             => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
+                  case errorStatus(s)          => s"$decl$hs.and(statusCode(sttp.model.StatusCode($s)))"
                 }),
                 tpe,
-                inlineDefn.map(_ ++ inlineHeaderEnumDefns.getOrElse("")).orElse(inlineHeaderEnumDefns)
+                inlineDefn.map(_ ++ inlineHeaderEnumDefns.getOrElse("")).orElse(inlineHeaderEnumDefns),
+                Nil
               )
           }
         case many =>
@@ -253,21 +285,43 @@ object OutComponent {
           val contentCanBeEmpty = many.exists(_.content.isEmpty)
           val allBodiesAreEmpty = many.forall(_.content.isEmpty)
           val allResponsesAreEmpty = allBodiesAreEmpty && many.forall(_.getHeaders.isEmpty)
-          val (noHeaders, hs, outHeaderDefns, matchHeaders, headerTypes, headerTopType) =
-            headerDefns(targetScala3, jsonSerdeLib, doc, generateValidators)(endpointName, many)
+
+          val manyIndexed = many.zipWithIndex
+          val ambiguous = addDisambiguationCodes && manyIndexed.exists { case (r, i) =>
+            r.code == "default" || manyIndexed.filterNot(_._2 == i).map(_._1).exists(_.content.map(_.schema) == r.content.map(_.schema))
+          }
+
+          val HeaderWrappingInfo(
+            noHeaders,
+            hs,
+            outHeaderDefns,
+            matchHeaders,
+            headerTypes,
+            headerTopType,
+            maybeHeaderTypeImpls,
+            statusCodeDisambig
+          ) =
+            headerDefns(targetScala3, jsonSerdeLib, doc, generateValidators, ambiguous, isErrorPosition)(endpointName, many)
+
+          val noAmbiguity = noHeaders && !ambiguous
+
           val (oneOfs, types, inlineDefns) = many.map { m =>
             val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = contentCanBeEmpty)
-            val code = if (m.code == "default") "400" else m.code
-            if (decl == "" && allResponsesAreEmpty && noHeaders)
+            val maybeCode =
+              if (addDisambiguationCodes && m.code.equalsIgnoreCase("default")) ""
+              else if (m.code.equalsIgnoreCase("default")) s"sttp.model.StatusCode(400), "
+              else if (m.code.matches("\\d+")) s"sttp.model.StatusCode(${m.code}), "
+              else throw new RuntimeException(s"Unknown status code '${m.code}'")
+            if (decl == "" && allResponsesAreEmpty && noAmbiguity)
               (
-                s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+                s"oneOfVariantSingletonMatcher($maybeCode" +
                   s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(())""",
                 maybeBodyType,
                 inlineDefn1
               )
-            else if (decl == "" && noHeaders)
+            else if (decl == "" && noAmbiguity)
               (
-                s"oneOfVariantSingletonMatcher(sttp.model.StatusCode($code), " +
+                s"oneOfVariantSingletonMatcher($maybeCode" +
                   s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}"))(None)""",
                 maybeBodyType,
                 inlineDefn1
@@ -275,22 +329,22 @@ object OutComponent {
             else if (decl == "") {
               val s =
                 if (allBodiesAreEmpty)
-                  s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
+                  s"oneOfVariantValueMatcher($maybeCode" +
                     s"""emptyOutput.description("${JavaEscape.escapeString(m.description)}")""" +
                     s""".and(${hs(m)})){ case ${matchHeaders(m)} => true}"""
                 else
-                  s"oneOfVariantValueMatcher(sttp.model.StatusCode($code), " +
+                  s"oneOfVariantValueMatcher($maybeCode" +
                     s"""emptyOutputAs(None).description("${JavaEscape.escapeString(
                         m.description
                       )}").and(${hs(m)})){ case (None, ${matchHeaders(m)}) => true}"""
               (s, maybeBodyType, inlineDefn1)
             } else {
               def bodyAndHeaderTypes(bodyType: String): String =
-                if (noHeaders) bodyType
+                if (noAmbiguity) bodyType
                 else if (allBodiesAreEmpty) headerTypes(m)
                 else s"($bodyType, ${headerTypes(m)})"
 
-              def matchBodyAndHeaders(matchBody: String): String = if (noHeaders) matchBody else s"($matchBody, ${matchHeaders(m)})"
+              def matchBodyAndHeaders(matchBody: String): String = if (noAmbiguity) matchBody else s"($matchBody, ${matchHeaders(m)})"
 
               val tpeIsBin = maybeBodyType.exists(t => t.contains("BinaryStream") || t.contains("fs2.Stream"))
               val maybeStrict = if (tpeIsBin) ".toEndpointIO" else ""
@@ -305,13 +359,21 @@ object OutComponent {
                 val maybeMap = if (m.content.size > 1 || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
                 (
-                  s"oneOfVariantValueMatcher(sttp.model.StatusCode(${code}), $decl$maybeStrict$maybeMap$h){ case ${matchBodyAndHeaders(s"Some(_$someType)")} => true }",
+                  s"oneOfVariantValueMatcher($maybeCode$decl$maybeStrict$maybeMap$h){ case ${matchBodyAndHeaders(s"Some(_$someType)")} => true }",
+                  maybeBodyType,
+                  inlineDefn1
+                )
+              } else if (noHeaders && ambiguous) {
+                val (_, tpe, _) = bodyFmt(m, isErrorPosition)
+                val tt = tpe.map("_: " + _).getOrElse("_")
+                (
+                  s"oneOfVariantValueMatcher($maybeCode$decl$maybeStrict$h){ case ${matchBodyAndHeaders(tt)} => true }",
                   maybeBodyType,
                   inlineDefn1
                 )
               } else
                 (
-                  s"oneOfVariant${maybeBodyType.map(s => s"[${bodyAndHeaderTypes(s)}]").getOrElse("")}(sttp.model.StatusCode(${code}), $decl$maybeStrict$h)",
+                  s"oneOfVariant${maybeBodyType.map(s => s"[${bodyAndHeaderTypes(s)}]").getOrElse("")}($maybeCode$decl$maybeStrict$h)",
                   maybeBodyType,
                   inlineDefn1
                 )
@@ -370,28 +432,42 @@ object OutComponent {
               if (contentCanBeEmpty) s"Option[$baseType]" else baseType
             }
           }
-          val oneOfType = if (noHeaders) commmonType else if (allBodiesAreEmpty) headerTopType else s"($commmonType, $headerTopType)"
+          val oneOfType = if (noAmbiguity) commmonType else if (allBodiesAreEmpty) headerTopType else s"($commmonType, $headerTopType)"
           MappedOutGroup(
             Some(s"oneOf[$oneOfType](${oneOfs.mkString("\n  ", ",\n  ", "")})"),
             Some(oneOfType),
-            (inlineDefns ++ outHeaderDefns).foldLeft(Option.empty[String])(combine(_, _))
+            (inlineDefns ++ outHeaderDefns).foldLeft(Option.empty[String])(combine(_, _)),
+            statusCodeDisambig
           )
       }
 
-    val MappedOutGroup(outDecls, outTypes, inlineOutDefns) = mappedGroup(outs, false)
+    val MappedOutGroup(outDecls, outTypes, inlineOutDefns, outStatusCodeDisambig) = mappedGroup(outs, false)
     val mappedOuts = outDecls.map(s => s".out($s)")
-    val MappedOutGroup(errDecls, errTypes, inlineErrDefns) = mappedGroup(errorOuts, true)
+    val MappedOutGroup(errDecls, errTypes, inlineErrDefns, errStatusCodeDisambig) = mappedGroup(errorOuts, true)
     val mappedErrorOuts = errDecls.map(s => s".errorOut($s)")
 
-    (Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n"), outTypes, errTypes, combine(inlineOutDefns, inlineErrDefns))
+    (
+      Seq(mappedErrorOuts, mappedOuts).flatten.mkString("\n"),
+      outTypes,
+      errTypes,
+      combine(inlineOutDefns, inlineErrDefns),
+      outStatusCodeDisambig ++ errStatusCodeDisambig
+    )
   }
 
-  private def headerDefns(targetScala3: Boolean, jsonSerdeLib: JsonSerdeLib, doc: OpenapiDocument, generateValidators: Boolean)(
+  private def headerDefns(
+      targetScala3: Boolean,
+      jsonSerdeLib: JsonSerdeLib,
+      doc: OpenapiDocument,
+      generateValidators: Boolean,
+      ambiguous: Boolean,
+      isErrorPosition: Boolean
+  )(
       endpointName: String,
       many: Seq[OpenapiResponseDef]
   )(implicit
       location: Location
-  ): (Boolean, OpenapiResponseDef => String, Seq[Option[String]], OpenapiResponseDef => String, OpenapiResponseDef => String, String) = {
+  ): HeaderWrappingInfo = {
     val (paramNames, headerNamesAndTypes) = many.map { m =>
       m.getHeaders
         .map { case (name, defn) =>
@@ -403,7 +479,11 @@ object OutComponent {
         .sortBy(_._1)
         .unzip
     }.unzip
-    if (headerNamesAndTypes.forall(_.isEmpty)) (true, _ => "", Nil, _ => "", _ => "", "")
+    if (headerNamesAndTypes.forall(_.isEmpty) && !ambiguous)
+      HeaderWrappingInfo(true, _ => "", Nil, _ => "", _ => "", "", None, Nil)
+    else if (headerNamesAndTypes.forall(_.isEmpty) && ambiguous)
+      // re-use the header disambiguation idea for status code disambiguation
+      generateTraitWithCodeObjects(true, isErrorPosition)(endpointName, headerNamesAndTypes, many, paramNames)
     else if (headerNamesAndTypes.map(_.map { case (name, _, defn) => name -> defn }.toSet).distinct.size == 1) {
       val commonResponseHeaders = headerNamesAndTypes.head
       val (outHeaderDefns, outHeaderInlineEnums, outHeaderTypes) = commonResponseHeaders.unzip3
@@ -419,17 +499,35 @@ object OutComponent {
       val headerTopType = if (outHeaderTypes.isEmpty) "Unit" else ht(null)
 
       val enumDefns = outHeaderInlineEnums.map(_.map(_.mkString("\n")))
-      (noHeaders, hs, enumDefns, (_: OpenapiResponseDef) => underscores, ht, headerTopType)
-    } else {
-      val traitName = s"${endpointName.capitalize}ResponseHeader"
+      HeaderWrappingInfo(noHeaders, hs, enumDefns, (_: OpenapiResponseDef) => underscores, ht, headerTopType, None, Nil)
+    } else generateTraitWithCodeObjects(false, isErrorPosition)(endpointName, headerNamesAndTypes, many, paramNames)
+  }
 
-      val (headerMappingDefns, headerModelDefns, enumDefns: Seq[Seq[String]]) = headerNamesAndTypes
+  private def generateTraitWithCodeObjects(noHeaders: Boolean, isErrorPosition: Boolean)(
+      endpointName: String,
+      headerNamesAndTypes: Seq[Seq[(String, Option[Seq[String]], String)]],
+      many: Seq[OpenapiResponseDef],
+      paramNames: Seq[Seq[String]]
+  ): HeaderWrappingInfo = {
+    def posn = if (isErrorPosition) "Err" else ""
+    val traitSuffix = if (noHeaders) s"Response${posn}Code" else s"Response${posn}Header"
+    val traitName = s"${endpointName.capitalize}$traitSuffix"
+
+    def normalisedCode(code: String) = if (code == "default") "Default" else code
+
+    val Seq(headerMappingDefns: Seq[String], headerModelDefns: Seq[String], enumDefns: Seq[Seq[String]], headerClasses: Seq[String]) =
+      headerNamesAndTypes
         .zip(many.map(_.code))
         .zip(paramNames)
         .map {
+          case ((s, c), _) if s.isEmpty && noHeaders =>
+            val objName = statusCodeDisambigObjectName(c)
+            if (c == "default")
+              Seq(s"statusCode.map($objName(_))(_.code)", "", Seq.empty[String], s"$objName")
+            else Seq(s"emptyOutputAs($objName)", "", Seq.empty[String], s"$objName.type")
           case ((s, c), _) if s.isEmpty =>
             val objName = s"$traitName$c"
-            (s"emptyOutputAs($objName)", s"case object $objName extends $traitName", Seq.empty[String])
+            Seq(s"emptyOutputAs($objName)", s"case object $objName extends $traitName", Seq.empty[String], s"$objName.type")
           case ((s, c), names) =>
             val className = s"$traitName$c"
             val (headerDefns, headerInlineEnums, headerTypes) = s.unzip3
@@ -438,29 +536,60 @@ object OutComponent {
               if (s.size == 1) s"$rawOutput.map($className(_))(_.${names.head})"
               else s"($rawOutput).map(($className.apply _).tupled)($className.unapply(_).get)"
             val fields = names.zip(headerTypes).map { case (n, t) => s"$n: $t" }.mkString(", ")
-            (output, s"""case class $traitName$c($fields) extends $traitName""", headerInlineEnums.flatten.flatten)
+            Seq(output, s"""case class $className($fields) extends $traitName""", headerInlineEnums.flatten.flatten, className)
         }
-        .unzip3
-      val mappingsByCode = headerMappingDefns
-        .zip(many.map(_.code))
-        .map { case (s, c) => c -> s }
-        .toMap
-      val tpesByCode = headerModelDefns
-        .zip(many.map(_.code))
-        .map { case (s, c) => c -> s }
-        .toMap
-      val headerTypeDefns =
-        s"""sealed trait ${endpointName.capitalize}ResponseHeader
-           |${tpesByCode.values.toSeq.sorted.mkString("\n")}
+        .transpose
+    val mappingsByCode = headerMappingDefns
+      .zip(many.map(_.code))
+      .map { case (s, c) => c -> s }
+      .toMap
+    val modelDefnsByCode = headerModelDefns
+      .zip(many.map(_.code))
+      .map { case (s, c) => c -> s }
+      .toMap
+    val tpesByCode = headerClasses
+      .zip(many.map(_.code))
+      .map { case (s, c) => c -> s }
+      .toMap
+    val headerTypeDefns =
+      if (noHeaders)
+        s"sealed trait $traitName extends $statusCodeDisambigBaseTrait"
+      else
+        s"""sealed trait $traitName
+           |${modelDefnsByCode.values.toSeq.sorted.mkString("\n")}
            |""".stripMargin
-      def ht(m: OpenapiResponseDef) = tpesByCode(m.code)
-      def getMapping(m: OpenapiResponseDef) = mappingsByCode(m.code)
-      def getMatch(m: OpenapiResponseDef) =
-        if (m.getHeaders.isEmpty) s"$traitName${m.code}"
-        else s"(_: $traitName${m.code})"
-      val enums = enumDefns.flatten.distinct.map(Some(_))
-      (false, getMapping, Some(headerTypeDefns) +: enums, getMatch, ht, traitName)
-    }
+
+    def hImpl(m: OpenapiResponseDef) = modelDefnsByCode(m.code)
+
+    def ht(m: OpenapiResponseDef) = tpesByCode(m.code)
+
+    def getMapping(m: OpenapiResponseDef) = mappingsByCode(m.code)
+
+    def getMatch(m: OpenapiResponseDef) =
+      if (m.getHeaders.isEmpty)
+        if (noHeaders) {
+          val name = statusCodeDisambigObjectName(m.code)
+          if (m.code == "default") s"(_: $name)"
+          else name
+        } else s"$traitName${m.code}"
+      else s"(_: $traitName${m.code})"
+
+    val statusCodeDisambig =
+      if (noHeaders) many.map(m => (normalisedCode(m.code), traitName)) else Nil
+
+    val enums = enumDefns.flatten.distinct.map(Some(_))
+    HeaderWrappingInfo(noHeaders, getMapping, Some(headerTypeDefns) +: enums, getMatch, ht, traitName, Some(hImpl), statusCodeDisambig)
   }
 
 }
+
+case class HeaderWrappingInfo(
+    noHeaders: Boolean,
+    hs: OpenapiResponseDef => String,
+    outHeaderDefns: Seq[Option[String]],
+    matchHeaders: OpenapiResponseDef => String,
+    headerTypes: OpenapiResponseDef => String,
+    headerTopType: String,
+    headerTypeImpls: Option[OpenapiResponseDef => String],
+    statusCodeDisambig: Seq[(String, String)] = Nil
+)

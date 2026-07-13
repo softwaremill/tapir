@@ -9,7 +9,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.util.NameHelpers.{indent, safeVariableName}
-import sttp.tapir.codegen.util.{DocUtils, VersionedHelpers}
+import sttp.tapir.codegen.util.{DocUtils, JavaEscape, NameValidation, VersionedHelpers}
 import sttp.tapir.codegen.xml.{XmlSerdeGenerator, XmlSerdeLib}
 
 case class GeneratedClassDefinitions(
@@ -87,6 +87,7 @@ class ClassDefinitionGenerator {
       seperateFilesForModels: Boolean = false,
       alwaysGenerateParamSupport: Boolean = false
   ): Option[GeneratedClassDefinitions] = {
+    NameValidation.validateDocumentNames(doc, useHeadTagForObjectNames = false)
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
     val (allClassyOneOfSchemas, allOtherOneOfSchemas) = allOneOfSchemas.partition(_._2.types.forall {
@@ -463,7 +464,7 @@ class ClassDefinitionGenerator {
       val discriminatorDefBody = discriminatorDefFields.filter { case (n, _) => obj.properties.map(_._1).toSet.contains(n) } match {
         case Nil    => ""
         case fields =>
-          val fs = fields.map { case (k, v) => s"""def ${safeVariableName(k)}: String = "$v"""" }.mkString("\n")
+          val fs = fields.map { case (k, v) => s"""def ${safeVariableName(k)}: String = "${JavaEscape.escapeString(v)}"""" }.mkString("\n")
           s""" {
              |${indent(2)(fs)}
              |}""".stripMargin

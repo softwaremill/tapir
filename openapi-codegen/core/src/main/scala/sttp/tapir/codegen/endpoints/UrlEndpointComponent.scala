@@ -6,7 +6,7 @@ import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaEnum, OpenapiSchemaSimpleType}
 import sttp.tapir.codegen.util.ErrUtils.bail
-import sttp.tapir.codegen.util.Location
+import sttp.tapir.codegen.util.{JavaEscape, Location}
 import sttp.tapir.codegen.validation.ValidationGenerator
 
 case class UrlMapResponse(
@@ -47,9 +47,9 @@ object UrlEndpointComponent {
             p.schema match {
               case st: OpenapiSchemaSimpleType =>
                 val (t, _) = mapSchemaSimpleTypeToType(st)
-                val desc = p.description.fold("")(d => s""".description("$d")""")
+                val desc = p.description.fold("")(d => s""".description("${JavaEscape.escapeString(d)}")""")
                 val validations = if (generateValidators) ValidationGenerator.mkValidations(doc, st, true) else ""
-                (s"""path[$t]("$name")$validations$desc""", Some(t), None)
+                (s"""path[$t]("${JavaEscape.escapeString(name)}")$validations$desc""", Some(t), None)
               case e: OpenapiSchemaEnum =>
                 val (param, inlineDefn, tpe, enumName) =
                   ParamComponent.getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, p, e, false)
@@ -64,7 +64,9 @@ object UrlEndpointComponent {
             }
           }
         } else {
-          ('"' + segment + '"', None, None)
+          // Literal path segments come from the (untrusted) `paths` keys and are emitted into a string literal, so
+          // escape them like the adjacent path-parameter and description sites. See GHSA-gpcc-36pq-8qxr.
+          (JavaEscape.quote(segment), None, None)
         }
       }
       .unzip3

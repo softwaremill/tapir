@@ -33,7 +33,7 @@ object TapirGeneratedEndpoints {
       case None => (None, None)
     }
   
-
+  
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -98,9 +98,9 @@ object TapirGeneratedEndpoints {
   sealed trait AnyObjectWithInlineEnum
   sealed trait Error
   sealed trait ValidatedOneOf
-
+  
   type ListType = List[String]
-
+  
   sealed trait AnEnum extends enumeratum.EnumEntry
   object AnEnum extends enumeratum.Enum[AnEnum] with enumeratum.CirceEnum[AnEnum] {
     val values = findValues
@@ -108,7 +108,6 @@ object TapirGeneratedEndpoints {
     case object Bar extends AnEnum
     case object Baz extends AnEnum
   }
-
   case class Abrdvark (
     b: Boolean
   )
@@ -146,7 +145,7 @@ object TapirGeneratedEndpoints {
     id: java.util.UUID,
     inlineEnum: ObjectWithInlineEnumInlineEnum = ObjectWithInlineEnumInlineEnum.foo3
   ) extends AnyObjectWithInlineEnum
-
+  
   sealed trait ObjectWithInlineEnumInlineEnum extends enumeratum.EnumEntry
   object ObjectWithInlineEnumInlineEnum extends enumeratum.Enum[ObjectWithInlineEnumInlineEnum] with enumeratum.CirceEnum[ObjectWithInlineEnumInlineEnum] {
     val values = findValues
@@ -158,7 +157,7 @@ object TapirGeneratedEndpoints {
   case class ObjectWithInlineEnum2 (
     inlineEnum: ObjectWithInlineEnum2InlineEnum
   ) extends AnyObjectWithInlineEnum
-
+  
   sealed trait ObjectWithInlineEnum2InlineEnum extends enumeratum.EnumEntry
   object ObjectWithInlineEnum2InlineEnum extends enumeratum.Enum[ObjectWithInlineEnum2InlineEnum] with enumeratum.CirceEnum[ObjectWithInlineEnum2InlineEnum] {
     val values = findValues
@@ -223,7 +222,7 @@ object TapirGeneratedEndpoints {
   case class ValidatedSubObj (
     i: String
   )
-
+  
   sealed trait Aardvark
   case class AardvarkUUID(v: java.util.UUID) extends Aardvark
   case class AardvarkDate(v: java.time.LocalDate) extends Aardvark
@@ -233,6 +232,8 @@ object TapirGeneratedEndpoints {
   case class AardvarkDouble(v: Double) extends Aardvark
   case class AardvarkAbrdvark(v: Abrdvark) extends Aardvark
   case class AardvarkAcrdvark(v: Acrdvark) extends Aardvark
+  sealed trait StatusCodeDisambig
+  sealed trait GetOneofErrorSecParamTestResponseErrCode extends StatusCodeDisambig
   
   sealed trait PostJsonStringJsonBodyBodyIn extends Product with java.io.Serializable
   case class PostJsonStringJsonBodyBody1In(value: Array[Byte]) extends PostJsonStringJsonBodyBodyIn
@@ -358,6 +359,7 @@ object TapirGeneratedEndpoints {
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  sealed trait PutInlineSimpleObjectResponseErrCode extends StatusCodeDisambig
   case class PostInlineSimpleObjectRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -366,6 +368,23 @@ object TapirGeneratedEndpoints {
     foo: String,
     bar: Option[java.util.UUID] = None
   )
+  sealed trait DeleteInlineSimpleObjectResponseCode extends StatusCodeDisambig
+  sealed trait DeleteInlineSimpleObjectResponseErrCode extends StatusCodeDisambig
+  case object StatusCodeDisambig200
+    extends DeleteInlineSimpleObjectResponseCode
+  case object StatusCodeDisambig201
+    extends DeleteInlineSimpleObjectResponseCode
+  case object StatusCodeDisambig400
+    extends PutInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig401
+    extends DeleteInlineSimpleObjectResponseErrCode
+    with PutInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig402
+    extends DeleteInlineSimpleObjectResponseErrCode
+  case object StatusCodeDisambig404
+    extends GetOneofErrorSecParamTestResponseErrCode
+  case class StatusCodeDisambigDefault(code: sttp.model.StatusCode)
+    extends GetOneofErrorSecParamTestResponseErrCode
 
   type TapirCodegenDirectivesExtension = Seq[String]
   val tapirCodegenDirectivesExtensionKey = new sttp.tapir.AttributeKey[TapirCodegenDirectivesExtension]("sttp.tapir.generated.TapirGeneratedEndpoints.TapirCodegenDirectivesExtension")
@@ -507,7 +526,7 @@ object TapirGeneratedEndpoints {
       extraCodecSupport[PostInlineEnumTestQueryOptSeqEnum]("PostInlineEnumTestQueryOptSeqEnum", PostInlineEnumTestQueryOptSeqEnum)
   }
   
-  type GetOneofErrorSecParamTestEndpoint = Endpoint[(String, Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn), Unit, Error, Unit, Any]
+  type GetOneofErrorSecParamTestEndpoint = Endpoint[(String, Bearer_or_Empty_or_api_key_or_api_key_and_Bearer_SecurityIn), Unit, (Error, GetOneofErrorSecParamTestResponseErrCode), Unit, Any]
   lazy val getOneofErrorSecParamTest: GetOneofErrorSecParamTestEndpoint =
     endpoint
       .get
@@ -531,9 +550,9 @@ object TapirGeneratedEndpoints {
         case EmptySecurityIn => (None, None, None)
       }
       .prependSecurityIn("oneof" / "error" / path[String]("secParam"))
-      .errorOut(oneOf[Error](
-        oneOfVariant[NotFoundError](sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found")),
-        oneOfVariant[SimpleError](sttp.model.StatusCode(400), jsonBody[SimpleError].description("Not found"))))
+      .errorOut(oneOf[(Error, GetOneofErrorSecParamTestResponseErrCode)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(404), jsonBody[NotFoundError].description("Not found").and(emptyOutputAs(StatusCodeDisambig404))){ case (_: NotFoundError, StatusCodeDisambig404) => true },
+        oneOfVariantValueMatcher(jsonBody[SimpleError].description("Generic error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: SimpleError, (_: StatusCodeDisambigDefault)) => true }))
       .out(statusCode(sttp.model.StatusCode(204)).description("No response"))
   
   type PostJsonStringJsonBodyEndpoint = Endpoint[Option[String], PostJsonStringJsonBodyBodyIn, Unit, Option[PostJsonStringJsonBodyBodyOut], Any]
@@ -694,16 +713,16 @@ object TapirGeneratedEndpoints {
         .map(_.asInstanceOf[PatchForceStreamingBodyOut])(p => PatchForceStreamingBody1Out(p.`text/plain`())).description("An object"))))
       .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-resp-body-streaming"))
   
-  type PutInlineSimpleObjectEndpoint = Endpoint[String, PutInlineSimpleObjectRequest, Array[Byte], PutInlineSimpleObjectResponse, Any]
+  type PutInlineSimpleObjectEndpoint = Endpoint[String, PutInlineSimpleObjectRequest, (Array[Byte], PutInlineSimpleObjectResponseErrCode), PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
       .put
       .in(("inline" / "simple" / "object"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .in(multipartBody[PutInlineSimpleObjectRequest])
-      .errorOut(oneOf[Array[Byte]](
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position")),
-        oneOfVariant[Array[Byte]](sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2"))))
+      .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(StatusCodeDisambig400))){ case (_: Array[Byte], StatusCodeDisambig400) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(StatusCodeDisambig401))){ case (_: Array[Byte], StatusCodeDisambig401) => true }))
       .out(multipartBody[PutInlineSimpleObjectResponse].description("An object"))
   
   type PostInlineSimpleObjectEndpoint = Endpoint[String, Option[PostInlineSimpleObjectRequest], Unit, (PostInlineSimpleObjectResponse, String), Any]
@@ -715,18 +734,18 @@ object TapirGeneratedEndpoints {
       .in(jsonBody[Option[PostInlineSimpleObjectRequest]])
       .out(jsonBody[PostInlineSimpleObjectResponse].description("An object").and(header[String]("x-combat-status").description("a response header")))
   
-  type DeleteInlineSimpleObjectEndpoint = Endpoint[String, Unit, Unit, Unit, Any]
+  type DeleteInlineSimpleObjectEndpoint = Endpoint[String, Unit, DeleteInlineSimpleObjectResponseErrCode, DeleteInlineSimpleObjectResponseCode, Any]
   lazy val deleteInlineSimpleObject: DeleteInlineSimpleObjectEndpoint =
     endpoint
       .delete
       .in(("inline" / "simple" / "object"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .errorOut(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("empty response 3"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(402), emptyOutput.description("empty response 4"))(())))
-      .out(oneOf[Unit](
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1"))(()),
-        oneOfVariantSingletonMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2"))(())))
+      .errorOut(oneOf[DeleteInlineSimpleObjectResponseErrCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(401), emptyOutput.description("empty response 3").and(emptyOutputAs(StatusCodeDisambig401))){ case StatusCodeDisambig401 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(402), emptyOutput.description("empty response 4").and(emptyOutputAs(StatusCodeDisambig402))){ case StatusCodeDisambig402 => true}))
+      .out(oneOf[DeleteInlineSimpleObjectResponseCode](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1").and(emptyOutputAs(StatusCodeDisambig200))){ case StatusCodeDisambig200 => true},
+        oneOfVariantValueMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2").and(emptyOutputAs(StatusCodeDisambig201))){ case StatusCodeDisambig201 => true}))
   
   type PatchInlineSimpleObjectEndpoint = Endpoint[String, Option[ListType], ListType, ListType, Any]
   lazy val patchInlineSimpleObject: PatchInlineSimpleObjectEndpoint =

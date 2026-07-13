@@ -23,6 +23,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaUUID
 }
 import sttp.tapir.codegen.dedup.PackageReuseContext
+import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers.{addName, indent, uncapitalise}
 
 object JsoniterSerdeImpl {
@@ -263,16 +264,19 @@ object JsoniterSerdeImpl {
         val body = if (schemaToJsonMapping.exists { case (className, jsonValue) => className != jsonValue }) {
           val discriminatorMap = indent(2)(
             schemaToJsonMapping
-              .map { case (k, v) => s"""case "$k" => "$v"""" }
+              .map { case (k, v) => s"""case "${JavaEscape.escapeString(k)}" => "${JavaEscape.escapeString(v)}"""" }
               .mkString("\n", "\n", "\n")
           )
           val codecName = getJsoniterName(name)
           val serde =
             if (useCustomJsoniterSerdes)
-              s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${discriminator.propertyName}", {$discriminatorMap})"""
+              s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${JavaEscape
+                  .escapeString(discriminator.propertyName)}", {$discriminatorMap})"""
             else {
               val config =
-                s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {$discriminatorMap})"""
+                s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${JavaEscape.escapeString(
+                    discriminator.propertyName
+                  )}")).withAdtLeafClassNameMapper(x => com.github.plokhotnyuk.jsoniter_scala.macros.JsonCodecMaker.simpleClassName(x) match {$discriminatorMap})"""
               s"implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
             }
 
@@ -280,10 +284,13 @@ object JsoniterSerdeImpl {
              |""".stripMargin
         } else {
           if (useCustomJsoniterSerdes)
-            s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${discriminator.propertyName}")"""
+            s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.makeOpenapiLike("${JavaEscape
+                .escapeString(discriminator.propertyName)}")"""
           else {
             val config =
-              s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${discriminator.propertyName}"))"""
+              s"""$jsoniterBaseConfig.withRequireDiscriminatorFirst(false).withDiscriminatorFieldName(Some("${JavaEscape.escapeString(
+                  discriminator.propertyName
+                )}"))"""
             s"implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = $jsoniterPkgMacros.JsonCodecMaker.make($config)"
           }
         }
@@ -396,7 +403,8 @@ object JsoniterSerdeImpl {
           case s                      =>
             s"case x: ${name}${s.disambiguationSuffix} => out.writeVal(x.v.toString)"
         } ++
-        childNameAndSerde.map { case (subName, serdeName) => s"case x: $name${subName} => $serdeName.encodeValue(x.v, out)" }).mkString("\n")
+        childNameAndSerde.map { case (subName, serdeName) => s"case x: $name${subName} => $serdeName.encodeValue(x.v, out)" })
+        .mkString("\n")
     val serde =
       s"""implicit lazy val $codecName: $jsoniterPkgCore.JsonValueCodec[$name] = new $jsoniterPkgCore.JsonValueCodec[$name] {
          |    def decodeValue(in: $jsoniterPkgCore.JsonReader, default: $name): $name = {

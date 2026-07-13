@@ -2,9 +2,19 @@ package sttp.tapir.codegen
 
 import sttp.tapir.codegen.RootGenerator.indent
 import sttp.tapir.codegen.openapi.models.OpenapiServer
+import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers.safeVariableName
 
 object ServersGenerator {
+
+  // The server URL is emitted both as a backtick-quoted identifier and inside a `uri"..."` interpolator (where a `$`
+  // would itself interpolate). A legitimate server URL contains none of these characters, so reject any that does
+  // rather than attempt to escape every context. See GHSA-gpcc-36pq-8qxr.
+  private def validateServerUrl(url: String): Unit =
+    if (url.exists(c => c == '"' || c == '`' || c == '\\' || c == '$' || c.isControl))
+      throw new IllegalArgumentException(
+        s"Unsafe server URL '$url': must not contain quotes, backticks, backslashes, '$$' or control characters (see GHSA-gpcc-36pq-8qxr)"
+      )
 
   def genServerDefinitions(servers: Seq[OpenapiServer], isScala3: Boolean): Option[String] = if (servers.isEmpty) None
   else
@@ -20,6 +30,7 @@ object ServersGenerator {
        |}""".stripMargin
     }
   private def genServerDefinition(server: OpenapiServer, isScala3: Boolean) = {
+    validateServerUrl(server.url)
     if (server.variables.isEmpty) genServerUrlVal(server)
     else genServerDefinitionWithVariables(server, isScala3)
   }
@@ -31,7 +42,7 @@ object ServersGenerator {
       (
         safeVariableName(k),
         vs.`enum`.map(i => safeVariableName(i)),
-        vs.default.map(v => if (vs.`enum`.isEmpty) '"' +: v :+ '"' else safeVariableName(v))
+        vs.default.map(v => if (vs.`enum`.isEmpty) JavaEscape.quote(v) else safeVariableName(v))
       )
     }
     val enums = enumNames
@@ -79,6 +90,12 @@ object ServersGenerator {
        |}""".stripMargin
   }
   private def genDescription(description: Option[String]): String =
-    description.map(d => s"/*\n${indent(2)(d)}\n*/\n").getOrElse("")
+    // Neutralise the (untrusted) description before emitting it into a block comment: double every backslash so a
+    // `*/` unicode escape cannot be reconstructed by Scala 2's unicode pre-scan (which runs before comment
+    // lexing) into a `*/`, and textually break any literal `*/`. Either could otherwise close the comment early and
+    // inject the code that follows. See GHSA-gpcc-36pq-8qxr.
+    description
+      .map(d => s"/*\n${indent(2)(d.replace("\\", "\\\\").replace("*/", "* /"))}\n*/\n")
+      .getOrElse("")
 
 }

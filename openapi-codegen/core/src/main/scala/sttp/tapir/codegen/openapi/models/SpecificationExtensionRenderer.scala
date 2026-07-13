@@ -1,6 +1,7 @@
 package sttp.tapir.codegen.openapi.models
 
 import io.circe.Json
+import sttp.tapir.codegen.util.JavaEscape
 
 object SpecificationExtensionRenderer {
 
@@ -39,10 +40,10 @@ object SpecificationExtensionRenderer {
     "null",
     bool => bool.toString,
     n => n.toLong.map(l => s"${l}L") getOrElse s"${n.toDouble}d", // the long repr is fine even if type expanded to Double
-    s => '"' +: s :+ '"',
+    s => JavaEscape.quote(s),
     arr => if (arr.isEmpty) "Vector.empty" else s"Vector(${arr.map(renderValue).mkString(", ")})",
     obj =>
       if (obj.isEmpty) "Map.empty[String, Nothing]"
-      else s"Map(${obj.toMap.map { case (k, v) => s""""$k" -> ${renderValue(v)}""" }.mkString(", ")})"
+      else s"Map(${obj.toMap.map { case (k, v) => s""""${JavaEscape.escapeString(k)}" -> ${renderValue(v)}""" }.mkString(", ")})"
   )
 }

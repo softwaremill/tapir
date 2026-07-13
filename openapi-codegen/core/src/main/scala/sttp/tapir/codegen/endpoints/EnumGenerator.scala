@@ -1,11 +1,11 @@
 package sttp.tapir.codegen.endpoints
 
+import sttp.tapir.codegen.util.NameHelpers
 import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaEnum
 
 object EnumGenerator {
-  val legalEnumName = "([a-zA-Z][a-zA-Z0-9_]*)".r
 
   // Uses enumeratum for scala 2, but generates scala 3 enums instead where it can
   private[codegen] def generateEnum(
@@ -17,10 +17,9 @@ object EnumGenerator {
       jsonParamRefs: Set[String],
       alwaysGenerateParamSupport: Boolean
   ): Seq[String] = {
-    def maybeEscaped(s: String) = s match {
-      case legalEnumName(l) => l
-      case illegal          => s"`$illegal`"
-    }
+    // Enum values come from the (untrusted) OpenAPI document and are emitted as Scala identifiers; the shared helper
+    // backtick-quotes them and rejects values that cannot be safely quoted. See GHSA-gpcc-36pq-8qxr.
+    def maybeEscaped(s: String) = NameHelpers.safeEnumMemberName(s)
     if (targetScala3) {
       val maybeCompanion =
         if (alwaysGenerateParamSupport || queryParamRefs.contains(name)) {
