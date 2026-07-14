@@ -1,8 +1,8 @@
 // {cat=OpenAPI documentation; effects=cats-effect; server=http4s; docs=Scalar}: Exposing documentation using Scalar
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.26
-//> using dep com.softwaremill.sttp.tapir::tapir-scalar-bundle:1.13.26
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.26
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.28
+//> using dep com.softwaremill.sttp.tapir::tapir-scalar-bundle:1.13.28
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.28
 //> using dep org.http4s::http4s-blaze-server:0.23.16
 
 package sttp.tapir.examples.openapi
