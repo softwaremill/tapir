@@ -348,4 +348,9 @@ class EndpointGenerator {
 }
 
 case class MappedContentType(bodyImpl: String, bodyType: String, inlineDefns: Option[String] = None, inlineTypes: Seq[String] = Nil)
-case class MappedOutGroup(decls: Option[String], types: Option[String], defns: Option[String], statusCodeDisambig: Seq[(String, String)] = Nil)
+case class MappedOutGroup(
+    decls: Option[String],
+    types: Option[String],
+    defns: Option[String],
+    statusCodeDisambig: Seq[(String, String)] = Nil
+)

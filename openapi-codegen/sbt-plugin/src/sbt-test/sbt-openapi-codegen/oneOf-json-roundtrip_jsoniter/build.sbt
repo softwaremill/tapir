@@ -7,7 +7,7 @@ lazy val root = (project in file("."))
     openapiStreamingImplementation := "pekko",
     openapiGenerateEndpointTypes := true,
     openapiUseCustomJsoniterSerdes := true,
-    openapiAddDisambiguationCodes := true,
+    openapiAddDisambiguationCodes := true
   )
 
 val catsXmlVersion = "0.0.20"

@@ -63,7 +63,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiPackageDependencies.value,
       openapiSeperateFilesForModels.value,
       openapiAlwaysGenerateParamSupport.value,
-      openapiAddDisambiguationCodes.value,
+      openapiAddDisambiguationCodes.value
     )
   def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
     openapiSwaggerFile := baseDirectory.value / "swagger.yaml",
@@ -174,6 +174,6 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       packageReuse,
       c.seperateFilesForModels,
       c.alwaysGenerateParamSupport,
-      c.addDisambiguationCodes,
+      c.addDisambiguationCodes
     )
 }

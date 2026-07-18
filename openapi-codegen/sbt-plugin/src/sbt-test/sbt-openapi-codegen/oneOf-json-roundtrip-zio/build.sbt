@@ -4,7 +4,7 @@ lazy val root = (project in file("."))
     scalaVersion := "2.13.18",
     version := "0.1",
     openapiJsonSerdeLib := "zio",
-    openapiAddDisambiguationCodes := true,
+    openapiAddDisambiguationCodes := true
   )
 
 libraryDependencies ++= Seq(

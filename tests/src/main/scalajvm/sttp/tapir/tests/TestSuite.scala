@@ -14,9 +14,9 @@ trait TestSuite extends AsyncFunSuite with BeforeAndAfterAll {
   def tests: Resource[IO, List[Test]]
   def testNameFilter: Option[String] = None // define to run a single test (temporarily for debugging)
 
-  /** The number of times a failing test is retried before it is reported as failed. Override with a positive value in
-    * suites whose backend is subject to a known, unavoidable flake (e.g. an upstream bug) to keep CI green; keep the
-    * override well-commented with the reason. `0` (the default) means each test runs exactly once, as usual.
+  /** The number of times a failing test is retried before it is reported as failed. Override with a positive value in suites whose backend
+    * is subject to a known, unavoidable flake (e.g. an upstream bug) to keep CI green; keep the override well-commented with the reason.
+    * `0` (the default) means each test runs exactly once, as usual.
     */
   def retries: Int = 0
 
