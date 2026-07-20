@@ -54,7 +54,7 @@ jobs:
         sam --version
     - name: Install NPM
       if: matrix.java == '11'
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@v7
       with:
         node-version: 18
     - run: npm --version
