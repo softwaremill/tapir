@@ -92,6 +92,28 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
     new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
   }
 
+  it should "generate enum with reserved-keyword members" in {
+    val doc = OpenapiDocument(
+      "",
+      Nil,
+      null,
+      Nil,
+      Some(
+        OpenapiComponent(
+          Map(
+            "Test" -> OpenapiSchemaEnum(
+              "string",
+              Seq("class", "object", "trait", "import", "type", "enum", "given", "using").map(OpenapiSchemaConstantString(_)),
+              false
+            )
+          )
+        )
+      ),
+      Nil
+    )
+    new ClassDefinitionGenerator().classDefs(doc, targetScala3 = isScala3).get.classRepr.shouldCompile()
+  }
+
   it should "generate simple class with reserved propName" in {
     val doc = OpenapiDocument(
       "",

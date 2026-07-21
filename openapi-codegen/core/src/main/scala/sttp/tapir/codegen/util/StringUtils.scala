@@ -34,13 +34,18 @@ object NameHelpers {
       )
     else s"`$s`"
 
+  // reservedKeys only contains the keywords of the Scala version the codegen itself is built with, but the generated
+  // code may target either version — so always also quote the Scala-3-only (soft) keywords.
+  private val keywordsInAnyScalaVersion: Set[String] = reservedKeys ++ Set("enum", "given", "using")
+
   def safeVariableName(s: String): String =
-    if (!(reservedKeys ++ Set("enum", "given", "using")).contains(s) && s.matches("[A-Za-z_$][A-Za-z_$0-9]*")) s
+    if (!keywordsInAnyScalaVersion.contains(s) && s.matches("[A-Za-z_$][A-Za-z_$0-9]*")) s
     else backtickQuoteOrReject("name", s)
 
   // Enum member values become `case object`/`enum case` identifiers. Same backtick-escape gap as safeVariableName.
   def safeEnumMemberName(s: String): String =
-    if (s.matches("[a-zA-Z][a-zA-Z0-9_]*")) s else backtickQuoteOrReject("enum value", s)
+    if (!keywordsInAnyScalaVersion.contains(s) && s.matches("[a-zA-Z][a-zA-Z0-9_]*")) s
+    else backtickQuoteOrReject("enum value", s)
 
   // The generated `CodecFormat` class name for a content type. The definition site and every reference must produce
   // the same identifier, so this single derivation is the source of truth (and safely quotes/rejects the content type).
