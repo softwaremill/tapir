@@ -95,15 +95,15 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2)
-      case ob: EndpointIO.OneOfBody[_, _] if ob.variants.nonEmpty =>
+      case ob: EndpointIO.OneOfBody[_, _] =>
         ob.headVariantBodyWithAppliedMapping match {
-          case Left(body)                                                                 => setInputParams(body, params, uri, req)
-          case Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, codec, _, _, _))) =>
+          case Some(Left(body))                                                                 => setInputParams(body, params, uri, req)
+          case Some(Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, codec, _, _, _)))) =>
             val req2 =
               req.streamBody(streams)(codec.asInstanceOf[Codec[Any, Any, CodecFormat]].encode(value).asInstanceOf[streams.BinaryStream])
             (uri, req2)
+          case None => throw new RuntimeException("One of body without variants")
         }
-      case _: EndpointIO.OneOfBody[_, _]                                   => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
         (uri, req2)

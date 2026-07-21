@@ -12,6 +12,7 @@ import sttp.tapir.tests.OneOfBody.{
   in_one_of_json_xml_text_mapped_out_string,
   in_one_of_json_xml_text_out_string,
   in_string_out_one_of_json_xml_text,
+  in_string_out_one_of_json_xml_text_mapped,
   FruitWrapper
 }
 import sttp.tapir.tests._
@@ -45,6 +46,12 @@ class ServerOneOfBodyTests[F[_], OPTIONS, ROUTE](
         post.body("<f>orange</f>").contentType(TextHtml).send(backend).map(_.body shouldBe "<f>orange</f>") >>
         post.body("pear").contentType(TextPlain).send(backend).map(_.body shouldBe "pear") >>
         post.body("!*@#").contentType(ApplicationPdf).send(backend).map(_.code shouldBe StatusCode.UnsupportedMediaType)
+    },
+    testServer(in_string_out_one_of_json_xml_text_mapped)((fruit: String) => pureResult(FruitWrapper(Fruit(fruit)).asRight[Unit])) {
+      (backend, baseUri) =>
+        val post = basicRequest.post(uri"$baseUri").response(asStringAlways)
+        post.body("apple").header(Accept, ApplicationJson.toString()).send(backend).map(_.body shouldBe """{"f":"apple"}""") >>
+          post.body("pear").header(Accept, TextPlain.toString()).send(backend).map(_.body shouldBe "pear")
     },
     testServer(in_string_out_one_of_json_xml_text)((fruit: String) => pureResult(Fruit(fruit).asRight[Unit])) { (backend, baseUri) =>
       val post = basicRequest.post(uri"$baseUri").response(asStringAlways)

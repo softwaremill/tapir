@@ -538,17 +538,23 @@ object EndpointIO {
 
     /** The body of the given variant, with this one-of-body's `mapping` composed into the variant's codec; interpreters should use the
       * returned body (not the variant's one directly), so that the mapping is applied when encoding/decoding values.
+      *
+      * For identity mappings, the variant's body is returned unchanged: this method is called per-request (server interpreters wrap every
+      * plain body input in a one-of body), so composing the mapping - which copies the body and its codec - must be skipped when it's a
+      * no-op.
       */
     private[tapir] def variantBodyWithAppliedMapping(
         variant: OneOfBodyVariant[O]
     ): Either[Body[?, T], StreamBodyWrapper[?, T]] =
-      variant.body match {
-        case Left(b)  => Left(b.map(mapping))
-        case Right(b) => Right(b.map(mapping))
-      }
+      if (mapping eq Mapping.id[Any]) variant.body.asInstanceOf[Either[Body[?, T], StreamBodyWrapper[?, T]]]
+      else
+        variant.body match {
+          case Left(b)  => Left(b.map(mapping))
+          case Right(b) => Right(b.map(mapping))
+        }
 
-    private[tapir] def headVariantBodyWithAppliedMapping: Either[Body[?, T], StreamBodyWrapper[?, T]] =
-      variantBodyWithAppliedMapping(variants.head)
+    private[tapir] def headVariantBodyWithAppliedMapping: Option[Either[Body[?, T], StreamBodyWrapper[?, T]]] =
+      variants.headOption.map(variantBodyWithAppliedMapping)
   }
 
   case class FixedHeader[T](h: sttp.model.Header, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Atom[T] {

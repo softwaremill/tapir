@@ -47,12 +47,14 @@ trait Mapping[L, H] { outer =>
 }
 
 object Mapping {
-  def id[L]: Mapping[L, L] =
-    new Mapping[L, L] {
-      override def rawDecode(l: L): DecodeResult[L] = DecodeResult.Value(l)
-      override def encode(h: L): L = h
-      override def validator: Validator[L] = Validator.pass
+  // a singleton, so that identity mappings can be detected (`eq`) and skipped by interpreters on per-request hot paths
+  private val idMapping: Mapping[Any, Any] =
+    new Mapping[Any, Any] {
+      override def rawDecode(l: Any): DecodeResult[Any] = DecodeResult.Value(l)
+      override def encode(h: Any): Any = h
+      override def validator: Validator[Any] = Validator.pass
     }
+  def id[L]: Mapping[L, L] = idMapping.asInstanceOf[Mapping[L, L]]
   def from[L, H](f: L => H)(g: H => L): Mapping[L, H] = fromDecode(f.andThen(Value(_)))(g)
   def fromDecode[L, H](f: L => DecodeResult[H])(g: H => L): Mapping[L, H] =
     new Mapping[L, H] {

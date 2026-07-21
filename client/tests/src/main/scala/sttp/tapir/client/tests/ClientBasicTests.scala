@@ -268,5 +268,12 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       "apple",
       Right(Fruit("apple (xml)"))
     )
+
+    testClient(
+      in_string_out_one_of_json_xml_text_mapped.in(header(Header.accept(MediaType.ApplicationJson))).in("content-negotiation" / "fruit"),
+      (),
+      "apple",
+      Right(FruitWrapper(Fruit("apple (json)")))
+    )
   }
 }

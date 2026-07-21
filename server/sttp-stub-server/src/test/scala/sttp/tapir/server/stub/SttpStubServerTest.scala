@@ -139,6 +139,30 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
     response2.code shouldBe StatusCode.InternalServerError
   }
 
+  it should "apply the mapping of a one-of body input when encoding the request and decoding it in the stub" in {
+    // given
+    val endpoint = sttp.tapir.endpoint.post
+      .in("api" / "mapped")
+      .in(oneOfBody(stringBody).map(Wrapped(_))(_.v))
+      .out(stringBody)
+
+    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
+      .apply(idMonad)
+      .whenInputMatches(endpoint) { body => body == Wrapped("hello") }
+      .thenSuccess("ok")
+      .whenAnyRequest
+      .thenRespondServerError()
+
+    // when: the client interpreter encodes the request (mapping is applied), the stub decodes it back
+    val response = SttpClientInterpreter()
+      .toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com"))
+      .apply(Wrapped("hello"))
+      .send(backend)
+
+    // then
+    response.body shouldBe Right("ok")
+  }
+
   it should "match with decode failure" in {
     // given
     val endpoint = sttp.tapir.endpoint
@@ -210,3 +234,5 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 }
 
 final case class ResponseWrapper(response: Double)
+
+final case class Wrapped(v: String)

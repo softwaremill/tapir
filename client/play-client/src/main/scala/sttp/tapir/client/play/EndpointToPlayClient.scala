@@ -119,16 +119,16 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         req2
-      case ob: EndpointIO.OneOfBody[_, _] if ob.variants.nonEmpty =>
+      case ob: EndpointIO.OneOfBody[_, _] =>
         ob.headVariantBodyWithAppliedMapping match {
-          case Left(body)                                                                 => setInputParams(body, params, req)
-          case Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, codec, _, _, _))) =>
+          case Some(Left(body))                                                                 => setInputParams(body, params, req)
+          case Some(Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, codec, _, _, _)))) =>
             setStreamingBody(streams)(
               codec.asInstanceOf[Codec[Any, Any, CodecFormat]].encode(value).asInstanceOf[streams.BinaryStream],
               req
             )
+          case None => throw new RuntimeException("One of body without variants")
         }
-      case _: EndpointIO.OneOfBody[_, _]                                   => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
         setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>

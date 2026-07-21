@@ -112,14 +112,14 @@ private[sttp4] trait EndpointToSttpClientBase {
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2, streamBody)
-      case ob: EndpointIO.OneOfBody[_, _] if ob.variants.nonEmpty =>
+      case ob: EndpointIO.OneOfBody[_, _] =>
         ob.headVariantBodyWithAppliedMapping match {
-          case Left(body)                                                           => setInputParams(body, params, uri, req, streamBody)
-          case Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _))) =>
+          case Some(Left(body)) => setInputParams(body, params, uri, req, streamBody)
+          case Some(Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)))) =>
             val req2 = req.body(codec.asInstanceOf[Codec[Any, Any, CodecFormat]].encode(value).asInstanceOf[InputStream])
             (uri, req2, streamBody)
+          case None => throw new RuntimeException("One of body without variants")
         }
-      case _: EndpointIO.OneOfBody[_, _]                                       => throw new RuntimeException("One of body without variants")
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, codec, _, _, _)) => (uri, req, Some((streams, codec.encode(value))))
       case EndpointIO.Header(name, codec, _)                                   =>
         val req2 = codec

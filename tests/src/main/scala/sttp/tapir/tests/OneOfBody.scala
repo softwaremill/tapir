@@ -66,4 +66,15 @@ object OneOfBody {
         stringBody.map(Fruit(_))(_.f)
       )
     )
+
+  val in_string_out_one_of_json_xml_text_mapped: PublicEndpoint[String, Unit, FruitWrapper, Any] = endpoint.post
+    .in(stringBody)
+    .out(
+      oneOfBody(
+        jsonBody[Fruit],
+        xmlBody[Fruit],
+        stringBody.map(Fruit(_))(_.f)
+      ).map(FruitWrapper(_))(_.fruit)
+    )
+    .name("mapped one of body output")
 }
