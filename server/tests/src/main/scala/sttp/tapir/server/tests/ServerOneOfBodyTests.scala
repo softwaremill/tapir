@@ -9,8 +9,10 @@ import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.tapir.tests.OneOfBody.{
   in_one_of_json_text_range_out_string,
+  in_one_of_json_xml_text_mapped_out_string,
   in_one_of_json_xml_text_out_string,
-  in_string_out_one_of_json_xml_text
+  in_string_out_one_of_json_xml_text,
+  FruitWrapper
 }
 import sttp.tapir.tests._
 import sttp.tapir.tests.data.Fruit
@@ -29,6 +31,13 @@ class ServerOneOfBodyTests[F[_], OPTIONS, ROUTE](
         post.body("<f>orange</f>").contentType(ApplicationXml).send(backend).map(_.body shouldBe "orange") >>
         post.body("pear").contentType(TextPlain).send(backend).map(_.body shouldBe "pear") >>
         post.body("!*@#").contentType(ApplicationPdf).send(backend).map(_.code shouldBe StatusCode.UnsupportedMediaType)
+    },
+    testServer(in_one_of_json_xml_text_mapped_out_string)((fruit: FruitWrapper) => pureResult(fruit.fruit.f.asRight[Unit])) {
+      (backend, baseUri) =>
+        val post = basicRequest.post(uri"$baseUri").response(asStringAlways)
+        post.body("""{"f":"apple"}""").contentType(ApplicationJson).send(backend).map(_.body shouldBe "apple") >>
+          post.body("<f>orange</f>").contentType(ApplicationXml).send(backend).map(_.body shouldBe "orange") >>
+          post.body("pear").contentType(TextPlain).send(backend).map(_.body shouldBe "pear")
     },
     testServer(in_one_of_json_text_range_out_string)((fruit: Fruit) => pureResult(fruit.f.asRight[Unit])) { (backend, baseUri) =>
       val post = basicRequest.post(uri"$baseUri").response(asStringAlways)

@@ -535,6 +535,20 @@ object EndpointIO {
     override def showDetail: String = show(_.showDetail)
 
     override def map[U](m: Mapping[T, U]): OneOfBody[O, U] = copy[O, U](mapping = mapping.map(m))
+
+    /** The body of the given variant, with this one-of-body's `mapping` composed into the variant's codec; interpreters should use the
+      * returned body (not the variant's one directly), so that the mapping is applied when encoding/decoding values.
+      */
+    private[tapir] def variantBodyWithAppliedMapping(
+        variant: OneOfBodyVariant[O]
+    ): Either[Body[?, T], StreamBodyWrapper[?, T]] =
+      variant.body match {
+        case Left(b)  => Left(b.map(mapping))
+        case Right(b) => Right(b.map(mapping))
+      }
+
+    private[tapir] def headVariantBodyWithAppliedMapping: Either[Body[?, T], StreamBodyWrapper[?, T]] =
+      variantBodyWithAppliedMapping(variants.head)
   }
 
   case class FixedHeader[T](h: sttp.model.Header, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Atom[T] {

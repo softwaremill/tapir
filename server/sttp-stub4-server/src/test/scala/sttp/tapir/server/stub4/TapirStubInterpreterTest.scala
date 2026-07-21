@@ -212,6 +212,26 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     response.code shouldBe StatusCode.InternalServerError
   }
 
+  it should "apply the mapping of a one-of body input when running server logic" in {
+    // given
+    case class Wrapped(v: String)
+    val se = endpoint.post
+      .in("test")
+      .in(oneOfBody(stringBody).map(Wrapped(_))(_.v))
+      .out(stringBody)
+      .serverLogicSuccess[Identity](w => s"ok: ${w.v}")
+    val server = TapirSyncStubInterpreter()
+      .whenServerEndpoint(se)
+      .thenRunLogic()
+      .backend()
+
+    // when
+    val response = basicRequest.post(uri"http://test.com/test").body("hello").send(server)
+
+    // then
+    response.body shouldBe Right("ok: hello")
+  }
+
   it should "handle multipart body" in {
     // given
     val e =

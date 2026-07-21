@@ -44,6 +44,19 @@ object OneOfBody {
     )
     .out(stringBody)
 
+  case class FruitWrapper(fruit: Fruit)
+
+  val in_one_of_json_xml_text_mapped_out_string: PublicEndpoint[FruitWrapper, Unit, String, Any] = endpoint.post
+    .in(
+      oneOfBody(
+        jsonBody[Fruit],
+        xmlBody[Fruit],
+        stringBody.map(Fruit(_))(_.f)
+      ).map(FruitWrapper(_))(_.fruit)
+    )
+    .out(stringBody)
+    .name("mapped one of body")
+
   val in_string_out_one_of_json_xml_text: PublicEndpoint[String, Unit, Fruit, Any] = endpoint.post
     .in(stringBody)
     .out(
