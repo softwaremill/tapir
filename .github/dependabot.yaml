@@ -2,7 +2,6 @@
 
 version: 2
 updates:
-
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -12,3 +11,5 @@ updates:
     labels:
       - "dependency"
       - "automerge"
+    cooldown:
+      default-days: 3
