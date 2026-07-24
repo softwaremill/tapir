@@ -112,8 +112,8 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
             )
           case None => throw new RuntimeException("One of body without variants")
         }
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
-        setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, codec, _, _, _)) =>
+        setStreamingBody(streams)(codec.asInstanceOf[Codec[Any, Any, CodecFormat]].encode(value).asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>
         val headers = codec.encode(value).map(value => Header.Raw(CIString(name), value): Header.ToRaw)
         req.putHeaders(headers: _*)

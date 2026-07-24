@@ -1,6 +1,8 @@
 package sttp.tapir.client.tests
 
 import sttp.capabilities.Streams
+import sttp.tapir.tests.Streaming.StreamWrapper
+import sttp.tapir.tests.Streaming.in_stream_mapped_out_string
 import sttp.tapir.tests.Streaming.in_stream_out_stream
 import sttp.tapir.tests.Streaming.in_stream_out_string
 import sttp.tapir.tests.Streaming.in_string_stream_out_either_stream_string
@@ -23,6 +25,12 @@ trait ClientStreamingTests[S] { this: ClientTests[S] =>
 
     test(in_stream_out_string(streams).showDetail) {
       send(in_stream_out_string(streams), port, (), mkStream("mango cranberry"))
+        .map(_.toOption.get)
+        .map(_ shouldBe "mango cranberry")
+    }
+
+    test(in_stream_mapped_out_string(streams).showDetail) {
+      send(in_stream_mapped_out_string(streams), port, (), StreamWrapper(mkStream("mango cranberry")))
         .map(_.toOption.get)
         .map(_ shouldBe "mango cranberry")
     }
