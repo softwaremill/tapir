@@ -23,7 +23,9 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
   // zio-http already decodes percent-encoded path segments while preserving segment boundaries (an encoded
   // slash stays within a single segment), so use them directly rather than re-joining and re-parsing, which
   // would turn an encoded slash into a segment separator.
-  override lazy val pathSegments: List[String] = req.url.path.segments.toList.filter(_.nonEmpty)
+  // Can differ from `uri.path`, if the routes are nested under a prefix (see `contextPathSegments`).
+  override lazy val pathSegments: List[String] =
+    req.url.path.segments.toList.filter(_.nonEmpty).drop(attributes.get(ZioHttpServerRequest.ContextPathSegments).getOrElse(0))
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams.map)
   override lazy val method: SttpMethod = SttpMethod(req.method.name.toUpperCase)
   override lazy val showShort: String = s"$method ${encodeQueryParams(req.url.path.encode, req.url.queryParams.normalize, Charsets.Http)}"
@@ -35,6 +37,12 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
     )
   }
   override lazy val headers: Seq[SttpHeader] = req.headers.toList.map { h => SttpHeader(h.headerName, h.renderedValue) }
+
+  /** Marks the first `n` path segments as belonging to the context (prefix) under which the routes are nested, and hence not described by
+    * the endpoints. Such segments are skipped in [[pathSegments]], but remain part of [[uri]].
+    */
+  def contextPathSegments(n: Int): ZioHttpServerRequest = attribute(ZioHttpServerRequest.ContextPathSegments, n)
+
   override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
   override def attribute[T](k: AttributeKey[T], v: T): ZioHttpServerRequest = copy(attributes = attributes.put(k, v))
   override def withUnderlying(underlying: Any): ServerRequest = ZioHttpServerRequest(req = underlying.asInstanceOf[Request], attributes)
@@ -53,4 +61,8 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
 
     encoder.toString
   }
+}
+
+object ZioHttpServerRequest {
+  private val ContextPathSegments: AttributeKey[Int] = AttributeKey[Int]
 }
