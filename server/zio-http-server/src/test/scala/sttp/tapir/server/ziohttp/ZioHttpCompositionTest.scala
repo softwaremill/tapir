@@ -35,6 +35,29 @@ class ZioHttpCompositionTest(
       basicRequest.get(uri"$baseUri/p1").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri/p2").send(backend).map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri/p3").send(backend).map(_.code shouldBe StatusCode.BadRequest)
+    },
+    testServer(
+      "zio http apps nested under a prefix", {
+        val withPathCapture = endpoint.in(path[String]("id"))
+        ZioHttpInterpreter()
+          .toHttp[Any](
+            List(
+              endpoint.get.in("p1").zServerLogic[Any](_ => ZIO.unit),
+              withPathCapture.put.zServerLogic[Any](_ => ZIO.unit),
+              withPathCapture.delete.zServerLogic[Any](_ => ZIO.unit),
+              // the query input verifies that only path inputs are counted when computing the length of the prefix
+              endpoint.get.in("wild").in(paths).in(query[String]("q")).zServerLogic[Any](_ => ZIO.unit),
+              endpoint.get.zServerLogic[Any](_ => ZIO.unit)
+            )
+          )
+          .nest("api")
+      }
+    ) { (backend, baseUri) =>
+      basicRequest.get(uri"$baseUri/api/p1").send(backend).map(_.code shouldBe StatusCode.Ok) >>
+        basicRequest.put(uri"$baseUri/api/x").send(backend).map(_.code shouldBe StatusCode.Ok) >>
+        basicRequest.delete(uri"$baseUri/api/x").send(backend).map(_.code shouldBe StatusCode.Ok) >>
+        basicRequest.get(uri"$baseUri/api/wild/a/b?q=v").send(backend).map(_.code shouldBe StatusCode.Ok) >>
+        basicRequest.get(uri"$baseUri/api").send(backend).map(_.code shouldBe StatusCode.Ok)
     }
   )
 }

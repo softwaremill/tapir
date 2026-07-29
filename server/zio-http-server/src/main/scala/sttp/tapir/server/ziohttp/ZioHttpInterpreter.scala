@@ -12,7 +12,7 @@ import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.ztapir._
 import zio._
-import zio.http.codec.PathCodec
+import zio.http.codec.{PathCodec, SegmentCodec}
 import zio.http.{Header => ZioHttpHeader, Headers => ZioHttpHeaders, _}
 import scala.util.chaining._
 
@@ -31,7 +31,11 @@ trait ZioHttpInterpreter[R] {
     val zioHttpResponseBody = new ZioHttpToResponseBody(zioHttpServerOptions.inputStreamChunkSize)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(widenedServerOptions.interceptors, widenedSes)
 
-    def handleRequest(req: Request, filteredEndpoints: List[ZServerEndpoint[R & R2, ZioStreams with WebSockets]]) =
+    def handleRequest(
+        req: Request,
+        filteredEndpoints: List[ZServerEndpoint[R & R2, ZioStreams with WebSockets]],
+        contextPathSegments: Int
+    ) =
       Handler.fromZIO {
         val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], ZioResponseBody, ZioStreams](
           _ => filteredEndpoints,
@@ -40,7 +44,7 @@ trait ZioHttpInterpreter[R] {
           interceptors,
           zioHttpServerOptions.deleteFile
         )
-        val serverRequest = ZioHttpServerRequest(req)
+        val serverRequest = ZioHttpServerRequest(req).contextPathSegments(contextPathSegments)
 
         interpreter
           .apply(serverRequest)
@@ -65,11 +69,34 @@ trait ZioHttpInterpreter[R] {
           )
       }
 
+    /** A zio-http route pattern, together with the number of path segments it matches (`fixedSegments`, not counting the wildcard). The
+      * count is needed to compute how many leading path segments come from zio-http route nesting (`Routes.nest`), which prepends segments
+      * to the pattern, but leaves the request untouched.
+      */
+    sealed trait PatternWithShape { def fixedSegments: Int }
+    object PatternWithShape {
+
+      /** A pattern which ends with a wildcard, capturing whatever follows the fixed segments. */
+      case class Wildcard(pattern: RoutePattern[Any], fixedSegments: Int) extends PatternWithShape
+
+      /** A pattern which matches exactly `fixedSegments` segments. */
+      case class Exact(pattern: RoutePattern[Any], fixedSegments: Int) extends PatternWithShape
+    }
+
+    /** The number of path segments matched by the pattern; the wildcard, which matches any number of them, is not counted. */
+    def fixedSegmentsOf(p: RoutePattern[_]): Int =
+      p.pathCodec.segments.count(s => s.nonEmpty && s != SegmentCodec.Trailing)
+
+    def endWithWildcard(p: RoutePattern[Any]): PatternWithShape.Wildcard = {
+      val withWildcard = (p / PathCodec.trailing).asInstanceOf[RoutePattern[Any]]
+      PatternWithShape.Wildcard(withWildcard, fixedSegmentsOf(withWildcard))
+    }
+
     // here we'll keep the endpoint together with the meta-data needed to create the zio-http routing information
     case class ServerEndpointWithPattern(
         index: Int,
         pathTemplate: Vector[String],
-        routePattern: RoutePattern[Any], // the Any here is a way to work around the type checker
+        routePattern: PatternWithShape,
         endpoint: ZServerEndpoint[R & R2, ZioStreams with WebSockets]
     )
 
@@ -101,25 +128,26 @@ trait ZioHttpInterpreter[R] {
         case _                                                                                                 => false
       }
 
-      val routePattern: RoutePattern[Any] = if (hasPath) {
-        val initialPattern = RoutePattern(Method.ANY, PathCodec.empty).asInstanceOf[RoutePattern[Any]]
-        // The second tuple parameter specifies if PathCodec.trailing should be added to the route's pattern. It can
+      val emptyPattern = RoutePattern(Method.ANY, PathCodec.empty).asInstanceOf[RoutePattern[Any]]
+
+      val routePattern: PatternWithShape = if (hasPath) {
+        // The second tuple parameter specifies if a wildcard should be added to the route's pattern. It can
         // be added either because of a PathsCapture, or because of an noTrailingSlash input.
-        val (p, addTrailing) = inputs
-          .foldLeft((initialPattern, hasNoTrailingSlash)) { case ((p, addTrailing), component) =>
+        val (p, addWildcard) = inputs
+          .foldLeft((emptyPattern, hasNoTrailingSlash)) { case ((p, addWildcard), component) =>
             component match {
               case i: EndpointInput.PathCapture[_] =>
-                ((p / PathCodec.string(i.name.getOrElse("?"))).asInstanceOf[RoutePattern[Any]], addTrailing)
+                ((p / PathCodec.string(i.name.getOrElse("?"))).asInstanceOf[RoutePattern[Any]], addWildcard)
               case _: EndpointInput.PathsCapture[_] => (p, true)
-              case i: EndpointInput.FixedPath[_]    => (p / PathCodec.literal(i.s), addTrailing)
-              case _                                => (p, addTrailing)
+              case i: EndpointInput.FixedPath[_]    => (p / PathCodec.literal(i.s), addWildcard)
+              case _                                => (p, addWildcard)
             }
           }
 
-        if (addTrailing) (p / PathCodec.trailing).asInstanceOf[RoutePattern[Any]] else p
+        if (addWildcard) endWithWildcard(p) else PatternWithShape.Exact(p, fixedSegmentsOf(p))
       } else {
         // if there are no path inputs, we return a catch-all
-        RoutePattern(Method.ANY, PathCodec.trailing).asInstanceOf[RoutePattern[Any]]
+        endWithWildcard(emptyPattern)
       }
 
       ServerEndpointWithPattern(index, pathTemplate, routePattern, se)
@@ -144,9 +172,9 @@ trait ZioHttpInterpreter[R] {
       */
     def generaliseTemplates(endpoints: List[ServerEndpointWithPattern]): List[ServerEndpointWithPattern] = {
       // de-duplicating the path templates
-      val allTemplates: List[(Vector[String], RoutePattern[Any])] = endpoints.map(se => (se.pathTemplate, se.routePattern)).toMap.toList
+      val allTemplates: List[(Vector[String], PatternWithShape)] = endpoints.map(se => (se.pathTemplate, se.routePattern)).toMap.toList
       endpoints.map { se =>
-        val mostGeneral: (Vector[String], RoutePattern[Any]) =
+        val mostGeneral: (Vector[String], PatternWithShape) =
           allTemplates.foldLeft((se.pathTemplate, se.routePattern)) {
             case ((mostGeneralTemplate, mostGeneralPattern), (template, pattern)) =>
               if (template != mostGeneralTemplate && isAtLeastAsGeneralAs(template, mostGeneralTemplate)) {
@@ -178,13 +206,47 @@ trait ZioHttpInterpreter[R] {
         .sortBy(_.map(_.index).min)
 
     val handlers: List[Route[R & R2, Response]] = widenedSesGroupedByPathTemplate.map { sesWithPattern =>
-      val pattern = sesWithPattern.head.routePattern
       val endpoints = sesWithPattern.sortBy(_.index).map(_.endpoint)
-      // The pattern that we generate should be the same for all endpoints in a group
-      Route.handledIgnoreParams(pattern)(Handler.fromFunctionHandler { (request: Request) => handleRequest(request, endpoints) })
+
+      // The routes might be nested under a prefix by the user (`Routes.nest`, `PathCodec./`), which prepends segments
+      // to the pattern, but leaves the request as-is. Those segments are not part of the paths described by the
+      // endpoints, so they have to be skipped when matching. Their number can only be computed per-request, as the
+      // pattern that the route ends up being registered under is not known when the route is created.
+      // The pattern that we generate should be the same for all endpoints in a group.
+      sesWithPattern.head.routePattern match {
+        case PatternWithShape.Wildcard(pattern, fixedSegments) =>
+          // the wildcard consumes everything after the prefix and the fixed segments, so its length is needed as well
+          Route.handled[Any, R & R2](pattern)(Handler.fromFunctionHandler { (in: (Any, Request)) =>
+            val (params, request) = in
+            handleRequest(request, endpoints, pathSegmentCount(request.url.path) - fixedSegments - wildcardSegmentCount(params))
+          })
+        case PatternWithShape.Exact(pattern, fixedSegments) =>
+          Route.handledIgnoreParams(pattern)(Handler.fromFunctionHandler { (request: Request) =>
+            handleRequest(request, endpoints, pathSegmentCount(request.url.path) - fixedSegments)
+          })
+      }
     }
 
     Routes(Chunk.fromIterable(handlers))
+  }
+
+  /** The number of path segments, counted the same way as zio-http's route patterns match them: leading and trailing slashes are stored as
+    * flags, and empty segments are dropped when parsing a path, so every segment counts.
+    */
+  private def pathSegmentCount(path: Path): Int = path.segments.length
+
+  /** The number of path segments captured by the wildcard which ends the route's pattern, given the values decoded from the path. The
+    * wildcard is the last of them, or the only one, if the pattern captures nothing else. Typing the pattern as `RoutePattern[Path]`
+    * instead wouldn't work: the `Combiner` which would then discard the other captured values is chosen (and specialised) for `Unit`, while
+    * at runtime they are a tuple.
+    */
+  private def wildcardSegmentCount(params: Any): Int = {
+    val wildcard = params match {
+      case p: Path    => p // `Path` is a case class, hence this case has to come first
+      case p: Product => p.productElement(p.productArity - 1).asInstanceOf[Path]
+      case _          => Path.empty // can't happen: the pattern always captures at least the wildcard
+    }
+    pathSegmentCount(wildcard)
   }
 
   private def handleWebSocketResponse(
