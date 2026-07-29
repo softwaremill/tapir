@@ -16,10 +16,10 @@ import sttp.model.{MediaType, Part}
 import sttp.monad.MonadError
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.server.stub4.internal.SttpFileToTapirFile
+import sttp.tapir.server.stub4.internal.SttpFileConversions
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType}
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileInputStream, InputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import java.nio.ByteBuffer
 import scala.annotation.tailrec
 
@@ -119,10 +119,10 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
         }
       case FileBody(f, _) =>
         bodyType match {
-          case RawBodyType.FileBody        => FileRange(SttpFileToTapirFile(f))
+          case RawBodyType.FileBody        => FileRange(SttpFileConversions.toTapirFile(f))
           case RawBodyType.ByteArrayBody   => f.readAsByteArray()
           case RawBodyType.ByteBufferBody  => ByteBuffer.wrap(f.readAsByteArray())
-          case RawBodyType.InputStreamBody => SttpFileToTapirFile.fileAsInputStream(f)
+          case RawBodyType.InputStreamBody => SttpFileConversions.fileAsInputStream(f)
           case _                           => throw new IllegalArgumentException(s"File part provided, while expecting $bodyType")
         }
       case StringBody(s, charset, _) =>

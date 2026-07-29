@@ -420,6 +420,24 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // then
     Await.result(readFromFile(response.toOption.get), 3.seconds) shouldBe "hello"
   }
+
+  it should "return a file range body, ignoring the range" in {
+    // given
+    val content = "hello"
+    val file = writeToFile(content)
+    val e = endpoint.get.in("file-range").out(fileRangeBody)
+    val range = RangeValue(Some(0), Some(2), content.length.toLong)
+
+    val server = TapirSyncStubInterpreter()
+      .whenServerEndpointRunLogic(e.serverLogicSuccess[Identity](_ => FileRange(file, Some(range))))
+      .backend()
+
+    // when
+    val response = SttpClientInterpreter().toClientThrowDecodeFailures(e, None, server)(())
+
+    // then: the range is not applied by the stub, the whole file is returned
+    Await.result(readFromFile(response.toOption.get.file), 3.seconds) shouldBe "hello"
+  }
 }
 
 case class MultipartData(name: String, year: Int, file: Part[TapirFile])
