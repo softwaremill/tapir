@@ -39,11 +39,11 @@ case class ZioHttpServerRequest(req: Request, attributes: AttributeMap = Attribu
   override lazy val headers: Seq[SttpHeader] = req.headers.toList.map { h => SttpHeader(h.headerName, h.renderedValue) }
 
   /** Marks the first `n` path segments as belonging to the context (prefix) under which the routes are nested, and hence not described by
-    * the endpoints. Such segments are skipped in [[pathSegments]], but remain part of [[uri]]. A non-positive `n` leaves the request
-    * unchanged.
+    * the endpoints. Such segments are skipped in [[pathSegments]], but remain part of [[uri]]. A non-positive `n` clears the context.
     */
   private[ziohttp] def contextPathSegments(n: Int): ZioHttpServerRequest =
-    if (n > 0) attribute(ZioHttpServerRequest.ContextPathSegments, n) else this
+    if (n > 0) attribute(ZioHttpServerRequest.ContextPathSegments, n)
+    else copy(attributes = attributes.remove(ZioHttpServerRequest.ContextPathSegments))
 
   override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
   override def attribute[T](k: AttributeKey[T], v: T): ZioHttpServerRequest = copy(attributes = attributes.put(k, v))
