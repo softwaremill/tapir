@@ -404,6 +404,22 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // then
     response.getMessage shouldBe "ByteArray part provided while expecting a File part"
   }
+
+  it should "return a file body" in {
+    // given
+    val file = writeToFile("hello")
+    val e = endpoint.get.in("file").out(fileBody)
+
+    val server = TapirSyncStubInterpreter()
+      .whenServerEndpointRunLogic(e.serverLogicSuccess[Identity](_ => file))
+      .backend()
+
+    // when
+    val response = SttpClientInterpreter().toClientThrowDecodeFailures(e, None, server)(())
+
+    // then
+    Await.result(readFromFile(response.toOption.get), 3.seconds) shouldBe "hello"
+  }
 }
 
 case class MultipartData(name: String, year: Int, file: Part[TapirFile])
