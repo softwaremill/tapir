@@ -13,8 +13,9 @@ import sttp.tapir.server.interceptor.reject.RejectHandler
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
 import sttp.tapir.server.model.ValuedEndpointOutput
 import sttp.tapir.generic.auto._
-import sttp.tapir.tests.TestUtil.{readFromFile, writeToFile}
+import sttp.tapir.tests.TestUtil.{inputStreamToByteArray, readFromFile, writeToFile}
 import sttp.tapir.TapirFile
+import java.io.ByteArrayInputStream
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import sttp.client4.testing.BackendStub
@@ -421,12 +422,29 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     Await.result(readFromFile(response.toOption.get), 3.seconds) shouldBe "hello"
   }
 
-  it should "return a file range body, ignoring the range" in {
+  it should "return a file range body without a range" in {
     // given
     val content = "hello"
     val file = writeToFile(content)
     val e = endpoint.get.in("file-range").out(fileRangeBody)
-    val range = RangeValue(Some(0), Some(2), content.length.toLong)
+
+    val server = TapirSyncStubInterpreter()
+      .whenServerEndpointRunLogic(e.serverLogicSuccess[Identity](_ => FileRange(file)))
+      .backend()
+
+    // when
+    val response = SttpClientInterpreter().toClientThrowDecodeFailures(e, None, server)(())
+
+    // then
+    Await.result(readFromFile(response.toOption.get.file), 3.seconds) shouldBe content
+  }
+
+  it should "return the whole file body when the range has no bounds" in {
+    // given
+    val content = "hello"
+    val file = writeToFile(content)
+    val e = endpoint.get.in("file-range").out(fileRangeBody)
+    val range = RangeValue(None, None, content.length.toLong)
 
     val server = TapirSyncStubInterpreter()
       .whenServerEndpointRunLogic(e.serverLogicSuccess[Identity](_ => FileRange(file, Some(range))))
@@ -435,8 +453,105 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
     // when
     val response = SttpClientInterpreter().toClientThrowDecodeFailures(e, None, server)(())
 
-    // then: the range is not applied by the stub, the whole file is returned
-    Await.result(readFromFile(response.toOption.get.file), 3.seconds) shouldBe "hello"
+    // then
+    Await.result(readFromFile(response.toOption.get.file), 3.seconds) shouldBe content
+  }
+
+  it should "return an input stream range body" in {
+    // given
+    val content = "hello"
+    val e = endpoint.get.in("stream-range").out(inputStreamRangeBody)
+
+    val server = TapirSyncStubInterpreter()
+      .whenServerEndpointRunLogic(
+        e.serverLogicSuccess[Identity](_ => InputStreamRange(() => new ByteArrayInputStream(content.getBytes)))
+      )
+      .backend()
+
+    // when
+    val response = SttpClientInterpreter().toClientThrowDecodeFailures(e, None, server)(())
+
+    // then
+    new String(inputStreamToByteArray(response.toOption.get.inputStream())) shouldBe content
+  }
+
+  it should "return an input stream range body, applying the range" in {
+    // given
+    val content = "hello"
+    val e = endpoint.get.in("stream-range").out(inputStreamRangeBody)
+    // bytes 1-3, inclusive
+    val range = RangeValue(Some(1), Some(3), content.length.toLong)
+
+    val server = TapirSyncStubInterpreter()
+      .whenServerEndpointRunLogic(
+        e.serverLogicSuccess[Identity](_ => InputStreamRange(() => new ByteArrayInputStream(content.getBytes), Some(range)))
+      )
+      .backend()
+
+    // when
+    val response = SttpClientInterpreter().toClientThrowDecodeFailures(e, None, server)(())
+
+    // then
+    new String(inputStreamToByteArray(response.toOption.get.inputStream())) shouldBe "ell"
+  }
+
+  it should "return an input stream range body, reading from the head when the range has no start" in {
+    // given
+    val content = "hello"
+    val e = endpoint.get.in("stream-range").out(inputStreamRangeBody)
+    // 2 bytes, without a start
+    val range = RangeValue(None, Some(2), content.length.toLong)
+
+    val server = TapirSyncStubInterpreter()
+      .whenServerEndpointRunLogic(
+        e.serverLogicSuccess[Identity](_ => InputStreamRange(() => new ByteArrayInputStream(content.getBytes), Some(range)))
+      )
+      .backend()
+
+    // when
+    val response = SttpClientInterpreter().toClientThrowDecodeFailures(e, None, server)(())
+
+    // then: as in the server interpreters, a stream without a range start is read from its head - unlike a file, which
+    // is read from its tail (see `RangeValue.startAndEnd` vs `InputStreamRange.inputStreamFromRangeStart`)
+    new String(inputStreamToByteArray(response.toOption.get.inputStream())) shouldBe "he"
+  }
+
+  it should "return an input stream range body, applying a range without an end" in {
+    // given
+    val content = "hello"
+    val e = endpoint.get.in("stream-range").out(inputStreamRangeBody)
+    val range = RangeValue(Some(1), None, content.length.toLong)
+
+    val server = TapirSyncStubInterpreter()
+      .whenServerEndpointRunLogic(
+        e.serverLogicSuccess[Identity](_ => InputStreamRange(() => new ByteArrayInputStream(content.getBytes), Some(range)))
+      )
+      .backend()
+
+    // when
+    val response = SttpClientInterpreter().toClientThrowDecodeFailures(e, None, server)(())
+
+    // then
+    new String(inputStreamToByteArray(response.toOption.get.inputStream())) shouldBe "ello"
+  }
+
+  it should "return the whole input stream body when the range has no bounds" in {
+    // given
+    val content = "hello"
+    val e = endpoint.get.in("stream-range").out(inputStreamRangeBody)
+    val range = RangeValue(None, None, content.length.toLong)
+
+    val server = TapirSyncStubInterpreter()
+      .whenServerEndpointRunLogic(
+        e.serverLogicSuccess[Identity](_ => InputStreamRange(() => new ByteArrayInputStream(content.getBytes), Some(range)))
+      )
+      .backend()
+
+    // when
+    val response = SttpClientInterpreter().toClientThrowDecodeFailures(e, None, server)(())
+
+    // then
+    new String(inputStreamToByteArray(response.toOption.get.inputStream())) shouldBe content
   }
 }
 
