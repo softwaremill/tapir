@@ -30,10 +30,10 @@ dependency:
 
 ```scala
 // used below, sttp-client v4
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.13.29"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.13.30"
 
 // for sttp-client v3
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.13.29"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.13.30"
 ```
 
 Let's assume you are using the [pekko http](server/pekkohttp.md) interpreter. Given the following server endpoint:
@@ -140,6 +140,11 @@ class MySpec2 extends AsyncFlatSpec with Matchers:
 Note that to provide alternate success/error outputs given a `ServerEndpoint`, the endpoint will have to be typed
 using the full type information, that is using the `ServerEndpoint.Full` alias.
 
+### Limitations
+
+Ranged file responses (a `FileRange` with a non-empty range) are not supported on Scala.js, as materializing the
+partial body requires file-system access; the stub throws an `UnsupportedOperationException`.
+
 ## External APIs
 
 If you are integrating with an external API, which is described using tapir's `Endpoint`s, or if you'd like to create
@@ -150,10 +155,10 @@ Similarly as when testing server interpreters, add the dependency:
 
 ```scala
 // used below, sttp-client v4
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.13.29"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.13.30"
 
 // for sttp-client v3
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.13.29"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.13.30"
 ```
 
 And the following imports:
@@ -207,7 +212,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.13.29"
+"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.13.30"
 ```
 
 Imports:
@@ -282,7 +287,7 @@ result == out
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.13.29"
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.13.30"
 ```
 
 ### Shadowed endpoints
@@ -405,7 +410,7 @@ The `OpenAPIVerifier` provides utilities for verifying that client and server en
 To use the `OpenAPIVerifier`, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-verifier" % "1.13.29"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-verifier" % "1.13.30"
 ```
 
 The `OpenAPIVerifier` supports two key verification scenarios:
