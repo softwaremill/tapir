@@ -140,6 +140,11 @@ class MySpec2 extends AsyncFlatSpec with Matchers:
 Note that to provide alternate success/error outputs given a `ServerEndpoint`, the endpoint will have to be typed
 using the full type information, that is using the `ServerEndpoint.Full` alias.
 
+### Limitations
+
+Ranged file responses (a `FileRange` with a non-empty range) are not supported on Scala.js, as materializing the
+partial body requires file-system access; the stub throws an `UnsupportedOperationException`.
+
 ## External APIs
 
 If you are integrating with an external API, which is described using tapir's `Endpoint`s, or if you'd like to create
