@@ -40,7 +40,7 @@ jobs:
       uses: actions/checkout@v7
     - uses: sbt/setup-sbt@6444f4c8111de4b9059c3975def104b03cfaa5f0 # v1, specifically v1.5.2
     - name: Set up JDK 
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@v5.6.0
       with:
         distribution: 'temurin'
         cache: 'sbt'
@@ -201,7 +201,7 @@ jobs:
         uses: actions/checkout@v7
       - uses: sbt/setup-sbt@6444f4c8111de4b9059c3975def104b03cfaa5f0 # v1, specifically v1.5.2
       - name: Set up JDK
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.6.0
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
