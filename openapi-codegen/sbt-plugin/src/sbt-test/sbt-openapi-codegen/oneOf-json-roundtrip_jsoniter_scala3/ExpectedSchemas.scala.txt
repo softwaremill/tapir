@@ -1,13 +1,14 @@
 package sttp.tapir.generated
 
+
 object TapirGeneratedEndpointsSchemas {
   import sttp.tapir.generated.TapirGeneratedEndpoints._
   import sttp.tapir.generic.auto._
   implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)
-  implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derived
+  implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derivedEnumeration.defaultStringBased
   implicit lazy val categoryTapirSchema: sttp.tapir.Schema[Category] = sttp.tapir.Schema.derived
   implicit def nodeTapirSchema: sttp.tapir.Schema[Node] = sttp.tapir.Schema.derived
-  implicit lazy val petStatusTapirSchema: sttp.tapir.Schema[PetStatus] = sttp.tapir.Schema.derived
+  implicit lazy val petStatusTapirSchema: sttp.tapir.Schema[PetStatus] = sttp.tapir.Schema.derivedEnumeration.defaultStringBased
   implicit lazy val subtypeWithD1TapirSchema: sttp.tapir.Schema[SubtypeWithD1] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithD2TapirSchema: sttp.tapir.Schema[SubtypeWithD2] = sttp.tapir.Schema.derived
   implicit lazy val subtypeWithoutD1TapirSchema: sttp.tapir.Schema[SubtypeWithoutD1] = sttp.tapir.Schema.derived

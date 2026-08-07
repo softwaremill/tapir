@@ -75,11 +75,13 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       (models + "\n" + serdes + "\n" + schemas + "\n" + endpoints).shouldCompile()
     }
 
-    it should s"compile endpoints with enum query params using ${jsonSerdeLib} serdes" in {
+    // scala2 can't handle the 'derivedEnumeration.defaultStringBased' macro in runtime mirror compilation
+    if (isScala3) it should s"compile endpoints with enum query params using ${jsonSerdeLib} serdes" in {
       gen(TestHelpers.enumQueryParamDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib).shouldCompile()
     }
 
-    VersionCheck.runTest(jsonSerdeLib)(it should s"compile endpoints with default params using ${jsonSerdeLib} serdes" in {
+    // scala2 can't handle the 'derivedEnumeration.defaultStringBased' macro in runtime mirror compilation
+    if (isScala3) VersionCheck.runTest(jsonSerdeLib)(it should s"compile endpoints with default params using ${jsonSerdeLib} serdes" in {
       val genWithParams = gen(TestHelpers.withDefaultsDocs, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
 
       val expectedDefaultDeclarations = Seq(

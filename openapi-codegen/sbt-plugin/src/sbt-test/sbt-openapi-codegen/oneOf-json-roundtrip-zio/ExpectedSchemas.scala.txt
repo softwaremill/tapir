@@ -7,7 +7,7 @@ object TapirGeneratedEndpointsSchemas {
   implicit lazy val byteStringSchema: sttp.tapir.Schema[ByteString] = sttp.tapir.Schema.schemaForByteArray.map(ba => Some(toByteString(ba)))(bs => bs)
   implicit lazy val abrdvarkTapirSchema: sttp.tapir.Schema[Abrdvark] = sttp.tapir.Schema.derived
   implicit lazy val acrdvarkTapirSchema: sttp.tapir.Schema[Acrdvark] = sttp.tapir.Schema.derived
-  implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derived
+  implicit lazy val anEnumTapirSchema: sttp.tapir.Schema[AnEnum] = sttp.tapir.Schema.derivedEnumeration.defaultStringBased
   implicit lazy val hasASetTapirSchema: sttp.tapir.Schema[HasASet] = sttp.tapir.Schema.derived
   
   implicit lazy val notNullableThingyTapirSchema: sttp.tapir.Schema[NotNullableThingy] = sttp.tapir.Schema.derived
