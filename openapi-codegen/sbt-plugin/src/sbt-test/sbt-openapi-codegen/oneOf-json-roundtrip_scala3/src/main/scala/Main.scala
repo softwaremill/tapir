@@ -8,5 +8,16 @@ object Main extends App {
   import java.nio.file.{Paths, Files}
   import java.nio.charset.StandardCharsets
 
-  Files.write(Paths.get("target/swagger.yaml"), docs.toYaml.getBytes(StandardCharsets.UTF_8))
+  private val outputYaml: String = docs.toYaml
+  Files.write(Paths.get("target/swagger.yaml"), outputYaml.getBytes(StandardCharsets.UTF_8))
+  assert(
+    outputYaml.contains("""    AnEnum:
+                          |      title: AnEnum
+                          |      type: string
+                          |      enum:
+                          |      - Bar
+                          |      - Baz
+                          |      - Foo""".stripMargin),
+    "enums look wrong :'("
+  )
 }

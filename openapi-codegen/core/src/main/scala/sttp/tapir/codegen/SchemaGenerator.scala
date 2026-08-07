@@ -109,7 +109,7 @@ object SchemaGenerator {
         .map(_.schemas.toSeq.flatMap {
           case (name, e: OpenapiSchemaEnum) =>
             Some(name -> parentImpl(name, e)({ (_: (Boolean, Seq[String])) =>
-              s"implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"
+              s"implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derivedEnumeration.defaultStringBased"
             }))
           case (name, obj: OpenapiSchemaObject)   => Some(name -> parentImpl(name, obj)(schemaForObject(name, _, obj)))
           case (name, schema: OpenapiSchemaMap)   => Some(name -> parentImpl(name, schema)(schemaForMapOrArray(name, _, schema.items)))
@@ -309,7 +309,7 @@ object SchemaGenerator {
     subs.fold("")("\n" + _)
   }
   private def schemaForEnum(name: String): String =
-    s"""implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derived"""
+    s"""implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derivedEnumeration.defaultStringBased"""
 
   private def genADTSchema(
       name: String,
