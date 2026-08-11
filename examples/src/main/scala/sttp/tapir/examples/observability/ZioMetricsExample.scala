@@ -1,8 +1,8 @@
 // {cat=Observability; effects=ZIO; server=ZIO HTTP}: Reporting Prometheus metrics
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.30
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.30
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-metrics:1.13.30
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.31
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.31
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-metrics:1.13.31
 
 package sttp.tapir.examples.observability
 
