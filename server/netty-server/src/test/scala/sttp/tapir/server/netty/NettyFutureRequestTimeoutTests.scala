@@ -85,6 +85,32 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
           }
         }
         .unsafeToFuture()
+    },
+    Test("respond with status 400 when not all declared bytes are received within time window") {
+      val e = endpoint.put
+        .in(stringBody)
+        .out(stringBody)
+        .serverLogicSuccess[Future] { body =>
+          Future.successful(body)
+        }
+
+      val config: NettyConfig = NettyConfig.default.requestTimeout(1.second)
+
+      val bind = IO.fromFuture(IO.delay(NettyFutureServer(config).addEndpoints(List(e)).start()))
+
+      Resource
+        .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
+        .map(_.port)
+        .use { port =>
+          basicRequest
+            .put(uri"http://localhost:$port")
+            .contentLength(10000L)
+            .body("test")
+            .send(backend).map { response =>
+            response.code shouldBe StatusCode.BadRequest
+          }
+        }
+        .unsafeToFuture()
     }
   )
 }
