@@ -107,6 +107,12 @@ class NettyServerHandler[F[_]](
     val _ = ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
   }
 
+  def writeError400ThenClose(ctx: ChannelHandlerContext): Unit = {
+    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST)
+    res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+    val _ = ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
+  }
+
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
     evt match {
       case e: IdleStateEvent =>
@@ -114,7 +120,8 @@ class NettyServerHandler[F[_]](
           logger.error(
             s"Closing connection due to exceeded response timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
-          writeError503ThenClose(ctx)
+          if(ctx.channel().attr(RequestBodyTracker.BodyComplete).get()) writeError503ThenClose(ctx)
+          else writeError400ThenClose(ctx)
         }
         if (e.state() == IdleState.ALL_IDLE) {
           logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
