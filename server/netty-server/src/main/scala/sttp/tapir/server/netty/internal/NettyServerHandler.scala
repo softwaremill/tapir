@@ -116,12 +116,17 @@ class NettyServerHandler[F[_]](
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
     evt match {
       case e: IdleStateEvent =>
-        if (e.state() == IdleState.WRITER_IDLE) {
+        if (e.state() == IdleState.WRITER_IDLE && RequestBodyCompletedTracker.wasBodyCompletelySend(ctx)) {
           logger.error(
             s"Closing connection due to exceeded response timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
-          if(ctx.channel().attr(RequestBodyTracker.BodyComplete).get()) writeError503ThenClose(ctx)
-          else writeError400ThenClose(ctx)
+          writeError503ThenClose(ctx)
+        }
+        if(e.state == IdleState.WRITER_IDLE) {
+          logger.error(
+            s"Closing connection due to partially send request with pause exceeded request timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
+          )
+          writeError400ThenClose(ctx)
         }
         if (e.state() == IdleState.ALL_IDLE) {
           logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
