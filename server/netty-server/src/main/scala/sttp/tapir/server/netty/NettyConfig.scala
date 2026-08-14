@@ -11,7 +11,7 @@ import io.netty.handler.ssl.SslContext
 import org.playframework.netty.http.HttpStreamsServerHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
 import sttp.tapir.server.netty.internal._
-import sttp.tapir.server.netty.internal.RequestBodyTracker
+import sttp.tapir.server.netty.internal.RequestBodyCompletedTracker
 
 import scala.concurrent.duration._
 
@@ -149,7 +149,7 @@ object NettyConfig {
     if (cfg.compressionConfig.enabled) {
       pipeline.addLast(new HttpContentCompressor())
     }
-    pipeline.addLast(new RequestBodyTrackerHandler)
+    pipeline.addLast(new RequestBodyCompletedTracker)
     pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
