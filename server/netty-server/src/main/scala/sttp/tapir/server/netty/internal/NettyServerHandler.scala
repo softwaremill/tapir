@@ -118,13 +118,13 @@ class NettyServerHandler[F[_]](
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
     evt match {
       case e: IdleStateEvent =>
-        if (e.state() == IdleState.WRITER_IDLE && wasBodyCompletelySend(ctx)) {
+        if (e.state() == IdleState.WRITER_IDLE) {
           logger.error(
             s"Closing connection due to exceeded response timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
           writeError503ThenClose(ctx)
         }
-        if(e.state == IdleState.WRITER_IDLE && !wasBodyCompletelySend(ctx)) {
+        if(e.state == IdleState.READER_IDLE && !wasBodyCompletelySend(ctx)) {
           logger.error(
             s"Closing connection due to partially send request with pause exceeded request timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
@@ -152,7 +152,7 @@ class NettyServerHandler[F[_]](
 
     def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
       val requestTimeoutHandler = config.requestTimeout.map { requestTimeout =>
-        new IdleStateHandler(0, requestTimeout.toMillis.toInt, 0, TimeUnit.MILLISECONDS)
+        new IdleStateHandler(requestTimeout.toMillis.toInt, requestTimeout.toMillis.toInt, 0, TimeUnit.MILLISECONDS)
       }
       requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
