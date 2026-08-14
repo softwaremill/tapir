@@ -32,6 +32,7 @@ import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
+import RequestBodyCompletedTracker._
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
@@ -110,19 +111,20 @@ class NettyServerHandler[F[_]](
   def writeError400ThenClose(ctx: ChannelHandlerContext): Unit = {
     val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST)
     res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+    res.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
     val _ = ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
   }
 
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
     evt match {
       case e: IdleStateEvent =>
-        if (e.state() == IdleState.WRITER_IDLE && RequestBodyCompletedTracker.wasBodyCompletelySend(ctx)) {
+        if (e.state() == IdleState.WRITER_IDLE && wasBodyCompletelySend(ctx)) {
           logger.error(
             s"Closing connection due to exceeded response timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
           writeError503ThenClose(ctx)
         }
-        if(e.state == IdleState.WRITER_IDLE) {
+        if(e.state == IdleState.WRITER_IDLE && !wasBodyCompletelySend(ctx)) {
           logger.error(
             s"Closing connection due to partially send request with pause exceeded request timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
