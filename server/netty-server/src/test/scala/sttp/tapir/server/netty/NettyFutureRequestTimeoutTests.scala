@@ -98,7 +98,7 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
           Future.successful(body)
         }
 
-      val config: NettyConfig = NettyConfig.default.requestTimeout(1.second)
+      val config: NettyConfig = NettyConfig.default.randomPort.requestTimeout(500.millis)
 
       val bind = IO.fromFuture(IO.delay(NettyFutureServer(config).addEndpoints(List(e)).start()))
 
@@ -112,7 +112,7 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
             socket <- IO(new Socket("localhost", port))
             _ <- IO(socket.getOutputStream.write(bytes))
             _ <- IO(socket.getOutputStream.flush())
-            _ <- IO.sleep(4.second)
+            _ <- IO.sleep(1.second)
             response <- IO(new String(socket.getInputStream.readAllBytes()))
             _ <- IO(socket.close())
           } yield {
