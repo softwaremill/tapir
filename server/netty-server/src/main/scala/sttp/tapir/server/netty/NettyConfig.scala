@@ -32,7 +32,9 @@ import scala.concurrent.duration._
   *
   * @param requestTimeout
   *   The maximum duration to wait for a response to be produced. If exceeded, the server will return a HTTP 503 response and close the
-  *   connection. This timeout is ignored in Web Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
+  *   connection.
+  *   If exceeded when request was partially send and then stalled the server will return a HTTP 400 and close the connection.
+  *   This timeout is ignored in Web Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
   *
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
