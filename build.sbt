@@ -593,7 +593,7 @@ lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-t
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.22.1",
       "nl.grons" %% "metrics4-scala" % Versions.metrics4Scala % Test,
       "com.lihaoyi" %% "scalatags" % Versions.scalaTags % Test,
-      "io.github.classgraph" % "classgraph" % "4.8.189",
+      "io.github.classgraph" % "classgraph" % "4.8.190",
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
