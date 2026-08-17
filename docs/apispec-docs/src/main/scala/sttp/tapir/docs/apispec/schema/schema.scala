@@ -20,7 +20,24 @@ package object schema {
   private[docs] type KeyedSchema = (SchemaKey, TSchema[_])
   private[docs] type SchemaId = String
 
-  private[docs] def calculateUniqueIds[T](ts: Iterable[T], toIdBase: T => String, failOnDuplicateSchemaName: Boolean): Map[T, String] = {
+  private[docs] val defaultDuplicateSchemaNameError: List[String] => String = baseNames =>
+    s"Duplicate schema names found: ${baseNames.mkString(", ")}. " +
+      "Consider using unique class names or customize the schemaName function."
+
+  /** Assigns a unique id to each of `ts`, based on `toIdBase`, suffixing with a number on collision.
+    *
+    * @param failOnDuplicateName
+    *   when true, a collision throws instead of being suffixed. Suffixing is order-dependent, so `Foo` vs `Foo1` can flip as endpoints are
+    *   reordered, producing phantom diffs in a committed specification.
+    * @param duplicateNameError
+    *   builds the failure message from the sorted, distinct colliding base names. Defaults to the schema-specific message.
+    */
+  private[docs] def calculateUniqueIds[T](
+      ts: Iterable[T],
+      toIdBase: T => String,
+      failOnDuplicateName: Boolean,
+      duplicateNameError: List[String] => String = defaultDuplicateSchemaNameError
+  ): Map[T, String] = {
     case class Assigment(idToT: Map[String, T], tToId: Map[T, String])
     val result = ts
       .foldLeft(Assigment(Map.empty, Map.empty)) { case (Assigment(idToT, tToId), t) =>
@@ -32,16 +49,13 @@ package object schema {
         )
       }
 
-    if (failOnDuplicateSchemaName) {
+    if (failOnDuplicateName) {
       val conflicts: Map[T, String] = result.tToId.collect { case (t, id) if toIdBase(t) != id => t -> id }
 
       if (conflicts.nonEmpty) {
         // Extract unique base names that had conflicts
         val baseNames = conflicts.map { case (t, _) => toIdBase(t) }.toSet.toList.sorted
-        throw new IllegalStateException(
-          s"Duplicate schema names found: ${baseNames.mkString(", ")}. " +
-            "Consider using unique class names or customize the schemaName function."
-        )
+        throw new IllegalStateException(duplicateNameError(baseNames))
       }
     }
 
