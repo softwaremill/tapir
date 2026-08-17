@@ -189,10 +189,22 @@ object OpenapiModels {
   }
   case class OpenapiHeaderRef($ref: OpenapiSchemaRef) extends OpenapiHeader {
     def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef = {
-      doc.components
+      // components.headers holds Header Objects; its keys are re-written to full refs at decode time
+      def fromHeaders: Option[OpenapiHeaderDef] = doc.components.flatMap(_.headers.get($ref.name)).map {
+        case OpenapiHeaderDef(param) => OpenapiHeaderDef(param.copy(name = name))
+        case _: OpenapiHeaderRef =>
+          throw new IllegalStateException(
+            s"Header component ${$ref.name} is itself a reference; chained header references are not supported"
+          )
+      }
+      // a request-header Parameter may also be referenced from a response header
+      def fromParameters: Option[OpenapiHeaderDef] = doc.components
         .flatMap(_.parameters.get($ref.name))
         .map(b => if (b.in != "header") throw new IllegalStateException(s"Referenced parameter ${$ref.name} is not header") else b)
         .map(b => OpenapiHeaderDef(b.copy(name = name)))
+
+      fromHeaders
+        .orElse(fromParameters)
         .getOrElse(throw new IllegalStateException(s"Response component ${$ref.name} is referenced but not found"))
     }
   }

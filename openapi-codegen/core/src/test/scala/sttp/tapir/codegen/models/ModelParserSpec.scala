@@ -4,6 +4,8 @@ import sttp.tapir.codegen.TestHelpers
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
   OpenapiHeaderDef,
+  OpenapiHeaderRef,
+  OpenapiInfo,
   OpenapiParameter,
   OpenapiResponse,
   OpenapiResponseContent,
@@ -239,5 +241,83 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
         )
       )
     )
+  }
+
+  it should "resolve a response header ref against components.headers" in {
+    val yaml = """
+                 |openapi: 3.1.0
+                 |info:
+                 |  title: Rate limited
+                 |  version: '1.0'
+                 |paths:
+                 |  /ping:
+                 |    get:
+                 |      operationId: getPing
+                 |      responses:
+                 |        '200':
+                 |          description: ''
+                 |          headers:
+                 |            X-Rate-Limit:
+                 |              $ref: '#/components/headers/RateLimit'
+                 |          content:
+                 |            text/plain:
+                 |              schema:
+                 |                type: string
+                 |components:
+                 |  schemas: {}
+                 |  headers:
+                 |    RateLimit:
+                 |      description: Requests left in the current window
+                 |      required: true
+                 |      schema:
+                 |        type: string""".stripMargin
+
+    val doc = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
+      .toOption
+      .get
+
+    val response = doc.paths.head.methods.head.responses.head.asInstanceOf[OpenapiResponseDef]
+    val (headerName, header) = response.getHeaders.head
+
+    header.resolved(headerName, doc) shouldBe OpenapiHeaderDef(
+      OpenapiParameter("X-Rate-Limit", "header", Some(true), Some("Requests left in the current window"), OpenapiSchemaString(false))
+    )
+  }
+
+  it should "still resolve a response header ref against components.parameters" in {
+    val doc = OpenapiDocument(
+      "3.1.0",
+      Nil,
+      OpenapiInfo("Rate limited", "1.0"),
+      Nil,
+      Some(
+        OpenapiComponent(
+          schemas = Map.empty,
+          parameters = Map(
+            "#/components/parameters/RateLimit" ->
+              OpenapiParameter("RateLimit", "header", Some(true), Some("Requests left"), OpenapiSchemaString(false))
+          )
+        )
+      ),
+      Nil
+    )
+
+    val ref = OpenapiHeaderRef(OpenapiSchemaRef("#/components/parameters/RateLimit"))
+
+    ref.resolved("X-Rate-Limit", doc) shouldBe OpenapiHeaderDef(
+      OpenapiParameter("X-Rate-Limit", "header", Some(true), Some("Requests left"), OpenapiSchemaString(false))
+    )
+  }
+
+  it should "fail with a clear message when a response header ref matches nothing" in {
+    val doc = OpenapiDocument("3.1.0", Nil, OpenapiInfo("Rate limited", "1.0"), Nil, Some(OpenapiComponent(Map.empty)), Nil)
+
+    val ref = OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/Missing"))
+
+    val thrown = intercept[IllegalStateException](ref.resolved("X-Rate-Limit", doc))
+    thrown.getMessage should include("is referenced but not found")
   }
 }
