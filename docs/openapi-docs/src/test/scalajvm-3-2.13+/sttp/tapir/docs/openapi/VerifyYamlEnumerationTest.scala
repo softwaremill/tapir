@@ -58,9 +58,22 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
+
+  test("should add docs extension from @customise annotation on a ShortEnum") {
+    import sttp.tapir.codec.enumeratum._
+
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.in("order").out(jsonBody[OrderStatusResponse]), "Orders", "1.0")
+      .toYaml
+
+    val expectedYaml = load("enum/expected_enumeratum_short_enum_with_docs_extension.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlEnumerationTest {
+
   sealed trait Game
   case object Strategy extends Game
   case object Action extends Game
@@ -93,4 +106,23 @@ object VerifyYamlEnumerationTest {
   }
 
   case class Square(cornerStyle: Option[CornerStyle.Value], tags: Seq[Tag.Value])
+
+  import sttp.tapir.Schema.annotations.customise
+  import sttp.tapir.json.circe._
+  import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+  import enumeratum.values.{ShortEnum, ShortEnumEntry}
+  import scala.collection.immutable
+
+  @customise(_.docsExtension("x-enum-varnames", List("UnPaid", "Paid", "Finish", "Cancel")))
+  sealed abstract class OrderStatus(val value: Short) extends ShortEnumEntry
+  object OrderStatus extends ShortEnum[OrderStatus] {
+    case object UnPaid extends OrderStatus(0)
+    case object Paid extends OrderStatus(1)
+    case object Finish extends OrderStatus(2)
+    case object Cancel extends OrderStatus(3)
+
+    override def values: immutable.IndexedSeq[OrderStatus] = findValues
+  }
+
+  case class OrderStatusResponse(status: OrderStatus)
 }
