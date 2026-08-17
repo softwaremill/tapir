@@ -13,7 +13,8 @@ import scala.collection.immutable.ListMap
 private[openapi] class EndpointToOpenAPIPaths(
     tschemaToASchema: TSchemaToASchema,
     securitySchemes: SecuritySchemes,
-    options: OpenAPIDocsOptions
+    options: OpenAPIDocsOptions,
+    reusableComponents: ReusableComponents
 ) {
   private val codecToMediaType = new CodecToMediaType(tschemaToASchema)
   private val endpointToParameters = new EndpointToParameters(tschemaToASchema)
@@ -54,7 +55,12 @@ private[openapi] class EndpointToOpenAPIPaths(
       summary = e.info.summary,
       description = e.info.description,
       operationId = e.info.name.orElse(Some(defaultId)),
-      parameters = parameters.map(Right(_)),
+      parameters = parameters.map(p =>
+        reusableComponents.parameterToName.get(p) match {
+          case Some(name) => Left(Reference.to("#/components/parameters/", name))
+          case None       => Right(p)
+        }
+      ),
       requestBody = body.headOption,
       responses = Responses(responses),
       deprecated = if (e.info.deprecated) Some(true) else None,
