@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Orders
+  version: '1.0'
+paths:
+  /order:
+    get:
+      operationId: getOrder
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusResponse'
+components:
+  schemas:
+    OrderStatus:
+      title: OrderStatus
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+        - 3
+      x-enum-varnames:
+        - UnPaid
+        - Paid
+        - Finish
+        - Cancel
+    OrderStatusResponse:
+      title: OrderStatusResponse
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
