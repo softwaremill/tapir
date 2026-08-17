@@ -1,7 +1,14 @@
 package sttp.tapir.codegen.openapi.models
 
 import sttp.tapir.codegen.TestHelpers
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiResponse, OpenapiResponseContent, OpenapiResponseDef}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
+  OpenapiDocument,
+  OpenapiHeaderDef,
+  OpenapiParameter,
+  OpenapiResponse,
+  OpenapiResponseContent,
+  OpenapiResponseDef
+}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaConstantString,
@@ -204,6 +211,33 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
 
     res shouldBe Right(
       TestHelpers.oneOfDocsWithMapping
+    )
+  }
+
+  it should "parse a components headers section, re-keyed by full ref" in {
+    val yaml = """
+                 |schemas: {}
+                 |headers:
+                 |  X-Rate-Limit:
+                 |    description: Requests left in the current window
+                 |    required: true
+                 |    schema:
+                 |      type: string""".stripMargin
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiComponent])
+
+    res shouldBe Right(
+      OpenapiComponent(
+        schemas = Map.empty,
+        headers = Map(
+          "#/components/headers/X-Rate-Limit" -> OpenapiHeaderDef(
+            OpenapiParameter("inline", "header", Some(true), Some("Requests left in the current window"), OpenapiSchemaString(false))
+          )
+        )
+      )
     )
   }
 }
