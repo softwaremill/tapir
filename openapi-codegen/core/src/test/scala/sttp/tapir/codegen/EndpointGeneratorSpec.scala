@@ -6,6 +6,8 @@ import sttp.tapir.codegen.endpoints.{EndpointGenerator, FS2}
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
+  OpenapiHeaderDef,
+  OpenapiHeaderRef,
   OpenapiParameter,
   OpenapiPath,
   OpenapiPathMethod,
@@ -452,6 +454,63 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     )
     generatedCode should include("case object StatusCodeDisambig401\n  extends DeleteDeleteOneResponseErrCode")
     generatedCode should not include "case object DeleteDeleteOneResponseCode200"
+    generatedCode.shouldCompile()
+  }
+
+  it should "generate a response header from a components.headers ref" in {
+    val doc = OpenapiDocument(
+      "3.1.0",
+      Nil,
+      null,
+      Seq(
+        OpenapiPath(
+          "ping",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "get",
+              parameters = Nil,
+              responses = Seq(
+                OpenapiResponseDef(
+                  "200",
+                  "",
+                  Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))),
+                  Map("X-Rate-Limit" -> OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/RateLimit")))
+                )
+              ),
+              requestBody = None
+            )
+          )
+        )
+      ),
+      Some(
+        OpenapiComponent(
+          schemas = Map.empty,
+          headers = Map(
+            "#/components/headers/RateLimit" ->
+              OpenapiHeaderDef(OpenapiParameter("inline", "header", Some(true), None, OpenapiSchemaString(false)))
+          )
+        )
+      ),
+      Nil
+    )
+    val generatedCode = RootGenerator.imports(JsonSerdeLib.Circe) +
+      new EndpointGenerator()
+        .endpointDefs(
+          doc,
+          useHeadTagForObjectNames = false,
+          targetScala3 = isScala3,
+          jsonSerdeLib = JsonSerdeLib.Circe,
+          xmlSerdeLib = XmlSerdeLib.CatsXml,
+          streamingImplementation = FS2(),
+          generateEndpointTypes = false,
+          validators = ValidationDefns.empty,
+          generateValidators = true,
+          packageReuse = PackageReuseContext.none,
+          seperateFilesForModels = false,
+          addDisambiguationCodes = true
+        )
+        .endpointDecls(None)
+    generatedCode should include("""header[String]("X-Rate-Limit")""")
     generatedCode.shouldCompile()
   }
 

@@ -192,7 +192,7 @@ object OpenapiModels {
       // components.headers holds Header Objects; its keys are re-written to full refs at decode time
       def fromHeaders: Option[OpenapiHeaderDef] = doc.components.flatMap(_.headers.get($ref.name)).map {
         case OpenapiHeaderDef(param) => OpenapiHeaderDef(param.copy(name = name))
-        case _: OpenapiHeaderRef =>
+        case _: OpenapiHeaderRef     =>
           throw new IllegalStateException(
             s"Header component ${$ref.name} is itself a reference; chained header references are not supported"
           )
