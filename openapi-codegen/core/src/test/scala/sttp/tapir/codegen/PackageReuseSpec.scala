@@ -16,7 +16,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 }
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
-import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiInfo
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiHeaderDef, OpenapiInfo, OpenapiParameter}
 
 import scala.collection.mutable
 
@@ -151,6 +151,12 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
   private def minimalDoc(title: String, schemas: Map[String, OpenapiSchemaString]) =
     OpenapiDocument("3.0.0", Nil, OpenapiInfo(title, "1"), Nil, Some(OpenapiComponent(schemas)), Nil)
 
+  private def headerDef(description: String): OpenapiHeaderDef =
+    OpenapiHeaderDef(OpenapiParameter("inline", "header", Some(true), Some(description), OpenapiSchemaString(false)))
+
+  private def docWith(components: OpenapiComponent) =
+    OpenapiDocument("3.0.0", Nil, OpenapiInfo("test", "1"), Nil, Some(components), Nil)
+
   "OpenApiMerger" should "merge schemas from multiple documents" in {
     val a = minimalDoc("a", Map("A" -> OpenapiSchemaString(false)))
     val b = minimalDoc("b", Map("B" -> OpenapiSchemaString(false)))
@@ -169,5 +175,36 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
       Nil
     )
     intercept[IllegalArgumentException](OpenApiMerger.merge(Seq(a, b)))
+  }
+
+  it should "merge components.headers from both documents, left winning on collisions" in {
+    val left = docWith(
+      OpenapiComponent(
+        schemas = Map.empty,
+        headers = Map(
+          "#/components/headers/RateLimit" -> headerDef("left rate limit"),
+          "#/components/headers/OnlyLeft" -> headerDef("only left")
+        )
+      )
+    )
+    val right = docWith(
+      OpenapiComponent(
+        schemas = Map.empty,
+        headers = Map(
+          "#/components/headers/RateLimit" -> headerDef("right rate limit"),
+          "#/components/headers/OnlyRight" -> headerDef("only right")
+        )
+      )
+    )
+
+    val merged = OpenApiMerger.merge(Seq(left, right))
+
+    merged.components.map(_.headers) shouldBe Some(
+      Map(
+        "#/components/headers/RateLimit" -> headerDef("left rate limit"),
+        "#/components/headers/OnlyLeft" -> headerDef("only left"),
+        "#/components/headers/OnlyRight" -> headerDef("only right")
+      )
+    )
   }
 }

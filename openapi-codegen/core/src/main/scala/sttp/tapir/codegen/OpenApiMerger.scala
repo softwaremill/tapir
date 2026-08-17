@@ -50,7 +50,8 @@ object OpenApiMerger {
     val mergedRequestBodies = left.requestBodies ++ right.requestBodies.filterNot { case (k, _) =>
       left.requestBodies.contains(k)
     }
+    val mergedHeaders = left.headers ++ right.headers.filterNot { case (k, _) => left.headers.contains(k) }
 
-    OpenapiComponent(mergedSchemas, mergedSecuritySchemes, mergedParameters, mergedResponses, mergedRequestBodies)
+    OpenapiComponent(mergedSchemas, mergedSecuritySchemes, mergedParameters, mergedResponses, mergedRequestBodies, mergedHeaders)
   }
 }
