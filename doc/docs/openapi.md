@@ -291,9 +291,9 @@ does when one `val` is used as a request header on one endpoint and a response h
 Notes:
 
 * The marker is an opt-in. Endpoints that do not use it produce exactly the document they produced before.
-* Which section the component lands in is inferred from position: an input becomes a `components.parameters` entry,
-  a response header becomes a `components.headers` entry. Request headers are `parameters` with `in: header`, which
-  is how OpenAPI models them, so they need no separate marker.
+* The same marker works everywhere; position decides where the component lands — inputs go to `components.parameters`
+  (request headers included, since OpenAPI models them as parameters with `in: header`), response headers to
+  `components.headers`.
 * Marking is by value, not by use site: once a parameter is marked anywhere, every structurally identical parameter is
   referenced, whether or not it was marked. Marking the shared `val` once is the intended usage.
 * A marked parameter is always hoisted, even when only one endpoint uses it, so the document does not change shape as
