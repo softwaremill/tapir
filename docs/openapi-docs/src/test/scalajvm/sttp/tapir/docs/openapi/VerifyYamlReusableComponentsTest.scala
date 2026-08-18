@@ -80,6 +80,45 @@ class VerifyYamlReusableComponentsTest extends AnyFunSuite with Matchers {
     operationParametersOf(openApi) shouldBe List(Right("visible"))
   }
 
+  test("a marked response header becomes a components.headers entry") {
+    val rateLimit = header[String]("X-Rate-Limit").description("Requests left").reusableComponent
+
+    val actual = toYaml(
+      List(
+        endpoint.get.in("books").out(stringBody).out(rateLimit),
+        endpoint.get.in("magazines").out(stringBody).out(rateLimit)
+      )
+    )
+
+    actual shouldBe load("reusableComponents/expected_marked_response_header.yml")
+  }
+
+  test("the same marked val used as request and as response header appears in both sections") {
+    val requestId = header[String]("X-Request-Id").description("Correlation id").reusableComponent
+
+    val openApi = OpenAPIDocsInterpreter(options)
+      .toOpenAPI(endpoint.get.in("books").in(requestId).out(stringBody).out(requestId), Info("test", "1.0"))
+
+    openApi.components.map(_.parameters.keys.toList) shouldBe Some(List("X-Request-Id"))
+    openApi.components.map(_.headers.keys.toList) shouldBe Some(List("X-Request-Id"))
+    operationParametersOf(openApi) shouldBe List(Left("#/components/parameters/X-Request-Id"))
+  }
+
+  test("an unmarked response header is still inlined") {
+    val openApi = OpenAPIDocsInterpreter(options)
+      .toOpenAPI(endpoint.get.in("books").out(stringBody).out(header[String]("X-Rate-Limit")), Info("test", "1.0"))
+
+    openApi.components shouldBe None
+  }
+
+  test("a marked response header used by exactly one endpoint is still hoisted") {
+    val rateLimit = header[String]("X-Rate-Limit").reusableComponent
+    val openApi = OpenAPIDocsInterpreter(options)
+      .toOpenAPI(endpoint.get.in("books").out(stringBody).out(rateLimit), Info("test", "1.0"))
+
+    openApi.components.map(_.headers.keys.toList) shouldBe Some(List("X-Rate-Limit"))
+  }
+
   /** Each of the single operation's parameters as either `Left(refString)` or `Right(parameterName)`. */
   private def operationParametersOf(openApi: sttp.apispec.openapi.OpenAPI): List[Either[String, String]] =
     openApi.paths.pathItems.values.head.get.get.parameters.map {

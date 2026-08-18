@@ -40,11 +40,12 @@ private[openapi] class ReusableComponentsForEndpoints(
     failOnDuplicateComponentName: Boolean
 ) {
   private val endpointToParameters = new EndpointToParameters(tschemaToASchema)
+  private val endpointToHeaders = new EndpointToHeaders(tschemaToASchema)
 
   def apply(): ReusableComponents =
     ReusableComponents(
       parameterToName = assignNames(collectMarkedParameters(), (p: Parameter) => p.name, "parameters"),
-      headerToName = Map.empty // populated in the response-headers change
+      headerToName = assignNames(collectMarkedHeaders(), (nh: (String, Header)) => nh._1, "headers")
     )
 
   private def collectMarkedParameters(): Vector[(Parameter, Option[String])] =
@@ -52,6 +53,21 @@ private[openapi] class ReusableComponentsForEndpoints(
       endpointToParameters
         .withSourceAtoms(endpointToParameters.filterOutHiddenInputs(e.asVectorOfBasicInputs(includeAuth = false)))
         .flatMap { case (atom, parameter) => markerOf(atom).map(m => parameter -> m.name) }
+    }
+
+  /** Response headers are collected without filtering hidden outputs, and without walking `defaultDecodeFailureOutput`: `collectHeaders`
+    * never filtered hidden outputs, and filtering here would either create a component nothing references or drop one that is still
+    * emitted; the synthesised decode-failure outputs are a status code plus a string body, so they contain no headers.
+    *
+    * `components/parameters` and `components/headers` are independent namespaces, which is why `assignNames` is called once per section: a
+    * `tenantId` in each does not collide.
+    */
+  private def collectMarkedHeaders(): Vector[((String, Header), Option[String])] =
+    es.toVector.flatMap { e =>
+      endpointToHeaders
+        .withSourceAtoms(List(e.output, e.errorOutput))
+        .toVector
+        .flatMap { case (atom, nameAndHeader) => markerOf(atom).map(m => nameAndHeader -> m.name) }
     }
 
   // read the attribute directly rather than through ReusableComponentAttribute's implicit class: the atom's static type here is

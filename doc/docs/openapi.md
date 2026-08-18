@@ -231,8 +231,8 @@ Options can be customised by providing an instance of `OpenAPIDocsOptions` to th
   which (without automatic deduplication by adding a numeric suffix) would be identical. Having automatically resolved 
   de-duplications might result in different names depending on the order of endpoints. This might result in false 
   positive changes in the OpenApi document.
-* `failOnDuplicateComponentName`: if two components marked with `.reusableComponent` derive the same component key,
-  fail instead of disambiguating with a numeric suffix. Defaults to `true` — stricter than
+* `failOnDuplicateComponentName`: if two parameters or two response headers marked with `.reusableComponent` derive the
+  same component key, fail instead of disambiguating with a numeric suffix. Defaults to `true` — stricter than
   `failOnDuplicateSchemaName`, because marking is explicit and a collision between two explicitly marked components is
   almost always a mistake.
 
@@ -273,11 +273,27 @@ import sttp.tapir.docs.openapi.ReusableComponentAttribute.*
 val tenantId = query[String]("tenantId").reusableComponent("TenantId")
 ```
 
+The same marker works on response headers, which are emitted into `components.headers`:
+
+```scala mdoc:compile-only
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.ReusableComponentAttribute.*
+
+val rateLimit = header[String]("X-Rate-Limit").description("Requests left").reusableComponent
+
+val listBooks = endpoint.get.in("books").out(stringBody).out(rateLimit)
+val listMagazines = endpoint.get.in("magazines").out(stringBody).out(rateLimit)
+```
+
+`components.parameters` and `components.headers` are independent namespaces, so the same name may appear in both — as it
+does when one `val` is used as a request header on one endpoint and a response header on another.
+
 Notes:
 
 * The marker is an opt-in. Endpoints that do not use it produce exactly the document they produced before.
-* Request headers need no separate marker: OpenAPI models them as `parameters` with `in: header`, which is how tapir
-  emits them, so marking one hoists it into `components.parameters` like any other parameter.
+* Which section the component lands in is inferred from position: an input becomes a `components.parameters` entry,
+  a response header becomes a `components.headers` entry. Request headers are `parameters` with `in: header`, which
+  is how OpenAPI models them, so they need no separate marker.
 * Marking is by value, not by use site: once a parameter is marked anywhere, every structurally identical parameter is
   referenced, whether or not it was marked. Marking the shared `val` once is the intended usage.
 * A marked parameter is always hoisted, even when only one endpoint uses it, so the document does not change shape as

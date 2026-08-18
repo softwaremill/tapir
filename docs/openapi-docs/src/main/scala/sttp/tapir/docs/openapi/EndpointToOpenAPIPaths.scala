@@ -18,7 +18,8 @@ private[openapi] class EndpointToOpenAPIPaths(
 ) {
   private val codecToMediaType = new CodecToMediaType(tschemaToASchema)
   private val endpointToParameters = new EndpointToParameters(tschemaToASchema)
-  private val endpointToOperationResponse = new EndpointToOperationResponse(tschemaToASchema, codecToMediaType, options)
+  private val endpointToOperationResponse =
+    new EndpointToOperationResponse(tschemaToASchema, codecToMediaType, options, reusableComponents)
   private val securityRequirementsForEndpoint = new SecurityRequirementsForEndpoints(securitySchemes)
 
   def pathItem(e: AnyEndpoint): (String, PathItem) = {
