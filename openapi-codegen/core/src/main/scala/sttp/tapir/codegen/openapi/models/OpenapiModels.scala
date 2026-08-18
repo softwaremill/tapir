@@ -203,7 +203,9 @@ object OpenapiModels {
 
       fromHeaders
         .orElse(fromParameters)
-        .getOrElse(throw new IllegalStateException(s"Response component ${$ref.name} is referenced but not found"))
+        .getOrElse(
+          throw new IllegalStateException(s"Header component ${$ref.name} is referenced but not found in components.headers or components.parameters")
+        )
     }
   }
 
