@@ -47,7 +47,7 @@ private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) 
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) =
     EndpointInputToParameterConverter.from(header, tschemaToASchema(header.codec))
-  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) =
+  private def fixedHeaderToParameter(header: EndpointIO.FixedHeader[_]) =
     EndpointInputToParameterConverter.from(header, ASchema(ASchemaType.String))
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) =
     EndpointInputToParameterConverter.from(cookie, tschemaToASchema(cookie.codec))
