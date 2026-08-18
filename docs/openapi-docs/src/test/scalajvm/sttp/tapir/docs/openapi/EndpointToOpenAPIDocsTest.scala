@@ -5,6 +5,8 @@ import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.endpoint
+import sttp.tapir.query
+import sttp.tapir.stringToPath
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.tests.Security._
 import sttp.tapir.tests.Basic._
@@ -163,5 +165,46 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     val options = OpenAPIDocsOptions.default.copy(failOnDuplicateSchemaName = false)
 
     OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("Entities", "1.0"))
+  }
+
+  test("should fail when failOnDuplicateComponentName is true and two marked parameters derive the same name") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e1 = endpoint.get.in("books").in(query[String]("tenantId").description("A").reusableComponent)
+    val e2 = endpoint.get.in("magazines").in(query[Int]("tenantId").description("B").reusableComponent)
+
+    val options = OpenAPIDocsOptions.default.copy(failOnDuplicateComponentName = true)
+
+    val thrown = intercept[IllegalStateException] {
+      OpenAPIDocsInterpreter(options).toOpenAPI(List(e1, e2), Info("Entities", "1.0"))
+    }
+
+    thrown.getMessage should include("Duplicate OpenAPI component names found in components/parameters")
+    thrown.getMessage should include("tenantId")
+    thrown.getMessage should include("reusableComponent")
+  }
+
+  test("should pass when failOnDuplicateComponentName is false and two marked parameters derive the same name") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e1 = endpoint.get.in("books").in(query[String]("tenantId").description("A").reusableComponent)
+    val e2 = endpoint.get.in("magazines").in(query[Int]("tenantId").description("B").reusableComponent)
+
+    val options = OpenAPIDocsOptions.default.copy(failOnDuplicateComponentName = false)
+
+    val openApi = OpenAPIDocsInterpreter(options).toOpenAPI(List(e1, e2), Info("Entities", "1.0"))
+
+    openApi.components.map(_.parameters.keys.toList.sorted) shouldBe Some(List("tenantId", "tenantId1"))
+  }
+
+  test("should default failOnDuplicateComponentName to true") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e1 = endpoint.get.in("books").in(query[String]("tenantId").description("A").reusableComponent)
+    val e2 = endpoint.get.in("magazines").in(query[Int]("tenantId").description("B").reusableComponent)
+
+    assertThrows[IllegalStateException] {
+      OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2), Info("Entities", "1.0"))
+    }
   }
 }

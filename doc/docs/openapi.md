@@ -231,12 +231,58 @@ Options can be customised by providing an instance of `OpenAPIDocsOptions` to th
   which (without automatic deduplication by adding a numeric suffix) would be identical. Having automatically resolved 
   de-duplications might result in different names depending on the order of endpoints. This might result in false 
   positive changes in the OpenApi document.
+* `failOnDuplicateComponentName`: if two components marked with `.reusableComponent` derive the same component key,
+  fail instead of disambiguating with a numeric suffix. Defaults to `true` — stricter than
+  `failOnDuplicateSchemaName`, because marking is explicit and a collision between two explicitly marked components is
+  almost always a mistake.
 
 ## Inlined and referenced schemas
 
 All named schemas (that is, schemas which have the `Schema.name` property defined) will be referenced at point of
 use, and their definitions will be part of the `components` section. If you'd like a schema to be inlined, instead
 of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
+
+## Reusable parameters and headers
+
+By default, every parameter is inlined into each operation that uses it. A parameter shared by many endpoints is
+therefore serialised in full many times over.
+
+To emit a parameter once into the `components` section and reference it from each use site, mark it with
+`.reusableComponent`:
+
+```scala mdoc:compile-only
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.ReusableComponentAttribute.*
+
+val tenantId = query[String]("tenantId").description("The tenant").reusableComponent
+
+val listBooks = endpoint.get.in("books").in(tenantId)
+val listMagazines = endpoint.get.in("magazines").in(tenantId)
+```
+
+Both operations then contain `$ref: '#/components/parameters/tenantId'`, and the definition appears once under
+`components.parameters`.
+
+The component's key defaults to the parameter's own name. Pass one explicitly if you need a different key, or to
+resolve a clash:
+
+```scala mdoc:compile-only
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.ReusableComponentAttribute.*
+
+val tenantId = query[String]("tenantId").reusableComponent("TenantId")
+```
+
+Notes:
+
+* The marker is an opt-in. Endpoints that do not use it produce exactly the document they produced before.
+* Request headers need no separate marker: OpenAPI models them as `parameters` with `in: header`, which is how tapir
+  emits them, so marking one hoists it into `components.parameters` like any other parameter.
+* Marking is by value, not by use site: once a parameter is marked anywhere, every structurally identical parameter is
+  referenced, whether or not it was marked. Marking the shared `val` once is the intended usage.
+* A marked parameter is always hoisted, even when only one endpoint uses it, so the document does not change shape as
+  endpoints are added or removed.
+* A marked input that is hidden (`.schema(_.hidden(true))`) produces no component.
 
 ## Authentication inputs and security requirements
 
