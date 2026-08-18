@@ -19,11 +19,12 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaString,
   OpenapiSchemaUUID
 }
+import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
 
-class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
+class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with EitherValues {
   import io.circe.yaml.parser
   import cats.implicits._
   import io.circe._
@@ -276,8 +277,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers {
       .parse(yaml)
       .leftMap(err => err: Error)
       .flatMap(_.as[OpenapiDocument])
-      .toOption
-      .get
+      .value
 
     val response = doc.paths.head.methods.head.responses.head.asInstanceOf[OpenapiResponseDef]
     val (headerName, header) = response.getHeaders.head
