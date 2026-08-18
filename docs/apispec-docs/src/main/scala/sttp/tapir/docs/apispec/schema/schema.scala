@@ -24,26 +24,18 @@ package object schema {
     s"Duplicate schema names found: ${baseNames.mkString(", ")}. " +
       "Consider using unique class names or customize the schemaName function."
 
-  /** Assigns a unique id to each of `ts`, based on `toIdBase`, suffixing with a number on collision.
-    *
-    * @param failOnDuplicateName
-    *   when true, a collision throws instead of being suffixed. Suffixing is order-dependent, so `Foo` vs `Foo1` can flip as endpoints are
-    *   reordered, producing phantom diffs in a committed specification.
-    * @param duplicateNameError
-    *   builds the failure message from the sorted, distinct colliding base names. Defaults to the schema-specific message.
-    */
   private[docs] def calculateUniqueIds[T](
       ts: Iterable[T],
       toIdBase: T => String,
       failOnDuplicateName: Boolean,
       duplicateNameError: List[String] => String = defaultDuplicateSchemaNameError
   ): Map[T, String] = {
-    case class Assigment(idToT: Map[String, T], tToId: Map[T, String])
+    case class Assignment(idToT: Map[String, T], tToId: Map[T, String])
     val result = ts
-      .foldLeft(Assigment(Map.empty, Map.empty)) { case (Assigment(idToT, tToId), t) =>
+      .foldLeft(Assignment(Map.empty, Map.empty)) { case (Assignment(idToT, tToId), t) =>
         val id = uniqueString(toIdBase(t), n => !idToT.contains(n) || idToT.get(n).contains(t))
 
-        Assigment(
+        Assignment(
           idToT + (id -> t),
           tToId + (t -> id)
         )
