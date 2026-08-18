@@ -8,6 +8,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiDocument,
   OpenapiHeaderDef,
   OpenapiHeaderRef,
+  OpenapiInfo,
   OpenapiParameter,
   OpenapiPath,
   OpenapiPathMethod,
@@ -461,7 +462,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
     val doc = OpenapiDocument(
       "3.1.0",
       Nil,
-      null,
+      OpenapiInfo("test", "1.0"),
       Seq(
         OpenapiPath(
           "ping",
