@@ -35,7 +35,6 @@ object OpenapiComponent {
         parameters.map { case (k, v) => s"#/components/parameters/$k" -> v },
         responses,
         requestBodies,
-        // re-keyed by full ref, exactly like `parameters` above, so that OpenapiHeaderRef.resolved can look up by `$ref.name`
         headers.map { case (k, v) => s"#/components/headers/$k" -> v }
       )
     }
