@@ -53,7 +53,16 @@ private[openapi] class ReusableComponentsForEndpoints(
     val distinctMarked: Vector[(T, Option[String])] = marked
       .groupBy(_._1)
       .toVector
-      .map { case (t, markers) => t -> markers.flatMap(_._2).headOption }
+      .map { case (t, markers) =>
+        val explicitNames = markers.flatMap(_._2).distinct.sorted
+        if (explicitNames.size > 1 && failOnDuplicateComponentName)
+          throw new IllegalStateException(
+            s"Conflicting OpenAPI component names in components/$section: ${explicitNames.mkString(", ")}. " +
+              "The same parameter or header cannot be emitted under more than one key - mark it once, " +
+              "or set OpenAPIDocsOptions.failOnDuplicateComponentName to false to use the first name alphabetically."
+          )
+        t -> explicitNames.headOption
+      }
       .sortBy { case (t, explicitName) => (explicitName.getOrElse(defaultName(t)), t.toString) }
 
     calculateUniqueIds[(T, Option[String])](

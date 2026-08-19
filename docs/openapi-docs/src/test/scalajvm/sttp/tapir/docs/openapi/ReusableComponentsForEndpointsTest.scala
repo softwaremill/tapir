@@ -96,4 +96,28 @@ class ReusableComponentsForEndpointsTest extends AnyFunSuite with Matchers {
 
     result.parameterToName.values.toList.sorted shouldBe List("tenantId", "tenantId1")
   }
+
+  test("one parameter claiming two names fails when the check is on") {
+    val tenantId = query[String]("tenantId")
+
+    val thrown = intercept[IllegalStateException] {
+      prePass(
+        List(
+          endpoint.get.in("books").in(tenantId.reusableComponent("TenantA")),
+          endpoint.get.in("magazines").in(tenantId.reusableComponent("TenantB"))
+        )
+      )
+    }
+    thrown.getMessage should include("TenantA")
+    thrown.getMessage should include("TenantB")
+  }
+
+  test("one parameter claiming two names takes the first alphabetically when the check is off, whatever the endpoint order") {
+    val tenantId = query[String]("tenantId")
+    val books = endpoint.get.in("books").in(tenantId.reusableComponent("TenantB"))
+    val magazines = endpoint.get.in("magazines").in(tenantId.reusableComponent("TenantA"))
+
+    prePass(List(books, magazines), failOnDuplicateComponentName = false).parameterToName.values.toList shouldBe List("TenantA")
+    prePass(List(magazines, books), failOnDuplicateComponentName = false).parameterToName.values.toList shouldBe List("TenantA")
+  }
 }
