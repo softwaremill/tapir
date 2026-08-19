@@ -124,7 +124,7 @@ class NettyServerHandler[F[_]](
           )
           writeError503ThenClose(ctx)
         }
-        if(e.state == IdleState.READER_IDLE && !wasBodyCompletelySend(ctx)) {
+        if(e.state == IdleState.READER_IDLE && !wasRequestBodyFullyReceived(ctx)) {
           logger.error(
             s"Closing connection due to partially send request with pause exceeded request timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
