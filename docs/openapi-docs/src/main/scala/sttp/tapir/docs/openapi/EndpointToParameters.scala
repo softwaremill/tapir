@@ -20,9 +20,6 @@ private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) 
     case a: EndpointInput.Atom[_] if !a.codec.schema.hidden => a
   }
 
-  /** The parameters for the given inputs, each paired with the atom it was generated from, so that callers can read attributes (such as the
-    * reusable-component marker) off the source atom.
-    */
   def withSourceAtoms(inputs: Vector[EndpointInput.Basic[_]]): Vector[(EndpointInput.Atom[_], Parameter)] = {
     inputs.collect {
       case q: EndpointInput.Query[_]       => (q, enrich(q, queryToParameter(q)))
