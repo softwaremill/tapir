@@ -296,8 +296,8 @@ Notes:
   `components.headers`.
 * Marking is by value, not by use site: once a parameter is marked anywhere, every structurally identical parameter is
   referenced, whether or not it was marked. Marking the shared `val` once is the intended usage.
-* A marked parameter is always hoisted, even when only one endpoint uses it, so the document does not change shape as
-  endpoints are added or removed.
+* A marked parameter is always moved into `components`, even when only one endpoint uses it, so the document does not
+  change shape as endpoints are added or removed.
 * A marked input that is hidden (`.schema(_.hidden(true))`) produces no component.
 
 ## Authentication inputs and security requirements
