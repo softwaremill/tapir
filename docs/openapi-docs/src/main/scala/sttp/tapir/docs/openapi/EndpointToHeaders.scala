@@ -25,7 +25,7 @@ private[openapi] class EndpointToHeaders(tschemaToASchema: TSchemaToASchema) {
       example = header.info.example.flatMap(exampleValue(header.codec, _))
     )
 
-  private def fixedHeaderToHeader[T](header: EndpointIO.FixedHeader[T]): Header =
+  private def fixedHeaderToHeader(header: EndpointIO.FixedHeader[_]): Header =
     Header(
       description = header.info.description,
       required = Some(true),
