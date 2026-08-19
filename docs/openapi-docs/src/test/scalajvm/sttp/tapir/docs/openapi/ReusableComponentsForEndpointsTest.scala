@@ -66,6 +66,14 @@ class ReusableComponentsForEndpointsTest extends AnyFunSuite with Matchers {
     result.parameterToName.keys.head.in.value shouldBe "header"
   }
 
+  test("a marked response header on the error output is collected as a header") {
+    val rateLimit = header[String]("X-Rate-Limit").reusableComponent
+    val result = prePass(List(endpoint.get.in("books").errorOut(stringBody).errorOut(rateLimit)))
+
+    result.headerToName.values.toList shouldBe List("X-Rate-Limit")
+    result.parameterToName shouldBe empty
+  }
+
   test("marking one use site also references structurally identical unmarked ones") {
     val marked = query[String]("tenantId").description("The tenant").reusableComponent
     val unmarked = query[String]("tenantId").description("The tenant")
