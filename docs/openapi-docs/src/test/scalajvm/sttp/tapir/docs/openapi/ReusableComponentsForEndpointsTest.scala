@@ -67,8 +67,6 @@ class ReusableComponentsForEndpointsTest extends AnyFunSuite with Matchers {
   }
 
   test("marking one use site also references structurally identical unmarked ones") {
-    // the lookup is keyed by the generated Parameter value, so an unmarked query with the same name, description and codec
-    // produces an equal key and is therefore covered by the same component - the documented, deliberate consequence
     val marked = query[String]("tenantId").description("The tenant").reusableComponent
     val unmarked = query[String]("tenantId").description("The tenant")
     val result = prePass(List(endpoint.get.in("books").in(marked), endpoint.get.in("magazines").in(unmarked)))

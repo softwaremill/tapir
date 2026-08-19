@@ -13,9 +13,6 @@ case class OpenAPIDocsOptions(
     markOptionsAsNullable: Boolean = false,
     failOnDuplicateOperationId: Boolean = false,
     failOnDuplicateSchemaName: Boolean = false,
-    // Stricter than failOnDuplicateSchemaName on purpose: marking a component is explicit, and its key defaults to the parameter's or
-    // header's own name, so a collision means two structurally different things claiming one name - almost always a mistake, and one
-    // only the author can resolve. Nothing can break, either: no existing code marks a component.
     failOnDuplicateComponentName: Boolean = true
 )
 

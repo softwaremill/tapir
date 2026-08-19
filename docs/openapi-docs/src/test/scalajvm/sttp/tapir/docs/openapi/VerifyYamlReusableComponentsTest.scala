@@ -9,7 +9,6 @@ import sttp.tapir.docs.openapi.ReusableComponentAttribute._
 
 class VerifyYamlReusableComponentsTest extends AnyFunSuite with Matchers {
 
-  // suppress the default 400 decode-failure response, so the expected YAML is about the feature under test and nothing else
   private val options = OpenAPIDocsOptions.default.copy(defaultDecodeFailureOutput = _ => None)
 
   private def toYaml(es: List[AnyEndpoint], os: OpenAPIDocsOptions = options): String =
@@ -51,7 +50,6 @@ class VerifyYamlReusableComponentsTest extends AnyFunSuite with Matchers {
     val alone = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("test", "1.0"))
     val together = OpenAPIDocsInterpreter(options).toOpenAPI(List(e, marked), Info("test", "1.0"))
 
-    // comparing the PathItem models, not substrings: this also proves the value-keyed lookup does not match a different parameter
     together.paths.pathItems("/books") shouldBe alone.paths.pathItems("/books")
   }
 
@@ -119,10 +117,8 @@ class VerifyYamlReusableComponentsTest extends AnyFunSuite with Matchers {
     openApi.components.map(_.headers.keys.toList) shouldBe Some(List("X-Rate-Limit"))
   }
 
-  /** Each of the single operation's parameters as either `Left(refString)` or `Right(parameterName)`. */
   private def operationParametersOf(openApi: sttp.apispec.openapi.OpenAPI): List[Either[String, String]] =
     openApi.paths.pathItems.values.head.get.get.parameters.map {
-      // an explicit match rather than `.left.map(...)`: LeftProjection's ergonomics differ across 2.12 / 2.13 / 3
       case Left(reference)  => Left(reference.$ref)
       case Right(parameter) => Right(parameter.name)
     }

@@ -6,16 +6,6 @@ import sttp.tapir._
 import sttp.tapir.EndpointIO.OneOfBody
 import sttp.tapir.docs.apispec.schema.TSchemaToASchema
 
-/** Converts an endpoint's basic inputs into OpenAPI `Parameter`s.
-  *
-  * Shared, deliberately, by two callers:
-  *   - [[EndpointToOpenAPIPaths]], which emits the parameters into each operation;
-  *   - [[ReusableComponentsForEndpoints]], which needs the very same `Parameter` values, because the reusable-components lookup is keyed by
-  *     the generated value rather than by input identity.
-  *
-  * If those two ever produced different values for the same input, no test would fail and no reference would be emitted — every `$ref`
-  * would quietly become an inlined parameter again. Hence one implementation, not two.
-  */
 private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) {
   // stateless, and derived from the same TSchemaToASchema as every other caller's instance
   private val codecToMediaType = new CodecToMediaType(tschemaToASchema)

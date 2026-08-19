@@ -22,8 +22,6 @@ class ReusableComponentAttributeTest extends AnyFunSuite with Matchers {
   }
 
   test("marking preserves the precise input type and every other property") {
-    // the type ascription is the point: the `.asInstanceOf[E]` in the implicit class must give back Query[String],
-    // not EndpointInput.Atom[_], or `.name` below would not compile
     val q: EndpointInput.Query[String] = query[String]("tenantId").description("The tenant").reusableComponent
     q.name shouldBe "tenantId"
     q.info.description shouldBe Some("The tenant")

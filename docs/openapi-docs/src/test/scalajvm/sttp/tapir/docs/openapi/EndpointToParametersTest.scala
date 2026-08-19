@@ -17,19 +17,17 @@ class EndpointToParametersTest extends AnyFunSuite with Matchers {
       .in(header[String]("X-Auth-Token"))
       .in(cookie[String]("session"))
 
-    // what the interpreter actually emits
     val emitted = OpenAPIDocsInterpreter()
       .toOpenAPI(e, Info("test", "1.0"))
       .paths
       .pathItems
       .values
       .head
-      .get // PathItem.get: Option[Operation]
-      .get // unwrap the Option
+      .get
+      .get
       .parameters
       .collect { case Right(p) => p }
 
-    // what EndpointToParameters computes, set up exactly as EndpointToOpenAPIDocs.toOpenAPI does
     val options = OpenAPIDocsOptions.default
     val es = List(e).filter(e2 => findWebSocket(e2).isEmpty).map(nameAllPathCapturesInEndpoint)
     val additionalOutputs = es.flatMap(e2 => options.defaultDecodeFailureOutput(e2.input)).toSet.toList
