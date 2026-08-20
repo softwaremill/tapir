@@ -69,4 +69,30 @@ class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
     val second: InputStream = caching.toRaw(request, RawBodyType.InputStreamBody, None).value
     new String(second.readAllBytes(), StandardCharsets.UTF_8) shouldBe "xy"
   }
+
+  it should "not let mutating a returned byte array corrupt the cache" in {
+    val delegate = new CountingRequestBody("hello")
+    val caching = new CachingRequestBody[Identity, NoStreams](delegate)
+
+    val first = caching.toRaw(request, RawBodyType.ByteArrayBody, None).value
+    java.util.Arrays.fill(first, 'X'.toByte)
+
+    caching.toRaw(request, RawBodyType.ByteArrayBody, None).value shouldBe "hello".getBytes(StandardCharsets.UTF_8)
+    caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), None).value shouldBe "hello"
+
+    delegate.reads shouldBe 1
+  }
+
+  it should "not let mutating a returned byte buffer corrupt the cache" in {
+    val delegate = new CountingRequestBody("hello")
+    val caching = new CachingRequestBody[Identity, NoStreams](delegate)
+
+    val first = caching.toRaw(request, RawBodyType.ByteBufferBody, None).value
+    while (first.hasRemaining) { val _ = first.put('X'.toByte) }
+
+    caching.toRaw(request, RawBodyType.ByteBufferBody, None).value.array() shouldBe "hello".getBytes(StandardCharsets.UTF_8)
+    caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), None).value shouldBe "hello"
+
+    delegate.reads shouldBe 1
+  }
 }

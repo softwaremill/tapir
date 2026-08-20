@@ -9,8 +9,9 @@ import sttp.tapir.{InputStreamRange, RawBodyType}
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
-/** Reads the request body from `delegate` at most once, buffering the bytes so that subsequent reads - e.g. an
-  * extracted body decoded during the security phase, followed by the endpoint's own body - are served from memory.
+/** Reads a bytes-like request body from `delegate` at most once, buffering the bytes so that subsequent reads - e.g.
+  * an extracted body decoded during the security phase, followed by the endpoint's own body - are served from
+  * memory.
   *
   * Must be created per request: it holds that request's bytes.
   */
@@ -28,16 +29,20 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
       case RawBodyType.StringBody(charset) =>
         bytes(serverRequest, maxBytes).map(bs => RawValue(new String(bs, charset)).asInstanceOf[RawValue[R]])
       case RawBodyType.ByteArrayBody =>
-        bytes(serverRequest, maxBytes).map(bs => RawValue(bs).asInstanceOf[RawValue[R]])
+        // clone: byteArrayBody is an identity codec, so the caller receives this array as-is and could mutate it
+        // in place, corrupting the cache for the next read
+        bytes(serverRequest, maxBytes).map(bs => RawValue(bs.clone()).asInstanceOf[RawValue[R]])
       case RawBodyType.ByteBufferBody =>
-        bytes(serverRequest, maxBytes).map(bs => RawValue(ByteBuffer.wrap(bs)).asInstanceOf[RawValue[R]])
+        // clone for the same reason as ByteArrayBody above; wrap (not asReadOnlyBuffer) so .array() keeps working
+        bytes(serverRequest, maxBytes).map(bs => RawValue(ByteBuffer.wrap(bs.clone())).asInstanceOf[RawValue[R]])
       case RawBodyType.InputStreamBody =>
         bytes(serverRequest, maxBytes).map(bs => RawValue(new ByteArrayInputStream(bs)).asInstanceOf[RawValue[R]])
       case RawBodyType.InputStreamRangeBody =>
         bytes(serverRequest, maxBytes)
           .map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))).asInstanceOf[RawValue[R]])
-      // file and multipart bodies cannot be extracted (rejected at compile time), so they are always the endpoint's
-      // single primary body and can be read directly
+      // File and multipart bodies are never served from the cache. An endpoint combining one of them with an
+      // extracted body is rejected by EndpointVerifier at route construction, so this branch only ever sees an
+      // endpoint whose sole body is the primary one.
       case other => delegate.toRaw(serverRequest, other, maxBytes)
     }
 
