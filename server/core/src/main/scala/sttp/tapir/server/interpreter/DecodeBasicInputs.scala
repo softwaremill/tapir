@@ -8,21 +8,32 @@ import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, oneOfB
 
 import scala.annotation.tailrec
 
-sealed trait DecodeBasicInputsResult
+sealed trait DecodeBasicInputsResult {
+
+  /** Whether any body input in this result is an extracted body, i.e. one which requires the request body to be
+    * readable more than once.
+    */
+  def hasExtractedBody: Boolean
+}
 object DecodeBasicInputsResult {
 
   /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint. */
   case class Values(
       basicInputsValues: Vector[Any],
-      bodyInputWithIndex: Option[(Either[EndpointIO.OneOfBody[?, ?], EndpointIO.StreamBodyWrapper[?, ?]], Int)]
+      bodyInputWithIndex: Option[(Either[EndpointIO.OneOfBody[?, ?], EndpointIO.StreamBodyWrapper[?, ?]], Int)],
+      extractedBodyInputsWithIndex: Vector[(EndpointIO.Body[?, ?], Int)] = Vector.empty
   ) extends DecodeBasicInputsResult {
+    override def hasExtractedBody: Boolean = extractedBodyInputsWithIndex.nonEmpty
+
     private def verifyNoBody(input: EndpointInput[?]): Unit = if (bodyInputWithIndex.isDefined) {
       throw new IllegalStateException(s"Double body definition: $input")
     }
-    def addBodyInput[O](input: EndpointIO.Body[?, O], bodyIndex: Int): Values = {
-      verifyNoBody(input)
-      copy(bodyInputWithIndex = Some((Left(oneOfBody(ContentTypeRange.AnyRange -> input)), bodyIndex)))
-    }
+    def addBodyInput[O](input: EndpointIO.Body[?, O], bodyIndex: Int): Values =
+      if (input.isExtracted) copy(extractedBodyInputsWithIndex = extractedBodyInputsWithIndex :+ ((input, bodyIndex)))
+      else {
+        verifyNoBody(input)
+        copy(bodyInputWithIndex = Some((Left(oneOfBody(ContentTypeRange.AnyRange -> input)), bodyIndex)))
+      }
     def addOneOfBodyInput(input: EndpointIO.OneOfBody[?, ?], bodyIndex: Int): Values = {
       verifyNoBody(input)
       copy(bodyInputWithIndex = Some((Left(input), bodyIndex)))
@@ -40,7 +51,9 @@ object DecodeBasicInputsResult {
 
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }
-  case class Failure(input: EndpointInput.Basic[?], failure: DecodeResult.Failure) extends DecodeBasicInputsResult
+  case class Failure(input: EndpointInput.Basic[?], failure: DecodeResult.Failure) extends DecodeBasicInputsResult {
+    override def hasExtractedBody: Boolean = false
+  }
 
   def higherPriorityFailure(l: DecodeBasicInputsResult, r: DecodeBasicInputsResult): Option[Failure] = (l, r) match {
     case (f1: Failure, _: Values)   => Some(f1)
