@@ -111,12 +111,17 @@ class ServerInterpreter[R, F[_], B, S](
     val rawValues = ConcurrentHashMap.newKeySet[RawValue[?]]()
     val addRawValue: RawValue[?] => Unit = rawValues.add(_): Unit
 
+    // if the endpoint reads the body more than once, buffer it so that the backend's request is consumed only once
+    val endpointRequestBody: RequestBody[F, S] =
+      if (securityBasicInputs.hasExtractedBody || regularBasicInputs.hasExtractedBody) new CachingRequestBody(requestBody)
+      else requestBody
+
     (for {
       // 2. if the decoding failed, short-circuiting further processing with the decode failure that has a lower sort
       // index (so that the correct one is passed to the decode failure handler)
       _ <- resultOrValueFrom(DecodeBasicInputsResult.higherPriorityFailure(securityBasicInputs, regularBasicInputs))
       // 3. computing the security input value
-      securityValues <- resultOrValueFrom(decodeBody(request, securityBasicInputs, se.info, addRawValue))
+      securityValues <- resultOrValueFrom(decodeBody(request, securityBasicInputs, se.info, addRawValue, endpointRequestBody))
       securityParams <- resultOrValueFrom(InputValue(se.endpoint.securityInput, securityValues))
       inputValues <- resultOrValueFrom(regularBasicInputs)
       a = securityParams.asAny.asInstanceOf[A]
@@ -142,7 +147,7 @@ class ServerInterpreter[R, F[_], B, S](
         case Right(u) =>
           for {
             // 5. decoding the body of regular inputs, computing the input value, and running the main logic
-            values <- resultOrValueFrom(decodeBody(request, inputValues, se.endpoint.info, addRawValue))
+            values <- resultOrValueFrom(decodeBody(request, inputValues, se.endpoint.info, addRawValue, endpointRequestBody))
             params <- resultOrValueFrom(InputValue(se.endpoint.input, values))
             response <- resultOrValueFrom.value(
               endpointHandler(defaultSecurityFailureResponse, endpointInterceptors)
@@ -178,15 +183,16 @@ class ServerInterpreter[R, F[_], B, S](
       request: ServerRequest,
       result: DecodeBasicInputsResult,
       endpointInfo: EndpointInfo,
-      addRawValue: RawValue[?] => Unit
-  ): F[DecodeBasicInputsResult] =
+      addRawValue: RawValue[?] => Unit,
+      requestBody: RequestBody[F, S]
+  ): F[DecodeBasicInputsResult] = {
+    val maxBodyLength = endpointInfo.attribute(AttributeKey[MaxContentLength]).map(_.value)
     result match {
       case values: DecodeBasicInputsResult.Values =>
-        val maxBodyLength = endpointInfo.attribute(AttributeKey[MaxContentLength]).map(_.value)
-        values.bodyInputWithIndex match {
+        val primaryDecoded: F[DecodeBasicInputsResult] = values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
-              case Some(Left(body)) => decodeBody(request, values, body, maxBodyLength, addRawValue)
+              case Some(Left(body)) => decodeBody(request, values, body, maxBodyLength, addRawValue, requestBody)
               case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body, maxBodyLength)
               case None                                                      => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
@@ -194,8 +200,51 @@ class ServerInterpreter[R, F[_], B, S](
             decodeStreamingBody(request, values, bodyInput, maxBodyLength)
           case None => (values: DecodeBasicInputsResult).unit
         }
+
+        primaryDecoded.flatMap {
+          case v: DecodeBasicInputsResult.Values => decodeExtractedBodies(request, v, maxBodyLength, addRawValue, requestBody)
+          case failure                           => failure.unit
+        }
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
+  }
+
+  private def decodeExtractedBodies(
+      request: ServerRequest,
+      values: DecodeBasicInputsResult.Values,
+      maxBodyLength: Option[Long],
+      addRawValue: RawValue[?] => Unit,
+      requestBody: RequestBody[F, S]
+  ): F[DecodeBasicInputsResult] =
+    values.extractedBodyInputsWithIndex.foldLeft((values: DecodeBasicInputsResult).unit) { case (acc, (bodyInput, index)) =>
+      acc.flatMap {
+        case v: DecodeBasicInputsResult.Values =>
+          decodeExtractedBody(request, v, bodyInput.asInstanceOf[EndpointIO.Body[Any, Any]], index, maxBodyLength, addRawValue, requestBody)
+        case failure => failure.unit
+      }
+    }
+
+  private def decodeExtractedBody[RAW, T](
+      request: ServerRequest,
+      values: DecodeBasicInputsResult.Values,
+      bodyInput: EndpointIO.Body[RAW, T],
+      index: Int,
+      maxBodyLength: Option[Long],
+      addRawValue: RawValue[?] => Unit,
+      requestBody: RequestBody[F, S]
+  ): F[DecodeBasicInputsResult] =
+    requestBody
+      .toRaw(request, bodyInput.bodyType, maxBodyLength)
+      .flatMap { v =>
+        addRawValue(v)
+        bodyInput.codec.decode(v.value) match {
+          case DecodeResult.Value(bodyV)     => (values.setBasicInputValue(bodyV, index): DecodeBasicInputsResult).unit
+          case failure: DecodeResult.Failure => (DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult).unit
+        }
+      }
+      .handleError { case e @ (StreamMaxLengthExceededException(_) | InvalidMultipartBodyException(_, _)) =>
+        (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.Error("", e)): DecodeBasicInputsResult).unit
+      }
 
   private def decodeStreamingBody(
       request: ServerRequest,
@@ -213,7 +262,8 @@ class ServerInterpreter[R, F[_], B, S](
       values: DecodeBasicInputsResult.Values,
       bodyInput: EndpointIO.Body[RAW, T],
       maxBodyLength: Option[Long],
-      addRawValue: RawValue[?] => Unit
+      addRawValue: RawValue[?] => Unit,
+      requestBody: RequestBody[F, S]
   ): F[DecodeBasicInputsResult] = {
     requestBody
       .toRaw(request, bodyInput.bodyType, maxBodyLength)
