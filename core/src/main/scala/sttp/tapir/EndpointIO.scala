@@ -492,7 +492,8 @@ object EndpointIO {
         case _                               => ""
       }
       val format = codec.format.mediaType
-      s"{body as $format$charset}"
+      val extracted = if (info.attribute(ExtractedBody.attributeKey).isDefined) "extracted " else ""
+      s"{${extracted}body as $format$charset}"
     }
   }
 
