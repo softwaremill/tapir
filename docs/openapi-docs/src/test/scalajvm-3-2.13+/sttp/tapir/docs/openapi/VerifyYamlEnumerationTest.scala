@@ -113,7 +113,8 @@ object VerifyYamlEnumerationTest {
   import enumeratum.values.{ShortEnum, ShortEnumEntry}
   import scala.collection.immutable
 
-  @customise(_.docsExtension("x-enum-varnames", List("UnPaid", "Paid", "Finish", "Cancel")))
+
+  @customise(new RichSchema(_).docsExtension("x-enum-varnames", List("UnPaid", "Paid", "Finish", "Cancel")))
   sealed abstract class OrderStatus(val value: Short) extends ShortEnumEntry
   object OrderStatus extends ShortEnum[OrderStatus] {
     case object UnPaid extends OrderStatus(0)
