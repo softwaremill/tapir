@@ -1,7 +1,7 @@
 package sttp.tapir.internal
 
 import sttp.tapir.Schema.annotations.format
-import sttp.tapir.SchemaAnnotations
+import sttp.tapir.{Schema, SchemaAnnotations}
 
 import scala.quoted.*
 
@@ -19,6 +19,8 @@ private[tapir] object SchemaAnnotationsMacro {
     val EncodedNameAnn = TypeTree.of[sttp.tapir.Schema.annotations.encodedName].tpe
     val ValidateAnn = TypeTree.of[sttp.tapir.Schema.annotations.validate[_]].tpe
     val ValidateEachAnn = TypeTree.of[sttp.tapir.Schema.annotations.validateEach[_]].tpe
+    val CustomiseAnn = TypeTree.of[sttp.tapir.Schema.annotations.customise].tpe
+    
 
     val tpe = TypeRepr.of[T]
 
@@ -71,7 +73,8 @@ private[tapir] object SchemaAnnotationsMacro {
         sa => annotations.find { _.tpe <:< HiddenAnn }.map(_ => '{ ${ sa }.copy(hidden = Some(true)) }).getOrElse(sa),
         sa => firstAnnArg(EncodedNameAnn).map(arg => '{ ${ sa }.copy(encodedName = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => '{ ${ sa }.copy(validate = ${ Expr.ofList(allAnnArg(ValidateAnn).map(_.asExprOf[sttp.tapir.Validator[T]])) }) },
-        sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) }
+        sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) },
+        sa => firstAnnArg(CustomiseAnn).map(arg => '{ ${ sa }.copy(customise = Some( ${ arg.asExprOf[Schema[?] => Schema[?]] } ))  }).getOrElse(sa)
       )
 
     transformations.foldLeft('{ SchemaAnnotations.empty[T] })((sa, t) => t(sa))
