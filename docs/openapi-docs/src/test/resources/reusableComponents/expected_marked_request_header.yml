@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: test
+  version: '1.0'
+paths:
+  /books:
+    get:
+      operationId: getBooks
+      parameters:
+      - $ref: '#/components/parameters/X-Request-Id'
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  parameters:
+    X-Request-Id:
+      name: X-Request-Id
+      in: header
+      description: Correlation id
+      required: true
+      schema:
+        type: string
