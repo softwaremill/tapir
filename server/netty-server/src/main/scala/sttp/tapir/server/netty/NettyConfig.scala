@@ -11,6 +11,7 @@ import io.netty.handler.ssl.SslContext
 import org.playframework.netty.http.HttpStreamsServerHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
 import sttp.tapir.server.netty.internal._
+import sttp.tapir.server.netty.internal.RequestBodyCompletedTracker
 
 import scala.concurrent.duration._
 
@@ -31,7 +32,9 @@ import scala.concurrent.duration._
   *
   * @param requestTimeout
   *   The maximum duration to wait for a response to be produced. If exceeded, the server will return a HTTP 503 response and close the
-  *   connection. This timeout is ignored in Web Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
+  *   connection.
+  *   If exceeded when request was partially send and then stalled the server will return a HTTP 400 and close the connection.
+  *   This timeout is ignored in Web Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
   *
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
@@ -148,6 +151,7 @@ object NettyConfig {
     if (cfg.compressionConfig.enabled) {
       pipeline.addLast(new HttpContentCompressor())
     }
+    pipeline.addLast(new RequestBodyCompletedTracker)
     pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())

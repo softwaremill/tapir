@@ -32,6 +32,7 @@ import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
+import RequestBodyCompletedTracker._
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
@@ -107,6 +108,13 @@ class NettyServerHandler[F[_]](
     val _ = ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
   }
 
+  def writeError400ThenClose(ctx: ChannelHandlerContext): Unit = {
+    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST)
+    res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
+    res.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+    val _ = ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
+  }
+
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
     evt match {
       case e: IdleStateEvent =>
@@ -115,6 +123,12 @@ class NettyServerHandler[F[_]](
             s"Closing connection due to exceeded response timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
           writeError503ThenClose(ctx)
+        }
+        if(e.state == IdleState.READER_IDLE && !wasRequestBodyFullyReceived(ctx)) {
+          logger.error(
+            s"Closing connection due to partially send request with pause exceeded request timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
+          )
+          writeError400ThenClose(ctx)
         }
         if (e.state() == IdleState.ALL_IDLE) {
           logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
@@ -138,7 +152,7 @@ class NettyServerHandler[F[_]](
 
     def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
       val requestTimeoutHandler = config.requestTimeout.map { requestTimeout =>
-        new IdleStateHandler(0, requestTimeout.toMillis.toInt, 0, TimeUnit.MILLISECONDS)
+        new IdleStateHandler(requestTimeout.toMillis.toInt, requestTimeout.toMillis.toInt, 0, TimeUnit.MILLISECONDS)
       }
       requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>

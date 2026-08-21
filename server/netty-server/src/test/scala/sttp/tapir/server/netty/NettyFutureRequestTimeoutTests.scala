@@ -2,6 +2,7 @@ package sttp.tapir.server.netty
 
 import sttp.tapir._
 import sttp.tapir.tests.Test
+
 import scala.concurrent.Future
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.duration.DurationInt
@@ -11,6 +12,7 @@ import sttp.tapir.server.metrics.EndpointMetric
 import io.netty.channel.EventLoopGroup
 import cats.effect.IO
 import cats.effect.kernel.Resource
+
 import scala.concurrent.ExecutionContext
 import sttp.client4._
 import sttp.capabilities.fs2.Fs2Streams
@@ -19,6 +21,8 @@ import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
+
+import java.net.Socket
 
 class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]])(implicit
     ec: ExecutionContext
@@ -82,6 +86,37 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
               activeRequests.get() shouldBe 0
               totalRequests.get() shouldBe 1
             }
+          }
+        }
+        .unsafeToFuture()
+    },
+    Test("respond with status 400 when not all declared bytes are received within time window") {
+      val e = endpoint.put
+        .in(stringBody)
+        .out(stringBody)
+        .serverLogicSuccess[Future] { body =>
+          Future.successful(body)
+        }
+
+      val config: NettyConfig = NettyConfig.default.randomPort.requestTimeout(500.millis)
+
+      val bind = IO.fromFuture(IO.delay(NettyFutureServer(config).addEndpoints(List(e)).start()))
+
+      Resource
+        .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
+        .map(_.port)
+        .use { port =>
+          val bytes = s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: 10000\r\n\r\ntest".getBytes
+
+          for {
+            socket <- IO(new Socket("localhost", port))
+            _ <- IO(socket.getOutputStream.write(bytes))
+            _ <- IO(socket.getOutputStream.flush())
+            _ <- IO.sleep(1.second)
+            response <- IO(new String(socket.getInputStream.readAllBytes()))
+            _ <- IO(socket.close())
+          } yield {
+            response should include("400 Bad Request")
           }
         }
         .unsafeToFuture()
