@@ -14,7 +14,8 @@ final case class SchemaAnnotations[T](
     hidden: Option[Boolean],
     encodedName: Option[String],
     validate: List[Validator[T]],
-    validateEach: List[Validator[Any]]
+    validateEach: List[Validator[Any]],
+    customise: Option[Schema[Any] => Schema[Any]]
 ) {
   private case class SchemaEnrich(current: Schema[T]) {
     def optionally(f: Schema[T] => Option[Schema[T]]): SchemaEnrich = f(current).map(SchemaEnrich.apply).getOrElse(this)
@@ -29,6 +30,7 @@ final case class SchemaAnnotations[T](
       .optionally(s => deprecated.map(s.deprecated(_)))
       .optionally(s => hidden.map(s.hidden(_)))
       .optionally(s => encodedName.map(en => s.name(SName(en))))
+      .optionally(s => customise.map(c => c(s.asInstanceOf[Schema[Any]]).asInstanceOf[Schema[T]]))
       .current
 
     val s3 = validate.foldLeft(s2)((current, v) => current.validate(v))
@@ -38,5 +40,5 @@ final case class SchemaAnnotations[T](
 }
 
 object SchemaAnnotations extends SchemaAnnotationsMacros {
-  def empty[T]: SchemaAnnotations[T] = SchemaAnnotations(None, None, None, None, None, None, None, Nil, Nil)
+  def empty[T]: SchemaAnnotations[T] = SchemaAnnotations(None, None, None, None, None, None, None, Nil, Nil, None)
 }

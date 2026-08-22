@@ -498,7 +498,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * }}}
       */
     class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
-    class customise(val f: Schema[?] => Schema[?]) extends StaticAnnotation with Serializable
+    class customise(val f: Schema[Any] => Schema[Any]) extends StaticAnnotation with Serializable
   }
 
   /** Wraps the given schema with a single-field product, where `fieldName` maps to `schema`.
