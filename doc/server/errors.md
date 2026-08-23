@@ -114,7 +114,7 @@ The default decode failure handler is a case class, consisting of functions whic
 an error or return a "no match", create error messages and create the response. Parts of the default behavior can be
 swapped, e.g. to return responses in a different format (other than plain text), or customise the error messages.
 
-Moreover, when using the `DefaultDecodeFailureHandler`, decode failure handling can be overriden on a per-input/output
+Moreover, when using the `DefaultDecodeFailureHandler`, decode failure handling can be overridden on a per-input/output
 basis, by setting an attribute. For example:
 
 ```scala mdoc:compile-only
