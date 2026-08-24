@@ -37,10 +37,11 @@ object EndpointBodyVerifier {
     val securityPrimaryBodies = primaryBodiesOf(securityInputs)
     val inPrimaryBodies = primaryBodiesOf(ordinaryInputs)
     val primaryBodies = securityPrimaryBodies ++ inPrimaryBodies
-    val primaryBodyAtoms: Vector[EndpointInput.Basic[?]] = primaryBodies.flatMap {
+    def asAtoms(body: EndpointInput.Basic[?]): Vector[EndpointInput.Basic[?]] = body match {
       case ob: EndpointIO.OneOfBody[?, ?] => ob.variants.map(_.bodyAsAtom).toVector
       case other                          => Vector(other)
     }
+    val primaryBodyAtoms: Vector[EndpointInput.Basic[?]] = primaryBodies.flatMap(asAtoms)
     val streamingPrimary = primaryBodyAtoms.exists(_.isInstanceOf[EndpointIO.StreamBodyWrapper[?, ?]])
     val nonReplayablePrimary = primaryBodyAtoms.exists {
       case b: EndpointIO.Body[?, ?] =>
