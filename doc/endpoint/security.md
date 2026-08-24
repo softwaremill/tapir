@@ -68,6 +68,21 @@ and input stream range bodies. File and multipart bodies aren't accepted - `extr
 can't be passed to `extractBodyFromRequest` in the first place. Either way, the restriction is enforced at compile
 time.
 
+The restriction also applies from the other side: an endpoint whose *ordinary* body (the one declared in `in`) is a
+file, multipart, or streaming body can't be combined with an extracted body in `securityIn` either. Reading the
+extracted body drains the request, so the file, multipart, or streaming body would then be read from an
+already-consumed request. Unlike the compile-time check above, this is a runtime check: it's rejected with an
+`IllegalArgumentException` when routes are constructed.
+
+```{warning}
+Declaring two *ordinary* request bodies - one in `securityIn`, one in `in`, neither wrapped in
+`extractBodyFromRequest` - is rejected the same way, since only one request body may be part of the API contract.
+This is a breaking change: on backends that eagerly buffer the whole request into memory (Vert.x, Armeria, Play),
+such an endpoint used to work, with both declarations decoding the same bytes. If you have an endpoint shaped like
+`.securityIn(stringBody).in(stringBody)`, migrate it by wrapping the `securityIn` declaration:
+`.securityIn(extractBodyFromRequest(stringBody)).in(stringBody)`.
+```
+
 Note that a *single* body input needs no wrapper: an endpoint which reads the body only in `serverSecurityLogic`,
 with no body declared in `in`, reads the request exactly once. It works without `extractBodyFromRequest`, and stays
 fully documented and visible to clients.
