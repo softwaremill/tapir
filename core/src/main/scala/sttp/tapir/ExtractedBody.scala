@@ -4,9 +4,9 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import scala.annotation.implicitNotFound
 
-/** Attribute value marking a body input as extracted: decoded from the request on the server, but not part of the API
-  * contract. Extracted bodies are excluded from documentation and ignored by client interpreters, which allows the
-  * request body to be decoded more than once - e.g. in `serverSecurityLogic` and again in the main logic.
+/** Attribute value marking a body input as extracted: decoded from the request on the server, but not part of the API contract. Extracted
+  * bodies are excluded from documentation and ignored by client interpreters, which allows the request body to be decoded more than once -
+  * e.g. in `serverSecurityLogic` and again in the main logic.
   *
   * Set using [[Tapir.extractBodyFromRequest]].
   */

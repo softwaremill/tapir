@@ -41,7 +41,7 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
         bytes(serverRequest, maxBytes)
           .map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))).asInstanceOf[RawValue[R]])
       // File and multipart bodies are never served from the cache. An endpoint combining one of them with an
-      // extracted body is rejected by EndpointVerifier at route construction, so this branch only ever sees an
+      // extracted body is rejected by EndpointBodyVerifier at route construction, so this branch only ever sees an
       // endpoint whose sole body is the primary one.
       case other => delegate.toRaw(serverRequest, other, maxBytes)
     }
