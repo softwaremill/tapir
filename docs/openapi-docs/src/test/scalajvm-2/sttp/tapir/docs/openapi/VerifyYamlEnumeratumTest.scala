@@ -6,16 +6,19 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.apispec.openapi.Info
 import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir.Schema.annotations.{default, description}
+import sttp.tapir.Schema.annotations.{default, description, customise}
 import sttp.tapir._
 import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
-
+import sttp.tapir.json.circe._
+import sttp.tapir.docs.apispec.DocsExtensionAttribute._
+import enumeratum.{Enum, EnumEntry}
+import enumeratum.values.{IntEnum, IntEnumEntry, ShortEnum, ShortEnumEntry}
 import scala.collection.immutable
+import sttp.tapir.codec.enumeratum._
 
 class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
-  import sttp.tapir.codec.enumeratum._
 
   test("should use enumeratum validator for array elements") {
     val expectedYaml = load("validator/expected_valid_enumeratum.yml")
@@ -148,11 +151,19 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
+
+  test("should add docs extension from @customise annotation on a ShortEnum") {
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(endpoint.in("order").out(jsonBody[OrderStatusResponse]), "Orders", "1.0")
+      .toYaml
+
+    val expectedYaml = load("enum/expected_enumeratum_short_enum_with_docs_extension.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlEnumeratumTest {
-  import enumeratum.{Enum, EnumEntry}
-  import enumeratum.values.{IntEnum, IntEnumEntry}
 
   case class FruitWithEnum(fruit: String, amount: Int, fruitType: List[FruitType])
 
@@ -206,4 +217,17 @@ object VerifyYamlEnumeratumTest {
 
     override def values: immutable.IndexedSeq[ErrorCode] = findValues
   }
+
+  @customise(_.docsExtension("x-enum-varnames", List("UnPaid", "Paid", "Finish", "Cancel")))
+  sealed abstract class OrderStatus(val value: Short) extends ShortEnumEntry
+
+  object OrderStatus extends ShortEnum[OrderStatus] {
+    case object UnPaid extends OrderStatus(0)
+    case object Paid extends OrderStatus(1)
+    case object Finish extends OrderStatus(2)
+    case object Cancel extends OrderStatus(3)
+    override def values: immutable.IndexedSeq[OrderStatus] = findValues
+  }
+
+  case class OrderStatusResponse(status: OrderStatus)
 }
