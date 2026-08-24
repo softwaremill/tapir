@@ -184,7 +184,7 @@ class ServerInterpreter[R, F[_], B, S](
       result: DecodeBasicInputsResult,
       endpointInfo: EndpointInfo,
       addRawValue: RawValue[?] => Unit,
-      requestBody: RequestBody[F, S]
+      bodyReader: RequestBody[F, S]
   ): F[DecodeBasicInputsResult] = {
     val maxBodyLength = endpointInfo.attribute(AttributeKey[MaxContentLength]).map(_.value)
     result match {
@@ -192,7 +192,7 @@ class ServerInterpreter[R, F[_], B, S](
         val primaryDecoded: F[DecodeBasicInputsResult] = values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), _)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
-              case Some(Left(body)) => decodeBody(request, values, body, maxBodyLength, addRawValue, requestBody)
+              case Some(Left(body)) => decodeBody(request, values, body, maxBodyLength, addRawValue, bodyReader)
               case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body, maxBodyLength)
               case None                                                      => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
@@ -202,7 +202,7 @@ class ServerInterpreter[R, F[_], B, S](
         }
 
         primaryDecoded.flatMap {
-          case v: DecodeBasicInputsResult.Values => decodeExtractedBodies(request, v, maxBodyLength, addRawValue, requestBody)
+          case v: DecodeBasicInputsResult.Values => decodeExtractedBodies(request, v, maxBodyLength, addRawValue, bodyReader)
           case failure                           => failure.unit
         }
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
@@ -214,12 +214,12 @@ class ServerInterpreter[R, F[_], B, S](
       values: DecodeBasicInputsResult.Values,
       maxBodyLength: Option[Long],
       addRawValue: RawValue[?] => Unit,
-      requestBody: RequestBody[F, S]
+      bodyReader: RequestBody[F, S]
   ): F[DecodeBasicInputsResult] =
     values.extractedBodyInputsWithIndex.foldLeft((values: DecodeBasicInputsResult).unit) { case (acc, (bodyInput, index)) =>
       acc.flatMap {
         case v: DecodeBasicInputsResult.Values =>
-          decodeExtractedBody(request, v, bodyInput.asInstanceOf[EndpointIO.Body[Any, Any]], index, maxBodyLength, addRawValue, requestBody)
+          decodeExtractedBody(request, v, bodyInput.asInstanceOf[EndpointIO.Body[Any, Any]], index, maxBodyLength, addRawValue, bodyReader)
         case failure => failure.unit
       }
     }
@@ -231,9 +231,9 @@ class ServerInterpreter[R, F[_], B, S](
       index: Int,
       maxBodyLength: Option[Long],
       addRawValue: RawValue[?] => Unit,
-      requestBody: RequestBody[F, S]
+      bodyReader: RequestBody[F, S]
   ): F[DecodeBasicInputsResult] =
-    requestBody
+    bodyReader
       .toRaw(request, bodyInput.bodyType, maxBodyLength)
       .flatMap { v =>
         addRawValue(v)
@@ -265,9 +265,9 @@ class ServerInterpreter[R, F[_], B, S](
       bodyInput: EndpointIO.Body[RAW, T],
       maxBodyLength: Option[Long],
       addRawValue: RawValue[?] => Unit,
-      requestBody: RequestBody[F, S]
+      bodyReader: RequestBody[F, S]
   ): F[DecodeBasicInputsResult] = {
-    requestBody
+    bodyReader
       .toRaw(request, bodyInput.bodyType, maxBodyLength)
       .flatMap { v =>
         addRawValue(v)
