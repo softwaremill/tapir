@@ -6,7 +6,7 @@ import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{InputStreamRange, RawBodyType}
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 
 /** Reads a bytes-like request body from `delegate` at most once, buffering the bytes so that subsequent reads - e.g. an extracted body
@@ -18,37 +18,33 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
 
   override val streams: Streams[S] = delegate.streams
 
-  // A plain var needs no synchronisation here: the interpreter's flatMap chain reads the security-phase body strictly
-  // before the main-phase one, and this instance never outlives a single request.
+  // The interpreter sequences the reads and this instance is per-request, so a plain var would do; @volatile only
+  // guards against the happens-before coming from an arbitrary backend's F.
   @volatile private var cachedBytes: Option[Array[Byte]] = None
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     bodyType match {
       case RawBodyType.StringBody(charset) =>
-        bytes(serverRequest, maxBytes).map(bs => RawValue(new String(bs, charset)).asInstanceOf[RawValue[R]])
+        bytes(serverRequest, maxBytes).map(bs => RawValue(new String(bs, charset)))
       case RawBodyType.ByteArrayBody =>
-        // clone: byteArrayBody is an identity codec, so the caller receives this array as-is and could mutate it
-        // in place, corrupting the cache for the next read
-        bytes(serverRequest, maxBytes).map(bs => RawValue(bs.clone()).asInstanceOf[RawValue[R]])
+        // identity codec: without the clone, a caller mutating the array would corrupt the cache
+        bytes(serverRequest, maxBytes).map(bs => RawValue(bs.clone()))
       case RawBodyType.ByteBufferBody =>
-        // clone for the same reason as ByteArrayBody above; wrap (not asReadOnlyBuffer) so .array() keeps working
-        bytes(serverRequest, maxBytes).map(bs => RawValue(ByteBuffer.wrap(bs.clone())).asInstanceOf[RawValue[R]])
+        // clone as above; wrap rather than asReadOnlyBuffer so .array() keeps working
+        bytes(serverRequest, maxBytes).map(bs => RawValue(ByteBuffer.wrap(bs.clone())))
       case RawBodyType.InputStreamBody =>
-        bytes(serverRequest, maxBytes).map(bs => RawValue(new ByteArrayInputStream(bs)).asInstanceOf[RawValue[R]])
+        bytes(serverRequest, maxBytes).map(bs => RawValue(new ByteArrayInputStream(bs): InputStream))
       case RawBodyType.InputStreamRangeBody =>
         bytes(serverRequest, maxBytes)
-          .map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))).asInstanceOf[RawValue[R]])
-      // File and multipart bodies are never served from the cache. An endpoint combining one of them with an
-      // extracted body is rejected by EndpointBodyVerifier at route construction, so this branch only ever sees an
-      // endpoint whose sole body is the primary one.
+          .map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
+      // file and multipart are never cached; EndpointBodyVerifier rejects them alongside an extracted body
       case other => delegate.toRaw(serverRequest, other, maxBytes)
     }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     delegate.toStream(serverRequest, maxBytes).asInstanceOf[streams.BinaryStream]
 
-  // Only the first call's maxBytes actually takes effect; the security and main phases both derive it from
-  // se.info, which is se.endpoint.info (see ServerEndpoint.info) - the same object - so they always agree.
+  // only the first call's maxBytes applies; both phases derive it from the same EndpointInfo, so they agree
   private def bytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
     cachedBytes match {
       case Some(bs) => bs.unit

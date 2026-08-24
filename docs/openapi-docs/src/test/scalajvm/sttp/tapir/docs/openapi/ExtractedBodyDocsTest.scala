@@ -12,8 +12,7 @@ class ExtractedBodyDocsTest extends AnyFlatSpec with Matchers {
       .securityIn(extractBodyFromRequest(stringBody))
       .in(byteArrayBody)
 
-    // suppress the default 400 response, whose body is always documented as text/plain regardless of the
-    // endpoint's inputs, so the assertion below isolates the request body under test
+    // the default 400 is always documented as text/plain; suppressing it isolates the request body under test
     val options = OpenAPIDocsOptions.default.copy(defaultDecodeFailureOutput = _ => None)
     val yaml = OpenAPIDocsInterpreter(options).toOpenAPI(e, "Test", "1.0").toYaml
 
