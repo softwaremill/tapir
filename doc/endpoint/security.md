@@ -35,6 +35,43 @@ the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../docs/opena
 supported, as well as optional variants: `authorizationCodeFlow[Optional]`, `clientCredentialsFlow[Optional]`, 
 `implicitFlow[Optional]`.
 
+## Using the request body in security logic
+
+Security logic sometimes needs the request body itself - for example, to verify a signature computed over the raw
+payload. The request body can normally be read only once, so an endpoint which needs it in both
+`serverSecurityLogic` and the main logic must mark one of the two declarations with `extractBodyFromRequest`:
+
+```scala mdoc:compile-only
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
+
+case class Person(name: String, age: Int)
+
+val secureEndpoint = endpoint.post
+  .securityIn(auth.bearer[String]())
+  .securityIn(extractBodyFromRequest(stringBody))
+  .in("people")
+  .in(jsonBody[Person])
+```
+
+An extracted body is still decoded on the server, using its own codec, but it isn't part of the endpoint's API
+contract: there's only one request body on the wire, so the extracted declaration is excluded from the generated
+documentation, and ignored by client interpreters. The unmarked body - `jsonBody[Person]` above - is the one that's
+documented, and the one clients actually send.
+
+Only bodies which can be re-read from buffered bytes can be extracted: string, byte array, byte buffer, input stream
+and input stream range bodies. File and multipart bodies aren't accepted - `extractBodyFromRequest` requires a
+`ReplayableRawBody` instance for the body's raw type, and none is provided for `RawBodyType.FileBody` or
+`RawBodyType.MultipartBody` - while streaming and `oneOf` bodies aren't `EndpointIO.Body` values at all, so they
+can't be passed to `extractBodyFromRequest` in the first place. Either way, the restriction is enforced at compile
+time.
+
+Note that a *single* body input needs no wrapper: an endpoint which reads the body only in `serverSecurityLogic`,
+with no body declared in `in`, reads the request exactly once. It works without `extractBodyFromRequest`, and stays
+fully documented and visible to clients.
+
 ## Authentication challenges
 
 For each `auth` scheme, one can define `WWW-Authenticate` headers that should be returned by the server in case input is 

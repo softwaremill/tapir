@@ -190,6 +190,34 @@ an error response is returned.
 
 Additional outputs can be then added to the resulting partial endpoint. 
 
+## Verifying endpoint descriptions
+
+When routes are constructed, tapir checks that each endpoint is structurally serveable, and throws an
+`IllegalArgumentException` if it isn't - for example, if a request body is declared both in `securityIn` and in `in`,
+without one of them being wrapped in
+[`extractBodyFromRequest`](../endpoint/security.md#using-the-request-body-in-security-logic).
+
+Other problems are reported only as warnings, since the endpoint still serves correctly, even though its published
+contract is probably not what was intended - for example, an `extractBodyFromRequest` input with no body declared in
+`in`, which will never be sent by clients or appear in the documentation. Unlike errors, warnings aren't checked
+automatically, and tapir doesn't log them anywhere - `server/core`, where `EndpointBodyVerifier` lives, deliberately
+contains no logging. To see them, call `EndpointBodyVerifier` yourself, e.g. asserting on the result in your own tests:
+
+```scala mdoc:compile-only
+import sttp.tapir.*
+import sttp.tapir.server.EndpointBodyVerifier
+
+val endpoints: List[AnyEndpoint] = List(
+  endpoint.post.in("ingest").securityIn(extractBodyFromRequest(stringBody))
+)
+
+val problems = EndpointBodyVerifier.verify(endpoints)
+assert(problems.warnings.nonEmpty)
+```
+
+`EndpointBodyVerifier.verify` checks a list of endpoints, while `EndpointBodyVerifier.verifyOne` checks a single one;
+both return an `EndpointBodyProblems(errors, warnings)` value.
+
 ## Status codes
 
 By default, successful responses are returned with the `200 OK` status code, and errors with `400 Bad Request`. However,
