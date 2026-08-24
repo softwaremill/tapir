@@ -13,7 +13,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.ResponseMetadata
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.client.ClientOutputParams
-import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointOutput, SplitParams}
+import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointIOBody, RichEndpointOutput, SplitParams}
 import sttp.tapir.{
   Codec,
   CodecFormat,
@@ -100,7 +100,9 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
           currentUri.withQueryParam(key, values)
         }
         req.withUri(uri)
-      case EndpointIO.Empty(_, _)              => req
+      case EndpointIO.Empty(_, _)                        => req
+      case b @ EndpointIO.Body(_, _, _) if b.isExtracted =>
+        req // decoded server-side only; not part of the request the client sends
       case EndpointIO.Body(bodyType, codec, _) => setBody(value, bodyType, codec, req)
       case ob: EndpointIO.OneOfBody[_, _]      =>
         ob.headVariantBodyWithAppliedMapping match {

@@ -8,7 +8,7 @@ import sttp.capabilities.pekko.PekkoStreams
 import sttp.model.{Header, Method, ResponseMetadata}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.client.ClientOutputParams
-import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointOutput, SplitParams}
+import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointIOBody, RichEndpointOutput, SplitParams}
 import sttp.tapir.{
   Codec,
   CodecFormat,
@@ -115,7 +115,9 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointInput.QueryParams(codec, _) =>
         val mqp = codec.encode(value)
         req.addQueryStringParameters(mqp.toSeq: _*)
-      case EndpointIO.Empty(_, _)              => req
+      case EndpointIO.Empty(_, _)                        => req
+      case b @ EndpointIO.Body(_, _, _) if b.isExtracted =>
+        req // decoded server-side only; not part of the request the client sends
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         req2
