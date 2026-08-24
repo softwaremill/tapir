@@ -278,7 +278,7 @@ object TestHelpers {
     ),
     Some(
       OpenapiComponent(
-        schema = Map(
+        schemaFields = Map(
           "Book" -> OpenapiSchemaField(
             OpenapiSchemaObject(
               mutable.LinkedHashMap("title" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),

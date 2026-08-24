@@ -4,7 +4,12 @@ import sttp.tapir.codegen.endpoints.SimpleTypes.mapSchemaSimpleTypeToType
 import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaEnum, OpenapiSchemaSimpleType}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
+  OpenapiSchemaArray,
+  OpenapiSchemaEnum,
+  OpenapiSchemaRef,
+  OpenapiSchemaSimpleType
+}
 import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.NameHelpers.strippedToCamelCase
 import sttp.tapir.codegen.util.{JavaEscape, Location}
@@ -84,8 +89,13 @@ object ParamComponent {
         val desc = param.description.map(JavaEscape.escapeString).fold("")(d => s""".description("$d")""")
         // TODO: should probably add enum in RenderConfig ?
         // Resolve the default value if schema is a ref
-        val defaultValue = param.schema.default
-        val default = defaultValue.fold("")(d => s".default(${DefaultValueRenderer.render(doc.components.toSeq.flatMap(_.schemas).toMap, st, !required, RenderConfig())(d)})")
+        val defaultValue = param.schema.`type` match {
+          case ref: OpenapiSchemaRef => ref.maybeResolved(doc).flatMap(_.default)
+          case _                     => param.schema.default
+        }
+        val default = defaultValue.fold("")(d =>
+          s".default(${DefaultValueRenderer.render(doc.components.toSeq.flatMap(_.schemas).toMap, st, !required, RenderConfig())(d)})"
+        )
         val validation = if (generateValidators) ValidationGenerator.mkValidations(doc, st, required) else ""
         (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$validation$desc$default""", None, req)
       case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>

@@ -291,7 +291,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Some(
         OpenapiComponent(
-          schemas = Map(
+          schemaFields = Map(
             "FileUpload" -> OpenapiSchemaField(
               OpenapiSchemaObject(
                 properties = mutable.LinkedHashMap(
@@ -490,7 +490,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Some(
         OpenapiComponent(
-          schemas = Map.empty,
+          schemaFields = Map.empty,
           headers = Map(
             "#/components/headers/RateLimit" ->
               TestHelpers.inlineHeaderDef()

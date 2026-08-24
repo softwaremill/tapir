@@ -58,7 +58,7 @@ class SchemaComparerSpec extends AnyFlatSpec with Matchers {
       ),
       Some(
         OpenapiComponent(
-          schemas = Map.empty,
+          schemaFields = Map.empty,
           headers = Map(
             "#/components/headers/RateLimit" ->
               TestHelpers.inlineHeaderDef(Some(headerDescription))
@@ -232,7 +232,7 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
   it should "merge components.headers from both documents" in {
     val left = docWith(
       OpenapiComponent(
-        schemas = Map.empty,
+        schemaFields = Map.empty,
         headers = Map(
           "#/components/headers/RateLimit" -> headerDef("rate limit"),
           "#/components/headers/OnlyLeft" -> headerDef("only left")
@@ -241,7 +241,7 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
     )
     val right = docWith(
       OpenapiComponent(
-        schemas = Map.empty,
+        schemaFields = Map.empty,
         headers = Map(
           "#/components/headers/RateLimit" -> headerDef("rate limit"),
           "#/components/headers/OnlyRight" -> headerDef("only right")
@@ -261,8 +261,8 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "fail when the same header is defined differently in both documents" in {
-    val left = docWith(OpenapiComponent(schemas = Map.empty, headers = Map("#/components/headers/RateLimit" -> headerDef("left"))))
-    val right = docWith(OpenapiComponent(schemas = Map.empty, headers = Map("#/components/headers/RateLimit" -> headerDef("right"))))
+    val left = docWith(OpenapiComponent(schemaFields = Map.empty, headers = Map("#/components/headers/RateLimit" -> headerDef("left"))))
+    val right = docWith(OpenapiComponent(schemaFields = Map.empty, headers = Map("#/components/headers/RateLimit" -> headerDef("right"))))
 
     val thrown = intercept[IllegalArgumentException](OpenApiMerger.merge(Seq(left, right)))
     thrown.getMessage should include("Conflicting header definitions")

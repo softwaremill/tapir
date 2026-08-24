@@ -259,7 +259,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
 
     res shouldBe Right(
       OpenapiComponent(
-        schemas = Map.empty,
+        schemaFields = Map.empty,
         headers = Map(
           "#/components/headers/X-Rate-Limit" -> OpenapiHeaderDef(
             OpenapiParameter(
@@ -332,7 +332,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
       Nil,
       Some(
         OpenapiComponent(
-          schemas = Map.empty,
+          schemaFields = Map.empty,
           parameters = Map(
             "#/components/parameters/RateLimit" ->
               OpenapiParameter(
@@ -401,7 +401,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
       Nil,
       Some(
         OpenapiComponent(
-          schemas = Map.empty,
+          schemaFields = Map.empty,
           parameters = Map(
             "#/components/parameters/RateLimit" ->
               OpenapiParameter(
@@ -435,7 +435,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
       Nil,
       Some(
         OpenapiComponent(
-          schemas = Map.empty,
+          schemaFields = Map.empty,
           headers = Map(
             "#/components/headers/A" -> OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/B")),
             "#/components/headers/B" -> OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/A"))

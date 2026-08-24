@@ -91,7 +91,7 @@ class ClassDefinitionGenerator {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
     val (allClassyOneOfSchemas, allOtherOneOfSchemas) = allOneOfSchemas.partition(_._2.types.forall {
-      case r: OpenapiSchemaRef => r.maybeResolved(doc).forall(_.isInstanceOf[OpenapiSchemaObject])
+      case r: OpenapiSchemaRef => r.maybeResolved(doc).forall(_.`type`.isInstanceOf[OpenapiSchemaObject])
       case _                   => false
     })
     val (resolvableNonClassyOneOfSchemas, unresolvableNCOOS) = allOtherOneOfSchemas.partition { p =>
@@ -143,7 +143,7 @@ class ClassDefinitionGenerator {
     def allChildrenDefineDiscriminator(d: String, s: OpenapiSchemaOneOf): Boolean =
       s.types.forall {
         case t: OpenapiSchemaRef =>
-          t.maybeResolved(doc).exists {
+          t.maybeResolved(doc).map(_.`type`).exists {
             case o: OpenapiSchemaObject => o.properties.contains(d)
             case _                      => false
           }

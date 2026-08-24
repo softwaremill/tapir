@@ -141,10 +141,15 @@ object OpenapiSchemaType {
     val nullable = false
     def isSchema: Boolean = name.startsWith("#/components/schemas/")
     def stripped: String = name.stripPrefix("#/components/schemas/")
-    def maybeResolved(doc: OpenapiDocument): Option[OpenapiSchemaType] =
+    def maybeResolved(doc: OpenapiDocument): Option[OpenapiSchemaField] =
       doc.components
-        .flatMap(_.schemas.get(stripped))
-        .flatMap { case r: OpenapiSchemaRef => r.maybeResolved(doc); case r => Some(r) }
+        .flatMap(_.schemaFields.get(stripped))
+        .flatMap { f =>
+          f.`type` match {
+            case r: OpenapiSchemaRef => r.maybeResolved(doc)
+            case _                   => Some(f)
+          }
+        }
   }
 
   object AnyType extends Enumeration {

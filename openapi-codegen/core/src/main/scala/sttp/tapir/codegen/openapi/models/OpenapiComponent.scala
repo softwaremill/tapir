@@ -1,15 +1,18 @@
 package sttp.tapir.codegen.openapi.models
 
 import OpenapiModels.{OpenapiHeader, OpenapiParameter}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaField
 
 case class OpenapiComponent(
-    schemas: Map[String, OpenapiSchemaType],
+    schemaFields: Map[String, OpenapiSchemaField],
     securitySchemes: Map[String, OpenapiSecuritySchemeType] = Map.empty,
     parameters: Map[String, OpenapiParameter] = Map.empty,
     responses: Map[String, OpenapiResponseDefn] = Map.empty,
     requestBodies: Map[String, OpenapiRequestBody] = Map.empty,
     headers: Map[String, OpenapiHeader] = Map.empty
-)
+) {
+  def schemas: Map[String, OpenapiSchemaType] = schemaFields.mapValues(_.`type`).toMap
+}
 
 object OpenapiComponent {
   import io.circe._
@@ -18,7 +21,7 @@ object OpenapiComponent {
 
   implicit val OpenapiComponentDecoder: Decoder[OpenapiComponent] = { (c: HCursor) =>
     for {
-      schemas <- c.getOrElse[Map[String, OpenapiSchemaType]]("schemas")(Map.empty)
+      schemas <- c.getOrElse[Map[String, OpenapiSchemaField]]("schemas")(Map.empty)
       nonMatching = schemas.keySet.filter(!_.matches(validName))
       _ <- Right(()).ensure(
         DecodingFailure(s"Schema names ${nonMatching} do not match expected regex! Expecting legal scala type names", c.history)
