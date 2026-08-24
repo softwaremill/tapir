@@ -252,6 +252,8 @@ class ServerInterpreter[R, F[_], B, S](
       bodyInput: EndpointIO.StreamBodyWrapper[Any, Any],
       maxBodyLength: Option[Long]
   ): F[DecodeBasicInputsResult] =
+    // never served from the cache: a body is either buffered for repeated reads or streamed lazily, not both;
+    // `EndpointBodyVerifier` rejects a streaming body combined with an extracted body at route construction
     (bodyInput.codec.decode(requestBody.toStream(request, maxBodyLength)) match {
       case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
       case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
