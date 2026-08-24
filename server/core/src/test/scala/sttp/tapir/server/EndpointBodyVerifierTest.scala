@@ -46,6 +46,28 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.errors.head should include("file")
   }
 
+  it should "reject a oneOfBody of streaming variants combined with an extracted body" in {
+    val e = endpoint.post
+      .in("people")
+      .securityIn(extractBodyFromRequest(stringBody))
+      .in[Nothing, Unit](oneOfBody[Nothing](streamTextBody(NoStreams)(CodecFormat.TextPlain()).toEndpointIO))
+    val problems = EndpointBodyVerifier.verifyOne(e)
+
+    problems.errors should have size 1
+    problems.errors.head should include("streaming body")
+  }
+
+  it should "reject a oneOfBody with a file body variant combined with an extracted body" in {
+    val e = endpoint.post
+      .in("people")
+      .securityIn(extractBodyFromRequest(stringBody))
+      .in(oneOfBody(fileBody))
+    val problems = EndpointBodyVerifier.verifyOne(e)
+
+    problems.errors should have size 1
+    problems.errors.head should include("file")
+  }
+
   it should "warn about an extracted body with no primary body on POST" in {
     val e = endpoint.post.in("ingest").securityIn(extractBodyFromRequest(stringBody))
     val problems = EndpointBodyVerifier.verifyOne(e)

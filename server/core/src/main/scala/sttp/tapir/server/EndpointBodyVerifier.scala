@@ -24,16 +24,25 @@ object EndpointBodyVerifier {
     endpoints.map(verifyOne).foldLeft(EndpointBodyProblems.Empty)(_ ++ _)
 
   def verifyOne(endpoint: AnyEndpoint): EndpointBodyProblems = {
-    val inputs = endpoint.securityInput.asVectorOfBasicInputs() ++ endpoint.input.asVectorOfBasicInputs()
+    val securityInputs = endpoint.securityInput.asVectorOfBasicInputs()
+    val ordinaryInputs = endpoint.input.asVectorOfBasicInputs()
+    val inputs = securityInputs ++ ordinaryInputs
 
     val extracted = inputs.collect { case b: EndpointIO.Body[?, ?] if b.isExtracted => b }
-    val primaryBodies: Vector[EndpointInput.Basic[?]] = inputs.collect {
+    def primaryBodiesOf(basics: Vector[EndpointInput.Basic[?]]): Vector[EndpointInput.Basic[?]] = basics.collect {
       case b: EndpointIO.Body[?, ?] if !b.isExtracted => b
       case b: EndpointIO.OneOfBody[?, ?]              => b
       case b: EndpointIO.StreamBodyWrapper[?, ?]      => b
     }
-    val streamingPrimary = primaryBodies.exists(_.isInstanceOf[EndpointIO.StreamBodyWrapper[?, ?]])
-    val nonReplayablePrimary = primaryBodies.exists {
+    val securityPrimaryBodies = primaryBodiesOf(securityInputs)
+    val inPrimaryBodies = primaryBodiesOf(ordinaryInputs)
+    val primaryBodies = securityPrimaryBodies ++ inPrimaryBodies
+    val primaryBodyAtoms: Vector[EndpointInput.Basic[?]] = primaryBodies.flatMap {
+      case ob: EndpointIO.OneOfBody[?, ?] => ob.variants.map(_.bodyAsAtom).toVector
+      case other                          => Vector(other)
+    }
+    val streamingPrimary = primaryBodyAtoms.exists(_.isInstanceOf[EndpointIO.StreamBodyWrapper[?, ?]])
+    val nonReplayablePrimary = primaryBodyAtoms.exists {
       case b: EndpointIO.Body[?, ?] =>
         b.bodyType match {
           case RawBodyType.FileBody         => true
@@ -44,12 +53,22 @@ object EndpointBodyVerifier {
     }
     val shown = endpoint.showShort
 
-    val tooManyPrimaries =
-      if (primaryBodies.size > 1)
+    val tooManyPrimaries: List[String] =
+      if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
         List(
           s"Endpoint $shown declares a request body in both securityIn and in. Only one may be part of the API " +
             s"contract. If both should decode the same request body, wrap the securityIn one: " +
             s"extractBodyFromRequest(...)."
+        )
+      else if (securityPrimaryBodies.size > 1)
+        List(
+          s"Endpoint $shown declares more than one request body in securityIn. Only one request body may be part " +
+            s"of the API contract."
+        )
+      else if (inPrimaryBodies.size > 1)
+        List(
+          s"Endpoint $shown declares more than one request body in in. Only one request body may be part of the " +
+            s"API contract."
         )
       else Nil
 
