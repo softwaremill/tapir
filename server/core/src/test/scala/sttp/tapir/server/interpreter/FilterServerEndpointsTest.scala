@@ -4,7 +4,6 @@ import sttp.tapir._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.{Header, Method, QueryParams, Uri}
-import sttp.monad.{IdentityMonad, MonadError}
 import sttp.shared.Identity
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
@@ -13,8 +12,6 @@ import scala.concurrent.Future
 import scala.collection.immutable.Seq
 
 class FilterServerEndpointsTest extends AnyFlatSpec with Matchers {
-  private implicit val idMonad: MonadError[Identity] = IdentityMonad
-
   it should "filter endpoints with a single fixed path component" in {
     val e1 = endpoint.in("x").noLogic
     val e2 = endpoint.in("y").noLogic

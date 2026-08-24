@@ -73,7 +73,7 @@ class ServerInterpreterExtractedBodyTest extends AnyFlatSpec with Matchers {
       _ => ()
     )
 
-    interpreter.apply(createTestRequest(List("test"), _method = Method.POST))
+    val _ = interpreter.apply(createTestRequest(List("test"), _method = Method.POST))
     requestBody.reads shouldBe 1
   }
 }
