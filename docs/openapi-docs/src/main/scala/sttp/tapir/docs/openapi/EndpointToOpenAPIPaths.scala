@@ -52,7 +52,7 @@ private[openapi] class EndpointToOpenAPIPaths(
         variants.filterNot(_.codec.schema.hidden),
         mapping
       )
-    case a: EndpointInput.Atom[_] if !a.codec.schema.hidden => a
+    case a: EndpointInput.Atom[_] if !a.codec.schema.hidden && !isExtractedBodyInput(a) => a
   }
 
   private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[_]]): Operation = {
