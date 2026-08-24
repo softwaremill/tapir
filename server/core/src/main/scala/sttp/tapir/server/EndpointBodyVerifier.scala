@@ -23,6 +23,12 @@ object EndpointBodyVerifier {
   def verify(endpoints: List[AnyEndpoint]): EndpointBodyProblems =
     endpoints.map(verifyOne).foldLeft(EndpointBodyProblems.Empty)(_ ++ _)
 
+  /** Throws an [[IllegalArgumentException]] listing all errors, if any are present. Called by server interpreters when routes are
+    * constructed.
+    */
+  private[tapir] def throwOnErrors(problems: EndpointBodyProblems): Unit =
+    if (problems.errors.nonEmpty) throw new IllegalArgumentException(problems.errors.mkString("\n"))
+
   def verifyOne(endpoint: AnyEndpoint): EndpointBodyProblems = {
     val securityInputs = endpoint.securityInput.asVectorOfBasicInputs()
     val ordinaryInputs = endpoint.input.asVectorOfBasicInputs()

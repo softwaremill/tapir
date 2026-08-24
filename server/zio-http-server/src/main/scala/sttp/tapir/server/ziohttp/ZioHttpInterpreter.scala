@@ -9,7 +9,7 @@ import sttp.tapir.internal.RichEndpointInput
 import sttp.tapir.server.EndpointBodyVerifier
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.ztapir._
 import zio._
@@ -24,7 +24,7 @@ trait ZioHttpInterpreter[R] {
     toHttp(List(se))
 
   def toHttp[R2](ses: List[ZServerEndpoint[R2, ZioStreams with WebSockets]]): Routes[R & R2, Response] = {
-    FilterServerEndpoints.throwOnErrors(EndpointBodyVerifier.verify(ses.map(_.endpoint)))
+    EndpointBodyVerifier.throwOnErrors(EndpointBodyVerifier.verify(ses.map(_.endpoint)))
 
     implicit val bodyListener: ZioHttpBodyListener[R & R2] = new ZioHttpBodyListener[R & R2]
     implicit val monadError: MonadError[RIO[R & R2, *]] = new RIOMonadError[R & R2]

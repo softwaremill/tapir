@@ -10,7 +10,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.server.{EndpointBodyVerifier, ServerEndpoint}
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.{VertxBodyListener, VertxErrorHandler}
 import sttp.tapir.server.vertx.cats.VertxCatsServerInterpreter.{CatsFFromVFuture, CatsRunAsync, VertxFutureToCatsF, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
@@ -35,7 +35,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter with Vert
   def route(
       e: ServerEndpoint[Fs2Streams[F] with WebSockets, F]
   ): Router => Route = { router =>
-    FilterServerEndpoints.throwOnErrors(EndpointBodyVerifier.verifyOne(e.endpoint))
+    EndpointBodyVerifier.throwOnErrors(EndpointBodyVerifier.verifyOne(e.endpoint))
 
     val routeDef = extractRouteDefinition(e.endpoint)
     val readStreamCompatible = fs2ReadStreamCompatible(vertxCatsServerOptions)

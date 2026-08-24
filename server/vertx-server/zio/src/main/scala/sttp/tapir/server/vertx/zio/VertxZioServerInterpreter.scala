@@ -6,7 +6,7 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.EndpointBodyVerifier
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxBodyListener
 import sttp.tapir.server.vertx.VertxErrorHandler
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
@@ -26,7 +26,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
   def route[R2](e: ZServerEndpoint[R2, ZioStreams with WebSockets])(implicit
       runtime: Runtime[R & R2]
   ): Router => Route = { router =>
-    FilterServerEndpoints.throwOnErrors(EndpointBodyVerifier.verifyOne(e.endpoint))
+    EndpointBodyVerifier.throwOnErrors(EndpointBodyVerifier.verifyOne(e.endpoint))
 
     val routeDef = extractRouteDefinition(e.endpoint)
     optionsRouteIfCORSDefined(e.widen)(router, routeDef, vertxZioServerOptions)

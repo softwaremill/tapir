@@ -10,7 +10,7 @@ import sttp.tapir.internal._
 import sttp.tapir.server.{EndpointBodyVerifier, ServerEndpoint}
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir._
 
 trait FinatraServerInterpreter extends Logging {
@@ -18,7 +18,7 @@ trait FinatraServerInterpreter extends Logging {
   def finatraServerOptions: FinatraServerOptions = FinatraServerOptions.default
 
   def toRoute(se: ServerEndpoint[Any, Future]): FinatraRoute = {
-    FilterServerEndpoints.throwOnErrors(EndpointBodyVerifier.verifyOne(se.endpoint))
+    EndpointBodyVerifier.throwOnErrors(EndpointBodyVerifier.verifyOne(se.endpoint))
 
     val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
       _ => List(se),
