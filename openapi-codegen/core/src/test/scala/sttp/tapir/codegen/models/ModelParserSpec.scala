@@ -15,6 +15,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaConstantString,
   OpenapiSchemaEnum,
+  OpenapiSchemaField,
   OpenapiSchemaRef,
   OpenapiSchemaString,
   OpenapiSchemaUUID
@@ -261,7 +262,13 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
         schemas = Map.empty,
         headers = Map(
           "#/components/headers/X-Rate-Limit" -> OpenapiHeaderDef(
-            OpenapiParameter("inline", "header", Some(true), Some("Requests left in the current window"), OpenapiSchemaString(false))
+            OpenapiParameter(
+              "inline",
+              "header",
+              Some(true),
+              Some("Requests left in the current window"),
+              OpenapiSchemaField(OpenapiSchemaString(false), None)
+            )
           )
         )
       )
@@ -307,7 +314,13 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
     val (headerName, header) = response.getHeaders.head
 
     header.resolved(headerName, doc) shouldBe OpenapiHeaderDef(
-      OpenapiParameter("X-Rate-Limit", "header", Some(true), Some("Requests left in the current window"), OpenapiSchemaString(false))
+      OpenapiParameter(
+        "X-Rate-Limit",
+        "header",
+        Some(true),
+        Some("Requests left in the current window"),
+        OpenapiSchemaField(OpenapiSchemaString(false), None)
+      )
     )
   }
 
@@ -322,7 +335,13 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
           schemas = Map.empty,
           parameters = Map(
             "#/components/parameters/RateLimit" ->
-              OpenapiParameter("RateLimit", "header", Some(true), Some("Requests left"), OpenapiSchemaString(false))
+              OpenapiParameter(
+                "RateLimit",
+                "header",
+                Some(true),
+                Some("Requests left"),
+                OpenapiSchemaField(OpenapiSchemaString(false), None)
+              )
           )
         )
       ),
@@ -332,7 +351,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
     val ref = OpenapiHeaderRef(OpenapiSchemaRef("#/components/parameters/RateLimit"))
 
     ref.resolved("X-Rate-Limit", doc) shouldBe OpenapiHeaderDef(
-      OpenapiParameter("X-Rate-Limit", "header", Some(true), Some("Requests left"), OpenapiSchemaString(false))
+      OpenapiParameter("X-Rate-Limit", "header", Some(true), Some("Requests left"), OpenapiSchemaField(OpenapiSchemaString(false), None))
     )
   }
 
@@ -370,7 +389,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
     val (headerName, header) = response.getHeaders.head
 
     header.resolved(headerName, doc) shouldBe OpenapiHeaderDef(
-      OpenapiParameter("Retry-After", "header", Some(true), None, OpenapiSchemaString(false))
+      OpenapiParameter("Retry-After", "header", Some(true), None, OpenapiSchemaField(OpenapiSchemaString(false), None))
     )
   }
 
@@ -385,7 +404,13 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
           schemas = Map.empty,
           parameters = Map(
             "#/components/parameters/RateLimit" ->
-              OpenapiParameter("RateLimit", "header", Some(true), Some("Requests left"), OpenapiSchemaString(false))
+              OpenapiParameter(
+                "RateLimit",
+                "header",
+                Some(true),
+                Some("Requests left"),
+                OpenapiSchemaField(OpenapiSchemaString(false), None)
+              )
           ),
           headers = Map(
             "#/components/headers/Alias" -> OpenapiHeaderRef(OpenapiSchemaRef("#/components/parameters/RateLimit"))
@@ -398,7 +423,7 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
     val ref = OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/Alias"))
 
     ref.resolved("X-Rate-Limit", doc) shouldBe OpenapiHeaderDef(
-      OpenapiParameter("X-Rate-Limit", "header", Some(true), Some("Requests left"), OpenapiSchemaString(false))
+      OpenapiParameter("X-Rate-Limit", "header", Some(true), Some("Requests left"), OpenapiSchemaField(OpenapiSchemaString(false), None))
     )
   }
 

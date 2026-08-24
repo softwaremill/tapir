@@ -377,23 +377,22 @@ object OpenapiSchemaType {
     } yield OpenapiSchemaEnum(tpe, items, nb)
   }
 
-  implicit val SchemaTypeWithDefaultDecoder: Decoder[(OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)] = { (c: HCursor) =>
+  implicit val OpenapiSchemaFieldDecoder: Decoder[OpenapiSchemaField] = { (c: HCursor) =>
     for {
       schemaType <- c.as[OpenapiSchemaType]
       maybeDefault <- c.downField("default").as[Option[Json]]
       readOnly <- c.downField("readOnly").as[Option[Boolean]]
       writeOnly <- c.downField("writeOnly").as[Option[Boolean]]
-    } yield (schemaType, maybeDefault, ObjectFieldRestrictions(readOnly, writeOnly))
+    } yield OpenapiSchemaField(schemaType, maybeDefault, ObjectFieldRestrictions(readOnly, writeOnly))
   }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
-      fieldsWithDefaults <- c
+      fields <- c
         .downField("properties")
-        .as[mutable.LinkedHashMap[String, (OpenapiSchemaType, Option[Json], ObjectFieldRestrictions)]]
+        .as[mutable.LinkedHashMap[String, OpenapiSchemaField]]
       r <- c.downField("required").as[Option[Seq[String]]]
       (_, nb) = p
-      fields = fieldsWithDefaults.map { case (k, (f, d, r)) => k -> OpenapiSchemaField(f, d, r) }
     } yield {
       OpenapiSchemaObject(fields, r.getOrElse(Seq.empty), nb)
     }

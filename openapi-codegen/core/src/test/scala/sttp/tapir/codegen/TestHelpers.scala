@@ -27,7 +27,7 @@ object TestHelpers {
 
   // the shape the header decoder produces for an inline definition
   def inlineHeaderDef(description: Option[String] = None): OpenapiHeaderDef =
-    OpenapiHeaderDef(OpenapiParameter("inline", "header", Some(true), description, OpenapiSchemaString(false)))
+    OpenapiHeaderDef(OpenapiParameter("inline", "header", Some(true), description, OpenapiSchemaField(OpenapiSchemaString(false), None)))
 
   val myBookshopYaml =
     """
@@ -179,7 +179,7 @@ object TestHelpers {
           OpenapiPathMethod(
             methodType = "get",
             parameters = Seq(
-              Resolved(OpenapiParameter("genre", "path", Some(true), None, OpenapiSchemaString(false))),
+              Resolved(OpenapiParameter("genre", "path", Some(true), None, OpenapiSchemaField(OpenapiSchemaString(false), None))),
               Ref[OpenapiParameter]("#/components/parameters/offset"),
               Resolved(
                 OpenapiParameter(
@@ -187,10 +187,10 @@ object TestHelpers {
                   "query",
                   Some(true),
                   Some("Maximum number of books to retrieve"),
-                  OpenapiSchemaInt(false, NumericRestrictions())
+                  OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None)
                 )
               ),
-              Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaString(false)))
+              Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaField(OpenapiSchemaString(false), None)))
             ),
             responses = Seq(
               OpenapiResponseDef(
@@ -220,17 +220,19 @@ object TestHelpers {
           OpenapiPathMethod(
             methodType = "post",
             parameters = Seq(
-              Resolved(OpenapiParameter("year", "path", Some(true), None, OpenapiSchemaInt(false, NumericRestrictions()))),
+              Resolved(
+                OpenapiParameter("year", "path", Some(true), None, OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None))
+              ),
               Resolved(
                 OpenapiParameter(
                   "limit",
                   "query",
                   Some(true),
                   Some("Maximum number of books to retrieve"),
-                  OpenapiSchemaInt(false, NumericRestrictions())
+                  OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None)
                 )
               ),
-              Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaString(false)))
+              Resolved(OpenapiParameter("X-Auth-Token", "header", Some(true), None, OpenapiSchemaField(OpenapiSchemaString(false), None)))
             ),
             responses = Seq(
               OpenapiResponseDef(
@@ -269,18 +271,21 @@ object TestHelpers {
           )
         ),
         parameters = Seq(
-          Resolved(OpenapiParameter("genre", "path", None, None, OpenapiSchemaString(false))),
+          Resolved(OpenapiParameter("genre", "path", None, None, OpenapiSchemaField(OpenapiSchemaString(false), None))),
           Ref("#/components/parameters/year")
         )
       )
     ),
     Some(
       OpenapiComponent(
-        schemas = Map(
-          "Book" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap("title" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
-            Seq("title"),
-            false
+        schema = Map(
+          "Book" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap("title" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+              Seq("title"),
+              false
+            ),
+            None
           )
         ),
         securitySchemes = Map.empty,
@@ -291,14 +296,14 @@ object TestHelpers {
               "query",
               Some(true),
               Some("Offset at which to start fetching books"),
-              OpenapiSchemaInt(false, NumericRestrictions())
+              OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None)
             ),
           "#/components/parameters/year" -> OpenapiParameter(
             "year",
             "path",
             Some(true),
             None,
-            OpenapiSchemaInt(false, NumericRestrictions())
+            OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None)
           )
         )
       )
@@ -383,7 +388,7 @@ object TestHelpers {
           OpenapiPathMethod(
             methodType = "get",
             parameters = Seq(
-              Resolved(OpenapiParameter("name", "query", Some(true), None, OpenapiSchemaString(false)))
+              Resolved(OpenapiParameter("name", "query", Some(true), None, OpenapiSchemaField(OpenapiSchemaString(false), None)))
             ),
             responses = Seq(
               OpenapiResponseDef(
@@ -429,19 +434,25 @@ object TestHelpers {
     Some(
       OpenapiComponent(
         Map(
-          "Author" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap("name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
-            List("name"),
-            false
-          ),
-          "Book" -> OpenapiSchemaObject(
-            properties = mutable.LinkedHashMap(
-              "title" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
-              "year" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None),
-              "author" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/Author"), None)
+          "Author" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap("name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+              List("name"),
+              false
             ),
-            required = Seq("title", "year", "author"),
-            nullable = false
+            None
+          ),
+          "Book" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              properties = mutable.LinkedHashMap(
+                "title" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
+                "year" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None),
+                "author" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/Author"), None)
+              ),
+              required = Seq("title", "year", "author"),
+              nullable = false
+            ),
+            None
           )
         )
       )
@@ -490,7 +501,7 @@ object TestHelpers {
           OpenapiPathMethod(
             methodType = "get",
             Seq(
-              Resolved(OpenapiParameter("name", "path", Some(true), None, OpenapiSchemaString(false)))
+              Resolved(OpenapiParameter("name", "path", Some(true), None, OpenapiSchemaField(OpenapiSchemaString(false), None)))
             ),
             responses = Seq(
               OpenapiResponseDef(
@@ -651,7 +662,9 @@ object TestHelpers {
           )
         ),
         parameters = Seq(
-          Resolved(OpenapiParameter("test", "query", Some(false), None, OpenapiSchemaRef("#/components/schemas/Test")))
+          Resolved(
+            OpenapiParameter("test", "query", Some(false), None, OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/Test"), None))
+          )
         )
       ),
       OpenapiPath(
@@ -668,22 +681,30 @@ object TestHelpers {
           )
         ),
         parameters = Seq(
-          Resolved(OpenapiParameter("test2", "path", Some(true), None, OpenapiSchemaRef("#/components/schemas/Test2")))
+          Resolved(
+            OpenapiParameter("test2", "path", Some(true), None, OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/Test2"), None))
+          )
         )
       )
     ),
     Some(
       OpenapiComponent(
         Map(
-          "Test" -> OpenapiSchemaEnum(
-            "string",
-            Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
-            false
+          "Test" -> OpenapiSchemaField(
+            OpenapiSchemaEnum(
+              "string",
+              Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
+              false
+            ),
+            None
           ),
-          "Test2" -> OpenapiSchemaEnum(
-            "string",
-            Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
-            false
+          "Test2" -> OpenapiSchemaField(
+            OpenapiSchemaEnum(
+              "string",
+              Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
+              false
+            ),
+            None
           )
         )
       )
@@ -1131,59 +1152,74 @@ object TestHelpers {
     Some(
       OpenapiComponent(
         Map(
-          "ReqWithDefaults" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap(
-              "f1" -> OpenapiSchemaField(OpenapiSchemaString(false), Some(Json.fromString("default string"))),
-              "f2" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), Some(Json.fromLong(1977)))
-            ),
-            List("f1"),
-            false
-          ),
-          "RespWithDefaults" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap(
-              "g1" -> OpenapiSchemaField(OpenapiSchemaUUID(false), Some(Json.fromString("default string"))),
-              "g2" -> OpenapiSchemaField(OpenapiSchemaFloat(false, NumericRestrictions()), Some(Json.fromLong(1977))),
-              "g3" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/AnEnum"), Some(Json.fromString("v1"))),
-              "g4" -> OpenapiSchemaField(
-                OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/AnEnum"), false),
-                Some(Json.fromValues(Vector(Json.fromString("v1"), Json.fromString("v2"), Json.fromString("v3"))))
+          "ReqWithDefaults" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap(
+                "f1" -> OpenapiSchemaField(OpenapiSchemaString(false), Some(Json.fromString("default string"))),
+                "f2" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), Some(Json.fromLong(1977)))
               ),
-              "sub" -> OpenapiSchemaField(
-                OpenapiSchemaRef("#/components/schemas/SubObject"),
-                Some(
-                  Json.fromFields(
-                    Map(
-                      "subsub" -> Json.fromFields(
-                        Map(
-                          "value" -> Json.fromString("hi there"),
-                          "value2" -> Json.fromString("ac8113ed-6105-4f65-a393-e88be2c5d585")
+              List("f1"),
+              false
+            ),
+            None
+          ),
+          "RespWithDefaults" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap(
+                "g1" -> OpenapiSchemaField(OpenapiSchemaUUID(false), Some(Json.fromString("default string"))),
+                "g2" -> OpenapiSchemaField(OpenapiSchemaFloat(false, NumericRestrictions()), Some(Json.fromLong(1977))),
+                "g3" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/AnEnum"), Some(Json.fromString("v1"))),
+                "g4" -> OpenapiSchemaField(
+                  OpenapiSchemaArray(OpenapiSchemaRef("#/components/schemas/AnEnum"), false),
+                  Some(Json.fromValues(Vector(Json.fromString("v1"), Json.fromString("v2"), Json.fromString("v3"))))
+                ),
+                "sub" -> OpenapiSchemaField(
+                  OpenapiSchemaRef("#/components/schemas/SubObject"),
+                  Some(
+                    Json.fromFields(
+                      Map(
+                        "subsub" -> Json.fromFields(
+                          Map(
+                            "value" -> Json.fromString("hi there"),
+                            "value2" -> Json.fromString("ac8113ed-6105-4f65-a393-e88be2c5d585")
+                          )
                         )
                       )
                     )
                   )
                 )
-              )
+              ),
+              List("g2"),
+              false
             ),
-            List("g2"),
-            false
+            None
           ),
-          "AnEnum" -> OpenapiSchemaEnum(
-            "string",
-            List(OpenapiSchemaConstantString("v1"), OpenapiSchemaConstantString("v2"), OpenapiSchemaConstantString("v3")),
-            false
-          ),
-          "SubObject" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap("subsub" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/SubSubObject"), None)),
-            List("subsub"),
-            false
-          ),
-          "SubSubObject" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap(
-              "value" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
-              "value2" -> OpenapiSchemaField(OpenapiSchemaUUID(false), None)
+          "AnEnum" -> OpenapiSchemaField(
+            OpenapiSchemaEnum(
+              "string",
+              List(OpenapiSchemaConstantString("v1"), OpenapiSchemaConstantString("v2"), OpenapiSchemaConstantString("v3")),
+              false
             ),
-            List("value"),
-            false
+            None
+          ),
+          "SubObject" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap("subsub" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/SubSubObject"), None)),
+              List("subsub"),
+              false
+            ),
+            None
+          ),
+          "SubSubObject" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap(
+                "value" -> OpenapiSchemaField(OpenapiSchemaString(false), None),
+                "value2" -> OpenapiSchemaField(OpenapiSchemaUUID(false), None)
+              ),
+              List("value"),
+              false
+            ),
+            None
           )
         ),
         Map(),
@@ -1428,60 +1464,78 @@ object TestHelpers {
     Some(
       OpenapiComponent(
         Map(
-          "ReqWithVariants" -> OpenapiSchemaOneOf(
-            List(
-              OpenapiSchemaRef("#/components/schemas/ReqSubtype1"),
-              OpenapiSchemaRef("#/components/schemas/ReqSubtype2"),
-              OpenapiSchemaRef("#/components/schemas/ReqSubtype3"),
-              OpenapiSchemaRef("#/components/schemas/ReqSubtype4")
-            ),
-            if (withDiscriminator)
-              Some(
-                Discriminator(
-                  "type",
-                  if (withMapping)
-                    Some(
-                      Map(
-                        "ReqSubtype1" -> "#/components/schemas/ReqSubtype1",
-                        "ReqSubtype2" -> "#/components/schemas/ReqSubtype2",
-                        "ReqSubtype3" -> "#/components/schemas/ReqSubtype3",
-                        "ReqSubtype4" -> "#/components/schemas/ReqSubtype4"
+          "ReqWithVariants" -> OpenapiSchemaField(
+            OpenapiSchemaOneOf(
+              List(
+                OpenapiSchemaRef("#/components/schemas/ReqSubtype1"),
+                OpenapiSchemaRef("#/components/schemas/ReqSubtype2"),
+                OpenapiSchemaRef("#/components/schemas/ReqSubtype3"),
+                OpenapiSchemaRef("#/components/schemas/ReqSubtype4")
+              ),
+              if (withDiscriminator)
+                Some(
+                  Discriminator(
+                    "type",
+                    if (withMapping)
+                      Some(
+                        Map(
+                          "ReqSubtype1" -> "#/components/schemas/ReqSubtype1",
+                          "ReqSubtype2" -> "#/components/schemas/ReqSubtype2",
+                          "ReqSubtype3" -> "#/components/schemas/ReqSubtype3",
+                          "ReqSubtype4" -> "#/components/schemas/ReqSubtype4"
+                        )
                       )
-                    )
-                  else None
+                    else None
+                  )
                 )
-              )
-            else None
-          ),
-          "ReqSubtype" -> OpenapiSchemaEnum(
-            "string",
-            List(
-              OpenapiSchemaConstantString("ReqSubtype1"),
-              OpenapiSchemaConstantString("ReqSubtype2"),
-              OpenapiSchemaConstantString("ReqSubtype3"),
-              OpenapiSchemaConstantString("ReqSubtype4")
+              else None
             ),
-            false
+            None
           ),
-          "ReqSubtype1" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None)),
-            List("foo"),
-            false
+          "ReqSubtype" -> OpenapiSchemaField(
+            OpenapiSchemaEnum(
+              "string",
+              List(
+                OpenapiSchemaConstantString("ReqSubtype1"),
+                OpenapiSchemaConstantString("ReqSubtype2"),
+                OpenapiSchemaConstantString("ReqSubtype3"),
+                OpenapiSchemaConstantString("ReqSubtype4")
+              ),
+              false
+            ),
+            None
           ),
-          "ReqSubtype2" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
-            List("foo"),
-            false
+          "ReqSubtype1" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None)),
+              List("foo"),
+              false
+            ),
+            None
           ),
-          "ReqSubtype3" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
-            List("foo"),
-            false
+          "ReqSubtype2" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+              List("foo"),
+              false
+            ),
+            None
           ),
-          "ReqSubtype4" -> OpenapiSchemaObject(
-            mutable.LinkedHashMap("bar" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
-            List("bar"),
-            false
+          "ReqSubtype3" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap("foo" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+              List("foo"),
+              false
+            ),
+            None
+          ),
+          "ReqSubtype4" -> OpenapiSchemaField(
+            OpenapiSchemaObject(
+              mutable.LinkedHashMap("bar" -> OpenapiSchemaField(OpenapiSchemaString(false), None)),
+              List("bar"),
+              false
+            ),
+            None
           )
         ),
         Map(),

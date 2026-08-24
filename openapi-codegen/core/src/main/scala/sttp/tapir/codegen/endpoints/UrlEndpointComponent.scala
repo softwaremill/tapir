@@ -44,7 +44,7 @@ object UrlEndpointComponent {
           val name = segment.drop(1).dropRight(1)
           val param = parameters.find(_.name == name)
           param.fold(bail(s"URLParam $name not found!")) { p =>
-            p.schema match {
+            p.schema.`type` match {
               case st: OpenapiSchemaSimpleType =>
                 val (t, _) = mapSchemaSimpleTypeToType(st)
                 val desc = p.description.fold("")(d => s""".description("${JavaEscape.escapeString(d)}")""")

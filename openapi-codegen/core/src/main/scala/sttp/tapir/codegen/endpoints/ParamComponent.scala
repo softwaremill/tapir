@@ -2,6 +2,7 @@ package sttp.tapir.codegen.endpoints
 
 import sttp.tapir.codegen.endpoints.SimpleTypes.mapSchemaSimpleTypeToType
 import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
+import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaEnum, OpenapiSchemaSimpleType}
 import sttp.tapir.codegen.util.ErrUtils.bail
@@ -75,14 +76,18 @@ object ParamComponent {
       location: Location
   ): (String, Option[Seq[String]], String) = {
     checkParamLocation(param)
-    param.schema match {
+    param.schema.`type` match {
       case st: OpenapiSchemaSimpleType =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
         val required = param.required.getOrElse(false)
         val req = if (required) t else s"Option[$t]"
         val desc = param.description.map(JavaEscape.escapeString).fold("")(d => s""".description("$d")""")
+        // TODO: should probably add enum in RenderConfig ?
+        // Resolve the default value if schema is a ref
+        val defaultValue = param.schema.default
+        val default = defaultValue.fold("")(d => s".default(${DefaultValueRenderer.render(doc.components.toSeq.flatMap(_.schemas).toMap, st, !required, RenderConfig())(d)})")
         val validation = if (generateValidators) ValidationGenerator.mkValidations(doc, st, required) else ""
-        (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$validation$desc""", None, req)
+        (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$validation$desc$default""", None, req)
       case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
         val (t, _) = mapSchemaSimpleTypeToType(st)
         val arrayType = if (param.isExploded) "ExplodedValues" else "CommaSeparatedValues"

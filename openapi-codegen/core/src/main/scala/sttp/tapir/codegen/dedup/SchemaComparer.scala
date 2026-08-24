@@ -44,7 +44,7 @@ object SchemaComparer {
         r.asInstanceOf[OpenapiResponseDef].getHeaders.forall { case (headerName, h) =>
           (Try(h.resolved(headerName, current)), Try(h.resolved(headerName, dependency))) match {
             case (Success(c), Success(d)) =>
-              c == d && schemasEqual(name, c.param.schema, currentSchemas, name, d.param.schema, dependencySchemas, Set.empty)
+              c == d && schemasEqual(name, c.param.schema.`type`, currentSchemas, name, d.param.schema.`type`, dependencySchemas, Set.empty)
             case _ => false
           }
         }
@@ -58,7 +58,7 @@ object SchemaComparer {
         .flatMap(_.asInstanceOf[OpenapiResponseDef].content.map(_.schema))
         .forall(t => schemasEqual(name, t, currentSchemas, name, t, dependencySchemas, Set.empty)) &&
       m.parameters
-        .map(_.resolve(currPs).schema)
+        .map(_.resolve(currPs).schema.`type`)
         .forall(t => schemasEqual(name, t, currentSchemas, name, t, dependencySchemas, Set.empty)) &&
       headersMatch(name, m) &&
       securityMatches(current, dependency)(m.security.get)

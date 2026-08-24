@@ -162,7 +162,7 @@ object OpenapiModels {
       in: String,
       required: Option[Boolean],
       description: Option[String],
-      schema: OpenapiSchemaType,
+      schema: OpenapiSchemaField,
       explode: Option[Boolean] = None
   ) {
     // default is true for query params, but headers must always be 'simple' style -- see https://swagger.io/docs/specification/serialization/
@@ -250,7 +250,7 @@ object OpenapiModels {
       }
       Some(
         "Content-Type" -> OpenapiHeaderDef(
-          OpenapiParameter("Content-Type", "header", Some(true), None, OpenapiSchemaString(false, Some(validatingRegex), None, None))
+          OpenapiParameter("Content-Type", "header", Some(true), None,OpenapiSchemaField(OpenapiSchemaString(false, Some(validatingRegex), None, None), None))
         )
       )
     }
@@ -383,6 +383,8 @@ object OpenapiModels {
     OpenapiRequestBodyDefnDecoder.or(OpenapiSchemaRefDecoder.map(OpenapiRequestRef(_)))
 
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
+  
+  import OpenapiSchemaType.OpenapiSchemaFieldDecoder
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
   implicit def ResolvableDecoder[T: Decoder]: Decoder[Resolvable[T]] = { (c: HCursor) =>
     c.as[T].map(Resolved(_)).orElse(c.as[OpenapiSchemaRef].map(r => Ref(r.name)))

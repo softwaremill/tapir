@@ -122,7 +122,7 @@ class PackageReuseContextSpec extends AnyFlatSpec with Matchers {
       Nil,
       OpenapiInfo("t", "1"),
       Nil,
-      Some(OpenapiComponent(Map("Pet" -> pet))),
+      Some(OpenapiComponent(Map("Pet" -> OpenapiSchemaField(pet, None)))),
       Nil
     )
   }
@@ -204,7 +204,8 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
   private def docWith(components: OpenapiComponent, title: String = "test") =
     OpenapiDocument("3.0.0", Nil, OpenapiInfo(title, "1"), Nil, Some(components), Nil)
 
-  private def minimalDoc(title: String, schemas: Map[String, OpenapiSchemaString]) = docWith(OpenapiComponent(schemas), title)
+  private def minimalDoc(title: String, schemas: Map[String, OpenapiSchemaString]) =
+    docWith(OpenapiComponent(schemas.mapValues(s => OpenapiSchemaField(s, None)).toMap), title)
 
   private def headerDef(description: String): OpenapiHeaderDef = TestHelpers.inlineHeaderDef(Some(description))
 
@@ -222,7 +223,7 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
       Nil,
       OpenapiInfo("b", "1"),
       Nil,
-      Some(OpenapiComponent(Map("Shared" -> OpenapiSchemaInt(false, NumericRestrictions())))),
+      Some(OpenapiComponent(Map("Shared" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None)))),
       Nil
     )
     intercept[IllegalArgumentException](OpenApiMerger.merge(Seq(a, b)))
