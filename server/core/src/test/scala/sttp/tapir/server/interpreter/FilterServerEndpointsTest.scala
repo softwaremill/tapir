@@ -4,6 +4,8 @@ import sttp.tapir._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.{Header, Method, QueryParams, Uri}
+import sttp.monad.{IdentityMonad, MonadError}
+import sttp.shared.Identity
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
 
@@ -11,6 +13,8 @@ import scala.concurrent.Future
 import scala.collection.immutable.Seq
 
 class FilterServerEndpointsTest extends AnyFlatSpec with Matchers {
+  private implicit val idMonad: MonadError[Identity] = IdentityMonad
+
   it should "filter endpoints with a single fixed path component" in {
     val e1 = endpoint.in("x").noLogic
     val e2 = endpoint.in("y").noLogic
@@ -134,6 +138,29 @@ class FilterServerEndpointsTest extends AnyFlatSpec with Matchers {
     filter(requestWithPath("x/c/d")) shouldBe List(e3)
 
     filter(requestWithPath("y")) shouldBe Nil
+  }
+
+  it should "throw when an endpoint declares two primary bodies" in {
+    val se = endpoint.post
+      .in("people")
+      .securityIn(stringBody)
+      .in(stringBody)
+      .serverSecurityLogic[Unit, Identity](_ => Right(()))
+      .serverLogic(_ => _ => Right(()))
+
+    val e = the[IllegalArgumentException] thrownBy FilterServerEndpoints(List(se))
+    e.getMessage should include("extractBodyFromRequest")
+  }
+
+  it should "accept an endpoint with an extracted body" in {
+    val se = endpoint.post
+      .in("people")
+      .securityIn(extractBodyFromRequest(stringBody))
+      .in(stringBody)
+      .serverSecurityLogic[Unit, Identity](_ => Right(()))
+      .serverLogic(_ => _ => Right(()))
+
+    noException should be thrownBy FilterServerEndpoints(List(se))
   }
 
   implicit class NoLogic[I, E](e: PublicEndpoint[I, E, Unit, Any]) {
