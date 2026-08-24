@@ -20,7 +20,7 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
 
   // A plain var needs no synchronisation here: the interpreter's flatMap chain reads the security-phase body strictly
   // before the main-phase one, and this instance never outlives a single request.
-  private var cachedBytes: Option[Array[Byte]] = None
+  @volatile private var cachedBytes: Option[Array[Byte]] = None
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     bodyType match {
@@ -47,6 +47,8 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     delegate.toStream(serverRequest, maxBytes).asInstanceOf[streams.BinaryStream]
 
+  // Only the first call's maxBytes actually takes effect; the security and main phases both derive it from
+  // se.info, which is se.endpoint.info (see ServerEndpoint.info) - the same object - so they always agree.
   private def bytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
     cachedBytes match {
       case Some(bs) => bs.unit

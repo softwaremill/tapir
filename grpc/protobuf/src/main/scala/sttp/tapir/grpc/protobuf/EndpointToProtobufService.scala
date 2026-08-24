@@ -1,6 +1,7 @@
 package sttp.tapir.grpc.protobuf
 
 import sttp.tapir._
+import sttp.tapir.internal._
 import sttp.tapir.grpc.protobuf.model._
 import sttp.tapir.EndpointIO.Pair
 import sttp.tapir.EndpointIO.Empty
@@ -79,9 +80,10 @@ class EndpointToProtobufService {
 
   private def forIO(io: EndpointIO[_]): List[MessageReference] = {
     io match {
-      case EndpointIO.Body(_, codec, _)      => List(fromCodec(codec))
-      case EndpointIO.MappedPair(wrapped, _) => forIO(wrapped)
-      case _                                 => List.empty
+      case b @ EndpointIO.Body(_, _, _) if b.isExtracted => List.empty
+      case EndpointIO.Body(_, codec, _)                  => List(fromCodec(codec))
+      case EndpointIO.MappedPair(wrapped, _)             => forIO(wrapped)
+      case _                                             => List.empty
     }
   }
 
