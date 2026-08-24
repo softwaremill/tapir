@@ -48,7 +48,7 @@ class ServerInterpreterExtractedBodyTest extends AnyFlatSpec with Matchers {
 
     val result = interpreter.apply(createTestRequest(List("test"), _method = Method.POST))
 
-    result shouldBe a[RequestResult.Response[_]]
+    result shouldBe a[RequestResult.Response[?]]
     val response = result.asInstanceOf[RequestResult.Response[String]].response
     response.body shouldBe Some("security:payload|logic:payload")
     requestBody.reads shouldBe 1

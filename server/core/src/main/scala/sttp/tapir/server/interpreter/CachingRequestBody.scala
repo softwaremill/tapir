@@ -9,14 +9,12 @@ import sttp.tapir.{InputStreamRange, RawBodyType}
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
-/** Reads a bytes-like request body from `delegate` at most once, buffering the bytes so that subsequent reads - e.g.
-  * an extracted body decoded during the security phase, followed by the endpoint's own body - are served from
-  * memory.
+/** Reads a bytes-like request body from `delegate` at most once, buffering the bytes so that subsequent reads - e.g. an extracted body
+  * decoded during the security phase, followed by the endpoint's own body - are served from memory.
   *
   * Must be created per request: it holds that request's bytes.
   */
-private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(implicit m: MonadError[F])
-    extends RequestBody[F, S] {
+private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(implicit m: MonadError[F]) extends RequestBody[F, S] {
 
   override val streams: Streams[S] = delegate.streams
 
@@ -52,7 +50,7 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
   private def bytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
     cachedBytes match {
       case Some(bs) => bs.unit
-      case None =>
+      case None     =>
         delegate.toRaw(serverRequest, RawBodyType.ByteArrayBody, maxBytes).map { raw =>
           cachedBytes = Some(raw.value)
           raw.value
