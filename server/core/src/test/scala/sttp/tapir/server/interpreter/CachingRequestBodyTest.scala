@@ -18,9 +18,11 @@ class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
 
   private class CountingRequestBody(content: String) extends RequestBody[Identity, NoStreams] {
     var reads = 0
+    var lastMaxBytes: Option[Long] = None
     override val streams: Streams[NoStreams] = NoStreams
     override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): RawValue[R] = {
       reads += 1
+      lastMaxBytes = maxBytes
       bodyType match {
         case RawBodyType.ByteArrayBody => RawValue(content.getBytes(StandardCharsets.UTF_8)).asInstanceOf[RawValue[R]]
         case other                     => throw new IllegalStateException(s"unexpected body type: $other")
@@ -81,6 +83,18 @@ class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
     caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), None).value shouldBe "hello"
 
     delegate.reads shouldBe 1
+  }
+
+  it should "pass maxBytes through to the delegate on the first read" in {
+    val delegate = new CountingRequestBody("hello")
+    val caching = new CachingRequestBody[Identity, NoStreams](delegate)
+
+    caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), Some(1024L)).value shouldBe "hello"
+    delegate.lastMaxBytes shouldBe Some(1024L)
+
+    caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), Some(2048L)).value shouldBe "hello"
+    delegate.reads shouldBe 1
+    delegate.lastMaxBytes shouldBe Some(1024L)
   }
 
   it should "not let mutating a returned byte buffer corrupt the cache" in {
