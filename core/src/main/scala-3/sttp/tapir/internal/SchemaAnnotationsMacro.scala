@@ -74,7 +74,7 @@ private[tapir] object SchemaAnnotationsMacro {
         sa => firstAnnArg(EncodedNameAnn).map(arg => '{ ${ sa }.copy(encodedName = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => '{ ${ sa }.copy(validate = ${ Expr.ofList(allAnnArg(ValidateAnn).map(_.asExprOf[sttp.tapir.Validator[T]])) }) },
         sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) },
-        sa => firstAnnArg(CustomiseAnn).map(arg => '{ ${ sa }.copy(customise = Some( ${ arg.asExprOf[Schema[Any] => Schema[Any]] } ))  }).getOrElse(sa)
+        sa => firstAnnArg(CustomiseAnn).map(arg => '{ ${ sa }.withCustomise(${ arg.asExprOf[Schema[Any] => Schema[Any]] } ) }).getOrElse(sa)
       )
 
     transformations.foldLeft('{ SchemaAnnotations.empty[T] })((sa, t) => t(sa))

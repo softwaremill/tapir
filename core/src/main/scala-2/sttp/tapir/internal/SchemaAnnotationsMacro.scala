@@ -44,8 +44,10 @@ private[tapir] object SchemaAnnotationsMacro {
     val validateEach = annotations.collect { case ann if ann.tree.tpe <:< ValidateEachAnn => firstArg(ann) }
     val customise = annotations.collectFirst { case ann if ann.tree.tpe <:< CustomiseAnn => firstArg(ann) }
 
+    val base = q"""_root_.sttp.tapir.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $hidden, $encodedName, _root_.scala.List(..$validate), _root_.scala.List(..$validateEach))"""
+
     c.Expr[SchemaAnnotations[T]](
-      q"""_root_.sttp.tapir.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $hidden, $encodedName, _root_.scala.List(..$validate), _root_.scala.List(..$validateEach), $customise)"""
+      customise.fold(base)(f => q"$base.withCustomise($f)")
     )
   }
 }

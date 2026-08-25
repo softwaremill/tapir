@@ -14,23 +14,10 @@ final case class SchemaAnnotations[T](
     hidden: Option[Boolean],
     encodedName: Option[String],
     validate: List[Validator[T]],
-    validateEach: List[Validator[Any]],
-    customise: Option[Schema[Any] => Schema[Any]]
+    validateEach: List[Validator[Any]]
 ) {
 
-  /** Retained for binary compatibility with 1.13.x. No default arguments: only one `copy` overload may have them. */
-  def copy(
-      description: Option[String],
-      encodedExample: Option[Any],
-      default: Option[(T, Option[Any])],
-      format: Option[String],
-      deprecated: Option[Boolean],
-      hidden: Option[Boolean],
-      encodedName: Option[String],
-      validate: List[Validator[T]],
-      validateEach: List[Validator[Any]]
-  ): SchemaAnnotations[T] =
-    new SchemaAnnotations(description, encodedExample, default, format, deprecated, hidden, encodedName, validate, validateEach, this.customise)
+  private var _customise: Option[Schema[Any] => Schema[Any]] = None
 
   private case class SchemaEnrich(current: Schema[T]) {
     def optionally(f: Schema[T] => Option[Schema[T]]): SchemaEnrich = f(current).map(SchemaEnrich.apply).getOrElse(this)
@@ -45,15 +32,21 @@ final case class SchemaAnnotations[T](
       .optionally(s => deprecated.map(s.deprecated(_)))
       .optionally(s => hidden.map(s.hidden(_)))
       .optionally(s => encodedName.map(en => s.name(SName(en))))
-      .optionally(s => customise.map(c => c(s.asInstanceOf[Schema[Any]]).asInstanceOf[Schema[T]]))
+      .optionally(s => _customise.map(c => c(s.asInstanceOf[Schema[Any]]).asInstanceOf[Schema[T]]))
       .current
 
     val s3 = validate.foldLeft(s2)((current, v) => current.validate(v))
 
     validateEach.foldLeft(s3)((current, v) => current.modifyUnsafe(Schema.ModifyCollectionElements)((_: Schema[Any]).validate(v)))
   }
+  
+  def withCustomise(c: Schema[Any] => Schema[Any]): SchemaAnnotations[T] = {
+    val copy = this.copy()
+    copy._customise = Some(c)
+    copy
+  }
 }
 
 object SchemaAnnotations extends SchemaAnnotationsMacros {
-  def empty[T]: SchemaAnnotations[T] = SchemaAnnotations(None, None, None, None, None, None, None, Nil, Nil, None)
+  def empty[T]: SchemaAnnotations[T] = SchemaAnnotations(None, None, None, None, None, None, None, Nil, Nil)
 }
