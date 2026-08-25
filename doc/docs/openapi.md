@@ -290,7 +290,6 @@ does when one `val` is used as a request header on one endpoint and a response h
 
 Notes:
 
-* The marker is an opt-in. Endpoints that do not use it produce exactly the document they produced before.
 * The same marker works everywhere; position decides where the component lands — inputs go to `components.parameters`
   (request headers included, since OpenAPI models them as parameters with `in: header`), response headers to
   `components.headers`.
