@@ -263,17 +263,9 @@ val listMagazines = endpoint.get.in("magazines").in(tenantId)
 Both operations then contain `$ref: '#/components/parameters/tenantId'`, and the definition appears once under
 `components.parameters`.
 
-The component's key defaults to the parameter's own name. Pass one explicitly if you need a different key, or to
-resolve a clash:
+The same marker works for request headers (which are also emitted into `components.parameters`) and response headers (emitted into `components.headers`)
 
-```scala mdoc:compile-only
-import sttp.tapir.*
-import sttp.tapir.docs.openapi.ReusableComponentAttribute.*
-
-val tenantId = query[String]("tenantId").reusableComponent("TenantId")
-```
-
-The same marker works on response headers, which are emitted into `components.headers`:
+Response header example:
 
 ```scala mdoc:compile-only
 import sttp.tapir.*
@@ -288,11 +280,18 @@ val listMagazines = endpoint.get.in("magazines").out(stringBody).out(rateLimit)
 `components.parameters` and `components.headers` are independent namespaces, so the same name may appear in both — as it
 does when one `val` is used as a request header on one endpoint and a response header on another.
 
+The component's key defaults to the parameter's own name. Pass one explicitly if you need a different key, or to
+resolve a clash:
+
+```scala mdoc:compile-only
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.ReusableComponentAttribute.*
+
+val tenantId = query[String]("tenantId").reusableComponent("TenantId")
+```
+
 Notes:
 
-* The same marker works everywhere; position decides where the component lands — inputs go to `components.parameters`
-  (request headers included, since OpenAPI models them as parameters with `in: header`), response headers to
-  `components.headers`.
 * Marking is by value, not by use site: once a parameter is marked anywhere, every structurally identical parameter is
   referenced, whether or not it was marked. Marking the shared `val` once is the intended usage.
 * A marked parameter is always moved into `components`, even when only one endpoint uses it, so the document does not
