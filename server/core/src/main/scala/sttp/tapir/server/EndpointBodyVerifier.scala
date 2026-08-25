@@ -4,9 +4,7 @@ import sttp.model.Method
 import sttp.tapir.internal._
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput, RawBodyType}
 
-/** Structural problems found in an endpoint description. Errors make the endpoint unserveable and are thrown when routes are constructed;
-  * warnings describe endpoints which work on the server, but whose published contract is probably not what the author intended.
-  */
+/** Errors make an endpoint unserveable; warnings describe one that works, but whose published contract probably isn't what was intended. */
 case class EndpointBodyProblems(errors: List[String], warnings: List[String]) {
   def ++(other: EndpointBodyProblems): EndpointBodyProblems =
     EndpointBodyProblems(errors ++ other.errors, warnings ++ other.warnings)
@@ -16,16 +14,13 @@ object EndpointBodyProblems {
   val Empty: EndpointBodyProblems = EndpointBodyProblems(Nil, Nil)
 }
 
-/** Verifies that endpoint descriptions are structurally serveable. Called by server interpreters when routes are constructed; can also be
-  * called directly, e.g. to assert in tests that no warnings are present.
+/** Verifies that endpoint descriptions are structurally serveable. Run by server interpreters when routes are constructed; warnings are not
+  * logged anywhere, so call this directly to assert on them.
   */
 object EndpointBodyVerifier {
   def verify(endpoints: List[AnyEndpoint]): EndpointBodyProblems =
     endpoints.map(verifyOne).foldLeft(EndpointBodyProblems.Empty)(_ ++ _)
 
-  /** Throws an [[IllegalArgumentException]] listing all errors, if any are present. Called by server interpreters when routes are
-    * constructed.
-    */
   private[tapir] def throwOnErrors(problems: EndpointBodyProblems): Unit =
     if (problems.errors.nonEmpty) throw new IllegalArgumentException(problems.errors.mkString("\n"))
 
