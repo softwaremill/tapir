@@ -14,7 +14,7 @@ class VerifyYamlReusableComponentsTest extends AnyFunSuite with Matchers {
   private def toYaml(es: List[AnyEndpoint], os: OpenAPIDocsOptions = options): String =
     noIndentation(OpenAPIDocsInterpreter(os).toOpenAPI(es, Info("test", "1.0")).toYaml)
 
-  test("marked parameters are emitted once and referenced by every operation using them") {
+  test("marked parameters are referenced, identical unmarked ones are still inlined") {
     val tenantId = query[String]("tenantId").description("The tenant").reusableComponent
     val unmarkedTenantId = query[String]("tenantId").description("The tenant")
     val region = query[String]("region").reusableComponent

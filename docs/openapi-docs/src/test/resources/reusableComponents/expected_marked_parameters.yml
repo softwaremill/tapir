@@ -31,7 +31,12 @@ paths:
     get:
       operationId: getPapers
       parameters:
-      - $ref: '#/components/parameters/tenantId'
+      - name: tenantId
+        in: query
+        description: The tenant
+        required: true
+        schema:
+          type: string
       - $ref: '#/components/parameters/region'
       responses:
         '200':

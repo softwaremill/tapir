@@ -30,8 +30,6 @@ private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) 
     }
   }
 
-  def apply(inputs: Vector[EndpointInput.Basic[_]]): Vector[Parameter] = withSourceAtoms(inputs).map(_._2)
-
   private def headerToParameter[T](header: EndpointIO.Header[T]) =
     EndpointInputToParameterConverter.from(header, tschemaToASchema(header.codec))
   private def fixedHeaderToParameter(header: EndpointIO.FixedHeader[_]) =

@@ -15,6 +15,9 @@ private[openapi] case class ReusableComponents(
 
 private[openapi] object ReusableComponents {
   val empty: ReusableComponents = ReusableComponents(Map.empty, Map.empty)
+
+  def markerOf(atom: EndpointTransput.Atom[_]): Option[ReusableComponent] =
+    atom.attribute(ReusableComponentAttribute.reusableComponentAttributeKey)
 }
 
 private[openapi] class ReusableComponentsForEndpoints(
@@ -35,7 +38,7 @@ private[openapi] class ReusableComponentsForEndpoints(
     es.toVector.flatMap { e =>
       endpointToParameters
         .withSourceAtoms(endpointToParameters.filterOutHiddenInputs(e.asVectorOfBasicInputs(includeAuth = false)))
-        .flatMap { case (atom, parameter) => markerOf(atom).map(m => parameter -> m.name) }
+        .flatMap { case (atom, parameter) => ReusableComponents.markerOf(atom).map(m => parameter -> m.name) }
     }
 
   private def collectMarkedHeaders(): Vector[((String, Header), Option[String])] =
@@ -43,11 +46,8 @@ private[openapi] class ReusableComponentsForEndpoints(
       endpointToHeaders
         .withSourceAtoms(List(e.output, e.errorOutput))
         .toVector
-        .flatMap { case (atom, nameAndHeader) => markerOf(atom).map(m => nameAndHeader -> m.name) }
+        .flatMap { case (atom, nameAndHeader) => ReusableComponents.markerOf(atom).map(m => nameAndHeader -> m.name) }
     }
-
-  private def markerOf(atom: EndpointTransput.Atom[_]): Option[ReusableComponent] =
-    atom.attribute(ReusableComponentAttribute.reusableComponentAttributeKey)
 
   private def assignNames[T](marked: Vector[(T, Option[String])], defaultName: T => String, section: String): Map[T, String] = {
     val distinctMarked: Vector[(T, Option[String])] = marked

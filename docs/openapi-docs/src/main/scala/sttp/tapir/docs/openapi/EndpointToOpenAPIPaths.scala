@@ -47,7 +47,17 @@ private[openapi] class EndpointToOpenAPIPaths(
   }
 
   private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[_]]): Operation = {
-    val parameters = endpointToParameters(inputs).distinct.toList
+    val parameters: List[ReferenceOr[Parameter]] = endpointToParameters
+      .withSourceAtoms(inputs)
+      .map { case (atom, parameter) =>
+        ReusableComponents
+          .markerOf(atom)
+          .flatMap(_ => reusableComponents.parameterToName.get(parameter))
+          .map(name => Left(Reference.to("#/components/parameters/", name)): ReferenceOr[Parameter])
+          .getOrElse(Right(parameter))
+      }
+      .distinct
+      .toList
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
 
@@ -56,12 +66,7 @@ private[openapi] class EndpointToOpenAPIPaths(
       summary = e.info.summary,
       description = e.info.description,
       operationId = e.info.name.orElse(Some(defaultId)),
-      parameters = parameters.map(p =>
-        reusableComponents.parameterToName.get(p) match {
-          case Some(name) => Left(Reference.to("#/components/parameters/", name))
-          case None       => Right(p)
-        }
-      ),
+      parameters = parameters,
       requestBody = body.headOption,
       responses = Responses(responses),
       deprecated = if (e.info.deprecated) Some(true) else None,

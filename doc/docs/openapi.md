@@ -292,8 +292,9 @@ val tenantId = query[String]("tenantId").reusableComponent("TenantId")
 
 Notes:
 
-* Marking is by value, not by use site: once a parameter is marked anywhere, every structurally identical parameter is
-  referenced, whether or not it was marked. Marking the shared `val` once is the intended usage.
+* Each use site decides for itself: `query[String]("tenantId")` is inlined, `query[String]("tenantId").reusableComponent`
+  is referenced. Marking a shared `val` once covers every endpoint that uses it.
+* Marked parameters that are identical share one component, so the same parameter defined in two places is emitted once.
 * A marked parameter is always moved into `components`, even when only one endpoint uses it, so the document does not
   change shape as endpoints are added or removed.
 * A marked input that is hidden (`.schema(_.hidden(true))`) produces no component.

@@ -76,11 +76,12 @@ private[openapi] class EndpointToOperationResponse(
 
   private def outputsToResponse(sc: StatusCodeKey, outputs: List[EndpointOutput[_]]): Option[Response] = {
     val bodies = collectBodies(outputs)
-    val headers: List[(String, ReferenceOr[Header])] = endpointToHeaders(outputs).map { case (name, header) =>
-      name -> (reusableComponents.headerToName.get((name, header)) match {
-        case Some(componentName) => Left(Reference.to("#/components/headers/", componentName))
-        case None                => Right(header)
-      })
+    val headers: List[(String, ReferenceOr[Header])] = endpointToHeaders.withSourceAtoms(outputs).map { case (atom, (name, header)) =>
+      name -> ReusableComponents
+        .markerOf(atom)
+        .flatMap(_ => reusableComponents.headerToName.get((name, header)))
+        .map(componentName => Left(Reference.to("#/components/headers/", componentName)): ReferenceOr[Header])
+        .getOrElse(Right(header))
     }
 
     val statusCodeDescriptions = outputs.flatMap {
