@@ -15,8 +15,22 @@ final case class SchemaAnnotations[T](
     encodedName: Option[String],
     validate: List[Validator[T]],
     validateEach: List[Validator[Any]],
-    customise: Option[Schema[Any] => Schema[Any]] = None
+    customise: Option[Schema[Any] => Schema[Any]]
 ) {
+
+  /** Retained for binary compatibility with 1.13.x */
+  def this(
+      description: Option[String],
+      encodedExample: Option[Any],
+      default: Option[(T, Option[Any])],
+      format: Option[String],
+      deprecated: Option[Boolean],
+      hidden: Option[Boolean],
+      encodedName: Option[String],
+      validate: List[Validator[T]],
+      validateEach: List[Validator[Any]]
+  ) = this(description, encodedExample, default, format, deprecated, hidden, encodedName, validate, validateEach, None)
+
   private case class SchemaEnrich(current: Schema[T]) {
     def optionally(f: Schema[T] => Option[Schema[T]]): SchemaEnrich = f(current).map(SchemaEnrich.apply).getOrElse(this)
   }
