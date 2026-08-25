@@ -62,17 +62,13 @@ documentation, and ignored by client interpreters. The unmarked body - `jsonBody
 documented, and the one clients actually send.
 
 Only bodies which can be re-read from buffered bytes can be extracted: string, byte array, byte buffer, input stream
-and input stream range bodies. File and multipart bodies aren't accepted - `extractBodyFromRequest` requires a
-`ReplayableRawBody` instance for the body's raw type, and none is provided for `RawBodyType.FileBody` or
-`RawBodyType.MultipartBody` - while streaming and `oneOf` bodies aren't `EndpointIO.Body` values at all, so they
-can't be passed to `extractBodyFromRequest` in the first place. Either way, the restriction is enforced at compile
+and input stream range bodies. File and multipart bodies aren't accepted. The restriction is enforced at compile
 time.
 
 The restriction also applies from the other side: an endpoint whose *ordinary* body (the one declared in `in`) is a
-file, multipart, or streaming body can't be combined with an extracted body in `securityIn` either. Reading the
-extracted body drains the request, so the file, multipart, or streaming body would then be read from an
-already-consumed request. Unlike the compile-time check above, this is a runtime check: it's rejected with an
-`IllegalArgumentException` when routes are constructed.
+file, multipart, or streaming body can't be combined with an extracted body in `securityIn` either. Unlike the
+compile-time check above, this is a runtime check: it's rejected with an `IllegalArgumentException` when routes are
+constructed.
 
 ```{warning}
 Declaring two *ordinary* request bodies - one in `securityIn`, one in `in`, neither wrapped in
