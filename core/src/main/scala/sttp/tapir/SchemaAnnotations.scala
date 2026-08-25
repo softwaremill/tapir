@@ -18,8 +18,8 @@ final case class SchemaAnnotations[T](
     customise: Option[Schema[Any] => Schema[Any]]
 ) {
 
-  /** Retained for binary compatibility with 1.13.x */
-  def this(
+  /** Retained for binary compatibility with 1.13.x. No default arguments: only one `copy` overload may have them. */
+  def copy(
       description: Option[String],
       encodedExample: Option[Any],
       default: Option[(T, Option[Any])],
@@ -29,7 +29,8 @@ final case class SchemaAnnotations[T](
       encodedName: Option[String],
       validate: List[Validator[T]],
       validateEach: List[Validator[Any]]
-  ) = this(description, encodedExample, default, format, deprecated, hidden, encodedName, validate, validateEach, None)
+  ): SchemaAnnotations[T] =
+    new SchemaAnnotations(description, encodedExample, default, format, deprecated, hidden, encodedName, validate, validateEach, this.customise)
 
   private case class SchemaEnrich(current: Schema[T]) {
     def optionally(f: Schema[T] => Option[Schema[T]]): SchemaEnrich = f(current).map(SchemaEnrich.apply).getOrElse(this)
@@ -54,19 +55,5 @@ final case class SchemaAnnotations[T](
 }
 
 object SchemaAnnotations extends SchemaAnnotationsMacros {
-
-  def apply[T](
-      description: Option[String],
-      encodedExample: Option[Any],
-      default: Option[(T, Option[Any])],
-      format: Option[String],
-      deprecated: Option[Boolean],
-      hidden: Option[Boolean],
-      encodedName: Option[String],
-      validate: List[Validator[T]],
-      validateEach: List[Validator[Any]]
-  ): SchemaAnnotations[T] =
-    SchemaAnnotations(description, encodedExample, default, format, deprecated, hidden, encodedName, validate, validateEach, None)
-
   def empty[T]: SchemaAnnotations[T] = SchemaAnnotations(None, None, None, None, None, None, None, Nil, Nil, None)
 }
