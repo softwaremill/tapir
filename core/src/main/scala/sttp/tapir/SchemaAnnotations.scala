@@ -40,5 +40,19 @@ final case class SchemaAnnotations[T](
 }
 
 object SchemaAnnotations extends SchemaAnnotationsMacros {
+
+  def apply[T](
+      description: Option[String],
+      encodedExample: Option[Any],
+      default: Option[(T, Option[Any])],
+      format: Option[String],
+      deprecated: Option[Boolean],
+      hidden: Option[Boolean],
+      encodedName: Option[String],
+      validate: List[Validator[T]],
+      validateEach: List[Validator[Any]]
+  ): SchemaAnnotations[T] =
+    SchemaAnnotations(description, encodedExample, default, format, deprecated, hidden, encodedName, validate, validateEach, None)
+
   def empty[T]: SchemaAnnotations[T] = SchemaAnnotations(None, None, None, None, None, None, None, Nil, Nil, None)
 }
