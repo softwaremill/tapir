@@ -6,12 +6,15 @@ paths:
   /books:
     get:
       operationId: getBooks
+      parameters:
+      - name: visible
+        in: query
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: ''
-          headers:
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
           content:
             text/plain:
               schema:
@@ -19,20 +22,17 @@ paths:
   /magazines:
     get:
       operationId: getMagazines
+      parameters:
+      - name: tenantId
+        in: query
+        description: The tenant
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: ''
-          headers:
-            X-Rate-Limit:
-              $ref: '#/components/headers/X-Rate-Limit'
           content:
             text/plain:
               schema:
                 type: string
-components:
-  headers:
-    X-Rate-Limit:
-      description: Requests left
-      required: true
-      schema:
-        type: string

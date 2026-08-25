@@ -11,6 +11,11 @@ paths:
       responses:
         '200':
           description: ''
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-Rate-Limit:
+              $ref: '#/components/headers/RateLimit'
           content:
             text/plain:
               schema:
@@ -20,6 +25,17 @@ components:
     X-Request-Id:
       name: X-Request-Id
       in: header
+      description: Correlation id
+      required: true
+      schema:
+        type: string
+  headers:
+    RateLimit:
+      description: Requests left
+      required: true
+      schema:
+        type: string
+    X-Request-Id:
       description: Correlation id
       required: true
       schema:

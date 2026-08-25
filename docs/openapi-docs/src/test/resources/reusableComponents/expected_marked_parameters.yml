@@ -27,8 +27,27 @@ paths:
             text/plain:
               schema:
                 type: string
+  /papers:
+    get:
+      operationId: getPapers
+      parameters:
+      - $ref: '#/components/parameters/tenantId'
+      - $ref: '#/components/parameters/region'
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   parameters:
+    region:
+      name: region
+      in: query
+      required: true
+      schema:
+        type: string
     tenantId:
       name: tenantId
       in: query

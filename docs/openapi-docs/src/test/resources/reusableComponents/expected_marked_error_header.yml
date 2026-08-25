@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info:
+  title: test
+  version: '1.0'
+paths:
+  /books:
+    get:
+      operationId: getBooks
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+        default:
+          description: ''
+          headers:
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  headers:
+    X-Rate-Limit:
+      description: Requests left
+      required: true
+      schema:
+        type: string

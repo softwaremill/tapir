@@ -207,4 +207,38 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
       OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2), Info("Entities", "1.0"))
     }
   }
+
+  test("should fail when failOnDuplicateComponentName is true and one marked parameter claims two names") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val tenantId = query[String]("tenantId")
+    val e1 = endpoint.get.in("books").in(tenantId.reusableComponent("TenantA"))
+    val e2 = endpoint.get.in("magazines").in(tenantId.reusableComponent("TenantB"))
+
+    val options = OpenAPIDocsOptions.default.copy(failOnDuplicateComponentName = true)
+
+    val thrown = intercept[IllegalStateException] {
+      OpenAPIDocsInterpreter(options).toOpenAPI(List(e1, e2), Info("Entities", "1.0"))
+    }
+
+    thrown.getMessage should include("Conflicting OpenAPI component names in components/parameters")
+    thrown.getMessage should include("TenantA")
+    thrown.getMessage should include("TenantB")
+  }
+
+  test("should use the first name alphabetically when failOnDuplicateComponentName is false and one marked parameter claims two names") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val tenantId = query[String]("tenantId")
+    val books = endpoint.get.in("books").in(tenantId.reusableComponent("TenantB"))
+    val magazines = endpoint.get.in("magazines").in(tenantId.reusableComponent("TenantA"))
+
+    val options = OpenAPIDocsOptions.default.copy(failOnDuplicateComponentName = false)
+
+    def componentNames(es: List[AnyEndpoint]): Option[List[String]] =
+      OpenAPIDocsInterpreter(options).toOpenAPI(es, Info("Entities", "1.0")).components.map(_.parameters.keys.toList)
+
+    componentNames(List(books, magazines)) shouldBe Some(List("TenantA"))
+    componentNames(List(magazines, books)) shouldBe Some(List("TenantA"))
+  }
 }
