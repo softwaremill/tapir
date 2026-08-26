@@ -30,8 +30,15 @@ import scala.concurrent.duration._
   *   contains tapir's server processing logic.
   *
   * @param requestTimeout
-  *   The maximum duration to wait for a response to be produced, which includes receiving the request. This timeout is ignored in Web
-  *   Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
+  *   The maximum duration to wait for the request to be received in full, and for the response to be produced. When exceeded, an empty
+  *   error response with a `Connection: close` header is sent, and the connection is closed. The status code depends on which side stalled:
+  *
+  *   - `503 Service Unavailable`, if no part of the response is written within this duration. The server did not produce, or start
+  *     streaming, a response in time.
+  *   - `400 Bad Request`, if no data is received within this duration while the request body is still incomplete. The client sent the
+  *     headers, and possibly part of the body, then stalled before sending the final chunk.
+  *
+  * This timeout is ignored in Web Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
   *
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
