@@ -248,7 +248,8 @@ By default, every parameter is inlined into each operation that uses it. A param
 therefore serialised in full many times over.
 
 To emit a parameter once into the `components` section and reference it from each use site, mark it with
-`.reusableComponent`:
+`.reusableComponent`. The marker is available on a `query`, `path` or `cookie` parameter, and on a header — request or
+response:
 
 ```scala mdoc:compile-only
 import sttp.tapir.*

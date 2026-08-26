@@ -34,4 +34,10 @@ class ReusableComponentAttributeTest extends AnyFunSuite with Matchers {
     cookie[String]("c").reusableComponent.reusableComponentMarker shouldBe Some(ReusableComponent(None))
     header("H", "v").reusableComponent.reusableComponentMarker shouldBe Some(ReusableComponent(None))
   }
+
+  test("the marker does not compile on inputs and outputs that cannot become components") {
+    assertDoesNotCompile("""stringBody.reusableComponent""")
+    assertDoesNotCompile("""statusCode.reusableComponent""")
+    assertDoesNotCompile("""queryParams.reusableComponent""")
+  }
 }

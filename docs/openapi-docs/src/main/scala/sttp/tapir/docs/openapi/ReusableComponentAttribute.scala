@@ -1,9 +1,10 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.{AttributeKey, EndpointTransput}
+import sttp.tapir.{AttributeKey, EndpointIO, EndpointInput, EndpointTransput}
 
-/** Marks a parameter or header as a reusable OpenAPI component: instead of being serialised in full into every operation that uses it, it
-  * is emitted once into the `components` section and referenced with a `$ref` from each use site.
+/** Marks a parameter or header as a reusable OpenAPI component - where a parameter is a `query`, `path` or `cookie` input, and a header is
+  * a request or response header. Instead of being serialised in full into every operation that uses it, it is emitted once into the
+  * `components` section and referenced with a `$ref` from each use site.
   *
   * @param name
   *   the key to emit the component under; when empty, the parameter's or header's own name is used.
@@ -12,26 +13,47 @@ case class ReusableComponent(name: Option[String])
 
 object ReusableComponentAttribute {
 
-  /** The key under which the marker is stored on a parameter or header. Set it through [[RichBasicEndpointTransput]] rather than directly.
+  /** The key under which the marker is stored on a parameter or header. Set it through the `reusableComponent` methods rather than
+    * directly.
     */
   val reusableComponentAttributeKey: AttributeKey[ReusableComponent] = AttributeKey[ReusableComponent]
 
+  /** Marks a query parameter as a reusable component, see [[ReusableComponent]]. */
+  implicit class RichQuery[T](q: EndpointInput.Query[T]) {
+    def reusableComponent: EndpointInput.Query[T] = q.attribute(reusableComponentAttributeKey, ReusableComponent(None))
+    def reusableComponent(name: String): EndpointInput.Query[T] =
+      q.attribute(reusableComponentAttributeKey, ReusableComponent(Some(name)))
+  }
+
+  /** Marks a path parameter as a reusable component, see [[ReusableComponent]]. */
+  implicit class RichPathCapture[T](p: EndpointInput.PathCapture[T]) {
+    def reusableComponent: EndpointInput.PathCapture[T] = p.attribute(reusableComponentAttributeKey, ReusableComponent(None))
+    def reusableComponent(name: String): EndpointInput.PathCapture[T] =
+      p.attribute(reusableComponentAttributeKey, ReusableComponent(Some(name)))
+  }
+
+  /** Marks a cookie parameter as a reusable component, see [[ReusableComponent]]. */
+  implicit class RichCookie[T](c: EndpointInput.Cookie[T]) {
+    def reusableComponent: EndpointInput.Cookie[T] = c.attribute(reusableComponentAttributeKey, ReusableComponent(None))
+    def reusableComponent(name: String): EndpointInput.Cookie[T] =
+      c.attribute(reusableComponentAttributeKey, ReusableComponent(Some(name)))
+  }
+
+  /** Marks a header as a reusable component, see [[ReusableComponent]]. */
+  implicit class RichHeader[T](h: EndpointIO.Header[T]) {
+    def reusableComponent: EndpointIO.Header[T] = h.attribute(reusableComponentAttributeKey, ReusableComponent(None))
+    def reusableComponent(name: String): EndpointIO.Header[T] =
+      h.attribute(reusableComponentAttributeKey, ReusableComponent(Some(name)))
+  }
+
+  /** Marks a fixed header as a reusable component, see [[ReusableComponent]]. */
+  implicit class RichFixedHeader[T](h: EndpointIO.FixedHeader[T]) {
+    def reusableComponent: EndpointIO.FixedHeader[T] = h.attribute(reusableComponentAttributeKey, ReusableComponent(None))
+    def reusableComponent(name: String): EndpointIO.FixedHeader[T] =
+      h.attribute(reusableComponentAttributeKey, ReusableComponent(Some(name)))
+  }
+
   implicit class RichBasicEndpointTransput[E <: EndpointTransput.Atom[_]](e: E) {
-
-    /** Emits this parameter or header once into the `components` section, referenced from every operation that uses it, under a key which
-      * is the parameter's or header's own name.
-      *
-      * Use when the same parameter is shared by many endpoints, to avoid repeating it in full in each operation.
-      *
-      * See https://tapir.softwaremill.com/en/latest/docs/openapi.html for details.
-      */
-    def reusableComponent: E = e.attribute(reusableComponentAttributeKey, ReusableComponent(None)).asInstanceOf[E]
-
-    /** As [[reusableComponent]], but emits the component under the given key instead of the parameter's or header's own name. Needed when
-      * two different components would otherwise claim the same key.
-      */
-    def reusableComponent(name: String): E =
-      e.attribute(reusableComponentAttributeKey, ReusableComponent(Some(name))).asInstanceOf[E]
 
     /** The reusable-component marker set on this parameter or header, if any. */
     def reusableComponentMarker: Option[ReusableComponent] = e.attribute(reusableComponentAttributeKey)
