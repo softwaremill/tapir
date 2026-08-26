@@ -264,7 +264,7 @@ val listMagazines = endpoint.get.in("magazines").in(tenantId)
 Both operations then contain `$ref: '#/components/parameters/tenantId'`, and the definition appears once under
 `components.parameters`.
 
-The same marker works for request headers (which are also emitted into `components.parameters`) and response headers (emitted into `components.headers`)
+The same marker works for request headers (which are also emitted into `components.parameters`) and response headers (emitted into `components.headers`).
 
 Response header example:
 
@@ -301,6 +301,7 @@ Notes:
   variations, keep the base parameter unmarked and mark the use sites that should be referenced.
 * A marked parameter is always moved into `components`, even when only one endpoint uses it, so the document does not
   change shape as endpoints are added or removed.
+* To mark a path capture, either name it (`path[String]("bookId")`) or give the component an explicit key.
 * A marked input that is hidden (`.schema(_.hidden(true))`) produces no component.
 
 ## Authentication inputs and security requirements
