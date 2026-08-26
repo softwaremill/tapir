@@ -9,10 +9,13 @@ import sttp.tapir.{EndpointIO, EndpointOutput}
 
 private[openapi] class EndpointToHeaders(tschemaToASchema: TSchemaToASchema) {
 
-  def withSourceAtoms(outputs: List[EndpointOutput[_]]): List[(EndpointIO.Atom[_], (String, Header))] =
+  def withSourceAtoms(
+      outputs: List[EndpointOutput[_]],
+      include: EndpointIO.Atom[_] => Boolean = _ => true
+  ): List[(EndpointIO.Atom[_], (String, Header))] =
     outputs.flatMap(_.traverseOutputs[(EndpointIO.Atom[_], (String, Header))] {
-      case h: EndpointIO.Header[_]      => Vector(h -> (h.name -> headerToHeader(h)))
-      case f: EndpointIO.FixedHeader[_] => Vector(f -> (f.h.name -> fixedHeaderToHeader(f)))
+      case h: EndpointIO.Header[_] if include(h)      => Vector(h -> (h.name -> headerToHeader(h)))
+      case f: EndpointIO.FixedHeader[_] if include(f) => Vector(f -> (f.h.name -> fixedHeaderToHeader(f)))
     })
 
   private def headerToHeader[T](header: EndpointIO.Header[T]): Header =

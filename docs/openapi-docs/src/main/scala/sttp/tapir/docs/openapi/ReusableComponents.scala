@@ -51,7 +51,10 @@ private[openapi] class ReusableComponentsForEndpoints(
   private def collectMarkedParameters(): Vector[(Parameter, Option[String])] =
     es.toVector.flatMap { e =>
       endpointToParameters
-        .withSourceAtoms(endpointToParameters.filterOutHiddenInputs(e.asVectorOfBasicInputs(includeAuth = false)))
+        .withSourceAtoms(
+          endpointToParameters.filterOutHiddenInputs(e.asVectorOfBasicInputs(includeAuth = false)),
+          include = ReusableComponents.markerOf(_).isDefined
+        )
         .flatMap { case (atom, parameter) => ReusableComponents.markerOf(atom).map(m => parameter -> m.name) }
     }
 
@@ -60,7 +63,7 @@ private[openapi] class ReusableComponentsForEndpoints(
       // the same argument EndpointToOperationResponse passes, so that the generated headers - which the lookup is keyed by - match
       val decodeFailureOutputs = defaultDecodeFailureOutput(e.securityInput.and(e.input)).toList
       endpointToHeaders
-        .withSourceAtoms(List(e.output, e.errorOutput) ++ decodeFailureOutputs)
+        .withSourceAtoms(List(e.output, e.errorOutput) ++ decodeFailureOutputs, include = ReusableComponents.markerOf(_).isDefined)
         .toVector
         .flatMap { case (atom, nameAndHeader) => ReusableComponents.markerOf(atom).map(m => nameAndHeader -> m.name) }
     }

@@ -20,13 +20,16 @@ private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) 
     case a: EndpointInput.Atom[_] if !a.codec.schema.hidden => a
   }
 
-  def withSourceAtoms(inputs: Vector[EndpointInput.Basic[_]]): Vector[(EndpointInput.Atom[_], Parameter)] = {
+  def withSourceAtoms(
+      inputs: Vector[EndpointInput.Basic[_]],
+      include: EndpointInput.Atom[_] => Boolean = _ => true
+  ): Vector[(EndpointInput.Atom[_], Parameter)] = {
     inputs.collect {
-      case q: EndpointInput.Query[_]       => (q, enrich(q, queryToParameter(q)))
-      case p: EndpointInput.PathCapture[_] => (p, enrich(p, pathCaptureToParameter(p)))
-      case h: EndpointIO.Header[_]         => (h, enrich(h, headerToParameter(h)))
-      case c: EndpointInput.Cookie[_]      => (c, enrich(c, cookieToParameter(c)))
-      case f: EndpointIO.FixedHeader[_]    => (f, enrich(f, fixedHeaderToParameter(f)))
+      case q: EndpointInput.Query[_] if include(q)       => (q, enrich(q, queryToParameter(q)))
+      case p: EndpointInput.PathCapture[_] if include(p) => (p, enrich(p, pathCaptureToParameter(p)))
+      case h: EndpointIO.Header[_] if include(h)         => (h, enrich(h, headerToParameter(h)))
+      case c: EndpointInput.Cookie[_] if include(c)      => (c, enrich(c, cookieToParameter(c)))
+      case f: EndpointIO.FixedHeader[_] if include(f)    => (f, enrich(f, fixedHeaderToParameter(f)))
     }
   }
 
