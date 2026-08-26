@@ -233,12 +233,12 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
     intercept[IllegalArgumentException](OpenApiMerger.merge(Seq(a, b)))
   }
 
-  it should "merge components.headers from both documents, left winning on collisions" in {
+  it should "merge components.headers from both documents" in {
     val left = docWith(
       OpenapiComponent(
         schemas = Map.empty,
         headers = Map(
-          "#/components/headers/RateLimit" -> headerDef("left rate limit"),
+          "#/components/headers/RateLimit" -> headerDef("rate limit"),
           "#/components/headers/OnlyLeft" -> headerDef("only left")
         )
       )
@@ -247,7 +247,7 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
       OpenapiComponent(
         schemas = Map.empty,
         headers = Map(
-          "#/components/headers/RateLimit" -> headerDef("right rate limit"),
+          "#/components/headers/RateLimit" -> headerDef("rate limit"),
           "#/components/headers/OnlyRight" -> headerDef("only right")
         )
       )
@@ -257,10 +257,19 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
 
     merged.components.map(_.headers) shouldBe Some(
       Map(
-        "#/components/headers/RateLimit" -> headerDef("left rate limit"),
+        "#/components/headers/RateLimit" -> headerDef("rate limit"),
         "#/components/headers/OnlyLeft" -> headerDef("only left"),
         "#/components/headers/OnlyRight" -> headerDef("only right")
       )
     )
+  }
+
+  it should "fail when the same header is defined differently in both documents" in {
+    val left = docWith(OpenapiComponent(schemas = Map.empty, headers = Map("#/components/headers/RateLimit" -> headerDef("left"))))
+    val right = docWith(OpenapiComponent(schemas = Map.empty, headers = Map("#/components/headers/RateLimit" -> headerDef("right"))))
+
+    val thrown = intercept[IllegalArgumentException](OpenApiMerger.merge(Seq(left, right)))
+    thrown.getMessage should include("Conflicting header definitions")
+    thrown.getMessage should include("RateLimit")
   }
 }

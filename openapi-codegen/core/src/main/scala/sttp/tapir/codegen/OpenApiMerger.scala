@@ -51,6 +51,15 @@ object OpenApiMerger {
       left.requestBodies.contains(k)
     }
     val mergedHeaders = left.headers ++ right.headers.filterNot { case (k, _) => left.headers.contains(k) }
+    // as for schemas, and unlike the other component maps: a header definition determines the generated endpoint's type, so silently
+    // keeping the left one would generate the wrong type for the right document's endpoints
+    val conflictingHeaders = left.headers.keySet.intersect(right.headers.keySet).filter { k =>
+      left.headers(k) != right.headers(k)
+    }
+    if (conflictingHeaders.nonEmpty)
+      throw new IllegalArgumentException(
+        s"Conflicting header definitions when merging OpenAPI documents: ${conflictingHeaders.mkString(", ")}"
+      )
 
     OpenapiComponent(mergedSchemas, mergedSecuritySchemes, mergedParameters, mergedResponses, mergedRequestBodies, mergedHeaders)
   }
