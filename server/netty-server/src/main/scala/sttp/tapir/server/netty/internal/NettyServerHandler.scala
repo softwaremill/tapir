@@ -119,7 +119,7 @@ class NettyServerHandler[F[_]](
         }
         if (e.state == IdleState.READER_IDLE && !wasRequestBodyFullyReceived(ctx)) {
           logger.debug(
-            s"Closing connection due to partially send request with pause exceeded request timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
+            s"Closing connection: the request body was not fully received within the request timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
           writeErrorThenClose(ctx, HttpResponseStatus.BAD_REQUEST)
         }
