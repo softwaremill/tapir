@@ -296,6 +296,9 @@ Notes:
 * Each use site decides for itself: `query[String]("tenantId")` is inlined, `query[String]("tenantId").reusableComponent`
   is referenced. Marking a shared `val` once covers every endpoint that uses it.
 * Marked parameters that are identical share one component, so the same parameter defined in two places is emitted once.
+* The marker is copied along with the parameter, so modifying a marked `val` at one use site — e.g. adding an example —
+  produces a second, different component claiming the same key, and generation fails. If you want per-endpoint
+  variations, keep the base parameter unmarked and mark the use sites that should be referenced.
 * A marked parameter is always moved into `components`, even when only one endpoint uses it, so the document does not
   change shape as endpoints are added or removed.
 * A marked input that is hidden (`.schema(_.hidden(true))`) produces no component.

@@ -84,8 +84,10 @@ private[openapi] class ReusableComponentsForEndpoints(
       failOnDuplicateComponentName,
       baseNames =>
         s"Duplicate OpenAPI component names found in components/$section: ${baseNames.mkString(", ")}. " +
-          "Give one of them an explicit name, e.g. .reusableComponent(\"MyName\"), " +
-          "or set OpenAPIDocsOptions.failOnDuplicateComponentName to false to disambiguate with a numeric suffix."
+          "Components marked as reusable share a name, but have different definitions - this happens when a marked value is modified " +
+          "at a use site, e.g. adding an example, as the marker is copied along with it. " +
+          "Give one of them its own key, e.g. .reusableComponent(\"MyName\"), leave the base unmarked and mark only the use sites that " +
+          "should be referenced, or set OpenAPIDocsOptions.failOnDuplicateComponentName to false to disambiguate with a numeric suffix."
     ).map { case ((t, _), id) => t -> id }
   }
 }
