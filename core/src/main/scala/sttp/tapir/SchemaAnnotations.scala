@@ -17,8 +17,6 @@ final case class SchemaAnnotations[T](
     validateEach: List[Validator[Any]]
 ) {
 
-  private var _customise: Option[Schema[Any] => Schema[Any]] = None
-
   private case class SchemaEnrich(current: Schema[T]) {
     def optionally(f: Schema[T] => Option[Schema[T]]): SchemaEnrich = f(current).map(SchemaEnrich.apply).getOrElse(this)
   }
@@ -39,7 +37,19 @@ final case class SchemaAnnotations[T](
 
     validateEach.foldLeft(s3)((current, v) => current.modifyUnsafe(Schema.ModifyCollectionElements)((_: Schema[Any]).validate(v)))
   }
-  
+
+  /**
+   * Customise transformation function taken from @cusomise annotation
+   * Extraction was accidentally omitted when the annotation was introduced
+   *
+   * Stored as a private var only to keep backward compatibility.
+   * Moving this to the parameter list would break copy() and apply() signatures for a generated jvm class.
+   *
+   * When breaking binary compatibility would be an option, consider moving this into a regular parameter list
+   * with adjusting SchemaAnnotationsMacro(both scala 3 and 2) accordingly
+   */
+  private var _customise: Option[Schema[Any] => Schema[Any]] = None
+
   def withCustomise(c: Schema[Any] => Schema[Any]): SchemaAnnotations[T] = {
     val copy = this.copy()
     copy._customise = Some(c)
