@@ -203,14 +203,16 @@ object OpenapiModels {
       throw new IllegalStateException(s"Header $name cannot be generated: $cause")
   }
   case class OpenapiHeaderRef($ref: OpenapiSchemaRef) extends OpenapiHeader {
-    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef = {
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef = resolvedFollowing(name, doc, Seq.empty)
+
+    // a header component may itself be a reference, so follow the chain, keeping the visited refs to report a cycle rather than hang
+    private def resolvedFollowing(name: String, doc: OpenapiDocument, visited: Seq[String]): OpenapiHeaderDef = {
+      if (visited.contains($ref.name))
+        throw new IllegalStateException(s"Circular header reference: ${(visited :+ $ref.name).mkString(" -> ")}")
+
       def fromHeaders: Option[OpenapiHeaderDef] = doc.components.flatMap(_.headers.get($ref.name)).map {
-        case d: OpenapiHeaderDef         => d.resolved(name, doc)
-        case u: OpenapiHeaderUnsupported => u.resolved(name, doc)
-        case _: OpenapiHeaderRef         =>
-          throw new IllegalStateException(
-            s"Header component ${$ref.name} is itself a reference; chained header references are not supported"
-          )
+        case r: OpenapiHeaderRef => r.resolvedFollowing(name, doc, visited :+ $ref.name)
+        case h                   => h.resolved(name, doc)
       }
       def fromParameters: Option[OpenapiHeaderDef] = doc.components
         .flatMap(_.parameters.get($ref.name))

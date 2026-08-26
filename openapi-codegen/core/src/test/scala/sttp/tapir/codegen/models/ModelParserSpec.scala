@@ -336,6 +336,58 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
     )
   }
 
+  it should "resolve a header component which is itself a reference" in {
+    val doc = OpenapiDocument(
+      "3.1.0",
+      Nil,
+      OpenapiInfo("Rate limited", "1.0"),
+      Nil,
+      Some(
+        OpenapiComponent(
+          schemas = Map.empty,
+          parameters = Map(
+            "#/components/parameters/RateLimit" ->
+              OpenapiParameter("RateLimit", "header", Some(true), Some("Requests left"), OpenapiSchemaString(false))
+          ),
+          headers = Map(
+            "#/components/headers/Alias" -> OpenapiHeaderRef(OpenapiSchemaRef("#/components/parameters/RateLimit"))
+          )
+        )
+      ),
+      Nil
+    )
+
+    val ref = OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/Alias"))
+
+    ref.resolved("X-Rate-Limit", doc) shouldBe OpenapiHeaderDef(
+      OpenapiParameter("X-Rate-Limit", "header", Some(true), Some("Requests left"), OpenapiSchemaString(false))
+    )
+  }
+
+  it should "fail with a clear message when header references form a cycle" in {
+    val doc = OpenapiDocument(
+      "3.1.0",
+      Nil,
+      OpenapiInfo("Rate limited", "1.0"),
+      Nil,
+      Some(
+        OpenapiComponent(
+          schemas = Map.empty,
+          headers = Map(
+            "#/components/headers/A" -> OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/B")),
+            "#/components/headers/B" -> OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/A"))
+          )
+        )
+      ),
+      Nil
+    )
+
+    val ref = OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/A"))
+
+    val thrown = intercept[IllegalStateException](ref.resolved("X-Rate-Limit", doc))
+    thrown.getMessage should include("Circular header reference")
+  }
+
   it should "fail with a clear message when a response header ref matches nothing" in {
     val doc = OpenapiDocument("3.1.0", Nil, OpenapiInfo("Rate limited", "1.0"), Nil, Some(OpenapiComponent(Map.empty)), Nil)
 
