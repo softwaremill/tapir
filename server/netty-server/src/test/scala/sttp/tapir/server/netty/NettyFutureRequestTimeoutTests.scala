@@ -108,15 +108,18 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         .use { port =>
           val bytes = s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: 10000\r\n\r\ntest".getBytes
 
-          for {
-            socket <- IO(new Socket("localhost", port))
-            _ <- IO(socket.getOutputStream.write(bytes))
-            _ <- IO(socket.getOutputStream.flush())
-            _ <- IO.sleep(1.second)
-            response <- IO(new String(socket.getInputStream.readAllBytes()))
-            _ <- IO(socket.close())
-          } yield {
-            response should include("400 Bad Request")
+          Resource
+            .make(IO(new Socket("localhost", port)))(socket => IO(socket.close()))
+            .use { socket =>
+              for {
+                _ <- IO(socket.getOutputStream.write(bytes))
+                _ <- IO(socket.getOutputStream.flush())
+                _ <- IO.sleep(1.second)
+                response <- IO(new String(socket.getInputStream.readAllBytes()))
+              } yield {
+                response should include("400 Bad Request")
+                response should not include("503")
+              }
           }
         }
         .unsafeToFuture()
