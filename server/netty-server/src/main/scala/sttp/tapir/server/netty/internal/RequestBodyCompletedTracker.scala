@@ -10,7 +10,7 @@ object RequestBodyCompletedTracker {
   val BodyComplete: AttributeKey[Boolean] = AttributeKey.valueOf[Boolean](key)
 
   def wasRequestBodyFullyReceived(ctx: ChannelHandlerContext): Boolean =
-    Option(ctx.channel().attr(RequestBodyCompletedTracker.BodyComplete).get()).contains(true)
+    Option(ctx.channel().attr(RequestBodyCompletedTracker.BodyComplete).get()).getOrElse(true)
 }
 
 private[netty] class RequestBodyCompletedTracker extends ChannelInboundHandlerAdapter {
