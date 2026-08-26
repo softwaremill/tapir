@@ -12,8 +12,7 @@ case class OpenAPIDocsOptions(
     defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]] = OpenAPIDocsOptions.defaultDecodeFailureOutput,
     markOptionsAsNullable: Boolean = false,
     failOnDuplicateOperationId: Boolean = false,
-    failOnDuplicateSchemaName: Boolean = false,
-    failOnDuplicateComponentName: Boolean = true
+    failOnDuplicateSchemaName: Boolean = false
 )
 
 object OpenAPIDocsOptions {

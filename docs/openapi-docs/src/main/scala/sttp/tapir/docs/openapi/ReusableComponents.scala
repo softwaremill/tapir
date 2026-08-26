@@ -36,7 +36,6 @@ private[openapi] object ReusableComponents {
 private[openapi] class ReusableComponentsForEndpoints(
     es: Iterable[AnyEndpoint],
     tschemaToASchema: TSchemaToASchema,
-    failOnDuplicateComponentName: Boolean,
     defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]]
 ) {
   private val endpointToParameters = new EndpointToParameters(tschemaToASchema)
@@ -74,11 +73,10 @@ private[openapi] class ReusableComponentsForEndpoints(
       .toVector
       .map { case (t, markers) =>
         val explicitNames = markers.flatMap(_._2).distinct.sorted
-        if (explicitNames.size > 1 && failOnDuplicateComponentName)
+        if (explicitNames.size > 1)
           throw new IllegalStateException(
             s"Conflicting OpenAPI component names in components/$section: ${explicitNames.mkString(", ")}. " +
-              "The same parameter or header cannot be emitted under more than one key - mark it once, " +
-              "or set OpenAPIDocsOptions.failOnDuplicateComponentName to false to use the first name alphabetically."
+              "The same parameter or header cannot be emitted under more than one key - mark it once."
           )
         t -> explicitNames.headOption
       }
@@ -87,13 +85,13 @@ private[openapi] class ReusableComponentsForEndpoints(
     val assigned = calculateUniqueIds[(T, Option[String])](
       distinctMarked,
       { case (t, explicitName) => explicitName.getOrElse(defaultName(t)) },
-      failOnDuplicateComponentName,
+      failOnDuplicateName = true,
       baseNames =>
         s"Duplicate OpenAPI component names found in components/$section: ${baseNames.mkString(", ")}. " +
           "Components marked as reusable share a name, but have different definitions - this happens when a marked value is modified " +
           "at a use site, e.g. adding an example, as the marker is copied along with it. " +
-          "Give one of them its own key, e.g. .reusableComponent(\"MyName\"), leave the base unmarked and mark only the use sites that " +
-          "should be referenced, or set OpenAPIDocsOptions.failOnDuplicateComponentName to false to disambiguate with a numeric suffix."
+          "Give one of them its own key, e.g. .reusableComponent(\"MyName\"), or leave the base unmarked and mark only the use sites " +
+          "that should be referenced."
     ).map { case ((t, _), id) => t -> id }
 
     assigned.values.foreach(verifyComponentKey(_, section))

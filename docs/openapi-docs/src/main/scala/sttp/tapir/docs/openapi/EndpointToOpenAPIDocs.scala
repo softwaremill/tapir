@@ -24,8 +24,7 @@ private[openapi] object EndpointToOpenAPIDocs {
         .apply()
     val securitySchemes = SecuritySchemesForEndpoints(es2, apiKeyAuthTypeName = "apiKey")
     val reusableComponents =
-      new ReusableComponentsForEndpoints(es2, tschemaToASchema, options.failOnDuplicateComponentName, options.defaultDecodeFailureOutput)
-        .apply()
+      new ReusableComponentsForEndpoints(es2, tschemaToASchema, options.defaultDecodeFailureOutput).apply()
     val pathCreator = new EndpointToOpenAPIPaths(tschemaToASchema, securitySchemes, options, reusableComponents)
     val componentsCreator = new EndpointToOpenAPIComponents(idToSchema, securitySchemes, reusableComponents)
 

@@ -231,10 +231,6 @@ Options can be customised by providing an instance of `OpenAPIDocsOptions` to th
   which (without automatic deduplication by adding a numeric suffix) would be identical. Having automatically resolved 
   de-duplications might result in different names depending on the order of endpoints. This might result in false 
   positive changes in the OpenApi document.
-* `failOnDuplicateComponentName`: if two parameters or two response headers marked with `.reusableComponent` derive the
-  same component key, fail instead of disambiguating with a numeric suffix. Defaults to `true` — stricter than
-  `failOnDuplicateSchemaName`, because marking is explicit and a collision between two explicitly marked components is
-  almost always a mistake.
 
 ## Inlined and referenced schemas
 
