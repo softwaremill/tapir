@@ -209,6 +209,31 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     }
   }
 
+  test("should hoist a marked header from a custom defaultDecodeFailureOutput") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val rateLimit = sttp.tapir.header[String]("X-Rate-Limit").reusableComponent
+    val options = OpenAPIDocsOptions.default.copy(defaultDecodeFailureOutput =
+      _ => Some(sttp.tapir.statusCode(sttp.model.StatusCode.BadRequest).and(rateLimit))
+    )
+
+    val e = endpoint.get.in("books").in(query[String]("tenantId"))
+
+    val openApi = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("Entities", "1.0"))
+
+    openApi.components.map(_.headers.keys.toList) shouldBe Some(List("X-Rate-Limit"))
+    openApi.paths
+      .pathItems("/books")
+      .get
+      .get
+      .responses
+      .responses
+      .values
+      .collect { case Right(r) => r.headers.values }
+      .flatten
+      .collect { case Left(reference) => reference.$ref } shouldBe List("#/components/headers/X-Rate-Limit")
+  }
+
   test("should fail when a marked parameter's name is not a valid component key") {
     import sttp.tapir.docs.openapi.ReusableComponentAttribute._
 

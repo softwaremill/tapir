@@ -2,7 +2,7 @@ package sttp.tapir.docs.openapi
 
 import sttp.apispec.openapi.{Header, Parameter}
 import sttp.tapir.docs.apispec.schema.{TSchemaToASchema, calculateUniqueIds}
-import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput}
+import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointOutput, EndpointTransput}
 import sttp.tapir.internal._
 
 private[openapi] case class ReusableComponents(
@@ -36,7 +36,8 @@ private[openapi] object ReusableComponents {
 private[openapi] class ReusableComponentsForEndpoints(
     es: Iterable[AnyEndpoint],
     tschemaToASchema: TSchemaToASchema,
-    failOnDuplicateComponentName: Boolean
+    failOnDuplicateComponentName: Boolean,
+    defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]]
 ) {
   private val endpointToParameters = new EndpointToParameters(tschemaToASchema)
   private val endpointToHeaders = new EndpointToHeaders(tschemaToASchema)
@@ -56,8 +57,10 @@ private[openapi] class ReusableComponentsForEndpoints(
 
   private def collectMarkedHeaders(): Vector[((String, Header), Option[String])] =
     es.toVector.flatMap { e =>
+      // the same argument EndpointToOperationResponse passes, so that the generated headers - which the lookup is keyed by - match
+      val decodeFailureOutputs = defaultDecodeFailureOutput(e.securityInput.and(e.input)).toList
       endpointToHeaders
-        .withSourceAtoms(List(e.output, e.errorOutput))
+        .withSourceAtoms(List(e.output, e.errorOutput) ++ decodeFailureOutputs)
         .toVector
         .flatMap { case (atom, nameAndHeader) => ReusableComponents.markerOf(atom).map(m => nameAndHeader -> m.name) }
     }
