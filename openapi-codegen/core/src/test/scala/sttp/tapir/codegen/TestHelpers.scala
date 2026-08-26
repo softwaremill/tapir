@@ -805,6 +805,138 @@ object TestHelpers {
      |          default: PT1H30M
      |""".stripMargin
 
+  // 'application/problem+json' (RFC 9457) and any other 'application/<something>+json' media type should be handled
+  // exactly like 'application/json'
+  val structuredSyntaxSuffixJsonYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: structured syntax suffix json test
+     |  version: '1.0'
+     |paths:
+     |  /widgets:
+     |    post:
+     |      operationId: createWidget
+     |      requestBody:
+     |        required: true
+     |        content:
+     |          application/json:
+     |            schema:
+     |              $ref: '#/components/schemas/Widget'
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/json:
+     |              schema:
+     |                $ref: '#/components/schemas/Widget'
+     |        '400':
+     |          description: ''
+     |          content:
+     |            application/problem+json:
+     |              schema:
+     |                $ref: '#/components/schemas/Problem'
+     |  /widgets/{id}:
+     |    patch:
+     |      operationId: patchWidget
+     |      parameters:
+     |      - name: id
+     |        in: path
+     |        required: true
+     |        schema:
+     |          type: string
+     |      requestBody:
+     |        required: true
+     |        content:
+     |          application/merge-patch+json:
+     |            schema:
+     |              $ref: '#/components/schemas/Widget'
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/vnd.example.widget+json:
+     |              schema:
+     |                type: array
+     |                items:
+     |                  $ref: '#/components/schemas/Widget'
+     |components:
+     |  schemas:
+     |    Widget:
+     |      required:
+     |      - name
+     |      type: object
+     |      properties:
+     |        name:
+     |          type: string
+     |        colour:
+     |          type: string
+     |    Problem:
+     |      required:
+     |      - type
+     |      - title
+     |      type: object
+     |      properties:
+     |        type:
+     |          type: string
+     |        title:
+     |          type: string
+     |        status:
+     |          type: integer
+     |          format: int32
+     |""".stripMargin
+
+  // 'application/problem+xml' (RFC 9457) and any other 'application/<something>+xml' media type should be handled
+  // exactly like 'application/xml'
+  val structuredSyntaxSuffixXmlYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: structured syntax suffix xml test
+     |  version: '1.0'
+     |paths:
+     |  /gadgets:
+     |    post:
+     |      operationId: createGadget
+     |      requestBody:
+     |        required: true
+     |        content:
+     |          application/vnd.example.gadget+xml:
+     |            schema:
+     |              $ref: '#/components/schemas/Gadget'
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/atom+xml:
+     |              schema:
+     |                $ref: '#/components/schemas/Gadget'
+     |        '400':
+     |          description: ''
+     |          content:
+     |            application/problem+xml:
+     |              schema:
+     |                $ref: '#/components/schemas/Fault'
+     |components:
+     |  schemas:
+     |    Gadget:
+     |      required:
+     |      - name
+     |      type: object
+     |      properties:
+     |        name:
+     |          type: string
+     |        colour:
+     |          type: string
+     |    Fault:
+     |      required:
+     |      - reason
+     |      type: object
+     |      properties:
+     |        reason:
+     |          type: string
+     |""".stripMargin
+
   val withDefaultsYaml =
     """
      |openapi: 3.1.0

@@ -1,7 +1,7 @@
 package sttp.tapir.codegen.endpoints
 
 import sttp.tapir.codegen.dedup.PackageReuseContext
-import sttp.tapir.codegen.endpoints.InAndOutComponents.{aliases, combine, contentTypeMapper, eagerTypes}
+import sttp.tapir.codegen.endpoints.InAndOutComponents.{aliases, combine, contentTypeMapper}
 import sttp.tapir.codegen.endpoints.Position.Request
 import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels
@@ -12,7 +12,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.{
   OpenapiRequestBodyDefn
 }
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaRef
-import sttp.tapir.codegen.util.{JavaEscape, Location}
+import sttp.tapir.codegen.util.{ContentTypes, JavaEscape, Location}
 import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.validation.ValidationDefns
 import sttp.tapir.codegen.xml.XmlSerdeLib.XmlSerdeLib
@@ -82,7 +82,7 @@ object InComponent {
         Some((s".in($decl$d)", tpe, maybeInlineDefn))
       } else {
         // We cannot mix eager and streaming types when using oneOfBody
-        val preferEager = b.content.exists(c => eagerTypes.contains(c.contentType))
+        val preferEager = b.content.exists(c => ContentTypes.isEager(c.contentType))
         val mapped = b.content.map(mapContent(_, b.required, preferEager))
         val (decls, tpes, maybeInlineDefns) = mapped.unzip3
         val distinctTypes = tpes.distinct

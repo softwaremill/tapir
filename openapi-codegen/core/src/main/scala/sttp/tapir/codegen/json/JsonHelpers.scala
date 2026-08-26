@@ -15,6 +15,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaStringType
 }
 
+import sttp.tapir.codegen.util.ContentTypes
+
 import scala.annotation.tailrec
 
 object JsonHelpers {
@@ -91,12 +93,12 @@ object JsonHelpers {
         m.responses
           .map(_.resolve(doc))
           .flatMap(_.content)
-          .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
+          .filter(o => ContentTypes.isJson(o.contentType) && o.schema.isInstanceOf[OpenapiSchemaObject])
           .map(c => (m.name(p.url).capitalize + "Response", c.schema, true)) ++
           m.requestBody.toSeq
             .map(_.resolve(doc))
             .flatMap(_.content)
-            .filter(o => o.contentType == "application/json" && o.schema.isInstanceOf[OpenapiSchemaObject])
+            .filter(o => ContentTypes.isJson(o.contentType) && o.schema.isInstanceOf[OpenapiSchemaObject])
             .map(c => (m.name(p.url).capitalize + "Request", c.schema, true))
       )
     )

@@ -7,6 +7,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
 import sttp.tapir.codegen.security.SecurityGenerator
+import sttp.tapir.codegen.util.ContentTypes
 import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers
 import sttp.tapir.codegen.util.NameValidation
@@ -243,8 +244,6 @@ object RootGenerator {
       }
       .mkString("\n")
 
-    val expectedTypes =
-      Set("text/plain", "text/html", "application/json", "application/xml", "multipart/form-data", "application/octet-stream")
     val mediaType = "([^/]+)/(.+)".r
     val customTypes = doc.paths
       .flatMap(
@@ -255,7 +254,7 @@ object RootGenerator {
       )
       .distinct
       .sorted
-      .filterNot(expectedTypes.contains)
+      .filterNot(ContentTypes.isNativeContentType)
       .map {
         case ct @ mediaType(mainType, subType) =>
           s"""case class ${NameHelpers.codecFormatName(ct)}() extends CodecFormat {

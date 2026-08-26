@@ -22,6 +22,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaSimpleType,
   OpenapiSchemaString
 }
+import sttp.tapir.codegen.util.ContentTypes
 import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.Location
 import sttp.tapir.codegen.util.NameHelpers.{codecFormatName, indent, safeVariableName}
@@ -47,8 +48,6 @@ object InAndOutComponents {
       case (None, Some(defn))         => Some(defn)
       case (Some(defn1), Some(defn2)) => Some(defn1 + separator + defn2)
     }
-  // These types all use 'eager' schemas, except for '*/*', which we default to eager for convenience but which has no schema mappings
-  private[endpoints] val eagerTypes = Set("application/json", "application/xml", "text/plain", "text/html", "multipart/form-data", "*/*")
 
   private[endpoints] def aliases(packageReuse: PackageReuseContext, types: Seq[String], seperateFilesForModels: Boolean): String =
     types.map(PackageReuseContext.enumAliasType(_, packageReuse, seperateFilesForModels)).mkString("\n")
@@ -96,7 +95,7 @@ object InAndOutComponents {
         MappedContentType("stringBody", "String")
       case "text/html" =>
         MappedContentType("htmlBodyUtf8", "String")
-      case "application/xml" if xmlSerdeLib != XmlSerdeLib.NoSupport =>
+      case ct if ContentTypes.isXml(ct) && xmlSerdeLib != XmlSerdeLib.NoSupport =>
         val (outT: String, maybeInline: Option[String], maybeAlias: Option[String], maybeTpe: Seq[String]) = schema match {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
@@ -112,10 +111,10 @@ object InAndOutComponents {
         def toList = if (required) ".toList" else ".map(_.toList)"
         val bodyType = maybeAlias.map(a => s"xmlBody[$a].map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(s"xmlBody[$req]")
         MappedContentType(bodyType + v(required), req, maybeInline, maybeTpe)
-      case "application/json" if tapirCodegenDirectives.contains(jsonBodyAsString) =>
+      case ct if ContentTypes.isJson(ct) && tapirCodegenDirectives.contains(jsonBodyAsString) =>
         if (required) MappedContentType("stringJsonBody", "String", None)
         else MappedContentType("stringJsonBody.map(Option(_))(_.orNull)", "Option[String]", None)
-      case "application/json" =>
+      case ct if ContentTypes.isJson(ct) =>
         val (outT, maybeInline) = schema match {
           case st: OpenapiSchemaSimpleType =>
             val (t, _) = mapSchemaSimpleTypeToType(st)
@@ -179,7 +178,7 @@ object InAndOutComponents {
     def eagerBody = contentType match {
       case "application/octet-stream" => "rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody)"
       case o if o.startsWith("text/") => s"stringBodyUtf8AnyFormat(${codec("String", o)})"
-      case "application/xml"          => s"EndpointIO.Body(RawBodyType.ByteArrayBody, CodecFormat.Xml(), EndpointIO.Info.empty)"
+      case o if ContentTypes.isXml(o) => s"EndpointIO.Body(RawBodyType.ByteArrayBody, CodecFormat.Xml(), EndpointIO.Info.empty)"
       case o                          => s"EndpointIO.Body(RawBodyType.ByteArrayBody, ${codec("Array[Byte]", o)}, EndpointIO.Info.empty)"
     }
     def streamingBody = contentType match {
@@ -187,9 +186,9 @@ object InAndOutComponents {
       case "text/html"                         => "CodecFormat.TextHtml()"
       case "multipart/form-data"               => "CodecFormat.MultipartFormData()"
       case "application/grpc"                  => "CodecFormat.Grpc()"
-      case "application/json"                  => "CodecFormat.Json()"
+      case o if ContentTypes.isJson(o)         => "CodecFormat.Json()"
       case "application/octet-stream"          => "CodecFormat.OctetStream()"
-      case "application/xml"                   => "CodecFormat.Xml()"
+      case o if ContentTypes.isXml(o)          => "CodecFormat.Xml()"
       case "application/x-www-form-urlencoded" => "CodecFormat.XWwwFormUrlencoded()"
       case "application/zip"                   => "CodecFormat.Zip()"
       case o                                   => s"${codecFormatName(o)}()"

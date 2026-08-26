@@ -11,6 +11,7 @@ import sttp.tapir.codegen.openapi.models.GenerationDirectives._
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter, OpenapiPath}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.security.{SecurityDefn, SecurityGenerator, SecurityWrapperDefn}
+import sttp.tapir.codegen.util.ContentTypes
 import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.NameHelpers.{indent, strippedToCamelCase}
 import sttp.tapir.codegen.util.{JavaEscape, Location}
@@ -273,12 +274,12 @@ class EndpointGenerator {
             .toSet
           val xmlParamRefs: Seq[String] = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
-            .collect { case (contentType, schema) if contentType == "application/xml" => schema }
+            .collect { case (contentType, schema) if ContentTypes.isXml(contentType) => schema }
             .collect { case ref: OpenapiSchemaRef if ref.isSchema => ref.stripped }
           val jsonParamRefs = (m.requestBody.toSeq.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))) ++
             m.responses.flatMap(_.resolve(doc).content.map(c => (c.contentType, c.schema))))
             .filterNot(_ => m.tapirCodegenDirectives.contains(jsonBodyAsString))
-            .collect { case (contentType, schema) if contentType == "application/json" => schema }
+            .collect { case (contentType, schema) if ContentTypes.isJson(contentType) => schema }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped
               case OpenapiSchemaArray(ref: OpenapiSchemaRef, _, _, _) if ref.isSchema => ref.stripped
