@@ -209,6 +209,29 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     }
   }
 
+  test("should fail when a marked parameter's name is not a valid component key") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e = endpoint.get.in("books").in(query[String]("filter[category]").reusableComponent)
+
+    val thrown = intercept[IllegalStateException] {
+      OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0"))
+    }
+
+    thrown.getMessage should include("filter[category]")
+    thrown.getMessage should include("not a valid OpenAPI component key")
+  }
+
+  test("should use an explicit key when the parameter's name is not a valid component key") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e = endpoint.get.in("books").in(query[String]("filter[category]").reusableComponent("FilterCategory"))
+
+    val openApi = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0"))
+
+    openApi.components.map(_.parameters.keys.toList) shouldBe Some(List("FilterCategory"))
+  }
+
   test("should fail when an unnamed path capture is marked as a reusable component") {
     import sttp.tapir.docs.openapi.ReusableComponentAttribute._
 

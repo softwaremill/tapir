@@ -78,7 +78,7 @@ private[openapi] class ReusableComponentsForEndpoints(
       }
       .sortBy { case (t, explicitName) => (explicitName.getOrElse(defaultName(t)), t.toString) }
 
-    calculateUniqueIds[(T, Option[String])](
+    val assigned = calculateUniqueIds[(T, Option[String])](
       distinctMarked,
       { case (t, explicitName) => explicitName.getOrElse(defaultName(t)) },
       failOnDuplicateComponentName,
@@ -89,5 +89,15 @@ private[openapi] class ReusableComponentsForEndpoints(
           "Give one of them its own key, e.g. .reusableComponent(\"MyName\"), leave the base unmarked and mark only the use sites that " +
           "should be referenced, or set OpenAPIDocsOptions.failOnDuplicateComponentName to false to disambiguate with a numeric suffix."
     ).map { case ((t, _), id) => t -> id }
+
+    assigned.values.foreach(verifyComponentKey(_, section))
+    assigned
   }
+
+  private def verifyComponentKey(key: String, section: String): Unit =
+    if (!key.matches("[a-zA-Z0-9.\\-_]+"))
+      throw new IllegalStateException(
+        s"$key is not a valid OpenAPI component key in components/$section; only letters, digits, '.', '-' and '_' are allowed. " +
+          "Give the component an explicit key, e.g. .reusableComponent(\"MyName\")."
+      )
 }
