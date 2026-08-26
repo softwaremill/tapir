@@ -302,7 +302,8 @@ Notes:
 * A marked parameter is always moved into `components`, even when only one endpoint uses it, so the document does not
   change shape as endpoints are added or removed.
 * To mark a path capture, either name it (`path[String]("bookId")`) or give the component an explicit key.
-* A marked input that is hidden (`.schema(_.hidden(true))`) produces no component.
+* A marked input that is hidden (`.schema(_.hidden(true))`) produces no component. `hidden` has no effect on response
+  headers, so a marked one always becomes a component.
 
 ## Authentication inputs and security requirements
 
