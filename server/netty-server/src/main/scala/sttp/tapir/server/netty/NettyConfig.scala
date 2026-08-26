@@ -11,7 +11,6 @@ import io.netty.handler.ssl.SslContext
 import org.playframework.netty.http.HttpStreamsServerHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
 import sttp.tapir.server.netty.internal._
-import sttp.tapir.server.netty.internal.RequestBodyCompletedTracker
 
 import scala.concurrent.duration._
 
