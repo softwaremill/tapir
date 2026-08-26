@@ -16,11 +16,60 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 }
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
-import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiHeaderDef, OpenapiInfo, OpenapiParameter}
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
+  OpenapiHeaderDef,
+  OpenapiHeaderRef,
+  OpenapiInfo,
+  OpenapiParameter,
+  OpenapiPath,
+  OpenapiPathMethod,
+  OpenapiResponseContent,
+  OpenapiResponseDef
+}
 
 import scala.collection.mutable
 
 class SchemaComparerSpec extends AnyFlatSpec with Matchers {
+
+  private def docWithSharedHeader(headerDescription: String) = {
+    def doc(headerDescription: String) = OpenapiDocument(
+      "3.1.0",
+      Nil,
+      OpenapiInfo("t", "1"),
+      Seq(
+        OpenapiPath(
+          "/ping",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "get",
+              parameters = Nil,
+              responses = Seq(
+                OpenapiResponseDef(
+                  "200",
+                  "",
+                  Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))),
+                  Map("X-Rate-Limit" -> OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/RateLimit")))
+                )
+              ),
+              requestBody = None
+            )
+          )
+        )
+      ),
+      Some(
+        OpenapiComponent(
+          schemas = Map.empty,
+          headers = Map(
+            "#/components/headers/RateLimit" ->
+              OpenapiHeaderDef(OpenapiParameter("inline", "header", Some(true), Some(headerDescription), OpenapiSchemaString(false)))
+          )
+        )
+      ),
+      Nil
+    )
+
+    doc(headerDescription)
+  }
 
   "SchemaComparer" should "find identical schemas by name and structure" in {
     val pet = OpenapiSchemaObject(
@@ -53,6 +102,13 @@ class SchemaComparerSpec extends AnyFlatSpec with Matchers {
     val e1 = OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("A")), false)
     val e2 = OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("B")), false)
     SchemaComparer.findIdenticalSchemaNames(Map("S" -> e1), Map("S" -> e2)) shouldBe Set.empty
+  }
+
+  it should "not reuse an endpoint whose shared response header is defined differently" in {
+    val current = docWithSharedHeader("Requests left")
+
+    SchemaComparer.findReusedEndpointNames(current, docWithSharedHeader("Requests left"), Map.empty, Map.empty) should have size 1
+    SchemaComparer.findReusedEndpointNames(current, docWithSharedHeader("Something else"), Map.empty, Map.empty) shouldBe empty
   }
 }
 

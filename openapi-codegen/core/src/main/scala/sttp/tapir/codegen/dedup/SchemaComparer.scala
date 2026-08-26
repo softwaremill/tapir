@@ -4,6 +4,8 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels._
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.{OpenapiModels, OpenapiSchemaType}
 
+import scala.util.{Success, Try}
+
 object SchemaComparer {
   private def resolved(doc: OpenapiDocument, ps: Map[String, OpenapiModels.OpenapiParameter])(
       p: OpenapiPath
@@ -35,6 +37,19 @@ object SchemaComparer {
     val resolvedCurr = current.paths.flatMap(resolved(current, currPs)).groupBy(_._1).map { case (k, v) => k -> v.head._2 }
     val mayMatch = resolvedCurr.filter { case (name, m) => resolvedDeps.get(name).contains(m) }
 
+    // response headers are compared by their definitions, not by the refs: the same ref may resolve differently in each document. A header
+    // that cannot be resolved in both is treated as not matching, so the endpoint is regenerated rather than reused with a stale header.
+    def headersMatch(name: String, m: OpenapiPathMethod): Boolean =
+      m.responses.forall { r =>
+        r.asInstanceOf[OpenapiResponseDef].getHeaders.forall { case (headerName, h) =>
+          (Try(h.resolved(headerName, current)), Try(h.resolved(headerName, dependency))) match {
+            case (Success(c), Success(d)) =>
+              c == d && schemasEqual(name, c.param.schema, currentSchemas, name, d.param.schema, dependencySchemas, Set.empty)
+            case _ => false
+          }
+        }
+      }
+
     mayMatch.filter { case (name, m) =>
       m.requestBody.toSeq
         .flatMap(_.asInstanceOf[OpenapiRequestBodyDefn].content.map(_.schema))
@@ -45,6 +60,7 @@ object SchemaComparer {
       m.parameters
         .map(_.resolve(currPs).schema)
         .forall(t => schemasEqual(name, t, currentSchemas, name, t, dependencySchemas, Set.empty)) &&
+      headersMatch(name, m) &&
       securityMatches(current, dependency)(m.security.get)
     }.keySet
   }
