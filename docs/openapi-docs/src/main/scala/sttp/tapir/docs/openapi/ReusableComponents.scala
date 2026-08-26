@@ -2,7 +2,7 @@ package sttp.tapir.docs.openapi
 
 import sttp.apispec.openapi.{Header, Parameter}
 import sttp.tapir.docs.apispec.schema.{TSchemaToASchema, calculateUniqueIds}
-import sttp.tapir.{AnyEndpoint, EndpointTransput}
+import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointTransput}
 import sttp.tapir.internal._
 
 private[openapi] case class ReusableComponents(
@@ -18,6 +18,19 @@ private[openapi] object ReusableComponents {
 
   def markerOf(atom: EndpointTransput.Atom[_]): Option[ReusableComponent] =
     atom.attribute(ReusableComponentAttribute.reusableComponentAttributeKey)
+
+  /** Must run before `nameAllPathCapturesInEndpoint`, which names unnamed captures `p1`, `p2`, ... restarting at `p1` for each endpoint:
+    * afterwards a generated name is indistinguishable from one the user wrote, and would be used as a component key.
+    */
+  def verifyMarkedPathCapturesAreNamed(e: AnyEndpoint): Unit =
+    e.asVectorOfBasicInputs(includeAuth = false).foreach {
+      case p: EndpointInput.PathCapture[_] if p.name.isEmpty && markerOf(p).exists(_.name.isEmpty) =>
+        throw new IllegalStateException(
+          "An unnamed path capture is marked as a reusable component, but has no name to use as the component key. " +
+            "Name the capture, e.g. path[String](\"id\"), or give the component an explicit key, e.g. .reusableComponent(\"Id\")."
+        )
+      case _ => ()
+    }
 }
 
 private[openapi] class ReusableComponentsForEndpoints(

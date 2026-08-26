@@ -15,7 +15,9 @@ private[openapi] object EndpointToOpenAPIDocs {
       options: OpenAPIDocsOptions,
       docsExtensions: List[DocsExtension[_]]
   ): OpenAPI = {
-    val es2 = es.filter(e => findWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
+    val documentedEs = es.filter(e => findWebSocket(e).isEmpty)
+    documentedEs.foreach(ReusableComponents.verifyMarkedPathCapturesAreNamed)
+    val es2 = documentedEs.map(nameAllPathCapturesInEndpoint)
     val additionalOutputs = es2.flatMap(e => options.defaultDecodeFailureOutput(e.input)).toSet.toList
     val (idToSchema, tschemaToASchema) =
       new SchemasForEndpoints(es2, options.schemaName, options.markOptionsAsNullable, options.failOnDuplicateSchemaName, additionalOutputs)

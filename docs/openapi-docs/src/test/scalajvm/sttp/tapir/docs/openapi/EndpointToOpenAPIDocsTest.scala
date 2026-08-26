@@ -6,6 +6,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.endpoint
 import sttp.tapir.query
+import sttp.tapir.path
 import sttp.tapir.stringToPath
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.tests.Security._
@@ -206,6 +207,28 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     assertThrows[IllegalStateException] {
       OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2), Info("Entities", "1.0"))
     }
+  }
+
+  test("should fail when an unnamed path capture is marked as a reusable component") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e = endpoint.get.in("books" / path[String].reusableComponent)
+
+    val thrown = intercept[IllegalStateException] {
+      OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0"))
+    }
+
+    thrown.getMessage should include("unnamed path capture")
+  }
+
+  test("should use an explicit component key for an unnamed path capture") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e = endpoint.get.in("books" / path[String].reusableComponent("BookId"))
+
+    val openApi = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0"))
+
+    openApi.components.map(_.parameters.keys.toList) shouldBe Some(List("BookId"))
   }
 
   test("should fail when failOnDuplicateComponentName is true and one marked parameter claims two names") {
