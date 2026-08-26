@@ -217,6 +217,30 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
     )
   }
 
+  it should "parse a components header described with content, without failing the document" in {
+    val yaml = """
+                 |schemas: {}
+                 |headers:
+                 |  X-Rate-Limit:
+                 |    description: Requests left in the current window
+                 |    content:
+                 |      text/plain:
+                 |        schema:
+                 |          type: string""".stripMargin
+
+    val res = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiComponent])
+
+    res.value.headers.keys.toList shouldBe List("#/components/headers/X-Rate-Limit")
+
+    val thrown = intercept[IllegalStateException] {
+      res.value.headers("#/components/headers/X-Rate-Limit").resolved("X-Rate-Limit", null)
+    }
+    thrown.getMessage should include("'content' instead of 'schema'")
+  }
+
   it should "parse a components headers section, re-keyed by full ref" in {
     val yaml = """
                  |schemas: {}
