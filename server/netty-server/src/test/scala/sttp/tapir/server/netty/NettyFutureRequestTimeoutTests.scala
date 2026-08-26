@@ -118,9 +118,9 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
                 response <- IO(new String(socket.getInputStream.readAllBytes()))
               } yield {
                 response should include("400 Bad Request")
-                response should not include("503")
+                response should not include ("503")
               }
-          }
+            }
         }
         .unsafeToFuture()
     }

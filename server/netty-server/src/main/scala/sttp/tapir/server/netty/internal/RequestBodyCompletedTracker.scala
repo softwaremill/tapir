@@ -4,10 +4,8 @@ import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.{HttpRequest, LastHttpContent}
 import io.netty.util.AttributeKey
 
-/**
- * Has to be included in the pipeline before HttpStreamsServerHandler
- * to observe LastHttpContent and HttpRequest
- */
+/** Has to be included in the pipeline before HttpStreamsServerHandler to observe LastHttpContent and HttpRequest
+  */
 object RequestBodyCompletedTracker {
   val key = "tapir.requestbody.completed"
 
@@ -22,8 +20,8 @@ private[netty] class RequestBodyCompletedTracker extends ChannelInboundHandlerAd
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
     msg match {
       case _: LastHttpContent => ctx.channel().attr(RequestBodyCompletedTracker.BodyComplete).set(true)
-      case _: HttpRequest => ctx.channel().attr(RequestBodyCompletedTracker.BodyComplete).set(false)
-      case _ => ()
+      case _: HttpRequest     => ctx.channel().attr(RequestBodyCompletedTracker.BodyComplete).set(false)
+      case _                  => ()
     }
     val _ = ctx.fireChannelRead(msg)
   }
