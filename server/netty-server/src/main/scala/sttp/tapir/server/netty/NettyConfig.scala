@@ -31,8 +31,8 @@ import scala.concurrent.duration._
   *   contains tapir's server processing logic.
   *
   * @param requestTimeout
-  *   The maximum duration to wait for a response to be produced, which includes receiving the request.
-  *   This timeout is ignored in Web Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
+  *   The maximum duration to wait for a response to be produced, which includes receiving the request. This timeout is ignored in Web
+  *   Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
   *
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
@@ -149,7 +149,9 @@ object NettyConfig {
     if (cfg.compressionConfig.enabled) {
       pipeline.addLast(new HttpContentCompressor())
     }
-    pipeline.addLast(new RequestBodyCompletedTracker)
+    if (cfg.requestTimeout.isDefined) {
+      pipeline.addLast(new RequestBodyCompletedTracker)
+    }
     pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
