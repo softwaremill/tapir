@@ -102,6 +102,12 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
 
       val bind = IO.fromFuture(IO.delay(NettyFutureServer(config).addEndpoints(List(e)).start()))
 
+      val createSocket: Int => Socket = port => {
+        val s = new Socket("localhost", port)
+        s.setSoTimeout(1000)
+        s
+      }
+
       Resource
         .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
         .map(_.port)
@@ -109,7 +115,7 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
           val bytes = s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: 10000\r\n\r\ntest".getBytes
 
           Resource
-            .make(IO(new Socket("localhost", port)))(socket => IO(socket.close()))
+            .make(IO(createSocket(port)))(socket => IO(socket.close()))
             .use { socket =>
               for {
                 _ <- IO(socket.getOutputStream.write(bytes))
