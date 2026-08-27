@@ -15,7 +15,7 @@ object RequestBodyCompletedTracker {
     Option(ctx.channel().attr(RequestBodyCompletedTracker.BodyComplete).get()).getOrElse(true)
 }
 
-private[netty] class RequestBodyCompletedTracker extends ChannelInboundHandlerAdapter {
+class RequestBodyCompletedTracker extends ChannelInboundHandlerAdapter {
 
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
     msg match {
