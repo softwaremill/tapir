@@ -114,7 +114,6 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
               for {
                 _ <- IO(socket.getOutputStream.write(bytes))
                 _ <- IO(socket.getOutputStream.flush())
-                _ <- IO.sleep(1.second)
                 response <- IO(new String(socket.getInputStream.readAllBytes()))
               } yield {
                 response should include("400 Bad Request")
