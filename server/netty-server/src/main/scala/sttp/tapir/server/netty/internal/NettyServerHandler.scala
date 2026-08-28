@@ -1,9 +1,9 @@
 package sttp.tapir.server.netty.internal
 
 import io.netty.buffer.{ByteBuf, Unpooled}
-import io.netty.channel.*
+import io.netty.channel._
 import io.netty.channel.group.ChannelGroup
-import io.netty.handler.codec.http.*
+import io.netty.handler.codec.http._
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import io.netty.handler.timeout.{IdleState, IdleStateEvent, IdleStateHandler}
@@ -12,27 +12,21 @@ import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import sttp.model.StatusCode
 import sttp.monad.MonadError
-import sttp.monad.syntax.*
+import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.NettyResponseContent.{
-  ByteBufNettyResponseContent,
-  ChunkedFileNettyResponseContent,
-  ChunkedStreamNettyResponseContent,
-  ReactivePublisherNettyResponseContent,
-  ReactiveWebSocketProcessorNettyResponseContent
-}
+import sttp.tapir.server.netty.NettyResponseContent._
+import sttp.tapir.server.netty.internal.RequestBodyCompletedTracker._
 import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, SubscribeTrackingStreamedHttpRequest}
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import scala.collection.JavaConverters.*
+import scala.collection.JavaConverters._
 import scala.collection.mutable.Queue as MutableQueue
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
-import RequestBodyCompletedTracker.*
+import scala.util.{Failure, Success}
 
 /** @param unsafeRunAsync
   *   Function which dispatches given effect to run asynchronously, returning its result as a Future, and function of type `() =>
