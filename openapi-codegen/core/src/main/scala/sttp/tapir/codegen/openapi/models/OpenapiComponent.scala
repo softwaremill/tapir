@@ -29,6 +29,8 @@ object OpenapiComponent {
       requestBodies <- c.getOrElse[Map[String, OpenapiRequestBody]]("requestBodies")(Map.empty)
       headers <- c.getOrElse[Map[String, OpenapiHeader]]("headers")(Map.empty)
     } yield {
+      // parameters and headers are keyed by full ref, so that a $ref is looked up as-is; responses and requestBodies keep bare keys and
+      // strip the prefix at the lookup site instead
       OpenapiComponent(
         schemas,
         securitySchemes,
