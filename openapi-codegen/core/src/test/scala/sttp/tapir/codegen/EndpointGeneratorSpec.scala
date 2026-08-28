@@ -488,7 +488,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           schemas = Map.empty,
           headers = Map(
             "#/components/headers/RateLimit" ->
-              OpenapiHeaderDef(OpenapiParameter("inline", "header", Some(true), None, OpenapiSchemaString(false)))
+              TestHelpers.inlineHeaderDef()
           )
         )
       ),

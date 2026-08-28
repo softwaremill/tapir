@@ -31,8 +31,8 @@ import scala.collection.mutable
 
 class SchemaComparerSpec extends AnyFlatSpec with Matchers {
 
-  private def docWithSharedHeader(headerDescription: String) = {
-    def doc(headerDescription: String) = OpenapiDocument(
+  private def docWithSharedHeader(headerDescription: String) =
+    OpenapiDocument(
       "3.1.0",
       Nil,
       OpenapiInfo("t", "1"),
@@ -61,15 +61,12 @@ class SchemaComparerSpec extends AnyFlatSpec with Matchers {
           schemas = Map.empty,
           headers = Map(
             "#/components/headers/RateLimit" ->
-              OpenapiHeaderDef(OpenapiParameter("inline", "header", Some(true), Some(headerDescription), OpenapiSchemaString(false)))
+              TestHelpers.inlineHeaderDef(Some(headerDescription))
           )
         )
       ),
       Nil
     )
-
-    doc(headerDescription)
-  }
 
   "SchemaComparer" should "find identical schemas by name and structure" in {
     val pet = OpenapiSchemaObject(
@@ -204,14 +201,12 @@ class PackageReuseContextSpec extends AnyFlatSpec with Matchers {
 
 class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
 
-  private def minimalDoc(title: String, schemas: Map[String, OpenapiSchemaString]) =
-    OpenapiDocument("3.0.0", Nil, OpenapiInfo(title, "1"), Nil, Some(OpenapiComponent(schemas)), Nil)
+  private def docWith(components: OpenapiComponent, title: String = "test") =
+    OpenapiDocument("3.0.0", Nil, OpenapiInfo(title, "1"), Nil, Some(components), Nil)
 
-  private def headerDef(description: String): OpenapiHeaderDef =
-    OpenapiHeaderDef(OpenapiParameter("inline", "header", Some(true), Some(description), OpenapiSchemaString(false)))
+  private def minimalDoc(title: String, schemas: Map[String, OpenapiSchemaString]) = docWith(OpenapiComponent(schemas), title)
 
-  private def docWith(components: OpenapiComponent) =
-    OpenapiDocument("3.0.0", Nil, OpenapiInfo("test", "1"), Nil, Some(components), Nil)
+  private def headerDef(description: String): OpenapiHeaderDef = TestHelpers.inlineHeaderDef(Some(description))
 
   "OpenApiMerger" should "merge schemas from multiple documents" in {
     val a = minimalDoc("a", Map("A" -> OpenapiSchemaString(false)))
