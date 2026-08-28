@@ -336,6 +336,44 @@ class ModelParserSpec extends AnyFlatSpec with Matchers with Checkers with Eithe
     )
   }
 
+  it should "resolve a header ref whose key contains characters that are not legal in a scala name" in {
+    val yaml = """
+                 |openapi: 3.1.0
+                 |info:
+                 |  title: Rate limited
+                 |  version: '1.0'
+                 |paths:
+                 |  /ping:
+                 |    get:
+                 |      operationId: getPing
+                 |      responses:
+                 |        '200':
+                 |          description: ''
+                 |          headers:
+                 |            Retry-After:
+                 |              $ref: '#/components/headers/Retry.After'
+                 |components:
+                 |  schemas: {}
+                 |  headers:
+                 |    Retry.After:
+                 |      required: true
+                 |      schema:
+                 |        type: string""".stripMargin
+
+    val doc = parser
+      .parse(yaml)
+      .leftMap(err => err: Error)
+      .flatMap(_.as[OpenapiDocument])
+      .value
+
+    val response = doc.paths.head.methods.head.responses.head.asInstanceOf[OpenapiResponseDef]
+    val (headerName, header) = response.getHeaders.head
+
+    header.resolved(headerName, doc) shouldBe OpenapiHeaderDef(
+      OpenapiParameter("Retry-After", "header", Some(true), None, OpenapiSchemaString(false))
+    )
+  }
+
   it should "resolve a header component which is itself a reference" in {
     val doc = OpenapiDocument(
       "3.1.0",
