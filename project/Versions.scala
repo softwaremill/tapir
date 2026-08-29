@@ -55,7 +55,7 @@ object Versions {
   val jwtScala = "10.0.4"
   val derevo = "0.14.0"
   val newtype = "0.4.4"
-  val monixNewtype = "0.4.1"
+  val monixNewtype = "1.0.0"
   val zioPrelude = "1.0.0-RC48"
   val awsLambdaInterface = "2.10.1"
   val armeria = "1.41.0"
