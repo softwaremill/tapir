@@ -5,19 +5,19 @@ import sttp.tapir.internal._
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput, RawBodyType}
 
 /** Errors make an endpoint unserveable; warnings describe one that works, but whose published contract probably isn't what was intended. */
-case class EndpointBodyProblems(errors: List[String], warnings: List[String]) {
+private[tapir] case class EndpointBodyProblems(errors: List[String], warnings: List[String]) {
   def ++(other: EndpointBodyProblems): EndpointBodyProblems =
     EndpointBodyProblems(errors ++ other.errors, warnings ++ other.warnings)
 }
 
-object EndpointBodyProblems {
+private[tapir] object EndpointBodyProblems {
   val Empty: EndpointBodyProblems = EndpointBodyProblems(Nil, Nil)
 }
 
 /** Verifies that endpoint descriptions are structurally serveable. Run by server interpreters when routes are constructed; warnings are not
   * logged anywhere, so call this directly to assert on them.
   */
-object EndpointBodyVerifier {
+private[tapir] object EndpointBodyVerifier {
   def verify(endpoints: List[AnyEndpoint]): EndpointBodyProblems =
     endpoints.map(verifyOne).foldLeft(EndpointBodyProblems.Empty)(_ ++ _)
 

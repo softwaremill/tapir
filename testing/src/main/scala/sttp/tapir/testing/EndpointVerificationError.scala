@@ -74,3 +74,13 @@ case class UnexpectedBodyError(e: AnyEndpoint, statusCode: StatusCode) extends E
 case class DuplicatedNameError(name: String) extends EndpointVerificationError {
   override def toString: String = s"Duplicate endpoints names found: $name"
 }
+
+/** Endpoint `e` declares its request body in a way which can't be served, or which won't be described correctly in the generated
+  * documentation. For example, declaring an ordinary request body in both `securityIn` and `in`, or combining a body which can't be re-read
+  * (streaming, file, multipart) with one wrapped in `extractBodyFromRequest`.
+  *
+  * Errors of this kind are also thrown when routes are constructed.
+  */
+case class InvalidBodyDefinitionError(e: AnyEndpoint, message: String) extends EndpointVerificationError {
+  override def toString: String = message
+}

@@ -79,6 +79,9 @@ Note that a *single* body input needs no wrapper: an endpoint which reads the bo
 with no body declared in `in`, reads the request exactly once. It works without `extractBodyFromRequest`, and stays
 fully documented and visible to clients.
 
+Both kinds of problem, along with endpoints whose contract is merely suspect, are also reported by
+[`EndpointVerifier`](../testing.md#invalid-request-body-definitions).
+
 ## Authentication challenges
 
 For each `auth` scheme, one can define `WWW-Authenticate` headers that should be returned by the server in case input is 
