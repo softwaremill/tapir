@@ -23,7 +23,7 @@ import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.JavaConverters._
-import scala.collection.mutable.Queue as MutableQueue
+import scala.collection.mutable.{Queue => MutableQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
