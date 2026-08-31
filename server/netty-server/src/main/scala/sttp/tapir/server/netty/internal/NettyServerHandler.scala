@@ -115,7 +115,7 @@ class NettyServerHandler[F[_]](
           logger.debug(
             s"Closing connection: the request body was not fully received within the request timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
           )
-          writeErrorThenClose(ctx, HttpResponseStatus.BAD_REQUEST)
+          writeErrorThenClose(ctx, HttpResponseStatus.REQUEST_TIMEOUT)
         }
         if (e.state() == IdleState.ALL_IDLE) {
           logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")

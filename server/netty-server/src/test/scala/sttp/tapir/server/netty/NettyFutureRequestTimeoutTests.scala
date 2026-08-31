@@ -122,7 +122,7 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
                 _ <- IO(socket.getOutputStream.flush())
                 response <- IO(new String(socket.getInputStream.readAllBytes()))
               } yield {
-                response should include("400 Bad Request")
+                response should include("408 Request Timeout")
                 response should not include ("503")
               }
             }
