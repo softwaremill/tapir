@@ -401,10 +401,10 @@ result3.toString
 ### Invalid request body definitions
 
 Only one request body may be part of an endpoint's API contract, and a body which can't be re-read can't be combined
-with one wrapped in [`extractBodyFromRequest`](endpoint/security.md#using-the-request-body-in-security-logic). Such
+with one marked using [`asSecondary`](endpoint/security.md#using-the-request-body-in-security-logic). Such
 endpoints can't be served, and are reported as errors here; they are also thrown when routes are constructed.
 
-Endpoints whose contract is merely suspect - for example an `extractBodyFromRequest` input with no body declared in
+Endpoints whose contract is merely suspect - for example an `asSecondary` body with no body declared in
 `in`, which clients will never send and which won't appear in the documentation - are reported here as well. These
 aren't fatal, and aren't reported anywhere else, so verifying endpoints in a test is the only way to see them.
 
@@ -413,7 +413,7 @@ Example 1:
 ```scala mdoc:silent
 import sttp.tapir.testing.EndpointVerifier
 
-val ep7 = endpoint.post.in("ingest").securityIn(extractBodyFromRequest(stringBody))
+val ep7 = endpoint.post.in("ingest").securityIn(stringBody.asSecondary)
 val result4 = EndpointVerifier(List(ep7))
 ```
 

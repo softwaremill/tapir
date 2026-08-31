@@ -361,12 +361,8 @@ package object internal {
     case _             => false
   }
 
-  def isExtractedBodyInput(input: EndpointInput[?]): Boolean = input match {
-    case b: EndpointIO.Body[?, ?] => b.info.attribute(ExtractedBody.attributeKey).isDefined
+  def isSecondaryBodyInput(input: EndpointInput[?]): Boolean = input match {
+    case b: EndpointIO.Body[?, ?] => b.isSecondary
     case _                        => false
-  }
-
-  implicit class RichEndpointIOBody[R, T](body: EndpointIO.Body[R, T]) {
-    def isExtracted: Boolean = body.info.attribute(ExtractedBody.attributeKey).isDefined
   }
 }

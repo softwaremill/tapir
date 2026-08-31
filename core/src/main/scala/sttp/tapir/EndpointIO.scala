@@ -486,14 +486,26 @@ object EndpointIO {
     override private[tapir] type L = R
     override private[tapir] type CF = CodecFormat
     override private[tapir] def copyWith[U](c: Codec[R, U, CodecFormat], i: Info[U]): Body[R, U] = copy(codec = c, info = i)
+
+    /** Marks this as a secondary body definition: still decoded on the server, but not part of the API contract - excluded from the
+      * documentation and ignored by client interpreters. Lets the request body be decoded a second time, e.g. once in `serverSecurityLogic`
+      * and once in the main logic. Only bodies which can be re-read from buffered bytes may be secondary.
+      */
+    def asSecondary(implicit ev: ReplayableRawBody[R]): Body[R, T] = {
+      val _ = ev
+      attribute(SecondaryBody.attributeKey, SecondaryBody())
+    }
+
+    def isSecondary: Boolean = info.attribute(SecondaryBody.attributeKey).isDefined
+
     override def show: String = {
       val charset = bodyType.asInstanceOf[RawBodyType[?]] match {
         case RawBodyType.StringBody(charset) => s" (${charset.toString})"
         case _                               => ""
       }
       val format = codec.format.mediaType
-      val extracted = if (info.attribute(ExtractedBody.attributeKey).isDefined) "extracted " else ""
-      s"{${extracted}body as $format$charset}"
+      val secondary = if (isSecondary) "secondary " else ""
+      s"{${secondary}body as $format$charset}"
     }
   }
 

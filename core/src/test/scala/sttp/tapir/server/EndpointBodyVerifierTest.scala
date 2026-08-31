@@ -7,7 +7,7 @@ import sttp.tapir.capabilities.NoStreams
 
 class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
   it should "accept an endpoint with one extracted and one primary body" in {
-    val e = endpoint.post.in("people").securityIn(extractBodyFromRequest(stringBody)).in(stringBody)
+    val e = endpoint.post.in("people").securityIn(stringBody.asSecondary).in(stringBody)
     EndpointBodyVerifier.verifyOne(e) shouldBe EndpointBodyProblems(Nil, Nil)
   }
 
@@ -21,13 +21,13 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
 
     problems.errors should have size 1
     problems.errors.head should include("declares a request body in both securityIn and in")
-    problems.errors.head should include("extractBodyFromRequest")
+    problems.errors.head should include("asSecondary")
   }
 
-  it should "reject a streaming primary body combined with an extracted body" in {
+  it should "reject a streaming primary body combined with an secondary body" in {
     val e = endpoint.post
       .in("people")
-      .securityIn(extractBodyFromRequest(stringBody))
+      .securityIn(stringBody.asSecondary)
       .in[Nothing, Nothing, Unit, NoStreams](streamTextBody(NoStreams)(CodecFormat.TextPlain()))
     val problems = EndpointBodyVerifier.verifyOne(e)
 
@@ -35,10 +35,10 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.errors.head should include("streaming body")
   }
 
-  it should "reject a file body primary combined with an extracted body" in {
+  it should "reject a file body primary combined with an secondary body" in {
     val e = endpoint.post
       .in("people")
-      .securityIn(extractBodyFromRequest(stringBody))
+      .securityIn(stringBody.asSecondary)
       .in(fileBody)
     val problems = EndpointBodyVerifier.verifyOne(e)
 
@@ -46,10 +46,10 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.errors.head should include("file")
   }
 
-  it should "reject a oneOfBody of streaming variants combined with an extracted body" in {
+  it should "reject a oneOfBody of streaming variants combined with an secondary body" in {
     val e = endpoint.post
       .in("people")
-      .securityIn(extractBodyFromRequest(stringBody))
+      .securityIn(stringBody.asSecondary)
       .in[Nothing, Unit](oneOfBody[Nothing](streamTextBody(NoStreams)(CodecFormat.TextPlain()).toEndpointIO))
     val problems = EndpointBodyVerifier.verifyOne(e)
 
@@ -57,10 +57,10 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.errors.head should include("streaming body")
   }
 
-  it should "reject a oneOfBody with a file body variant combined with an extracted body" in {
+  it should "reject a oneOfBody with a file body variant combined with an secondary body" in {
     val e = endpoint.post
       .in("people")
-      .securityIn(extractBodyFromRequest(stringBody))
+      .securityIn(stringBody.asSecondary)
       .in(oneOfBody(fileBody))
     val problems = EndpointBodyVerifier.verifyOne(e)
 
@@ -68,8 +68,8 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.errors.head should include("file")
   }
 
-  it should "warn about an extracted body with no primary body on POST" in {
-    val e = endpoint.post.in("ingest").securityIn(extractBodyFromRequest(stringBody))
+  it should "warn about an secondary body with no primary body on POST" in {
+    val e = endpoint.post.in("ingest").securityIn(stringBody.asSecondary)
     val problems = EndpointBodyVerifier.verifyOne(e)
 
     problems.errors shouldBe empty
@@ -77,15 +77,15 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.warnings.head should include("no request body is part of the API contract")
   }
 
-  it should "not warn about an extracted body with no primary body on GET" in {
-    val e = endpoint.get.in("ping").securityIn(extractBodyFromRequest(stringBody))
+  it should "not warn about an secondary body with no primary body on GET" in {
+    val e = endpoint.get.in("ping").securityIn(stringBody.asSecondary)
     EndpointBodyVerifier.verifyOne(e).warnings shouldBe empty
   }
 
-  it should "warn about metadata on an extracted body" in {
+  it should "warn about metadata on an secondary body" in {
     val e = endpoint.post
       .in("people")
-      .securityIn(extractBodyFromRequest(stringBody.description("the raw payload")))
+      .securityIn(stringBody.description("the raw payload").asSecondary)
       .in(stringBody)
     val problems = EndpointBodyVerifier.verifyOne(e)
 

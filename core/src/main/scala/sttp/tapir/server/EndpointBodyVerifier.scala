@@ -29,9 +29,9 @@ private[tapir] object EndpointBodyVerifier {
     val ordinaryInputs = endpoint.input.asVectorOfBasicInputs()
     val inputs = securityInputs ++ ordinaryInputs
 
-    val extracted = inputs.collect { case b: EndpointIO.Body[?, ?] if b.isExtracted => b }
+    val secondary = inputs.collect { case b: EndpointIO.Body[?, ?] if b.isSecondary => b }
     def primaryBodiesOf(basics: Vector[EndpointInput.Basic[?]]): Vector[EndpointInput.Basic[?]] = basics.collect {
-      case b: EndpointIO.Body[?, ?] if !b.isExtracted => b
+      case b: EndpointIO.Body[?, ?] if !b.isSecondary => b
       case b: EndpointIO.OneOfBody[?, ?]              => b
       case b: EndpointIO.StreamBodyWrapper[?, ?]      => b
     }
@@ -59,8 +59,8 @@ private[tapir] object EndpointBodyVerifier {
       if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
         List(
           s"Endpoint $shown declares a request body in both securityIn and in. Only one may be part of the API " +
-            s"contract. If both should decode the same request body, wrap the securityIn one: " +
-            s"extractBodyFromRequest(...)."
+            s"contract. If both should decode the same request body, mark the securityIn one: " +
+            s"stringBody.asSecondary."
         )
       else if (securityPrimaryBodies.size > 1)
         List(
@@ -74,41 +74,41 @@ private[tapir] object EndpointBodyVerifier {
         )
       else Nil
 
-    val streamWithExtracted =
-      if (streamingPrimary && extracted.nonEmpty)
+    val streamWithSecondary =
+      if (streamingPrimary && secondary.nonEmpty)
         List(
-          s"Endpoint $shown combines a streaming body with an extracted body. The request body can either be " +
+          s"Endpoint $shown combines a streaming body with a secondary body. The request body can either be " +
             s"streamed lazily or buffered for repeated reads, not both."
         )
       else Nil
 
-    val nonReplayableWithExtracted =
-      if (nonReplayablePrimary && extracted.nonEmpty)
+    val nonReplayableWithSecondary =
+      if (nonReplayablePrimary && secondary.nonEmpty)
         List(
-          s"Endpoint $shown combines a file or multipart body with an extracted body. Reading the extracted body " +
+          s"Endpoint $shown combines a file or multipart body with a secondary body. Reading the secondary body " +
             s"consumes the request; the file or multipart body would then be read from an already-drained request."
         )
       else Nil
 
     val bodyCarryingMethod = endpoint.method.exists(m => m == Method.POST || m == Method.PUT || m == Method.PATCH)
-    val extractedWithoutPrimary =
-      if (extracted.nonEmpty && primaryBodies.isEmpty && bodyCarryingMethod)
+    val secondaryWithoutPrimary =
+      if (secondary.nonEmpty && primaryBodies.isEmpty && bodyCarryingMethod)
         List(
-          s"Endpoint $shown reads an extracted request body, but no request body is part of the API contract: it " +
+          s"Endpoint $shown reads a secondary request body, but no request body is part of the API contract: it " +
             s"will be absent from the documentation and clients will not send it. Either declare the body in `in` " +
-            s"as well, or drop extractBodyFromRequest and use the body input directly."
+            s"as well, or drop asSecondary and use the body input directly."
         )
       else Nil
 
     val uselessMetadata =
-      extracted.filter(b => b.info.description.isDefined || b.info.examples.nonEmpty).map { b =>
-        s"Endpoint $shown sets a description or example on the extracted body ${b.show}, which never reaches the " +
-          s"documentation, as extracted bodies are excluded from it."
+      secondary.filter(b => b.info.description.isDefined || b.info.examples.nonEmpty).map { b =>
+        s"Endpoint $shown sets a description or example on the secondary body ${b.show}, which never reaches the " +
+          s"documentation, as secondary bodies are excluded from it."
       }
 
     EndpointBodyProblems(
-      errors = tooManyPrimaries ++ streamWithExtracted ++ nonReplayableWithExtracted,
-      warnings = (extractedWithoutPrimary ++ uselessMetadata).toList
+      errors = tooManyPrimaries ++ streamWithSecondary ++ nonReplayableWithSecondary,
+      warnings = (secondaryWithoutPrimary ++ uselessMetadata).toList
     )
   }
 }

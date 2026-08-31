@@ -92,7 +92,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
         val uri2 = uri.addParams(mqp.toSeq: _*)
         (uri2, req)
       case EndpointIO.Empty(_, _)                        => (uri, req)
-      case b @ EndpointIO.Body(_, _, _) if b.isExtracted =>
+      case b @ EndpointIO.Body(_, _, _) if b.isSecondary =>
         // decoded server-side only; not part of the request the client sends
         (uri, req)
       case EndpointIO.Body(bodyType, codec, _) =>

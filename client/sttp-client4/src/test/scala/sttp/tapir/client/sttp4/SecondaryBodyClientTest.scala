@@ -6,13 +6,13 @@ import sttp.client4.Request
 import sttp.model.Uri._
 import sttp.tapir._
 
-class ExtractedBodyClientTest extends AnyFlatSpec with Matchers {
-  it should "send only the primary body, ignoring the extracted one" in {
-    // the extracted body is on `in`, processed after `securityIn` - so an unskipped one would overwrite the primary
+class SecondaryBodyClientTest extends AnyFlatSpec with Matchers {
+  it should "send only the primary body, ignoring the secondary one" in {
+    // the secondary body is on `in`, processed after `securityIn` - so an unskipped one would overwrite the primary
     val e = endpoint.post
       .in("people")
       .securityIn(stringBody)
-      .in(extractBodyFromRequest(stringBody))
+      .in(stringBody.asSecondary)
       .out(stringBody)
 
     val request: Request[_] =

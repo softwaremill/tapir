@@ -225,17 +225,6 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] =
     EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null), EndpointIO.Info.empty)
 
-  /** Decode the request body a second time, server-side only. The resulting input is excluded from documentation and ignored by client
-    * interpreters, so an endpoint may declare one body as part of its contract (in `in`) and read the same request body again through this
-    * input (e.g. in `securityIn`).
-    *
-    * Only bodies which can be re-read from buffered bytes are supported; file, multipart and streaming bodies are rejected at compile time.
-    */
-  def extractBodyFromRequest[R, T](body: EndpointIO.Body[R, T])(implicit ev: ReplayableRawBody[R]): EndpointIO.Body[R, T] = {
-    val _ = ev // evidence is only a compile-time restriction
-    body.attribute(ExtractedBody.attributeKey, ExtractedBody())
-  }
-
   /** An output which maps to the status code in the response. */
   def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] =
     EndpointOutput.StatusCode(Map.empty, Codec.idPlain(), EndpointIO.Info.empty)

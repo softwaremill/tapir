@@ -77,7 +77,7 @@ case class DuplicatedNameError(name: String) extends EndpointVerificationError {
 
 /** Endpoint `e` declares its request body in a way which can't be served, or which won't be described correctly in the generated
   * documentation. For example, declaring an ordinary request body in both `securityIn` and `in`, or combining a body which can't be re-read
-  * (streaming, file, multipart) with one wrapped in `extractBodyFromRequest`.
+  * (streaming, file, multipart) with one marked with `asSecondary`.
   *
   * Errors of this kind are also thrown when routes are constructed.
   */

@@ -146,13 +146,13 @@ class FilterServerEndpointsTest extends AnyFlatSpec with Matchers {
       .serverLogic(_ => _ => Right(()))
 
     val e = the[IllegalArgumentException] thrownBy FilterServerEndpoints(List(se))
-    e.getMessage should include("extractBodyFromRequest")
+    e.getMessage should include("asSecondary")
   }
 
-  it should "accept an endpoint with an extracted body" in {
+  it should "accept an endpoint with an secondary body" in {
     val se = endpoint.post
       .in("people")
-      .securityIn(extractBodyFromRequest(stringBody))
+      .securityIn(stringBody.asSecondary)
       .in(stringBody)
       .serverSecurityLogic[Unit, Identity](_ => Right(()))
       .serverLogic(_ => _ => Right(()))

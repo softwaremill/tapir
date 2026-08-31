@@ -113,7 +113,7 @@ class ServerInterpreter[R, F[_], B, S](
 
     // if the endpoint reads the body more than once, buffer it so that the backend's request is consumed only once
     val endpointRequestBody: RequestBody[F, S] =
-      if (securityBasicInputs.hasExtractedBody || regularBasicInputs.hasExtractedBody) new CachingRequestBody(requestBody)
+      if (securityBasicInputs.hasSecondaryBody || regularBasicInputs.hasSecondaryBody) new CachingRequestBody(requestBody)
       else requestBody
 
     (for {
@@ -202,29 +202,29 @@ class ServerInterpreter[R, F[_], B, S](
         }
 
         primaryDecoded.flatMap {
-          case v: DecodeBasicInputsResult.Values => decodeExtractedBodies(request, v, maxBodyLength, addRawValue, bodyReader)
+          case v: DecodeBasicInputsResult.Values => decodeSecondaryBodies(request, v, maxBodyLength, addRawValue, bodyReader)
           case failure                           => failure.unit
         }
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
   }
 
-  private def decodeExtractedBodies(
+  private def decodeSecondaryBodies(
       request: ServerRequest,
       values: DecodeBasicInputsResult.Values,
       maxBodyLength: Option[Long],
       addRawValue: RawValue[?] => Unit,
       bodyReader: RequestBody[F, S]
   ): F[DecodeBasicInputsResult] =
-    values.extractedBodyInputsWithIndex.foldLeft((values: DecodeBasicInputsResult).unit) { case (acc, (bodyInput, index)) =>
+    values.secondaryBodyInputsWithIndex.foldLeft((values: DecodeBasicInputsResult).unit) { case (acc, (bodyInput, index)) =>
       acc.flatMap {
         case v: DecodeBasicInputsResult.Values =>
-          decodeExtractedBody(request, v, bodyInput.asInstanceOf[EndpointIO.Body[Any, Any]], index, maxBodyLength, addRawValue, bodyReader)
+          decodeSecondaryBody(request, v, bodyInput.asInstanceOf[EndpointIO.Body[Any, Any]], index, maxBodyLength, addRawValue, bodyReader)
         case failure => failure.unit
       }
     }
 
-  private def decodeExtractedBody[RAW, T](
+  private def decodeSecondaryBody[RAW, T](
       request: ServerRequest,
       values: DecodeBasicInputsResult.Values,
       bodyInput: EndpointIO.Body[RAW, T],

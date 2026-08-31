@@ -14,7 +14,7 @@ import sttp.tapir.server.interceptor.RequestResult
 
 import java.nio.charset.StandardCharsets
 
-class ServerInterpreterExtractedBodyTest extends AnyFlatSpec with Matchers {
+class ServerInterpreterSecondaryBodyTest extends AnyFlatSpec with Matchers {
   private implicit val idMonad: MonadError[Identity] = IdentityMonad
 
   private class CountingRequestBody(content: String) extends RequestBody[Identity, NoStreams] {
@@ -31,7 +31,7 @@ class ServerInterpreterExtractedBodyTest extends AnyFlatSpec with Matchers {
   it should "decode the same request body for security and main logic, reading it once" in {
     val se = endpoint.post
       .in("test")
-      .securityIn(extractBodyFromRequest(stringBody))
+      .securityIn(stringBody.asSecondary)
       .in(stringBody)
       .out(stringBody)
       .serverSecurityLogic[String, Identity](raw => Right(s"security:$raw"))
@@ -57,7 +57,7 @@ class ServerInterpreterExtractedBodyTest extends AnyFlatSpec with Matchers {
   it should "not read the body a second time when security logic fails" in {
     val se = endpoint.post
       .in("test")
-      .securityIn(extractBodyFromRequest(stringBody))
+      .securityIn(stringBody.asSecondary)
       .in(stringBody)
       .out(stringBody)
       .errorOut(stringBody)

@@ -4,21 +4,21 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import scala.annotation.implicitNotFound
 
-/** Attribute value marking a body input as extracted: decoded from the request on the server, but not part of the API contract. Extracted
-  * bodies are excluded from documentation and ignored by client interpreters, which allows the request body to be decoded more than once -
-  * e.g. in `serverSecurityLogic` and again in the main logic.
+/** Attribute value marking a body input as a secondary definition: decoded from the request on the server, but not part of the API
+  * contract. Secondary bodies are excluded from documentation and ignored by client interpreters, which allows the request body to be
+  * decoded more than once - e.g. in `serverSecurityLogic` and again in the main logic.
   *
-  * Set using [[Tapir.extractBodyFromRequest]].
+  * Set using [[EndpointIO.Body.asSecondary]].
   */
-case class ExtractedBody()
+case class SecondaryBody()
 
-object ExtractedBody {
-  val attributeKey: AttributeKey[ExtractedBody] = new AttributeKey[ExtractedBody]("sttp.tapir.ExtractedBody")
+object SecondaryBody {
+  val attributeKey: AttributeKey[SecondaryBody] = new AttributeKey[SecondaryBody]("sttp.tapir.SecondaryBody")
 }
 
-/** Evidence that a raw body type can be re-read from buffered bytes, and is therefore usable as an extracted body. */
+/** Evidence that a raw body type can be re-read from buffered bytes, and is therefore usable as a secondary body. */
 @implicitNotFound(
-  "Cannot use a body with raw type ${R} as an extracted body. Only bodies which can be re-read from buffered bytes " +
+  "Cannot use a body with raw type ${R} as a secondary body. Only bodies which can be re-read from buffered bytes " +
     "are supported: string, byte array, byte buffer, input stream. File, multipart and streaming bodies cannot be " +
     "read twice."
 )

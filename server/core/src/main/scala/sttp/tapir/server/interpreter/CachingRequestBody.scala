@@ -9,7 +9,7 @@ import sttp.tapir.{InputStreamRange, RawBodyType}
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 
-/** Reads a bytes-like request body from `delegate` at most once, buffering the bytes so that subsequent reads - e.g. an extracted body
+/** Reads a bytes-like request body from `delegate` at most once, buffering the bytes so that subsequent reads - e.g. a secondary body
   * decoded during the security phase, followed by the endpoint's own body - are served from memory.
   *
   * Must be created per request: it holds that request's bytes.
@@ -37,7 +37,7 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
       case RawBodyType.InputStreamRangeBody =>
         bytes(serverRequest, maxBytes)
           .map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
-      // file and multipart are never cached; EndpointBodyVerifier rejects them alongside an extracted body
+      // file and multipart are never cached; EndpointBodyVerifier rejects them alongside a secondary body
       case other => delegate.toRaw(serverRequest, other, maxBytes)
     }
 
