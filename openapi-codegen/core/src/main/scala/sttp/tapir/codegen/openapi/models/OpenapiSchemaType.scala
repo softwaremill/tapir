@@ -7,9 +7,10 @@ import scala.collection.mutable
 
 object NameValidation {
   val validName = """[a-zA-Z_$][a-zA-Z0-9_$]*"""
-  val validOrHyphen = """[a-zA-Z_$][a-zA-Z0-9_$-]*"""
-  // Schema refs have stricter validation, since used directly as types; parameters etc can also contain hyphens
-  val validRef = s"""#/components/(schemas/$validName|(?!schemas)[a-zA-Z]+/$validOrHyphen)"""
+  // the keys openapi allows in the components section - cf https://swagger.io/specification/#components-object
+  val validComponentKey = """[a-zA-Z0-9._-]+"""
+  // Schema refs have stricter validation, since used directly as types; parameters, headers etc are only ever looked up by key
+  val validRef = s"""#/components/(schemas/$validName|(?!schemas)[a-zA-Z]+/$validComponentKey)"""
 }
 import NameValidation._
 

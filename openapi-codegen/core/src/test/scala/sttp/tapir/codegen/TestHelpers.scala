@@ -25,6 +25,10 @@ import scala.collection.mutable
 
 object TestHelpers {
 
+  // the shape the header decoder produces for an inline definition
+  def inlineHeaderDef(description: Option[String] = None): OpenapiHeaderDef =
+    OpenapiHeaderDef(OpenapiParameter("inline", "header", Some(true), description, OpenapiSchemaString(false)))
+
   val myBookshopYaml =
     """
       |openapi: 3.1.0
