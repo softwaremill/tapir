@@ -300,6 +300,9 @@ Notes:
 * To mark a path capture, either name it (`path[String]("bookId")`) or give the component an explicit key.
 * A marked input that is hidden (`.schema(_.hidden(true))`) produces no component. `hidden` has no effect on response
   headers, so a marked one always becomes a component.
+* Marking an input inside an authentication input, e.g. `auth.apiKey(header[String]("X-Api-Key").reusableComponent)`, has
+  no effect: authentication inputs are emitted once under `components.securitySchemes` and referenced from each
+  operation's `security`.
 
 ## Authentication inputs and security requirements
 
