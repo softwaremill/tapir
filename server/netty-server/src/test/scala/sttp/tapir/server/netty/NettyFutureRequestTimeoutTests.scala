@@ -90,7 +90,7 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         }
         .unsafeToFuture()
     },
-    Test("respond with status 400 when not all declared bytes are received within time window") {
+    Test("respond with status 408 when not all declared bytes are received within time window") {
       val e = endpoint.put
         .in(stringBody)
         .out(stringBody)

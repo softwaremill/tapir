@@ -35,7 +35,7 @@ import scala.concurrent.duration._
   *
   *   - `503 Service Unavailable`, if no part of the response is written within this duration. The server did not produce, or start
   *     streaming, a response in time.
-  *   - `400 Bad Request`, if no data is received within this duration while the request body is still incomplete. The client sent the
+  *   - `408 Request Timeout`, if no data is received within this duration while the request body is still incomplete. The client sent the
   *     headers, and possibly part of the body, then stalled before sending the final chunk.
   *
   * This timeout is ignored in Web Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.

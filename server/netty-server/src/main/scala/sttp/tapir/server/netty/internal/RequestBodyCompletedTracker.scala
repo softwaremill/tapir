@@ -2,7 +2,6 @@ package sttp.tapir.server.netty.internal
 
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.{HttpRequest, LastHttpContent}
-import io.netty.util.AttributeKey
 
 /** Has to be included in the pipeline before HttpStreamsServerHandler to observe LastHttpContent and HttpRequest
   */
