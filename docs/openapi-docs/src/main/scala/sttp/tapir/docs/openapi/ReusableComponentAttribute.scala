@@ -1,6 +1,6 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.{AttributeKey, EndpointIO, EndpointInput, EndpointTransput}
+import sttp.tapir.{AttributeKey, EndpointIO, EndpointInput}
 
 /** Marks a parameter or header as a reusable OpenAPI component - where a parameter is a `query`, `path` or `cookie` input, and a header is
   * a request or response header. Instead of being serialised in full into every operation that uses it, it is emitted once into the
@@ -53,9 +53,4 @@ object ReusableComponentAttribute {
       h.attribute(reusableComponentAttributeKey, ReusableComponent(Some(name)))
   }
 
-  implicit class RichBasicEndpointTransput[E <: EndpointTransput.Atom[_]](e: E) {
-
-    /** The reusable-component marker set on this parameter or header, if any. */
-    def reusableComponentMarker: Option[ReusableComponent] = e.attribute(reusableComponentAttributeKey)
-  }
 }
