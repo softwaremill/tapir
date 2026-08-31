@@ -38,16 +38,17 @@ final case class SchemaAnnotations[T](
     validateEach.foldLeft(s3)((current, v) => current.modifyUnsafe(Schema.ModifyCollectionElements)((_: Schema[Any]).validate(v)))
   }
 
-  /**
-   * Customise transformation function taken from @cusomise annotation
-   * Extraction was accidentally omitted when the annotation was introduced
-   *
-   * Stored as a private var only to keep backward compatibility.
-   * Moving this to the parameter list would break copy() and apply() signatures for a generated jvm class.
-   *
-   * When breaking binary compatibility would be an option, consider moving this into a regular parameter list
-   * with adjusting SchemaAnnotationsMacro(both scala 3 and 2) accordingly
-   */
+  /** Customise transformation function taken from @cusomise annotation Extraction was accidentally omitted when the annotation was
+    * introduced
+    *
+    * Stored as a private var only to keep backward compatibility. Moving this to the parameter list would break copy() and apply()
+    * signatures for a generated jvm class.
+    *
+    * When breaking binary compatibility would be an option, consider moving this into a regular parameter list with adjusting
+    * SchemaAnnotationsMacro(both scala 3 and 2) accordingly
+    *
+    * This has to be called last within macro transformations otherwise it would be lost as it is not a part of the auto generated copy
+    */
   private var _customise: Option[Schema[Any] => Schema[Any]] = None
 
   def withCustomise(c: Schema[Any] => Schema[Any]): SchemaAnnotations[T] = {

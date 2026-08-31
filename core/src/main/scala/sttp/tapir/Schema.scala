@@ -498,6 +498,20 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * }}}
       */
     class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
+
+    /** Applies an arbitrary transformation `f` to the derived schema of the annotated class, field or enumeration. An escape hatch for
+      * customisations that the other annotations in [[Schema.annotations]] can't express - most often setting a schema attribute, which
+      * documentation interpreters then render (e.g. an OpenAPI extension):
+      * {{{
+      *
+      * @customise(_.attribute(AttributeKey[List[String]], List("UnPaid", "Paid")))
+      * sealed trait OrderStatus
+      * }}}
+      *
+      * `f` is applied after the metadata annotations ([[description]], [[encodedExample]], [[default]], [[format]], [[deprecated]],
+      * [[hidden]], [[encodedName]]), so it can override what they set. When deriving a schema for an enumeration, it is applied before
+      * [[validate]] and [[validateEach]] - a validator set inside `f` is therefore added to, not replaced by, those annotations.
+      */
     class customise(val f: Schema[Any] => Schema[Any]) extends StaticAnnotation with Serializable
   }
 
