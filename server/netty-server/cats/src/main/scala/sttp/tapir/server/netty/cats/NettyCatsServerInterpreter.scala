@@ -9,7 +9,7 @@ import sttp.monad.syntax._
 import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync, _}
 import sttp.tapir.server.netty.cats.internal.NettyCatsRequestBody
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
@@ -32,7 +32,7 @@ trait NettyCatsServerInterpreter[F[_]] {
     val deleteFile = nettyServerOptions.deleteFile
 
     val serverInterpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, F, NettyResponse, Fs2Streams[F]](
-      FilterServerEndpoints(ses),
+      PrepareServerEndpoints(ses),
       new NettyCatsRequestBody(
         createFile,
         deleteFile,

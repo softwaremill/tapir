@@ -3,7 +3,7 @@ package sttp.tapir.server.interpreter
 import sttp.tapir.{AnyEndpoint, EndpointInput}
 import sttp.tapir.internal.RichEndpointInput
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.{EndpointBodyVerifier, ServerEndpoint}
+import sttp.tapir.server.ServerEndpoint
 
 class FilterServerEndpoints[R, F[_]](rootLayer: PathLayer[R, F]) extends (ServerRequest => List[ServerEndpoint[R, F]]) {
 
@@ -98,8 +98,6 @@ object FilterServerEndpoints {
   }
 
   def apply[R, F[_]](serverEndpoints: List[ServerEndpoint[R, F]]): FilterServerEndpoints[R, F] = {
-    EndpointBodyVerifier.throwOnErrors(EndpointBodyVerifier.verify(serverEndpoints.map(_.endpoint)))
-
     val segmentsToEndpoints: List[(List[PathSegment], ServerEndpoint[R, F])] =
       serverEndpoints.map(se => segmentsForEndpoint(se.endpoint) -> se)
 

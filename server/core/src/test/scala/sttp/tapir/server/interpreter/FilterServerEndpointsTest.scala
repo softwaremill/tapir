@@ -137,29 +137,6 @@ class FilterServerEndpointsTest extends AnyFlatSpec with Matchers {
     filter(requestWithPath("y")) shouldBe Nil
   }
 
-  it should "throw when an endpoint declares two primary bodies" in {
-    val se = endpoint.post
-      .in("people")
-      .securityIn(stringBody)
-      .in(stringBody)
-      .serverSecurityLogic[Unit, Identity](_ => Right(()))
-      .serverLogic(_ => _ => Right(()))
-
-    val e = the[IllegalArgumentException] thrownBy FilterServerEndpoints(List(se))
-    e.getMessage should include("asSecondary")
-  }
-
-  it should "accept an endpoint with an secondary body" in {
-    val se = endpoint.post
-      .in("people")
-      .securityIn(stringBody.asSecondary)
-      .in(stringBody)
-      .serverSecurityLogic[Unit, Identity](_ => Right(()))
-      .serverLogic(_ => _ => Right(()))
-
-    noException should be thrownBy FilterServerEndpoints(List(se))
-  }
-
   implicit class NoLogic[I, E](e: PublicEndpoint[I, E, Unit, Any]) {
     def noLogic: ServerEndpoint[Any, Future] = e.serverLogicSuccessPure[Future](_ => ())
   }
