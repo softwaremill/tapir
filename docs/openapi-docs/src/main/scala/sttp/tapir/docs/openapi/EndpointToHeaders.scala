@@ -12,8 +12,8 @@ private[openapi] class EndpointToHeaders(tschemaToASchema: TSchemaToASchema) {
   def withSourceAtoms(
       outputs: List[EndpointOutput[_]],
       include: EndpointIO.Atom[_] => Boolean = _ => true
-  ): List[(EndpointIO.Atom[_], (String, Header))] =
-    outputs.flatMap(_.traverseOutputs[(EndpointIO.Atom[_], (String, Header))] {
+  ): Vector[(EndpointIO.Atom[_], (String, Header))] =
+    outputs.toVector.flatMap(_.traverseOutputs[(EndpointIO.Atom[_], (String, Header))] {
       case h: EndpointIO.Header[_] if include(h)      => Vector(h -> (h.name -> headerToHeader(h)))
       case f: EndpointIO.FixedHeader[_] if include(f) => Vector(f -> (f.h.name -> fixedHeaderToHeader(f)))
     })

@@ -76,7 +76,7 @@ private[openapi] class EndpointToOperationResponse(
 
   private def outputsToResponse(sc: StatusCodeKey, outputs: List[EndpointOutput[_]]): Option[Response] = {
     val bodies = collectBodies(outputs)
-    val headers: List[(String, ReferenceOr[Header])] = endpointToHeaders.withSourceAtoms(outputs).map { case (atom, (name, header)) =>
+    val headers: Vector[(String, ReferenceOr[Header])] = endpointToHeaders.withSourceAtoms(outputs).map { case (atom, (name, header)) =>
       name -> ReusableComponents
         .markerOf(atom)
         .flatMap(_ => reusableComponents.headerToName.get((name, header)))

@@ -63,7 +63,6 @@ private[openapi] class ReusableComponentsForEndpoints(
       val decodeFailureOutputs = defaultDecodeFailureOutput(e.securityInput.and(e.input)).toList
       endpointToHeaders
         .withSourceAtoms(List(e.output, e.errorOutput) ++ decodeFailureOutputs, include = ReusableComponents.markerOf(_).isDefined)
-        .toVector
         .flatMap { case (atom, nameAndHeader) => ReusableComponents.markerOf(atom).map(m => nameAndHeader -> m.name) }
     }
 
