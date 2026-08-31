@@ -46,15 +46,52 @@ final case class SchemaAnnotations[T](
     *
     * When breaking binary compatibility would be an option, consider moving this into a regular parameter list with adjusting
     * SchemaAnnotationsMacro(both scala 3 and 2) accordingly
-    *
-    * This has to be called last within macro transformations otherwise it would be lost as it is not a part of the auto generated copy
     */
   private var _customise: Option[Schema[Any] => Schema[Any]] = None
 
   def withCustomise(c: Schema[Any] => Schema[Any]): SchemaAnnotations[T] = {
-    val copy = this.copy()
+    val copy = this.copy[T]()
     copy._customise = Some(c)
     copy
+  }
+
+  /** Replaces the `copy` that would otherwise be generated for this case class, so that the `_customise` field - which is not a constructor
+    * parameter - is carried over to the copy.
+    *
+    * The signature must stay exactly as the generated one would be. Scala 3 skips generating `copy` only when a user-defined `copy` matches
+    * that signature; a differently shaped one becomes an overload instead, making every defaulted call ambiguous. Keeping the type
+    * parameter named `T` also keeps the erased and generic signatures identical to the generated ones, which is what makes this binary
+    * compatible. The casts below are needed because this `T` shadows the class's one - the generated `copy` is special-cased by the
+    * compiler and needs no casts.
+    *
+    * Remove this method once `_customise` moves to a regular parameter list: the generated `copy` takes over again, and the explicit
+    * `copy[T]()` in `withCustomise` can go back to `copy()`.
+    */
+
+  def copy[T](
+      description: Option[String] = this.description,
+      encodedExample: Option[Any] = this.encodedExample,
+      default: Option[(T, Option[Any])] = this.default.asInstanceOf[Option[(T, Option[Any])]],
+      format: Option[String] = this.format,
+      deprecated: Option[Boolean] = this.deprecated,
+      hidden: Option[Boolean] = this.hidden,
+      encodedName: Option[String] = this.encodedName,
+      validate: List[Validator[T]] = this.validate.asInstanceOf[List[Validator[T]]],
+      validateEach: List[Validator[Any]] = this.validateEach
+  ): SchemaAnnotations[T] = {
+    val c = new SchemaAnnotations[T](
+      description,
+      encodedExample,
+      default,
+      format,
+      deprecated,
+      hidden,
+      encodedName,
+      validate,
+      validateEach
+    )
+    c._customise = this._customise
+    c
   }
 }
 
