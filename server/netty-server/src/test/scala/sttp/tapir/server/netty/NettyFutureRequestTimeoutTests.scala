@@ -164,7 +164,6 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
               _ <- IO.blocking(socket.getOutputStream.flush())
               _ <- IO.blocking(socket.getOutputStream.write(bodyFragment))
               _ <- IO.blocking(socket.getOutputStream.flush())
-              _ <- IO.sleep(dribbleInterval)
               response <- IO.blocking(new String(socket.getInputStream.readAllBytes()))
             } yield response).map { response =>
               response should startWith("HTTP/1.1 408 Request Timeout")
