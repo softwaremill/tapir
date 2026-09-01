@@ -15,14 +15,18 @@ private[openapi] object EndpointToOpenAPIDocs {
       options: OpenAPIDocsOptions,
       docsExtensions: List[DocsExtension[_]]
   ): OpenAPI = {
-    val es2 = es.filter(e => findWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
+    val documentedEs = es.filter(e => findWebSocket(e).isEmpty)
+    documentedEs.foreach(ReusableComponents.verifyMarkedPathCapturesAreNamed)
+    val es2 = documentedEs.map(nameAllPathCapturesInEndpoint)
     val additionalOutputs = es2.flatMap(e => options.defaultDecodeFailureOutput(e.input)).toSet.toList
     val (idToSchema, tschemaToASchema) =
       new SchemasForEndpoints(es2, options.schemaName, options.markOptionsAsNullable, options.failOnDuplicateSchemaName, additionalOutputs)
         .apply()
     val securitySchemes = SecuritySchemesForEndpoints(es2, apiKeyAuthTypeName = "apiKey")
-    val pathCreator = new EndpointToOpenAPIPaths(tschemaToASchema, securitySchemes, options)
-    val componentsCreator = new EndpointToOpenAPIComponents(idToSchema, securitySchemes)
+    val reusableComponents =
+      new ReusableComponentsForEndpoints(es2, tschemaToASchema, options.defaultDecodeFailureOutput).apply()
+    val pathCreator = new EndpointToOpenAPIPaths(tschemaToASchema, securitySchemes, options, reusableComponents)
+    val componentsCreator = new EndpointToOpenAPIComponents(idToSchema, securitySchemes, reusableComponents)
 
     val base = apiToOpenApi(api, componentsCreator, docsExtensions)
 

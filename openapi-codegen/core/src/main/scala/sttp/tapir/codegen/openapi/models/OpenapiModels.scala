@@ -174,26 +174,58 @@ object OpenapiModels {
   }
   object OpenapiHeader {
     import io.circe._
-    implicit val OpenapiHeaderDecoder: Decoder[OpenapiHeader] =
-      OpenapiSchemaRefDecoder
-        .map(OpenapiHeaderRef(_))
-        .or((c: HCursor) => {
-          OpenapiParameterDecoder
-            .tryDecode(c.withFocus(_.mapObject(("name" -> Json.fromString("inline")) +: ("in" -> Json.fromString("header")) +: _)))
-            .map(OpenapiHeaderDef(_))
-        })
+    // a header we cannot model is kept, rather than failing the whole document: it only matters if something references it
+    implicit val OpenapiHeaderDecoder: Decoder[OpenapiHeader] = (c: HCursor) => {
+      val asRef = OpenapiSchemaRefDecoder.tryDecode(c).map(OpenapiHeaderRef(_): OpenapiHeader)
+      lazy val asDef = OpenapiParameterDecoder
+        .tryDecode(c.withFocus(_.mapObject(("name" -> Json.fromString("inline")) +: ("in" -> Json.fromString("header")) +: _)))
+        .map(OpenapiHeaderDef(_): OpenapiHeader)
+      asRef match {
+        case r: Right[?, ?] => r
+        case _              =>
+          asDef match {
+            case r: Right[?, ?] => r
+            case Left(failure)  => Right(OpenapiHeaderUnsupported(unsupportedCause(c, failure)))
+          }
+      }
+    }
+
+    private def unsupportedCause(c: HCursor, failure: DecodingFailure): String =
+      if (c.downField("content").succeeded) "headers described with 'content' instead of 'schema' are not supported"
+      else failure.getMessage
   }
   case class OpenapiHeaderDef(param: OpenapiParameter) extends OpenapiHeader {
     def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef =
       if (name == param.name) this else OpenapiHeaderDef(param.copy(name = name))
   }
+  case class OpenapiHeaderUnsupported(cause: String) extends OpenapiHeader {
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef =
+      throw new IllegalStateException(s"Header $name cannot be generated: $cause")
+  }
   case class OpenapiHeaderRef($ref: OpenapiSchemaRef) extends OpenapiHeader {
-    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef = {
-      doc.components
+    def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef = resolvedFollowing(name, doc, Seq.empty)
+
+    // a header component may itself be a reference, so follow the chain, keeping the visited refs to report a cycle rather than hang
+    private def resolvedFollowing(name: String, doc: OpenapiDocument, visited: Seq[String]): OpenapiHeaderDef = {
+      if (visited.contains($ref.name))
+        throw new IllegalStateException(s"Circular header reference: ${(visited :+ $ref.name).mkString(" -> ")}")
+
+      def fromHeaders: Option[OpenapiHeaderDef] = doc.components.flatMap(_.headers.get($ref.name)).map {
+        case r: OpenapiHeaderRef => r.resolvedFollowing(name, doc, visited :+ $ref.name)
+        case h                   => h.resolved(name, doc)
+      }
+      def fromParameters: Option[OpenapiHeaderDef] = doc.components
         .flatMap(_.parameters.get($ref.name))
         .map(b => if (b.in != "header") throw new IllegalStateException(s"Referenced parameter ${$ref.name} is not header") else b)
         .map(b => OpenapiHeaderDef(b.copy(name = name)))
-        .getOrElse(throw new IllegalStateException(s"Response component ${$ref.name} is referenced but not found"))
+
+      fromHeaders
+        .orElse(fromParameters)
+        .getOrElse(
+          throw new IllegalStateException(
+            s"Header component ${$ref.name} is referenced but not found in components.headers or components.parameters"
+          )
+        )
     }
   }
 

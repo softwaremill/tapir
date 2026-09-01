@@ -16,11 +16,57 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
 }
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiComponent
-import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiInfo
+import sttp.tapir.codegen.openapi.models.OpenapiModels.{
+  OpenapiHeaderDef,
+  OpenapiHeaderRef,
+  OpenapiInfo,
+  OpenapiParameter,
+  OpenapiPath,
+  OpenapiPathMethod,
+  OpenapiResponseContent,
+  OpenapiResponseDef
+}
 
 import scala.collection.mutable
 
 class SchemaComparerSpec extends AnyFlatSpec with Matchers {
+
+  private def docWithSharedHeader(headerDescription: String) =
+    OpenapiDocument(
+      "3.1.0",
+      Nil,
+      OpenapiInfo("t", "1"),
+      Seq(
+        OpenapiPath(
+          "/ping",
+          Seq(
+            OpenapiPathMethod(
+              methodType = "get",
+              parameters = Nil,
+              responses = Seq(
+                OpenapiResponseDef(
+                  "200",
+                  "",
+                  Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))),
+                  Map("X-Rate-Limit" -> OpenapiHeaderRef(OpenapiSchemaRef("#/components/headers/RateLimit")))
+                )
+              ),
+              requestBody = None
+            )
+          )
+        )
+      ),
+      Some(
+        OpenapiComponent(
+          schemas = Map.empty,
+          headers = Map(
+            "#/components/headers/RateLimit" ->
+              TestHelpers.inlineHeaderDef(Some(headerDescription))
+          )
+        )
+      ),
+      Nil
+    )
 
   "SchemaComparer" should "find identical schemas by name and structure" in {
     val pet = OpenapiSchemaObject(
@@ -53,6 +99,13 @@ class SchemaComparerSpec extends AnyFlatSpec with Matchers {
     val e1 = OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("A")), false)
     val e2 = OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("B")), false)
     SchemaComparer.findIdenticalSchemaNames(Map("S" -> e1), Map("S" -> e2)) shouldBe Set.empty
+  }
+
+  it should "not reuse an endpoint whose shared response header is defined differently" in {
+    val current = docWithSharedHeader("Requests left")
+
+    SchemaComparer.findReusedEndpointNames(current, docWithSharedHeader("Requests left"), Map.empty, Map.empty) should have size 1
+    SchemaComparer.findReusedEndpointNames(current, docWithSharedHeader("Something else"), Map.empty, Map.empty) shouldBe empty
   }
 }
 
@@ -148,8 +201,12 @@ class PackageReuseContextSpec extends AnyFlatSpec with Matchers {
 
 class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
 
-  private def minimalDoc(title: String, schemas: Map[String, OpenapiSchemaString]) =
-    OpenapiDocument("3.0.0", Nil, OpenapiInfo(title, "1"), Nil, Some(OpenapiComponent(schemas)), Nil)
+  private def docWith(components: OpenapiComponent, title: String = "test") =
+    OpenapiDocument("3.0.0", Nil, OpenapiInfo(title, "1"), Nil, Some(components), Nil)
+
+  private def minimalDoc(title: String, schemas: Map[String, OpenapiSchemaString]) = docWith(OpenapiComponent(schemas), title)
+
+  private def headerDef(description: String): OpenapiHeaderDef = TestHelpers.inlineHeaderDef(Some(description))
 
   "OpenApiMerger" should "merge schemas from multiple documents" in {
     val a = minimalDoc("a", Map("A" -> OpenapiSchemaString(false)))
@@ -169,5 +226,45 @@ class OpenApiMergerSpec extends AnyFlatSpec with Matchers {
       Nil
     )
     intercept[IllegalArgumentException](OpenApiMerger.merge(Seq(a, b)))
+  }
+
+  it should "merge components.headers from both documents" in {
+    val left = docWith(
+      OpenapiComponent(
+        schemas = Map.empty,
+        headers = Map(
+          "#/components/headers/RateLimit" -> headerDef("rate limit"),
+          "#/components/headers/OnlyLeft" -> headerDef("only left")
+        )
+      )
+    )
+    val right = docWith(
+      OpenapiComponent(
+        schemas = Map.empty,
+        headers = Map(
+          "#/components/headers/RateLimit" -> headerDef("rate limit"),
+          "#/components/headers/OnlyRight" -> headerDef("only right")
+        )
+      )
+    )
+
+    val merged = OpenApiMerger.merge(Seq(left, right))
+
+    merged.components.map(_.headers) shouldBe Some(
+      Map(
+        "#/components/headers/RateLimit" -> headerDef("rate limit"),
+        "#/components/headers/OnlyLeft" -> headerDef("only left"),
+        "#/components/headers/OnlyRight" -> headerDef("only right")
+      )
+    )
+  }
+
+  it should "fail when the same header is defined differently in both documents" in {
+    val left = docWith(OpenapiComponent(schemas = Map.empty, headers = Map("#/components/headers/RateLimit" -> headerDef("left"))))
+    val right = docWith(OpenapiComponent(schemas = Map.empty, headers = Map("#/components/headers/RateLimit" -> headerDef("right"))))
+
+    val thrown = intercept[IllegalArgumentException](OpenApiMerger.merge(Seq(left, right)))
+    thrown.getMessage should include("Conflicting header definitions")
+    thrown.getMessage should include("RateLimit")
   }
 }

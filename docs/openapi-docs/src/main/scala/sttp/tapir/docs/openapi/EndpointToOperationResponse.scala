@@ -1,11 +1,11 @@
 package sttp.tapir.docs.openapi
 
 import sttp.model.StatusCode
-import sttp.apispec.{Schema => ASchema, SchemaType => ASchemaType}
+import sttp.apispec.{Schema => ASchema}
 import sttp.apispec.openapi._
 import sttp.tapir._
 import sttp.tapir.docs.apispec.DocsExtensionAttribute.RichEndpointIOInfo
-import sttp.tapir.docs.apispec.{DocsExtensions, exampleValue}
+import sttp.tapir.docs.apispec.DocsExtensions
 import sttp.tapir.docs.apispec.schema.TSchemaToASchema
 import sttp.tapir.internal._
 import sttp.tapir.model.StatusCodeRange
@@ -15,8 +15,11 @@ import scala.collection.immutable.ListMap
 private[openapi] class EndpointToOperationResponse(
     tschemaToASchema: TSchemaToASchema,
     codecToMediaType: CodecToMediaType,
-    options: OpenAPIDocsOptions
+    options: OpenAPIDocsOptions,
+    reusableComponents: ReusableComponents
 ) {
+  private val endpointToHeaders = new EndpointToHeaders(tschemaToASchema)
+
   def apply(e: AnyEndpoint): ListMap[ResponsesKey, ReferenceOr[Response]] = {
     // There always needs to be at least a 200 empty response
     outputToResponses(e.output, ResponsesCodeKey(200), Some(Response.Empty)) ++
@@ -73,7 +76,13 @@ private[openapi] class EndpointToOperationResponse(
 
   private def outputsToResponse(sc: StatusCodeKey, outputs: List[EndpointOutput[_]]): Option[Response] = {
     val bodies = collectBodies(outputs)
-    val headers = collectHeaders(outputs)
+    val headers: Vector[(String, ReferenceOr[Header])] = endpointToHeaders.withSourceAtoms(outputs).map { case (atom, (name, header)) =>
+      name -> ReusableComponents
+        .markerOf(atom)
+        .flatMap(_ => reusableComponents.headerToName.get((name, header)))
+        .map(componentName => Left(Reference.to("#/components/headers/", componentName)): ReferenceOr[Header])
+        .getOrElse(Right(header))
+    }
 
     val statusCodeDescriptions = outputs.flatMap {
       case EndpointOutput.StatusCode(documentedCodes, _, _) => documentedCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
@@ -123,32 +132,6 @@ private[openapi] class EndpointToOperationResponse(
       case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType, Nil)))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, _)) =>
         Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType, Nil)))
-    })
-  }
-
-  private def collectHeaders(outputs: List[EndpointOutput[_]]): List[(String, Right[Nothing, Header])] = {
-    outputs.flatMap(_.traverseOutputs {
-      case EndpointIO.Header(name, codec, info) =>
-        Vector(
-          name -> Right(
-            Header(
-              description = info.description,
-              required = Some(!codec.schema.isOptional),
-              schema = Some(tschemaToASchema(codec)),
-              example = info.example.flatMap(exampleValue(codec, _))
-            )
-          )
-        )
-      case EndpointIO.FixedHeader(h, _, info) =>
-        Vector(
-          h.name -> Right(
-            Header(
-              description = info.description,
-              required = Some(true),
-              schema = Option(ASchema(ASchemaType.String))
-            )
-          )
-        )
     })
   }
 
