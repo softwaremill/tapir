@@ -19,7 +19,6 @@ import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
-import java.io.OutputStream
 import java.net.Socket
 import scala.concurrent.duration.FiniteDuration
 
@@ -89,10 +88,8 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         }
         .unsafeToFuture()
     },
-    Test(s"respond with status 408 when not all declared body bytes are received, in a single write") {
+    Test("respond with status 408 when not all declared body bytes are received, in a single write") {
       val requestTimeout = 500.millis
-      val pauseBeforeBodyFragment = requestTimeout / 2
-      val dribbleInterval = requestTimeout / 3
 
       def requestHead(port: Int): Array[Byte] =
         s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: 10000\r\n\r\n".getBytes
@@ -133,7 +130,7 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         .unsafeToFuture()
     },
     Test(
-      s"respond with status 408 when not all declared body bytes are received, with the body fragment in a separate write, then a stall"
+      "respond with status 408 when not all declared body bytes are received, with the body fragment in a separate write, then a stall"
     ) {
       val requestTimeout = 500.millis
       val dribbleInterval = requestTimeout / 3
