@@ -55,8 +55,21 @@ private[tapir] object EndpointBodyVerifier {
     }
     val shown = endpoint.showShort
 
+    // asSecondary can be called on a variant, as oneOfBody takes bodies, but the server interpreters only look for
+    // the marker on a top-level body input - so accepting it here would silently fall back to reading the body once
+    val secondaryInsideOneOfBody: List[String] =
+      inputs
+        .collect { case ob: EndpointIO.OneOfBody[?, ?] => ob }
+        .collect {
+          case ob if ob.variants.map(_.bodyAsAtom).exists { case b: EndpointIO.Body[?, ?] => b.isSecondary; case _ => false } =>
+            s"Endpoint $shown marks a oneOfBody variant as secondary. Only a body input used on its own can be " +
+              s"secondary; a oneOfBody is always part of the API contract."
+        }
+        .toList
+
     val tooManyPrimaries: List[String] =
-      if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
+      if (secondaryInsideOneOfBody.nonEmpty) Nil
+      else if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
         List(
           s"Endpoint $shown declares a request body in both securityIn and in. Only one may be part of the API " +
             s"contract. If both should decode the same request body, mark the securityIn one: " +
@@ -107,7 +120,7 @@ private[tapir] object EndpointBodyVerifier {
       }
 
     EndpointBodyProblems(
-      errors = tooManyPrimaries ++ streamWithSecondary ++ nonReplayableWithSecondary,
+      errors = secondaryInsideOneOfBody ++ tooManyPrimaries ++ streamWithSecondary ++ nonReplayableWithSecondary,
       warnings = (secondaryWithoutPrimary ++ uselessMetadata).toList
     )
   }
