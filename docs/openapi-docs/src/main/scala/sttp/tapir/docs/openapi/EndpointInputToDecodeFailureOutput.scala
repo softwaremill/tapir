@@ -8,7 +8,8 @@ import scala.annotation.tailrec
 
 private[openapi] object EndpointInputToDecodeFailureOutput {
   def defaultBadRequestDescription(input: EndpointInput[_]): Option[String] = {
-    val fallibleBasicInputs = input.asVectorOfBasicInputs(includeAuth = false).filter(inputMayFailWithBadRequest)
+    val fallibleBasicInputs =
+      input.asVectorOfBasicInputs(includeAuth = false).filterNot(isSecondaryBodyInput).filter(inputMayFailWithBadRequest)
 
     if (fallibleBasicInputs.nonEmpty) Some(badRequestDescription(fallibleBasicInputs))
     else None

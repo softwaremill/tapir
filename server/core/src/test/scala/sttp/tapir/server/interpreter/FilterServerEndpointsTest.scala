@@ -4,6 +4,7 @@ import sttp.tapir._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.{Header, Method, QueryParams, Uri}
+import sttp.shared.Identity
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
 

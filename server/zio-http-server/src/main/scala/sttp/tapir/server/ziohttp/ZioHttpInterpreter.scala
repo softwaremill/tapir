@@ -6,6 +6,7 @@ import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointInput
 import sttp.tapir.internal.RichEndpointInput
+import sttp.tapir.server.EndpointBodyVerifier
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interpreter.ServerInterpreter
@@ -23,6 +24,8 @@ trait ZioHttpInterpreter[R] {
     toHttp(List(se))
 
   def toHttp[R2](ses: List[ZServerEndpoint[R2, ZioStreams with WebSockets]]): Routes[R & R2, Response] = {
+    EndpointBodyVerifier.throwOnErrors(EndpointBodyVerifier.verify(ses.map(_.endpoint)))
+
     implicit val bodyListener: ZioHttpBodyListener[R & R2] = new ZioHttpBodyListener[R & R2]
     implicit val monadError: MonadError[RIO[R & R2, *]] = new RIOMonadError[R & R2]
     val widenedSes = ses.map(_.widen[R & R2])
