@@ -14,8 +14,14 @@ import sttp.model.StatusCode
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.NettyResponseContent._
-import sttp.tapir.server.netty.internal.RequestBodyCompletedTracker._
+import sttp.tapir.server.netty.NettyResponseContent.{
+  ByteBufNettyResponseContent,
+  ChunkedFileNettyResponseContent,
+  ChunkedStreamNettyResponseContent,
+  ReactivePublisherNettyResponseContent,
+  ReactiveWebSocketProcessorNettyResponseContent
+}
+import sttp.tapir.server.netty.internal.RequestBodyCompletionTracker.wasRequestBodyFullyReceived
 import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, SubscribeTrackingStreamedHttpRequest}
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
@@ -102,26 +108,28 @@ class NettyServerHandler[F[_]](
     val _ = ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
   }
 
+  private def handleRequestTimeout(ctx: ChannelHandlerContext): Unit = {
+    val timeoutDescription = config.requestTimeout.map(_.toString).getOrElse("(not set)")
+    if (wasRequestBodyFullyReceived(ctx)) {
+      logger.error(s"Closing connection due to exceeded response timeout of $timeoutDescription")
+      writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
+    } else {
+      logger.debug(s"Closing connection: the request body was not fully received within the request timeout of $timeoutDescription")
+      writeErrorThenClose(ctx, HttpResponseStatus.REQUEST_TIMEOUT)
+    }
+  }
+
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
     evt match {
       case e: IdleStateEvent =>
-        if (e.state() == IdleState.WRITER_IDLE) {
-          logger.error(
-            s"Closing connection due to exceeded response timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
-          )
-          writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
+        e.state() match {
+          case IdleState.WRITER_IDLE => handleRequestTimeout(ctx)
+          case IdleState.ALL_IDLE    =>
+            logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
+            val _ = ctx.close()
+          case _ => ()
         }
-        if (e.state == IdleState.READER_IDLE && !wasRequestBodyFullyReceived(ctx)) {
-          logger.debug(
-            s"Closing connection: the request body was not fully received within the request timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
-          )
-          writeErrorThenClose(ctx, HttpResponseStatus.REQUEST_TIMEOUT)
-        }
-        if (e.state() == IdleState.ALL_IDLE) {
-          logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
-          val _ = ctx.close()
-        }
-      case other =>
+      case _ =>
         super.userEventTriggered(ctx, evt)
     }
   }
@@ -139,7 +147,7 @@ class NettyServerHandler[F[_]](
 
     def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
       val requestTimeoutHandler = config.requestTimeout.map { requestTimeout =>
-        new IdleStateHandler(requestTimeout.toMillis.toInt, requestTimeout.toMillis.toInt, 0, TimeUnit.MILLISECONDS)
+        new IdleStateHandler(0, requestTimeout.toMillis, 0, TimeUnit.MILLISECONDS)
       }
       requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
@@ -356,7 +364,7 @@ class NettyServerHandler[F[_]](
       handshakeReq: HttpRequest
   ) = {
     ctx.pipeline().remove(this)
-    Option(ctx.pipeline().get(classOf[RequestBodyCompletedTracker])).foreach(ctx.pipeline().remove)
+    Option(ctx.pipeline().get(classOf[RequestBodyCompletionTracker])).foreach(ctx.pipeline().remove)
     ctx
       .pipeline()
       .addAfter(

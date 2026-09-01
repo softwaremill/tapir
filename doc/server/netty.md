@@ -100,7 +100,9 @@ Tapir's endpoints) are added to a Netty server.
 
 `NettyConfig` exposes a number of configuration options which allows to
 customise the server socket, such as:
-* request timeout
+* request timeout: bounds the time between receiving the request headers and
+  producing a response, and so also bounds how long a client may take to upload
+  a request body; see [request timeout](#request-timeout) below
 * connection timeout
 * linger timeout
 * graceful shutdown timeout: when stopped e.g. using
@@ -120,6 +122,31 @@ import scala.concurrent.duration.*
 
 val config = NettyConfig.default.requestTimeout(5.seconds)
 ```
+
+### Request timeout
+
+The request timeout starts when the request headers are received, and is only
+satisfied once a response starts being written. When it is exceeded, the server
+sends an empty response with a `Connection: close` header and closes the
+connection. The status code says which side ran out of time, which is decided by
+whether the request body had been received in full when the timeout expired:
+
+* `503 Service Unavailable`, if the request had been received in full, but no
+  part of a response was produced in time — the endpoint's logic is too slow.
+* `408 Request Timeout`, if the request body was still incomplete — the client
+  sent the headers, and possibly part of the body, then either stalled or kept
+  sending too slowly to finish in time. A client declaring
+  `Content-Length: 10000` and then sending only the first few bytes is answered
+  this way.
+
+Because the timeout also covers receiving the body, it has to be higher than the
+longest upload you want to accept, and lower than `idleTimeout`. It is ignored
+for Web Sockets, once the handshake has been established.
+
+Telling the two cases apart relies on a handler which
+`NettyConfig.defaultInitPipeline` adds when `requestTimeout` is set. A custom
+`initPipeline` which does not add it still gets the timeout, but always reports
+it as `503`; see the `initPipeline` scaladoc for the placement requirement.
 
 ## Web sockets
 

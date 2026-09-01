@@ -27,16 +27,18 @@ import scala.concurrent.duration._
   *
   * @param initPipeline
   *   The function to create the Netty pipeline, using the configuration instance, the pipeline created so far, and the handler which
-  *   contains tapir's server processing logic.
+  *   contains tapir's server processing logic. A custom pipeline which omits the handlers added by [[NettyConfig.defaultInitPipeline]] also
+  *   gives up the behaviour which depends on them; in particular, without a `RequestBodyCompletionTracker` placed after the HTTP codec and
+  *   before `HttpStreamsServerHandler`, an exceeded `requestTimeout` is always reported as `503`, never as `408`.
   *
   * @param requestTimeout
-  *   The maximum duration to wait for the request to be received in full, and for the response to be produced. When exceeded, an empty
-  *   error response with a `Connection: close` header is sent, and the connection is closed. The status code depends on which side stalled:
+  *   The maximum duration between receiving the request headers and producing a response, which therefore also bounds the time the client
+  *   has to send the request body. When exceeded, an empty error response with a `Connection: close` header is sent, and the connection is
+  *   closed. The status code is decided by whether the request body had been received in full when the timeout expired:
   *
-  *   - `503 Service Unavailable`, if no part of the response is written within this duration. The server did not produce, or start
-  *     streaming, a response in time.
-  *   - `408 Request Timeout`, if no data is received within this duration while the request body is still incomplete. The client sent the
-  *     headers, and possibly part of the body, then stalled before sending the final chunk.
+  *   - `503 Service Unavailable`, if the request had been received in full, but no part of a response was produced in time.
+  *   - `408 Request Timeout`, if the request body was still incomplete: the client sent the headers, and possibly part of the body, then
+  *     either stalled or kept sending too slowly to finish in time.
   *
   * This timeout is ignored in Web Sockets (after a handshake is established). Make sure it's lower than `idleTimeout`.
   *
@@ -155,8 +157,10 @@ object NettyConfig {
     if (cfg.compressionConfig.enabled) {
       pipeline.addLast(new HttpContentCompressor())
     }
+    // tracks request body completion, so that an exceeded requestTimeout can be reported as 408 rather than 503 when it's the client
+    // which stalled mid-upload; has to come before HttpStreamsServerHandler
     if (cfg.requestTimeout.isDefined) {
-      pipeline.addLast(new RequestBodyCompletedTracker)
+      pipeline.addLast(new RequestBodyCompletionTracker)
     }
     pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
