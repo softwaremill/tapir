@@ -2,7 +2,6 @@ package sttp.tapir.server.netty
 
 import sttp.tapir._
 import sttp.tapir.tests.Test
-
 import scala.concurrent.Future
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.duration.DurationInt
@@ -12,7 +11,6 @@ import sttp.tapir.server.metrics.EndpointMetric
 import io.netty.channel.EventLoopGroup
 import cats.effect.IO
 import cats.effect.kernel.Resource
-
 import scala.concurrent.ExecutionContext
 import sttp.client4._
 import sttp.capabilities.fs2.Fs2Streams
@@ -21,8 +19,9 @@ import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
-
+import java.io.OutputStream
 import java.net.Socket
+import scala.concurrent.duration.FiniteDuration
 
 class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]])(implicit
     ec: ExecutionContext
@@ -90,44 +89,99 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         }
         .unsafeToFuture()
     },
-    Test("respond with status 408 when not all declared bytes are received within time window") {
+    Test(s"respond with status 408 when not all declared body bytes are received, in a single write") {
+      val requestTimeout = 500.millis
+      val pauseBeforeBodyFragment = requestTimeout / 2
+      val dribbleInterval = requestTimeout / 3
+
+      def requestHead(port: Int): Array[Byte] =
+        s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: 10000\r\n\r\n".getBytes
+
+      val bodyFragment: Array[Byte] = "test".getBytes
+
       val e = endpoint.put
         .in(stringBody)
         .out(stringBody)
-        .serverLogicSuccess[Future] { body =>
-          Future.successful(body)
-        }
+        .serverLogicSuccess[Future](body => Future.successful(body))
 
-      val config: NettyConfig = NettyConfig.default.randomPort.requestTimeout(500.millis)
+      val serverConfig = NettyConfig.default
+        .eventLoopGroup(eventLoopGroup)
+        .randomPort
+        .withDontShutdownEventLoopGroupOnClose
+        .noGracefulShutdown
+        .requestTimeout(requestTimeout)
 
-      val bind = IO.fromFuture(IO.delay(NettyFutureServer(config).addEndpoints(List(e)).start()))
-
-      val createSocket: Int => Socket = port => {
-        val s = new Socket("localhost", port)
-        s.setSoTimeout(1000)
-        s
-      }
+      val bind = IO.fromFuture(IO.delay(NettyFutureServer(serverConfig).addEndpoints(List(e)).start()))
 
       Resource
         .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
         .map(_.port)
         .use { port =>
-          val bytes = s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: 10000\r\n\r\ntest".getBytes
-
-          Resource
-            .make(IO(createSocket(port)))(socket => IO(socket.close()))
-            .use { socket =>
-              for {
-                _ <- IO(socket.getOutputStream.write(bytes))
-                _ <- IO(socket.getOutputStream.flush())
-                response <- IO(new String(socket.getInputStream.readAllBytes()))
-              } yield {
-                response should include("408 Request Timeout")
+          Resource.fromAutoCloseable(IO(clientSocket(port, requestTimeout))).use { socket =>
+            (for {
+              _ <- IO.blocking(socket.getOutputStream.write(requestHead(port) ++ bodyFragment))
+              _ <- IO.blocking(socket.getOutputStream.flush())
+              resp <- IO.blocking(new String(socket.getInputStream.readAllBytes()))
+            } yield resp)
+              .map { response =>
+                // asserting on the status line, rather than just containment, also covers a second response written behind the first
+                response should startWith("HTTP/1.1 408 Request Timeout")
                 response should not include ("503")
               }
+          }
+        }
+        .unsafeToFuture()
+    },
+    Test(
+      s"respond with status 408 when not all declared body bytes are received, with the body fragment in a separate write, then a stall"
+    ) {
+      val requestTimeout = 500.millis
+      val dribbleInterval = requestTimeout / 3
+
+      def requestHead(port: Int): Array[Byte] =
+        s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: 10000\r\n\r\n".getBytes
+
+      val bodyFragment: Array[Byte] = "test".getBytes
+
+      val e = endpoint.put
+        .in(stringBody)
+        .out(stringBody)
+        .serverLogicSuccess[Future](body => Future.successful(body))
+
+      val serverConfig = NettyConfig.default
+        .eventLoopGroup(eventLoopGroup)
+        .randomPort
+        .withDontShutdownEventLoopGroupOnClose
+        .noGracefulShutdown
+        .requestTimeout(requestTimeout)
+
+      val bind = IO.fromFuture(IO.delay(NettyFutureServer(serverConfig).addEndpoints(List(e)).start()))
+
+      Resource
+        .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
+        .map(_.port)
+        .use { port =>
+          Resource.fromAutoCloseable(IO(clientSocket(port, requestTimeout))).use { socket =>
+            (for {
+              _ <- IO.blocking(socket.getOutputStream.write(requestHead(port)))
+              _ <- IO.blocking(socket.getOutputStream.flush())
+              _ <- IO.blocking(socket.getOutputStream.write(bodyFragment))
+              _ <- IO.blocking(socket.getOutputStream.flush())
+              _ <- IO.sleep(dribbleInterval)
+              response <- IO.blocking(new String(socket.getInputStream.readAllBytes()))
+            } yield response).map { response =>
+              response should startWith("HTTP/1.1 408 Request Timeout")
+              response should not include ("503")
             }
+          }
         }
         .unsafeToFuture()
     }
   )
+
+  private def clientSocket(port: Int, requestTimeout: FiniteDuration): Socket = {
+    val socket = new Socket("localhost", port)
+    socket.setSoTimeout((requestTimeout * 20).toMillis.toInt)
+    socket
+  }
 }
