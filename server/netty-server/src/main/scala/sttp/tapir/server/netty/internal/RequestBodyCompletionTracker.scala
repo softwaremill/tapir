@@ -18,6 +18,9 @@ object RequestBodyCompletionTracker {
   */
 class RequestBodyCompletionTracker extends ChannelInboundHandlerAdapter {
 
+  /** A plain var, as it's only ever touched on the channel's event loop: written by channelRead below, read (through
+    * wasRequestBodyFullyReceived) by NettyServerHandler.userEventTriggered when the request timeout fires.
+    */
   private[internal] var bodyFullyReceived: Boolean = true
 
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
