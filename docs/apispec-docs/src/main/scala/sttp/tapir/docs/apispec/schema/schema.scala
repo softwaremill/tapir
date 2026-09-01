@@ -20,28 +20,34 @@ package object schema {
   private[docs] type KeyedSchema = (SchemaKey, TSchema[_])
   private[docs] type SchemaId = String
 
-  private[docs] def calculateUniqueIds[T](ts: Iterable[T], toIdBase: T => String, failOnDuplicateSchemaName: Boolean): Map[T, String] = {
-    case class Assigment(idToT: Map[String, T], tToId: Map[T, String])
+  private[docs] val defaultDuplicateSchemaNameError: List[String] => String = baseNames =>
+    s"Duplicate schema names found: ${baseNames.mkString(", ")}. " +
+      "Consider using unique class names or customize the schemaName function."
+
+  private[docs] def calculateUniqueIds[T](
+      ts: Iterable[T],
+      toIdBase: T => String,
+      failOnDuplicateName: Boolean,
+      duplicateNameError: List[String] => String = defaultDuplicateSchemaNameError
+  ): Map[T, String] = {
+    case class Assignment(idToT: Map[String, T], tToId: Map[T, String])
     val result = ts
-      .foldLeft(Assigment(Map.empty, Map.empty)) { case (Assigment(idToT, tToId), t) =>
+      .foldLeft(Assignment(Map.empty, Map.empty)) { case (Assignment(idToT, tToId), t) =>
         val id = uniqueString(toIdBase(t), n => !idToT.contains(n) || idToT.get(n).contains(t))
 
-        Assigment(
+        Assignment(
           idToT + (id -> t),
           tToId + (t -> id)
         )
       }
 
-    if (failOnDuplicateSchemaName) {
+    if (failOnDuplicateName) {
       val conflicts: Map[T, String] = result.tToId.collect { case (t, id) if toIdBase(t) != id => t -> id }
 
       if (conflicts.nonEmpty) {
         // Extract unique base names that had conflicts
         val baseNames = conflicts.map { case (t, _) => toIdBase(t) }.toSet.toList.sorted
-        throw new IllegalStateException(
-          s"Duplicate schema names found: ${baseNames.mkString(", ")}. " +
-            "Consider using unique class names or customize the schemaName function."
-        )
+        throw new IllegalStateException(duplicateNameError(baseNames))
       }
     }
 

@@ -5,6 +5,9 @@ import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.endpoint
+import sttp.tapir.query
+import sttp.tapir.path
+import sttp.tapir.stringToPath
 import sttp.tapir.AnyEndpoint
 import sttp.tapir.tests.Security._
 import sttp.tapir.tests.Basic._
@@ -163,5 +166,106 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
     val options = OpenAPIDocsOptions.default.copy(failOnDuplicateSchemaName = false)
 
     OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("Entities", "1.0"))
+  }
+
+  test("should fail when two marked parameters derive the same component name") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e1 = endpoint.get.in("books").in(query[String]("tenantId").description("A").reusableComponent)
+    val e2 = endpoint.get.in("magazines").in(query[Int]("tenantId").description("B").reusableComponent)
+
+    val thrown = intercept[IllegalStateException] {
+      OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2), Info("Entities", "1.0"))
+    }
+
+    thrown.getMessage should include("Duplicate OpenAPI component names found in components/parameters")
+    thrown.getMessage should include("tenantId")
+    thrown.getMessage should include("reusableComponent")
+  }
+
+  test("should hoist a marked header from a custom defaultDecodeFailureOutput") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val rateLimit = sttp.tapir.header[String]("X-Rate-Limit").reusableComponent
+    val options = OpenAPIDocsOptions.default.copy(defaultDecodeFailureOutput =
+      _ => Some(sttp.tapir.statusCode(sttp.model.StatusCode.BadRequest).and(rateLimit))
+    )
+
+    val e = endpoint.get.in("books").in(query[String]("tenantId"))
+
+    val openApi = OpenAPIDocsInterpreter(options).toOpenAPI(e, Info("Entities", "1.0"))
+
+    openApi.components.map(_.headers.keys.toList) shouldBe Some(List("X-Rate-Limit"))
+    openApi.paths
+      .pathItems("/books")
+      .get
+      .get
+      .responses
+      .responses
+      .values
+      .collect { case Right(r) => r.headers.values }
+      .flatten
+      .collect { case Left(reference) => reference.$ref } shouldBe List("#/components/headers/X-Rate-Limit")
+  }
+
+  test("should fail when a marked parameter's name is not a valid component key") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e = endpoint.get.in("books").in(query[String]("filter[category]").reusableComponent)
+
+    val thrown = intercept[IllegalStateException] {
+      OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0"))
+    }
+
+    thrown.getMessage should include("filter[category]")
+    thrown.getMessage should include("not a valid OpenAPI component key")
+  }
+
+  test("should use an explicit key when the parameter's name is not a valid component key") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e = endpoint.get.in("books").in(query[String]("filter[category]").reusableComponent("FilterCategory"))
+
+    val openApi = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0"))
+
+    openApi.components.map(_.parameters.keys.toList) shouldBe Some(List("FilterCategory"))
+  }
+
+  test("should fail when an unnamed path capture is marked as a reusable component") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e = endpoint.get.in("books" / path[String].reusableComponent)
+
+    val thrown = intercept[IllegalStateException] {
+      OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0"))
+    }
+
+    thrown.getMessage should include("unnamed path capture")
+  }
+
+  test("should use an explicit component key for an unnamed path capture") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val e = endpoint.get.in("books" / path[String].reusableComponent("BookId"))
+
+    val openApi = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Entities", "1.0"))
+
+    openApi.components.map(_.parameters.keys.toList) shouldBe Some(List("BookId"))
+  }
+
+  test("should fail when one marked parameter claims two component names") {
+    import sttp.tapir.docs.openapi.ReusableComponentAttribute._
+
+    val tenantId = query[String]("tenantId")
+    val e1 = endpoint.get.in("books").in(tenantId.reusableComponent("TenantA"))
+    val e2 = endpoint.get.in("magazines").in(tenantId.reusableComponent("TenantB"))
+
+    val thrown = intercept[IllegalStateException] {
+      OpenAPIDocsInterpreter().toOpenAPI(List(e1, e2), Info("Entities", "1.0"))
+    }
+
+    thrown.getMessage should include("Conflicting OpenAPI component names in components/parameters")
+    thrown.getMessage should include("TenantA")
+    thrown.getMessage should include("TenantB")
   }
 }

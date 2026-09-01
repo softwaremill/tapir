@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: test
+  version: '1.0'
+paths:
+  /books:
+    get:
+      operationId: getBooks
+      parameters:
+      - name: visible
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+  /magazines:
+    get:
+      operationId: getMagazines
+      parameters:
+      - name: tenantId
+        in: query
+        description: The tenant
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
