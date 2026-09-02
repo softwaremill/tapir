@@ -1296,7 +1296,7 @@ lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-v
   )
   .dependsOn(core, openapiDocs, tests % Test)
 
-lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn(enumeratum.jvm(scala3))
+lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn(enumeratum.jvm(scala3) % Test)
 lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
 lazy val openapiDocs2_12 = openapiDocs.jvm(scala2_12).dependsOn(enumeratum.jvm(scala2_12))
 

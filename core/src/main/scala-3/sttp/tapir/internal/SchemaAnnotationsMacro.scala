@@ -20,7 +20,6 @@ private[tapir] object SchemaAnnotationsMacro {
     val ValidateAnn = TypeTree.of[sttp.tapir.Schema.annotations.validate[_]].tpe
     val ValidateEachAnn = TypeTree.of[sttp.tapir.Schema.annotations.validateEach[_]].tpe
     val CustomiseAnn = TypeTree.of[sttp.tapir.Schema.annotations.customise].tpe
-    
 
     val tpe = TypeRepr.of[T]
 
@@ -74,7 +73,7 @@ private[tapir] object SchemaAnnotationsMacro {
         sa => firstAnnArg(EncodedNameAnn).map(arg => '{ ${ sa }.copy(encodedName = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => '{ ${ sa }.copy(validate = ${ Expr.ofList(allAnnArg(ValidateAnn).map(_.asExprOf[sttp.tapir.Validator[T]])) }) },
         sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) },
-        sa => firstAnnArg(CustomiseAnn).map(arg => '{ ${ sa }.withCustomise(${ arg.asExprOf[Schema[Any] => Schema[Any]] } ) }).getOrElse(sa)
+        sa => allAnnArg(CustomiseAnn).foldLeft(sa)((acc, arg) => '{ ${ acc }.withCustomise(${ arg.asExprOf[Schema[Any] => Schema[Any]] }) })
       )
 
     transformations.foldLeft('{ SchemaAnnotations.empty[T] })((sa, t) => t(sa))

@@ -499,18 +499,20 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       */
     class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
 
-    /** Applies an arbitrary transformation `f` to the derived schema of the annotated class, field or enumeration. An escape hatch for
-      * customisations that the other annotations in [[Schema.annotations]] can't express - most often setting a schema attribute, which
-      * documentation interpreters then render (e.g. an OpenAPI extension):
-      * {{{
+    /** Applies `f` to the schema derived for the annotated class, field or enumeration - an escape hatch for what the other
+      * [[Schema.annotations]] can't express, e.g. setting an attribute rendered by a documentation interpreter:
       *
-      * @customise(_.attribute(AttributeKey[List[String]], List("UnPaid", "Paid")))
+      * {{{
+      * @customise(_.docsExtension("x-enum-varnames", List("UnPaid", "Paid")))
       * sealed trait OrderStatus
       * }}}
       *
-      * `f` is applied after the metadata annotations ([[description]], [[encodedExample]], [[default]], [[format]], [[deprecated]],
-      * [[hidden]], [[encodedName]]), so it can override what they set. When deriving a schema for an enumeration, it is applied before
-      * [[validate]] and [[validateEach]] - a validator set inside `f` is therefore added to, not replaced by, those annotations.
+      * All `@customise` annotations are applied, in declaration order. `Schema.derived` and auto derivation apply annotations in
+      * declaration order; `Schema.derivedEnumeration` and the enumeration / enumeratum codecs apply `f` after the metadata annotations and
+      * before [[validate]] / [[validateEach]].
+      *
+      * `f` is `Schema[Any] => Schema[Any]`, not `Schema[?] => Schema[?]`: the Scala 2 macro splices its tree, and an existential parameter
+      * type carries a skolem that can't be lifted.
       */
     class customise(val f: Schema[Any] => Schema[Any]) extends StaticAnnotation with Serializable
   }

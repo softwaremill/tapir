@@ -88,7 +88,7 @@ NettySyncServer(NettyConfig.default.socketBacklog(256))
 ```
 
 ```{note}
-Unlike other server interpreters, the Netty-based servers are by default
+Unlike other server interpreters, the Netty-based servers are bydefault
 configured to return a 404, in case none of the given endpoints match a request.
 This can be changed by using a different `RejectHandler`.
 
