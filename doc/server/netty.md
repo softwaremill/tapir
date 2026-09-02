@@ -130,8 +130,11 @@ with `Connection: close` is sent and the connection is closed - `503` if the
 request had been received in full, `408` if the body was still incomplete.
 Ignored for Web Sockets, once the handshake has been established.
 
-The `408` relies on a handler added by `NettyConfig.defaultInitPipeline`; a
-custom `initPipeline` which omits it always reports `503`.
+The `408` relies on a `RequestBodyCompletionTracker` handler, which
+`NettyConfig.defaultInitPipeline` adds whenever a request timeout is set. A
+custom `initPipeline` has to add it itself - after the HTTP codec and before
+`HttpStreamsServerHandler` - or an exceeded timeout is always reported as
+`503`.
 
 ## Web sockets
 

@@ -60,7 +60,6 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
 
   private def clientSocket(port: Int): Socket = {
     val socket = new Socket("localhost", port)
-    // only reached if the server neither responds nor closes the connection, i.e. if the request timeout didn't fire at all
     socket.setSoTimeout((shortRequestTimeout * 20).toMillis.toInt)
     socket
   }
