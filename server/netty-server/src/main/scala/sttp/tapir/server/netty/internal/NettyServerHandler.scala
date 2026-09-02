@@ -23,7 +23,7 @@ import sttp.tapir.server.netty.NettyResponseContent.{
 }
 import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, SubscribeTrackingStreamedHttpRequest}
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
-import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, RequestBodyCompletionTracker, Route}
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -68,8 +68,8 @@ class NettyServerHandler[F[_]](
   // if the connection gets closed.
   private[this] val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
-  // Guards against `IdleStateHandler` re-firing `WRITER_IDLE` every `requestTimeout` until a write completes: only the first request
-  // timeout is answered, the connection is closed afterwards. A plain var, as it's only touched on the channel's event loop.
+  // `IdleStateHandler` re-fires `WRITER_IDLE` every `requestTimeout` until a write completes; only the first firing is answered, as the
+  // connection is closed along with the response. A plain var, as it's only touched on the channel's event loop.
   private[this] var requestTimeoutHandled = false
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
@@ -369,7 +369,6 @@ class NettyServerHandler[F[_]](
       handshakeReq: HttpRequest
   ) = {
     ctx.pipeline().remove(this)
-    // the HTTP request framing it keys off is gone after the upgrade, so it would only be dead weight in a Web Socket pipeline
     Option(ctx.pipeline().get(classOf[RequestBodyCompletionTracker])).foreach(tracker => ctx.pipeline().remove(tracker))
     ctx
       .pipeline()

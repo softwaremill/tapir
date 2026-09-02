@@ -93,7 +93,7 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
       statusLinesForTimingOutRequest { (socket, port) =>
         for {
           _ <- send(socket, requestHead(port))
-          // the pause makes the fragment arrive as a separate read, which is what a stalled upload actually looks like
+          // the pause makes the fragment arrive as its own read, as a stalled upload would
           _ <- IO.sleep(pauseBetweenWrites)
           _ <- send(socket, bodyFragment)
         } yield ()
@@ -109,7 +109,6 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
           _ <- send(socket, requestHead(port))
         } yield ()
       }.map { statusLines =>
-        // the first request is answered normally; the body-completion flag has to be reset for the second one to be reported as 408
         statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 408 Request Timeout")
       }.unsafeToFuture()
     }
