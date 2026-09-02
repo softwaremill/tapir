@@ -503,6 +503,7 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * [[Schema.annotations]] can't express, e.g. setting an attribute rendered by a documentation interpreter:
       *
       * {{{
+      * // with sttp.tapir.docs.apispec.DocsExtensionAttribute._ in scope
       * @customise(_.docsExtension("x-enum-varnames", List("UnPaid", "Paid")))
       * sealed trait OrderStatus
       * }}}

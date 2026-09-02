@@ -6,19 +6,17 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.apispec.openapi.Info
 import sttp.apispec.openapi.circe.yaml._
-import sttp.tapir.Schema.annotations.{default, description, customise}
+import sttp.tapir.Schema.annotations.{customise, default, description}
 import sttp.tapir._
+import sttp.tapir.docs.apispec.DocsExtensionAttribute._
 import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest._
 import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.json.circe._
-import sttp.tapir.docs.apispec.DocsExtensionAttribute._
-import enumeratum.{Enum, EnumEntry}
-import enumeratum.values.{IntEnum, IntEnumEntry, ShortEnum, ShortEnumEntry}
+
 import scala.collection.immutable
-import sttp.tapir.codec.enumeratum._
 
 class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
+  import sttp.tapir.codec.enumeratum._
 
   test("should use enumeratum validator for array elements") {
     val expectedYaml = load("validator/expected_valid_enumeratum.yml")
@@ -164,6 +162,8 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
 }
 
 object VerifyYamlEnumeratumTest {
+  import enumeratum.{Enum, EnumEntry}
+  import enumeratum.values.{IntEnum, IntEnumEntry, ShortEnum, ShortEnumEntry}
 
   case class FruitWithEnum(fruit: String, amount: Int, fruitType: List[FruitType])
 
