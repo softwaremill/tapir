@@ -8,6 +8,8 @@ import io.netty.handler.codec.http.{HttpRequest, LastHttpContent}
   *
   * Has to be included in the pipeline after the HTTP codec and before `HttpStreamsServerHandler`, which replaces the individual
   * [[HttpRequest]] / [[LastHttpContent]] messages this relies on with a single streamed request.
+  *
+  * Tracked per connection, not per request: headers of a following request reset it, so a slow handler can report 408 instead of 503.
   */
 class RequestBodyCompletionTracker extends ChannelInboundHandlerAdapter {
 
