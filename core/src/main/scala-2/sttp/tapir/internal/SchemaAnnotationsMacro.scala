@@ -18,6 +18,7 @@ private[tapir] object SchemaAnnotationsMacro {
     val EncodedNameAnn = typeOf[sttp.tapir.Schema.annotations.encodedName]
     val ValidateAnn = typeOf[sttp.tapir.Schema.annotations.validate[_]]
     val ValidateEachAnn = typeOf[sttp.tapir.Schema.annotations.validateEach[_]]
+    val CustomiseAnn = typeOf[sttp.tapir.Schema.annotations.customise]
 
     val weakType = weakTypeOf[T]
 
@@ -41,9 +42,13 @@ private[tapir] object SchemaAnnotationsMacro {
     val encodedName = annotations.collectFirst { case ann if ann.tree.tpe <:< EncodedNameAnn => firstArg(ann) }
     val validate = annotations.collect { case ann if ann.tree.tpe <:< ValidateAnn => firstArg(ann) }
     val validateEach = annotations.collect { case ann if ann.tree.tpe <:< ValidateEachAnn => firstArg(ann) }
+    val customise = annotations.collect { case ann if ann.tree.tpe <:< CustomiseAnn => firstArg(ann) }
+
+    val base =
+      q"""_root_.sttp.tapir.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $hidden, $encodedName, _root_.scala.List(..$validate), _root_.scala.List(..$validateEach))"""
 
     c.Expr[SchemaAnnotations[T]](
-      q"""_root_.sttp.tapir.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $hidden, $encodedName, _root_.scala.List(..$validate), _root_.scala.List(..$validateEach))"""
+      customise.foldLeft(base)((acc, f) => q"$acc.withCustomise($f)")
     )
   }
 }

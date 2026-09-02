@@ -498,7 +498,24 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * }}}
       */
     class validateEach[T](val v: Validator[T]) extends StaticAnnotation with Serializable
-    class customise(val f: Schema[?] => Schema[?]) extends StaticAnnotation with Serializable
+
+    /** Applies `f` to the schema derived for the annotated class, field or enumeration - an escape hatch for what the other
+      * [[Schema.annotations]] can't express, e.g. setting an attribute rendered by a documentation interpreter:
+      *
+      * {{{
+      * // with sttp.tapir.docs.apispec.DocsExtensionAttribute._ in scope
+      * @customise(_.docsExtension("x-enum-varnames", List("UnPaid", "Paid")))
+      * sealed trait OrderStatus
+      * }}}
+      *
+      * All `@customise` annotations are applied, in declaration order. `Schema.derived` and auto derivation apply annotations in
+      * declaration order; `Schema.derivedEnumeration` and the enumeration / enumeratum codecs apply `f` after the metadata annotations and
+      * before [[validate]] / [[validateEach]].
+      *
+      * `f` is `Schema[Any] => Schema[Any]`, not `Schema[?] => Schema[?]`: the Scala 2 macro splices its tree, and an existential parameter
+      * type carries a skolem that can't be lifted.
+      */
+    class customise(val f: Schema[Any] => Schema[Any]) extends StaticAnnotation with Serializable
   }
 
   /** Wraps the given schema with a single-field product, where `fieldName` maps to `schema`.
