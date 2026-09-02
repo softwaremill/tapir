@@ -69,6 +69,10 @@ class NettyServerHandler[F[_]](
   // if the connection gets closed.
   private[this] val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
+  // Guards against `IdleStateHandler` re-firing `WRITER_IDLE` every `requestTimeout` until a write completes: only the first request
+  // timeout is answered, the connection is closed afterwards. A plain var, as it's only touched on the channel's event loop.
+  private[this] var requestTimeoutHandled = false
+
   private val logger = LoggerFactory.getLogger(getClass.getName)
   private final val WebSocketAutoPingHandlerName = "wsAutoPingHandler"
 
@@ -86,7 +90,7 @@ class NettyServerHandler[F[_]](
       // Initialize our ExecutionContext
       eventLoopContext = ExecutionContext.fromExecutor(ctx.channel.eventLoop)
       config.idleTimeout.foreach { idleTimeout =>
-        ctx.pipeline().addFirst(new IdleStateHandler(0, 0, idleTimeout.toMillis.toInt, TimeUnit.MILLISECONDS))
+        ctx.pipeline().addFirst(new IdleStateHandler(0, 0, idleTimeout.toMillis, TimeUnit.MILLISECONDS))
       }
       // When the channel closes we want to cancel any pending dispatches.
       // Since the listener will be executed from the channels EventLoop everything is thread safe.
@@ -109,6 +113,7 @@ class NettyServerHandler[F[_]](
   }
 
   private def handleRequestTimeout(ctx: ChannelHandlerContext): Unit = {
+    requestTimeoutHandled = true
     val timeoutDescription = config.requestTimeout.map(_.toString).getOrElse("(not set)")
     if (wasRequestBodyFullyReceived(ctx)) {
       logger.error(s"Closing connection due to exceeded response timeout of $timeoutDescription")
@@ -123,8 +128,9 @@ class NettyServerHandler[F[_]](
     evt match {
       case e: IdleStateEvent =>
         e.state() match {
-          case IdleState.WRITER_IDLE => handleRequestTimeout(ctx)
-          case IdleState.ALL_IDLE    =>
+          case IdleState.WRITER_IDLE if !requestTimeoutHandled =>
+            handleRequestTimeout(ctx)
+          case IdleState.ALL_IDLE =>
             logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
             val _ = ctx.close()
           case _ => ()
