@@ -21,7 +21,6 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ReactivePublisherNettyResponseContent,
   ReactiveWebSocketProcessorNettyResponseContent
 }
-import RequestBodyCompletionTracker.wasRequestBodyFullyReceived
 import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, SubscribeTrackingStreamedHttpRequest}
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
@@ -105,21 +104,20 @@ class NettyServerHandler[F[_]](
     }
   }
 
-  def writeErrorThenClose(ctx: ChannelHandlerContext, errorResponseStatus: HttpResponseStatus): Unit = {
-    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, errorResponseStatus)
+  private def writeErrorThenClose(ctx: ChannelHandlerContext, status: HttpResponseStatus): Unit = {
+    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status)
     res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
     res.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
     val _ = ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
   }
 
   private def handleRequestTimeout(ctx: ChannelHandlerContext): Unit = {
-    requestTimeoutHandled = true
     val timeoutDescription = config.requestTimeout.map(_.toString).getOrElse("(not set)")
-    if (wasRequestBodyFullyReceived(ctx)) {
-      logger.error(s"Closing connection due to exceeded response timeout of $timeoutDescription")
+    if (RequestBodyCompletionTracker.wasRequestBodyFullyReceived(ctx)) {
+      logger.error(s"Closing connection with 503: no response produced within the request timeout of $timeoutDescription")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
-      logger.debug(s"Closing connection: the request body was not fully received within the request timeout of $timeoutDescription")
+      logger.debug(s"Closing connection with 408: request body not fully received within the request timeout of $timeoutDescription")
       writeErrorThenClose(ctx, HttpResponseStatus.REQUEST_TIMEOUT)
     }
   }
@@ -129,6 +127,7 @@ class NettyServerHandler[F[_]](
       case e: IdleStateEvent =>
         e.state() match {
           case IdleState.WRITER_IDLE if !requestTimeoutHandled =>
+            requestTimeoutHandled = true
             handleRequestTimeout(ctx)
           case IdleState.ALL_IDLE =>
             logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
@@ -370,7 +369,8 @@ class NettyServerHandler[F[_]](
       handshakeReq: HttpRequest
   ) = {
     ctx.pipeline().remove(this)
-    Option(ctx.pipeline().get(classOf[RequestBodyCompletionTracker])).foreach(ctx.pipeline().remove)
+    // the HTTP request framing it keys off is gone after the upgrade, so it would only be dead weight in a Web Socket pipeline
+    Option(ctx.pipeline().get(classOf[RequestBodyCompletionTracker])).foreach(tracker => ctx.pipeline().remove(tracker))
     ctx
       .pipeline()
       .addAfter(
