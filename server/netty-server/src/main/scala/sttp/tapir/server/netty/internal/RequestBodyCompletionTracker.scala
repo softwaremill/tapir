@@ -24,6 +24,7 @@ class RequestBodyCompletionTracker extends ChannelInboundHandlerAdapter {
   private[internal] var bodyFullyReceived: Boolean = true
 
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
+    // the order of the cases matters: FullHttpRequest is both an HttpRequest and a LastHttpContent, and has to match the latter
     msg match {
       case _: LastHttpContent => bodyFullyReceived = true
       case _: HttpRequest     => bodyFullyReceived = false
