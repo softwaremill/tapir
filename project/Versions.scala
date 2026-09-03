@@ -21,6 +21,7 @@ object Versions {
   val swaggerUi = "5.32.14"
   val upickle = "4.4.3"
   val upickle3 = "3.3.1"
+  val hearth = "0.4.1"
   val playJson = "3.0.1"
   val play29Json = "3.0.6"
   val finatra = "24.2.0"

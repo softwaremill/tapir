@@ -197,6 +197,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   playJson.projectRefs ++
   play29Json.projectRefs ++
   picklerJson.projectRefs ++
+  picklerHearthJson.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
   tethysJson.projectRefs ++
@@ -975,6 +976,39 @@ lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
       "com.lihaoyi" %%% "upickle" % Versions.upickle3,
       scalaTest.value % Test
     )
+  )
+  .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
+  .jsPlatform(scalaVersions = List(scala3), settings = commonJsSettings)
+  .dependsOn(core % "compile->compile;test->test")
+
+// PoC: a re-implementation of `picklerJson` which derives the tapir Schema and the jsoniter-scala
+// JsonValueCodec in a single Hearth-based macro expansion, instead of deriving a Schema and a
+// uPickle ReadWriter separately.
+//
+// It lives in `sttp.tapir.json.pickler.next` rather than `sttp.tapir.json.pickler`, so that both
+// implementations can sit on one classpath. That is what makes differential testing possible: the
+// same fixture can be encoded by the incumbent and by this one, and the two JSON outputs compared
+// directly. At cutover the `next` package level is dropped and `json/pickler` is deleted.
+//
+// The package is deliberately NOT called `hearth`: inside `sttp.tapir.json.pickler.hearth`, an
+// `import hearth.MacroCommons` resolves to the enclosing package rather than the Hearth library on
+// Scala 2 (Scala 3's name resolution happens to cope, Scala 2's does not), which would break the
+// planned 2.13 cross-build.
+lazy val picklerHearthJson: ProjectMatrix = (projectMatrix in file("json/pickler-hearth"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-pickler-hearth",
+    libraryDependencies ++= Seq(
+      "com.kubuszok" %%% "hearth" % Versions.hearth,
+      compilerPlugin("com.kubuszok" %% "hearth-cross-quotes" % Versions.hearth),
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % Versions.jsoniter,
+      scalaTest.value % Test
+    ),
+    // NB: Hearth requires -language:implicitConversions (to unwrap `Type.Lazy[A]` into `Type[A]` at use sites);
+    // tapir's commonSettings already enables it, so setting it here again only produces a redundancy warning.
+    // Uncomment to debug the cross-quotes compiler plugin's rewriting:
+    // scalacOptions += "-P:hearth.cross-quotes:logging=true",
+    publish / skip := true
   )
   .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
   .jsPlatform(scalaVersions = List(scala3), settings = commonJsSettings)
