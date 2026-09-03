@@ -100,7 +100,7 @@ Tapir's endpoints) are added to a Netty server.
 
 `NettyConfig` exposes a number of configuration options which allows to
 customise the server socket, such as:
-* request timeout
+* request timeout, see [request timeout](#request-timeout) below
 * connection timeout
 * linger timeout
 * graceful shutdown timeout: when stopped e.g. using
@@ -120,6 +120,21 @@ import scala.concurrent.duration.*
 
 val config = NettyConfig.default.requestTimeout(5.seconds)
 ```
+
+### Request timeout
+
+Spans from receiving the request headers to starting to write a response, so it
+also bounds how long the client has to send the body: keep it higher than your
+longest upload, and lower than `idleTimeout`. When exceeded, an empty response
+with `Connection: close` is sent and the connection is closed - `503` if the
+request had been received in full, `408` if the body was still incomplete.
+Ignored for Web Sockets, once the handshake has been established.
+
+The `408` relies on a `RequestBodyCompletionTracker` handler, which
+`NettyConfig.defaultInitPipeline` adds whenever a request timeout is set. A
+custom `initPipeline` has to add it itself - after the HTTP codec and before
+`HttpStreamsServerHandler` - or an exceeded timeout is always reported as
+`503`.
 
 ## Web sockets
 
