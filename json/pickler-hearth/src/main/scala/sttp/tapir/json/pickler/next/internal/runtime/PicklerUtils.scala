@@ -11,7 +11,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core.{
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
-import sttp.tapir.{Codec, Schema, SchemaType}
+import sttp.tapir.{Codec, Schema}
 
 import scala.util.{Failure, Success, Try}
 
@@ -44,13 +44,9 @@ object PicklerUtils {
   /** `null` for reference types, the boxed zero for primitives. Used as jsoniter's `nullValue`. */
   def nullValueOf[A]: A = null.asInstanceOf[A]
 
-  // -- Phase 0 placeholders -------------------------------------------------------------------------------------
-  // These exist only so that the macro skeleton produces type-correct, inspectable trees before any derivation
-  // rules are implemented. They are replaced rule-by-rule in Phase 1+ and must not survive into a release.
-
-  /** Placeholder schema, so the skeleton can emit a `Schema[A]` before the schema rules exist. */
-  def notImplementedSchema[A](typeName: String): Schema[A] =
-    Schema[A](SchemaType.SString()).description(s"TODO: schema derivation not implemented for $typeName")
+  // -- Codec placeholders ---------------------------------------------------------------------------------------
+  // The schema half is derived for real (see `internal.compiletime.SchemaDerivation`); the encoder and decoder are
+  // still stubs, replaced in Phases 2 and 3. These must not survive into a release.
 
   /** Placeholder decoder body. Returns `A` (via `Nothing`) so the skeleton type-checks without the decoder rules. */
   def notImplementedDecode[A](in: JsonReader, typeName: String): A =

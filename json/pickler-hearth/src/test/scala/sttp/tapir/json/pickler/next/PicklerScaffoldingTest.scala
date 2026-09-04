@@ -3,20 +3,21 @@ package sttp.tapir.json.pickler.next
 import org.scalatest.OptionValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.Schema
+import sttp.tapir.SchemaType.SProduct
+import sttp.tapir.{FieldName, Schema}
 
-/** Phase 0 acceptance test.
+/** Structural acceptance test for the macro skeleton.
   *
-  * This does not test any derivation *behaviour* — the rules are still stubs. What it proves is that the macro
-  * skeleton expands end to end: the bundle is constructed, the cross-quotes plugin is active, the shared
-  * `ValDefsCache` produces well-scoped `def`s (a cross-splice staging bug would fail compilation here), and the
-  * emitted expression type-checks as a `Pickler[A]`.
-  *
-  * Once the schema rules land in Phase 1, these assertions get replaced by the real `SchemaDerivationTest`.
+  * Behavioural coverage of the schema half lives in `SchemaDerivationTest`, ported verbatim from the incumbent
+  * module. What this file pins down is the *plumbing*, which that suite exercises only incidentally: that the bundle
+  * is constructed, the cross-quotes plugin is active, the shared `ValDefsCache` produces well-scoped `def`s (a
+  * cross-splice staging bug would fail compilation here rather than at runtime), and that both entry points
+  * — `Pickler.derived` and `Pickler.schemaFor` — agree.
   */
 class PicklerScaffoldingTest extends AnyFlatSpec with Matchers with OptionValues {
 
   case class Simple(fieldA: Int, fieldB: String)
+  case class Nested(first: Simple, second: Simple)
 
   behavior of "the Pickler derivation skeleton"
 
@@ -27,14 +28,28 @@ class PicklerScaffoldingTest extends AnyFlatSpec with Matchers with OptionValues
     pickler.codec should not be null
   }
 
-  it should "expose the derived schema (currently a Phase 0 placeholder)" in {
+  it should "expose a fully derived schema" in {
     val schema: Schema[Simple] = Pickler.derived[Simple].schema
-    schema.description.value should include("schema derivation not implemented")
+    schema.name.value.fullName should endWith("Simple")
+    schema.schemaType shouldBe a[SProduct[?]]
+    schema.schemaType.asInstanceOf[SProduct[Simple]].fields.map(_.name) shouldBe List(
+      FieldName("fieldA"),
+      FieldName("fieldB")
+    )
   }
 
-  it should "support the schema-only entry point" in {
-    val schema = Pickler.schemaFor[Simple]
-    schema.description.value should include("schema derivation not implemented")
+  it should "derive the same schema through the schema-only entry point" in {
+    // The two entry points share `derivePicklerCore`, so a divergence here means the schema branch is sensitive to
+    // whether the codec halves are also being derived -- exactly the kind of coupling the single-expansion design
+    // exists to prevent.
+    Pickler.schemaFor[Simple] shouldBe Pickler.derived[Simple].schema
+  }
+
+  it should "hoist derived schemas rather than inlining them at every occurrence" in {
+    // `Nested` mentions `Simple` twice; both must resolve to the same cached `lazy val`.
+    val schema = Pickler.schemaFor[Nested].schemaType.asInstanceOf[SProduct[Nested]]
+    val fieldSchemas = schema.fields.map(_.schema)
+    fieldSchemas.head should be theSameInstanceAs fieldSchemas(1)
   }
 
   it should "build a tapir codec from the pickler" in {

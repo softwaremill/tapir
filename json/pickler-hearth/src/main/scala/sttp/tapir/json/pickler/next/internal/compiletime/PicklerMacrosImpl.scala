@@ -22,7 +22,7 @@ import sttp.tapir.json.pickler.next.internal.runtime.{PicklerFactories, PicklerU
   * `derive*Recursively` methods are deliberate stubs; Phase 1+ replaces them with rule pipelines without changing any
   * of the surrounding structure.
   */
-trait PicklerMacrosImpl extends DerivationTimeout {
+trait PicklerMacrosImpl extends DerivationTimeout with AnnotationSupport with SchemaDerivation {
   this: MacroCommons & StdExtensions & LoadStandardExtensionsOnce =>
 
   override protected def derivationSettingsNamespace: String = "tapirPickler"
@@ -80,12 +80,14 @@ trait PicklerMacrosImpl extends DerivationTimeout {
       .namedScope(s"Deriving Schema for ${Type[A].prettyPrint} at: ${Environment.currentPosition.prettyPrint}") {
         MIO.scoped { runSafe =>
           val cache = ValDefsCache.mlocal
-          val evConfig: Option[PicklerConfiguration] = configExpr.semiEval.toOption
+          // No `semiEval` of the configuration here: the schema chain applies `toEncodedName` /
+          // `toDiscriminatorValue` at runtime (see `SchemaDerivation`), so there is nothing to fold at compile time
+          // and nothing to keep in sync between a folded and an unfolded code path.
 
           val schemaExpr = runSafe {
             for {
               _ <- ensureStandardExtensionsLoaded()
-              result <- deriveSchemaRecursively[A](cache, evConfig, selfType)
+              result <- deriveSchemaRecursively[A](cache, configExpr, selfType)
             } yield result
           }
 
@@ -162,7 +164,7 @@ trait PicklerMacrosImpl extends DerivationTimeout {
             )
           )
 
-          val schemaMIO: MIO[Expr[Schema[A]]] = deriveSchemaRecursively[A](cache, evConfig, selfType)
+          val schemaMIO: MIO[Expr[Schema[A]]] = deriveSchemaRecursively[A](cache, configExpr, selfType)
 
           // Encoder body, cached as `def pickler_encode_A(a: A, w: JsonWriter, c: PicklerConfiguration): Unit`.
           // Forward-declaring before deriving the body is what lets a recursive type refer back to this def.
@@ -232,17 +234,18 @@ trait PicklerMacrosImpl extends DerivationTimeout {
   // Phase 0 stubs -- replaced by rule pipelines in Phase 1+
   // ---------------------------------------------------------------------------------------------------------------
 
+  /** Entry into the schema rule pipeline.
+    *
+    * The `inProgress` set is created here, once per expansion, so that the recursion guard has the same lifetime as
+    * the `ValDefsCache` it cooperates with.
+    */
   private def deriveSchemaRecursively[A: Type](
       cache: MLocal[ValDefsCache],
-      evConfig: Option[PicklerConfiguration],
+      configExpr: Expr[PicklerConfiguration],
       selfType: Option[??]
   ): MIO[Expr[Schema[A]]] = {
-    val _ = (cache, evConfig, selfType)
-    // `plainPrint`, not `prettyPrint`: the latter embeds ANSI colour escapes, which are fine in a log message but
-    // must never end up inside a string literal in the generated code.
-    val typeName = Expr(Type[A].plainPrint)
-    Log.info(s"[stub] Schema derivation for ${Type[A].prettyPrint}") >>
-      MIO.pure(Expr.quote(PicklerUtils.notImplementedSchema[A](Expr.splice(typeName))))
+    val inProgress: MLocal[Set[String]] = MLocal(Set.empty[String])(identity)((a, b) => a ++ b)
+    deriveSchemaFor[A](using SchemaCtx(Type[A], configExpr, cache, inProgress, selfType))
   }
 
   private def deriveEncoderRecursively[A: Type](
