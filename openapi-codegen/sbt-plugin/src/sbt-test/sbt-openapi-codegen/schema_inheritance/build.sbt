@@ -1,7 +1,7 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "2.13.18",
+    scalaVersion := "3.9.0",
     version := "0.1",
     openapiGenerateEndpointTypes := true,
     openapiSwaggerFile := baseDirectory.value / "specs" / "core.yaml",
