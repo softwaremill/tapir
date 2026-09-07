@@ -305,6 +305,9 @@ field of a case class. One way the automatic & semi-automatic derivation can be 
 * `@validate` will add the given validator to a case class field
 * `@validateEach` will add the given validator to the elements of a case class field. Useful for validating the
   value contained in an `Option` (when it's defined), and collection elements
+* `@customise` applies an arbitrary `Schema[Any] => Schema[Any]` function to the schema derived for the annotated
+  class, field or enumeration; an escape hatch for what the annotations above can't express. All `@customise`
+  annotations are applied, in declaration order
 
 These annotations will adjust schemas, after they are looked up using the normal implicit mechanisms.
 

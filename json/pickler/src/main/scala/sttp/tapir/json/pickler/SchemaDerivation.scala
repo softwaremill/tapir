@@ -117,7 +117,7 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
           '{ $schema.modifyUnsafe[X](Schema.ModifyCollectionElements)((_: Schema[X]).validate($ann.v.asInstanceOf[Validator[X]])) }
         case '{ $ann: Schema.annotations.format }     => '{ $schema.format($ann.format) }
         case '{ $ann: Schema.annotations.deprecated } => '{ $schema.deprecated(true) }
-        case '{ $ann: Schema.annotations.customise }  => '{ $ann.f($schema).asInstanceOf[Schema[X]] }
+        case '{ $ann: Schema.annotations.customise }  => '{ $ann.f($schema.asInstanceOf[Schema[Any]]).asInstanceOf[Schema[X]] }
         case _                                        => schema
     }
 

@@ -55,7 +55,7 @@ def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List
 
 def versionedScalaJvmSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case Some((3, _))            => List(sourceDir / "scalajvm-3")
+    case Some((3, _))            => List(sourceDir / "scalajvm-3", sourceDir / "scalajvm-3-2.13+")
     case Some((2, n)) if n >= 13 => List(sourceDir / "scalajvm-2", sourceDir / "scalajvm-3-2.13+")
     case _                       => List(sourceDir / "scalajvm-2")
   }
@@ -1257,7 +1257,13 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
       "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
       "com.softwaremill.sttp.apispec" %%% "openapi-model" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test
-    )
+    ),
+    Test / scalacOptions ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3, _)) => Seq("-Yretain-trees")
+        case _            => Seq()
+      }
+    }
   )
   .jvmPlatform(
     scalaVersions = scala2And3Versions,
@@ -1290,7 +1296,7 @@ lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-v
   )
   .dependsOn(core, openapiDocs, tests % Test)
 
-lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn()
+lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn(enumeratum.jvm(scala3) % Test)
 lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
 lazy val openapiDocs2_12 = openapiDocs.jvm(scala2_12).dependsOn(enumeratum.jvm(scala2_12))
 
