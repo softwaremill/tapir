@@ -85,16 +85,16 @@ This method may be used both with automatic and semi-automatic derivation.
 
 ### Derivation for recursive types
 
-In Scala3, any schemas for recursive types need to be provided as typed `implicit def` (not a `given`)!
+In Scala3, any schemas for recursive types need to be provided using by-name givens (not a direct `given`)!
 For example:
 
 ```scala mdoc:silent
 case class RecursiveTest(data: List[RecursiveTest])
 object RecursiveTest:
-  implicit def f1Schema: Schema[RecursiveTest] = Schema.derived[RecursiveTest]
+  given f1Schema: () => Schema[RecursiveTest] = Schema.derived[RecursiveTest]
 ```
 
-The implicit doesn't have to be defined in the companion object, just anywhere in scope. This applies to cases where
+The `given` doesn't have to be defined in the companion object, just anywhere in scope. This applies to cases where
 the schema is looked up implicitly, e.g. for `jsonBody`.
 
 ### Derivation for union types
