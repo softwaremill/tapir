@@ -29,6 +29,9 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
     interval = org.scalatest.time.Span(150, org.scalatest.time.Millis)
   )
 
+  private val timingOutRequest = new TimingOutRequestSpecData(eventLoopGroup)
+  import timingOutRequest._
+
   def tests(): List[Test] = List(
     Test("properly update metrics when a request times out") {
       val e = endpoint.post
@@ -85,6 +88,29 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
           }
         }
         .unsafeToFuture()
+    },
+    Test("respond with status 408 when not all declared request body bytes are received") {
+      statusLinesForTimingOutRequest { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port))
+          // the pause makes the fragment arrive as its own read, as a stalled upload would
+          _ <- IO.sleep(pauseBetweenWrites)
+          _ <- send(socket, bodyFragment)
+        } yield ()
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
+    Test("respond with status 408 for an incomplete request following a complete one on the same connection") {
+      statusLinesForTimingOutRequest { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port, bodyFragment.length) ++ bodyFragment)
+          _ <- IO.sleep(pauseBetweenWrites)
+          _ <- send(socket, requestHead(port))
+        } yield ()
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
     }
   )
 }
