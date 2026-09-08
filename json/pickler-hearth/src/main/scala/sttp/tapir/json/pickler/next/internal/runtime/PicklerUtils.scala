@@ -1,13 +1,6 @@
 package sttp.tapir.json.pickler.next.internal.runtime
 
-import com.github.plokhotnyuk.jsoniter_scala.core.{
-  readFromString,
-  writeToString,
-  JsonReader,
-  JsonReaderException,
-  JsonValueCodec,
-  ReaderConfig
-}
+import com.github.plokhotnyuk.jsoniter_scala.core.{readFromString, writeToString, JsonReaderException, JsonValueCodec, ReaderConfig}
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
@@ -40,15 +33,4 @@ object PicklerUtils {
       }
     } { a => writeToString[A](a) }
   }
-
-  /** `null` for reference types, the boxed zero for primitives. Used as jsoniter's `nullValue`. */
-  def nullValueOf[A]: A = null.asInstanceOf[A]
-
-  // -- Codec placeholders ---------------------------------------------------------------------------------------
-  // The schema half is derived for real (see `internal.compiletime.SchemaDerivation`); the encoder and decoder are
-  // still stubs, replaced in Phases 2 and 3. These must not survive into a release.
-
-  /** Placeholder decoder body. Returns `A` (via `Nothing`) so the skeleton type-checks without the decoder rules. */
-  def notImplementedDecode[A](in: JsonReader, typeName: String): A =
-    in.decodeError(s"TODO: decoder derivation not implemented for $typeName")
 }

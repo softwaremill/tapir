@@ -32,8 +32,12 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     def ProductFieldOf[A: Type]: Type[SProductField[A]] = Type.of[SProductField[A]]
     lazy val SNameT: Type[SName] = Type.of[SName]
     lazy val StringT: Type[String] = Type.of[String]
+    lazy val CharT: Type[Char] = Type.of[Char]
     lazy val AnyT: Type[Any] = Type.of[Any]
+    lazy val AnyValT: Type[AnyVal] = Type.of[AnyVal]
     lazy val ListAnyT: Type[List[Any]] = Type.of[List[Any]]
+    lazy val ListStringT: Type[List[String]] = Type.of[List[String]]
+    def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
     lazy val EncodedName: Type[Schema.annotations.encodedName] = Type.of[Schema.annotations.encodedName]
   }
 
@@ -117,6 +121,7 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
         //     only available on Scala 3.7+, and tapir builds Scala 3 at 3.3.8. Ordering gives us the same guarantee
         //     without the API. See the note on `UseImplicitRule`.
         UseBuiltInLeafRule,
+        HandleAsValueClassRule,
         HandleAsOptionRule,
         HandleAsMapRule,
         HandleAsCollectionRule,
@@ -202,8 +207,13 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
   }
 
   private object UseBuiltInLeafRule extends SchemaRule("use tapir's built-in schema for a scalar-like type") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      if (!isBuiltInLeaf[A]) MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not a scalar-like built-in"))
+    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
+      implicit val CharT: Type[Char] = STypes.CharT
+      if (Type[A] =:= Type[Char])
+        // tapir core declares no `Schema[Char]`, but jsoniter writes a `Char` as a one-character string. Supplying the
+        // matching `SString` here is what keeps the schema and the codec in agreement.
+        MIO.pure(Rule.matched(Expr.quote(SchemaUtils.stringLikeSchema[A])))
+      else if (!isBuiltInLeaf[A]) MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not a scalar-like built-in"))
       else {
         implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
         MIO.pure(Expr.summonImplicit[Schema[A]].toOption match {
@@ -211,6 +221,25 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
           case None       => Rule.yielded(s"no built-in Schema[${Type[A].plainPrint}] in scope")
         })
       }
+    }
+  }
+
+  /** An `AnyVal` wrapper is documented as its inner type, because that is how jsoniter writes it (unwrapped). Matches
+    * tapir core's own `Schema.derived` for value classes. Restricted to `AnyVal`: Hearth's `IsValueType` also matches
+    * opaque types and Java boxes, which jsoniter does not unwrap.
+    */
+  private object HandleAsValueClassRule extends SchemaRule("handle as AnyVal value class") {
+    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
+      implicit val AnyValT: Type[AnyVal] = STypes.AnyValT
+      Type[A] match {
+        case IsValueType(isValueType) if Type[A] <:< Type[AnyVal] =>
+          import isValueType.Underlying as Inner
+          deriveSchemaFor[Inner](using sctx.nest[Inner]).map { inner =>
+            Rule.matched(Expr.quote(Expr.splice(inner).asInstanceOf[Schema[A]]))
+          }
+        case _ => MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not an AnyVal value class"))
+      }
+    }
   }
 
   private object HandleAsOptionRule extends SchemaRule("handle as Option") {
@@ -382,29 +411,76 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     val config = sctx.config
     val children = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList)
 
-    children
-      .foldLeft(MIO.pure(List.empty[Expr[Schema[Any]]])) { case (acc, (_, child)) =>
-        acc.flatMap { schemas =>
-          import child.Underlying as Child
-          deriveSchemaFor[Child](using sctx.nest[Child]).map { childSchema =>
-            schemas :+ Expr.quote(Expr.splice(childSchema).asInstanceOf[Schema[Any]])
+    // Plan §5.2: a hierarchy whose leaves are *all* singletons is documented as a string with an enumeration
+    // validator, not as a coproduct -- because that is how it is encoded. `CodecDerivation.coproductConfig` makes the
+    // same test; if the two ever disagree, the schema will document an object while the codec writes a string.
+    val allSingletons = children.nonEmpty && children.forall { case (_, child) =>
+      import child.Underlying as Child
+      SingletonValue.parse[Child].toEither.isRight
+    }
+
+    if (allSingletons) deriveStringEnumSchema[A](children)
+    else
+      children
+        .foldLeft(MIO.pure(List.empty[Expr[Schema[Any]]])) { case (acc, (_, child)) =>
+          acc.flatMap { schemas =>
+            import child.Underlying as Child
+            deriveSchemaFor[Child](using sctx.nest[Child]).map { childSchema =>
+              schemas :+ Expr.quote(Expr.splice(childSchema).asInstanceOf[Schema[Any]])
+            }
           }
         }
-      }
-      .flatMap { childSchemas =>
-        val subtypes = childSchemas.foldRight(Expr.quote(Nil: List[Schema[Any]])) { (childSchema, tail) =>
-          Expr.quote(Expr.splice(childSchema) :: Expr.splice(tail))
-        }
-        setCachedAndGet[A](
-          sctx.cache,
-          Expr.quote {
-            SchemaUtils.enrichSchema[A](
-              SchemaUtils.coproductSchema[A](Expr.splice(name), Expr.splice(subtypes), Expr.splice(config)),
-              Expr.splice(annotations)
-            )
+        .flatMap { childSchemas =>
+          val subtypes = childSchemas.foldRight(Expr.quote(Nil: List[Schema[Any]])) { (childSchema, tail) =>
+            Expr.quote(Expr.splice(childSchema) :: Expr.splice(tail))
           }
+          setCachedAndGet[A](
+            sctx.cache,
+            Expr.quote {
+              SchemaUtils.enrichSchema[A](
+                SchemaUtils.coproductSchema[A](Expr.splice(name), Expr.splice(subtypes), Expr.splice(config)),
+                Expr.splice(annotations)
+              )
+            }
+          )
+        }
+  }
+
+  /** `SString` plus a `Validator.enumeration` of the singleton values — the schema counterpart of encoding an
+    * all-singleton hierarchy as a bare string.
+    */
+  private def deriveStringEnumSchema[A: SchemaCtx](children: List[(String, ??<:[A])]): MIO[Expr[Schema[A]]] = {
+    implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
+    implicit val SNameT: Type[SName] = STypes.SNameT
+    implicit val ListA: Type[List[A]] = STypes.ListOf[A]
+    implicit val ListStringT: Type[List[String]] = STypes.ListStringT
+    implicit val StringT: Type[String] = STypes.StringT
+
+    val name = sNameExpr[A]
+    val annotations = typeAnnotationsExpr[A]
+    val config = sctx.config
+
+    val values = children.foldRight(Expr.quote(Nil: List[A])) { case ((_, child), tail) =>
+      import child.Underlying as Child
+      val singleton = SingletonValue.parse[Child].toEither.toOption.get
+      Expr.quote(Expr.splice(singleton.singletonExpr).asInstanceOf[A] :: Expr.splice(tail))
+    }
+    // The encoded name of each case is its discriminator value, computed from the same SName the codec uses.
+    val encodedNames = children.foldRight(Expr.quote(Nil: List[String])) { case ((_, child), tail) =>
+      import child.Underlying as Child
+      val childName = sNameExpr[Child]
+      Expr.quote(Expr.splice(config).toDiscriminatorValue(Expr.splice(childName)) :: Expr.splice(tail))
+    }
+
+    setCachedAndGet[A](
+      sctx.cache,
+      Expr.quote {
+        SchemaUtils.enrichSchema[A](
+          SchemaUtils.stringEnumSchema[A](Expr.splice(name), Expr.splice(values), Expr.splice(encodedNames)),
+          Expr.splice(annotations)
         )
       }
+    )
   }
 
   // -----------------------------------------------------------------------------------------------------------------

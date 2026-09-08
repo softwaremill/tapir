@@ -10,5 +10,9 @@ import sttp.tapir.json.pickler.next.{Pickler, PicklerConfiguration}
   * exactly the types that need no user-visible ceremony.
   */
 object auto {
-  inline implicit def picklerForType[T](implicit config: PicklerConfiguration): Pickler[T] = Pickler.derived[T]
+
+  /** `config` is an `inline` parameter on purpose: the derivation must evaluate the configuration at compile time (see
+    * `PicklerMacrosImpl.foldConfiguration`), which needs the *reference to the given*, not a proxy `val` holding it.
+    */
+  inline implicit def picklerForType[T](implicit inline config: PicklerConfiguration): Pickler[T] = Pickler.derived[T]
 }

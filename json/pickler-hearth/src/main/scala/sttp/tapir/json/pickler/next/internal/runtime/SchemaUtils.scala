@@ -168,6 +168,11 @@ object SchemaUtils {
       Some(SName("Map", typeParameters))
     )
 
+  /** A bare `SString` schema, for a type that tapir core has no schema for but that the codec writes as a string.
+    * `Char` is the only such type today.
+    */
+  def stringLikeSchema[T]: Schema[T] = Schema(SString[T]())
+
   /** A string-valued schema whose validator enumerates the singleton values of an enum-like hierarchy. */
   def stringEnumSchema[T](name: SName, values: List[T], encodedNames: List[String]): Schema[T] = {
     val encoded = values.zip(encodedNames).toMap

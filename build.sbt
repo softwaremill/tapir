@@ -983,7 +983,9 @@ lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
 
 // PoC: a re-implementation of `picklerJson` which derives the tapir Schema and the jsoniter-scala
 // JsonValueCodec in a single Hearth-based macro expansion, instead of deriving a Schema and a
-// uPickle ReadWriter separately.
+// uPickle ReadWriter separately. The codec half is produced by configuring `JsonCodecMaker.make`
+// from the derived schema's names, so `jsoniter-scala-macros` is a *compile* dependency: the
+// generated code calls the macro, which therefore has to be on the user's compile classpath too.
 //
 // It lives in `sttp.tapir.json.pickler.next` rather than `sttp.tapir.json.pickler`, so that both
 // implementations can sit on one classpath. That is what makes differential testing possible: the
@@ -1002,6 +1004,7 @@ lazy val picklerHearthJson: ProjectMatrix = (projectMatrix in file("json/pickler
       "com.kubuszok" %%% "hearth" % Versions.hearth,
       compilerPlugin("com.kubuszok" %% "hearth-cross-quotes" % Versions.hearth),
       "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % Versions.jsoniter,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % Versions.jsoniter,
       scalaTest.value % Test
     ),
     // NB: Hearth requires -language:implicitConversions (to unwrap `Type.Lazy[A]` into `Type[A]` at use sites);

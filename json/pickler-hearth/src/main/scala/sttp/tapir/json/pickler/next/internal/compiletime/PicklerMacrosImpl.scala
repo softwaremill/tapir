@@ -1,29 +1,28 @@
 package sttp.tapir.json.pickler.next.internal.compiletime
 
-import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonWriter}
+import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import hearth.MacroCommons
 import hearth.fp.data.NonEmptyVector
 import hearth.fp.effect.*
 import hearth.std.*
 import sttp.tapir.Schema
 import sttp.tapir.json.pickler.next.{Pickler, PicklerConfiguration}
-import sttp.tapir.json.pickler.next.internal.runtime.{PicklerFactories, PicklerUtils}
+import sttp.tapir.json.pickler.next.internal.runtime.PicklerFactories
 
 /** Core, platform-independent derivation logic for [[Pickler]].
   *
   * This trait holds no `Quotes`/`Context` of its own — it is mixed into the platform bundle (`PicklerMacros`), which
-  * supplies Hearth's cake. That separation is what allows the same logic to be reused from a Scala 2 macro bundle
-  * later without touching this file.
+  * supplies Hearth's cake and the [[PlatformSupport]] implementation. That separation is what allows the same logic
+  * to be reused from a Scala 2 macro bundle later without touching this file.
   *
-  * ==Phase 0 status==
-  * The plumbing is complete and load-bearing: one shared `ValDefsCache`, the encode/decode bodies forward-declared as
-  * `def`s before their bodies are derived (which is what breaks recursion and keeps each `Expr.splice` free of
-  * cross-splice staging problems), and a single `toValDefs.use` wrapping the *entire* instance expression. The three
-  * `derive*Recursively` methods are deliberate stubs; Phase 1+ replaces them with rule pipelines without changing any
-  * of the surrounding structure.
+  * ==Structure==
+  * The schema half ([[SchemaDerivation]]) walks the type graph and hoists one `lazy val` per schema into a shared
+  * `ValDefsCache`. The codec half ([[CodecDerivation]]) walks the same graph and emits one `JsonCodecMaker.make` per
+  * case class / sealed hierarchy, configured from the *same* `PicklerConfiguration`. A single `toValDefs.use` wraps
+  * the whole instance expression, so every hoisted definition sits at instance scope and is built once.
   */
-trait PicklerMacrosImpl extends DerivationTimeout with AnnotationSupport with SchemaDerivation {
-  this: MacroCommons & StdExtensions & LoadStandardExtensionsOnce =>
+trait PicklerMacrosImpl extends DerivationTimeout with AnnotationSupport with SchemaDerivation with CodecDerivation {
+  this: MacroCommons & StdExtensions & LoadStandardExtensionsOnce & PlatformSupport =>
 
   override protected def derivationSettingsNamespace: String = "tapirPickler"
 
@@ -37,10 +36,8 @@ trait PicklerMacrosImpl extends DerivationTimeout with AnnotationSupport with Sc
   private[compiletime] object PTypes {
     def SchemaOf[A: Type]: Type[Schema[A]] = Type.of[Schema[A]]
     def PicklerOf[A: Type]: Type[Pickler[A]] = Type.of[Pickler[A]]
+    def CodecOf[A: Type]: Type[JsonValueCodec[A]] = Type.of[JsonValueCodec[A]]
     lazy val Config: Type[PicklerConfiguration] = Type.of[PicklerConfiguration]
-    lazy val JsonReaderT: Type[JsonReader] = Type.of[JsonReader]
-    lazy val JsonWriterT: Type[JsonWriter] = Type.of[JsonWriter]
-    lazy val UnitT: Type[Unit] = Type.of[Unit]
     lazy val LogDerivation: Type[Pickler.LogDerivation] = Type.of[Pickler.LogDerivation]
   }
 
@@ -52,27 +49,54 @@ trait PicklerMacrosImpl extends DerivationTimeout with AnnotationSupport with Sc
   def derivePickler[A: Type](configExpr: Expr[PicklerConfiguration]): Expr[Pickler[A]] = {
     implicit val SchemaA: Type[Schema[A]] = PTypes.SchemaOf[A]
     implicit val PicklerA: Type[Pickler[A]] = PTypes.PicklerOf[A]
+    implicit val CodecA: Type[JsonValueCodec[A]] = PTypes.CodecOf[A]
+    val macroName = "Pickler.derived"
+
+    // On Scala 3 an unconstrained type parameter is inferred as `Any`, which is almost never what the user meant.
+    if (Type[A] =:= Type.of[Nothing].asInstanceOf[Type[A]] || Type[A] =:= Type.of[Any].asInstanceOf[Type[A]])
+      Environment.reportErrorAndAbort(
+        s"$macroName: type parameter was inferred as ${Type[A].prettyPrint}, which is likely unintended.\n" +
+          s"Provide an explicit type parameter, e.g.: $macroName[MyType]"
+      )
 
     // Extracted before any Expr.quote: `??` is a macro-internal existential and must not leak into a reified tree.
     val selfType: Option[??] = Some(Type[A].as_??)
 
-    derivePicklerCore[A, Pickler[A]]("Pickler.derived", configExpr, selfType) {
-      case (schemaExpr, encodeFn, decodeFn, nullValueExpr) =>
-        Expr.quote {
-          PicklerFactories.instance[A](
-            Expr.splice(schemaExpr),
-            Expr.splice(nullValueExpr),
-            (in: JsonReader, default: A) => {
-              val _ = default
-              Expr.splice(decodeFn(Expr.quote(in), configExpr))
-            },
-            (x: A, out: JsonWriter) => Expr.splice(encodeFn(Expr.quote(x), Expr.quote(out), configExpr))
-          )
+    Log
+      .namedScope(s"Deriving Pickler for ${Type[A].prettyPrint} at: ${Environment.currentPosition.prettyPrint}") {
+        MIO.scoped { runSafe =>
+          val cache = ValDefsCache.mlocal
+
+          // The schema is derived first and sequentially: schema and codec derivations share Hearth-internal MLocal
+          // state, and parallelising them has previously produced silently wrong codegen for parameterised Scala 3
+          // enums in a comparable derivation (plan §6.2).
+          val (schemaExpr, codecExpr) = runSafe {
+            for {
+              _ <- ensureStandardExtensionsLoaded()
+              schema <- deriveSchemaRecursively[A](cache, configExpr, selfType)
+              config <- foldConfiguration(configExpr)
+              codec <- deriveCodec[A](config)
+            } yield (schema, codec)
+          }
+
+          val vals = runSafe(cache.get)
+          vals.toValDefs.use { _ =>
+            Expr.quote(PicklerFactories.instance[A](Expr.splice(schemaExpr), Expr.splice(codecExpr)))
+          }
         }
-    }
+      }
+      .flatTap(result => Log.info(s"Derived final Pickler: ${result.prettyPrint}"))
+      .runToExprOrFail(
+        macroName,
+        infoRendering = if (shouldWeLogDerivation) RenderFrom(Log.Level.Info) else DontRender,
+        errorRendering = if (shouldWeLogDerivation) RenderFrom(Log.Level.Info) else DontRender,
+        timeout = derivationTimeout
+      )(renderDerivationErrorMessage)
   }
 
-  /** Schema-only entry point. Shares the whole derivation core; simply discards the codec halves. */
+  /** Schema-only entry point. Needs no compile-time configuration: the schema chain applies `toEncodedName` /
+    * `toDiscriminatorValue` at runtime, so there is nothing to fold.
+    */
   def deriveSchemaOnly[A: Type](configExpr: Expr[PicklerConfiguration]): Expr[Schema[A]] = {
     val selfType: Option[??] = Some(Type[A].as_??)
 
@@ -80,17 +104,12 @@ trait PicklerMacrosImpl extends DerivationTimeout with AnnotationSupport with Sc
       .namedScope(s"Deriving Schema for ${Type[A].prettyPrint} at: ${Environment.currentPosition.prettyPrint}") {
         MIO.scoped { runSafe =>
           val cache = ValDefsCache.mlocal
-          // No `semiEval` of the configuration here: the schema chain applies `toEncodedName` /
-          // `toDiscriminatorValue` at runtime (see `SchemaDerivation`), so there is nothing to fold at compile time
-          // and nothing to keep in sync between a folded and an unfolded code path.
-
           val schemaExpr = runSafe {
             for {
               _ <- ensureStandardExtensionsLoaded()
               result <- deriveSchemaRecursively[A](cache, configExpr, selfType)
             } yield result
           }
-
           val vals = runSafe(cache.get)
           vals.toValDefs.use(_ => schemaExpr)
         }
@@ -105,133 +124,40 @@ trait PicklerMacrosImpl extends DerivationTimeout with AnnotationSupport with Sc
   }
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Derivation core
+  // Configuration
   // ---------------------------------------------------------------------------------------------------------------
 
-  /** Derives all four members of a pickler and hands them to `adapt`, which assembles the final expression.
+  /** Fold the `PicklerConfiguration` expression to a value.
     *
-    * Why the callback rather than returning a tuple: `toValDefs.use` has to wrap the *outermost* expression. If it
-    * wrapped only, say, the encode lambda, then every cached `lazy val` (including the schema graph, whose
-    * construction involves `SName` parsing, field-list building and annotation folding) would become local to that
-    * lambda and be rebuilt on every `encodeValue` call. That mistake is silent — no error, no warning — and has
-    * previously cost a 6x runtime regression in a comparable derivation. Passing an adapter keeps the `use` call at
-    * the one correct place.
+    * The codec half *needs* the value: `toEncodedName` and `toDiscriminatorValue` are invoked during expansion and the
+    * results handed to `JsonCodecMaker` as literals (see [[CodecDerivation]]). `semiEval` handles the common shapes
+    * directly (`PicklerConfiguration.default`, `.with*` chains, lambdas such as `_.toUpperCase`). When the expression
+    * is merely a reference to a `given`/`implicit val` — which is what an implicit parameter usually is — the
+    * definition is followed to its right-hand side and that is evaluated instead, as far as the tree is available.
     */
-  private def derivePicklerCore[A: Type, Out: Type](
-      macroName: String,
-      configExpr: Expr[PicklerConfiguration],
-      selfType: Option[??]
-  )(
-      adapt: (
-          Expr[Schema[A]],
-          (Expr[A], Expr[JsonWriter], Expr[PicklerConfiguration]) => Expr[Unit],
-          (Expr[JsonReader], Expr[PicklerConfiguration]) => Expr[A],
-          Expr[A]
-      ) => Expr[Out]
-  ): Expr[Out] = {
-    // On Scala 3 an unconstrained type parameter is inferred as `Any`, which is almost never what the user meant.
-    if (Type[A] =:= Type.of[Nothing].asInstanceOf[Type[A]] || Type[A] =:= Type.of[Any].asInstanceOf[Type[A]])
-      Environment.reportErrorAndAbort(
-        s"$macroName: type parameter was inferred as ${Type[A].prettyPrint}, which is likely unintended.\n" +
-          s"Provide an explicit type parameter, e.g.: $macroName[MyType]"
-      )
+  private def foldConfiguration(configExpr: Expr[PicklerConfiguration]): MIO[PicklerConfiguration] = {
+    implicit val ConfigT: Type[PicklerConfiguration] = PTypes.Config
 
-    Log
-      .namedScope(s"Deriving Pickler for ${Type[A].prettyPrint} at: ${Environment.currentPosition.prettyPrint}") {
-        implicit val ConfigT: Type[PicklerConfiguration] = PTypes.Config
-        implicit val JsonReaderT: Type[JsonReader] = PTypes.JsonReaderT
-        implicit val JsonWriterT: Type[JsonWriter] = PTypes.JsonWriterT
-        implicit val UnitT: Type[Unit] = PTypes.UnitT
-
-        MIO.scoped { runSafe =>
-          // One cache shared by the schema `lazy val`s and the encode/decode `def`s, so that a single
-          // `toValDefs.use` emits them all side by side at instance scope.
-          val cache = ValDefsCache.mlocal
-
-          // Fold the configuration to a value at expansion time when possible. This matters more here than for a
-          // plain codec: the *shape* of a tapir Schema depends on the configuration, so a statically known config
-          // lets us bake field names and discriminators in as constants.
-          //
-          // Hearth has a known limitation where `semiEval` fails on an `Inlined(...)` tree wrapping a module field
-          // access -- which is exactly the shape of the most common call site, `PicklerConfiguration.default`. The
-          // outcome is logged rather than assumed, because whether it succeeds decides which codegen path every rule
-          // takes, and a silent difference between the two is a nasty class of bug.
-          val evConfig: Option[PicklerConfiguration] = configExpr.semiEval.toOption
-          runSafe(
-            Log.info(
-              if (evConfig.isDefined) s"Configuration folded at compile time: ${evConfig.get}"
-              else s"Configuration NOT statically known (${configExpr.prettyPrint}); using runtime-checked codegen"
-            )
-          )
-
-          val schemaMIO: MIO[Expr[Schema[A]]] = deriveSchemaRecursively[A](cache, configExpr, selfType)
-
-          // Encoder body, cached as `def pickler_encode_A(a: A, w: JsonWriter, c: PicklerConfiguration): Unit`.
-          // Forward-declaring before deriving the body is what lets a recursive type refer back to this def.
-          val encMIO: MIO[(Expr[A], Expr[JsonWriter], Expr[PicklerConfiguration]) => Expr[Unit]] = {
-            val defBuilder =
-              ValDefBuilder.ofDef3[A, JsonWriter, PicklerConfiguration, Unit](s"pickler_encode_${Type[A].shortName}")
-            for {
-              _ <- Log.info(s"Forward-declaring encode body for ${Type[A].prettyPrint}")
-              _ <- cache.forwardDeclare("pickler-encode-body", defBuilder)
-              _ <- MIO.scoped { rs =>
-                rs(cache.buildCachedWith("pickler-encode-body", defBuilder) { case (_, (value, writer, config)) =>
-                  rs(deriveEncoderRecursively[A](value, writer, config, cache, evConfig, selfType))
-                })
-              }
-              _ <- Log.info(s"Defined encode body for ${Type[A].prettyPrint}")
-              fn <- cache.get3Ary[A, JsonWriter, PicklerConfiguration, Unit]("pickler-encode-body")
-            } yield fn.get
+    def attempt(expr: Expr[PicklerConfiguration], depth: Int): Either[String, PicklerConfiguration] =
+      expr.semiEval match {
+        case Right(value) => Right(value)
+        case Left(reasons) =>
+          dereferenceStable(expr) match {
+            case Some(rhs) if depth < 8 => attempt(rhs, depth + 1)
+            case _                      => Left(reasons.toVector.mkString("; "))
           }
-
-          // Decoder body, cached as `def pickler_decode_A(r: JsonReader, c: PicklerConfiguration): A`.
-          val decMIO: MIO[(Expr[JsonReader], Expr[PicklerConfiguration]) => Expr[A]] = {
-            val defBuilder =
-              ValDefBuilder.ofDef2[JsonReader, PicklerConfiguration, A](s"pickler_decode_${Type[A].shortName}")
-            for {
-              _ <- Log.info(s"Forward-declaring decode body for ${Type[A].prettyPrint}")
-              _ <- cache.forwardDeclare("pickler-decode-body", defBuilder)
-              _ <- MIO.scoped { rs =>
-                rs(cache.buildCachedWith("pickler-decode-body", defBuilder) { case (_, (reader, config)) =>
-                  rs(deriveDecoderRecursively[A](reader, config, cache, evConfig, selfType))
-                })
-              }
-              _ <- Log.info(s"Defined decode body for ${Type[A].prettyPrint}")
-              fn <- cache.get2Ary[JsonReader, PicklerConfiguration, A]("pickler-decode-body")
-            } yield fn.get
-          }
-
-          val nullMIO: MIO[Expr[A]] = deriveNullValue[A]
-
-          // The codec halves are parallelised so that an unsupported type reports every problem at once instead of
-          // one fix-and-retry cycle per method. The schema is composed *sequentially* on purpose: schema and decoder
-          // derivations share Hearth-internal MLocal state, and parallelising those two has previously produced
-          // silently wrong codegen for parameterised Scala 3 enums in a comparable derivation. Revisit only with the
-          // enum tests green, and re-run them straight after.
-          val (schemaExpr, ((encFn, decFn), nullVal)) = runSafe {
-            for {
-              _ <- ensureStandardExtensionsLoaded()
-              schema <- schemaMIO
-              codec <- encMIO.parTuple(decMIO).parTuple(nullMIO)
-            } yield (schema, codec)
-          }
-
-          val vals = runSafe(cache.get)
-          val resultExpr = adapt(schemaExpr, encFn, decFn, nullVal)
-          vals.toValDefs.use(_ => resultExpr)
-        }
       }
-      .flatTap(result => Log.info(s"Derived final Pickler: ${result.prettyPrint}"))
-      .runToExprOrFail(
-        macroName,
-        infoRendering = if (shouldWeLogDerivation) RenderFrom(Log.Level.Info) else DontRender,
-        errorRendering = if (shouldWeLogDerivation) RenderFrom(Log.Level.Info) else DontRender,
-        timeout = derivationTimeout
-      )(renderDerivationErrorMessage)
+
+    attempt(configExpr, 0) match {
+      case Right(value) => Log.info(s"Configuration folded at compile time: $value") >> MIO.pure(value)
+      case Left(reason) =>
+        val error = PicklerDerivationError.ConfigurationNotStatic(configExpr.plainPrint, reason)
+        Log.error(error.message) >> MIO.fail(error)
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Phase 0 stubs -- replaced by rule pipelines in Phase 1+
+  // Schema chain entry
   // ---------------------------------------------------------------------------------------------------------------
 
   /** Entry into the schema rule pipeline.
@@ -247,38 +173,6 @@ trait PicklerMacrosImpl extends DerivationTimeout with AnnotationSupport with Sc
     val inProgress: MLocal[Set[String]] = MLocal(Set.empty[String])(identity)((a, b) => a ++ b)
     deriveSchemaFor[A](using SchemaCtx(Type[A], configExpr, cache, inProgress, selfType))
   }
-
-  private def deriveEncoderRecursively[A: Type](
-      value: Expr[A],
-      writer: Expr[JsonWriter],
-      config: Expr[PicklerConfiguration],
-      cache: MLocal[ValDefsCache],
-      evConfig: Option[PicklerConfiguration],
-      selfType: Option[??]
-  ): MIO[Expr[Unit]] = {
-    val _ = (cache, evConfig, selfType, config)
-    Log.info(s"[stub] Encoder derivation for ${Type[A].prettyPrint}") >>
-      MIO.pure(Expr.quote {
-        val _ = Expr.splice(value)
-        Expr.splice(writer).writeNull()
-      })
-  }
-
-  private def deriveDecoderRecursively[A: Type](
-      reader: Expr[JsonReader],
-      config: Expr[PicklerConfiguration],
-      cache: MLocal[ValDefsCache],
-      evConfig: Option[PicklerConfiguration],
-      selfType: Option[??]
-  ): MIO[Expr[A]] = {
-    val _ = (cache, evConfig, selfType, config)
-    val typeName = Expr(Type[A].plainPrint)
-    Log.info(s"[stub] Decoder derivation for ${Type[A].prettyPrint}") >>
-      MIO.pure(Expr.quote(PicklerUtils.notImplementedDecode[A](Expr.splice(reader), Expr.splice(typeName))))
-  }
-
-  private def deriveNullValue[A: Type]: MIO[Expr[A]] =
-    MIO.pure(Expr.quote(PicklerUtils.nullValueOf[A]))
 
   // ---------------------------------------------------------------------------------------------------------------
   // Diagnostics
