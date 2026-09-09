@@ -1,9 +1,11 @@
 package sttp.tapir.json.pickler
 
 import sttp.tapir.generic.Configuration
-import upickle.core.Annotator
 
-/** Configuration parameters for Pickler.
+/** Configuration parameters for [[Pickler]] derivation.
+  *
+  * A single instance of this drives both halves of the derivation: the tapir `Schema` and the jsoniter-scala `JsonValueCodec`.
+  *
   * @param genericDerivationConfig
   *   basic configuration for schema and codec derivation
   * @param transientNone
@@ -12,7 +14,7 @@ import upickle.core.Annotator
 final case class PicklerConfiguration(genericDerivationConfig: Configuration, transientNone: Boolean = true) {
   export genericDerivationConfig.{toEncodedName, toDiscriminatorValue}
 
-  def discriminator: String = genericDerivationConfig.discriminator.getOrElse(Annotator.defaultTagKey)
+  def discriminator: String = genericDerivationConfig.discriminator.getOrElse(PicklerConfiguration.DefaultTagKey)
 
   def withSnakeCaseMemberNames: PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withSnakeCaseMemberNames)
   def withScreamingSnakeCaseMemberNames: PicklerConfiguration = PicklerConfiguration(
@@ -41,7 +43,13 @@ final case class PicklerConfiguration(genericDerivationConfig: Configuration, tr
 }
 
 object PicklerConfiguration {
+
+  /** The default discriminator field name. Previously this came from `upickle.core.Annotator.defaultTagKey`; it is inlined here so that the
+    * module carries no uPickle dependency.
+    */
+  final val DefaultTagKey = "$type"
+
   given default: PicklerConfiguration = PicklerConfiguration(
-    Configuration.default.copy(discriminator = Some(Annotator.defaultTagKey))
+    Configuration.default.copy(discriminator = Some(DefaultTagKey))
   )
 }

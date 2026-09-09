@@ -3,11 +3,14 @@ package sttp.tapir.json.pickler
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
-import sttp.tapir.{Schema, SchemaType}
-import upickle.core.ObjVisitor
+
+import scala.compiletime.testing.typeCheckErrors
 
 import Fixtures.*
 
+/** Port of the uPickle-based module's `PicklerEnumTest`. One change: the `oneOfUsingField`-on-enums rejection checks the error message and
+  * no longer builds picklers for individual enum cases (see `PicklerFacadeTest`).
+  */
 class PicklerEnumTest extends AnyFlatSpec with Matchers {
 
   behavior of "Pickler derivation for enumerations"
@@ -90,22 +93,13 @@ class PicklerEnumTest extends AnyFlatSpec with Matchers {
   }
 
   it should "Reject oneOfUsingField for enums" in {
-    // given
-    assertCompiles("""
-      import Fixtures.*
-      val picklerCyan = Pickler.derived[RichColorEnum.Cyan.type]
-      val picklerMagenta = Pickler.derived[RichColorEnum.Magenta.type]""")
-    // when
-    assertDoesNotCompile("""
-      import Fixtures.*
-      val picklerCyan = Pickler.derived[RichColorEnum.Cyan.type]
-      val picklerMagenta = Pickler.derived[RichColorEnum.Magenta.type]
-
-      given picklerRichColor: Pickler[RichColorEnum] = 
+    val errors = typeCheckErrors("""
+      given picklerRichColor: Pickler[RichColorEnum] =
         Pickler.oneOfUsingField[RichColorEnum, Int](_.code, codeInt => s"code-$codeInt")(
-          3 -> picklerCyan,
-          18 -> picklerMagenta
-        )""")
+          3 -> (null: Pickler[RichColorEnum.Cyan.type]),
+          18 -> (null: Pickler[RichColorEnum.Magenta.type])
+        )""").map(_.message).mkString
+    errors should include("derivedEnumeration")
   }
 
   it should "encode and decode an enum where the cases are not alphabetically sorted" in {

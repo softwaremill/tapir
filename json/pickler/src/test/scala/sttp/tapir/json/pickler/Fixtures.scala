@@ -5,6 +5,9 @@ import sttp.tapir.Schema.annotations.description
 import java.util.UUID
 import sttp.tapir.Schema.annotations.encodedName
 
+/** The fixtures of the uPickle-based module this one replaced, kept verbatim so that the ported suites' assertions (fully-qualified names
+  * included) stayed meaningful across the rewrite.
+  */
 object Fixtures:
   enum ColorEnum:
     case Green, Pink

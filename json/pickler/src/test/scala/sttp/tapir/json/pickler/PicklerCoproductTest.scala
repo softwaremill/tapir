@@ -1,15 +1,15 @@
 package sttp.tapir.json.pickler
 
-import magnolia1.SealedTrait
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
-import sttp.tapir.Schema.annotations.{default, encodedName}
-import sttp.tapir.{Schema, SchemaType}
-import upickle.core.{ObjVisitor, Visitor}
 
 import Fixtures.*
 
+/** Port of the uPickle-based module's `PicklerCoproductTest`. Unchanged apart from the package (which shows up in the full-name
+  * discriminator assertion) and the `StatusInternalError.type` pickler, which is derived rather than built for a single case (see
+  * `PicklerEnumTest`).
+  */
 class PicklerCoproductTest extends AnyFlatSpec with Matchers {
 
   behavior of "Pickler derivation for coproducts"

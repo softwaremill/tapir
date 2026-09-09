@@ -167,7 +167,7 @@ jobs:
       run: sbt $SBT_JAVA_OPTS catsJS/test circeJsonJS/test clientCoreJS/test clientTestsJS/test coreJS/test enumeratumJS/test jsoniterScalaJS/test newtypeJS/test openapiDocsJS/test playJsonJS/test redocJS/test serverCoreJS/test sttpClientJS/test testingJS/test testsJS/test uPickleJsonJS/test zioJsonJS/test clientTestServer/reStop
     - name: Test
       if: matrix.target-platform == 'JS' && matrix.scala-version == '3'
-      run: sbt $SBT_JAVA_OPTS catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test clientTestServer/reStop
+      run: sbt $SBT_JAVA_OPTS catsJS3/test circeJsonJS3/test clientCoreJS3/test clientTestsJS3/test coreJS3/test jsoniterScalaJS3/test openapiDocsJS3/test picklerJsonJS3/test redocJS3/test serverCoreJS3/test sttpClientJS3/test testingJS3/test testsJS3/test uPickleJsonJS3/test zioJsonJS3/test clientTestServer/reStop
     - uses: actions/upload-artifact@v7  # upload test results
       if: success() || failure()        # run this step even if previous step failed
       with:
