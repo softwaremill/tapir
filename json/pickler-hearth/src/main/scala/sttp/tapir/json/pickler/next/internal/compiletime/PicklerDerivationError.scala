@@ -57,6 +57,22 @@ object PicklerDerivationError {
     def message: String = s"$macroName can only be used with a sealed hierarchy or enum; $typeName is not one"
   }
 
+  /** `derivedEnumeration` needs every case to be a singleton, because that is what a bare-string encoding can name. */
+  final case class NotAnEnumeration(typeName: String, nonSingletons: List[String]) extends PicklerDerivationError {
+    def message: String =
+      s"""Pickler.derivedEnumeration can only be used with a sealed hierarchy or enum whose cases are all objects (or
+         |parameterless enum cases); $typeName has cases with fields: ${nonSingletons.mkString(", ")}.
+         |Use Pickler.derived[$typeName] or Pickler.oneOfUsingField instead.""".stripMargin
+  }
+
+  /** An all-singleton hierarchy is encoded as a bare string, which has no field to carry a discriminator. */
+  final case class EnumerationInOneOfUsingField(typeName: String) extends PicklerDerivationError {
+    def message: String =
+      s"""Pickler.oneOfUsingField cannot be used with $typeName: all its cases are objects, so it is encoded as a bare
+         |string with no field to hold the discriminator. Use Pickler.derivedEnumeration[$typeName].customStringBased(...)
+         |to choose how each case is rendered.""".stripMargin
+  }
+
   /** `oneOfUsingField` turns every mapping key into a jsoniter discriminator literal at compile time, so both the
     * keys and `asString` have to be evaluable during expansion.
     */

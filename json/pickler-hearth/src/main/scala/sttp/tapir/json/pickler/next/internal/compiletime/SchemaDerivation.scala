@@ -39,6 +39,7 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     lazy val ListStringT: Type[List[String]] = Type.of[List[String]]
     def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
     lazy val EncodedName: Type[Schema.annotations.encodedName] = Type.of[Schema.annotations.encodedName]
+    lazy val EitherCtor: Type.Ctor2[Either] = Type.Ctor2.of[Either]
   }
 
   // -----------------------------------------------------------------------------------------------------------------
@@ -127,6 +128,7 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
         UseBuiltInLeafRule,
         HandleAsValueClassRule,
         HandleAsOptionRule,
+        HandleAsEitherRule,
         HandleAsMapRule,
         HandleAsCollectionRule,
         HandleAsSingletonRule,
@@ -266,6 +268,26 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
           })
         }
       case _ => MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not an Option"))
+    }
+  }
+
+  /** `Either` is a sealed hierarchy, so without this rule it would fall through to `HandleAsEnumRule` and be documented
+    * as a discriminated coproduct of `Left`/`Right`. tapir core documents it as an *untagged* coproduct of the two
+    * sides (`Schema.schemaForEither`), and the codec writes the bare side value to match (plan §5.3).
+    */
+  private object HandleAsEitherRule extends SchemaRule("handle as Either") {
+    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
+      val EitherCtor = STypes.EitherCtor
+      Type[A] match {
+        case EitherCtor(left, right) =>
+          import left.Underlying as L
+          import right.Underlying as R
+          for {
+            l <- deriveSchemaFor[L](using sctx.nest[L])
+            r <- deriveSchemaFor[R](using sctx.nest[R])
+          } yield Rule.matched(Expr.quote(SchemaUtils.eitherSchema[L, R](Expr.splice(l), Expr.splice(r)).asInstanceOf[Schema[A]]))
+        case _ => MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not an Either"))
+      }
     }
   }
 
@@ -474,11 +496,7 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     val annotations = typeAnnotationsExpr[A]
     val config = sctx.config
 
-    val values = children.foldRight(Expr.quote(Nil: List[A])) { case ((_, child), tail) =>
-      import child.Underlying as Child
-      val singleton = SingletonValue.parse[Child].toEither.toOption.get
-      Expr.quote(Expr.splice(singleton.singletonExpr).asInstanceOf[A] :: Expr.splice(tail))
-    }
+    val values = singletonValuesExpr[A](children)
     // The encoded name of each case is its discriminator value, computed from the same SName the codec uses.
     val encodedNames = children.foldRight(Expr.quote(Nil: List[String])) { case ((_, child), tail) =>
       import child.Underlying as Child
@@ -495,6 +513,16 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
         )
       }
     )
+  }
+
+  /** `List(Case1, Case2, ...)` for the singleton children of an enumeration; the caller guarantees they are singletons. */
+  protected def singletonValuesExpr[A: Type](children: List[(String, ??<:[A])]): Expr[List[A]] = {
+    implicit val ListA: Type[List[A]] = STypes.ListOf[A]
+    children.foldRight(Expr.quote(Nil: List[A])) { case ((_, child), tail) =>
+      import child.Underlying as Child
+      val singleton = SingletonValue.parse[Child].toEither.toOption.get
+      Expr.quote(Expr.splice(singleton.singletonExpr).asInstanceOf[A] :: Expr.splice(tail))
+    }
   }
 
   // -----------------------------------------------------------------------------------------------------------------

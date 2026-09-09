@@ -168,6 +168,13 @@ object SchemaUtils {
       Some(SName("Map", typeParameters))
     )
 
+  /** tapir core's own `Either` schema — an untagged coproduct of the two sides — over our derived side schemas. The
+    * codec (`CodecCombinators.either`) writes the bare side value, which is what this schema documents.
+    */
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
+  def eitherSchema[L, R](left: Schema[L], right: Schema[R]): Schema[Any] =
+    Schema.schemaForEither(left, right).asInstanceOf[Schema[Any]]
+
   /** A bare `SString` schema, for a type that tapir core has no schema for but that the codec writes as a string.
     * `Char` is the only such type today.
     */

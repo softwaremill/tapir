@@ -35,9 +35,11 @@ trait PlatformSupport { this: MacroCommons =>
   /** `{ implicit lazy val n1: T1 = e1; ...; body(refs) }` where `refs` are references to the vals, in order.
     *
     * `implicit` because jsoniter finds codecs for nested types through `Implicits.search` and nothing else; `lazy`
-    * so that mutually recursive codecs can refer to each other regardless of declaration order.
+    * so that mutually recursive codecs can refer to each other regardless of declaration order. Each right-hand side
+    * is built from the same `refs`, so a hand-written combinator (`Either`) can name its sibling codecs directly
+    * rather than through an implicit search that happens at *our* expansion time, when the vals do not exist yet.
     */
-  protected def implicitLazyVals[Out: Type](vals: List[(String, UntypedType, UntypedExpr)])(
+  protected def implicitLazyVals[Out: Type](vals: List[(String, UntypedType, List[UntypedExpr] => UntypedExpr)])(
       body: List[UntypedExpr] => Expr[Out]
   ): Expr[Out]
 

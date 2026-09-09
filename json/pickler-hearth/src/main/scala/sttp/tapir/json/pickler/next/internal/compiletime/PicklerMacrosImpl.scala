@@ -6,7 +6,7 @@ import hearth.fp.data.NonEmptyVector
 import hearth.fp.effect.*
 import hearth.std.*
 import sttp.tapir.Schema
-import sttp.tapir.json.pickler.next.{Pickler, PicklerConfiguration}
+import sttp.tapir.json.pickler.next.{CreateDerivedEnumerationPickler, Pickler, PicklerConfiguration}
 import sttp.tapir.json.pickler.next.internal.runtime.{PicklerFactories, PicklerUtils}
 
 /** Core, platform-independent derivation logic for [[Pickler]].
@@ -43,6 +43,8 @@ trait PicklerMacrosImpl
     def PicklerOf[A: Type]: Type[Pickler[A]] = Type.of[Pickler[A]]
     def CodecOf[A: Type]: Type[JsonValueCodec[A]] = Type.of[JsonValueCodec[A]]
     def MappingEntryOf[A: Type, V: Type]: Type[(V, Pickler[? <: A])] = Type.of[(V, Pickler[? <: A])]
+    def EnumBuilderOf[A: Type]: Type[CreateDerivedEnumerationPickler[A]] = Type.of[CreateDerivedEnumerationPickler[A]]
+    def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
     def FnOf[A: Type, B: Type]: Type[A => B] = Type.of[A => B]
     lazy val Config: Type[PicklerConfiguration] = Type.of[PicklerConfiguration]
     lazy val Configuration: Type[sttp.tapir.generic.Configuration] = Type.of[sttp.tapir.generic.Configuration]
@@ -134,6 +136,73 @@ trait PicklerMacrosImpl
       )(renderDerivationErrorMessage)
   }
 
+  /** `Pickler.derivedEnumeration[A]`: the builder behind `defaultStringBased` / `customStringBased`.
+    *
+    * The default schema and codec are exactly what `derivePickler` produces for `A` (an all-singleton hierarchy is a
+    * string enumeration on both sides, plan §5.2); the builder additionally receives the singleton values, from which
+    * `customStringBased` builds a runtime string codec and the matching enumeration validator. Nothing about the
+    * user's `encode` function is needed at compile time.
+    */
+  def deriveEnumerationBuilder[A: Type](configExpr: Expr[PicklerConfiguration]): Expr[CreateDerivedEnumerationPickler[A]] = {
+    implicit val SchemaA: Type[Schema[A]] = PTypes.SchemaOf[A]
+    implicit val CodecA: Type[JsonValueCodec[A]] = PTypes.CodecOf[A]
+    implicit val BuilderA: Type[CreateDerivedEnumerationPickler[A]] = PTypes.EnumBuilderOf[A]
+    implicit val ListA: Type[List[A]] = PTypes.ListOf[A]
+    val macroName = "Pickler.derivedEnumeration"
+
+    val selfType: Option[??] = Some(Type[A].as_??)
+    implicitLookupExclusions += Type[A].plainPrint
+
+    Log
+      .namedScope(s"Deriving enumeration Pickler for ${Type[A].prettyPrint} at: ${Environment.currentPosition.prettyPrint}") {
+        MIO.scoped { runSafe =>
+          val cache = ValDefsCache.mlocal
+
+          val (valuesExpr, schemaExpr, codecExpr) = runSafe {
+            for {
+              _ <- ensureStandardExtensionsLoaded()
+              children <- enumerationCases[A](macroName)
+              schema <- deriveSchemaRecursively[A](cache, configExpr, selfType)
+              config <- foldConfiguration(configExpr)
+              codec <- deriveCodec[A](config)
+            } yield (singletonValuesExpr[A](children), schema, codec)
+          }
+
+          val vals = runSafe(cache.get)
+          vals.toValDefs.use { _ =>
+            Expr.quote(
+              PicklerFactories.enumerationBuilder[A](Expr.splice(valuesExpr), Expr.splice(schemaExpr), Expr.splice(codecExpr))
+            )
+          }
+        }
+      }
+      .flatTap(result => Log.info(s"Derived enumeration builder: ${result.prettyPrint}"))
+      .runToExprOrFail(
+        macroName,
+        infoRendering = if (shouldWeLogDerivation) RenderFrom(Log.Level.Info) else DontRender,
+        errorRendering = if (shouldWeLogDerivation) RenderFrom(Log.Level.Info) else DontRender,
+        timeout = derivationTimeout
+      )(renderDerivationErrorMessage)
+  }
+
+  /** The leaves of `A`, provided `A` is a sealed hierarchy whose leaves are all singletons. */
+  private def enumerationCases[A: Type](macroName: String): MIO[List[(String, ??<:[A])]] =
+    Enum.parse[A].toEither match {
+      case Left(_) => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
+      case Right(e) =>
+        val children = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList)
+        val nonSingletons = children.collect {
+          case (_, child) if {
+                import child.Underlying as Child
+                SingletonValue.parse[Child].toEither.isLeft
+              } =>
+            child.Underlying.plainPrint
+        }
+        if (children.isEmpty) fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))
+        else if (nonSingletons.nonEmpty) fail(PicklerDerivationError.NotAnEnumeration(Type[A].plainPrint, nonSingletons))
+        else MIO.pure(children)
+    }
+
   /** `Pickler.oneOfUsingField[A, V](extractor, asString)(v1 -> pickler1, ...)`.
     *
     * The discriminator value of each mapped leaf is `asString(v)`, decided by the user rather than by the
@@ -172,8 +241,17 @@ trait PicklerMacrosImpl
             for {
               _ <- ensureStandardExtensionsLoaded()
               _ <- Enum.parse[A].toEither match {
-                case Right(_)    => MIO.pure(())
-                case Left(_)     => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
+                case Left(_) => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
+                case Right(e) =>
+                  // An all-singleton hierarchy is a bare string (plan §5.2): there is no object to put a discriminator
+                  // in, and core's `Schema.oneOfUsingField` would document one. Same rejection as the incumbent.
+                  val children = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList)
+                  val allSingletons = children.nonEmpty && children.forall { case (_, child) =>
+                    import child.Underlying as Child
+                    SingletonValue.parse[Child].toEither.isRight
+                  }
+                  if (allSingletons) fail(PicklerDerivationError.EnumerationInOneOfUsingField(Type[A].plainPrint))
+                  else MIO.pure(())
               }
               entries <- parseOneOfMapping[A, V](mapping)
               overrides <- entries.foldLeft(MIO.pure(Map.empty[String, String])) { case (acc, (key, child)) =>

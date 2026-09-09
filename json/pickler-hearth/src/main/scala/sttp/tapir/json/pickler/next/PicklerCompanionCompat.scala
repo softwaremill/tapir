@@ -46,4 +46,33 @@ private[next] trait PicklerCompanionCompat { this: Pickler.type =>
       inline mapping: (V, Pickler[? <: T])*
   )(using inline config: PicklerConfiguration): Pickler[T] =
     ${ internal.compiletime.PicklerMacros.oneOfUsingFieldImpl[T, V]('extractorFn, 'asStringFn, 'mapping, 'config) }
+
+  /** Create a pickler for an enumeration: a sealed hierarchy or `enum` whose cases are all singletons (parameterised
+    * `enum` cases included). The returned builder chooses how the cases are rendered:
+    * {{{
+    * Pickler.derivedEnumeration[Color].defaultStringBased            // as Pickler.derived[Color] would
+    * Pickler.derivedEnumeration[Color].customStringBased(_.ordinal.toString)
+    * }}}
+    * The custom `encode` function is applied at runtime, so it is not restricted to compile-time evaluable code.
+    */
+  inline def derivedEnumeration[T](using inline config: PicklerConfiguration): CreateDerivedEnumerationPickler[T] =
+    ${ internal.compiletime.PicklerMacros.derivedEnumerationImpl[T]('config) }
+
+  /** Create a pickler for a map with arbitrary keys. Keys are rendered with `keyToString` and parsed back with
+    * `stringToKey`; the schema documents them through the same `keyToString`, as `Schema.schemaForMap` does. Values use
+    * the given pickler.
+    *
+    * Maps with `String` keys need none of this: they are derived directly. To make this pickler available for automatic
+    * derivation of enclosing types, define it as a `given`, e.g.:
+    * {{{
+    * given Pickler[Map[UUID, Book]] = Pickler.picklerForMap(_.toString, UUID.fromString)
+    * }}}
+    */
+  inline def picklerForMap[K, V](keyToString: K => String, stringToKey: String => K)(using pv: Pickler[V]): Pickler[Map[K, V]] = {
+    given Schema[V] = pv.schema
+    internal.runtime.PicklerFactories.instance(
+      Schema.schemaForMap[K, V](keyToString),
+      internal.runtime.CodecCombinators.map(keyToString, stringToKey, pv.codec)
+    )
+  }
 }

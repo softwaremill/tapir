@@ -2,7 +2,7 @@ package sttp.tapir.json.pickler.next.internal.runtime
 
 import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import sttp.tapir.Schema
-import sttp.tapir.json.pickler.next.Pickler
+import sttp.tapir.json.pickler.next.{CreateDerivedEnumerationPickler, Pickler}
 
 /** Factory for the final [[Pickler]] instance emitted by the derivation macro.
   *
@@ -17,4 +17,8 @@ object PicklerFactories {
     val schema: Schema[A] = schemaValue
     val codec: JsonValueCodec[A] = codecValue
   }
+
+  /** Emitted by `Pickler.derivedEnumeration`: the singleton values plus the pickler `Pickler.derived` would produce. */
+  def enumerationBuilder[A](values: List[A], schema: Schema[A], codec: JsonValueCodec[A]): CreateDerivedEnumerationPickler[A] =
+    new CreateDerivedEnumerationPickler[A](values, schema, codec)
 }

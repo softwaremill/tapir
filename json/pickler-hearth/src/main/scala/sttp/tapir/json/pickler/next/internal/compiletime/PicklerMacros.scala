@@ -3,7 +3,7 @@ package sttp.tapir.json.pickler.next.internal.compiletime
 import hearth.MacroCommonsScala3
 import sttp.tapir.Schema
 import sttp.tapir.internal.SNameMacros
-import sttp.tapir.json.pickler.next.{Pickler, PicklerConfiguration}
+import sttp.tapir.json.pickler.next.{CreateDerivedEnumerationPickler, Pickler, PicklerConfiguration}
 
 import scala.quoted.*
 
@@ -49,6 +49,9 @@ private[next] object PicklerMacros {
 
   def deriveSchemaOnlyImpl[A: Type](config: Expr[PicklerConfiguration])(using q: Quotes): Expr[Schema[A]] =
     nested(new PicklerMacros(q).deriveSchemaOnly[A](config))
+
+  def derivedEnumerationImpl[A: Type](config: Expr[PicklerConfiguration])(using q: Quotes): Expr[CreateDerivedEnumerationPickler[A]] =
+    nested(new PicklerMacros(q).deriveEnumerationBuilder[A](config))
 
   def oneOfUsingFieldImpl[A: Type, V: Type](
       extractor: Expr[A => V],
@@ -117,14 +120,15 @@ private[compiletime] trait PlatformSupportScala3 extends PlatformSupport { this:
 
   protected def tapirFullName[A: Type]: String = SNameMacros.typeFullNameFromTpe(TypeRepr.of[A])
 
-  protected def implicitLazyVals[Out: Type](vals: List[(String, UntypedType, UntypedExpr)])(
+  protected def implicitLazyVals[Out: Type](vals: List[(String, UntypedType, List[UntypedExpr] => UntypedExpr)])(
       body: List[UntypedExpr] => Expr[Out]
   ): Expr[Out] = {
-    val defs = vals.map { case (name, tpe, rhs) =>
-      val sym = Symbol.newVal(Symbol.spliceOwner, name, tpe, Flags.Implicit | Flags.Lazy, Symbol.noSymbol)
-      ValDef(sym, Some(rhs.changeOwner(sym)))
+    val syms = vals.map { case (name, tpe, _) =>
+      Symbol.newVal(Symbol.spliceOwner, name, tpe, Flags.Implicit | Flags.Lazy, Symbol.noSymbol)
     }
-    Block(defs, body(defs.map(d => Ref(d.symbol))).asTerm).asExprOf[Out]
+    val refs: List[UntypedExpr] = syms.map(Ref(_))
+    val defs = vals.zip(syms).map { case ((_, _, rhs), sym) => ValDef(sym, Some(rhs(refs).changeOwner(sym))) }
+    Block(defs, body(refs).asTerm).asExprOf[Out]
   }
 
   protected def betaReduce[A: Type, B: Type](f: Expr[A => B], a: Expr[A]): Expr[B] = {

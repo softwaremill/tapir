@@ -5,6 +5,8 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.Schema
 
 import scala.annotation.implicitNotFound
+import scala.collection.Factory
+import scala.reflect.ClassTag
 
 /** A pickler combines the [[Schema]] of a type (used for documentation and validation of deserialized values) with a
   * jsoniter-scala [[JsonValueCodec]]. Both are derived by a single macro expansion from a single
@@ -27,6 +29,17 @@ trait Pickler[A] {
     * jsoniter-scala codec.
     */
   final def toCodec: JsonCodec[A] = internal.runtime.PicklerUtils.toTapirCodec(codec, schema)
+
+  /** A pickler for `Option[A]`: the schema is marked optional, `None` is written as `null`. */
+  final def asOption: Pickler[Option[A]] =
+    internal.runtime.PicklerFactories.instance(schema.asOption, internal.runtime.CodecCombinators.option(codec))
+
+  /** A pickler for a collection of `A`, written as a JSON array. */
+  final def asIterable[C[X] <: Iterable[X]](using Factory[A, C[A]]): Pickler[C[A]] =
+    internal.runtime.PicklerFactories.instance(schema.asIterable[C], internal.runtime.CodecCombinators.iterable[A, C](codec))
+
+  final def asArray(using ClassTag[A]): Pickler[Array[A]] =
+    internal.runtime.PicklerFactories.instance(schema.asArray, internal.runtime.CodecCombinators.array(codec))
 }
 
 object Pickler extends PicklerCompanionCompat {
