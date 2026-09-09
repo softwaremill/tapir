@@ -10,19 +10,17 @@ import sttp.tapir.{FieldName, Schema, ValidationError, Validator}
 /** Recursive-type support for the schema half of the derivation.
   *
   * ==Why this file exists separately from `SchemaDerivationTest`==
-  * The ported suite declares recursive fixtures (`F`, `Node`/`Edge`, `IOpt`, `IList`) but never references them, so it
-  * imposes no constraint at all on recursion. It could not have: the uPickle-based pickler **cannot derive a
-  * self-recursive type**, failing at compile time with
-  * `Failed to summon Pickler[List[RecF]]`. (Its `SchemaDerivation.withCache`, which would have emitted an `SRef`, has
-  * zero call sites — dead code.) Recursion is therefore new capability rather than behaviour to match, and these
-  * expectations are modelled on tapir core's own `Schema.derived`, which does support it.
+  * The ported suite declares recursive fixtures (`F`, `Node`/`Edge`, `IOpt`, `IList`) but never references them, so it imposes no
+  * constraint at all on recursion. It could not have: the uPickle-based pickler **cannot derive a self-recursive type**, failing at compile
+  * time with `Failed to summon Pickler[List[RecF]]`. (Its `SchemaDerivation.withCache`, which would have emitted an `SRef`, has zero call
+  * sites — dead code.) Recursion is therefore new capability rather than behaviour to match, and these expectations are modelled on tapir
+  * core's own `Schema.derived`, which does support it.
   *
   * ==The invariant under test==
-  * A recursive occurrence becomes `Schema(SRef(name))`. That is only useful if the `name` is *exactly* the `SName`
-  * carried by an enclosing schema, because `Schema.applyValidation` resolves a reference by looking it up in a
-  * `Map[SName, Schema]` accumulated during traversal (`core/src/main/scala/sttp/tapir/Schema.scala:272-292`). A
-  * merely *stable* name is not enough — a mismatch degrades silently to "no validation" rather than raising an error,
-  * which is why `should "resolve ..."` below is the load-bearing test in this file.
+  * A recursive occurrence becomes `Schema(SRef(name))`. That is only useful if the `name` is *exactly* the `SName` carried by an enclosing
+  * schema, because `Schema.applyValidation` resolves a reference by looking it up in a `Map[SName, Schema]` accumulated during traversal
+  * (`core/src/main/scala/sttp/tapir/Schema.scala:272-292`). A merely *stable* name is not enough — a mismatch degrades silently to "no
+  * validation" rather than raising an error, which is why `should "resolve ..."` below is the load-bearing test in this file.
   */
 class SchemaRecursionTest extends AnyFlatSpec with Matchers with OptionValues {
 

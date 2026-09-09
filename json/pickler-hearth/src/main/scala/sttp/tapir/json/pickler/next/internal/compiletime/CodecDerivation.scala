@@ -9,8 +9,8 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.json.pickler.next.PicklerConfiguration
 import sttp.tapir.json.pickler.next.internal.runtime.{CodecCombinators, LeafCodecs}
 
-/** Derivation of the `JsonValueCodec` half of a `Pickler`, by **configuring `JsonCodecMaker.make`** rather than by
-  * generating reader/writer code ourselves.
+/** Derivation of the `JsonValueCodec` half of a `Pickler`, by **configuring `JsonCodecMaker.make`** rather than by generating reader/writer
+  * code ourselves.
   *
   * ==Shape of the generated code==
   * {{{
@@ -20,17 +20,15 @@ import sttp.tapir.json.pickler.next.internal.runtime.{CodecCombinators, LeafCode
   *   JsonCodecMaker.make[Person](<config for Person>)
   * }
   * }}}
-  * One `make` per case class and per sealed hierarchy in the type graph, each with its own configuration. jsoniter
-  * finds the sibling codecs through implicit search when it meets a nested type, which is what allows every
-  * configuration to be *local*: `fieldNameMapper` is keyed by bare field name, so a graph-wide mapper could not
-  * express `@encodedName` on one class's `name` but not another's.
+  * One `make` per case class and per sealed hierarchy in the type graph, each with its own configuration. jsoniter finds the sibling codecs
+  * through implicit search when it meets a nested type, which is what allows every configuration to be *local*: `fieldNameMapper` is keyed
+  * by bare field name, so a graph-wide mapper could not express `@encodedName` on one class's `name` but not another's.
   *
   * ==Why the configuration is computed here==
-  * jsoniter interprets its `CodecMakerConfig` argument at *its* expansion time, and only accepts trees made of
-  * literals and stable references. tapir's `PicklerConfiguration` is a runtime value, so it is folded with `semiEval`
-  * first, its `toEncodedName` / `toDiscriminatorValue` are *invoked* during our expansion, and the results are emitted
-  * as literal `Match` cases (see [[PlatformSupport]]). The schema half computes the same names at runtime from the same
-  * configuration, so the two agree by construction.
+  * jsoniter interprets its `CodecMakerConfig` argument at *its* expansion time, and only accepts trees made of literals and stable
+  * references. tapir's `PicklerConfiguration` is a runtime value, so it is folded with `semiEval` first, its `toEncodedName` /
+  * `toDiscriminatorValue` are *invoked* during our expansion, and the results are emitted as literal `Match` cases (see
+  * [[PlatformSupport]]). The schema half computes the same names at runtime from the same configuration, so the two agree by construction.
   *
   * ==Knobs, and why each is set==
   *   - `transientEmpty(false)`: empty collections are written as `[]` (the uPickle-based module did so).
@@ -38,19 +36,19 @@ import sttp.tapir.json.pickler.next.internal.runtime.{CodecCombinators, LeafCode
   *   - `transientNone`: from `PicklerConfiguration.transientNone`.
   *   - `requireDiscriminatorFirst(false)`: the discriminator may appear anywhere in the object.
   *   - `allowRecursiveTypes(true)`: recursion is handled by jsoniter's own `def`s; the schema uses `SRef`.
-  *   - `alwaysEmitDiscriminator(true)` on case classes: a leaf written on its own carries its discriminator, as the
-  *     uPickle-based module's tagged writers did. It is also what makes per-leaf codecs composable into the hierarchy
-  *     codec: jsoniter delegates to the leaf's implicit and the leaf writes the tag itself.
+  *   - `alwaysEmitDiscriminator(true)` on case classes: a leaf written on its own carries its discriminator, as the uPickle-based module's
+  *     tagged writers did. It is also what makes per-leaf codecs composable into the hierarchy codec: jsoniter delegates to the leaf's
+  *     implicit and the leaf writes the tag itself.
   *   - `discriminatorFieldName(None)` on a hierarchy whose leaves are all singletons: bare strings (plan §5.2).
   *
   * ==`Either`==
-  * jsoniter has no encoding for it, so an `Either[L, R]` in the graph gets a hand-written `CodecCombinators.either`
-  * val over the codecs of its two sides (plan §5.3: untagged, as tapir core's `Codec.eitherRight`). A side that has a
-  * val of its own is referenced; any other (a primitive, a collection) gets an inline `make` under the base config.
+  * jsoniter has no encoding for it, so an `Either[L, R]` in the graph gets a hand-written `CodecCombinators.either` val over the codecs of
+  * its two sides (plan §5.3: untagged, as tapir core's `Codec.eitherRight`). A side that has a val of its own is referenced; any other (a
+  * primitive, a collection) gets an inline `make` under the base config.
   *
   * ==What is deliberately not supported==
-  * tapir's `@default` annotation does not drive decoding: jsoniter fills a missing field only from a Scala default
-  * parameter and has no hook for anything else (D5). Scala default parameters *are* honoured.
+  * tapir's `@default` annotation does not drive decoding: jsoniter fills a missing field only from a Scala default parameter and has no
+  * hook for anything else (D5). Scala default parameters *are* honoured.
   */
 trait CodecDerivation {
   this: MacroCommons & StdExtensions & AnnotationSupport & PlatformSupport & ImplicitPicklerSupport =>
@@ -74,9 +72,9 @@ trait CodecDerivation {
   /** References to the sibling vals of the generated block, by the `plainPrint` of the type they are a codec for. */
   private type CodecRefs = String => Option[UntypedExpr]
 
-  /** One `implicit lazy val` of type `JsonValueCodec[tpe]` the generated code will contain: a `JsonCodecMaker.make`
-    * call, a hand-written leaf codec from [[LeafCodecs]], a user pickler's codec, or a [[CodecCombinators]] call over
-    * sibling vals (hence the right-hand side is a function of the block's references).
+  /** One `implicit lazy val` of type `JsonValueCodec[tpe]` the generated code will contain: a `JsonCodecMaker.make` call, a hand-written
+    * leaf codec from [[LeafCodecs]], a user pickler's codec, or a [[CodecCombinators]] call over sibling vals (hence the right-hand side is
+    * a function of the block's references).
     */
   private final case class CodecVal(tpe: ??, rhs: CodecRefs => UntypedExpr)
   private object CodecVal {
@@ -87,8 +85,8 @@ trait CodecDerivation {
   // Entry point
   // -----------------------------------------------------------------------------------------------------------------
 
-  /** Discriminator values that replace the configuration-derived ones for specific leaves, keyed by the leaf type's
-    * `plainPrint`. Used by `oneOfUsingField`, which decides those values from a user function.
+  /** Discriminator values that replace the configuration-derived ones for specific leaves, keyed by the leaf type's `plainPrint`. Used by
+    * `oneOfUsingField`, which decides those values from a user function.
     */
   protected var leafNameOverrides: Map[String, String] = Map.empty
 
@@ -100,15 +98,18 @@ trait CodecDerivation {
         // The root gets an implicit too. `make[A]` itself never looks its own type up (jsoniter pre-seeds the root as
         // "no implicit"), but a *nested* `make[Leaf]` whose field refers back to `A` must find it: otherwise jsoniter
         // would inline `A` there, under the leaf's configuration -- whose leaf-name mapper knows only that one leaf.
-        root <- codecValFor[A](shapeOf[A], config).map(_.getOrElse(CodecVal.const(Type[A].as_??, makeExpr[A](baseConfig(config)).asUntyped)))
+        root <- codecValFor[A](shapeOf[A], config).map(
+          _.getOrElse(CodecVal.const(Type[A].as_??, makeExpr[A](baseConfig(config)).asUntyped))
+        )
         _ <- Log.info(s"Emitting ${units.size} nested codec(s): ${units.map(_.tpe.Underlying.plainPrint).mkString(", ")}")
       } yield {
         val all = units :+ root
         val keys = all.map(_.tpe.Underlying.plainPrint)
-        def refsByType(refs: List[UntypedExpr]): CodecRefs = key => keys.indexOf(key) match {
-          case -1 => None
-          case i  => Some(refs(i))
-        }
+        def refsByType(refs: List[UntypedExpr]): CodecRefs = key =>
+          keys.indexOf(key) match {
+            case -1 => None
+            case i  => Some(refs(i))
+          }
         val vals = all.zipWithIndex.map { case (unit, i) =>
           import unit.tpe.Underlying as U
           implicit val CodecU: Type[JsonValueCodec[U]] = CTypes.CodecOf[U]
@@ -130,9 +131,9 @@ trait CodecDerivation {
 
   /** Every case class and sealed hierarchy reachable from `A` (excluding `A` itself), dependencies first.
     *
-    * The classification mirrors `SchemaDerivation`'s rule order so that both halves take a type apart the same way:
-    * `String` and `Array[Byte]` are scalars (not collections), a value class is its inner type, `Map` before
-    * `Collection`, singletons before case classes, and hierarchies flattened to their leaves.
+    * The classification mirrors `SchemaDerivation`'s rule order so that both halves take a type apart the same way: `String` and
+    * `Array[Byte]` are scalars (not collections), a value class is its inner type, `Map` before `Collection`, singletons before case
+    * classes, and hierarchies flattened to their leaves.
     */
   private def collectNested[A: Type](config: PicklerConfiguration): MIO[List[CodecVal]] =
     walkChildren(children(shapeOf[A]), config, Set(Type[A].plainPrint), Vector.empty).map(_._2.toList)
@@ -142,14 +143,17 @@ trait CodecDerivation {
   /** How a type is taken apart. The order of the cases in `shapeOf` mirrors `SchemaDerivation`'s rule order. */
   private sealed trait Shape
   private object Shape {
+
     /** jsoniter knows it, or nothing can be done for it. */
     case object Leaf extends Shape
     final case class HandWritten(codec: CodecVal) extends Shape
+
     /** A wrapper jsoniter sees through: `AnyVal`, `Option`, collections, `Map` values. */
     final case class Transparent(inner: List[??]) extends Shape
     case object Singleton extends Shape
     final case class Product[A](cc: CaseClass[A], fields: List[??]) extends Shape
     final case class Coproduct[A](e: Enum[A], leaves: List[??]) extends Shape
+
     /** Hand-written over the two sides' codecs; must precede `Coproduct`, which would otherwise claim it. */
     final case class EitherOf(left: ??, right: ??) extends Shape
   }
@@ -168,7 +172,7 @@ trait CodecDerivation {
               import isOption.Underlying as Element
               Shape.Transparent(List(Type[Element].as_??))
             case CTypes.EitherCtor(left, right) => Shape.EitherOf(left, right)
-            case IsMap(isMap) =>
+            case IsMap(isMap)                   =>
               import isMap.Underlying as Pair
               Shape.Transparent(List(mapValueType[A, Pair](isMap.value)))
             case IsCollection(isCollection) =>
@@ -183,10 +187,9 @@ trait CodecDerivation {
                   case Left(_) =>
                     Enum.parse[A].toEither match {
                       case Right(e) =>
-                        val leaves = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList).map {
-                          case (_, child) =>
-                            import child.Underlying as Child
-                            Type[Child].as_??
+                        val leaves = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList).map { case (_, child) =>
+                          import child.Underlying as Child
+                          Type[Child].as_??
                         }
                         Shape.Coproduct(e, leaves)
                       // jsoniter either knows the type (java.time, UUID, ...) or the schema chain has already failed
@@ -212,8 +215,8 @@ trait CodecDerivation {
 
   private def makeUnit[A: Type](config: Expr[CodecMakerConfig]): CodecVal = CodecVal.const(Type[A].as_??, makeExpr[A](config).asUntyped)
 
-  /** The val `A` contributes to the block given its shape, if any. Shared by the root and the nested walk; the root
-    * additionally falls back to a plain `make` for the shapes that need no val when nested (jsoniter inlines them).
+  /** The val `A` contributes to the block given its shape, if any. Shared by the root and the nested walk; the root additionally falls back
+    * to a plain `make` for the shapes that need no val when nested (jsoniter inlines them).
     */
   private def codecValFor[A: Type](shape: Shape, config: PicklerConfiguration): MIO[Option[CodecVal]] = shape match {
     case Shape.HandWritten(codec) => MIO.pure(Some(codec))
@@ -242,8 +245,8 @@ trait CodecDerivation {
 
   /** Visit `A` (nested somewhere under the root): recurse into its children, then emit its codec if it needs one.
     *
-    * A user-supplied `Pickler[A]` short-circuits the visit: its `codec` becomes the implicit for `A`, and nothing
-    * beneath `A` is looked at -- whatever that pickler does for its own fields is its business.
+    * A user-supplied `Pickler[A]` short-circuits the visit: its `codec` becomes the implicit for `A`, and nothing beneath `A` is looked at
+    * -- whatever that pickler does for its own fields is its business.
     */
   private def walk[A: Type](config: PicklerConfiguration, visited: Set[String], acc: Vector[CodecVal]): MIO[Walk] = {
     val key = Type[A].plainPrint
@@ -263,11 +266,11 @@ trait CodecDerivation {
 
   /** A `given JsonValueCodec[A]` with no `given Pickler[A]`, for a structural `A`, is refused.
     *
-    * It would not even be honoured: the `implicit lazy val codec$A` this derivation emits sits in a tighter scope than
-    * the user's given and wins the implicit search inside jsoniter, so the user's codec would be silently ignored
-    * (measured). Had it won instead, the JSON would follow the codec while the schema still documented the class.
-    * Either outcome is wrong; a `Pickler[A]` carries both halves and is honoured by both chains. Leaf types are exempt
-    * (their schema comes from an implicit `Schema` anyway, which the user controls the same way).
+    * It would not even be honoured: the `implicit lazy val codec$A` this derivation emits sits in a tighter scope than the user's given and
+    * wins the implicit search inside jsoniter, so the user's codec would be silently ignored (measured). Had it won instead, the JSON would
+    * follow the codec while the schema still documented the class. Either outcome is wrong; a `Pickler[A]` carries both halves and is
+    * honoured by both chains. Leaf types are exempt (their schema comes from an implicit `Schema` anyway, which the user controls the same
+    * way).
     */
   private def rejectBareCodec[A: Type](shape: Shape): MIO[Unit] = shape match {
     case _: Shape.Product[?] | _: Shape.Coproduct[?] =>
@@ -318,8 +321,8 @@ trait CodecDerivation {
   // Per-type configuration
   // -----------------------------------------------------------------------------------------------------------------
 
-  /** The knobs every `make` gets. Non-structural roots (primitives, collections, `Option`, `Map`) need nothing more;
-    * jsoniter derives them directly.
+  /** The knobs every `make` gets. Non-structural roots (primitives, collections, `Option`, `Map`) need nothing more; jsoniter derives them
+    * directly.
     */
   private def baseConfig(config: PicklerConfiguration): Expr[CodecMakerConfig] = {
     implicit val ConfigT: Type[CodecMakerConfig] = CTypes.MakerConfig
@@ -352,7 +355,7 @@ trait CodecDerivation {
       }
 
     renames match {
-      case Left(error) => Log.error(error.message) >> MIO.fail(error)
+      case Left(error)  => Log.error(error.message) >> MIO.fail(error)
       case Right(pairs) =>
         // `alwaysEmitDiscriminator` needs a discriminator field name; jsoniter only acts on it when `A` has a sealed
         // parent, so setting both unconditionally is safe. The leaf mapper covers `A` itself, which is all a
@@ -428,9 +431,9 @@ trait CodecDerivation {
       case Left(detail)          => Left(PicklerDerivationError.InvalidAnnotation(detail))
     }
 
-  /** `config.toDiscriminatorValue(<SName of A>)`, with the `SName` built as `SchemaDerivation.sNameExpr` builds it: a
-    * type-level `@encodedName` replaces the whole name, otherwise it is core's `typeFullName`. Only `fullName` matters
-    * to `toDiscriminatorValue`, so type arguments are not reproduced here.
+  /** `config.toDiscriminatorValue(<SName of A>)`, with the `SName` built as `SchemaDerivation.sNameExpr` builds it: a type-level
+    * `@encodedName` replaces the whole name, otherwise it is core's `typeFullName`. Only `fullName` matters to `toDiscriminatorValue`, so
+    * type arguments are not reproduced here.
     */
   private def discriminatorValue[A: Type](config: PicklerConfiguration): String =
     leafNameOverrides.getOrElse(Type[A].plainPrint, configDiscriminatorValue[A](config))

@@ -9,9 +9,9 @@ import scala.quoted.*
 
 /** Scala 3 macro bundle: the only file that knows about `Quotes`.
   *
-  * `MacroCommonsScala3` supplies Hearth's cake (and already mixes in `StdExtensions`); all the actual derivation logic
-  * comes from `PicklerMacrosImpl`. Adding Scala 2.13 support later means adding a sibling bundle extending
-  * `MacroCommonsScala2` with the same `PicklerMacrosImpl` and its own [[PlatformSupport]] — nothing else changes.
+  * `MacroCommonsScala3` supplies Hearth's cake (and already mixes in `StdExtensions`); all the actual derivation logic comes from
+  * `PicklerMacrosImpl`. Adding Scala 2.13 support later means adding a sibling bundle extending `MacroCommonsScala2` with the same
+  * `PicklerMacrosImpl` and its own [[PlatformSupport]] — nothing else changes.
   */
 final private[next] class PicklerMacros(q: Quotes)
     extends MacroCommonsScala3(using q),
@@ -23,11 +23,10 @@ private[next] object PicklerMacros {
 
   /** Number of pickler derivations currently on the stack of this compiler thread.
     *
-    * A derivation summons `Pickler[X]` for every nested `X` (see [[ImplicitPicklerSupport]]). If `generic.auto` is
-    * in scope, one candidate is `Pickler.derived[X]` itself, i.e. this macro, expanded *while* the outer one is
-    * running. `derivePicklerImpl` refuses to run in that situation, which turns the candidate into a failed one and
-    * lets the search fall through to "no user-supplied pickler". A `ThreadLocal` rather than a plain `var` only
-    * because nothing guarantees the compiler will never expand macros on several threads.
+    * A derivation summons `Pickler[X]` for every nested `X` (see [[ImplicitPicklerSupport]]). If `generic.auto` is in scope, one candidate
+    * is `Pickler.derived[X]` itself, i.e. this macro, expanded *while* the outer one is running. `derivePicklerImpl` refuses to run in that
+    * situation, which turns the candidate into a failed one and lets the search fall through to "no user-supplied pickler". A `ThreadLocal`
+    * rather than a plain `var` only because nothing guarantees the compiler will never expand macros on several threads.
     */
   private val depth: ThreadLocal[Int] = ThreadLocal.withInitial(() => 0)
 
@@ -65,12 +64,12 @@ private[next] object PicklerMacros {
 /** [[PlatformSupport]] for Scala 3.
   *
   * The two mapper shapes are pinned by jsoniter's `CompileTimeEval` (`NameMapper.scala` in `jsoniter-scala-macros`):
-  *   - `evalApplyStringTerm` destructures the argument with the `Lambda(params, body)` extractor and evaluates the body
-  *     as a `Match` with a `null` default, so a `Closure` over a `DefDef` whose body is a bare `Match` on `Literal`
-  *     patterns is the shape to produce. This is exactly what the typer produces for `{ case "a" => "b" }` before
-  *     `ExpandSAMs`, which is why hand-written jsoniter configurations work.
-  *   - A `Map(...)` literal is matched by a quote pattern that does **not** see through the `Inlined` nodes splicing
-  *     produces, so it is unusable from a macro (measured, D5).
+  *   - `evalApplyStringTerm` destructures the argument with the `Lambda(params, body)` extractor and evaluates the body as a `Match` with a
+  *     `null` default, so a `Closure` over a `DefDef` whose body is a bare `Match` on `Literal` patterns is the shape to produce. This is
+  *     exactly what the typer produces for `{ case "a" => "b" }` before `ExpandSAMs`, which is why hand-written jsoniter configurations
+  *     work.
+  *   - A `Map(...)` literal is matched by a quote pattern that does **not** see through the `Inlined` nodes splicing produces, so it is
+  *     unusable from a macro (measured, D5).
   */
 private[compiletime] trait PlatformSupportScala3 extends PlatformSupport { this: MacroCommonsScala3 =>
   import quotes.reflect.*
@@ -108,8 +107,8 @@ private[compiletime] trait PlatformSupportScala3 extends PlatformSupport { this:
       }
     ).asExprOf[String => String]
 
-  /** Mirrors `JsonCodecMakerInstance.discriminatorValue` in `jsoniter-scala-macros`: enum values are named by their
-    * term symbol, everything else by its type symbol, and a module's trailing `$` is dropped.
+  /** Mirrors `JsonCodecMakerInstance.discriminatorValue` in `jsoniter-scala-macros`: enum values are named by their term symbol, everything
+    * else by its type symbol, and a module's trailing `$` is dropped.
     */
   protected def jsoniterLeafName[A: Type]: String = {
     val tpe = TypeRepr.of[A]
@@ -155,8 +154,8 @@ private[compiletime] trait PlatformSupportScala3 extends PlatformSupport { this:
 
   protected def dereferenceStable[A: Type](expr: Expr[A]): Option[Expr[A]] = {
     def loop(term: Term): Option[Term] = term match {
-      case Inlined(_, Nil, inner) => loop(inner)
-      case Typed(inner, _)        => loop(inner)
+      case Inlined(_, Nil, inner)          => loop(inner)
+      case Typed(inner, _)                 => loop(inner)
       case ref: Ref if ref.symbol.isValDef =>
         ref.symbol.tree match {
           case ValDef(_, _, Some(rhs)) => Some(rhs)

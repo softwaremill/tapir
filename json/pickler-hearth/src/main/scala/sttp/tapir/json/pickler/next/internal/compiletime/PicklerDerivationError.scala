@@ -4,12 +4,11 @@ import scala.util.control.NoStackTrace
 
 /** Errors raised during derivation.
   *
-  * Modelling these as an ADT rather than passing strings around is what makes it possible to render one coherent,
-  * actionable message at the end of a failed derivation (see REQ-10 in the plan) instead of a pile of unrelated
-  * compiler errors.
+  * Modelling these as an ADT rather than passing strings around is what makes it possible to render one coherent, actionable message at the
+  * end of a failed derivation (see REQ-10 in the plan) instead of a pile of unrelated compiler errors.
   *
-  * Every error site follows the `Log.error(err.message) >> MIO.fail(err)` pattern, so that the failure shows up both in
-  * the derivation log and as the compile error.
+  * Every error site follows the `Log.error(err.message) >> MIO.fail(err)` pattern, so that the failure shows up both in the derivation log
+  * and as the compile error.
   */
 sealed trait PicklerDerivationError extends NoStackTrace with Product with Serializable {
   def message: String
@@ -18,8 +17,7 @@ sealed trait PicklerDerivationError extends NoStackTrace with Product with Seria
 
 object PicklerDerivationError {
 
-  /** No derivation rule was applicable. `reasons` carries one entry per rule that declined, so the user can see why
-    * each one bowed out.
+  /** No derivation rule was applicable. `reasons` carries one entry per rule that declined, so the user can see why each one bowed out.
     */
   final case class UnsupportedType(typeName: String, reasons: List[String]) extends PicklerDerivationError {
     def message: String =
@@ -36,14 +34,13 @@ object PicklerDerivationError {
     def message: String = s"Cannot construct a value of $typeName during decoding: $detail"
   }
 
-  final case class UnexpectedParameterInSingleton(typeName: String, parameter: String)
-      extends PicklerDerivationError {
+  final case class UnexpectedParameterInSingleton(typeName: String, parameter: String) extends PicklerDerivationError {
     def message: String = s"Singleton $typeName unexpectedly has a constructor parameter '$parameter'"
   }
 
-  /** The `PicklerConfiguration` could not be evaluated during expansion. The codec half needs the configuration as a
-    * *value* (its name transformations are invoked at compile time and the results handed to `JsonCodecMaker` as
-    * literals), so a configuration that is only known at runtime cannot be supported.
+  /** The `PicklerConfiguration` could not be evaluated during expansion. The codec half needs the configuration as a *value* (its name
+    * transformations are invoked at compile time and the results handed to `JsonCodecMaker` as literals), so a configuration that is only
+    * known at runtime cannot be supported.
     */
   final case class ConfigurationNotStatic(configExpr: String, reason: String) extends PicklerDerivationError {
     def message: String =
@@ -73,8 +70,8 @@ object PicklerDerivationError {
          |to choose how each case is rendered.""".stripMargin
   }
 
-  /** `oneOfUsingField` turns every mapping key into a jsoniter discriminator literal at compile time, so both the
-    * keys and `asString` have to be evaluable during expansion.
+  /** `oneOfUsingField` turns every mapping key into a jsoniter discriminator literal at compile time, so both the keys and `asString` have
+    * to be evaluable during expansion.
     */
   final case class OneOfMappingNotStatic(detail: String) extends PicklerDerivationError {
     def message: String =
@@ -82,8 +79,8 @@ object PicklerDerivationError {
          |Use literal keys (e.g. `200 -> picklerOk`) and a lambda over them (e.g. `code => s"code-$$code"`).""".stripMargin
   }
 
-  /** A `JsonValueCodec[X]` alone cannot be honoured for a structural `X`: the schema would still be derived from the
-    * class, documenting a shape the codec no longer writes.
+  /** A `JsonValueCodec[X]` alone cannot be honoured for a structural `X`: the schema would still be derived from the class, documenting a
+    * shape the codec no longer writes.
     */
   final case class CodecWithoutPickler(typeName: String, codecExpr: String) extends PicklerDerivationError {
     def message: String =

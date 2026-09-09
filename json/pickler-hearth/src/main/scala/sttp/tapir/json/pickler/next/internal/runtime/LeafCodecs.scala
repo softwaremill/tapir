@@ -6,8 +6,8 @@ import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 
 /** Codecs for leaf types that tapir has a `Schema` for but `JsonCodecMaker` does not derive on its own.
   *
-  * The derivation macro puts these into scope (as `implicit lazy val`s in the generated block) whenever the type graph
-  * contains one of the types, so that jsoniter picks them up through its ordinary implicit lookup.
+  * The derivation macro puts these into scope (as `implicit lazy val`s in the generated block) whenever the type graph contains one of the
+  * types, so that jsoniter picks them up through its ordinary implicit lookup.
   */
 object LeafCodecs {
 

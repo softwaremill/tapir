@@ -8,11 +8,10 @@ import sttp.tapir.{FieldName, Schema}
 
 /** Structural acceptance test for the macro skeleton.
   *
-  * Behavioural coverage of the schema half lives in `SchemaDerivationTest`, ported verbatim from the incumbent
-  * module. What this file pins down is the *plumbing*, which that suite exercises only incidentally: that the bundle
-  * is constructed, the cross-quotes plugin is active, the shared `ValDefsCache` produces well-scoped `def`s (a
-  * cross-splice staging bug would fail compilation here rather than at runtime), and that both entry points
-  * — `Pickler.derived` and `Pickler.schemaFor` — agree.
+  * Behavioural coverage of the schema half lives in `SchemaDerivationTest`, ported verbatim from the incumbent module. What this file pins
+  * down is the *plumbing*, which that suite exercises only incidentally: that the bundle is constructed, the cross-quotes plugin is active,
+  * the shared `ValDefsCache` produces well-scoped `def`s (a cross-splice staging bug would fail compilation here rather than at runtime),
+  * and that both entry points — `Pickler.derived` and `Pickler.schemaFor` — agree.
   */
 class PicklerScaffoldingTest extends AnyFlatSpec with Matchers with OptionValues {
 

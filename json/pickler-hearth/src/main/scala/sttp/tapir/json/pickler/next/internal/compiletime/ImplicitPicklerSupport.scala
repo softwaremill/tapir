@@ -9,27 +9,25 @@ import scala.collection.mutable
 /** Looking up a user-supplied `Pickler[X]` for a type nested in the one being derived.
   *
   * ==Why this is not a plain `Expr.summonImplicit`==
-  * With `generic.auto.*` in scope, `Pickler[X]` always has a candidate: `auto.picklerForType[X]`, which expands to
-  * `Pickler.derived[X]` — our own macro. Summoning from inside a derivation would therefore start a *nested*
-  * derivation for every field type, recursing forever on cyclic types and exponentially on deep ones (plan §6.4).
-  * `Implicits.searchIgnoring`, the direct fix, needs Scala 3.7.
+  * With `generic.auto.*` in scope, `Pickler[X]` always has a candidate: `auto.picklerForType[X]`, which expands to `Pickler.derived[X]` —
+  * our own macro. Summoning from inside a derivation would therefore start a *nested* derivation for every field type, recursing forever on
+  * cyclic types and exponentially on deep ones (plan §6.4). `Implicits.searchIgnoring`, the direct fix, needs Scala 3.7.
   *
-  * The guard is instead in `PicklerMacros.derivePicklerImpl`: it aborts immediately when invoked while another
-  * derivation is on the stack. The compiler treats an aborted candidate as a failed one, so the search comes back
-  * empty and we derive structurally; a user's `given` is an already-typed value, not a pending macro call, and is
-  * found normally.
+  * The guard is instead in `PicklerMacros.derivePicklerImpl`: it aborts immediately when invoked while another derivation is on the stack.
+  * The compiler treats an aborted candidate as a failed one, so the search comes back empty and we derive structurally; a user's `given` is
+  * an already-typed value, not a pending macro call, and is found normally.
   *
   * ==Exclusions==
-  * The root type is never looked up (a `given p: Pickler[A] = Pickler.derived[A]` would otherwise find itself).
-  * `oneOfUsingField` additionally excludes the leaves it maps, whose codecs it must derive with overridden
-  * discriminator values rather than take from the user's child picklers.
+  * The root type is never looked up (a `given p: Pickler[A] = Pickler.derived[A]` would otherwise find itself). `oneOfUsingField`
+  * additionally excludes the leaves it maps, whose codecs it must derive with overridden discriminator values rather than take from the
+  * user's child picklers.
   */
 trait ImplicitPicklerSupport { this: MacroCommons =>
 
   private val memo = mutable.Map.empty[String, Option[Expr_??]]
 
-  /** Types for which no user pickler is looked up (by `plainPrint`). Mutable per-expansion state, set by the entry
-    * points before derivation starts.
+  /** Types for which no user pickler is looked up (by `plainPrint`). Mutable per-expansion state, set by the entry points before derivation
+    * starts.
     */
   protected var implicitLookupExclusions: Set[String] = Set.empty
 

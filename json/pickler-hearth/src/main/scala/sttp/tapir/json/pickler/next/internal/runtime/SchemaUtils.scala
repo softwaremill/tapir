@@ -1,25 +1,14 @@
 package sttp.tapir.json.pickler.next.internal.runtime
 
 import sttp.tapir.Schema.SName
-import sttp.tapir.SchemaType.{
-  SArray,
-  SCoproduct,
-  SDiscriminator,
-  SOpenProduct,
-  SProduct,
-  SProductField,
-  SRef,
-  SString,
-  SchemaWithValue
-}
+import sttp.tapir.SchemaType.{SArray, SCoproduct, SDiscriminator, SOpenProduct, SProduct, SProductField, SRef, SString, SchemaWithValue}
 import sttp.tapir.json.pickler.next.PicklerConfiguration
 import sttp.tapir.{FieldName, Schema, Validator}
 
 /** Runtime constructors for [[Schema]] values, invoked by macro-generated code.
   *
-  * Everything here must be public (generated code lives in user compilation units) and free of macro machinery. The
-  * split matters for compile times as much as for readability: every bit of logic expressed here is logic the macro
-  * does not have to reify into a tree.
+  * Everything here must be public (generated code lives in user compilation units) and free of macro machinery. The split matters for
+  * compile times as much as for readability: every bit of logic expressed here is logic the macro does not have to reify into a tree.
   *
   * The shapes produced here are pinned by `SchemaDerivationTest` in the incumbent `json/pickler` module; see
   * `doc/dev/schema-derivation-test-spec.md` for the assertion-by-assertion breakdown.
@@ -33,24 +22,24 @@ object SchemaUtils {
 
   /** Fold tapir's `Schema.annotations.*` onto a schema, ignoring every other annotation silently.
     *
-    * `@encodedName` is deliberately absent: on a type it is consumed while building the [[SName]], and on a field it
-    * is consumed by [[productField]]. Applying it here as well would be a no-op at best.
+    * `@encodedName` is deliberately absent: on a type it is consumed while building the [[SName]], and on a field it is consumed by
+    * [[productField]]. Applying it here as well would be a no-op at best.
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def enrichSchema[T](schema: Schema[T], annotations: List[Any]): Schema[T] =
     annotations.foldLeft(schema) {
-      case (s, ann: Schema.annotations.description)                 => s.description(ann.text)
-      case (s, ann: Schema.annotations.encodedExample)              => s.encodedExample(ann.example)
-      case (s, ann: Schema.annotations.default[T @unchecked])       => s.default(ann.default, ann.encoded)
-      case (s, ann: Schema.annotations.validate[T @unchecked])      => s.validate(ann.v)
-      case (s, ann: Schema.annotations.validateEach[T @unchecked])  =>
+      case (s, ann: Schema.annotations.description)                => s.description(ann.text)
+      case (s, ann: Schema.annotations.encodedExample)             => s.encodedExample(ann.example)
+      case (s, ann: Schema.annotations.default[T @unchecked])      => s.default(ann.default, ann.encoded)
+      case (s, ann: Schema.annotations.validate[T @unchecked])     => s.validate(ann.v)
+      case (s, ann: Schema.annotations.validateEach[T @unchecked]) =>
         s.modifyUnsafe[T](Schema.ModifyCollectionElements)((_: Schema[T]).validate(ann.v))
-      case (s, ann: Schema.annotations.format)     => s.format(ann.format)
-      case (s, ann: Schema.annotations.title)      => s.title(ann.name)
-      case (s, _: Schema.annotations.deprecated)   => s.deprecated(true)
-      case (s, _: Schema.annotations.hidden)       => s.hidden(true)
-      case (s, ann: Schema.annotations.customise)  => ann.f(s).asInstanceOf[Schema[T]]
-      case (s, _)                                  => s
+      case (s, ann: Schema.annotations.format)    => s.format(ann.format)
+      case (s, ann: Schema.annotations.title)     => s.title(ann.name)
+      case (s, _: Schema.annotations.deprecated)  => s.deprecated(true)
+      case (s, _: Schema.annotations.hidden)      => s.hidden(true)
+      case (s, ann: Schema.annotations.customise) => ann.f(s).asInstanceOf[Schema[T]]
+      case (s, _)                                 => s
     }
 
   /** The `@encodedName` carried by a type, if any. When present it *replaces* the whole derived [[SName]]. */
@@ -61,9 +50,9 @@ object SchemaUtils {
 
   /** Build one product field.
     *
-    * `index` is the position of the parameter in the primary constructor, which for a case class is also its
-    * `Product` element index. `SProductField` compares by name and schema only, so the accessor does not affect the
-    * test assertions — but it does drive `Schema.applyValidation`, so it has to be right.
+    * `index` is the position of the parameter in the primary constructor, which for a case class is also its `Product` element index.
+    * `SProductField` compares by name and schema only, so the accessor does not affect the test assertions — but it does drive
+    * `Schema.applyValidation`, so it has to be right.
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def productField[T](
@@ -95,8 +84,8 @@ object SchemaUtils {
     *      `Validator.enumeration` would change `Schema` equality and fail the assertions;
     *   3. the attribute goes on the **field's** schema, not on the child schema itself.
     *
-    * Discriminator values are computed here rather than in the macro so that all eight
-    * `with*DiscriminatorValues` variants fall out of `config.toDiscriminatorValue` for free.
+    * Discriminator values are computed here rather than in the macro so that all eight `with*DiscriminatorValues` variants fall out of
+    * `config.toDiscriminatorValue` for free.
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def coproductSchema[T](
@@ -128,13 +117,12 @@ object SchemaUtils {
     val enrichedSubtypes = withDiscriminator.map(_._1)
 
     Schema[T](
-      SCoproduct[T](enrichedSubtypes, Some(SDiscriminator(FieldName(discriminatorField, discriminatorField), mapping))) {
-        (value: T) =>
-          val className = value.getClass.getName
-          enrichedSubtypes.collectFirst {
-            case s if s.name.exists(n => className == n.fullName || className == n.fullName + "$") =>
-              SchemaWithValue(s.asInstanceOf[Schema[Any]], value)
-          }
+      SCoproduct[T](enrichedSubtypes, Some(SDiscriminator(FieldName(discriminatorField, discriminatorField), mapping))) { (value: T) =>
+        val className = value.getClass.getName
+        enrichedSubtypes.collectFirst {
+          case s if s.name.exists(n => className == n.fullName || className == n.fullName + "$") =>
+            SchemaWithValue(s.asInstanceOf[Schema[Any]], value)
+        }
       },
       Some(name)
     )
@@ -158,8 +146,8 @@ object SchemaUtils {
 
   /** Mirrors what `Schema.schemaForMap` generates, but with our own derived value schema.
     *
-    * `typeParameters` is computed by the macro and follows tapir's convention: the key type is omitted when it is
-    * `String`, and nested type arguments are flattened.
+    * `typeParameters` is computed by the macro and follows tapir's convention: the key type is omitted when it is `String`, and nested type
+    * arguments are flattened.
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def mapSchema[V](valueSchema: Schema[V], typeParameters: List[String]): Schema[Any] =
@@ -168,15 +156,15 @@ object SchemaUtils {
       Some(SName("Map", typeParameters))
     )
 
-  /** tapir core's own `Either` schema — an untagged coproduct of the two sides — over our derived side schemas. The
-    * codec (`CodecCombinators.either`) writes the bare side value, which is what this schema documents.
+  /** tapir core's own `Either` schema — an untagged coproduct of the two sides — over our derived side schemas. The codec
+    * (`CodecCombinators.either`) writes the bare side value, which is what this schema documents.
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def eitherSchema[L, R](left: Schema[L], right: Schema[R]): Schema[Any] =
     Schema.schemaForEither(left, right).asInstanceOf[Schema[Any]]
 
-  /** A bare `SString` schema, for a type that tapir core has no schema for but that the codec writes as a string.
-    * `Char` is the only such type today.
+  /** A bare `SString` schema, for a type that tapir core has no schema for but that the codec writes as a string. `Char` is the only such
+    * type today.
     */
   def stringLikeSchema[T]: Schema[T] = Schema(SString[T]())
 
@@ -188,24 +176,22 @@ object SchemaUtils {
 
   // -- Names ------------------------------------------------------------------------------------------------------
 
-  /** Build an [[SName]] from a name computed by tapir core's own `SNameMacros`, plus type arguments recovered from
-    * the printed form of the type.
+  /** Build an [[SName]] from a name computed by tapir core's own `SNameMacros`, plus type arguments recovered from the printed form of the
+    * type.
     *
-    * The split exists because the two halves are best obtained from different places. `SNameMacros.typeFullName`
-    * walks the *symbol* owner chain, which is the only way to get a genuinely qualified name for a class nested in
-    * another class (whose type prints as the path-dependent `Outer.this.Inner`), and it applies core's conventions
-    * for module suffixes and synthetic `<local ...>` owners. The printed form, meanwhile, is the only place the
-    * applied type arguments survive.
+    * The split exists because the two halves are best obtained from different places. `SNameMacros.typeFullName` walks the *symbol* owner
+    * chain, which is the only way to get a genuinely qualified name for a class nested in another class (whose type prints as the
+    * path-dependent `Outer.this.Inner`), and it applies core's conventions for module suffixes and synthetic `<local ...>` owners. The
+    * printed form, meanwhile, is the only place the applied type arguments survive.
     */
   def sName(fullName: String, printedType: String): SName =
     SName(fullName, parseSName(printedType).typeParameterShortNames)
 
   /** Turn a fully-qualified, Scala-syntax type name into an [[SName]].
     *
-    * `SName.typeParameterShortNames` is a misnomer inherited from tapir: it holds *fully-qualified* names, and nested
-    * arguments are flattened into one list. `Foo[Bar[Baz], Qux]` therefore becomes
-    * `SName("Foo", List("Bar", "Baz", "Qux"))` with each entry fully qualified — matching
-    * `Schema.renameWithTypeParameter`.
+    * `SName.typeParameterShortNames` is a misnomer inherited from tapir: it holds *fully-qualified* names, and nested arguments are
+    * flattened into one list. `Foo[Bar[Baz], Qux]` therefore becomes `SName("Foo", List("Bar", "Baz", "Qux"))` with each entry fully
+    * qualified — matching `Schema.renameWithTypeParameter`.
     */
   def parseSName(fullTypeName: String): SName = {
     val bracket = fullTypeName.indexOf('[')

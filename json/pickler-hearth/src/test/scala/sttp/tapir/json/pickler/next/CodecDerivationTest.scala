@@ -11,10 +11,9 @@ import java.util.UUID
 
 /** The codec half of a derived `Pickler`.
   *
-  * Expected JSON strings are taken from the uPickle-based module's tests wherever it has an equivalent
-  * (`PicklerBasicTest`, `PicklerCoproductTest`, `PicklerEnumTest`, `PicklerCustomizationTest`), so that a green run
-  * here means wire-format parity. Cases that exist because of *this* design — per-class configurations, standalone
-  * leaves, recursion, schema/codec agreement — are marked as such.
+  * Expected JSON strings are taken from the uPickle-based module's tests wherever it has an equivalent (`PicklerBasicTest`,
+  * `PicklerCoproductTest`, `PicklerEnumTest`, `PicklerCustomizationTest`), so that a green run here means wire-format parity. Cases that
+  * exist because of *this* design — per-class configurations, standalone leaves, recursion, schema/codec agreement — are marked as such.
   */
 class CodecDerivationTest extends AnyFlatSpec with Matchers {
   import CodecFixtures.*
@@ -177,7 +176,11 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     // PicklerCoproductTest L63-64
     given PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("kind")
     val codec = Pickler.derived[MyCaseClass].toCodec
-    roundTrip(Pickler.derived[MyCaseClass], MyCaseClass(CustomError("customErrMsg2"), "msg19"), """{"fieldA":{"kind":"CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}""")
+    roundTrip(
+      Pickler.derived[MyCaseClass],
+      MyCaseClass(CustomError("customErrMsg2"), "msg19"),
+      """{"fieldA":{"kind":"CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}"""
+    )
     codec.encode(MyCaseClass(ErrorNotFound, "")) shouldBe """{"fieldA":{"kind":"ErrorNotFound"},"fieldB":""}"""
   }
 
@@ -279,12 +282,19 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
 
   it should "use a given Pickler for a nested type, for both the schema and the codec" in {
     // The incumbent's override mechanism (PicklerEnumTest L47/L64, PicklerCoproductTest L109).
-    given Pickler[SimpleTestResult] = Pickler.derived[SimpleTestResult](using PicklerConfiguration.default.withScreamingSnakeCaseMemberNames)
+    given Pickler[SimpleTestResult] =
+      Pickler.derived[SimpleTestResult](using PicklerConfiguration.default.withScreamingSnakeCaseMemberNames)
     val pickler = Pickler.derived[ClassWithMap]
 
     pickler.toCodec.encode(ClassWithMap(Map("k" -> SimpleTestResult("r")))) shouldBe """{"field":{"k":{"MSG":"r"}}}"""
-    val valueSchema = pickler.schema.schemaType.asInstanceOf[SProduct[ClassWithMap]].fields.head.schema.schemaType
-      .asInstanceOf[sttp.tapir.SchemaType.SOpenProduct[?, SimpleTestResult]].valueSchema
+    val valueSchema = pickler.schema.schemaType
+      .asInstanceOf[SProduct[ClassWithMap]]
+      .fields
+      .head
+      .schema
+      .schemaType
+      .asInstanceOf[sttp.tapir.SchemaType.SOpenProduct[?, SimpleTestResult]]
+      .valueSchema
     valueSchema.schemaType.asInstanceOf[SProduct[SimpleTestResult]].fields.map(_.name.encodedName) shouldBe List("MSG")
   }
 

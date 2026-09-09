@@ -5,9 +5,8 @@ import java.util.concurrent.TimeUnit
 
 /** Reads the derivation timeout from `-Xmacro-settings:<namespace>.timeout=...`.
   *
-  * Hearth's default is deliberately short (5s) so that a runaway derivation fails fast rather than hanging the
-  * compiler. A combined Schema + codec derivation over a large ADT graph can legitimately exceed it, hence the
-  * override.
+  * Hearth's default is deliberately short (5s) so that a runaway derivation fails fast rather than hanging the compiler. A combined Schema
+  * + codec derivation over a large ADT graph can legitimately exceed it, hence the override.
   *
   * Accepted formats: `30` (seconds), `30s`, `5000ms`, `1m`.
   */

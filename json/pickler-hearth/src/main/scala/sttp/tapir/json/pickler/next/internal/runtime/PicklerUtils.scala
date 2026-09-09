@@ -11,22 +11,21 @@ import scala.util.{Failure, Success, Try}
 
 /** Runtime helpers invoked by macro-generated code, plus the bridge from a jsoniter-scala codec to a tapir codec.
   *
-  * Everything here must be public (the generated code lives in user compilation units) and must not depend on any
-  * macro machinery.
+  * Everything here must be public (the generated code lives in user compilation units) and must not depend on any macro machinery.
   */
 object PicklerUtils {
 
   private lazy val readerConfig = ReaderConfig.withAppendHexDumpToParseException(false)
 
-  /** Mirrors `sttp.tapir.json.jsoniter.TapirJsonJsoniter.jsoniterCodec`, kept here so that this module does not have to
-    * depend on `tapir-jsoniter-scala`.
+  /** Mirrors `sttp.tapir.json.jsoniter.TapirJsonJsoniter.jsoniterCodec`, kept here so that this module does not have to depend on
+    * `tapir-jsoniter-scala`.
     */
   def toTapirCodec[A](codec: JsonValueCodec[A], schema: Schema[A]): JsonCodec[A] = {
     given JsonValueCodec[A] = codec
     given Schema[A] = schema
     Codec.json[A] { s =>
       Try(readFromString[A](s, readerConfig)) match {
-        case Success(v) => Value(v)
+        case Success(v)                          => Value(v)
         case Failure(error: JsonReaderException) =>
           val errMsg = Option(error.getMessage)
           Error(s, JsonDecodeException(errors = errMsg.toList.map(e => JsonError(e, Nil)), error))
