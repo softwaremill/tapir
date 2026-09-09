@@ -31,6 +31,15 @@ trait PlatformSupport { this: MacroCommons =>
     */
   protected def tapirFullName[A: Type]: String
 
+  /** The string an all-singleton hierarchy's case is written as: the case's simple name (`VariantB`, `Cyan`), or its type-level
+    * `@encodedName`. Deliberately *not* run through `toDiscriminatorValue`: an enumeration value is not a discriminator, and the
+    * uPickle-based module never transformed it either (`DifferentialOracleTest` is what showed `withFullKebabCaseDiscriminatorValues` had
+    * started producing `sttp.tapir...variant-b` for a plain enum value). Users who want a different rendering have
+    * `derivedEnumeration[T].customStringBased`.
+    */
+  protected def enumCaseName[A: Type](encodedName: Option[String]): String =
+    encodedName.getOrElse(tapirFullName[A].split('.').last)
+
   /** `{ implicit lazy val n1: T1 = e1; ...; body(refs) }` where `refs` are references to the vals, in order.
     *
     * `implicit` because jsoniter finds codecs for nested types through `Implicits.search` and nothing else; `lazy` so that mutually
@@ -62,4 +71,10 @@ trait PlatformSupport { this: MacroCommons =>
     * need `-Yretain-trees`).
     */
   protected def dereferenceStable[A: Type](expr: Expr[A]): Option[Expr[A]]
+
+  /** `f(name = a)` rewritten as `f(a)`, everywhere in the tree. Hearth's `semiEval` does not see through named arguments, and
+    * `withToEncodedName(toEncodedName = _.toUpperCase)` is a natural thing to write. Only sound when the named arguments are already in
+    * parameter order, which holds for every single-parameter `with*` builder.
+    */
+  protected def dropNamedArgs[A: Type](expr: Expr[A]): Expr[A]
 }

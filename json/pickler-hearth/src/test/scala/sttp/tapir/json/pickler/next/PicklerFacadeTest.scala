@@ -105,8 +105,8 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
     import sttp.tapir.json.pickler.next.generic.auto.*
     given picklerMap: Pickler[Map[UUID, SimpleTestResult]] = Pickler.picklerForMap(_.toString, UUID.fromString)
     val pickler = Pickler.derived[ClassWithMapCustomKey]
-    val uuid1: UUID = UUID.randomUUID()
-    val uuid2: UUID = UUID.randomUUID()
+    val uuid1: UUID = UUID.fromString("2c2b1cf3-5f2e-4a0b-9d3a-7d1a4e0b1c01") // fixed: no `randomUUID` on Scala.js
+    val uuid2: UUID = UUID.fromString("9e0e3b8d-1d51-4c3f-8f0e-6a2c1b7d2f02")
     val obj = ClassWithMapCustomKey(Map((uuid1, SimpleTestResult("result3")), (uuid2, SimpleTestResult("result4"))))
 
     roundTrip(pickler, obj, s"""{"field":{"$uuid1":{"msg":"result3"},"$uuid2":{"msg":"result4"}}}""")

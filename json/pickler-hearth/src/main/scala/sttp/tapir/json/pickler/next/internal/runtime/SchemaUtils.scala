@@ -87,16 +87,29 @@ object SchemaUtils {
     * Discriminator values are computed here rather than in the macro so that all eight `with*DiscriminatorValues` variants fall out of
     * `config.toDiscriminatorValue` for free.
     */
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def coproductSchema[T](
       name: SName,
       subtypes: List[Schema[Any]],
       config: PicklerConfiguration
-  ): Schema[T] = {
-    val discriminatorField = config.discriminator
+  ): Schema[T] =
+    coproductSchemaWithValues[T](
+      name,
+      subtypes.map(child => child -> child.name.map(config.toDiscriminatorValue).getOrElse("")),
+      config.discriminator
+    )
 
-    val withDiscriminator: List[(Schema[Any], String)] = subtypes.map { child =>
-      val value = child.name.map(config.toDiscriminatorValue).getOrElse("")
+  /** As [[coproductSchema]], with the discriminator value of every child given explicitly — for `oneOfUsingField`, where the values come
+    * from the user's function rather than from the configuration. The codec writes exactly these values into `discriminatorField`, so this
+    * is what the schema has to document (core's `Schema.oneOfUsingField` would document a field named after the extractor instead, which
+    * the JSON does not contain).
+    */
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
+  def coproductSchemaWithValues[T](
+      name: SName,
+      subtypesWithValues: List[(Schema[Any], String)],
+      discriminatorField: String
+  ): Schema[T] = {
+    val withDiscriminator: List[(Schema[Any], String)] = subtypesWithValues.map { case (child, value) =>
       val enriched = child.schemaType match {
         case p: SProduct[Any @unchecked] if !p.fields.exists(_.name.encodedName == discriminatorField) =>
           val field = SProductField[Any, String](
@@ -168,10 +181,12 @@ object SchemaUtils {
     */
   def stringLikeSchema[T]: Schema[T] = Schema(SString[T]())
 
-  /** A string-valued schema whose validator enumerates the singleton values of an enum-like hierarchy. */
+  /** A string-valued schema whose validator enumerates the singleton values of an enum-like hierarchy. The validator carries the name too,
+    * as core's `Validator.derivedEnumeration` does: the OpenAPI interpreter uses it to emit a named component for the enumeration.
+    */
   def stringEnumSchema[T](name: SName, values: List[T], encodedNames: List[String]): Schema[T] = {
     val encoded = values.zip(encodedNames).toMap
-    Schema.string[T].name(name).copy(validator = Validator.enumeration(values, (v: T) => encoded.get(v)))
+    Schema.string[T].name(name).copy(validator = Validator.enumeration(values, (v: T) => encoded.get(v), Some(name)))
   }
 
   // -- Names ------------------------------------------------------------------------------------------------------

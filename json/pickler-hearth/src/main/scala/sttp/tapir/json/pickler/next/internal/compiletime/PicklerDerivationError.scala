@@ -89,6 +89,15 @@ object PicklerDerivationError {
          |could disagree. Provide a `given Pickler[$typeName]` instead (it carries both), or remove the codec.""".stripMargin
   }
 
+  /** jsoniter writes a tuple as a JSON array while tapir has no array-of-heterogeneous-elements schema (a case-class reading would document
+    * an object with `_1`, `_2`, ... fields), so no agreeing pair exists.
+    */
+  final case class TupleNotSupported(typeName: String) extends PicklerDerivationError {
+    def message: String =
+      s"""Cannot derive Pickler for $typeName: tuples have no JSON schema in tapir (the codec would write an array,
+         |the schema would document an object). Use a case class instead.""".stripMargin
+  }
+
   final case class InvalidAnnotation(detail: String) extends PicklerDerivationError {
     def message: String = s"Cannot derive Pickler: $detail"
   }

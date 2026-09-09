@@ -7,7 +7,7 @@ import hearth.fp.effect.*
 import hearth.std.*
 import sttp.tapir.Schema
 import sttp.tapir.json.pickler.next.{CreateDerivedEnumerationPickler, Pickler, PicklerConfiguration}
-import sttp.tapir.json.pickler.next.internal.runtime.{PicklerFactories, PicklerUtils}
+import sttp.tapir.json.pickler.next.internal.runtime.{PicklerFactories, PicklerUtils, SchemaUtils}
 
 /** Core, platform-independent derivation logic for [[Pickler]].
   *
@@ -45,6 +45,8 @@ trait PicklerMacrosImpl
     def MappingEntryOf[A: Type, V: Type]: Type[(V, Pickler[? <: A])] = Type.of[(V, Pickler[? <: A])]
     def EnumBuilderOf[A: Type]: Type[CreateDerivedEnumerationPickler[A]] = Type.of[CreateDerivedEnumerationPickler[A]]
     def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
+    lazy val SNameT: Type[Schema.SName] = Type.of[Schema.SName]
+    lazy val SchemaAnyPairs: Type[List[(Schema[Any], String)]] = Type.of[List[(Schema[Any], String)]]
     def FnOf[A: Type, B: Type]: Type[A => B] = Type.of[A => B]
     lazy val Config: Type[PicklerConfiguration] = Type.of[PicklerConfiguration]
     lazy val Configuration: Type[sttp.tapir.generic.Configuration] = Type.of[sttp.tapir.generic.Configuration]
@@ -204,14 +206,19 @@ trait PicklerMacrosImpl
 
   /** `Pickler.oneOfUsingField[A, V](extractor, asString)(v1 -> pickler1, ...)`.
     *
-    * The discriminator value of each mapped leaf is `asString(v)`, decided by the user rather than by the configuration. Both halves get it
-    * the same way:
-    *   - the **schema** is core's own `Schema.oneOfUsingField`, fed the children's schemas (so a user's child pickler is fully honoured on
-    *     the documentation side);
+    * The discriminator value of each mapped leaf is `asString(v)`, decided by the user rather than by the configuration; the discriminator
+    * *field* is the configured one (`$type` by default), as in the uPickle-based module. Both halves get the values the same way:
+    *   - the **schema** is our coproduct schema over the children's schemas (so a user's child pickler is fully honoured on the
+    *     documentation side), with `asString(v)` as each child's discriminator value. Not core's `Schema.oneOfUsingField`: that documents a
+    *     discriminator field named after the extractor (`code` for `_.code`), which the JSON does not contain -- the incumbent had that
+    *     mismatch, and `SchemaCodecAgreementTest` is what caught it here;
     *   - the **codec** is the ordinary `CodecDerivation` run with `leafNameOverrides` set to `asString(v)` per leaf. jsoniter needs those
     *     values as literals, which is why the keys and `asString` are evaluated at expansion time, and why the children's *codecs* are
     *     derived afresh rather than taken from the child picklers: a user-derived leaf codec would write its configuration-derived tag, not
     *     the overridden one.
+    *
+    * `extractor` is accepted for API compatibility with the incumbent and with core's `Schema.oneOfUsingField`; nothing is derived from it,
+    * since the JSON does not carry that field.
     */
   def deriveOneOfUsingField[A: Type, V: Type](
       extractor: Expr[A => V],
@@ -220,16 +227,16 @@ trait PicklerMacrosImpl
       configExpr: Expr[PicklerConfiguration]
   ): Expr[Pickler[A]] = {
     implicit val SchemaA: Type[Schema[A]] = PTypes.SchemaOf[A]
-    implicit val SchemaV: Type[Schema[V]] = PTypes.SchemaOf[V]
     implicit val PicklerA: Type[Pickler[A]] = PTypes.PicklerOf[A]
     implicit val CodecA: Type[JsonValueCodec[A]] = PTypes.CodecOf[A]
     implicit val EntryT: Type[(V, Pickler[? <: A])] = PTypes.MappingEntryOf[A, V]
-    implicit val ExtractorT: Type[A => V] = PTypes.FnOf[A, V]
     implicit val StringT: Type[String] = PTypes.StringT
     implicit val AsStringT: Type[V => String] = PTypes.FnOf[V, String]
     implicit val ConfigT: Type[PicklerConfiguration] = PTypes.Config
-    implicit val ConfigurationT: Type[sttp.tapir.generic.Configuration] = PTypes.Configuration
+    implicit val SNameT: Type[Schema.SName] = PTypes.SNameT
+    implicit val SchemaAnyPairs: Type[List[(Schema[Any], String)]] = PTypes.SchemaAnyPairs
     val macroName = "Pickler.oneOfUsingField"
+    val _ = extractor
 
     Log
       .namedScope(s"Deriving Pickler for ${Type[A].prettyPrint} with oneOfUsingField at: ${Environment.currentPosition.prettyPrint}") {
@@ -274,21 +281,23 @@ trait PicklerMacrosImpl
                 // scope would otherwise be picked up and write the configuration-derived tag instead.
                 implicitLookupExclusions ++= overrides.keySet + Type[A].plainPrint
               }
-              schemaV <- Expr.summonImplicit[Schema[V]].toOption match {
-                case Some(s) => MIO.pure(s)
-                case None    =>
-                  fail(PicklerDerivationError.OneOfMappingNotStatic(s"no implicit Schema[${Type[V].plainPrint}] for the discriminator"))
-              }
               config <- foldConfiguration(configExpr)
               codec <- deriveCodec[A](config)
             } yield {
               // `VarArgs.from` re-packs the elements as an `Expr[Seq[_]]` on both platforms, which is the one shape
               // cross-quotes can splice with `*`.
               val mappingSeq = VarArgs.from(mapping.toList)
+              val name = sNameExpr[A]
+              val annotations = typeAnnotationsExpr[A]
               val schema = Expr.quote {
-                Schema.oneOfUsingField[A, V](Expr.splice(extractor), Expr.splice(asString))(
-                  PicklerUtils.oneOfSchemas[A, V](Expr.splice(mappingSeq)*)*
-                )(Expr.splice(configExpr).genericDerivationConfig, Expr.splice(schemaV))
+                SchemaUtils.enrichSchema[A](
+                  SchemaUtils.coproductSchemaWithValues[A](
+                    Expr.splice(name),
+                    PicklerUtils.oneOfSchemasWithValues[A, V](Expr.splice(asString), Expr.splice(mappingSeq)*),
+                    Expr.splice(configExpr).discriminator
+                  ),
+                  Expr.splice(annotations)
+                )
               }
               (schema, codec)
             }
@@ -367,7 +376,7 @@ trait PicklerMacrosImpl
     implicit val ConfigT: Type[PicklerConfiguration] = PTypes.Config
 
     def attempt(expr: Expr[PicklerConfiguration], depth: Int): Either[String, PicklerConfiguration] =
-      expr.semiEval match {
+      dropNamedArgs(expr).semiEval match {
         case Right(value)  => Right(value)
         case Left(reasons) =>
           dereferenceStable(expr) match {

@@ -42,6 +42,13 @@ trait Pickler[A] {
 
 object Pickler extends PicklerCompanionCompat {
 
+  /** A pickler over an existing schema and jsoniter-scala codec, for types whose JSON representation is hand-written (or comes from
+    * elsewhere) rather than derived. Put the result in a `given` and both derivation halves honour it wherever the type is nested. Keeping
+    * the two halves in step is the caller's responsibility here.
+    */
+  def fromSchemaAndCodec[A](schema: Schema[A], codec: JsonValueCodec[A]): Pickler[A] =
+    internal.runtime.PicklerFactories.instance(schema, codec)
+
   /** Marker type: if an implicit instance is in scope, the macro will log its derivation process.
     *
     * @see

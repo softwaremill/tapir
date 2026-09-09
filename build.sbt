@@ -1005,7 +1005,9 @@ lazy val picklerHearthJson: ProjectMatrix = (projectMatrix in file("json/pickler
       compilerPlugin("com.kubuszok" %% "hearth-cross-quotes" % Versions.hearth),
       "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % Versions.jsoniter,
       "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % Versions.jsoniter,
-      scalaTest.value % Test
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test
     ),
     // NB: Hearth requires -language:implicitConversions (to unwrap `Type.Lazy[A]` into `Type[A]` at use sites);
     // tapir's commonSettings already enables it, so setting it here again only produces a redundancy warning.
@@ -1016,6 +1018,9 @@ lazy val picklerHearthJson: ProjectMatrix = (projectMatrix in file("json/pickler
   .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
   .jsPlatform(scalaVersions = List(scala3), settings = commonJsSettings)
   .dependsOn(core % "compile->compile;test->test")
+  // Test-only, until cutover: the differential oracle encodes every generated fixture with both implementations and
+  // compares the JSON. Goes away together with `picklerJson`.
+  .dependsOn(picklerJson % "test->compile")
 
 lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
   .settings(commonSettings)

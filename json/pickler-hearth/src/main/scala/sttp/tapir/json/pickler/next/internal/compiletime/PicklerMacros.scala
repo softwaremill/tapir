@@ -152,6 +152,16 @@ private[compiletime] trait PlatformSupportScala3 extends PlatformSupport { this:
     }
   }
 
+  protected def dropNamedArgs[A: Type](expr: Expr[A]): Expr[A] = {
+    val transform = new TreeMap {
+      override def transformTerm(tree: Term)(owner: Symbol): Term = tree match {
+        case NamedArg(_, arg) => transformTerm(arg)(owner)
+        case other            => super.transformTerm(other)(owner)
+      }
+    }
+    transform.transformTerm(expr.asTerm)(Symbol.spliceOwner).asExprOf[A]
+  }
+
   protected def dereferenceStable[A: Type](expr: Expr[A]): Option[Expr[A]] = {
     def loop(term: Term): Option[Term] = term match {
       case Inlined(_, Nil, inner)          => loop(inner)

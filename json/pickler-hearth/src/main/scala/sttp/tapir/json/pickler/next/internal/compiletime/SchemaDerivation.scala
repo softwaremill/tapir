@@ -20,7 +20,7 @@ import sttp.tapir.json.pickler.next.internal.runtime.SchemaUtils
   * variants and all three member-name variants work without a single compile-time branch — and it matches the incumbent, which emits
   * `config.toEncodedName(name)` into the tree too.
   */
-trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport & ImplicitPicklerSupport =>
+trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport & ImplicitPicklerSupport & PlatformSupport =>
 
   /** Centralised `Type.of` instances — see the note on `PicklerMacrosImpl.PTypes` for why these are not `implicit val`s at their use sites.
     */
@@ -344,10 +344,13 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
 
   private object HandleAsCaseClassRule extends SchemaRule("handle as case class") {
     def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      CaseClass.parse[A].toEither match {
-        case Right(cc)    => guardingRecursion[A, Expr[Schema[A]]](deriveCaseClassSchema[A](cc)).map(Rule.matched)
-        case Left(reason) => MIO.pure(Rule.yielded(reason))
-      }
+      // A tuple parses as a case class, but jsoniter writes it as an array: no schema would agree with the codec.
+      if (Type[A].isTuple) MIO.fail(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
+      else
+        CaseClass.parse[A].toEither match {
+          case Right(cc)    => guardingRecursion[A, Expr[Schema[A]]](deriveCaseClassSchema[A](cc)).map(Rule.matched)
+          case Left(reason) => MIO.pure(Rule.yielded(reason))
+        }
   }
 
   private object HandleAsEnumRule extends SchemaRule("handle as sealed hierarchy / enum") {
@@ -491,14 +494,14 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
 
     val name = sNameExpr[A]
     val annotations = typeAnnotationsExpr[A]
-    val config = sctx.config
 
     val values = singletonValuesExpr[A](children)
-    // The encoded name of each case is its discriminator value, computed from the same SName the codec uses.
+    // Each case is written as its simple name (`PlatformSupport.enumCaseName`), the same literal the codec's leaf-name
+    // mapper produces -- computed once here, independent of the configuration.
     val encodedNames = children.foldRight(Expr.quote(Nil: List[String])) { case ((_, child), tail) =>
       import child.Underlying as Child
-      val childName = sNameExpr[Child]
-      Expr.quote(Expr.splice(config).toDiscriminatorValue(Expr.splice(childName)) :: Expr.splice(tail))
+      val childName = Expr(enumCaseName[Child](typeEncodedName[Child]))
+      Expr.quote(Expr.splice(childName) :: Expr.splice(tail))
     }
 
     setCachedAndGet[A](
@@ -529,7 +532,7 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
   /** The `SName` for `A`: either its `@encodedName`, which replaces the name wholesale, or its fully-qualified type name parsed into base
     * name + flattened, fully-qualified type arguments.
     */
-  private def sNameExpr[A: Type]: Expr[SName] = {
+  protected def sNameExpr[A: Type]: Expr[SName] = {
     implicit val SNameT: Type[SName] = STypes.SNameT
     implicit val EncodedNameT: Type[Schema.annotations.encodedName] = STypes.EncodedName
     // `plainPrint`, not `prettyPrint`: the latter embeds ANSI escapes, which must never reach a string literal in
@@ -537,7 +540,7 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     // Only the type's *own* `@encodedName` is consulted: the incumbent deliberately does not propagate a parent's
     // renaming to its subtypes (`SchemaDerivationTest`: "Not propagate type encodedName to subtypes of a sealed
     // trait, but keep inheritance for fields").
-    Type[A].annotationsOfType[Schema.annotations.encodedName].headOption.flatMap(literalStringArg(_)) match {
+    typeEncodedName[A] match {
       case Some(encoded) =>
         // An explicit name replaces the derived one wholesale, type arguments included.
         val literal = Expr(encoded)
@@ -560,6 +563,6 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     }
   }
 
-  private def typeAnnotationsExpr[A: Type]: Expr[List[Any]] =
+  protected def typeAnnotationsExpr[A: Type]: Expr[List[Any]] =
     collectAnnotationsExpr(allTypeAnnotations[A])
 }

@@ -342,10 +342,14 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     roundTrip(picklerResponse, StatusResponse(StatusBadRequest(54)), """{"status":{"$type":"code-400","bF":54}}""")
     roundTrip(picklerResponse, StatusResponse(StatusInternalError), """{"status":{"$type":"code-500"}}""")
 
-    // The schema documents the same values, on a discriminator named after the extractor.
+    // The schema documents the same values, on the discriminator field the codec actually writes (`$type`, not the
+    // extractor's `code` -- the incumbent's schema said `code` while its JSON said `$type`; see D6.6).
     val discriminator = statusPickler.schema.schemaType.asInstanceOf[SCoproduct[Status]].discriminator.get
-    discriminator.name.encodedName shouldBe "code"
+    discriminator.name.encodedName shouldBe "$type"
     discriminator.mapping.keySet shouldBe Set("code-200", "code-400", "code-500")
+    statusPickler.schema.schemaType.asInstanceOf[SCoproduct[Status]].subtypes.flatMap(_.name) should contain(
+      Pickler.derived[StatusOk].schema.name.get
+    )
   }
 
   it should "set discriminator values with oneOfUsingField for a deeper hierarchy" in {

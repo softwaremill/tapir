@@ -109,4 +109,10 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
       case List(Right(value: String)) => Some(value)
       case _                          => None
     }
+
+  /** The type-level `@encodedName` of `A`, when it is a string literal. Both derivation halves read it through this. */
+  protected def typeEncodedName[A: Type]: Option[String] = {
+    implicit val EncodedNameT: Type[Schema.annotations.encodedName] = Type.of[Schema.annotations.encodedName]
+    Type[A].annotationsOfType[Schema.annotations.encodedName].headOption.flatMap(literalStringArg(_))
+  }
 }
