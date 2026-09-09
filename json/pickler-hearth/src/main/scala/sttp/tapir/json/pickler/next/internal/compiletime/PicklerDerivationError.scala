@@ -13,6 +13,7 @@ import scala.util.control.NoStackTrace
   */
 sealed trait PicklerDerivationError extends NoStackTrace with Product with Serializable {
   def message: String
+  override def getMessage: String = message
 }
 
 object PicklerDerivationError {
@@ -50,6 +51,29 @@ object PicklerDerivationError {
          |Define it as a `given`/`implicit val` with a right-hand side built from `PicklerConfiguration.default` and its
          |`with*` methods (or an `inline given`), either in the same compilation unit as the derivation or in an already
          |compiled module. Functions passed to `withToEncodedName` must themselves be evaluable, e.g. `_.toUpperCase`.""".stripMargin
+  }
+
+  final case class NotASealedHierarchy(typeName: String, macroName: String) extends PicklerDerivationError {
+    def message: String = s"$macroName can only be used with a sealed hierarchy or enum; $typeName is not one"
+  }
+
+  /** `oneOfUsingField` turns every mapping key into a jsoniter discriminator literal at compile time, so both the
+    * keys and `asString` have to be evaluable during expansion.
+    */
+  final case class OneOfMappingNotStatic(detail: String) extends PicklerDerivationError {
+    def message: String =
+      s"""Pickler.oneOfUsingField needs its mapping keys and `asString` function to be known at compile time: $detail
+         |Use literal keys (e.g. `200 -> picklerOk`) and a lambda over them (e.g. `code => s"code-$$code"`).""".stripMargin
+  }
+
+  /** A `JsonValueCodec[X]` alone cannot be honoured for a structural `X`: the schema would still be derived from the
+    * class, documenting a shape the codec no longer writes.
+    */
+  final case class CodecWithoutPickler(typeName: String, codecExpr: String) extends PicklerDerivationError {
+    def message: String =
+      s"""Found a JsonValueCodec[$typeName] in scope ($codecExpr), but no Pickler[$typeName].
+         |A codec on its own would be used for the JSON while the Schema is still derived from the class, so the two
+         |could disagree. Provide a `given Pickler[$typeName]` instead (it carries both), or remove the codec.""".stripMargin
   }
 
   final case class InvalidAnnotation(detail: String) extends PicklerDerivationError {

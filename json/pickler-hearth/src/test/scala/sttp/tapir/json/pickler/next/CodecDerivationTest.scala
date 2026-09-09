@@ -275,6 +275,96 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     Pickler.derived[Map[String, Int]].toCodec.encode(Map("a" -> 1)) shouldBe """{"a":1}"""
   }
 
+  behavior of "user-supplied instances for nested types"
+
+  it should "use a given Pickler for a nested type, for both the schema and the codec" in {
+    // The incumbent's override mechanism (PicklerEnumTest L47/L64, PicklerCoproductTest L109).
+    given Pickler[SimpleTestResult] = Pickler.derived[SimpleTestResult](using PicklerConfiguration.default.withScreamingSnakeCaseMemberNames)
+    val pickler = Pickler.derived[ClassWithMap]
+
+    pickler.toCodec.encode(ClassWithMap(Map("k" -> SimpleTestResult("r")))) shouldBe """{"field":{"k":{"MSG":"r"}}}"""
+    val valueSchema = pickler.schema.schemaType.asInstanceOf[SProduct[ClassWithMap]].fields.head.schema.schemaType
+      .asInstanceOf[sttp.tapir.SchemaType.SOpenProduct[?, SimpleTestResult]].valueSchema
+    valueSchema.schemaType.asInstanceOf[SProduct[SimpleTestResult]].fields.map(_.name.encodedName) shouldBe List("MSG")
+  }
+
+  it should "still derive structurally when only generic.auto is in scope (the re-entrancy guard)" in {
+    // With `auto.*` imported, `summon[Pickler[InnerClass]]` inside the macro has a candidate: our own macro. It must
+    // abort quietly so that the search fails and the type is derived structurally -- not loop, not error.
+    import sttp.tapir.json.pickler.next.generic.auto.*
+    val pickler = summon[Pickler[TopClass]]
+    pickler.toCodec.encode(TopClass("a", InnerClass(1))) shouldBe """{"fieldA":"a","fieldB":{"fieldA11":1}}"""
+
+    // and the same with a recursive type, where a nested derivation would never terminate
+    summon[Pickler[Tree]].toCodec.encode(Tree(1, List(Tree(2, Nil)))) shouldBe """{"value":1,"children":[{"value":2,"children":[]}]}"""
+  }
+
+  it should "refuse a given JsonValueCodec for a nested case class when no Pickler accompanies it" in {
+    // jsoniter would honour the codec while the schema is still derived from the class -- exactly the drift the
+    // single-expansion design exists to prevent. The user has to supply a Pickler, which carries both.
+    assertDoesNotCompile("""
+      given com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SimpleTestResult] =
+        new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[SimpleTestResult] {
+          def nullValue: SimpleTestResult = null
+          def decodeValue(in: com.github.plokhotnyuk.jsoniter_scala.core.JsonReader, default: SimpleTestResult): SimpleTestResult =
+            SimpleTestResult(in.readString(null))
+          def encodeValue(x: SimpleTestResult, out: com.github.plokhotnyuk.jsoniter_scala.core.JsonWriter): Unit = out.writeVal(x.msg)
+        }
+      Pickler.derived[ClassWithMap]
+    """)
+  }
+
+  behavior of "oneOfUsingField"
+
+  it should "set discriminator values using oneOfUsingField" in {
+    // PicklerCoproductTest L102-128
+    val picklerOk = Pickler.derived[StatusOk]
+    val picklerBadRequest = Pickler.derived[StatusBadRequest]
+    val picklerInternalError = Pickler.derived[StatusInternalError.type]
+
+    given statusPickler: Pickler[Status] = Pickler.oneOfUsingField[Status, Int](_.code, codeInt => s"code-$codeInt")(
+      200 -> picklerOk,
+      400 -> picklerBadRequest,
+      500 -> picklerInternalError
+    )
+    val picklerResponse = Pickler.derived[StatusResponse]
+
+    roundTrip(picklerResponse, StatusResponse(StatusBadRequest(54)), """{"status":{"$type":"code-400","bF":54}}""")
+    roundTrip(picklerResponse, StatusResponse(StatusInternalError), """{"status":{"$type":"code-500"}}""")
+
+    // The schema documents the same values, on a discriminator named after the extractor.
+    val discriminator = statusPickler.schema.schemaType.asInstanceOf[SCoproduct[Status]].discriminator.get
+    discriminator.name.encodedName shouldBe "code"
+    discriminator.mapping.keySet shouldBe Set("code-200", "code-400", "code-500")
+  }
+
+  it should "set discriminator values with oneOfUsingField for a deeper hierarchy" in {
+    // PicklerCoproductTest L130-162
+    sealed trait Status:
+      def code: Int
+    sealed trait DeeperStatus extends Status
+    sealed trait DeeperStatus2 extends Status
+    case class StatusOk(oF: Int) extends DeeperStatus {
+      def code = 200
+    }
+    case class StatusBadRequest(bF: Int) extends DeeperStatus2 {
+      def code = 400
+    }
+    case class Response(status: Status)
+    val picklerOk = Pickler.derived[StatusOk]
+    val picklerBadRequest = Pickler.derived[StatusBadRequest]
+
+    given statusPickler: Pickler[Status] = Pickler.oneOfUsingField[Status, Int](_.code, codeInt => s"code-$codeInt")(
+      200 -> picklerOk,
+      400 -> picklerBadRequest
+    )
+    roundTrip(Pickler.derived[Response], Response(StatusOk(818)), """{"status":{"$type":"code-200","oF":818}}""")
+  }
+
+  it should "reject oneOfUsingField on a case class" in {
+    assertDoesNotCompile("""Pickler.oneOfUsingField[FlatClass, Int](_.fieldA, _.toString)(1 -> Pickler.derived[FlatClass])""")
+  }
+
   behavior of "schema/codec agreement"
 
   it should "document the discriminator values the codec writes" in {
@@ -337,10 +427,17 @@ object CodecFixtures {
   case class CustomError(msg: String) extends ErrorCode
   case class MyCaseClass(fieldA: ErrorCode, fieldB: String)
 
-  sealed trait Status
-  case class StatusOk(oF: Int) extends Status
-  case class StatusBadRequest(bF: Int) extends Status
-  case object StatusInternalError extends Status
+  sealed trait Status:
+    def code: Int
+  case class StatusOk(oF: Int) extends Status {
+    def code = 200
+  }
+  case class StatusBadRequest(bF: Int) extends Status {
+    def code = 400
+  }
+  case object StatusInternalError extends Status {
+    def code = 500
+  }
   case class StatusResponse(status: Status)
 
   sealed trait SealedVariant

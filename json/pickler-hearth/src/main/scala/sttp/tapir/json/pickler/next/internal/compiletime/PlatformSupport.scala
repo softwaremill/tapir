@@ -41,6 +41,22 @@ trait PlatformSupport { this: MacroCommons =>
       body: List[UntypedExpr] => Expr[Out]
   ): Expr[Out]
 
+  /** `f(a)` with the lambda inlined, when `f` is a lambda literal: `((x: A) => body)(a)` becomes `body[x := a]`.
+    *
+    * Hearth's `semiEval` can evaluate a method-call tree but not apply a lambda it has evaluated (it materialises
+    * lambdas as reflective proxies), so `oneOfUsingField` reduces the application first and evaluates the body.
+    * Returns the plain application when `f` is not a literal lambda.
+    */
+  protected def betaReduce[A: Type, B: Type](f: Expr[A => B], a: Expr[A]): Expr[B]
+
+  /** A string interpolation over constants, folded: `s"code-${200}"` gives `"code-200"`.
+    *
+    * Covers the one shape Hearth's `semiEval` does not (`StringContext.apply(parts*).s(args*)`, a varargs call on a
+    * varargs-constructed receiver), which happens to be how `oneOfUsingField`'s `asString` is usually written.
+    * `None` for anything else.
+    */
+  protected def constantInterpolation(expr: Expr[String]): Option[String]
+
   /** Follow a stable reference (`Ident`/`Select` of a `val`/`given`) to its right-hand side, when the definition's
     * tree is available in this compilation run. `None` when `expr` is not such a reference or the tree is not
     * retained (definitions from other compilation units need `-Yretain-trees`).

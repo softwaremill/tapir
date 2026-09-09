@@ -5,6 +5,7 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.{Codec, Schema}
+import sttp.tapir.json.pickler.next.Pickler
 
 import scala.util.{Failure, Success, Try}
 
@@ -33,4 +34,8 @@ object PicklerUtils {
       }
     } { a => writeToString[A](a) }
   }
+
+  /** The `(value, schema)` pairs `Schema.oneOfUsingField` wants, from the `(value, pickler)` pairs the user gave. */
+  def oneOfSchemas[T, V](mapping: (V, Pickler[? <: T])*): Seq[(V, Schema[?])] =
+    mapping.map { case (v, p) => (v, p.schema) }
 }

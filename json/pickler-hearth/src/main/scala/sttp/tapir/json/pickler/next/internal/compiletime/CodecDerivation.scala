@@ -47,7 +47,8 @@ import sttp.tapir.json.pickler.next.internal.runtime.LeafCodecs
   * tapir's `@default` annotation does not drive decoding: jsoniter fills a missing field only from a Scala default
   * parameter and has no hook for anything else (D5). Scala default parameters *are* honoured.
   */
-trait CodecDerivation { this: MacroCommons & StdExtensions & AnnotationSupport & PlatformSupport =>
+trait CodecDerivation {
+  this: MacroCommons & StdExtensions & AnnotationSupport & PlatformSupport & ImplicitPicklerSupport =>
 
   private[compiletime] object CTypes {
     def CodecOf[A: Type]: Type[JsonValueCodec[A]] = Type.of[JsonValueCodec[A]]
@@ -72,6 +73,11 @@ trait CodecDerivation { this: MacroCommons & StdExtensions & AnnotationSupport &
   // -----------------------------------------------------------------------------------------------------------------
   // Entry point
   // -----------------------------------------------------------------------------------------------------------------
+
+  /** Discriminator values that replace the configuration-derived ones for specific leaves, keyed by the leaf type's
+    * `plainPrint`. Used by `oneOfUsingField`, which decides those values from a user function.
+    */
+  protected var leafNameOverrides: Map[String, String] = Map.empty
 
   def deriveCodec[A: Type](config: PicklerConfiguration): MIO[Expr[JsonValueCodec[A]]] =
     Log.namedScope(s"deriveCodec[${Type[A].prettyPrint}]") {
@@ -184,21 +190,52 @@ trait CodecDerivation { this: MacroCommons & StdExtensions & AnnotationSupport &
 
   private def makeUnit[A: Type](config: Expr[CodecMakerConfig]): CodecVal = CodecVal(Type[A].as_??, makeExpr[A](config).asUntyped)
 
-  /** Visit `A` (nested somewhere under the root): recurse into its children, then emit its codec if it needs one. */
+  /** Visit `A` (nested somewhere under the root): recurse into its children, then emit its codec if it needs one.
+    *
+    * A user-supplied `Pickler[A]` short-circuits the visit: its `codec` becomes the implicit for `A`, and nothing
+    * beneath `A` is looked at -- whatever that pickler does for its own fields is its business.
+    */
   private def walk[A: Type](config: PicklerConfiguration, visited: Set[String], acc: Vector[CodecVal]): MIO[Walk] = {
     val key = Type[A].plainPrint
     if (visited.contains(key)) MIO.pure((visited, acc))
-    else {
-      val shape = shapeOf[A]
-      walkChildren(children(shape), config, visited + key, acc).flatMap { case (v, a) =>
-        shape match {
-          case Shape.HandWritten(codec) => MIO.pure((v, a :+ codec))
-          case Shape.Product(cc, _)     => productConfig[A](cc.asInstanceOf[CaseClass[A]], config).map(cfg => (v, a :+ makeUnit[A](cfg)))
-          case Shape.Coproduct(e, _)    => coproductConfig[A](e.asInstanceOf[Enum[A]], config).map(cfg => (v, a :+ makeUnit[A](cfg)))
-          case _                        => MIO.pure((v, a))
-        }
+    else
+      userPickler[A].flatMap {
+        case Some(pickler) =>
+          implicit val CodecA: Type[JsonValueCodec[A]] = CTypes.CodecOf[A]
+          MIO.pure((visited + key, acc :+ CodecVal(Type[A].as_??, Expr.quote(Expr.splice(pickler).codec).asUntyped)))
+        case None =>
+          val shape = shapeOf[A]
+          rejectBareCodec[A](shape) >> walkChildren(children(shape), config, visited + key, acc).flatMap { case (v, a) =>
+            shape match {
+              case Shape.HandWritten(codec) => MIO.pure((v, a :+ codec))
+              case Shape.Product(cc, _)     =>
+                productConfig[A](cc.asInstanceOf[CaseClass[A]], config).map(cfg => (v, a :+ makeUnit[A](cfg)))
+              case Shape.Coproduct(e, _) =>
+                coproductConfig[A](e.asInstanceOf[Enum[A]], config).map(cfg => (v, a :+ makeUnit[A](cfg)))
+              case _ => MIO.pure((v, a))
+            }
+          }
       }
-    }
+  }
+
+  /** A `given JsonValueCodec[A]` with no `given Pickler[A]`, for a structural `A`, is refused.
+    *
+    * It would not even be honoured: the `implicit lazy val codec$A` this derivation emits sits in a tighter scope than
+    * the user's given and wins the implicit search inside jsoniter, so the user's codec would be silently ignored
+    * (measured). Had it won instead, the JSON would follow the codec while the schema still documented the class.
+    * Either outcome is wrong; a `Pickler[A]` carries both halves and is honoured by both chains. Leaf types are exempt
+    * (their schema comes from an implicit `Schema` anyway, which the user controls the same way).
+    */
+  private def rejectBareCodec[A: Type](shape: Shape): MIO[Unit] = shape match {
+    case _: Shape.Product[?] | _: Shape.Coproduct[?] =>
+      implicit val CodecA: Type[JsonValueCodec[A]] = CTypes.CodecOf[A]
+      Expr.summonImplicit[JsonValueCodec[A]].toOption match {
+        case Some(codec) =>
+          val error = PicklerDerivationError.CodecWithoutPickler(Type[A].plainPrint, codec.plainPrint)
+          Log.error(error.message) >> MIO.fail(error)
+        case None => MIO.pure(())
+      }
+    case _ => MIO.pure(())
   }
 
   private def walkChildren(children: List[??], config: PicklerConfiguration, visited: Set[String], acc: Vector[CodecVal]): MIO[Walk] =
@@ -359,7 +396,10 @@ trait CodecDerivation { this: MacroCommons & StdExtensions & AnnotationSupport &
     * type-level `@encodedName` replaces the whole name, otherwise it is core's `typeFullName`. Only `fullName` matters
     * to `toDiscriminatorValue`, so type arguments are not reproduced here.
     */
-  private def discriminatorValue[A: Type](config: PicklerConfiguration): String = {
+  private def discriminatorValue[A: Type](config: PicklerConfiguration): String =
+    leafNameOverrides.getOrElse(Type[A].plainPrint, configDiscriminatorValue[A](config))
+
+  private def configDiscriminatorValue[A: Type](config: PicklerConfiguration): String = {
     implicit val EncodedNameT: Type[sttp.tapir.Schema.annotations.encodedName] = CTypes.EncodedName
     val fullName = Type[A]
       .annotationsOfType[sttp.tapir.Schema.annotations.encodedName]

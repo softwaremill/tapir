@@ -21,7 +21,7 @@ import sttp.tapir.json.pickler.next.internal.runtime.SchemaUtils
   * what makes all eight `with*DiscriminatorValues` variants and all three member-name variants work without a single
   * compile-time branch — and it matches the incumbent, which emits `config.toEncodedName(name)` into the tree too.
   */
-trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport =>
+trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport & ImplicitPicklerSupport =>
 
   /** Centralised `Type.of` instances — see the note on `PicklerMacrosImpl.PTypes` for why these are not `implicit
     * val`s at their use sites.
@@ -112,6 +112,10 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
       Rules(
         UseCachedRule,
         UseSelfRefWhenRecursiveRule,
+        // A user-supplied `Pickler[A]` beats everything structural: it is the incumbent's override mechanism, and the
+        // codec chain honours the same instance, so schema and JSON stay in step. Safe to summon early only because
+        // of the re-entrancy guard described in `ImplicitPicklerSupport`.
+        UseUserPicklerRule,
         // Every structural rule precedes the implicit search. Two reasons, and the ordering is load-bearing:
         //
         //  1. Summoning tapir's own `Schema[Option[A]]` would make the *compiler* search for `Schema[A]`, and that
@@ -165,6 +169,16 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
           val sName = sNameExpr[A]
           Rule.matched(Expr.quote(SchemaUtils.refSchema[A](Expr.splice(sName))))
         } else Rule.yielded(s"${Type[A].plainPrint} is not currently being derived")
+      }
+  }
+
+  private object UseUserPicklerRule extends SchemaRule("use the schema of a user-supplied Pickler") {
+    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
+      userPickler[A].flatMap {
+        case Some(pickler) =>
+          implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
+          setCachedAndGet[A](sctx.cache, Expr.quote(Expr.splice(pickler).schema)).map(Rule.matched)
+        case None => MIO.pure(Rule.yielded(s"no user-supplied Pickler[${Type[A].plainPrint}] in scope"))
       }
   }
 

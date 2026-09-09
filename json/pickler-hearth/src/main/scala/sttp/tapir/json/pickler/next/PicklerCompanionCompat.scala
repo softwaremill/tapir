@@ -12,9 +12,11 @@ private[next] trait PicklerCompanionCompat { this: Pickler.type =>
 
   /** Derive a [[Pickler]] instance for `A` at compile time.
     *
-    * Can be used explicitly, in the definition of a `given`, or indirectly via a `... derives Pickler` clause.
+    * Can be used explicitly, in the definition of a `given`, or indirectly via a `... derives Pickler` clause. It is
+    * deliberately not a `given` itself (as in the uPickle-based module): automatic derivation is opt-in through
+    * `import sttp.tapir.json.pickler.next.generic.auto.*`.
     */
-  inline given derived[A](using inline config: PicklerConfiguration): Pickler[A] =
+  inline def derived[A](using inline config: PicklerConfiguration): Pickler[A] =
     ${ internal.compiletime.PicklerMacros.derivePicklerImpl[A]('config) }
 
   /** Derive only the tapir [[Schema]] for `A`, without building a codec.
@@ -24,4 +26,24 @@ private[next] trait PicklerCompanionCompat { this: Pickler.type =>
     */
   inline def schemaFor[A](using inline config: PicklerConfiguration): Schema[A] =
     ${ internal.compiletime.PicklerMacros.deriveSchemaOnlyImpl[A]('config) }
+
+  /** Create a pickler for a sealed hierarchy `T`, where the discriminator value of each child is not derived from its
+    * type name but decided by the user: the value of `extractorFn` applied to the child, rendered with `asStringFn`.
+    *
+    * The children have to be listed explicitly, each with the value that selects it:
+    * {{{
+    * Pickler.oneOfUsingField[Status, Int](_.code, code => s"code-$code")(
+    *   200 -> Pickler.derived[StatusOk],
+    *   400 -> Pickler.derived[StatusBadRequest]
+    * )
+    * }}}
+    *
+    * The mapping keys and `asStringFn` must be evaluable at compile time (literals and lambdas over them), because the
+    * resulting discriminator values become part of the generated jsoniter codec. The children's *schemas* are taken
+    * from the given picklers; their *codecs* are derived here with the overridden discriminator values.
+    */
+  inline def oneOfUsingField[T, V](inline extractorFn: T => V, inline asStringFn: V => String)(
+      inline mapping: (V, Pickler[? <: T])*
+  )(using inline config: PicklerConfiguration): Pickler[T] =
+    ${ internal.compiletime.PicklerMacros.oneOfUsingFieldImpl[T, V]('extractorFn, 'asStringFn, 'mapping, 'config) }
 }

@@ -21,11 +21,42 @@ final private[next] class PicklerMacros(q: Quotes)
 
 private[next] object PicklerMacros {
 
+  /** Number of pickler derivations currently on the stack of this compiler thread.
+    *
+    * A derivation summons `Pickler[X]` for every nested `X` (see [[ImplicitPicklerSupport]]). If `generic.auto` is
+    * in scope, one candidate is `Pickler.derived[X]` itself, i.e. this macro, expanded *while* the outer one is
+    * running. `derivePicklerImpl` refuses to run in that situation, which turns the candidate into a failed one and
+    * lets the search fall through to "no user-supplied pickler". A `ThreadLocal` rather than a plain `var` only
+    * because nothing guarantees the compiler will never expand macros on several threads.
+    */
+  private val depth: ThreadLocal[Int] = ThreadLocal.withInitial(() => 0)
+
+  private def nested[R](body: => R): R = {
+    depth.set(depth.get + 1)
+    try body
+    finally depth.set(depth.get - 1)
+  }
+
   def derivePicklerImpl[A: Type](config: Expr[PicklerConfiguration])(using q: Quotes): Expr[Pickler[A]] =
-    new PicklerMacros(q).derivePickler[A](config)
+    if (depth.get > 0)
+      // Reached only as an implicit candidate during another derivation's `summon[Pickler[X]]`. Aborting here is
+      // what makes that summon fail cleanly instead of deriving `X` a second time (or forever, for cyclic types).
+      q.reflect.report.errorAndAbort(
+        s"Pickler.derived[${q.reflect.TypeRepr.of[A].show}] invoked from within another Pickler derivation; " +
+          "nested types are derived structurally unless a user-defined Pickler is in scope."
+      )
+    else nested(new PicklerMacros(q).derivePickler[A](config))
 
   def deriveSchemaOnlyImpl[A: Type](config: Expr[PicklerConfiguration])(using q: Quotes): Expr[Schema[A]] =
-    new PicklerMacros(q).deriveSchemaOnly[A](config)
+    nested(new PicklerMacros(q).deriveSchemaOnly[A](config))
+
+  def oneOfUsingFieldImpl[A: Type, V: Type](
+      extractor: Expr[A => V],
+      asString: Expr[V => String],
+      mapping: Expr[Seq[(V, Pickler[? <: A])]],
+      config: Expr[PicklerConfiguration]
+  )(using q: Quotes): Expr[Pickler[A]] =
+    nested(new PicklerMacros(q).deriveOneOfUsingField[A, V](extractor, asString, mapping, config))
 }
 
 /** [[PlatformSupport]] for Scala 3.
@@ -94,6 +125,28 @@ private[compiletime] trait PlatformSupportScala3 extends PlatformSupport { this:
       ValDef(sym, Some(rhs.changeOwner(sym)))
     }
     Block(defs, body(defs.map(d => Ref(d.symbol))).asTerm).asExprOf[Out]
+  }
+
+  protected def betaReduce[A: Type, B: Type](f: Expr[A => B], a: Expr[A]): Expr[B] = {
+    val application = '{ $f($a) }
+    Term.betaReduce(application.asTerm).fold(application)(_.asExprOf[B])
+  }
+
+  protected def constantInterpolation(expr: Expr[String]): Option[String] = {
+    def constant(term: Term): Option[Any] = term match {
+      case Inlined(_, Nil, inner) => constant(inner)
+      case Typed(inner, _)        => constant(inner)
+      case Literal(c)             => Some(c.value)
+      case _                      => None
+    }
+    expr match {
+      case '{ StringContext(${ Varargs(parts) }*).s(${ Varargs(args) }*) } =>
+        for {
+          ps <- parts.foldRight(Option(List.empty[String]))((p, acc) => acc.flatMap(tail => p.value.map(_ :: tail)))
+          as <- args.foldRight(Option(List.empty[Any]))((a, acc) => acc.flatMap(tail => constant(a.asTerm).map(_ :: tail)))
+        } yield StringContext(ps*).s(as*)
+      case _ => None
+    }
   }
 
   protected def dereferenceStable[A: Type](expr: Expr[A]): Option[Expr[A]] = {
