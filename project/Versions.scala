@@ -61,7 +61,7 @@ object Versions {
   val armeria = "1.41.1"
   val scalaJava8Compat = "1.0.2"
   val scalaCollectionCompat = "2.14.0"
-  val fs2 = "3.13.0"
+  val fs2 = "3.14.0"
   val decline = "2.6.2"
   val quicklens = "1.9.15"
   val openTelemetry = "1.65.0"
