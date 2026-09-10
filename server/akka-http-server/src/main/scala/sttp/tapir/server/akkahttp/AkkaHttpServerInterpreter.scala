@@ -23,7 +23,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +43,7 @@ trait AkkaHttpServerInterpreter {
       requestBody: (Materializer, ExecutionContext) => RequestBody[Future, AkkaStreams],
       toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[AkkaResponseBody, AkkaStreams]
   )(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]]): Route = {
-    val filterServerEndpoints = FilterServerEndpoints(ses)
+    val filterServerEndpoints = PrepareServerEndpoints(ses)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(
       akkaHttpServerOptions.appendInterceptor(AkkaStreamSizeExceptionInterceptor).interceptors,
       ses

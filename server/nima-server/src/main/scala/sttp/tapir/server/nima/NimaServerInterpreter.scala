@@ -7,7 +7,7 @@ import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.nima.internal.{NimaBodyListener, NimaRequestBody, NimaServerRequest, NimaToResponseBody, idMonad}
 
 import java.io.InputStream
@@ -16,7 +16,7 @@ trait NimaServerInterpreter {
   def nimaServerOptions: NimaServerOptions
 
   def toHandler(ses: List[ServerEndpoint[Any, Identity]]): Handler = {
-    val filteredEndpoints = FilterServerEndpoints[Any, Identity](ses)
+    val filteredEndpoints = PrepareServerEndpoints[Any, Identity](ses)
     val requestBody = new NimaRequestBody(nimaServerOptions.createFile)
     val responseBody = new NimaToResponseBody
     val interceptors = nimaServerOptions.interceptors

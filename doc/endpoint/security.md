@@ -35,6 +35,53 @@ the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../docs/opena
 supported, as well as optional variants: `authorizationCodeFlow[Optional]`, `clientCredentialsFlow[Optional]`, 
 `implicitFlow[Optional]`.
 
+## Using the request body in security logic
+
+Security logic sometimes needs the request body itself - for example, to verify a signature computed over the raw
+payload. The request body can normally be read only once, so an endpoint which needs it in both
+`serverSecurityLogic` and the main logic must mark one of the two declarations with `asSecondary`:
+
+```scala mdoc:compile-only
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
+
+case class Person(name: String, age: Int)
+
+val secureEndpoint = endpoint.post
+  .securityIn(auth.bearer[String]())
+  .securityIn(stringBody.asSecondary)
+  .in("people")
+  .in(jsonBody[Person])
+```
+
+A secondary body is still decoded on the server, using its own codec, but it isn't part of the endpoint's API
+contract: there's only one request body on the wire, so the secondary declaration is excluded from the generated
+documentation, and ignored by client interpreters. The unmarked body - `jsonBody[Person]` above - is the one that's
+documented, and the one clients actually send.
+
+Only bodies which can be re-read from buffered bytes can be secondary: string, byte array, byte buffer, input stream
+and input stream range bodies. File and multipart bodies aren't accepted. The restriction is enforced at compile
+time.
+
+The restriction also applies from the other side: an endpoint whose *ordinary* body (the one declared in `in`) is a
+file, multipart, or streaming body can't be combined with a secondary body in `securityIn` either. Unlike the
+compile-time check above, this is a runtime check: it's rejected with an `IllegalArgumentException` when routes are
+constructed.
+
+```{warning}
+Declaring two *ordinary* request bodies - one in `securityIn`, one in `in`, neither marked with
+`asSecondary` - is rejected the same way, since only one request body may be part of the API contract.
+```
+
+Note that a *single* body input needs no marking: an endpoint which reads the body only in `serverSecurityLogic`,
+with no body declared in `in`, reads the request exactly once. It works without `asSecondary`, and stays
+fully documented and visible to clients.
+
+Both kinds of problem, along with endpoints whose contract is merely suspect, are also reported by
+[`EndpointVerifier`](../testing.md#invalid-request-body-definitions).
+
 ## Authentication challenges
 
 For each `auth` scheme, one can define `WWW-Authenticate` headers that should be returned by the server in case input is 

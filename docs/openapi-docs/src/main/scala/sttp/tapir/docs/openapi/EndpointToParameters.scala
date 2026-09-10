@@ -5,6 +5,7 @@ import sttp.apispec.openapi.Parameter
 import sttp.tapir._
 import sttp.tapir.EndpointIO.OneOfBody
 import sttp.tapir.docs.apispec.schema.TSchemaToASchema
+import sttp.tapir.internal._
 
 private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) {
   // stateless, and derived from the same TSchemaToASchema as every other caller's instance
@@ -17,7 +18,7 @@ private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) 
         variants.filterNot(_.codec.schema.hidden),
         mapping
       )
-    case a: EndpointInput.Atom[_] if !a.codec.schema.hidden => a
+    case a: EndpointInput.Atom[_] if !a.codec.schema.hidden && !isSecondaryBodyInput(a) => a
   }
 
   def withSourceAtoms(

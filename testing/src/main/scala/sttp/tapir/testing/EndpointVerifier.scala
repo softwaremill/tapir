@@ -3,6 +3,7 @@ package sttp.tapir.testing
 import sttp.model.Method
 import sttp.model.StatusCode.{NoContent, NotModified}
 import sttp.tapir.internal.{RichEndpointInput, RichEndpointOutput, UrlencodedData}
+import sttp.tapir.server.EndpointBodyVerifier
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput, EndpointOutput, testing}
 
 import scala.annotation.tailrec
@@ -13,8 +14,15 @@ object EndpointVerifier {
       findIncorrectPaths(endpoints).toSet ++
       findDuplicatedMethodDefinitions(endpoints).toSet ++
       findIncorrectStatusWithBody(endpoints).toSet ++
-      findDuplicateNames(endpoints).toSet
+      findDuplicateNames(endpoints).toSet ++
+      findInvalidBodyDefinitions(endpoints).toSet
   }
+
+  private def findInvalidBodyDefinitions(endpoints: List[AnyEndpoint]): List[InvalidBodyDefinitionError] =
+    endpoints.flatMap { e =>
+      val problems = EndpointBodyVerifier.verifyOne(e)
+      (problems.errors ++ problems.warnings).map(InvalidBodyDefinitionError(e, _))
+    }
 
   private def findIncorrectPaths(endpoints: List[AnyEndpoint]): List[IncorrectPathsError] = {
     endpoints

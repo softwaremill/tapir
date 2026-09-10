@@ -139,6 +139,39 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
         bearer.code.code shouldBe 200
         without.code.code shouldBe 200
       }
+    },
+    testServerLogic(
+      endpoint.post
+        .in("secondary")
+        .securityIn(stringBody.asSecondary)
+        .in(stringBody)
+        .out(stringBody)
+        .serverSecurityLogic((raw: String) => pureResult(s"security:$raw".asRight[Unit]))
+        .serverLogic(principal => body => pureResult(s"$principal|logic:$body".asRight[Unit])),
+      "secondary body is decoded for both security and main logic"
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/secondary")
+        .body("payload")
+        .send(backend)
+        .map(_.body shouldBe "security:payload|logic:payload")
+    },
+    testServerLogic(
+      endpoint.post
+        .in("secondary-denied")
+        .securityIn(stringBody.asSecondary)
+        .in(stringBody)
+        .out(stringBody)
+        .errorOut(stringBody)
+        .serverSecurityLogic((_: String) => pureResult("denied".asLeft[Unit]))
+        .serverLogic(_ => (body: String) => pureResult(body.asRight[String])),
+      "secondary body short-circuits on security failure"
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/secondary-denied")
+        .body("payload")
+        .send(backend)
+        .map(_.body shouldBe "denied")
     }
   ) ++
     correctAuthTests ++

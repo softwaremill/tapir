@@ -331,6 +331,31 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
 
     result shouldBe Set(DuplicatedNameError("Z"))
   }
+
+  it should "detect a request body declared in both securityIn and in" in {
+    val e = endpoint.post.in("a").securityIn(stringBody).in(stringBody)
+
+    val result = EndpointVerifier(List(e))
+
+    result should have size 1
+    result.head shouldBe a[InvalidBodyDefinitionError]
+    result.head.toString should include("asSecondary")
+  }
+
+  it should "report an secondary body with no body in the API contract" in {
+    val e = endpoint.post.in("ingest").securityIn(stringBody.asSecondary)
+
+    val result = EndpointVerifier(List(e))
+
+    result should have size 1
+    result.head shouldBe a[InvalidBodyDefinitionError]
+  }
+
+  it should "accept an secondary body alongside an ordinary one" in {
+    val e = endpoint.post.in("a").securityIn(stringBody.asSecondary).in(stringBody)
+
+    EndpointVerifier(List(e)) shouldBe empty
+  }
 }
 
 sealed trait ErrorInfo

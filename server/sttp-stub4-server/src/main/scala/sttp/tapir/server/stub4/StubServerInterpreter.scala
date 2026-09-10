@@ -26,7 +26,7 @@ private[stub4] object StubServerInterpreter {
 
     val interpreter =
       new ServerInterpreter[R, F, Any, AnyStreams](
-        FilterServerEndpoints(endpoints),
+        PrepareServerEndpoints(endpoints),
         new SttpRequestBody[F],
         SttpResponseEncoder.toResponseBody,
         interceptors,

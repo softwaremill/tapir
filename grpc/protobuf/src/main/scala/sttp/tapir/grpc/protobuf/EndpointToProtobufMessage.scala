@@ -4,6 +4,7 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.{SArray, SCoproduct, SDate, SDateTime, SInteger, SNumber, SProduct, SProductField, SString}
 import sttp.tapir.{Schema, _}
 import sttp.tapir.grpc.protobuf.model._
+import sttp.tapir.internal._
 
 class EndpointToProtobufMessage {
   def apply(es: List[AnyEndpoint]): List[ProtobufMessage] =
@@ -55,6 +56,7 @@ class EndpointToProtobufMessage {
       case EndpointIO.Pair(left, right, _, _)                            => forIO(left) ++ forIO(right)
       case EndpointIO.Header(_, codec, _)                                => ???
       case EndpointIO.Headers(_, _)                                      => List.empty
+      case b @ EndpointIO.Body(_, _, _) if b.isSecondary                 => List.empty
       case EndpointIO.Body(_, codec, _)                                  => fromCodec(codec)
       case EndpointIO.OneOfBody(variants, _)                             => variants.flatMap(v => forIO(v.bodyAsAtom))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => ???

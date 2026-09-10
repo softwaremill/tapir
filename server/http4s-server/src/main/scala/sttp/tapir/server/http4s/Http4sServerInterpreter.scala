@@ -14,7 +14,7 @@ import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
 import scala.reflect.ClassTag
@@ -69,7 +69,7 @@ trait Http4sServerInterpreter[F[_]] {
     implicit val bodyListener: BodyListener[F, Http4sResponseBody[F]] = new Http4sBodyListener[F]
 
     new ServerInterpreter(
-      FilterServerEndpoints(serverEndpoints),
+      PrepareServerEndpoints(serverEndpoints),
       new Http4sRequestBody[F](http4sServerOptions),
       new Http4sToResponseBody[F](http4sServerOptions),
       RejectInterceptor.disableWhenSingleEndpoint(http4sServerOptions.interceptors, serverEndpoints),

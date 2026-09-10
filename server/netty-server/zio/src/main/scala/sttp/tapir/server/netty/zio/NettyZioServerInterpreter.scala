@@ -2,7 +2,7 @@ package sttp.tapir.server.netty.zio
 
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync, _}
 import sttp.tapir.server.netty.zio.NettyZioServerInterpreter.ZioRunAsync
 import sttp.tapir.server.netty.zio.internal.{NettyZioRequestBody, ZioStreamCompatible}
@@ -24,7 +24,7 @@ trait NettyZioServerInterpreter[R] {
 
       implicit val bodyListener: BodyListener[F, NettyResponse] = new NettyBodyListener(runAsync)
       val serverInterpreter = new ServerInterpreter[ZioStreams, F, NettyResponse, ZioStreams](
-        FilterServerEndpoints(widenedSes),
+        PrepareServerEndpoints(widenedSes),
         new NettyZioRequestBody(
           widenedServerOptions.createFile,
           widenedServerOptions.deleteFile,
