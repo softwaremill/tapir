@@ -967,14 +967,29 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
   )
   .dependsOn(core)
 
+// Derives the tapir Schema and a jsoniter-scala JsonValueCodec in a single Hearth-based macro expansion, so the
+// two cannot drift apart. The codec half is produced by configuring `JsonCodecMaker.make` from the derived
+// schema's names, so `jsoniter-scala-macros` is a *compile* dependency: the generated code calls the macro,
+// which therefore has to be on the user's compile classpath too. See doc/dev/pickler-*.md for the design.
 lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
   .settings(commonSettings)
   .settings(
     name := "tapir-json-pickler",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "upickle" % Versions.upickle3,
-      scalaTest.value % Test
+      "com.kubuszok" %%% "hearth" % Versions.hearth,
+      compilerPlugin("com.kubuszok" %% "hearth-cross-quotes" % Versions.hearth),
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % Versions.jsoniter,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % Versions.jsoniter,
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test,
+      // a JSON AST for the schema/codec agreement tests, which walk the written JSON alongside the schema
+      "com.lihaoyi" %%% "ujson" % Versions.upickle % Test
     )
+    // NB: Hearth requires -language:implicitConversions (to unwrap `Type.Lazy[A]` into `Type[A]` at use sites);
+    // tapir's commonSettings already enables it, so setting it here again only produces a redundancy warning.
+    // Uncomment to debug the cross-quotes compiler plugin's rewriting:
+    // scalacOptions += "-P:hearth.cross-quotes:logging=true",
   )
   .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
   .jsPlatform(scalaVersions = List(scala3), settings = commonJsSettings)
@@ -2437,8 +2452,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     mdocExtraArguments := Seq("--clean-target"),
     publishArtifact := false,
     name := "doc",
-    // Force upickle3 to match picklerJson's dependency and avoid version conflict
-    dependencyOverrides += "com.lihaoyi" %% "upickle" % Versions.upickle3,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play-netty-server" % Versions.playServer,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,

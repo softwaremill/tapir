@@ -15,7 +15,7 @@ import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
   import SchemaDerivationTest._
 
-  import generic.auto._
+  import generic.auto.*
   def implicitlySchema[T: Pickler]: Schema[T] = summon[Pickler[T]].schema
 
   "Schema auto derivation" should "find schema for simple types" in {
@@ -208,7 +208,14 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
     val schema = implicitlySchema[Test1]
 
     // when
-    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.SchemaDerivationTest.<local SchemaDerivationTest>.Test1"))
+    // DELIBERATE DEVIATION from the uPickle-based pickler, which expects
+    //   "sttp.tapir.json.pickler.SchemaDerivationTest.<local SchemaDerivationTest>.Test1"
+    // here. That `<local ...>` segment is an inconsistency in the incumbent, not a feature: tapir core's own
+    // `SNameMacros.typeFullNameFromTpe` explicitly skips synthetic `<...>` owners
+    // (core/src/main/scala-3/sttp/tapir/internal/SNameMacros.scala:23), and the pickler's private `TypeInfo` copy
+    // simply omitted that line. Emitting the segment leaks a compiler-internal marker into OpenAPI component names.
+    // We match core. See PICKLER_HEARTH_PLAN.md §5.8.
+    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.SchemaDerivationTest.Test1"))
     schema.schemaType shouldBe SProduct[Test1](
       List(
         field(FieldName("f1"), implicitlySchema[String]),
@@ -490,7 +497,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
 }
 
 object SchemaDerivationTest {
-  import generic.auto._
+  import generic.auto.*
   def implicitlySchema[A: Pickler]: Schema[A] = summon[Pickler[A]].schema
 
   private[json] val stringSchema = implicitlySchema[String]
