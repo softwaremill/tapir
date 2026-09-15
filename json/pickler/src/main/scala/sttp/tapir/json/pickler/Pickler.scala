@@ -30,14 +30,14 @@ trait Pickler[A] {
 
   /** A pickler for `Option[A]`: the schema is marked optional, `None` is written as `null`. */
   final def asOption: Pickler[Option[A]] =
-    internal.runtime.PicklerFactories.instance(schema.asOption, internal.runtime.CodecCombinators.option(codec))
+    Pickler.fromSchemaAndCodec(schema.asOption, internal.runtime.CodecCombinators.option(codec))
 
   /** A pickler for a collection of `A`, written as a JSON array. */
   final def asIterable[C[X] <: Iterable[X]](using Factory[A, C[A]]): Pickler[C[A]] =
-    internal.runtime.PicklerFactories.instance(schema.asIterable[C], internal.runtime.CodecCombinators.iterable[A, C](codec))
+    Pickler.fromSchemaAndCodec(schema.asIterable[C], internal.runtime.CodecCombinators.iterable[A, C](codec))
 
   final def asArray(using ClassTag[A]): Pickler[Array[A]] =
-    internal.runtime.PicklerFactories.instance(schema.asArray, internal.runtime.CodecCombinators.array(codec))
+    Pickler.fromSchemaAndCodec(schema.asArray, internal.runtime.CodecCombinators.array(codec))
 }
 
 object Pickler extends PicklerCompanionCompat {

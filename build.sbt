@@ -970,7 +970,7 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
 // Derives the tapir Schema and a jsoniter-scala JsonValueCodec in a single Hearth-based macro expansion, so the
 // two cannot drift apart. The codec half is produced by configuring `JsonCodecMaker.make` from the derived
 // schema's names, so `jsoniter-scala-macros` is a *compile* dependency: the generated code calls the macro,
-// which therefore has to be on the user's compile classpath too. See doc/dev/pickler-*.md for the design.
+// which therefore has to be on the user's compile classpath too.
 lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
   .settings(commonSettings)
   .settings(

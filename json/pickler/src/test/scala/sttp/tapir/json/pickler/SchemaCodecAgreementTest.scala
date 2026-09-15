@@ -7,8 +7,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 /** For generated values of every fixture, under every configuration: the JSON the codec writes has the shape the schema documents
-  * (`SchemaJsonAgreement`), and decodes back to the value. Plan §7.2 called this "the entire reason for deriving them together" -- it is
-  * the property the string assertions in the other suites only sample.
+  * (`SchemaJsonAgreement`), and decodes back to the value. This is the entire reason for deriving the two together -- the property the
+  * string assertions in the other suites only sample.
   */
 class SchemaCodecAgreementTest extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks {
   import CodecFixtures.{MutualA, Node, Tree}

@@ -6,10 +6,7 @@ import sttp.tapir.DecodeResult.Value
 
 import Fixtures.*
 
-/** Port of the uPickle-based module's `PicklerCoproductTest`. Unchanged apart from the package (which shows up in the full-name
-  * discriminator assertion) and the `StatusInternalError.type` pickler, which is derived rather than built for a single case (see
-  * `PicklerEnumTest`).
-  */
+/** Sealed hierarchies and enums with parameters: discriminator field and value configuration, `oneOfUsingField`. */
 class PicklerCoproductTest extends AnyFlatSpec with Matchers {
 
   behavior of "Pickler derivation for coproducts"

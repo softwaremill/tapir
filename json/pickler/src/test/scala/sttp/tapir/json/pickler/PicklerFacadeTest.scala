@@ -9,11 +9,8 @@ import sttp.tapir.{Schema, Validator}
 import java.util.UUID
 import scala.compiletime.testing.typeCheckErrors
 
-/** The public surface of `Pickler` beyond `derived` (plan §1.1, Phase 4b): `derivedEnumeration`, `picklerForMap`, `asOption` / `asIterable`
-  * / `asArray`, the `JsonCodec` bridge, and `Either`.
-  *
-  * Expected JSON strings come from the uPickle-based module's tests where it has an equivalent (`PicklerEnumTest`, `PicklerBasicTest`); the
-  * `Either` encoding is the one intentional divergence (plan §5.3).
+/** The public surface of `Pickler` beyond `derived`: `derivedEnumeration`, `picklerForMap`, `asOption` / `asIterable` / `asArray`, the
+  * `JsonCodec` bridge, and `Either`.
   */
 class PicklerFacadeTest extends AnyFlatSpec with Matchers {
   import CodecFixtures.*
@@ -28,13 +25,11 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
   behavior of "derivedEnumeration"
 
   it should "encode with a custom function (ordinal), for a nested enum" in {
-    // PicklerEnumTest L45
     given Pickler[ColorEnum] = Pickler.derivedEnumeration[ColorEnum].customStringBased(_.ordinal.toString)
     roundTrip(Pickler.derived[Response], Response(ColorEnum.Pink, "pink!!"), """{"color":"1","description":"pink!!"}""")
   }
 
   it should "encode with a custom function over a parameterised enum case" in {
-    // PicklerEnumTest L62
     given picklerColorEnum: Pickler[RichColorEnum] =
       Pickler.derivedEnumeration[RichColorEnum].customStringBased(enumValue => s"color-number-${enumValue.code}")
     roundTrip(Pickler.derived[RichColorResponse], RichColorResponse(RichColorEnum.Cyan), """{"color":"color-number-3"}""")
@@ -82,9 +77,8 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
   }
 
   it should "reject oneOfUsingField for enums" in {
-    // PicklerEnumTest L92. The incumbent built picklers for the individual cases first; jsoniter cannot
-    // (`JsonCodecMaker.make[RichColorEnum.Cyan.type]` fails to type-check for a parameterised enum's case), so the
-    // children here are only typed, which is all the rejection needs.
+    // jsoniter cannot build a codec for a single parameterised enum case (`JsonCodecMaker.make[RichColorEnum.Cyan.type]`
+    // fails to type-check), so the children here are only typed, which is all the rejection needs.
     val errors = typeCheckErrors("""
       given picklerRichColor: Pickler[RichColorEnum] =
         Pickler.oneOfUsingField[RichColorEnum, Int](_.code, codeInt => s"code-$codeInt")(
@@ -101,7 +95,6 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
   behavior of "picklerForMap"
 
   it should "derive picklers for Map with non-String key" in {
-    // PicklerBasicTest L224
     import sttp.tapir.json.pickler.generic.auto.*
     given picklerMap: Pickler[Map[UUID, SimpleTestResult]] = Pickler.picklerForMap(_.toString, UUID.fromString)
     val pickler = Pickler.derived[ClassWithMapCustomKey]
@@ -184,7 +177,6 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
   behavior of "Either"
 
   it should "encode Either fields untagged, as tapir core's Codec.eitherRight does" in {
-    // PicklerBasicTest L187, with the encoding changed on purpose: uPickle wrote `[0,"err1"]` / `[1,{...}]`.
     val pickler = Pickler.derived[ClassWithEither]
     roundTrip(pickler, ClassWithEither("fieldA 1", Left("err1")), """{"fieldA":"fieldA 1","fieldB":"err1"}""")
     roundTrip(

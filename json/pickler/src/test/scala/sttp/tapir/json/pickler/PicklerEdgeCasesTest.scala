@@ -9,9 +9,7 @@ import sttp.tapir.SchemaType.{SOption, SProduct}
 
 import scala.compiletime.testing.typeCheckErrors
 
-/** The coverage gaps plan §7.2 lists for the incumbent's suite: numeric values, string escaping, nested `Option`s, `Char`, tuples, and
-  * decode failures. None of these had a single assertion before.
-  */
+/** Edge cases: numeric values, string escaping, nested `Option`s, `Char`, tuples, and decode failures. */
 class PicklerEdgeCasesTest extends AnyFlatSpec with Matchers {
   import EdgeFixtures.*
 

@@ -12,15 +12,16 @@ import sttp.tapir.json.pickler.internal.runtime.SchemaUtils
 
 /** Derivation of the tapir [[Schema]] half of a `Pickler`.
   *
-  * The shapes produced here are pinned by the incumbent module's `SchemaDerivationTest`; see `doc/dev/schema-derivation-test-spec.md`.
+  * The shapes produced here (names, field order, where the discriminator field goes, which annotations are folded) are pinned by
+  * `SchemaDerivationTest`, and match what tapir core's `Schema.derived` produces for the same types.
   *
   * ==Design==
   * Name transformations (`toEncodedName`, `toDiscriminatorValue`) are applied at **runtime**, by passing the `PicklerConfiguration`
   * expression through to [[SchemaUtils]], rather than being folded at compile time. That is what makes all eight `with*DiscriminatorValues`
-  * variants and all three member-name variants work without a single compile-time branch — and it matches the incumbent, which emits
-  * `config.toEncodedName(name)` into the tree too.
+  * variants and all three member-name variants work without a single compile-time branch.
   */
-trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport & ImplicitPicklerSupport & PlatformSupport =>
+trait SchemaDerivation {
+  this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & ImplicitPicklerSupport & PlatformSupport =>
 
   /** Centralised `Type.of` instances — see the note on `PicklerMacrosImpl.PTypes` for why these are not `implicit val`s at their use sites.
     */
@@ -30,14 +31,10 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     def ProductFieldOf[A: Type]: Type[SProductField[A]] = Type.of[SProductField[A]]
     lazy val SNameT: Type[SName] = Type.of[SName]
     lazy val StringT: Type[String] = Type.of[String]
-    lazy val CharT: Type[Char] = Type.of[Char]
     lazy val AnyT: Type[Any] = Type.of[Any]
-    lazy val AnyValT: Type[AnyVal] = Type.of[AnyVal]
     lazy val ListAnyT: Type[List[Any]] = Type.of[List[Any]]
     lazy val ListStringT: Type[List[String]] = Type.of[List[String]]
     def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
-    lazy val EncodedName: Type[Schema.annotations.encodedName] = Type.of[Schema.annotations.encodedName]
-    lazy val EitherCtor: Type.Ctor2[Either] = Type.Ctor2.of[Either]
   }
 
   // -----------------------------------------------------------------------------------------------------------------
@@ -53,12 +50,11 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
       tpe: Type[A],
       config: Expr[PicklerConfiguration],
       cache: MLocal[ValDefsCache],
-      inProgress: MLocal[Set[String]],
-      derivedType: Option[??]
+      inProgress: MLocal[Set[String]]
   ) {
     def cacheKey: String = SchemaDerivation.this.cacheKey(tpe)
 
-    def nest[B: Type]: SchemaCtx[B] = SchemaCtx(Type[B], config, cache, inProgress, derivedType)
+    def nest[B: Type]: SchemaCtx[B] = SchemaCtx(Type[B], config, cache, inProgress)
   }
 
   def sctx[A](implicit A: SchemaCtx[A]): SchemaCtx[A] = A
@@ -111,45 +107,23 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
       Rules(
         UseCachedRule,
         UseSelfRefWhenRecursiveRule,
-        // A user-supplied `Pickler[A]` beats everything structural: it is the incumbent's override mechanism, and the
-        // codec chain honours the same instance, so schema and JSON stay in step. Safe to summon early only because
-        // of the re-entrancy guard described in `ImplicitPicklerSupport`.
+        // A user-supplied `Pickler[A]` beats everything structural: it is the override mechanism, and the codec chain
+        // honours the same instance, so schema and JSON stay in step. Safe to summon early only because of the
+        // re-entrancy guard described in `ImplicitPicklerSupport`.
         UseUserPicklerRule,
-        // Every structural rule precedes the implicit search. Two reasons, and the ordering is load-bearing:
-        //
-        //  1. Summoning tapir's own `Schema[Option[A]]` would make the *compiler* search for `Schema[A]`, and that
-        //     inner search is not under our control — with `sttp.tapir.generic.auto.*` in scope it resolves to
-        //     tapir's Mirror/magnolia derivation, silently producing a schema built by different rules.
-        //  2. Hearth's `summonExprIgnoring` (which is how one would otherwise exclude `Schema.derivedSchema`) is
-        //     only available on Scala 3.7+, and tapir builds Scala 3 at 3.3.8. Ordering gives us the same guarantee
-        //     without the API. See the note on `UseImplicitRule`.
-        UseBuiltInLeafRule,
-        HandleAsValueClassRule,
-        HandleAsOptionRule,
-        HandleAsEitherRule,
-        HandleAsMapRule,
-        HandleAsCollectionRule,
-        HandleAsSingletonRule,
-        HandleAsCaseClassRule,
-        HandleAsEnumRule,
-        UseImplicitRule
+        StructuralRule
       )(_[A]).flatMap {
         case Right(result) => MIO.pure(result)
         case Left(reasons) =>
-          val explanation = reasons.toListMap.view
-            .map { case (rule, why) =>
-              if (why.isEmpty) s"  - ${rule.name}: not applicable"
-              else s"  - ${rule.name}: ${why.mkString("; ")}"
-            }
-            .mkString("\n")
-          MIO.fail(
-            new Exception(
-              s"Cannot derive a tapir Schema for ${Type[A].plainPrint}: no implicit Schema was found and the type is " +
-                s"not an Option, collection, Map, singleton, case class or sealed hierarchy.\n" + explanation
-            )
-          )
+          val explanation = reasons.toListMap.view.map { case (rule, why) =>
+            if (why.isEmpty) s"  - ${rule.name}: not applicable"
+            else s"  - ${rule.name}: ${why.mkString("; ")}"
+          }.toList
+          failSchema(PicklerDerivationError.UnsupportedType(Type[A].plainPrint, explanation))
       }
     }
+
+  private def failSchema[T](error: PicklerDerivationError): MIO[T] = Log.error(error.message) >> MIO.fail(error)
 
   private object UseCachedRule extends SchemaRule("use cached schema") {
     def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
@@ -182,183 +156,95 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
       }
   }
 
-  /** Terminal rule: pick up whatever `Schema[A]` is in implicit scope.
+  /** The structural rule: dispatch on the [[Shape]] shared with `CodecDerivation`, so that both halves take a type apart identically.
     *
-    * This is where primitives, `String`, `java.time` types and any user-provided schema for a non-structural type are resolved —
-    * `Schema.schemaForInt` and friends live on the `Schema` companion and need no import.
+    * Only the shapes that are not structural (`BuiltInScalar`, the Java numbers, `Opaque`) reach the implicit search for a `Schema[A]`.
+    * That is where primitives, `String`, `java.time` types and any user-provided schema for a non-structural type are resolved —
+    * `Schema.schemaForInt` and friends live on the `Schema` companion and need no import. Keeping the implicit search away from the
+    * structural shapes is load-bearing: with `sttp.tapir.generic.auto.*` in scope, `Schema.derivedSchema` would resolve every case class
+    * through magnolia instead of through our rules (which name types and fold annotations differently), and summoning tapir's own
+    * `Schema[Option[A]]` would make the *compiler* search for `Schema[A]`, out of our control. (Hearth's `summonExprIgnoring`, the direct
+    * fix, needs Scala 3.7+.)
     *
-    * Running *last* is deliberate. `Schema.derivedSchema` (in `LowPrioritySchema`) unwraps a `Derived[Schema[T]]` produced by
-    * `sttp.tapir.generic.auto.schemaForCaseClass`; if a user has that import in scope, an early implicit search would resolve every case
-    * class through magnolia instead of through our rules, which name types and fold annotations differently. Because structural rules are
-    * tried first, a case class, sealed hierarchy, `Option`, collection or `Map` never reaches this rule.
-    *
-    * The cost is that a user-supplied `given Schema[MyCaseClass]` does not override structural derivation. That matches the incumbent,
-    * where overriding is done by supplying a `Pickler`, not a `Schema`.
+    * The cost is that a user-supplied `given Schema[MyCaseClass]` does not override structural derivation: overriding is done by supplying
+    * a `Pickler`, not a `Schema`, so that the codec follows suit.
     */
-  private object UseImplicitRule extends SchemaRule("use an implicit Schema") {
+  private object StructuralRule extends SchemaRule("derive from the type's shape") {
     def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
-      implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
-      MIO.pure(Expr.summonImplicit[Schema[A]].toOption match {
-        case Some(expr) => Rule.matched(expr)
-        case None       => Rule.yielded(s"no implicit Schema[${Type[A].plainPrint}] in scope")
-      })
+      val shape = classify[A]
+      Log.info(s"${Type[A].prettyPrint} classified as ${shape.getClass.getSimpleName}") >> (shape match {
+        case Shape.BuiltInScalar() | Shape.JavaBigDecimal() | Shape.JavaBigInteger() | Shape.Opaque() => useImplicitSchema[A]
+        // tapir core declares no `Schema[Char]`, but jsoniter writes a `Char` as a one-character string. Supplying the
+        // matching `SString` here is what keeps the schema and the codec in agreement.
+        case Shape.CharScalar()           => MIO.pure(Expr.quote(SchemaUtils.stringLikeSchema[A]))
+        case Shape.ValueClass(inner)      => deriveValueClassSchema[A](inner)
+        case Shape.OptionOf(element)      => deriveOptionSchema[A](element)
+        case Shape.NestedOption(inner, _) => deriveOptionSchema[A](inner)
+        case Shape.EitherOf(left, right)  => deriveEitherSchema[A](left, right)
+        case Shape.StringMap(value)       => deriveMapSchema[A](value)
+        case Shape.NonStringMap(key, _)   => failSchema(PicklerDerivationError.NonStringMapKey(key.Underlying.plainPrint))
+        case Shape.Collection(element)    => deriveCollectionSchema[A](element)
+        case Shape.Tuple()                => failSchema(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
+        case Shape.Singleton()            => guardingRecursion[A, Expr[Schema[A]]](deriveSingletonSchema[A])
+        case Shape.Product(_, params)     => guardingRecursion[A, Expr[Schema[A]]](deriveCaseClassSchema[A](params))
+        case Shape.Enumeration(_, leaves) => guardingRecursion[A, Expr[Schema[A]]](deriveStringEnumSchema[A](leaves))
+        case Shape.Coproduct(_, leaves)   => guardingRecursion[A, Expr[Schema[A]]](deriveCoproductSchema[A](leaves))
+      }).map(Rule.matched)
     }
   }
 
-  /** Types that tapir models as scalars but that the structural rules would happily take apart.
-    *
-    * `String` is the motivating case: it is an `Iterable[Char]`, so `IsCollection` matches it and the collection rule would emit
-    * `SArray[String, Char]` instead of `SString`. `Array[Byte]` is the same story with `SBinary`.
-    *
-    * Summoning early is safe for exactly these types because they are not case classes or sealed hierarchies, so `sttp.tapir.generic.auto`
-    * cannot produce a competing instance for them — the concern that keeps the general implicit search at the end of the chain does not
-    * apply.
-    */
-  private def isBuiltInLeaf[A: Type]: Boolean = {
-    implicit val StringT: Type[String] = STypes.StringT
-    Type[A] <:< Type[String] || Type[A].plainPrint == "scala.Array[scala.Byte]"
-  }
-
-  private object UseBuiltInLeafRule extends SchemaRule("use tapir's built-in schema for a scalar-like type") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
-      implicit val CharT: Type[Char] = STypes.CharT
-      if (Type[A] =:= Type[Char])
-        // tapir core declares no `Schema[Char]`, but jsoniter writes a `Char` as a one-character string. Supplying the
-        // matching `SString` here is what keeps the schema and the codec in agreement.
-        MIO.pure(Rule.matched(Expr.quote(SchemaUtils.stringLikeSchema[A])))
-      else if (!isBuiltInLeaf[A]) MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not a scalar-like built-in"))
-      else {
-        implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
-        MIO.pure(Expr.summonImplicit[Schema[A]].toOption match {
-          case Some(expr) => Rule.matched(expr)
-          case None       => Rule.yielded(s"no built-in Schema[${Type[A].plainPrint}] in scope")
-        })
-      }
+  private def useImplicitSchema[A: SchemaCtx]: MIO[Expr[Schema[A]]] = {
+    implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
+    Expr.summonImplicit[Schema[A]].toOption match {
+      case Some(expr) => MIO.pure(expr)
+      case None       =>
+        failSchema(PicklerDerivationError.UnsupportedType(Type[A].plainPrint, List(s"no implicit Schema[${Type[A].plainPrint}] in scope")))
     }
   }
 
   /** An `AnyVal` wrapper is documented as its inner type, because that is how jsoniter writes it (unwrapped). Matches tapir core's own
-    * `Schema.derived` for value classes. Restricted to `AnyVal`: Hearth's `IsValueType` also matches opaque types and Java boxes, which
-    * jsoniter does not unwrap.
+    * `Schema.derived` for value classes.
     */
-  private object HandleAsValueClassRule extends SchemaRule("handle as AnyVal value class") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
-      implicit val AnyValT: Type[AnyVal] = STypes.AnyValT
-      Type[A] match {
-        case IsValueType(isValueType) if Type[A] <:< Type[AnyVal] =>
-          import isValueType.Underlying as Inner
-          deriveSchemaFor[Inner](using sctx.nest[Inner]).map { inner =>
-            Rule.matched(Expr.quote(Expr.splice(inner).asInstanceOf[Schema[A]]))
-          }
-        case _ => MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not an AnyVal value class"))
-      }
+  private def deriveValueClassSchema[A: SchemaCtx](inner: ??): MIO[Expr[Schema[A]]] = {
+    import inner.Underlying as Inner
+    deriveSchemaFor[Inner](using sctx.nest[Inner]).map(schema => Expr.quote(Expr.splice(schema).asInstanceOf[Schema[A]]))
+  }
+
+  private def deriveOptionSchema[A: SchemaCtx](element: ??): MIO[Expr[Schema[A]]] = {
+    import element.Underlying as Element
+    deriveSchemaFor[Element](using sctx.nest[Element]).map { schema =>
+      Expr.quote(SchemaUtils.optionSchema[Element](Expr.splice(schema)).asInstanceOf[Schema[A]])
     }
   }
 
-  private object HandleAsOptionRule extends SchemaRule("handle as Option") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = Type[A] match {
-      case IsOption(isOption) =>
-        import isOption.Underlying as Element
-        deriveSchemaFor[Element](using sctx.nest[Element]).map { element =>
-          Rule.matched(Expr.quote {
-            SchemaUtils.optionSchema[Element](Expr.splice(element)).asInstanceOf[Schema[A]]
-          })
-        }
-      case _ => MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not an Option"))
-    }
-  }
-
-  /** `Either` is a sealed hierarchy, so without this rule it would fall through to `HandleAsEnumRule` and be documented as a discriminated
-    * coproduct of `Left`/`Right`. tapir core documents it as an *untagged* coproduct of the two sides (`Schema.schemaForEither`), and the
-    * codec writes the bare side value to match (plan §5.3).
+  /** tapir core documents `Either` as an *untagged* coproduct of the two sides (`Schema.schemaForEither`), and the codec writes the bare
+    * side value to match.
     */
-  private object HandleAsEitherRule extends SchemaRule("handle as Either") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
-      val EitherCtor = STypes.EitherCtor
-      Type[A] match {
-        case EitherCtor(left, right) =>
-          import left.Underlying as L
-          import right.Underlying as R
-          for {
-            l <- deriveSchemaFor[L](using sctx.nest[L])
-            r <- deriveSchemaFor[R](using sctx.nest[R])
-          } yield Rule.matched(Expr.quote(SchemaUtils.eitherSchema[L, R](Expr.splice(l), Expr.splice(r)).asInstanceOf[Schema[A]]))
-        case _ => MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not an Either"))
-      }
+  private def deriveEitherSchema[A: SchemaCtx](left: ??, right: ??): MIO[Expr[Schema[A]]] = {
+    import left.Underlying as L
+    import right.Underlying as R
+    for {
+      l <- deriveSchemaFor[L](using sctx.nest[L])
+      r <- deriveSchemaFor[R](using sctx.nest[R])
+    } yield Expr.quote(SchemaUtils.eitherSchema[L, R](Expr.splice(l), Expr.splice(r)).asInstanceOf[Schema[A]])
+  }
+
+  private def deriveCollectionSchema[A: SchemaCtx](element: ??): MIO[Expr[Schema[A]]] = {
+    import element.Underlying as Element
+    deriveSchemaFor[Element](using sctx.nest[Element]).map { schema =>
+      Expr.quote(SchemaUtils.collectionSchema[Element](Expr.splice(schema)).asInstanceOf[Schema[A]])
     }
   }
 
-  private object HandleAsCollectionRule extends SchemaRule("handle as collection") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = Type[A] match {
-      case IsCollection(isCollection) =>
-        import isCollection.Underlying as Element
-        deriveSchemaFor[Element](using sctx.nest[Element]).map { element =>
-          Rule.matched(Expr.quote {
-            SchemaUtils.collectionSchema[Element](Expr.splice(element)).asInstanceOf[Schema[A]]
-          })
-        }
-      case _ => MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not a collection"))
+  private def deriveMapSchema[A: SchemaCtx](value: ??): MIO[Expr[Schema[A]]] = {
+    import value.Underlying as Value
+    implicit val StringT: Type[String] = STypes.StringT
+    // tapir's own convention (`SchemaMacros.generateSchemaForMap`): a `String` key contributes nothing to the name,
+    // and the value's type arguments are flattened in after it.
+    val typeParams = Expr(SchemaUtils.flattenTypeName(Type[Value].plainPrint))
+    deriveSchemaFor[Value](using sctx.nest[Value]).map { schema =>
+      Expr.quote(SchemaUtils.mapSchema[Value](Expr.splice(schema), Expr.splice(typeParams)).asInstanceOf[Schema[A]])
     }
-  }
-
-  private object HandleAsMapRule extends SchemaRule("handle as Map") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = Type[A] match {
-      case IsMap(isMap) =>
-        import isMap.Underlying as Pair
-        deriveMapSchema[A, Pair](isMap.value)
-      case _ => MIO.pure(Rule.yielded(s"${Type[A].plainPrint} is not a Map"))
-    }
-
-    private def deriveMapSchema[A: SchemaCtx, Pair: Type](
-        isMap: IsMapOf[A, Pair]
-    ): MIO[Rule.Applicability[Expr[Schema[A]]]] = {
-      import isMap.{Key, Value}
-      implicit val StringT: Type[String] = STypes.StringT
-      if (!(Key <:< Type[String]))
-        MIO.fail(
-          new Exception(
-            s"Cannot derive a tapir Schema for a Map with non-String keys (${Key.plainPrint}); " +
-              "use Pickler.picklerForMap with an explicit key encoder."
-          )
-        )
-      else {
-        // tapir's own convention (`SchemaMacros.generateSchemaForMap`): a `String` key contributes nothing to the
-        // name, and the value's type arguments are flattened in after it.
-        val typeParams = Expr(SchemaUtils.flattenTypeName(Value.plainPrint))
-        deriveSchemaFor[Value](using sctx.nest[Value]).map { value =>
-          Rule.matched(Expr.quote {
-            SchemaUtils.mapSchema[Value](Expr.splice(value), Expr.splice(typeParams)).asInstanceOf[Schema[A]]
-          })
-        }
-      }
-    }
-  }
-
-  private object HandleAsSingletonRule extends SchemaRule("handle as singleton") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      SingletonValue.parse[A].toEither match {
-        case Right(_)     => guardingRecursion[A, Expr[Schema[A]]](deriveSingletonSchema[A]).map(Rule.matched)
-        case Left(reason) => MIO.pure(Rule.yielded(reason))
-      }
-  }
-
-  private object HandleAsCaseClassRule extends SchemaRule("handle as case class") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      // A tuple parses as a case class, but jsoniter writes it as an array: no schema would agree with the codec.
-      if (Type[A].isTuple) MIO.fail(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
-      else
-        CaseClass.parse[A].toEither match {
-          case Right(cc)    => guardingRecursion[A, Expr[Schema[A]]](deriveCaseClassSchema[A](cc)).map(Rule.matched)
-          case Left(reason) => MIO.pure(Rule.yielded(reason))
-        }
-  }
-
-  private object HandleAsEnumRule extends SchemaRule("handle as sealed hierarchy / enum") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      Enum.parse[A].toEither match {
-        case Right(e)     => guardingRecursion[A, Expr[Schema[A]]](deriveEnumSchema[A](e)).map(Rule.matched)
-        case Left(reason) => MIO.pure(Rule.yielded(reason.toString))
-      }
   }
 
   // -----------------------------------------------------------------------------------------------------------------
@@ -382,14 +268,13 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     )
   }
 
-  private def deriveCaseClassSchema[A: SchemaCtx](cc: CaseClass[A]): MIO[Expr[Schema[A]]] = {
+  private def deriveCaseClassSchema[A: SchemaCtx](params: List[(String, Parameter)]): MIO[Expr[Schema[A]]] = {
     implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
     implicit val SNameT: Type[SName] = STypes.SNameT
     implicit val FieldT: Type[SProductField[A]] = STypes.ProductFieldOf[A]
 
     val name = sNameExpr[A]
     val annotations = typeAnnotationsExpr[A]
-    val params = cc.primaryConstructor.totalParameters.flatten.toList
 
     params
       .foldLeft(MIO.pure(List.empty[Expr[SProductField[A]]])) { case (acc, (fieldName, param)) =>
@@ -434,10 +319,8 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     }
   }
 
-  /** Sealed hierarchies are flattened to their **leaves**: an intermediate sealed trait contributes its own children, not itself.
-    * `Pet -> Rodent -> Hamster` must yield `Hamster` as a direct subtype.
-    */
-  private def deriveEnumSchema[A: SchemaCtx](e: Enum[A]): MIO[Expr[Schema[A]]] = {
+  /** A sealed hierarchy with at least one non-singleton leaf: a discriminated coproduct over the **leaves** (`Shape.Coproduct`). */
+  private def deriveCoproductSchema[A: SchemaCtx](leaves: List[(String, ??<:[A])]): MIO[Expr[Schema[A]]] = {
     implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
     implicit val SchemaAnyT: Type[Schema[Any]] = STypes.SchemaAny
     implicit val SNameT: Type[SName] = STypes.SNameT
@@ -445,45 +328,34 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     val name = sNameExpr[A]
     val annotations = typeAnnotationsExpr[A]
     val config = sctx.config
-    val children = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList)
 
-    // Plan §5.2: a hierarchy whose leaves are *all* singletons is documented as a string with an enumeration
-    // validator, not as a coproduct -- because that is how it is encoded. `CodecDerivation.coproductConfig` makes the
-    // same test; if the two ever disagree, the schema will document an object while the codec writes a string.
-    val allSingletons = children.nonEmpty && children.forall { case (_, child) =>
-      import child.Underlying as Child
-      SingletonValue.parse[Child].toEither.isRight
-    }
-
-    if (allSingletons) deriveStringEnumSchema[A](children)
-    else
-      children
-        .foldLeft(MIO.pure(List.empty[Expr[Schema[Any]]])) { case (acc, (_, child)) =>
-          acc.flatMap { schemas =>
-            import child.Underlying as Child
-            deriveSchemaFor[Child](using sctx.nest[Child]).map { childSchema =>
-              schemas :+ Expr.quote(Expr.splice(childSchema).asInstanceOf[Schema[Any]])
-            }
+    leaves
+      .foldLeft(MIO.pure(List.empty[Expr[Schema[Any]]])) { case (acc, (_, leaf)) =>
+        acc.flatMap { schemas =>
+          import leaf.Underlying as Leaf
+          deriveSchemaFor[Leaf](using sctx.nest[Leaf]).map { leafSchema =>
+            schemas :+ Expr.quote(Expr.splice(leafSchema).asInstanceOf[Schema[Any]])
           }
         }
-        .flatMap { childSchemas =>
-          val subtypes = childSchemas.foldRight(Expr.quote(Nil: List[Schema[Any]])) { (childSchema, tail) =>
-            Expr.quote(Expr.splice(childSchema) :: Expr.splice(tail))
-          }
-          setCachedAndGet[A](
-            sctx.cache,
-            Expr.quote {
-              SchemaUtils.enrichSchema[A](
-                SchemaUtils.coproductSchema[A](Expr.splice(name), Expr.splice(subtypes), Expr.splice(config)),
-                Expr.splice(annotations)
-              )
-            }
-          )
+      }
+      .flatMap { leafSchemas =>
+        val subtypes = leafSchemas.foldRight(Expr.quote(Nil: List[Schema[Any]])) { (leafSchema, tail) =>
+          Expr.quote(Expr.splice(leafSchema) :: Expr.splice(tail))
         }
+        setCachedAndGet[A](
+          sctx.cache,
+          Expr.quote {
+            SchemaUtils.enrichSchema[A](
+              SchemaUtils.coproductSchema[A](Expr.splice(name), Expr.splice(subtypes), Expr.splice(config)),
+              Expr.splice(annotations)
+            )
+          }
+        )
+      }
   }
 
-  /** `SString` plus a `Validator.enumeration` of the singleton values — the schema counterpart of encoding an all-singleton hierarchy as a
-    * bare string.
+  /** An all-singleton hierarchy (`Shape.Enumeration`): `SString` plus a `Validator.enumeration` of the singleton values — the schema
+    * counterpart of encoding it as a bare string.
     */
   private def deriveStringEnumSchema[A: SchemaCtx](children: List[(String, ??<:[A])]): MIO[Expr[Schema[A]]] = {
     implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
@@ -534,12 +406,9 @@ trait SchemaDerivation { this: MacroCommons & StdExtensions & AnnotationSupport 
     */
   protected def sNameExpr[A: Type]: Expr[SName] = {
     implicit val SNameT: Type[SName] = STypes.SNameT
-    implicit val EncodedNameT: Type[Schema.annotations.encodedName] = STypes.EncodedName
-    // `plainPrint`, not `prettyPrint`: the latter embeds ANSI escapes, which must never reach a string literal in
-    // generated code.
-    // Only the type's *own* `@encodedName` is consulted: the incumbent deliberately does not propagate a parent's
-    // renaming to its subtypes (`SchemaDerivationTest`: "Not propagate type encodedName to subtypes of a sealed
-    // trait, but keep inheritance for fields").
+    // Only the type's *own* `@encodedName` is consulted: a parent's renaming is deliberately not propagated to its
+    // subtypes (`SchemaDerivationTest`: "Not propagate type encodedName to subtypes of a sealed trait, but keep
+    // inheritance for fields").
     typeEncodedName[A] match {
       case Some(encoded) =>
         // An explicit name replaces the derived one wholesale, type arguments included.

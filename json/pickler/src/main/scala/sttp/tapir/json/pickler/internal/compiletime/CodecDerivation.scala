@@ -31,27 +31,27 @@ import sttp.tapir.json.pickler.internal.runtime.{CodecCombinators, LeafCodecs}
   * [[PlatformSupport]]). The schema half computes the same names at runtime from the same configuration, so the two agree by construction.
   *
   * ==Knobs, and why each is set==
-  *   - `transientEmpty(false)`: empty collections are written as `[]` (the uPickle-based module did so).
+  *   - `transientEmpty(false)`: empty collections are written as `[]`.
   *   - `transientDefault(false)`: fields equal to their Scala default are still written.
   *   - `transientNone`: from `PicklerConfiguration.transientNone`.
   *   - `requireDiscriminatorFirst(false)`: the discriminator may appear anywhere in the object.
   *   - `allowRecursiveTypes(true)`: recursion is handled by jsoniter's own `def`s; the schema uses `SRef`.
-  *   - `alwaysEmitDiscriminator(true)` on case classes: a leaf written on its own carries its discriminator, as the uPickle-based module's
-  *     tagged writers did. It is also what makes per-leaf codecs composable into the hierarchy codec: jsoniter delegates to the leaf's
-  *     implicit and the leaf writes the tag itself.
-  *   - `discriminatorFieldName(None)` on a hierarchy whose leaves are all singletons: bare strings (plan §5.2).
+  *   - `alwaysEmitDiscriminator(true)` on case classes: a leaf written on its own carries its discriminator, so that a member of a sealed
+  *     hierarchy is encoded the same way whether it is written through the parent or through its own pickler. It is also what makes
+  *     per-leaf codecs composable into the hierarchy codec: jsoniter delegates to the leaf's implicit and the leaf writes the tag itself.
+  *   - `discriminatorFieldName(None)` on a hierarchy whose leaves are all singletons: such hierarchies are encoded as bare strings.
   *
   * ==`Either`==
   * jsoniter has no encoding for it, so an `Either[L, R]` in the graph gets a hand-written `CodecCombinators.either` val over the codecs of
-  * its two sides (plan §5.3: untagged, as tapir core's `Codec.eitherRight`). A side that has a val of its own is referenced; any other (a
-  * primitive, a collection) gets an inline `make` under the base config.
+  * its two sides (untagged, as tapir core's `Codec.eitherRight`). A side that has a val of its own is referenced; any other (a primitive, a
+  * collection) gets an inline `make` under the base config.
   *
   * ==What is deliberately not supported==
   * tapir's `@default` annotation does not drive decoding: jsoniter fills a missing field only from a Scala default parameter and has no
-  * hook for anything else (D5). Scala default parameters *are* honoured.
+  * hook for anything else. Scala default parameters *are* honoured.
   */
 trait CodecDerivation {
-  this: MacroCommons & StdExtensions & AnnotationSupport & PlatformSupport & ImplicitPicklerSupport =>
+  this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & PlatformSupport & ImplicitPicklerSupport =>
 
   private[compiletime] object CTypes {
     def CodecOf[A: Type]: Type[JsonValueCodec[A]] = Type.of[JsonValueCodec[A]]
@@ -61,12 +61,8 @@ trait CodecDerivation {
     lazy val OptionStringT: Type[Option[String]] = Type.of[Option[String]]
     lazy val StringPF: Type[PartialFunction[String, String]] = Type.of[PartialFunction[String, String]]
     lazy val StringFn: Type[String => String] = Type.of[String => String]
-    lazy val AnyValT: Type[AnyVal] = Type.of[AnyVal]
-    lazy val CharT: Type[Char] = Type.of[Char]
     lazy val JBigDecimalT: Type[java.math.BigDecimal] = Type.of[java.math.BigDecimal]
     lazy val JBigIntegerT: Type[java.math.BigInteger] = Type.of[java.math.BigInteger]
-    lazy val EncodedName: Type[sttp.tapir.Schema.annotations.encodedName] = Type.of[sttp.tapir.Schema.annotations.encodedName]
-    lazy val EitherCtor: Type.Ctor2[Either] = Type.Ctor2.of[Either]
   }
 
   /** References to the sibling vals of the generated block, by the `plainPrint` of the type they are a codec for. */
@@ -93,12 +89,13 @@ trait CodecDerivation {
   def deriveCodec[A: Type](config: PicklerConfiguration): MIO[Expr[JsonValueCodec[A]]] =
     Log.namedScope(s"deriveCodec[${Type[A].prettyPrint}]") {
       implicit val CodecA: Type[JsonValueCodec[A]] = CTypes.CodecOf[A]
+      val rootShape = classify[A]
       for {
-        units <- collectNested[A](config)
+        units <- walkChildren(childrenOf(rootShape), config, Set(Type[A].plainPrint), Vector.empty).map(_._2.toList)
         // The root gets an implicit too. `make[A]` itself never looks its own type up (jsoniter pre-seeds the root as
         // "no implicit"), but a *nested* `make[Leaf]` whose field refers back to `A` must find it: otherwise jsoniter
         // would inline `A` there, under the leaf's configuration -- whose leaf-name mapper knows only that one leaf.
-        rootUnits <- codecValFor[A](shapeOf[A], config, isRoot = true).map {
+        rootUnits <- codecValFor[A](rootShape, config, isRoot = true).map {
           case Nil   => List(CodecVal.const(Type[A].as_??, makeExpr[A](baseConfig(config)).asUntyped))
           case units => units
         }
@@ -131,111 +128,43 @@ trait CodecDerivation {
   // Type graph walk
   // -----------------------------------------------------------------------------------------------------------------
 
-  /** Every case class and sealed hierarchy reachable from `A` (excluding `A` itself), dependencies first.
-    *
-    * The classification mirrors `SchemaDerivation`'s rule order so that both halves take a type apart the same way: `String` and
-    * `Array[Byte]` are scalars (not collections), a value class is its inner type, `Map` before `Collection`, singletons before case
-    * classes, and hierarchies flattened to their leaves.
+  /** The state threaded through the walk over every type reachable from the root (dependencies first): the types already visited, and the
+    * vals emitted so far.
     */
-  private def collectNested[A: Type](config: PicklerConfiguration): MIO[List[CodecVal]] =
-    walkChildren(children(shapeOf[A]), config, Set(Type[A].plainPrint), Vector.empty).map(_._2.toList)
-
   private type Walk = (Set[String], Vector[CodecVal])
-
-  /** How a type is taken apart. The order of the cases in `shapeOf` mirrors `SchemaDerivation`'s rule order. */
-  private sealed trait Shape
-  private object Shape {
-
-    /** jsoniter knows it, or nothing can be done for it. */
-    case object Leaf extends Shape
-    final case class HandWritten(codec: CodecVal) extends Shape
-
-    /** A wrapper jsoniter sees through: `AnyVal`, `Option`, collections, `Map` values. */
-    final case class Transparent(inner: List[??]) extends Shape
-    case object Singleton extends Shape
-    final case class Product[A](cc: CaseClass[A], fields: List[??]) extends Shape
-    final case class Coproduct[A](e: Enum[A], leaves: List[??]) extends Shape
-
-    /** Hand-written over the two sides' codecs; must precede `Coproduct`, which would otherwise claim it. */
-    final case class EitherOf(left: ??, right: ??) extends Shape
-
-    /** `Option[Option[X]]`: jsoniter would derive the inner `Some`/`None` as an ADT, the schema says nullable `X`. */
-    final case class NestedOption(inner: ??, element: ??) extends Shape
-  }
-
-  private def shapeOf[A: Type]: Shape =
-    if (isCodecLeaf[A]) Shape.Leaf
-    else
-      leafCodecFor[A] match {
-        case Some(codec) => Shape.HandWritten(codec)
-        case None        =>
-          Type[A] match {
-            case IsValueType(isValueType) if isAnyVal[A] =>
-              import isValueType.Underlying as Inner
-              Shape.Transparent(List(Type[Inner].as_??))
-            case IsOption(isOption) =>
-              import isOption.Underlying as Element
-              Type[Element] match {
-                case IsOption(isInner) =>
-                  import isInner.Underlying as Innermost
-                  Shape.NestedOption(Type[Element].as_??, Type[Innermost].as_??)
-                case _ => Shape.Transparent(List(Type[Element].as_??))
-              }
-            case CTypes.EitherCtor(left, right) => Shape.EitherOf(left, right)
-            case IsMap(isMap)                   =>
-              import isMap.Underlying as Pair
-              Shape.Transparent(List(mapValueType[A, Pair](isMap.value)))
-            case IsCollection(isCollection) =>
-              import isCollection.Underlying as Element
-              Shape.Transparent(List(Type[Element].as_??))
-            case _ =>
-              if (SingletonValue.parse[A].toEither.isRight) Shape.Singleton
-              else
-                CaseClass.parse[A].toEither match {
-                  case Right(cc) =>
-                    Shape.Product(cc, cc.primaryConstructor.totalParameters.flatten.toList.map { case (_, param) => param.tpe })
-                  case Left(_) =>
-                    Enum.parse[A].toEither match {
-                      case Right(e) =>
-                        val leaves = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList).map { case (_, child) =>
-                          import child.Underlying as Child
-                          Type[Child].as_??
-                        }
-                        Shape.Coproduct(e, leaves)
-                      // jsoniter either knows the type (java.time, UUID, ...) or the schema chain has already failed
-                      // to find an implicit Schema for it.
-                      case Left(_) => Shape.Leaf
-                    }
-                }
-          }
-      }
-
-  private def mapValueType[A: Type, Pair: Type](isMap: IsMapOf[A, Pair]): ?? = {
-    import isMap.Value
-    Type[Value].as_??
-  }
-
-  private def children(shape: Shape): List[??] = shape match {
-    case Shape.Transparent(inner)     => inner
-    case Shape.Product(_, fields)     => fields
-    case Shape.Coproduct(_, leaves)   => leaves
-    case Shape.EitherOf(l, r)         => List(l, r)
-    case Shape.NestedOption(inner, _) => List(inner)
-    case _                            => Nil
-  }
 
   private def makeUnit[A: Type](config: Expr[CodecMakerConfig]): CodecVal = CodecVal.const(Type[A].as_??, makeExpr[A](config).asUntyped)
 
-  /** The vals `A` contributes to the block given its shape (usually one, for `A` itself; empty for the shapes jsoniter inlines). Shared by
-    * the root and the nested walk; for the root, the last val must be `A`'s own codec.
+  /** The vals `A` contributes to the block given its shape (usually one, for `A` itself; empty for the shapes jsoniter derives on its own).
+    * Shared by the root and the nested walk; for the root, the last val must be `A`'s own codec.
     */
-  private def codecValFor[A: Type](shape: Shape, config: PicklerConfiguration, isRoot: Boolean): MIO[List[CodecVal]] = shape match {
-    case Shape.HandWritten(codec) => MIO.pure(List(codec))
-    case Shape.Product(cc, _)     => productConfig[A](cc.asInstanceOf[CaseClass[A]], config).map(cfg => List(makeUnit[A](cfg)))
-    case Shape.Coproduct(e, _)    => coproductConfig[A](e.asInstanceOf[Enum[A]], config).map(cfg => List(makeUnit[A](cfg)))
-    case Shape.EitherOf(l, r)     => MIO.pure(List(eitherUnit[A](l, r, config)))
-    case Shape.NestedOption(i, e) => MIO.pure(nestedOptionUnits[A](i, e, config, isRoot))
-    case _                        => MIO.pure(Nil)
+  private def codecValFor[A: Type](shape: Shape[A], config: PicklerConfiguration, isRoot: Boolean): MIO[List[CodecVal]] = shape match {
+    case Shape.JavaBigDecimal()       => MIO.pure(List(javaBigDecimalVal[A]))
+    case Shape.JavaBigInteger()       => MIO.pure(List(javaBigIntegerVal[A]))
+    case Shape.Product(_, params)     => productConfig[A](params, config).map(cfg => List(makeUnit[A](cfg)))
+    case Shape.Enumeration(_, leaves) => hierarchyConfig[A](leaves, asEnumeration = true, config).map(cfg => List(makeUnit[A](cfg)))
+    case Shape.Coproduct(_, leaves)   => hierarchyConfig[A](leaves, asEnumeration = false, config).map(cfg => List(makeUnit[A](cfg)))
+    case Shape.EitherOf(l, r)         => MIO.pure(List(eitherUnit[A](l, r, config)))
+    case Shape.NestedOption(i, e)     => MIO.pure(nestedOptionUnits[A](i, e, config, isRoot))
+    case Shape.Tuple()                => fail(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
+    case Shape.NonStringMap(key, _)   => fail(PicklerDerivationError.NonStringMapKey(key.Underlying.plainPrint))
+    case _                            => MIO.pure(Nil)
+  }
+
+  private def fail[T](error: PicklerDerivationError): MIO[T] = Log.error(error.message) >> MIO.fail(error)
+
+  // Hand-written codecs from `LeafCodecs`, for leaf types tapir has a `Schema` for but `JsonCodecMaker` cannot derive.
+
+  private def javaBigDecimalVal[A: Type]: CodecVal = {
+    implicit val JBigDecimalT: Type[java.math.BigDecimal] = CTypes.JBigDecimalT
+    implicit val CodecBD: Type[JsonValueCodec[java.math.BigDecimal]] = CTypes.CodecOf[java.math.BigDecimal]
+    CodecVal.const(Type[A].as_??, Expr.quote(LeafCodecs.javaBigDecimal).asUntyped)
+  }
+
+  private def javaBigIntegerVal[A: Type]: CodecVal = {
+    implicit val JBigIntegerT: Type[java.math.BigInteger] = CTypes.JBigIntegerT
+    implicit val CodecBI: Type[JsonValueCodec[java.math.BigInteger]] = CTypes.CodecOf[java.math.BigInteger]
+    CodecVal.const(Type[A].as_??, Expr.quote(LeafCodecs.javaBigInteger).asUntyped)
   }
 
   /** The codec of a sibling type: its val in the block when it has one, otherwise an inline `make` under the base config (primitives,
@@ -305,8 +234,8 @@ trait CodecDerivation {
           implicit val CodecA: Type[JsonValueCodec[A]] = CTypes.CodecOf[A]
           MIO.pure((visited + key, acc :+ CodecVal.const(Type[A].as_??, Expr.quote(Expr.splice(pickler).codec).asUntyped)))
         case None =>
-          val shape = shapeOf[A]
-          rejectBareCodec[A](shape) >> walkChildren(children(shape), config, visited + key, acc).flatMap { case (v, a) =>
+          val shape = classify[A]
+          rejectBareCodec[A](shape) >> walkChildren(childrenOf(shape), config, visited + key, acc).flatMap { case (v, a) =>
             codecValFor[A](shape, config, isRoot = false).map(units => (v, a ++ units))
           }
       }
@@ -320,14 +249,12 @@ trait CodecDerivation {
     * honoured by both chains. Leaf types are exempt (their schema comes from an implicit `Schema` anyway, which the user controls the same
     * way).
     */
-  private def rejectBareCodec[A: Type](shape: Shape): MIO[Unit] = shape match {
-    case _: Shape.Product[?] | _: Shape.Coproduct[?] =>
+  private def rejectBareCodec[A: Type](shape: Shape[A]): MIO[Unit] = shape match {
+    case _: Shape.Product[?] | _: Shape.Enumeration[?] | _: Shape.Coproduct[?] =>
       implicit val CodecA: Type[JsonValueCodec[A]] = CTypes.CodecOf[A]
       Expr.summonImplicit[JsonValueCodec[A]].toOption match {
-        case Some(codec) =>
-          val error = PicklerDerivationError.CodecWithoutPickler(Type[A].plainPrint, codec.plainPrint)
-          Log.error(error.message) >> MIO.fail(error)
-        case None => MIO.pure(())
+        case Some(codec) => fail(PicklerDerivationError.CodecWithoutPickler(Type[A].plainPrint, codec.plainPrint))
+        case None        => MIO.pure(())
       }
     case _ => MIO.pure(())
   }
@@ -339,31 +266,6 @@ trait CodecDerivation {
         walk[Child](config, v, a)
       }
     }
-
-  private def isAnyVal[A: Type]: Boolean = {
-    implicit val AnyValT: Type[AnyVal] = CTypes.AnyValT
-    Type[A] <:< Type[AnyVal]
-  }
-
-  /** Leaf types tapir has a `Schema` for but `JsonCodecMaker` cannot derive: supplied from [[LeafCodecs]]. */
-  private def leafCodecFor[A: Type]: Option[CodecVal] = {
-    implicit val JBigDecimalT: Type[java.math.BigDecimal] = CTypes.JBigDecimalT
-    implicit val JBigIntegerT: Type[java.math.BigInteger] = CTypes.JBigIntegerT
-    implicit val CodecBD: Type[JsonValueCodec[java.math.BigDecimal]] = CTypes.CodecOf[java.math.BigDecimal]
-    implicit val CodecBI: Type[JsonValueCodec[java.math.BigInteger]] = CTypes.CodecOf[java.math.BigInteger]
-    if (Type[A] =:= Type[java.math.BigDecimal])
-      Some(CodecVal.const(Type[A].as_??, Expr.quote(LeafCodecs.javaBigDecimal).asUntyped))
-    else if (Type[A] =:= Type[java.math.BigInteger])
-      Some(CodecVal.const(Type[A].as_??, Expr.quote(LeafCodecs.javaBigInteger).asUntyped))
-    else None
-  }
-
-  /** Scalar-like types the structural extractors would otherwise take apart; same set as `SchemaDerivation`. */
-  private def isCodecLeaf[A: Type]: Boolean = {
-    implicit val StringT: Type[String] = CTypes.StringT
-    implicit val CharT: Type[Char] = CTypes.CharT
-    Type[A] <:< Type[String] || Type[A] =:= Type[Char] || Type[A].plainPrint == "scala.Array[scala.Byte]"
-  }
 
   // -----------------------------------------------------------------------------------------------------------------
   // Per-type configuration
@@ -386,14 +288,13 @@ trait CodecDerivation {
     }
   }
 
-  private def productConfig[A: Type](cc: CaseClass[A], config: PicklerConfiguration): MIO[Expr[CodecMakerConfig]] = {
+  private def productConfig[A: Type](params: List[(String, Parameter)], config: PicklerConfiguration): MIO[Expr[CodecMakerConfig]] = {
     implicit val ConfigT: Type[CodecMakerConfig] = CTypes.MakerConfig
     implicit val StringT: Type[String] = CTypes.StringT
     implicit val OptionStringT: Type[Option[String]] = CTypes.OptionStringT
     implicit val StringPF: Type[PartialFunction[String, String]] = CTypes.StringPF
     implicit val StringFn: Type[String => String] = CTypes.StringFn
 
-    val params = cc.primaryConstructor.totalParameters.flatten.toList
     val renames: Either[PicklerDerivationError, List[(String, String)]] =
       params.foldRight[Either[PicklerDerivationError, List[(String, String)]]](Right(Nil)) { case ((name, param), acc) =>
         for {
@@ -403,7 +304,7 @@ trait CodecDerivation {
       }
 
     renames match {
-      case Left(error)  => Log.error(error.message) >> MIO.fail(error)
+      case Left(error)  => fail(error)
       case Right(pairs) =>
         // `alwaysEmitDiscriminator` needs a discriminator field name; jsoniter only acts on it when `A` has a sealed
         // parent, so setting both unconditionally is safe. The leaf mapper covers `A` itself, which is all a
@@ -427,30 +328,28 @@ trait CodecDerivation {
     }
   }
 
-  private def coproductConfig[A: Type](e: Enum[A], config: PicklerConfiguration): MIO[Expr[CodecMakerConfig]] = {
+  /** The configuration for a sealed hierarchy: bare strings for an enumeration (`Shape.Enumeration`), discriminated objects otherwise
+    * (`Shape.Coproduct`).
+    */
+  private def hierarchyConfig[A: Type](
+      leaves: List[(String, ??<:[A])],
+      asEnumeration: Boolean,
+      config: PicklerConfiguration
+  ): MIO[Expr[CodecMakerConfig]] = {
     implicit val ConfigT: Type[CodecMakerConfig] = CTypes.MakerConfig
-    implicit val StringT: Type[String] = CTypes.StringT
+    implicit val StringT: Type[String] = CTypes.StringT // needed by `Expr(_: Option[String])`
     implicit val OptionStringT: Type[Option[String]] = CTypes.OptionStringT
     implicit val StringFn: Type[String => String] = CTypes.StringFn
 
-    val leaves = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList)
-    if (leaves.isEmpty) {
-      val error = PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint)
-      Log.error(error.message) >> MIO.fail(error)
-    } else {
-      // Plan §5.2: all leaves singletons => bare strings; otherwise => discriminated objects. `SchemaDerivation`
-      // makes the same test (`SString` + enumeration validator vs `SCoproduct`).
-      val allSingletons = leaves.forall { case (_, leaf) =>
-        import leaf.Underlying as Leaf
-        SingletonValue.parse[Leaf].toEither.isRight
-      }
+    if (leaves.isEmpty) fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))
+    else {
       // Enumeration values are the cases' simple names, not discriminator values (`PlatformSupport.enumCaseName`);
       // `SchemaDerivation.deriveStringEnumSchema` documents the same literals.
       val mapping = leaves.map { case (_, leaf) =>
         import leaf.Underlying as Leaf
-        jsoniterLeafName[Leaf] -> (if (allSingletons) enumCaseName[Leaf](typeEncodedName[Leaf]) else discriminatorValue[Leaf](config))
+        jsoniterLeafName[Leaf] -> (if (asEnumeration) enumCaseName[Leaf](typeEncodedName[Leaf]) else discriminatorValue[Leaf](config))
       }
-      val discriminator = Expr(if (allSingletons) Option.empty[String] else Some(config.discriminator))
+      val discriminator = Expr(if (asEnumeration) Option.empty[String] else Some(config.discriminator))
       val leafMapper = stringFunction(mapping)
       val result = Expr.quote {
         Expr
@@ -459,7 +358,7 @@ trait CodecDerivation {
           .withAdtLeafClassNameMapper(Expr.splice(leafMapper))
       }
       Log.info(
-        s"${Type[A].prettyPrint}: ${if (allSingletons) "string enum" else s"discriminated by '${config.discriminator}'"}, " +
+        s"${Type[A].prettyPrint}: ${if (asEnumeration) "string enum" else s"discriminated by '${config.discriminator}'"}, " +
           s"leaves ${mapping.mkString("{", ", ", "}")}"
       ) >> MIO.pure(result)
     }

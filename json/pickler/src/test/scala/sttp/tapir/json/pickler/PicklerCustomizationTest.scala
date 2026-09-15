@@ -7,8 +7,8 @@ import sttp.tapir.{DecodeResult, SchemaType}
 
 import Fixtures.*
 
-/** Port of the uPickle-based module's `PicklerCustomizationTest`. The two `@default` tests are rewritten for the D5.2 decision: tapir's
-  * `@default` annotation is documentation only, Scala default parameters drive decoding.
+/** Field-name configuration and annotations. Note that tapir's `@default` annotation is documentation only: Scala default parameters drive
+  * decoding.
   */
 class PicklerCustomizationTest extends AnyFlatSpec with Matchers {
 
@@ -53,8 +53,7 @@ class PicklerCustomizationTest extends AnyFlatSpec with Matchers {
     obj shouldBe Value(TopClass("field_a_value", InnerClass(7954)))
   }
 
-  it should "document @default in the schema but not use it to fill missing fields (D5.2)" in {
-    // was: "apply defaults from annotations" -- the uPickle-based module filled fieldA from @default("field-a-default")
+  it should "document @default in the schema but not use it to fill missing fields" in {
     import generic.auto.* // for Pickler auto-derivation
 
     // when
@@ -80,8 +79,7 @@ class PicklerCustomizationTest extends AnyFlatSpec with Matchers {
     ) shouldBe Value(ClassWithDefault3(ErrorNotFound, InnerCaseClass("b", 1), InnerCaseClass("c", 2)))
   }
 
-  it should "apply Scala default parameters, ignoring a competing @default (D5.2)" in {
-    // was: "apply defaults from class fields, then annotations" -- the annotation used to win over the Scala default
+  it should "apply Scala default parameters, ignoring a competing @default" in {
     import generic.auto.* // for Pickler auto-derivation
 
     // when

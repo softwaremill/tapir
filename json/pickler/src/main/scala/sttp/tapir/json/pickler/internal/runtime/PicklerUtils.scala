@@ -15,7 +15,7 @@ import scala.util.{Failure, Success, Try}
   */
 object PicklerUtils {
 
-  private lazy val readerConfig = ReaderConfig.withAppendHexDumpToParseException(false)
+  private val readerConfig = ReaderConfig.withAppendHexDumpToParseException(false)
 
   /** Mirrors `sttp.tapir.json.jsoniter.TapirJsonJsoniter.jsoniterCodec`, kept here so that this module does not have to depend on
     * `tapir-jsoniter-scala`.

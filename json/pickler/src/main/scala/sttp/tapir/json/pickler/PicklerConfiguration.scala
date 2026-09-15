@@ -44,9 +44,7 @@ final case class PicklerConfiguration(genericDerivationConfig: Configuration, tr
 
 object PicklerConfiguration {
 
-  /** The default discriminator field name. Previously this came from `upickle.core.Annotator.defaultTagKey`; it is inlined here so that the
-    * module carries no uPickle dependency.
-    */
+  /** The default discriminator field name. */
   final val DefaultTagKey = "$type"
 
   given default: PicklerConfiguration = PicklerConfiguration(

@@ -8,9 +8,7 @@ import scala.compiletime.testing.typeCheckErrors
 
 import Fixtures.*
 
-/** Port of the uPickle-based module's `PicklerEnumTest`. One change: the `oneOfUsingField`-on-enums rejection checks the error message and
-  * no longer builds picklers for individual enum cases (see `PicklerFacadeTest`).
-  */
+/** Enumerations: Scala 3 enums and all-object sealed hierarchies, encoded as bare strings. */
 class PicklerEnumTest extends AnyFlatSpec with Matchers {
 
   behavior of "Pickler derivation for enumerations"

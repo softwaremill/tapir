@@ -9,11 +9,8 @@ import sttp.tapir.{DecodeResult, Schema, Validator}
 
 import java.util.UUID
 
-/** The codec half of a derived `Pickler`.
-  *
-  * Expected JSON strings are taken from the uPickle-based module's tests wherever it has an equivalent (`PicklerBasicTest`,
-  * `PicklerCoproductTest`, `PicklerEnumTest`, `PicklerCustomizationTest`), so that a green run here means wire-format parity. Cases that
-  * exist because of *this* design — per-class configurations, standalone leaves, recursion, schema/codec agreement — are marked as such.
+/** The codec half of a derived `Pickler`: the wire format for products, coproducts, enumerations, recursive types and non-structural roots,
+  * plus the interaction with user-supplied instances and the agreement between the codec and the schema.
   */
 class CodecDerivationTest extends AnyFlatSpec with Matchers {
   import CodecFixtures.*
@@ -27,12 +24,10 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   behavior of "codec derivation for products"
 
   it should "encode and decode a flat case class" in {
-    // PicklerBasicTest L51
     roundTrip(Pickler.derived[FlatClass], FlatClass(44, "b_value"), """{"fieldA":44,"fieldB":"b_value"}""")
   }
 
   it should "encode and decode nested case classes" in {
-    // PicklerBasicTest L65
     roundTrip(
       Pickler.derived[TopClass],
       TopClass("field_a_value", InnerClass(7954)),
@@ -41,7 +36,7 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "apply a member-name transformation given as a local given" in {
-    // PicklerCustomizationTest L27 -- note `fieldA11 -> field_a11`, not `field_a_11`.
+    // note `fieldA11 -> field_a11`, not `field_a_11`
     given config: PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
     roundTrip(
       Pickler.derived[TopClass],
@@ -51,13 +46,11 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "apply a member-name transformation given as an arbitrary evaluable function" in {
-    // PicklerCoproductTest L44
     given PicklerConfiguration = PicklerConfiguration.default.withToEncodedName(_.toUpperCase())
     roundTrip(Pickler.derived[FlatClass], FlatClass(1, "x"), """{"FIELDA":1,"FIELDB":"x"}""")
   }
 
   it should "honour @encodedName on a field, which beats the configured transformation" in {
-    // PicklerCustomizationTest L39
     given PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
     roundTrip(
       Pickler.derived[TopClass2],
@@ -77,7 +70,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "encode and decode Options, omitting None by default" in {
-    // PicklerBasicTest L114-116
     val flat = Pickler.derived[FlatClassWithOption].toCodec
     val nested = Pickler.derived[NestedClassWithOption].toCodec
     flat.encode(FlatClassWithOption("fieldA value", Some(-4018), true)) shouldBe
@@ -90,14 +82,12 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "encode None as null when transientNone is off" in {
-    // PicklerBasicTest L138
     given PicklerConfiguration = PicklerConfiguration.default.withTransientNone(false)
     Pickler.derived[FlatClassWithOption].toCodec.encode(FlatClassWithOption("fieldA value2", None, true)) shouldBe
       """{"fieldA":"fieldA value2","fieldB":null,"fieldC":true}"""
   }
 
   it should "encode empty collections as [] and read a missing collection as empty" in {
-    // PicklerBasicTest L156-158
     val flat = Pickler.derived[FlatClassWithList].toCodec
     val nested = Pickler.derived[NestedClassWithList].toCodec
     flat.encode(FlatClassWithList("fieldA value", List(64, -5))) shouldBe """{"fieldA":"fieldA value","fieldB":[64,-5]}"""
@@ -107,7 +97,7 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "encode and decode a Map with String keys" in {
-    // PicklerBasicTest L217 (order of insertion is preserved by jsoniter for immutable Map with <= 4 entries)
+    // insertion order is preserved by an immutable Map with <= 4 entries
     roundTrip(
       Pickler.derived[ClassWithMap],
       ClassWithMap(Map("keyB" -> SimpleTestResult("result1"), "keyA" -> SimpleTestResult("result2"))),
@@ -116,7 +106,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "unwrap AnyVal value classes, in the codec and in the schema alike" in {
-    // PicklerBasicTest L254
     val pickler = Pickler.derived[ClassWithValues]
     val id = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
     roundTrip(
@@ -129,17 +118,15 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "honour Scala default parameters when decoding, and still write fields equal to them" in {
-    // PicklerCustomizationTest L92-94
     val codec = Pickler.derived[ClassWithScalaDefault].toCodec
     codec.encode(ClassWithScalaDefault("field-a-user-value", "msg104")) shouldBe """{"fieldA":"field-a-user-value","fieldB":"msg104"}"""
     codec.encode(ClassWithScalaDefault("field-a-default", "text b")) shouldBe """{"fieldA":"field-a-default","fieldB":"text b"}"""
     codec.decode("""{"fieldB":"msg205"}""") shouldBe Value(ClassWithScalaDefault("field-a-default", "msg205"))
   }
 
-  it should "NOT fill a missing field from tapir's @default annotation (documented limitation, D5)" in {
-    // The uPickle-based module decoded `{"fieldB":"x"}` to ClassWithDefault("field-a-default", "x"). jsoniter has
-    // no hook for anything but Scala default parameters, so this is a required-field error here. The annotation is
-    // still reflected in the schema.
+  it should "NOT fill a missing field from tapir's @default annotation (documented limitation)" in {
+    // jsoniter has no hook for anything but Scala default parameters, so a missing field with only a tapir @default
+    // is a required-field error. The annotation is still reflected in the schema.
     val pickler = Pickler.derived[ClassWithDefault]
     pickler.toCodec.decode("""{"fieldB":"x"}""") shouldBe a[DecodeResult.Error]
     pickler.schema.schemaType.asInstanceOf[SProduct[ClassWithDefault]].fields.head.schema.default.map(_._1) shouldBe
@@ -153,7 +140,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   behavior of "codec derivation for coproducts"
 
   it should "handle a mixed sealed hierarchy with the default $type discriminator" in {
-    // PicklerCoproductTest L28-29
     val codec = Pickler.derived[MyCaseClass].toCodec
     codec.encode(MyCaseClass(ErrorTimeout, "msg18")) shouldBe """{"fieldA":{"$type":"ErrorTimeout"},"fieldB":"msg18"}"""
     codec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18")) shouldBe
@@ -164,7 +150,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "apply the member-name transformation to leaf fields too" in {
-    // PicklerCoproductTest L44-45
     given PicklerConfiguration = PicklerConfiguration.default.withToEncodedName(_.toUpperCase())
     val codec = Pickler.derived[MyCaseClass].toCodec
     codec.encode(MyCaseClass(ErrorTimeout, "msg18")) shouldBe """{"FIELDA":{"$type":"ErrorTimeout"},"FIELDB":"msg18"}"""
@@ -173,7 +158,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "apply a custom discriminator name" in {
-    // PicklerCoproductTest L63-64
     given PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("kind")
     val codec = Pickler.derived[MyCaseClass].toCodec
     roundTrip(
@@ -190,7 +174,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "use full kebab-case discriminator values" in {
-    // PicklerCoproductTest L98
     given PicklerConfiguration = PicklerConfiguration.default.withFullKebabCaseDiscriminatorValues
     roundTrip(
       Pickler.derived[StatusResponse],
@@ -205,28 +188,25 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     roundTrip(Pickler.derived[StatusResponse], StatusResponse(StatusInternalError), """{"status":{"$type":"status_internal_error"}}""")
   }
 
-  it should "encode a leaf on its own with its discriminator, as the uPickle-based module did" in {
-    // Design: `alwaysEmitDiscriminator`. uPickle's tagged writer for a member of a sealed hierarchy wrote the tag
-    // whenever the value was written, not only through the parent.
+  it should "encode a leaf on its own with its discriminator" in {
+    // `alwaysEmitDiscriminator`: a member of a sealed hierarchy carries its tag whenever it is written, not only
+    // through the parent, so that the two encodings agree.
     roundTrip(Pickler.derived[StatusBadRequest], StatusBadRequest(7), """{"$type":"StatusBadRequest","bF":7}""")
     Pickler.derived[StatusBadRequest].toCodec.decode("""{"bF":7}""") shouldBe Value(StatusBadRequest(7))
   }
 
   it should "encode an all-singleton sealed trait as a bare string" in {
-    // PicklerEnumTest L89
     roundTrip(Pickler.derived[SealedVariantContainer], SealedVariantContainer(VariantA), """{"v":"VariantA"}""")
   }
 
   it should "encode a Scala 3 enum as a bare string, dropping parameters" in {
-    // PicklerEnumTest L26 and L41
     roundTrip(Pickler.derived[Response], Response(ColorEnum.Pink, "pink!!"), """{"color":"Pink","description":"pink!!"}""")
     roundTrip(Pickler.derived[RichColorResponse], RichColorResponse(RichColorEnum.Cyan), """{"color":"Cyan"}""")
-    // PicklerEnumTest L121: no alphabetical reordering of cases
+    // no alphabetical reordering of cases
     Pickler.derived[NotAlphabetical].toCodec.encode(NotAlphabetical.Xyz) shouldBe "\"Xyz\""
   }
 
   it should "encode a Scala 3 enum with case-class cases as discriminated objects" in {
-    // PicklerCoproductTest L176
     roundTrip(Pickler.derived[Entity], Entity.Business("221B Baker Street"), """{"$type":"Business","address":"221B Baker Street"}""")
   }
 
@@ -281,7 +261,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   behavior of "user-supplied instances for nested types"
 
   it should "use a given Pickler for a nested type, for both the schema and the codec" in {
-    // The incumbent's override mechanism (PicklerEnumTest L47/L64, PicklerCoproductTest L109).
     given Pickler[SimpleTestResult] =
       Pickler.derived[SimpleTestResult](using PicklerConfiguration.default.withScreamingSnakeCaseMemberNames)
     val pickler = Pickler.derived[ClassWithMap]
@@ -327,7 +306,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   behavior of "oneOfUsingField"
 
   it should "set discriminator values using oneOfUsingField" in {
-    // PicklerCoproductTest L102-128
     val picklerOk = Pickler.derived[StatusOk]
     val picklerBadRequest = Pickler.derived[StatusBadRequest]
     val picklerInternalError = Pickler.derived[StatusInternalError.type]
@@ -343,7 +321,7 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     roundTrip(picklerResponse, StatusResponse(StatusInternalError), """{"status":{"$type":"code-500"}}""")
 
     // The schema documents the same values, on the discriminator field the codec actually writes (`$type`, not the
-    // extractor's `code` -- the incumbent's schema said `code` while its JSON said `$type`; see D6.6).
+    // extractor's `code`, which core's `Schema.oneOfUsingField` would have documented).
     val discriminator = statusPickler.schema.schemaType.asInstanceOf[SCoproduct[Status]].discriminator.get
     discriminator.name.encodedName shouldBe "$type"
     discriminator.mapping.keySet shouldBe Set("code-200", "code-400", "code-500")
@@ -353,7 +331,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "set discriminator values with oneOfUsingField for a deeper hierarchy" in {
-    // PicklerCoproductTest L130-162
     sealed trait Status:
       def code: Int
     sealed trait DeeperStatus extends Status

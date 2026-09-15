@@ -11,7 +11,7 @@ import scala.collection.mutable
   * ==Why this is not a plain `Expr.summonImplicit`==
   * With `generic.auto.*` in scope, `Pickler[X]` always has a candidate: `auto.picklerForType[X]`, which expands to `Pickler.derived[X]` —
   * our own macro. Summoning from inside a derivation would therefore start a *nested* derivation for every field type, recursing forever on
-  * cyclic types and exponentially on deep ones (plan §6.4). `Implicits.searchIgnoring`, the direct fix, needs Scala 3.7.
+  * cyclic types and exponentially on deep ones. `Implicits.searchIgnoring`, the direct fix, needs Scala 3.7.
   *
   * The guard is instead in `PicklerMacros.derivePicklerImpl`: it aborts immediately when invoked while another derivation is on the stack.
   * The compiler treats an aborted candidate as a failed one, so the search comes back empty and we derive structurally; a user's `given` is

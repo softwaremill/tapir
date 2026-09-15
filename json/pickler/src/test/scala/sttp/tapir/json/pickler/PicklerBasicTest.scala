@@ -10,19 +10,12 @@ import java.util.{TimeZone, UUID}
 
 import Fixtures.*
 
-/** Port of the uPickle-based module's `PicklerBasicTest`. Changes from the original, each marked inline:
-  *   - the three tests that embedded uPickle types (`macroRW`, `AttributeTagged`/`Visitor`, `readwriter.bimap`) now use
-  *     `Pickler.fromSchemaAndCodec` with a jsoniter `JsonValueCodec`;
-  *   - `Either` is untagged (plan §5.3);
-  *   - `picklerForMap` takes the key parser as well (D6.2);
-  *   - `Map` assertions no longer depend on iteration order (plan §7.2).
-  */
+/** Basic derivation: `derives`, nested case classes, user-supplied codecs, `Option`/collection/`Either`/`Map` fields, value classes. */
 class PicklerBasicTest extends AnyFlatSpec with Matchers {
 
   behavior of "Pickler derivation"
 
   it should "build from an existing Schema and JsonValueCodec" in {
-    // was: "build from an existing Schema and upickle.default.ReadWriter", with the two picked up implicitly
     val codec: JsonValueCodec[FlatClass] = new JsonValueCodec[FlatClass] {
       def nullValue: FlatClass = null
       def decodeValue(in: JsonReader, default: FlatClass): FlatClass = {
@@ -75,7 +68,6 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
   }
 
   it should "work with a user-provided codec for a nested type" in {
-    // was: "work with provided own readers and writers" (a custom uPickle Writer for FlatClass)
     val customCodec: JsonValueCodec[FlatClass] = new JsonValueCodec[FlatClass] {
       def nullValue: FlatClass = null
       def decodeValue(in: JsonReader, default: FlatClass): FlatClass = FlatClass(in.readString(null).stripPrefix("custom-").toInt, "")
@@ -92,7 +84,6 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
   }
 
   it should "work with a user-provided codec for a non-structural type" in {
-    // was: "work with provider uPickle ReadWriter on a non-mirrored type" (TimeZone via readwriter[String].bimap)
     val tzCodec: JsonValueCodec[TimeZone] = new JsonValueCodec[TimeZone] {
       def nullValue: TimeZone = null
       def decodeValue(in: JsonReader, default: TimeZone): TimeZone = TimeZone.getTimeZone(in.readString(null))
@@ -108,8 +99,8 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
   }
 
   it should "derive structurally even when a Schema for the class is in scope" in {
-    // was: "fail to derive a Pickler when there's a Schema but missing ReadWriter". A bare Schema is not an override
-    // here (a Pickler is -- see the test above); a bare JsonValueCodec for a nested class is refused (CodecDerivationTest).
+    // A bare Schema is not an override (a Pickler is -- see the test above); a bare JsonValueCodec for a nested class
+    // is refused (CodecDerivationTest).
     given givenSchemaForCc: Schema[FlatClass] = Schema.string[FlatClass]
     Pickler.derived[FlatClass].toCodec.encode(FlatClass(1, "a")) shouldBe """{"fieldA":1,"fieldB":"a"}"""
     Pickler.derived[FlatClass].schema.schemaType shouldBe a[SchemaType.SProduct[?]]
@@ -215,7 +206,7 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
     val jsonStr1 = codec.encode(obj1)
     val jsonStr2 = codec.encode(obj2)
 
-    // then -- untagged (plan §5.3); the uPickle-based module wrote [0,"err1"] / [1,{"msg":"it is fine"}]
+    // then -- untagged, as tapir core's `Codec.eitherRight`
     jsonStr1 shouldBe """{"fieldA":"fieldA 1","fieldB":"err1"}"""
     jsonStr2 shouldBe """{"fieldA":"fieldA 2","fieldB":{"msg":"it is fine"}}"""
     codec.decode(jsonStr1) shouldBe Value(obj1)
@@ -235,7 +226,7 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
     val obj = ClassWithMap(Map(("keyB", SimpleTestResult("result1")), ("keyA", SimpleTestResult("result2"))))
     val jsonStr = codec.encode(obj)
 
-    // then -- order-insensitive (plan §7.2)
+    // then -- order-insensitive
     jsonStr should (be("""{"field":{"keyB":{"msg":"result1"},"keyA":{"msg":"result2"}}}""") or
       be("""{"field":{"keyA":{"msg":"result2"},"keyB":{"msg":"result1"}}}"""))
     codec.decode(jsonStr) shouldBe Value(obj)
@@ -248,7 +239,7 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
   it should "derive picklers for Map with non-String key" in {
     import generic.auto.* // for Pickler auto-derivation
 
-    // when -- `picklerForMap` also takes the key parser (D6.2)
+    // when
     given picklerMap: Pickler[Map[UUID, SimpleTestResult]] = Pickler.picklerForMap(_.toString, UUID.fromString)
     val pickler = Pickler.derived[ClassWithMapCustomKey]
     // fixed rather than random: `UUID.randomUUID()` has no Scala.js implementation (SecureRandom)
@@ -258,7 +249,7 @@ class PicklerBasicTest extends AnyFlatSpec with Matchers {
     val obj = ClassWithMapCustomKey(Map((uuid1, SimpleTestResult("result3")), (uuid2, SimpleTestResult("result4"))))
     val jsonStr = codec.encode(obj)
 
-    // then -- order-insensitive (plan §7.2)
+    // then -- order-insensitive
     jsonStr should (be(s"""{"field":{"$uuid1":{"msg":"result3"},"$uuid2":{"msg":"result4"}}}""") or
       be(s"""{"field":{"$uuid2":{"msg":"result4"},"$uuid1":{"msg":"result3"}}}"""))
     codec.decode(jsonStr) shouldBe Value(obj)

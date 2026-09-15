@@ -69,7 +69,7 @@ private[pickler] object PicklerMacros {
   *     exactly what the typer produces for `{ case "a" => "b" }` before `ExpandSAMs`, which is why hand-written jsoniter configurations
   *     work.
   *   - A `Map(...)` literal is matched by a quote pattern that does **not** see through the `Inlined` nodes splicing produces, so it is
-  *     unusable from a macro (measured, D5).
+  *     unusable from a macro.
   */
 private[compiletime] trait PlatformSupportScala3 extends PlatformSupport { this: MacroCommonsScala3 =>
   import quotes.reflect.*

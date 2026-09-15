@@ -10,8 +10,7 @@ import sttp.tapir.{FieldName, Schema, Validator}
   * Everything here must be public (generated code lives in user compilation units) and free of macro machinery. The split matters for
   * compile times as much as for readability: every bit of logic expressed here is logic the macro does not have to reify into a tree.
   *
-  * The shapes produced here are pinned by `SchemaDerivationTest` in the incumbent `json/pickler` module; see
-  * `doc/dev/schema-derivation-test-spec.md` for the assertion-by-assertion breakdown.
+  * The shapes produced here are pinned by `SchemaDerivationTest`.
   */
 object SchemaUtils {
 
@@ -78,7 +77,7 @@ object SchemaUtils {
 
   /** Build a coproduct schema, injecting the discriminator field into every child product.
     *
-    * Three details are pinned by the test suite and easy to get wrong:
+    * Three details are pinned by `SchemaDerivationTest` and easy to get wrong:
     *   1. the discriminator field is appended **after** the declared fields, not prepended;
     *   2. its schema is a bare `Schema(SString())` carrying only the `EncodedDiscriminatorValue` attribute — adding a
     *      `Validator.enumeration` would change `Schema` equality and fail the assertions;

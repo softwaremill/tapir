@@ -23,6 +23,7 @@ import sttp.tapir.json.pickler.internal.runtime.{PicklerFactories, PicklerUtils,
   */
 trait PicklerMacrosImpl
     extends DerivationTimeout
+    with TypeShape
     with AnnotationSupport
     with ImplicitPicklerSupport
     with SchemaDerivation
@@ -49,7 +50,6 @@ trait PicklerMacrosImpl
     lazy val SchemaAnyPairs: Type[List[(Schema[Any], String)]] = Type.of[List[(Schema[Any], String)]]
     def FnOf[A: Type, B: Type]: Type[A => B] = Type.of[A => B]
     lazy val Config: Type[PicklerConfiguration] = Type.of[PicklerConfiguration]
-    lazy val Configuration: Type[sttp.tapir.generic.Configuration] = Type.of[sttp.tapir.generic.Configuration]
     lazy val StringT: Type[String] = Type.of[String]
     lazy val LogDerivation: Type[Pickler.LogDerivation] = Type.of[Pickler.LogDerivation]
   }
@@ -72,8 +72,6 @@ trait PicklerMacrosImpl
           s"Provide an explicit type parameter, e.g.: $macroName[MyType]"
       )
 
-    // Extracted before any Expr.quote: `??` is a macro-internal existential and must not leak into a reified tree.
-    val selfType: Option[??] = Some(Type[A].as_??)
     implicitLookupExclusions += Type[A].plainPrint
 
     Log
@@ -83,11 +81,11 @@ trait PicklerMacrosImpl
 
           // The schema is derived first and sequentially: schema and codec derivations share Hearth-internal MLocal
           // state, and parallelising them has previously produced silently wrong codegen for parameterised Scala 3
-          // enums in a comparable derivation (plan §6.2).
+          // enums in a comparable derivation.
           val (schemaExpr, codecExpr) = runSafe {
             for {
               _ <- ensureStandardExtensionsLoaded()
-              schema <- deriveSchemaRecursively[A](cache, configExpr, selfType)
+              schema <- deriveSchemaRecursively[A](cache, configExpr)
               config <- foldConfiguration(configExpr)
               codec <- deriveCodec[A](config)
             } yield (schema, codec)
@@ -112,7 +110,6 @@ trait PicklerMacrosImpl
     * runtime, so there is nothing to fold.
     */
   def deriveSchemaOnly[A: Type](configExpr: Expr[PicklerConfiguration]): Expr[Schema[A]] = {
-    val selfType: Option[??] = Some(Type[A].as_??)
     implicitLookupExclusions += Type[A].plainPrint
 
     Log
@@ -122,7 +119,7 @@ trait PicklerMacrosImpl
           val schemaExpr = runSafe {
             for {
               _ <- ensureStandardExtensionsLoaded()
-              result <- deriveSchemaRecursively[A](cache, configExpr, selfType)
+              result <- deriveSchemaRecursively[A](cache, configExpr)
             } yield result
           }
           val vals = runSafe(cache.get)
@@ -141,8 +138,8 @@ trait PicklerMacrosImpl
   /** `Pickler.derivedEnumeration[A]`: the builder behind `defaultStringBased` / `customStringBased`.
     *
     * The default schema and codec are exactly what `derivePickler` produces for `A` (an all-singleton hierarchy is a string enumeration on
-    * both sides, plan §5.2); the builder additionally receives the singleton values, from which `customStringBased` builds a runtime string
-    * codec and the matching enumeration validator. Nothing about the user's `encode` function is needed at compile time.
+    * both sides); the builder additionally receives the singleton values, from which `customStringBased` builds a runtime string codec and
+    * the matching enumeration validator. Nothing about the user's `encode` function is needed at compile time.
     */
   def deriveEnumerationBuilder[A: Type](configExpr: Expr[PicklerConfiguration]): Expr[CreateDerivedEnumerationPickler[A]] = {
     implicit val SchemaA: Type[Schema[A]] = PTypes.SchemaOf[A]
@@ -151,7 +148,6 @@ trait PicklerMacrosImpl
     implicit val ListA: Type[List[A]] = PTypes.ListOf[A]
     val macroName = "Pickler.derivedEnumeration"
 
-    val selfType: Option[??] = Some(Type[A].as_??)
     implicitLookupExclusions += Type[A].plainPrint
 
     Log
@@ -163,7 +159,7 @@ trait PicklerMacrosImpl
             for {
               _ <- ensureStandardExtensionsLoaded()
               children <- enumerationCases[A](macroName)
-              schema <- deriveSchemaRecursively[A](cache, configExpr, selfType)
+              schema <- deriveSchemaRecursively[A](cache, configExpr)
               config <- foldConfiguration(configExpr)
               codec <- deriveCodec[A](config)
             } yield (singletonValuesExpr[A](children), schema, codec)
@@ -188,37 +184,28 @@ trait PicklerMacrosImpl
 
   /** The leaves of `A`, provided `A` is a sealed hierarchy whose leaves are all singletons. */
   private def enumerationCases[A: Type](macroName: String): MIO[List[(String, ??<:[A])]] =
-    Enum.parse[A].toEither match {
-      case Left(_)  => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
-      case Right(e) =>
-        val children = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList)
-        val nonSingletons = children.collect {
-          case (_, child) if {
-                import child.Underlying as Child
-                SingletonValue.parse[Child].toEither.isLeft
-              } =>
-            child.Underlying.plainPrint
-        }
-        if (children.isEmpty) fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))
-        else if (nonSingletons.nonEmpty) fail(PicklerDerivationError.NotAnEnumeration(Type[A].plainPrint, nonSingletons))
-        else MIO.pure(children)
+    classify[A] match {
+      case Shape.Enumeration(_, leaves)                 => MIO.pure(leaves)
+      case Shape.Coproduct(_, leaves) if leaves.isEmpty => fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))
+      case Shape.Coproduct(_, leaves)                   =>
+        fail(PicklerDerivationError.NotAnEnumeration(Type[A].plainPrint, nonSingletonLeaves(leaves)))
+      case _ => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
     }
 
   /** `Pickler.oneOfUsingField[A, V](extractor, asString)(v1 -> pickler1, ...)`.
     *
     * The discriminator value of each mapped leaf is `asString(v)`, decided by the user rather than by the configuration; the discriminator
-    * *field* is the configured one (`$type` by default), as in the uPickle-based module. Both halves get the values the same way:
+    * *field* is the configured one (`$type` by default). Both halves get the values the same way:
     *   - the **schema** is our coproduct schema over the children's schemas (so a user's child pickler is fully honoured on the
     *     documentation side), with `asString(v)` as each child's discriminator value. Not core's `Schema.oneOfUsingField`: that documents a
-    *     discriminator field named after the extractor (`code` for `_.code`), which the JSON does not contain -- the incumbent had that
-    *     mismatch, and `SchemaCodecAgreementTest` is what caught it here;
+    *     discriminator field named after the extractor (`code` for `_.code`), which the JSON does not contain;
     *   - the **codec** is the ordinary `CodecDerivation` run with `leafNameOverrides` set to `asString(v)` per leaf. jsoniter needs those
     *     values as literals, which is why the keys and `asString` are evaluated at expansion time, and why the children's *codecs* are
     *     derived afresh rather than taken from the child picklers: a user-derived leaf codec would write its configuration-derived tag, not
     *     the overridden one.
     *
-    * `extractor` is accepted for API compatibility with the incumbent and with core's `Schema.oneOfUsingField`; nothing is derived from it,
-    * since the JSON does not carry that field.
+    * `extractor` is accepted for API compatibility with core's `Schema.oneOfUsingField`; nothing is derived from it, since the JSON does
+    * not carry that field.
     */
   def deriveOneOfUsingField[A: Type, V: Type](
       extractor: Expr[A => V],
@@ -246,18 +233,11 @@ trait PicklerMacrosImpl
           val (schemaExpr, codecExpr) = runSafe {
             for {
               _ <- ensureStandardExtensionsLoaded()
-              _ <- Enum.parse[A].toEither match {
-                case Left(_)  => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
-                case Right(e) =>
-                  // An all-singleton hierarchy is a bare string (plan §5.2): there is no object to put a discriminator
-                  // in, and core's `Schema.oneOfUsingField` would document one. Same rejection as the incumbent.
-                  val children = e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList)
-                  val allSingletons = children.nonEmpty && children.forall { case (_, child) =>
-                    import child.Underlying as Child
-                    SingletonValue.parse[Child].toEither.isRight
-                  }
-                  if (allSingletons) fail(PicklerDerivationError.EnumerationInOneOfUsingField(Type[A].plainPrint))
-                  else MIO.pure(())
+              _ <- classify[A] match {
+                case Shape.Coproduct(_, _) => MIO.pure(())
+                // An all-singleton hierarchy is a bare string: there is no object to put a discriminator in.
+                case Shape.Enumeration(_, _) => fail(PicklerDerivationError.EnumerationInOneOfUsingField(Type[A].plainPrint))
+                case _                       => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
               }
               entries <- parseOneOfMapping[A, V](mapping)
               overrides <- entries.foldLeft(MIO.pure(Map.empty[String, String])) { case (acc, (key, child)) =>
@@ -404,11 +384,10 @@ trait PicklerMacrosImpl
     */
   private def deriveSchemaRecursively[A: Type](
       cache: MLocal[ValDefsCache],
-      configExpr: Expr[PicklerConfiguration],
-      selfType: Option[??]
+      configExpr: Expr[PicklerConfiguration]
   ): MIO[Expr[Schema[A]]] = {
     val inProgress: MLocal[Set[String]] = MLocal(Set.empty[String])(identity)((a, b) => a ++ b)
-    deriveSchemaFor[A](using SchemaCtx(Type[A], configExpr, cache, inProgress, selfType))
+    deriveSchemaFor[A](using SchemaCtx(Type[A], configExpr, cache, inProgress))
   }
 
   // ---------------------------------------------------------------------------------------------------------------
@@ -416,9 +395,10 @@ trait PicklerMacrosImpl
   // ---------------------------------------------------------------------------------------------------------------
 
   /** Logging is enabled either by importing `sttp.tapir.json.pickler.debug.logDerivationForPickler` or by the scalac option
-    * `-Xmacro-settings:tapirPickler.logDerivation=true`.
+    * `-Xmacro-settings:tapirPickler.logDerivation=true`. A `lazy val`: the answer cannot change within one expansion, and the implicit
+    * search is not free.
     */
-  def shouldWeLogDerivation: Boolean = {
+  lazy val shouldWeLogDerivation: Boolean = {
     implicit val LogDerivationT: Type[Pickler.LogDerivation] = PTypes.LogDerivation
     def importedIntoScope = Expr.summonImplicit[Pickler.LogDerivation].isDefined
     def setGlobally = (for {

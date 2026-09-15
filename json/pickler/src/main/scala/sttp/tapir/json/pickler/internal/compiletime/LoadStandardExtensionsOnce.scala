@@ -9,9 +9,9 @@ import hearth.std.StdExtensions
   * The standard extensions register the providers behind the `IsCollection`, `IsMap`, `IsValueType` and `IsOption` extractors. Without them
   * those extractor patterns silently never match, and collection/option fields fall through to the case-class rule or fail outright.
   *
-  * Because a single `Pickler` derivation runs three sub-derivations (schema, encoder, decoder), each of which would naturally want to load
-  * them, the `var` below is what keeps the ServiceLoader scan from running three times. It lives on a trait that is mixed into the bundle
-  * class exactly once, which is what makes it per-expansion state.
+  * Because a single `Pickler` derivation runs two sub-derivations (schema and codec), each of which would naturally want to load them, the
+  * `var` below is what keeps the ServiceLoader scan from running twice. It lives on a trait that is mixed into the bundle class exactly
+  * once, which is what makes it per-expansion state.
   *
   * Rules: never call `Environment.loadStandardExtensions()` directly, and never call this from inside an `Expr.quote` or a builder callback
   * — load once, before any quotes are constructed.

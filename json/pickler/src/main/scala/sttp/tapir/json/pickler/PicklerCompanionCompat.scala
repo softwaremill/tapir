@@ -13,8 +13,7 @@ private[pickler] trait PicklerCompanionCompat { this: Pickler.type =>
   /** Derive a [[Pickler]] instance for `A` at compile time.
     *
     * Can be used explicitly, in the definition of a `given`, or indirectly via a `... derives Pickler` clause. It is deliberately not a
-    * `given` itself (as in the uPickle-based module): automatic derivation is opt-in through
-    * `import sttp.tapir.json.pickler.generic.auto.*`.
+    * `given` itself: automatic derivation is opt-in through `import sttp.tapir.json.pickler.generic.auto.*`.
     */
   inline def derived[A](using inline config: PicklerConfiguration): Pickler[A] =
     ${ internal.compiletime.PicklerMacros.derivePicklerImpl[A]('config) }
@@ -67,9 +66,11 @@ private[pickler] trait PicklerCompanionCompat { this: Pickler.type =>
     * given Pickler[Map[UUID, Book]] = Pickler.picklerForMap(_.toString, UUID.fromString)
     * }}}
     */
+  // `inline` so that `Schema.schemaForMap` (a macro) sees the concrete `K` and `V` at the call site and names the schema after them,
+  // rather than after the abstract type parameters `picklerForMap.K` / `picklerForMap.V`.
   inline def picklerForMap[K, V](keyToString: K => String, stringToKey: String => K)(using pv: Pickler[V]): Pickler[Map[K, V]] = {
     given Schema[V] = pv.schema
-    internal.runtime.PicklerFactories.instance(
+    fromSchemaAndCodec(
       Schema.schemaForMap[K, V](keyToString),
       internal.runtime.CodecCombinators.map(keyToString, stringToKey, pv.codec)
     )

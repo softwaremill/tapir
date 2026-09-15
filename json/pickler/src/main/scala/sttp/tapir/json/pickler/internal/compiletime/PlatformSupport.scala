@@ -6,8 +6,8 @@ import hearth.MacroCommons
   *
   * Everything here exists because the codec half delegates to `jsoniter-scala-macros`' `JsonCodecMaker.make`, whose configuration is
   * interpreted at *its* expansion time by walking the argument tree (`CompileTimeEval` in `jsoniter-scala-macros`). That interpreter
-  * accepts a narrow set of tree shapes, so the trees have to be built by hand rather than with `Expr.quote`. See
-  * `doc/dev/pickler-decisions.md` D5 for what was measured.
+  * accepts a narrow set of tree shapes, so the trees have to be built by hand rather than with `Expr.quote` (see the notes on
+  * `PlatformSupportScala3` for the shapes that were found to work).
   *
   * Keeping these behind an interface is what leaves `CodecDerivation` platform-independent: a Scala 2 bundle would implement the same six
   * methods against `scala.reflect.macros` (where jsoniter evaluates its config with `c.eval` and therefore accepts different shapes).
@@ -32,10 +32,9 @@ trait PlatformSupport { this: MacroCommons =>
   protected def tapirFullName[A: Type]: String
 
   /** The string an all-singleton hierarchy's case is written as: the case's simple name (`VariantB`, `Cyan`), or its type-level
-    * `@encodedName`. Deliberately *not* run through `toDiscriminatorValue`: an enumeration value is not a discriminator, and the
-    * uPickle-based module never transformed it either (`DifferentialOracleTest` is what showed `withFullKebabCaseDiscriminatorValues` had
-    * started producing `sttp.tapir...variant-b` for a plain enum value). Users who want a different rendering have
-    * `derivedEnumeration[T].customStringBased`.
+    * `@encodedName`. Deliberately *not* run through `toDiscriminatorValue`: an enumeration value is not a discriminator, so e.g.
+    * `withFullKebabCaseDiscriminatorValues` must not turn a plain enum value into `sttp.tapir...variant-b`. Users who want a different
+    * rendering have `derivedEnumeration[T].customStringBased`.
     */
   protected def enumCaseName[A: Type](encodedName: Option[String]): String =
     encodedName.getOrElse(tapirFullName[A].split('.').last)
