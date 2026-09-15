@@ -51,6 +51,27 @@ object PicklerDerivationError {
          |compiled module. Functions passed to `withToEncodedName` must themselves be evaluable, e.g. `_.toUpperCase`.""".stripMargin
   }
 
+  /** A function from the `PicklerConfiguration` (`toEncodedName`, `toDiscriminatorValue`) was evaluated at compile time but threw. The
+    * usual cause is a body Hearth's evaluator cannot interpret, e.g. one going through an implicit conversion such as `StringOps`.
+    */
+  final case class ConfigurationFunctionFailed(function: String, input: String, cause: Throwable) extends PicklerDerivationError {
+    def message: String = {
+      val root = Iterator.iterate(cause)(_.getCause).takeWhile(_ != null).toList.last
+      // Hearth's evaluator reports its reasons through a private `ControlThrowable` case class with no message; being a
+      // case class, it is still a `Product`, which is how the reasons are recovered.
+      val detail = Option(root.getMessage)
+        .orElse(root match {
+          case p: Product => Some(p.productIterator.mkString("; "))
+          case _          => None
+        })
+        .getOrElse(root.getClass.getSimpleName)
+      s"""The PicklerConfiguration's `$function` could not be evaluated at compile time for `$input`: $detail
+         |Names are computed during derivation, so the function has to be evaluable there: keep it to `java.lang.String` method calls
+         |(e.g. `_.toUpperCase`, `n => n.toLowerCase.concat("_")`); string `+` and `StringOps` extensions (`.reverse`, `.capitalize`)
+         |are not supported.""".stripMargin
+    }
+  }
+
   final case class NotASealedHierarchy(typeName: String, macroName: String) extends PicklerDerivationError {
     def message: String = s"$macroName can only be used with a sealed hierarchy or enum; $typeName is not one"
   }

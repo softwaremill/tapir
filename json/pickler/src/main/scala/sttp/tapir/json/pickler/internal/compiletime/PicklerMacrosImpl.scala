@@ -25,6 +25,7 @@ trait PicklerMacrosImpl
     extends DerivationTimeout
     with TypeShape
     with AnnotationSupport
+    with NameSupport
     with ImplicitPicklerSupport
     with SchemaDerivation
     with CodecDerivation {
@@ -85,8 +86,8 @@ trait PicklerMacrosImpl
           val (schemaExpr, codecExpr) = runSafe {
             for {
               _ <- ensureStandardExtensionsLoaded()
-              schema <- deriveSchemaRecursively[A](cache, configExpr)
               config <- foldConfiguration(configExpr)
+              schema <- deriveSchemaRecursively[A](cache, config)
               codec <- deriveCodec[A](config)
             } yield (schema, codec)
           }
@@ -106,9 +107,7 @@ trait PicklerMacrosImpl
       )(renderDerivationErrorMessage)
   }
 
-  /** Schema-only entry point. Needs no compile-time configuration: the schema chain applies `toEncodedName` / `toDiscriminatorValue` at
-    * runtime, so there is nothing to fold.
-    */
+  /** Schema-only entry point. Like the others it needs the configuration at compile time: the names it splices are computed from it. */
   def deriveSchemaOnly[A: Type](configExpr: Expr[PicklerConfiguration]): Expr[Schema[A]] = {
     implicitLookupExclusions += Type[A].plainPrint
 
@@ -119,7 +118,8 @@ trait PicklerMacrosImpl
           val schemaExpr = runSafe {
             for {
               _ <- ensureStandardExtensionsLoaded()
-              result <- deriveSchemaRecursively[A](cache, configExpr)
+              config <- foldConfiguration(configExpr)
+              result <- deriveSchemaRecursively[A](cache, config)
             } yield result
           }
           val vals = runSafe(cache.get)
@@ -159,8 +159,8 @@ trait PicklerMacrosImpl
             for {
               _ <- ensureStandardExtensionsLoaded()
               children <- enumerationCases[A](macroName)
-              schema <- deriveSchemaRecursively[A](cache, configExpr)
               config <- foldConfiguration(configExpr)
+              schema <- deriveSchemaRecursively[A](cache, config)
               codec <- deriveCodec[A](config)
             } yield (singletonValuesExpr[A](children), schema, codec)
           }
@@ -269,12 +269,13 @@ trait PicklerMacrosImpl
               val mappingSeq = VarArgs.from(mapping.toList)
               val name = sNameExpr[A]
               val annotations = typeAnnotationsExpr[A]
+              val discriminatorField = Expr(config.discriminator)
               val schema = Expr.quote {
                 SchemaUtils.enrichSchema[A](
-                  SchemaUtils.coproductSchemaWithValues[A](
+                  SchemaUtils.coproductSchema[A](
                     Expr.splice(name),
                     PicklerUtils.oneOfSchemasWithValues[A, V](Expr.splice(asString), Expr.splice(mappingSeq)*),
-                    Expr.splice(configExpr).discriminator
+                    Expr.splice(discriminatorField)
                   ),
                   Expr.splice(annotations)
                 )
@@ -384,10 +385,10 @@ trait PicklerMacrosImpl
     */
   private def deriveSchemaRecursively[A: Type](
       cache: MLocal[ValDefsCache],
-      configExpr: Expr[PicklerConfiguration]
+      config: PicklerConfiguration
   ): MIO[Expr[Schema[A]]] = {
     val inProgress: MLocal[Set[String]] = MLocal(Set.empty[String])(identity)((a, b) => a ++ b)
-    deriveSchemaFor[A](using SchemaCtx(Type[A], configExpr, cache, inProgress))
+    deriveSchemaFor[A](using SchemaCtx(Type[A], config, cache, inProgress))
   }
 
   // ---------------------------------------------------------------------------------------------------------------

@@ -34,7 +34,7 @@ object PicklerUtils {
     } { a => writeToString[A](a) }
   }
 
-  /** The `(child schema, discriminator value)` pairs `SchemaUtils.coproductSchemaWithValues` wants, from the `(value, pickler)` pairs the
+  /** The `(child schema, discriminator value)` pairs `SchemaUtils.coproductSchema` wants, from the `(value, pickler)` pairs the
     * user gave to `oneOfUsingField` and its `asString`.
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))

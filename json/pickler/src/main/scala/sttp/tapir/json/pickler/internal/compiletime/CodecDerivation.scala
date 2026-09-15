@@ -5,7 +5,6 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodec
 import hearth.MacroCommons
 import hearth.fp.effect.*
 import hearth.std.*
-import sttp.tapir.Schema.SName
 import sttp.tapir.json.pickler.PicklerConfiguration
 import sttp.tapir.json.pickler.internal.runtime.{CodecCombinators, LeafCodecs}
 
@@ -27,8 +26,8 @@ import sttp.tapir.json.pickler.internal.runtime.{CodecCombinators, LeafCodecs}
   * ==Why the configuration is computed here==
   * jsoniter interprets its `CodecMakerConfig` argument at *its* expansion time, and only accepts trees made of literals and stable
   * references. tapir's `PicklerConfiguration` is a runtime value, so it is folded with `semiEval` first, its `toEncodedName` /
-  * `toDiscriminatorValue` are *invoked* during our expansion, and the results are emitted as literal `Match` cases (see
-  * [[PlatformSupport]]). The schema half computes the same names at runtime from the same configuration, so the two agree by construction.
+  * `toDiscriminatorValue` are *invoked* during our expansion ([[NameSupport]]), and the results are emitted as literal `Match` cases (see
+  * [[PlatformSupport]]). The schema half splices the very same literals, so the two agree by construction.
   *
   * ==Knobs, and why each is set==
   *   - `transientEmpty(false)`: empty collections are written as `[]`.
@@ -51,7 +50,7 @@ import sttp.tapir.json.pickler.internal.runtime.{CodecCombinators, LeafCodecs}
   * hook for anything else. Scala default parameters *are* honoured.
   */
 trait CodecDerivation {
-  this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & PlatformSupport & ImplicitPicklerSupport =>
+  this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & NameSupport & PlatformSupport & ImplicitPicklerSupport =>
 
   private[compiletime] object CTypes {
     def CodecOf[A: Type]: Type[JsonValueCodec[A]] = Type.of[JsonValueCodec[A]]
@@ -80,11 +79,6 @@ trait CodecDerivation {
   // -----------------------------------------------------------------------------------------------------------------
   // Entry point
   // -----------------------------------------------------------------------------------------------------------------
-
-  /** Discriminator values that replace the configuration-derived ones for specific leaves, keyed by the leaf type's `plainPrint`. Used by
-    * `oneOfUsingField`, which decides those values from a user function.
-    */
-  protected var leafNameOverrides: Map[String, String] = Map.empty
 
   def deriveCodec[A: Type](config: PicklerConfiguration): MIO[Expr[JsonValueCodec[A]]] =
     Log.namedScope(s"deriveCodec[${Type[A].prettyPrint}]") {
@@ -303,14 +297,14 @@ trait CodecDerivation {
         } yield if (encoded == name) tail else (name -> encoded) :: tail
       }
 
-    renames match {
-      case Left(error)  => fail(error)
-      case Right(pairs) =>
+    (for { pairs <- renames; ownTag <- discriminatorValue[A](config) } yield (pairs, ownTag)) match {
+      case Left(error)            => fail(error)
+      case Right((pairs, ownTag)) =>
         // `alwaysEmitDiscriminator` needs a discriminator field name; jsoniter only acts on it when `A` has a sealed
         // parent, so setting both unconditionally is safe. The leaf mapper covers `A` itself, which is all a
         // stand-alone leaf codec can ever be asked about.
         val discriminator = Expr(Option(config.discriminator))
-        val leafMapper = stringFunction(List(jsoniterLeafName[A] -> discriminatorValue[A](config)))
+        val leafMapper = stringFunction(List(jsoniterLeafName[A] -> ownTag))
         val withoutFields = Expr.quote {
           Expr
             .splice(baseConfig(config))
@@ -341,52 +335,31 @@ trait CodecDerivation {
     implicit val OptionStringT: Type[Option[String]] = CTypes.OptionStringT
     implicit val StringFn: Type[String => String] = CTypes.StringFn
 
+    // Enumeration values are the cases' simple names, not discriminator values (`NameSupport.enumerationValue`);
+    // `SchemaDerivation.deriveStringEnumSchema` documents the same literals.
+    val values: Either[PicklerDerivationError, List[String]] =
+      if (asEnumeration) Right(leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; enumerationValue[Leaf] })
+      else discriminatorValues(leaves, config)
+    val jsoniterNames = leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; jsoniterLeafName[Leaf] }
+
     if (leaves.isEmpty) fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))
-    else {
-      // Enumeration values are the cases' simple names, not discriminator values (`PlatformSupport.enumCaseName`);
-      // `SchemaDerivation.deriveStringEnumSchema` documents the same literals.
-      val mapping = leaves.map { case (_, leaf) =>
-        import leaf.Underlying as Leaf
-        jsoniterLeafName[Leaf] -> (if (asEnumeration) enumCaseName[Leaf](typeEncodedName[Leaf]) else discriminatorValue[Leaf](config))
+    else
+      values match {
+        case Left(error)   => fail(error)
+        case Right(values) =>
+          val mapping = jsoniterNames.zip(values)
+          val discriminator = Expr(if (asEnumeration) Option.empty[String] else Some(config.discriminator))
+          val leafMapper = stringFunction(mapping)
+          val result = Expr.quote {
+            Expr
+              .splice(baseConfig(config))
+              .withDiscriminatorFieldName(Expr.splice(discriminator))
+              .withAdtLeafClassNameMapper(Expr.splice(leafMapper))
+          }
+          Log.info(
+            s"${Type[A].prettyPrint}: ${if (asEnumeration) "string enum" else s"discriminated by '${config.discriminator}'"}, " +
+              s"leaves ${mapping.mkString("{", ", ", "}")}"
+          ) >> MIO.pure(result)
       }
-      val discriminator = Expr(if (asEnumeration) Option.empty[String] else Some(config.discriminator))
-      val leafMapper = stringFunction(mapping)
-      val result = Expr.quote {
-        Expr
-          .splice(baseConfig(config))
-          .withDiscriminatorFieldName(Expr.splice(discriminator))
-          .withAdtLeafClassNameMapper(Expr.splice(leafMapper))
-      }
-      Log.info(
-        s"${Type[A].prettyPrint}: ${if (asEnumeration) "string enum" else s"discriminated by '${config.discriminator}'"}, " +
-          s"leaves ${mapping.mkString("{", ", ", "}")}"
-      ) >> MIO.pure(result)
-    }
   }
-
-  // -----------------------------------------------------------------------------------------------------------------
-  // Names — computed once, exactly as the schema half computes them at runtime
-  // -----------------------------------------------------------------------------------------------------------------
-
-  /** `@encodedName` if present, otherwise `config.toEncodedName(name)` — what `SchemaUtils.productField` does. */
-  private def encodedFieldName[A: Type](
-      param: Parameter,
-      name: String,
-      config: PicklerConfiguration
-  ): Either[PicklerDerivationError, String] =
-    literalEncodedFieldName[A](param, name) match {
-      case Right(Some(explicit)) => Right(explicit)
-      case Right(None)           => Right(config.toEncodedName(name))
-      case Left(detail)          => Left(PicklerDerivationError.InvalidAnnotation(detail))
-    }
-
-  /** `config.toDiscriminatorValue(<SName of A>)`, with the `SName` built as `SchemaDerivation.sNameExpr` builds it: a type-level
-    * `@encodedName` replaces the whole name, otherwise it is core's `typeFullName`. Only `fullName` matters to `toDiscriminatorValue`, so
-    * type arguments are not reproduced here.
-    */
-  private def discriminatorValue[A: Type](config: PicklerConfiguration): String =
-    leafNameOverrides.getOrElse(Type[A].plainPrint, configDiscriminatorValue[A](config))
-
-  private def configDiscriminatorValue[A: Type](config: PicklerConfiguration): String =
-    config.toDiscriminatorValue(SName(typeEncodedName[A].getOrElse(tapirFullName[A])))
 }

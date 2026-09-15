@@ -6,7 +6,6 @@ import hearth.std.*
 import sttp.tapir.Schema
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.SProductField
-import sttp.tapir.internal.SNameMacros
 import sttp.tapir.json.pickler.PicklerConfiguration
 import sttp.tapir.json.pickler.internal.runtime.SchemaUtils
 
@@ -16,12 +15,12 @@ import sttp.tapir.json.pickler.internal.runtime.SchemaUtils
   * `SchemaDerivationTest`, and match what tapir core's `Schema.derived` produces for the same types.
   *
   * ==Design==
-  * Name transformations (`toEncodedName`, `toDiscriminatorValue`) are applied at **runtime**, by passing the `PicklerConfiguration`
-  * expression through to [[SchemaUtils]], rather than being folded at compile time. That is what makes all eight `with*DiscriminatorValues`
-  * variants and all three member-name variants work without a single compile-time branch.
+  * Every name (field names, type names, discriminator and enumeration values) is computed at expansion time by [[NameSupport]] from the
+  * folded `PicklerConfiguration` and spliced as a literal — the same literal the codec half hands to `JsonCodecMaker`. The structure of the
+  * schema is built by [[SchemaUtils]] at runtime, so that the macro reifies as little as possible.
   */
 trait SchemaDerivation {
-  this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & ImplicitPicklerSupport & PlatformSupport =>
+  this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & NameSupport & ImplicitPicklerSupport & PlatformSupport =>
 
   /** Centralised `Type.of` instances — see the note on `PicklerMacrosImpl.PTypes` for why these are not `implicit val`s at their use sites.
     */
@@ -35,6 +34,8 @@ trait SchemaDerivation {
     lazy val ListAnyT: Type[List[Any]] = Type.of[List[Any]]
     lazy val ListStringT: Type[List[String]] = Type.of[List[String]]
     def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
+    lazy val SchemaAnyPair: Type[(Schema[Any], String)] = Type.of[(Schema[Any], String)]
+    lazy val SchemaAnyPairs: Type[List[(Schema[Any], String)]] = Type.of[List[(Schema[Any], String)]]
   }
 
   // -----------------------------------------------------------------------------------------------------------------
@@ -48,7 +49,7 @@ trait SchemaDerivation {
     */
   final case class SchemaCtx[A](
       tpe: Type[A],
-      config: Expr[PicklerConfiguration],
+      config: PicklerConfiguration,
       cache: MLocal[ValDefsCache],
       inProgress: MLocal[Set[String]]
   ) {
@@ -304,49 +305,63 @@ trait SchemaDerivation {
     val scalaName = Expr(fieldName)
     val index = Expr(param.index)
     val annotations = collectAnnotationsExpr(allParamAnnotations[A](param, fieldName))
-    val config = sctx.config
 
-    deriveSchemaFor[Field](using sctx.nest[Field]).map { fieldSchema =>
-      Expr.quote {
-        SchemaUtils.productField[A](
-          Expr.splice(scalaName),
-          Expr.splice(config).toEncodedName(Expr.splice(scalaName)),
-          Expr.splice(fieldSchema).asInstanceOf[Schema[Any]],
-          Expr.splice(index),
-          Expr.splice(annotations)
-        )
-      }
+    encodedFieldName[A](param, fieldName, sctx.config) match {
+      case Left(error)    => failSchema(error)
+      case Right(encoded) =>
+        val encodedName = Expr(encoded)
+        deriveSchemaFor[Field](using sctx.nest[Field]).map { fieldSchema =>
+          Expr.quote {
+            SchemaUtils.productField[A](
+              Expr.splice(scalaName),
+              Expr.splice(encodedName),
+              Expr.splice(fieldSchema).asInstanceOf[Schema[Any]],
+              Expr.splice(index),
+              Expr.splice(annotations)
+            )
+          }
+        }
     }
   }
 
-  /** A sealed hierarchy with at least one non-singleton leaf: a discriminated coproduct over the **leaves** (`Shape.Coproduct`). */
+  /** A sealed hierarchy with at least one non-singleton leaf: a discriminated coproduct over the **leaves** (`Shape.Coproduct`), each leaf
+    * paired with the discriminator value the codec writes for it.
+    */
   private def deriveCoproductSchema[A: SchemaCtx](leaves: List[(String, ??<:[A])]): MIO[Expr[Schema[A]]] = {
     implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
     implicit val SchemaAnyT: Type[Schema[Any]] = STypes.SchemaAny
     implicit val SNameT: Type[SName] = STypes.SNameT
+    implicit val StringT: Type[String] = STypes.StringT
+    implicit val PairT: Type[(Schema[Any], String)] = STypes.SchemaAnyPair
+    implicit val PairsT: Type[List[(Schema[Any], String)]] = STypes.SchemaAnyPairs
 
     val name = sNameExpr[A]
     val annotations = typeAnnotationsExpr[A]
-    val config = sctx.config
+    val discriminatorField = Expr(sctx.config.discriminator)
 
     leaves
-      .foldLeft(MIO.pure(List.empty[Expr[Schema[Any]]])) { case (acc, (_, leaf)) =>
-        acc.flatMap { schemas =>
+      .foldLeft(MIO.pure(List.empty[Expr[(Schema[Any], String)]])) { case (acc, (_, leaf)) =>
+        acc.flatMap { pairs =>
           import leaf.Underlying as Leaf
-          deriveSchemaFor[Leaf](using sctx.nest[Leaf]).map { leafSchema =>
-            schemas :+ Expr.quote(Expr.splice(leafSchema).asInstanceOf[Schema[Any]])
+          discriminatorValue[Leaf](sctx.config) match {
+            case Left(error)  => failSchema(error)
+            case Right(value) =>
+              val valueExpr = Expr(value)
+              deriveSchemaFor[Leaf](using sctx.nest[Leaf]).map { leafSchema =>
+                pairs :+ Expr.quote((Expr.splice(leafSchema).asInstanceOf[Schema[Any]], Expr.splice(valueExpr)))
+              }
           }
         }
       }
-      .flatMap { leafSchemas =>
-        val subtypes = leafSchemas.foldRight(Expr.quote(Nil: List[Schema[Any]])) { (leafSchema, tail) =>
-          Expr.quote(Expr.splice(leafSchema) :: Expr.splice(tail))
+      .flatMap { pairs =>
+        val subtypesWithValues = pairs.foldRight(Expr.quote(Nil: List[(Schema[Any], String)])) { (pair, tail) =>
+          Expr.quote(Expr.splice(pair) :: Expr.splice(tail))
         }
         setCachedAndGet[A](
           sctx.cache,
           Expr.quote {
             SchemaUtils.enrichSchema[A](
-              SchemaUtils.coproductSchema[A](Expr.splice(name), Expr.splice(subtypes), Expr.splice(config)),
+              SchemaUtils.coproductSchema[A](Expr.splice(name), Expr.splice(subtypesWithValues), Expr.splice(discriminatorField)),
               Expr.splice(annotations)
             )
           }
@@ -368,11 +383,10 @@ trait SchemaDerivation {
     val annotations = typeAnnotationsExpr[A]
 
     val values = singletonValuesExpr[A](children)
-    // Each case is written as its simple name (`PlatformSupport.enumCaseName`), the same literal the codec's leaf-name
-    // mapper produces -- computed once here, independent of the configuration.
+    // The same literal the codec's leaf-name mapper produces (`NameSupport.enumerationValue`).
     val encodedNames = children.foldRight(Expr.quote(Nil: List[String])) { case ((_, child), tail) =>
       import child.Underlying as Child
-      val childName = Expr(enumCaseName[Child](typeEncodedName[Child]))
+      val childName = Expr(enumerationValue[Child])
       Expr.quote(Expr.splice(childName) :: Expr.splice(tail))
     }
 
@@ -401,26 +415,15 @@ trait SchemaDerivation {
   // Names and annotations
   // -----------------------------------------------------------------------------------------------------------------
 
-  /** The `SName` for `A`: either its `@encodedName`, which replaces the name wholesale, or its fully-qualified type name parsed into base
-    * name + flattened, fully-qualified type arguments.
-    */
+  /** `NameSupport.sNameOf[A]`, reified: the same `SName` the codec half feeds to `toDiscriminatorValue`. */
   protected def sNameExpr[A: Type]: Expr[SName] = {
     implicit val SNameT: Type[SName] = STypes.SNameT
-    // Only the type's *own* `@encodedName` is consulted: a parent's renaming is deliberately not propagated to its
-    // subtypes (`SchemaDerivationTest`: "Not propagate type encodedName to subtypes of a sealed trait, but keep
-    // inheritance for fields").
-    typeEncodedName[A] match {
-      case Some(encoded) =>
-        // An explicit name replaces the derived one wholesale, type arguments included.
-        val literal = Expr(encoded)
-        Expr.quote(SName(Expr.splice(literal), Nil))
-      case None =>
-        // `plainPrint`, not `prettyPrint`: the latter embeds ANSI escapes, which must never reach a string literal
-        // in generated code. It supplies the type arguments; the base name comes from core -- see
-        // `SchemaUtils.sName`.
-        val printed = Expr(Type[A].plainPrint)
-        Expr.quote(SchemaUtils.sName(SNameMacros.typeFullName[A], Expr.splice(printed)))
-    }
+    implicit val StringT: Type[String] = STypes.StringT
+    implicit val ListStringT: Type[List[String]] = STypes.ListStringT
+    val name = sNameOf[A]
+    val fullName = Expr(name.fullName)
+    val typeParameters = Expr(name.typeParameterShortNames)
+    Expr.quote(SName(Expr.splice(fullName), Expr.splice(typeParameters)))
   }
 
   private def collectAnnotationsExpr(annotations: List[UntypedExpr]): Expr[List[Any]] = {

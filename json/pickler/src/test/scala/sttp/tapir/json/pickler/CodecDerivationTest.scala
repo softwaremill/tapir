@@ -390,6 +390,34 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   it should "agree with the schema-only entry point" in {
     Pickler.schemaFor[Status] shouldBe Pickler.derived[Status].schema
   }
+
+  it should "compute every name once, so an arbitrary name function cannot give the schema and the JSON different names" in {
+    // Both halves splice the same literal, computed at expansion time; neither re-evaluates the function at runtime.
+    given PicklerConfiguration =
+      PicklerConfiguration.default
+        .withToEncodedName(n => n.toUpperCase.concat("_"))
+        .withDiscriminator("k")
+        .withFullSnakeCaseDiscriminatorValues
+    val pickler = Pickler.derived[Status]
+    val leaf = pickler.schema.schemaType.asInstanceOf[SCoproduct[Status]].subtypes.find(_.name.exists(_.fullName.endsWith("StatusOk"))).get
+    leaf.schemaType.asInstanceOf[SProduct[?]].fields.map(_.name.encodedName) shouldBe List("OF_", "k")
+    val discriminator = pickler.schema.schemaType.asInstanceOf[SCoproduct[Status]].discriminator.get
+    discriminator.name.encodedName shouldBe "k"
+    pickler.toCodec.encode(StatusOk(1)) shouldBe """{"k":"sttp.tapir.json.pickler.codec_fixtures.status_ok","OF_":1}"""
+    discriminator.mapping.keySet should contain("sttp.tapir.json.pickler.codec_fixtures.status_ok")
+    Pickler.schemaFor[Status] shouldBe pickler.schema
+  }
+
+  it should "explain a name function that cannot be evaluated at compile time" in {
+    // `.reverse` goes through the `StringOps` implicit conversion, which Hearth's evaluator cannot interpret.
+    scala.compiletime.testing
+      .typeCheckErrors("""
+      given reversing: PicklerConfiguration = PicklerConfiguration.default.withToEncodedName(_.reverse)
+      Pickler.derived[FlatClass]
+    """)
+      .map(_.message)
+      .mkString should include("`toEncodedName` could not be evaluated at compile time")
+  }
 }
 
 object CodecFixtures {

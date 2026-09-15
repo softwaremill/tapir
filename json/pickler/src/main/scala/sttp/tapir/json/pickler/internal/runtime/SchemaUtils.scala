@@ -2,7 +2,6 @@ package sttp.tapir.json.pickler.internal.runtime
 
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.{SArray, SCoproduct, SDiscriminator, SOpenProduct, SProduct, SProductField, SRef, SString, SchemaWithValue}
-import sttp.tapir.json.pickler.PicklerConfiguration
 import sttp.tapir.{FieldName, Schema, Validator}
 
 /** Runtime constructors for [[Schema]] values, invoked by macro-generated code.
@@ -21,8 +20,7 @@ object SchemaUtils {
 
   /** Fold tapir's `Schema.annotations.*` onto a schema, ignoring every other annotation silently.
     *
-    * `@encodedName` is deliberately absent: on a type it is consumed while building the [[SName]], and on a field it is consumed by
-    * [[productField]]. Applying it here as well would be a no-op at best.
+    * `@encodedName` is deliberately absent: the macro consumes it while computing the [[SName]] of a type and the encoded name of a field.
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def enrichSchema[T](schema: Schema[T], annotations: List[Any]): Schema[T] =
@@ -41,13 +39,9 @@ object SchemaUtils {
       case (s, _)                                 => s
     }
 
-  /** The `@encodedName` carried by a type, if any. When present it *replaces* the whole derived [[SName]]. */
-  def encodedNameFrom(annotations: List[Any]): Option[String] =
-    annotations.collectFirst { case ann: Schema.annotations.encodedName => ann.name }
-
   // -- Products ---------------------------------------------------------------------------------------------------
 
-  /** Build one product field.
+  /** Build one product field. `encodedName` is the JSON name the macro computed (`@encodedName`, or the configured transformation).
     *
     * `index` is the position of the parameter in the primary constructor, which for a case class is also its `Product` element index.
     * `SProductField` compares by name and schema only, so the accessor does not affect the test assertions — but it does drive
@@ -56,54 +50,33 @@ object SchemaUtils {
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def productField[T](
       scalaName: String,
-      configEncodedName: String,
+      encodedName: String,
       fieldSchema: Schema[Any],
       index: Int,
       annotations: List[Any]
-  ): SProductField[T] = {
-    // An explicit `@encodedName` beats the configured member-name transformation.
-    val encodedName = encodedNameFrom(annotations).getOrElse(configEncodedName)
+  ): SProductField[T] =
     SProductField[T, Any](
       FieldName(scalaName, encodedName),
       enrichSchema(fieldSchema, annotations),
       t => Some(t.asInstanceOf[Product].productElement(index))
     )
-  }
 
   def productSchema[T](name: SName, fields: List[SProductField[T]]): Schema[T] =
     Schema[T](SProduct[T](fields), Some(name))
 
   // -- Coproducts -------------------------------------------------------------------------------------------------
 
-  /** Build a coproduct schema, injecting the discriminator field into every child product.
+  /** Build a coproduct schema over `(child schema, discriminator value)` pairs, injecting the discriminator field into every child product.
+    * The values are the ones the macro computed — and the ones the codec writes — so this is what the schema has to document.
     *
     * Three details are pinned by `SchemaDerivationTest` and easy to get wrong:
     *   1. the discriminator field is appended **after** the declared fields, not prepended;
     *   2. its schema is a bare `Schema(SString())` carrying only the `EncodedDiscriminatorValue` attribute — adding a
     *      `Validator.enumeration` would change `Schema` equality and fail the assertions;
     *   3. the attribute goes on the **field's** schema, not on the child schema itself.
-    *
-    * Discriminator values are computed here rather than in the macro so that all eight `with*DiscriminatorValues` variants fall out of
-    * `config.toDiscriminatorValue` for free.
-    */
-  def coproductSchema[T](
-      name: SName,
-      subtypes: List[Schema[Any]],
-      config: PicklerConfiguration
-  ): Schema[T] =
-    coproductSchemaWithValues[T](
-      name,
-      subtypes.map(child => child -> child.name.map(config.toDiscriminatorValue).getOrElse("")),
-      config.discriminator
-    )
-
-  /** As [[coproductSchema]], with the discriminator value of every child given explicitly — for `oneOfUsingField`, where the values come
-    * from the user's function rather than from the configuration. The codec writes exactly these values into `discriminatorField`, so this
-    * is what the schema has to document (core's `Schema.oneOfUsingField` would document a field named after the extractor instead, which
-    * the JSON does not contain).
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def coproductSchemaWithValues[T](
+  def coproductSchema[T](
       name: SName,
       subtypesWithValues: List[(Schema[Any], String)],
       discriminatorField: String
@@ -191,7 +164,7 @@ object SchemaUtils {
   // -- Names ------------------------------------------------------------------------------------------------------
 
   /** Build an [[SName]] from a name computed by tapir core's own `SNameMacros`, plus type arguments recovered from the printed form of the
-    * type.
+    * type. Called by the macro at expansion time.
     *
     * The split exists because the two halves are best obtained from different places. `SNameMacros.typeFullName` walks the *symbol* owner
     * chain, which is the only way to get a genuinely qualified name for a class nested in another class (whose type prints as the
