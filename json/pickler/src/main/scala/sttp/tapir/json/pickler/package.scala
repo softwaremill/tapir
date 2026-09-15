@@ -1,6 +1,12 @@
 package sttp.tapir.json.pickler
 
-import sttp.tapir._
+import sttp.tapir.*
+import sttp.tapir.Codec.JsonCodec
+
+/** The bridge that makes a [[Pickler]] usable wherever tapir wants a JSON codec: with it in scope, `jsonBody[T]` from `sttp.tapir` resolves
+  * for any `T` that has a `Pickler`.
+  */
+given picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
 
 def jsonBody[T: Pickler]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(summon[Pickler[T]].toCodec)
 
