@@ -64,7 +64,7 @@ trait CodecDerivation {
     lazy val JBigIntegerT: Type[java.math.BigInteger] = Type.of[java.math.BigInteger]
   }
 
-  /** References to the sibling vals of the generated block, by the `plainPrint` of the type they are a codec for. */
+  /** References to the sibling vals of the generated block, by the `typeKey` of the type they are a codec for. */
   private type CodecRefs = String => Option[UntypedExpr]
 
   /** One `implicit lazy val` of type `JsonValueCodec[tpe]` the generated code will contain: a `JsonCodecMaker.make` call, a hand-written
@@ -80,7 +80,7 @@ trait CodecDerivation {
   // Entry point
   // -----------------------------------------------------------------------------------------------------------------
 
-  def deriveCodec[A: Type](config: PicklerConfiguration): MIO[Expr[JsonValueCodec[A]]] =
+  def deriveCodec[A: Type](env: DerivationEnv): MIO[Expr[JsonValueCodec[A]]] =
     Log.namedScope(s"deriveCodec[${Type[A].prettyPrint}]") {
       implicit val CodecA: Type[JsonValueCodec[A]] = CTypes.CodecOf[A]
       val rootShape = classify[A]
@@ -88,19 +88,19 @@ trait CodecDerivation {
         // The root is subject to the same rule as nested types: `make[A]` never looks its own type up, so a bare
         // `given JsonValueCodec[A]` would be silently ignored while the user expects it to be honoured.
         _ <- rejectBareCodec[A](rootShape)
-        units <- walkChildren(childrenOf(rootShape), config, Set(Type[A].plainPrint), Vector.empty).map(_._2.toList)
+        units <- walkChildren(childrenOf(rootShape), env, Set(typeKey[A]), Vector.empty).map(_._2.toList)
         // The root gets an implicit too. `make[A]` itself never looks its own type up (jsoniter pre-seeds the root as
         // "no implicit"), but a *nested* `make[Leaf]` whose field refers back to `A` must find it: otherwise jsoniter
         // would inline `A` there, under the leaf's configuration -- whose leaf-name mapper knows only that one leaf.
-        rootUnits <- codecValFor[A](rootShape, config, isRoot = true).map {
-          case Nil   => List(CodecVal.const(Type[A].as_??, makeExpr[A](baseConfig(config)).asUntyped))
+        rootUnits <- codecValFor[A](rootShape, env, isRoot = true).map {
+          case Nil   => List(CodecVal.const(Type[A].as_??, makeExpr[A](baseConfig(env.config)).asUntyped))
           case units => units
         }
         _ <- Log.info(s"Emitting ${units.size} nested codec(s): ${units.map(_.tpe.Underlying.plainPrint).mkString(", ")}")
       } yield {
         // The last unit is the root's own codec, whatever else its shape needed emitted before it.
         val all = units ++ rootUnits
-        val keys = all.map(_.tpe.Underlying.plainPrint)
+        val keys = all.map { unit => import unit.tpe.Underlying as U; typeKey[U] }
         def refsByType(refs: List[UntypedExpr]): CodecRefs = key =>
           keys.indexOf(key) match {
             case -1 => None
@@ -135,14 +135,14 @@ trait CodecDerivation {
   /** The vals `A` contributes to the block given its shape (usually one, for `A` itself; empty for the shapes jsoniter derives on its own).
     * Shared by the root and the nested walk; for the root, the last val must be `A`'s own codec.
     */
-  private def codecValFor[A: Type](shape: Shape[A], config: PicklerConfiguration, isRoot: Boolean): MIO[List[CodecVal]] = shape match {
+  private def codecValFor[A: Type](shape: Shape[A], env: DerivationEnv, isRoot: Boolean): MIO[List[CodecVal]] = shape match {
     case Shape.JavaBigDecimal()       => MIO.pure(List(javaBigDecimalVal[A]))
     case Shape.JavaBigInteger()       => MIO.pure(List(javaBigIntegerVal[A]))
-    case Shape.Product(_, params)     => productConfig[A](params, config).map(cfg => List(makeUnit[A](cfg)))
-    case Shape.Enumeration(_, leaves) => hierarchyConfig[A](leaves, asEnumeration = true, config).map(cfg => List(makeUnit[A](cfg)))
-    case Shape.Coproduct(_, leaves)   => hierarchyConfig[A](leaves, asEnumeration = false, config).map(cfg => List(makeUnit[A](cfg)))
-    case Shape.EitherOf(l, r)         => MIO.pure(List(eitherUnit[A](l, r, config)))
-    case Shape.NestedOption(i, e)     => MIO.pure(nestedOptionUnits[A](i, e, config, isRoot))
+    case Shape.Product(_, params)     => productConfig[A](params, env).map(cfg => List(makeUnit[A](cfg)))
+    case Shape.Enumeration(_, leaves) => hierarchyConfig[A](leaves, asEnumeration = true, env).map(cfg => List(makeUnit[A](cfg)))
+    case Shape.Coproduct(_, leaves)   => hierarchyConfig[A](leaves, asEnumeration = false, env).map(cfg => List(makeUnit[A](cfg)))
+    case Shape.EitherOf(l, r)         => MIO.pure(List(eitherUnit[A](l, r, env.config)))
+    case Shape.NestedOption(i, e)     => MIO.pure(nestedOptionUnits[A](i, e, env.config, isRoot))
     case Shape.Tuple()                => fail(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
     case Shape.NonStringMap(key, _)   => fail(PicklerDerivationError.NonStringMapKey(key.Underlying.plainPrint))
     case _                            => MIO.pure(Nil)
@@ -169,7 +169,7 @@ trait CodecDerivation {
     */
   private def refOrMake[S: Type](refs: CodecRefs, config: PicklerConfiguration): Expr[JsonValueCodec[S]] = {
     implicit val CodecS: Type[JsonValueCodec[S]] = CTypes.CodecOf[S]
-    refs(Type[S].plainPrint).map(_.asTyped[JsonValueCodec[S]]).getOrElse(makeExpr[S](baseConfig(config)))
+    refs(typeKey[S]).map(_.asTyped[JsonValueCodec[S]]).getOrElse(makeExpr[S](baseConfig(config)))
   }
 
   private def eitherUnit[A: Type](left: ??, right: ??, config: PicklerConfiguration): CodecVal = {
@@ -222,18 +222,18 @@ trait CodecDerivation {
     * A user-supplied `Pickler[A]` short-circuits the visit: its `codec` becomes the implicit for `A`, and nothing beneath `A` is looked at
     * -- whatever that pickler does for its own fields is its business.
     */
-  private def walk[A: Type](config: PicklerConfiguration, visited: Set[String], acc: Vector[CodecVal]): MIO[Walk] = {
-    val key = Type[A].plainPrint
+  private def walk[A: Type](env: DerivationEnv, visited: Set[String], acc: Vector[CodecVal]): MIO[Walk] = {
+    val key = typeKey[A]
     if (visited.contains(key)) MIO.pure((visited, acc))
     else
-      userPickler[A].flatMap {
+      userPickler[A](env).flatMap {
         case Some(pickler) =>
           implicit val CodecA: Type[JsonValueCodec[A]] = CTypes.CodecOf[A]
           MIO.pure((visited + key, acc :+ CodecVal.const(Type[A].as_??, Expr.quote(Expr.splice(pickler).codec).asUntyped)))
         case None =>
           val shape = classify[A]
-          rejectBareCodec[A](shape) >> walkChildren(childrenOf(shape), config, visited + key, acc).flatMap { case (v, a) =>
-            codecValFor[A](shape, config, isRoot = false).map(units => (v, a ++ units))
+          rejectBareCodec[A](shape) >> walkChildren(childrenOf(shape), env, visited + key, acc).flatMap { case (v, a) =>
+            codecValFor[A](shape, env, isRoot = false).map(units => (v, a ++ units))
           }
       }
   }
@@ -256,11 +256,11 @@ trait CodecDerivation {
     case _ => MIO.pure(())
   }
 
-  private def walkChildren(children: List[??], config: PicklerConfiguration, visited: Set[String], acc: Vector[CodecVal]): MIO[Walk] =
+  private def walkChildren(children: List[??], env: DerivationEnv, visited: Set[String], acc: Vector[CodecVal]): MIO[Walk] =
     children.foldLeft(MIO.pure((visited, acc))) { (walkSoFar, child) =>
       walkSoFar.flatMap { case (v, a) =>
         import child.Underlying as Child
-        walk[Child](config, v, a)
+        walk[Child](env, v, a)
       }
     }
 
@@ -285,7 +285,8 @@ trait CodecDerivation {
     }
   }
 
-  private def productConfig[A: Type](params: List[(String, Parameter)], config: PicklerConfiguration): MIO[Expr[CodecMakerConfig]] = {
+  private def productConfig[A: Type](params: List[(String, Parameter)], env: DerivationEnv): MIO[Expr[CodecMakerConfig]] = {
+    val config = env.config
     implicit val ConfigT: Type[CodecMakerConfig] = CTypes.MakerConfig
     implicit val StringT: Type[String] = CTypes.StringT
     implicit val OptionStringT: Type[Option[String]] = CTypes.OptionStringT
@@ -300,7 +301,7 @@ trait CodecDerivation {
         } yield if (encoded == name) tail else (name -> encoded) :: tail
       }
 
-    (for { pairs <- renames; ownTag <- discriminatorValue[A](config) } yield (pairs, ownTag)) match {
+    (for { pairs <- renames; ownTag <- discriminatorValue[A](env) } yield (pairs, ownTag)) match {
       case Left(error)            => fail(error)
       case Right((pairs, ownTag)) =>
         // `alwaysEmitDiscriminator` needs a discriminator field name; jsoniter only acts on it when `A` has a sealed
@@ -331,8 +332,9 @@ trait CodecDerivation {
   private def hierarchyConfig[A: Type](
       leaves: List[(String, ??<:[A])],
       asEnumeration: Boolean,
-      config: PicklerConfiguration
+      env: DerivationEnv
   ): MIO[Expr[CodecMakerConfig]] = {
+    val config = env.config
     implicit val ConfigT: Type[CodecMakerConfig] = CTypes.MakerConfig
     implicit val StringT: Type[String] = CTypes.StringT // needed by `Expr(_: Option[String])`
     implicit val OptionStringT: Type[Option[String]] = CTypes.OptionStringT
@@ -342,7 +344,7 @@ trait CodecDerivation {
     // `SchemaDerivation.deriveStringEnumSchema` documents the same literals.
     val values: Either[PicklerDerivationError, List[String]] =
       if (asEnumeration) Right(leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; enumerationValue[Leaf] })
-      else discriminatorValues(leaves, config)
+      else discriminatorValues(leaves, env)
     val jsoniterNames = leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; jsoniterLeafName[Leaf] }
 
     if (leaves.isEmpty) fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))

@@ -3,7 +3,22 @@ package sttp.tapir.json.pickler.internal.compiletime
 import hearth.MacroCommons
 import sttp.tapir.Schema.SName
 import sttp.tapir.json.pickler.PicklerConfiguration
-import sttp.tapir.json.pickler.internal.runtime.SchemaUtils
+
+/** Everything one derivation needs to know beyond the type it derives for, passed explicitly through both halves.
+  *
+  * @param config
+  *   the folded `PicklerConfiguration`
+  * @param leafNameOverrides
+  *   discriminator values that replace the configuration-derived ones for specific leaves (by `plainPrint`) — set by `oneOfUsingField`
+  * @param implicitLookupExclusions
+  *   types (by `plainPrint`) for which no user `Pickler` is looked up: the root (a `given p = Pickler.derived[A]` would find itself) and,
+  *   for `oneOfUsingField`, the mapped leaves (whose codecs must be derived here, with the overridden tags)
+  */
+final case class DerivationEnv(
+    config: PicklerConfiguration,
+    leafNameOverrides: Map[String, String] = Map.empty,
+    implicitLookupExclusions: Set[String] = Set.empty
+)
 
 /** Every name that ends up in the JSON or in the schema — field names, type names, discriminator values, enumeration values — computed
   * **once**, at expansion time, from the folded [[PicklerConfiguration]].
@@ -13,11 +28,6 @@ import sttp.tapir.json.pickler.internal.runtime.SchemaUtils
   * transformations at runtime, and no way for the two halves to disagree about a name.
   */
 trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
-
-  /** Discriminator values that replace the configuration-derived ones for specific leaves, keyed by the leaf type's `plainPrint`. Used by
-    * `oneOfUsingField`, which decides those values from a user function.
-    */
-  protected var leafNameOverrides: Map[String, String] = Map.empty
 
   /** The JSON name of a field: its `@encodedName` if present, otherwise `config.toEncodedName(scalaName)`. */
   protected def encodedFieldName[A: Type](
@@ -39,38 +49,35 @@ trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
     catch { case scala.util.control.NonFatal(e) => Left(PicklerDerivationError.ConfigurationFunctionFailed(function, input, e)) }
 
   /** The `SName` of `A`: its type-level `@encodedName`, which replaces the name wholesale (type arguments included), or core's fully
-    * qualified name plus the flattened, fully qualified type arguments recovered from the printed type.
+    * qualified name plus the flattened, fully qualified type arguments.
     *
     * Only the type's *own* `@encodedName` is consulted: a parent's renaming is deliberately not propagated to its subtypes.
     */
   protected def sNameOf[A: Type]: SName =
     typeEncodedName[A] match {
       case Some(encoded) => SName(encoded, Nil)
-      // `plainPrint`, not `prettyPrint`: the latter embeds ANSI escapes. It supplies the type arguments; the base name
-      // comes from core's own `SNameMacros`, which is the only way to get a properly qualified name for a class nested
-      // in another class -- see `SchemaUtils.sName`.
-      case None => SchemaUtils.sName(tapirFullName[A], Type[A].plainPrint)
+      // The base name comes from core's own `SNameMacros`, which is the only way to get a properly qualified name for
+      // a class nested in another class; the type arguments are flattened the way core's `Schema.renameWithTypeParameter`
+      // does (`SName.typeParameterShortNames` is a misnomer: the entries are fully qualified).
+      case None => SName(tapirFullName[A], flattenedTypeArguments[A])
     }
 
   /** The discriminator value written for, and documented on, leaf `A`: an `oneOfUsingField` override if there is one, otherwise
     * `config.toDiscriminatorValue(sNameOf[A])`.
     */
-  protected def discriminatorValue[A: Type](config: PicklerConfiguration): Either[PicklerDerivationError, String] =
-    leafNameOverrides.get(Type[A].plainPrint) match {
+  protected def discriminatorValue[A: Type](env: DerivationEnv): Either[PicklerDerivationError, String] =
+    env.leafNameOverrides.get(typeKey[A]) match {
       case Some(overridden) => Right(overridden)
       case None             =>
         val name = sNameOf[A]
-        evaluating("toDiscriminatorValue", name.fullName)(config.toDiscriminatorValue(name))
+        evaluating("toDiscriminatorValue", name.fullName)(env.config.toDiscriminatorValue(name))
     }
 
   /** `discriminatorValue` for every leaf, or the first failure. */
-  protected def discriminatorValues[A](
-      leaves: List[(String, ??<:[A])],
-      config: PicklerConfiguration
-  ): Either[PicklerDerivationError, List[String]] =
+  protected def discriminatorValues[A](leaves: List[(String, ??<:[A])], env: DerivationEnv): Either[PicklerDerivationError, List[String]] =
     leaves.foldRight[Either[PicklerDerivationError, List[String]]](Right(Nil)) { case ((_, leaf), acc) =>
       import leaf.Underlying as Leaf
-      for { tail <- acc; value <- discriminatorValue[Leaf](config) } yield value :: tail
+      for { tail <- acc; value <- discriminatorValue[Leaf](env) } yield value :: tail
     }
 
   /** The bare string an enumeration case `A` is written as. */

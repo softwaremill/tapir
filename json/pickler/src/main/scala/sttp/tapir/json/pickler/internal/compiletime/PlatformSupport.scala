@@ -26,6 +26,16 @@ trait PlatformSupport { this: MacroCommons =>
   /** The name jsoniter hands to `adtLeafClassNameMapper` for this leaf: `Symbol.fullName`, module `$` stripped. */
   protected def jsoniterLeafName[A: Type]: String
 
+  /** The type arguments of `A`, flattened and fully qualified the way tapir core's `SNameMacros.extractTypeArguments` does it:
+    * `Foo[Bar[Baz], Qux]` gives `List("Bar", "Baz", "Qux")`. Empty for a non-applied type.
+    */
+  protected def flattenedTypeArguments[A: Type]: List[String]
+
+  /** The key under which `A` is memoised throughout a derivation (codec vals, visited set, user-pickler memo, name overrides): its
+    * *dealiased* printed form, so that `type Id = UUID` and `UUID` share one entry.
+    */
+  protected def typeKey[A: Type]: String
+
   /** The fully-qualified name tapir core's `SNameMacros.typeFullName[A]` produces — the base of the `SName` that `NameSupport.sNameOf`
     * builds, hence the input to `toDiscriminatorValue`.
     */

@@ -18,24 +18,18 @@ import scala.collection.mutable
   * an already-typed value, not a pending macro call, and is found normally.
   *
   * ==Exclusions==
-  * The root type is never looked up (a `given p: Pickler[A] = Pickler.derived[A]` would otherwise find itself). `oneOfUsingField`
-  * additionally excludes the leaves it maps, whose codecs it must derive with overridden discriminator values rather than take from the
-  * user's child picklers.
+  * `DerivationEnv.implicitLookupExclusions` lists the types never looked up: the root (a `given p: Pickler[A] = Pickler.derived[A]` would
+  * otherwise find itself) and, for `oneOfUsingField`, the mapped leaves.
   */
-trait ImplicitPicklerSupport { this: MacroCommons =>
+trait ImplicitPicklerSupport { this: MacroCommons & PlatformSupport =>
 
   private val memo = mutable.Map.empty[String, Option[Expr_??]]
 
-  /** Types for which no user pickler is looked up (by `plainPrint`). Mutable per-expansion state, set by the entry points before derivation
-    * starts.
-    */
-  protected var implicitLookupExclusions: Set[String] = Set.empty
-
   private def PicklerOf[A: Type]: Type[Pickler[A]] = Type.of[Pickler[A]]
 
-  protected def userPickler[A: Type]: MIO[Option[Expr[Pickler[A]]]] = {
-    val key = Type[A].plainPrint
-    if (implicitLookupExclusions.contains(key)) MIO.pure(None)
+  protected def userPickler[A: Type](env: DerivationEnv): MIO[Option[Expr[Pickler[A]]]] = {
+    val key = typeKey[A]
+    if (env.implicitLookupExclusions.contains(key)) MIO.pure(None)
     else
       memo.get(key) match {
         case Some(cached) => MIO.pure(cached.map(_.value.asInstanceOf[Expr[Pickler[A]]]))

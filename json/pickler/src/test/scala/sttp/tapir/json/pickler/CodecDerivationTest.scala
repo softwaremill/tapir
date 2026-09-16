@@ -437,6 +437,37 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     pickler.toCodec.encode(AnnotatedInnerClass("a", "b")) shouldBe """{"encoded_field-a":"a","field-b":"b"}"""
   }
 
+  it should "treat a type alias and the aliased type as one type" in {
+    // Memoisation, user-pickler lookup and the codec vals are keyed by the *dealiased* type: a `given Pickler[UUID]`
+    // must apply to a field typed with an alias of it, and a hierarchy referenced both ways gets one codec.
+    given Pickler[UUID] = Pickler.fromSchemaAndCodec(
+      Schema.string[UUID],
+      new com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[UUID] {
+        def nullValue: UUID = null
+        def decodeValue(in: com.github.plokhotnyuk.jsoniter_scala.core.JsonReader, default: UUID): UUID =
+          UUID.fromString(in.readString(null).stripPrefix("id:"))
+        def encodeValue(x: UUID, out: com.github.plokhotnyuk.jsoniter_scala.core.JsonWriter): Unit = out.writeVal(s"id:$x")
+      }
+    )
+    val id = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
+    roundTrip(
+      Pickler.derived[WithAliases],
+      WithAliases(id, id, List(StatusOk(1)), StatusOk(2)),
+      s"""{"a":"id:$id","b":"id:$id","statuses":[{"$$type":"StatusOk","oF":1}],"status":{"$$type":"StatusOk","oF":2}}"""
+    )
+    // the schema names the aliased types, not the aliases
+    Pickler.derived[List[Id]].schema.name shouldBe Pickler.derived[List[UUID]].schema.name
+  }
+
+  it should "name parameterised types with flattened, fully qualified type arguments" in {
+    Pickler.derived[Map[String, List[Option[FlatClass]]]].schema.name shouldBe Some(
+      Schema.SName("Map", List("scala.collection.immutable.List", "scala.Option", "sttp.tapir.json.pickler.CodecFixtures.FlatClass"))
+    )
+    Pickler.derived[Boxed[List[Int]]].schema.name shouldBe Some(
+      Schema.SName("sttp.tapir.json.pickler.CodecFixtures.Boxed", List("scala.collection.immutable.List", "scala.Int"))
+    )
+  }
+
   it should "agree with the schema-only entry point" in {
     Pickler.schemaFor[Status] shouldBe Pickler.derived[Status].schema
   }
@@ -548,4 +579,9 @@ object CodecFixtures {
   sealed trait Node
   case class Edge(id: Long, source: Node) extends Node
   case class SimpleNode(id: Long) extends Node
+
+  type Id = UUID
+  type Statuses = List[Status]
+  case class WithAliases(a: Id, b: UUID, statuses: Statuses, status: Status)
+  case class Boxed[T](value: T)
 }

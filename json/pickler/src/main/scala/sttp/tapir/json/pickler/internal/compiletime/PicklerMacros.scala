@@ -124,6 +124,16 @@ private[compiletime] trait PlatformSupportScala3 extends PlatformSupport { this:
 
   protected def tapirFullName[A: Type]: String = SNameMacros.typeFullNameFromTpe(TypeRepr.of[A])
 
+  protected def flattenedTypeArguments[A: Type]: List[String] = SNameMacros.extractTypeArguments(TypeRepr.of[A].dealias)
+
+  protected def typeKey[A: Type]: String = {
+    def deepDealias(tpe: TypeRepr): TypeRepr = tpe.dealias match {
+      case AppliedType(tycon, args) => AppliedType(tycon, args.map(deepDealias))
+      case other                    => other
+    }
+    deepDealias(TypeRepr.of[A]).show
+  }
+
   protected def implicitLazyVals[Out: Type](vals: List[(String, UntypedType, List[UntypedExpr] => UntypedExpr)])(
       body: List[UntypedExpr] => Expr[Out]
   ): Expr[Out] = {

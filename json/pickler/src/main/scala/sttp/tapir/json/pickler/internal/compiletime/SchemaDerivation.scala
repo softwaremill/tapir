@@ -8,7 +8,6 @@ import hearth.std.*
 import sttp.tapir.Schema
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.SProductField
-import sttp.tapir.json.pickler.PicklerConfiguration
 import sttp.tapir.json.pickler.internal.runtime.SchemaUtils
 
 /** Derivation of the tapir [[Schema]] half of a `Pickler`.
@@ -53,20 +52,20 @@ trait SchemaDerivation {
     */
   final case class SchemaCtx[A](
       tpe: Type[A],
-      config: PicklerConfiguration,
+      env: DerivationEnv,
       cache: MLocal[ValDefsCache],
       inProgress: MLocal[Set[String]]
   ) {
     def cacheKey: String = SchemaDerivation.this.cacheKey(tpe)
 
-    def nest[B: Type]: SchemaCtx[B] = SchemaCtx(Type[B], config, cache, inProgress)
+    def nest[B: Type]: SchemaCtx[B] = SchemaCtx(Type[B], env, cache, inProgress)
   }
 
   def sctx[A](implicit A: SchemaCtx[A]): SchemaCtx[A] = A
 
   implicit def currentSchemaType[A: SchemaCtx]: Type[A] = sctx.tpe
 
-  private def cacheKey[A](tpe: Type[A]): String = s"pickler-schema-for-${tpe.plainPrint}"
+  private def cacheKey[A](tpe: Type[A]): String = s"pickler-schema-for-${typeKey(using tpe)}"
 
   private def cacheName[A: Type]: String = s"schema_${Type[A].shortName}"
 
@@ -153,7 +152,7 @@ trait SchemaDerivation {
 
   private object UseUserPicklerRule extends SchemaRule("use the schema of a user-supplied Pickler") {
     def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      userPickler[A].flatMap {
+      userPickler[A](sctx.env).flatMap {
         case Some(pickler) =>
           implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
           setCachedAndGet[A](sctx.cache, Expr.quote(Expr.splice(pickler).schema)).map(Rule.matched)
@@ -245,8 +244,8 @@ trait SchemaDerivation {
     import value.Underlying as Value
     implicit val StringT: Type[String] = STypes.StringT
     // tapir's own convention (`SchemaMacros.generateSchemaForMap`): a `String` key contributes nothing to the name,
-    // and the value's type arguments are flattened in after it.
-    val typeParams = Expr(SchemaUtils.flattenTypeName(Type[Value].plainPrint))
+    // the value's name comes first and its type arguments are flattened in after it.
+    val typeParams = Expr(tapirFullName[Value] :: flattenedTypeArguments[Value])
     deriveSchemaFor[Value](using sctx.nest[Value]).map { schema =>
       Expr.quote(SchemaUtils.mapSchema[Value](Expr.splice(schema), Expr.splice(typeParams)).asInstanceOf[Schema[A]])
     }
@@ -310,7 +309,7 @@ trait SchemaDerivation {
     val index = Expr(param.index)
     val annotations = collectAnnotationsExpr(allParamAnnotations[A](param, fieldName))
 
-    encodedFieldName[A](param, fieldName, sctx.config) match {
+    encodedFieldName[A](param, fieldName, sctx.env.config) match {
       case Left(error)    => failSchema(error)
       case Right(encoded) =>
         val encodedName = Expr(encoded)
@@ -341,13 +340,13 @@ trait SchemaDerivation {
 
     val name = sNameExpr[A]
     val annotations = typeAnnotationsExpr[A]
-    val discriminatorField = Expr(sctx.config.discriminator)
+    val discriminatorField = Expr(sctx.env.config.discriminator)
 
     leaves
       .foldLeft(MIO.pure(List.empty[Expr[(Schema[Any], String)]])) { case (acc, (_, leaf)) =>
         acc.flatMap { pairs =>
           import leaf.Underlying as Leaf
-          discriminatorValue[Leaf](sctx.config) match {
+          discriminatorValue[Leaf](sctx.env) match {
             case Left(error)  => failSchema(error)
             case Right(value) =>
               val valueExpr = Expr(value)
@@ -388,10 +387,10 @@ trait SchemaDerivation {
   private def subtypeIndexExpr[A: Type](leaves: List[(String, ??<:[A])]): MIO[Expr[A => Int]] = {
     implicit val IntT: Type[Int] = STypes.IntT
     implicit val FnT: Type[A => Int] = STypes.IndexFnOf[A]
-    val keys = leaves.map { case (_, leaf) => leaf.Underlying.plainPrint }
+    val keys = leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; typeKey[Leaf] }
 
     def indexOf[B: Type](value: Expr[B]): MIO[Expr[Int]] =
-      keys.indexOf(Type[B].plainPrint) match {
+      keys.indexOf(typeKey[B]) match {
         case -1 =>
           Enum.parse[B].toEither match {
             case Right(e) =>

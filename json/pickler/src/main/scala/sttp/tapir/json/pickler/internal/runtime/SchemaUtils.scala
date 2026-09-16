@@ -132,8 +132,8 @@ object SchemaUtils {
 
   /** Mirrors what `Schema.schemaForMap` generates, but with our own derived value schema.
     *
-    * `typeParameters` is computed by the macro and follows tapir's convention: the key type is omitted when it is `String`, and nested type
-    * arguments are flattened.
+    * `typeParameters` is computed by the macro with core's own `SNameMacros`: the key type is omitted (it is `String`), the value's name
+    * comes first and its type arguments are flattened after it.
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def mapSchema[V](valueSchema: Schema[V], typeParameters: List[String]): Schema[Any] =
@@ -160,64 +160,5 @@ object SchemaUtils {
   def stringEnumSchema[T](name: SName, values: List[T], encodedNames: List[String]): Schema[T] = {
     val encoded = values.zip(encodedNames).toMap
     Schema.string[T].name(name).copy(validator = Validator.enumeration(values, (v: T) => encoded.get(v), Some(name)))
-  }
-
-  // -- Names ------------------------------------------------------------------------------------------------------
-
-  /** Build an [[SName]] from a name computed by tapir core's own `SNameMacros`, plus type arguments recovered from the printed form of the
-    * type. Called by the macro at expansion time.
-    *
-    * The split exists because the two halves are best obtained from different places. `SNameMacros.typeFullName` walks the *symbol* owner
-    * chain, which is the only way to get a genuinely qualified name for a class nested in another class (whose type prints as the
-    * path-dependent `Outer.this.Inner`), and it applies core's conventions for module suffixes and synthetic `<local ...>` owners. The
-    * printed form, meanwhile, is the only place the applied type arguments survive.
-    */
-  def sName(fullName: String, printedType: String): SName =
-    SName(fullName, parseSName(printedType).typeParameterShortNames)
-
-  /** Turn a fully-qualified, Scala-syntax type name into an [[SName]].
-    *
-    * `SName.typeParameterShortNames` is a misnomer inherited from tapir: it holds *fully-qualified* names, and nested arguments are
-    * flattened into one list. `Foo[Bar[Baz], Qux]` therefore becomes `SName("Foo", List("Bar", "Baz", "Qux"))` with each entry fully
-    * qualified — matching `Schema.renameWithTypeParameter`.
-    */
-  def parseSName(fullTypeName: String): SName = {
-    val bracket = fullTypeName.indexOf('[')
-    if (bracket < 0) SName(fullTypeName)
-    else
-      SName(
-        fullTypeName.substring(0, bracket),
-        splitTopLevel(fullTypeName.substring(bracket + 1, fullTypeName.length - 1)).flatMap(flattenTypeName)
-      )
-  }
-
-  /** `List[Int]` => `List("List", "Int")`, fully qualified, in tapir's flattened order. */
-  def flattenTypeName(typeName: String): List[String] = {
-    val bracket = typeName.indexOf('[')
-    if (bracket < 0) List(typeName)
-    else
-      typeName.substring(0, bracket) ::
-        splitTopLevel(typeName.substring(bracket + 1, typeName.length - 1)).flatMap(flattenTypeName)
-  }
-
-  /** Split on commas that are not nested inside brackets. */
-  private def splitTopLevel(s: String): List[String] = {
-    val result = List.newBuilder[String]
-    var depth = 0
-    var start = 0
-    var i = 0
-    while (i < s.length) {
-      s.charAt(i) match {
-        case '['               => depth += 1
-        case ']'               => depth -= 1
-        case ',' if depth == 0 =>
-          result += s.substring(start, i).trim
-          start = i + 1
-        case _ => ()
-      }
-      i += 1
-    }
-    if (start < s.length) result += s.substring(start).trim
-    result.result()
   }
 }
