@@ -101,6 +101,19 @@ object PicklerDerivationError {
          |Use literal keys (e.g. `200 -> picklerOk`) and a lambda over them (e.g. `code => s"code-$$code"`).""".stripMargin
   }
 
+  /** Every leaf of the hierarchy has to be given a discriminator value; a leaf that is not would otherwise get a configuration-derived one
+    * in the codec and none in the schema.
+    */
+  final case class IncompleteOneOfMapping(typeName: String, unmapped: List[String]) extends PicklerDerivationError {
+    def message: String =
+      s"""Pickler.oneOfUsingField for $typeName does not map every case of the hierarchy; missing: ${unmapped.mkString(", ")}.
+         |Add a `value -> Pickler.derived[Case]` entry for each of them.""".stripMargin
+  }
+
+  final case class AmbiguousOneOfMapping(typeName: String, detail: String) extends PicklerDerivationError {
+    def message: String = s"Pickler.oneOfUsingField for $typeName is ambiguous: $detail"
+  }
+
   /** A `JsonValueCodec[X]` alone cannot be honoured for a structural `X`: the schema would still be derived from the class, documenting a
     * shape the codec no longer writes.
     */

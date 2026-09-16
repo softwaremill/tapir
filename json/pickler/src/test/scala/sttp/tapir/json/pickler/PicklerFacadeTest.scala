@@ -42,6 +42,9 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
     val validator = pickler.schema.validator.asInstanceOf[Validator.Enumeration[ColorEnum]]
     validator.possibleValues shouldBe List(ColorEnum.Green, ColorEnum.Pink)
     validator.encode.flatMap(_(ColorEnum.Pink)) shouldBe Some("1")
+    // the OpenAPI interpreter emits a named component for a *named* enumeration validator, as with `Pickler.derived`
+    validator.name shouldBe pickler.schema.name
+    validator.name shouldBe Pickler.derived[ColorEnum].schema.validator.asInstanceOf[Validator.Enumeration[ColorEnum]].name
   }
 
   it should "be equivalent to Pickler.derived when defaultStringBased" in {
@@ -116,6 +119,13 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
     codec.decode("{}") shouldBe Value(Map.empty[Int, String])
     codec.encode(Map(1 -> "a", 2 -> "b")) shouldBe """{"1":"a","2":"b"}"""
     codec.decode("""{"x":"a"}""") should not be a[Value[?]]
+  }
+
+  it should "report a key the parser rejects as a decoding error with a message, not as an escaped exception" in {
+    val codec = Pickler.picklerForMap[UUID, Int](_.toString, UUID.fromString)(using Pickler.derived[Int]).toCodec
+    val result = codec.decode("""{"not-a-uuid":1}""")
+    val error = result.asInstanceOf[sttp.tapir.DecodeResult.Error].error.asInstanceOf[sttp.tapir.DecodeResult.Error.JsonDecodeException]
+    error.errors.map(_.msg).mkString should include("illegal map key 'not-a-uuid'")
   }
 
   it should "still require picklerForMap for a non-String key in structural derivation" in {
@@ -206,6 +216,15 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
 
   it should "prefer Right when both sides accept the value" in {
     Pickler.derived[Either[String, String]].toCodec.decode("\"x\"") shouldBe Value(Right("x"))
+  }
+
+  it should "fall back to Left when the Right codec fails with something other than a JsonReaderException" in {
+    // `UUID.fromString` throws an `IllegalArgumentException`, which is not jsoniter's exception type.
+    given Pickler[Map[UUID, Int]] = Pickler.picklerForMap[UUID, Int](_.toString, UUID.fromString)(using Pickler.derived[Int])
+    val codec = Pickler.derived[Either[Map[String, Int], Map[UUID, Int]]].toCodec
+    codec.decode("""{"k":1}""") shouldBe Value(Left(Map("k" -> 1)))
+    codec.decode("""{"2c2b1cf3-5f2e-4a0b-9d3a-7d1a4e0b1c01":1}""") shouldBe
+      Value(Right(Map(UUID.fromString("2c2b1cf3-5f2e-4a0b-9d3a-7d1a4e0b1c01") -> 1)))
   }
 
   it should "honour a user pickler for one side" in {

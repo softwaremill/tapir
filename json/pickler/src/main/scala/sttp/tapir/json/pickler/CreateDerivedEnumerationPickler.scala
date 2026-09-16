@@ -26,7 +26,8 @@ final class CreateDerivedEnumerationPickler[T] private[pickler] (
     */
   def customStringBased(encode: T => String): Pickler[T] = {
     val codec = CodecCombinators.stringEnum(values, encode)
-    val schema = defaultSchema.copy(validator = Validator.enumeration(values, (v: T) => Some(encode(v))))
+    // The validator keeps the schema's name, as the default one does: the OpenAPI interpreter uses it to emit a named component.
+    val schema = defaultSchema.copy(validator = Validator.enumeration(values, (v: T) => Some(encode(v)), defaultSchema.name))
     PicklerFactories.instance(schema, codec)
   }
 }

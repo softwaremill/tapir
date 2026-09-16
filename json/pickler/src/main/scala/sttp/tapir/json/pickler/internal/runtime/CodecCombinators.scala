@@ -1,9 +1,10 @@
 package sttp.tapir.json.pickler.internal.runtime
 
-import com.github.plokhotnyuk.jsoniter_scala.core.{readFromArrayReentrant, JsonReader, JsonReaderException, JsonValueCodec, JsonWriter}
+import com.github.plokhotnyuk.jsoniter_scala.core.{readFromArrayReentrant, JsonReader, JsonValueCodec, JsonWriter}
 
 import scala.collection.Factory
 import scala.reflect.ClassTag
+import scala.util.control.NonFatal
 
 /** Hand-written `JsonValueCodec` combinators, for the shapes `JsonCodecMaker` either cannot produce or cannot produce from a codec that
   * already exists at runtime.
@@ -35,14 +36,17 @@ object CodecCombinators {
 
   def iterable[T, C[X] <: Iterable[X]](inner: JsonValueCodec[T])(implicit factory: Factory[T, C[T]]): JsonValueCodec[C[T]] =
     new JsonValueCodec[C[T]] {
-      def nullValue: C[T] = factory.newBuilder.result()
+      // `nullValue` is requested for every element decoded by an enclosing codec, so it must not allocate each time.
+      private val empty: C[T] = factory.newBuilder.result()
+      def nullValue: C[T] = empty
       def decodeValue(in: JsonReader, default: C[T]): C[T] =
         readArray(in, default, factory.newBuilder, inner)
       def encodeValue(x: C[T], out: JsonWriter): Unit = writeArray(x, out, inner)
     }
 
   def array[T: ClassTag](inner: JsonValueCodec[T]): JsonValueCodec[Array[T]] = new JsonValueCodec[Array[T]] {
-    def nullValue: Array[T] = Array.empty[T]
+    private val empty: Array[T] = Array.empty[T]
+    def nullValue: Array[T] = empty
     def decodeValue(in: JsonReader, default: Array[T]): Array[T] = readArray(in, default, Array.newBuilder[T], inner)
     def encodeValue(x: Array[T], out: JsonWriter): Unit = {
       out.writeArrayStart()
@@ -68,7 +72,15 @@ object CodecCombinators {
             in.rollbackToken()
             val builder = Map.newBuilder[K, V]
             while ({
-              val key = stringToKey(in.readKeyAsString())
+              val rawKey = in.readKeyAsString()
+              // A failing key parser is a malformed document, reported with jsoniter's position information like any
+              // other decoding error (and hence as a `JsonReaderException`, which `toTapirCodec` turns into a
+              // `JsonDecodeException` with a message).
+              val key =
+                try stringToKey(rawKey)
+                catch {
+                  case NonFatal(e) => in.decodeError(s"illegal map key '$rawKey': ${Option(e.getMessage).getOrElse(e.getClass.getName)}")
+                }
               builder += key -> values.decodeValue(in, values.nullValue)
               in.isNextToken(',')
             }) ()
@@ -91,6 +103,9 @@ object CodecCombinators {
     *
     * The value is read as raw bytes and re-parsed rather than decoded with `setMark`/`rollbackToMark`, because jsoniter does not allow
     * marks to nest and a generated coproduct codec uses one itself (`requireDiscriminatorFirst(false)`).
+    *
+    * Any non-fatal failure of the right codec (not only a `JsonReaderException`: a user codec may throw anything) falls back to the left
+    * one. If both fail, the *right* failure is reported, since `Right` is the side the encoding is expected to be.
     */
   def either[A, B](left: JsonValueCodec[A], right: JsonValueCodec[B]): JsonValueCodec[Either[A, B]] =
     new JsonValueCodec[Either[A, B]] {
@@ -99,7 +114,9 @@ object CodecCombinators {
         val raw = in.readRawValAsBytes()
         try Right(readFromArrayReentrant(raw)(right))
         catch {
-          case _: JsonReaderException => Left(readFromArrayReentrant(raw)(left))
+          case NonFatal(rightFailure) =>
+            try Left(readFromArrayReentrant(raw)(left))
+            catch { case NonFatal(_) => throw rightFailure }
         }
       }
       def encodeValue(x: Either[A, B], out: JsonWriter): Unit = x match {

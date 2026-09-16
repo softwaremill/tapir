@@ -303,6 +303,14 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     """)
   }
 
+  it should "refuse a given JsonValueCodec for the root type too" in {
+    // `JsonCodecMaker.make[A]` never looks its own type up, so such a codec would be silently ignored.
+    assertDoesNotCompile("""
+      given com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec[FlatClass] = null
+      Pickler.derived[FlatClass]
+    """)
+  }
+
   behavior of "oneOfUsingField"
 
   it should "set discriminator values using oneOfUsingField" in {
@@ -356,6 +364,33 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     assertDoesNotCompile("""Pickler.oneOfUsingField[FlatClass, Int](_.fieldA, _.toString)(1 -> Pickler.derived[FlatClass])""")
   }
 
+  it should "derive the children of oneOfUsingField under the outer configuration, whatever the mapped picklers were derived with" in {
+    // The mapped picklers only say which leaf a value selects. Had their schemas been taken as-is, the schema would
+    // document `o_f` while the codec writes `oF`.
+    val snake = Pickler.derived[StatusOk](using PicklerConfiguration.default.withSnakeCaseMemberNames)
+    val pickler = Pickler.oneOfUsingField[Status, Int](_.code, code => s"code-$code")(
+      200 -> snake,
+      400 -> Pickler.derived[StatusBadRequest],
+      500 -> Pickler.derived[StatusInternalError.type]
+    )
+    pickler.toCodec.encode(StatusOk(1)) shouldBe """{"$type":"code-200","oF":1}"""
+    val ok = pickler.schema.schemaType.asInstanceOf[SCoproduct[Status]].subtypes.find(_.name.exists(_.fullName.endsWith("StatusOk"))).get
+    ok.schemaType.asInstanceOf[SProduct[?]].fields.map(_.name.encodedName) shouldBe List("oF", "$type")
+    SchemaJsonAgreement.mismatches(pickler.schema, ujson.read(pickler.toCodec.encode(StatusOk(1)))) shouldBe Nil
+  }
+
+  it should "reject an incomplete or ambiguous oneOfUsingField mapping" in {
+    scala.compiletime.testing
+      .typeCheckErrors("""Pickler.oneOfUsingField[Status, Int](_.code, code => s"code-$code")(200 -> Pickler.derived[StatusOk])""")
+      .map(_.message)
+      .mkString should include("does not map every case of the hierarchy; missing: ")
+    scala.compiletime.testing
+      .typeCheckErrors("""Pickler.oneOfUsingField[Status, Int](_.code, code => s"code-$code")(
+        200 -> Pickler.derived[StatusOk], 200 -> Pickler.derived[StatusBadRequest], 500 -> Pickler.derived[StatusInternalError.type])""")
+      .map(_.message)
+      .mkString should include("several cases map to 'code-200'")
+  }
+
   behavior of "schema/codec agreement"
 
   it should "document the discriminator values the codec writes" in {
@@ -369,6 +404,21 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     )
     pickler.toCodec.encode(StatusInternalError) shouldBe
       """{"$type":"sttp.tapir.json.pickler.codec-fixtures.status-internal-error"}"""
+  }
+
+  it should "name every kind of leaf the way jsoniter does (canary for jsoniter upgrades)" in {
+    // The leaf-name mapper has no fallback: a leaf whose jsoniter name we predicted wrongly makes `JsonCodecMaker` fail
+    // compilation. Nested case classes/objects, enum cases with and without parameters, and leaves below an
+    // intermediate trait are all covered here.
+    given PicklerConfiguration = PicklerConfiguration.default.withFullDiscriminatorValues
+    val prefix = "sttp.tapir.json.pickler.CodecFixtures"
+    roundTrip(Pickler.derived[Status], StatusInternalError, s"""{"$$type":"$prefix.StatusInternalError"}""")
+    roundTrip(Pickler.derived[Status], StatusOk(1), s"""{"$$type":"$prefix.StatusOk","oF":1}""")
+    roundTrip(Pickler.derived[Entity], Entity.Person("a", 1), s"""{"$$type":"$prefix.Entity.Person","first":"a","age":1}""")
+    roundTrip(Pickler.derived[NotAllSealedVariant], NotAllSealedVariantA, s"""{"$$type":"$prefix.NotAllSealedVariantA"}""")
+    roundTrip(Pickler.derived[Animal], Hamster("h"), s"""{"$$type":"$prefix.Hamster","name":"h"}""")
+    roundTrip(Pickler.derived[RichColorEnum], RichColorEnum.Cyan, "\"Cyan\"")
+    roundTrip(Pickler.derived[ColorEnum], ColorEnum.Pink, "\"Pink\"")
   }
 
   it should "document an all-singleton hierarchy as a string enumeration, matching the bare-string encoding" in {

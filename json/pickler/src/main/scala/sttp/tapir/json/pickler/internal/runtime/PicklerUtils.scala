@@ -5,7 +5,6 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.{Codec, Schema}
-import sttp.tapir.json.pickler.Pickler
 
 import scala.util.{Failure, Success, Try}
 
@@ -33,11 +32,4 @@ object PicklerUtils {
       }
     } { a => writeToString[A](a) }
   }
-
-  /** The `(child schema, discriminator value)` pairs `SchemaUtils.coproductSchema` wants, from the `(value, pickler)` pairs the
-    * user gave to `oneOfUsingField` and its `asString`.
-    */
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def oneOfSchemasWithValues[T, V](asString: V => String, mapping: (V, Pickler[? <: T])*): List[(Schema[Any], String)] =
-    mapping.toList.map { case (v, p) => (p.schema.asInstanceOf[Schema[Any]], asString(v)) }
 }

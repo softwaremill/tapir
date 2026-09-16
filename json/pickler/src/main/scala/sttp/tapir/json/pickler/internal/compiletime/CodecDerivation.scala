@@ -85,6 +85,9 @@ trait CodecDerivation {
       implicit val CodecA: Type[JsonValueCodec[A]] = CTypes.CodecOf[A]
       val rootShape = classify[A]
       for {
+        // The root is subject to the same rule as nested types: `make[A]` never looks its own type up, so a bare
+        // `given JsonValueCodec[A]` would be silently ignored while the user expects it to be honoured.
+        _ <- rejectBareCodec[A](rootShape)
         units <- walkChildren(childrenOf(rootShape), config, Set(Type[A].plainPrint), Vector.empty).map(_._2.toList)
         // The root gets an implicit too. `make[A]` itself never looks its own type up (jsoniter pre-seeds the root as
         // "no implicit"), but a *nested* `make[Leaf]` whose field refers back to `A` must find it: otherwise jsoniter

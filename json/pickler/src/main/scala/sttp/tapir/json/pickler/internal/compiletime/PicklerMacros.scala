@@ -97,18 +97,23 @@ private[compiletime] trait PlatformSupportScala3 extends PlatformSupport { this:
       .asExprOf[PartialFunction[String, String]]
   }
 
+  // No wildcard case on purpose. jsoniter's `evalApplyStringTerm` evaluates a lambda body with a `null` default, and a `None` from
+  // the leaf mapper makes `JsonCodecMaker` fail with "Discriminator is not defined for ...". Every leaf we know of is in `pairs`, so
+  // reaching the default means `jsoniterLeafName` no longer agrees with jsoniter's own naming -- which must be a compile error, not a
+  // silently different discriminator value from the one the schema documents.
   protected def stringFunction(pairs: List[(String, String)]): Expr[String => String] =
     Lambda(
       Symbol.spliceOwner,
       stringToString,
       {
-        case (_, List(x: Term)) => stringMatch(pairs, x, fallback = Some(x))
+        case (_, List(x: Term)) => stringMatch(pairs, x, fallback = None)
         case (_, other)         => throw new IllegalStateException(s"unexpected lambda parameters: $other")
       }
     ).asExprOf[String => String]
 
-  /** Mirrors `JsonCodecMakerInstance.discriminatorValue` in `jsoniter-scala-macros`: enum values are named by their term symbol, everything
-    * else by its type symbol, and a module's trailing `$` is dropped.
+  /** Mirrors `JsonCodecMaker.discriminatorValue` in `jsoniter-scala-macros`: enum values are named by their term symbol, everything else by
+    * its type symbol, and a module's trailing `$` is dropped. Coupled to `Versions.jsoniter`: if jsoniter changes its naming, the leaf
+    * mapper (`stringFunction`) stops matching and `JsonCodecMaker` fails compilation with "Discriminator is not defined".
     */
   protected def jsoniterLeafName[A: Type]: String = {
     val tpe = TypeRepr.of[A]

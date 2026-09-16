@@ -194,15 +194,17 @@ trait PicklerMacrosImpl
 
   /** `Pickler.oneOfUsingField[A, V](extractor, asString)(v1 -> pickler1, ...)`.
     *
-    * The discriminator value of each mapped leaf is `asString(v)`, decided by the user rather than by the configuration; the discriminator
-    * *field* is the configured one (`$type` by default). Both halves get the values the same way:
-    *   - the **schema** is our coproduct schema over the children's schemas (so a user's child pickler is fully honoured on the
-    *     documentation side), with `asString(v)` as each child's discriminator value. Not core's `Schema.oneOfUsingField`: that documents a
-    *     discriminator field named after the extractor (`code` for `_.code`), which the JSON does not contain;
-    *   - the **codec** is the ordinary `CodecDerivation` run with `leafNameOverrides` set to `asString(v)` per leaf. jsoniter needs those
-    *     values as literals, which is why the keys and `asString` are evaluated at expansion time, and why the children's *codecs* are
-    *     derived afresh rather than taken from the child picklers: a user-derived leaf codec would write its configuration-derived tag, not
-    *     the overridden one.
+    * The discriminator value of each leaf is `asString(v)`, decided by the user rather than by the configuration; the discriminator *field*
+    * is the configured one (`$type` by default). Not core's `Schema.oneOfUsingField`: that documents a discriminator field named after the
+    * extractor (`code` for `_.code`), which the JSON does not contain.
+    *
+    * Apart from those values, this *is* `Pickler.derived[A]`: both halves are derived structurally, with `leafNameOverrides` set to
+    * `asString(v)` per leaf. The child picklers in the mapping only tell us which leaf each value selects; neither their schemas nor their
+    * codecs are used. Taking them would let the two halves drift (a child pickler derived under another configuration would document field
+    * names the codec does not write), and a leaf codec derived on its own writes its configuration-derived tag, not the overridden one.
+    * jsoniter needs the values as literals, which is why the keys and `asString` are evaluated at expansion time.
+    *
+    * The mapping must cover every leaf exactly once.
     *
     * `extractor` is accepted for API compatibility with core's `Schema.oneOfUsingField`; nothing is derived from it, since the JSON does
     * not carry that field.
@@ -216,12 +218,7 @@ trait PicklerMacrosImpl
     implicit val SchemaA: Type[Schema[A]] = PTypes.SchemaOf[A]
     implicit val PicklerA: Type[Pickler[A]] = PTypes.PicklerOf[A]
     implicit val CodecA: Type[JsonValueCodec[A]] = PTypes.CodecOf[A]
-    implicit val EntryT: Type[(V, Pickler[? <: A])] = PTypes.MappingEntryOf[A, V]
     implicit val StringT: Type[String] = PTypes.StringT
-    implicit val AsStringT: Type[V => String] = PTypes.FnOf[V, String]
-    implicit val ConfigT: Type[PicklerConfiguration] = PTypes.Config
-    implicit val SNameT: Type[Schema.SName] = PTypes.SNameT
-    implicit val SchemaAnyPairs: Type[List[(Schema[Any], String)]] = PTypes.SchemaAnyPairs
     val macroName = "Pickler.oneOfUsingField"
     val _ = extractor
 
@@ -233,8 +230,8 @@ trait PicklerMacrosImpl
           val (schemaExpr, codecExpr) = runSafe {
             for {
               _ <- ensureStandardExtensionsLoaded()
-              _ <- classify[A] match {
-                case Shape.Coproduct(_, _) => MIO.pure(())
+              leaves <- classify[A] match {
+                case Shape.Coproduct(_, leaves) => MIO.pure(leaves)
                 // An all-singleton hierarchy is a bare string: there is no object to put a discriminator in.
                 case Shape.Enumeration(_, _) => fail(PicklerDerivationError.EnumerationInOneOfUsingField(Type[A].plainPrint))
                 case _                       => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
@@ -245,43 +242,36 @@ trait PicklerMacrosImpl
                   // `asString(key)` is beta-reduced and the *body* evaluated, rather than evaluating the lambda and
                   // calling it: Hearth materialises an evaluated lambda as a reflective proxy that cannot be applied.
                   val applied = betaReduce[V, String](asString, key)
+                  val leaf = child.Underlying.plainPrint
                   applied.semiEval.left
                     .flatMap(reasons => constantInterpolation(applied).toRight(reasons))
                     .fold(
                       reasons =>
                         fail(PicklerDerivationError.OneOfMappingNotStatic(s"${applied.plainPrint}: ${reasons.toVector.mkString("; ")}")),
-                      s => MIO.pure(m + (child.Underlying.plainPrint -> s))
+                      value =>
+                        if (m.contains(leaf))
+                          fail(PicklerDerivationError.AmbiguousOneOfMapping(Type[A].plainPrint, s"$leaf is mapped more than once"))
+                        else if (m.values.exists(_ == value))
+                          fail(PicklerDerivationError.AmbiguousOneOfMapping(Type[A].plainPrint, s"several cases map to '$value'"))
+                        else MIO.pure(m + (leaf -> value))
                     )
                 }
+              }
+              _ <- {
+                val unmapped = leaves.map { case (_, leaf) => leaf.Underlying.plainPrint }.filterNot(overrides.contains)
+                if (unmapped.isEmpty) MIO.pure(()) else fail(PicklerDerivationError.IncompleteOneOfMapping(Type[A].plainPrint, unmapped))
               }
               _ <- Log.info(s"Discriminator values from oneOfUsingField: ${overrides.mkString("{", ", ", "}")}")
               _ = {
                 leafNameOverrides = overrides
-                // The mapped leaves' codecs must be derived here, with the overridden tags; a `given Pickler[Leaf]` in
-                // scope would otherwise be picked up and write the configuration-derived tag instead.
+                // The leaves' schemas and codecs must be derived here, with the overridden tags; a `given Pickler[Leaf]`
+                // in scope would otherwise be picked up and write the configuration-derived tag instead.
                 implicitLookupExclusions ++= overrides.keySet + Type[A].plainPrint
               }
               config <- foldConfiguration(configExpr)
+              schema <- deriveSchemaRecursively[A](cache, config)
               codec <- deriveCodec[A](config)
-            } yield {
-              // `VarArgs.from` re-packs the elements as an `Expr[Seq[_]]` on both platforms, which is the one shape
-              // cross-quotes can splice with `*`.
-              val mappingSeq = VarArgs.from(mapping.toList)
-              val name = sNameExpr[A]
-              val annotations = typeAnnotationsExpr[A]
-              val discriminatorField = Expr(config.discriminator)
-              val schema = Expr.quote {
-                SchemaUtils.enrichSchema[A](
-                  SchemaUtils.coproductSchema[A](
-                    Expr.splice(name),
-                    PicklerUtils.oneOfSchemasWithValues[A, V](Expr.splice(asString), Expr.splice(mappingSeq)*),
-                    Expr.splice(discriminatorField)
-                  ),
-                  Expr.splice(annotations)
-                )
-              }
-              (schema, codec)
-            }
+            } yield (schema, codec)
           }
 
           val vals = runSafe(cache.get)

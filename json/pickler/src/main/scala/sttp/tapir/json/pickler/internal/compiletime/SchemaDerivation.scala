@@ -2,6 +2,8 @@ package sttp.tapir.json.pickler.internal.compiletime
 
 import hearth.MacroCommons
 import hearth.fp.effect.*
+import hearth.fp.instances.*
+import hearth.fp.syntax.*
 import hearth.std.*
 import sttp.tapir.Schema
 import sttp.tapir.Schema.SName
@@ -36,6 +38,8 @@ trait SchemaDerivation {
     def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
     lazy val SchemaAnyPair: Type[(Schema[Any], String)] = Type.of[(Schema[Any], String)]
     lazy val SchemaAnyPairs: Type[List[(Schema[Any], String)]] = Type.of[List[(Schema[Any], String)]]
+    lazy val IntT: Type[Int] = Type.of[Int]
+    def IndexFnOf[A: Type]: Type[A => Int] = Type.of[A => Int]
   }
 
   // -----------------------------------------------------------------------------------------------------------------
@@ -357,16 +361,50 @@ trait SchemaDerivation {
         val subtypesWithValues = pairs.foldRight(Expr.quote(Nil: List[(Schema[Any], String)])) { (pair, tail) =>
           Expr.quote(Expr.splice(pair) :: Expr.splice(tail))
         }
-        setCachedAndGet[A](
-          sctx.cache,
-          Expr.quote {
-            SchemaUtils.enrichSchema[A](
-              SchemaUtils.coproductSchema[A](Expr.splice(name), Expr.splice(subtypesWithValues), Expr.splice(discriminatorField)),
-              Expr.splice(annotations)
-            )
-          }
-        )
+        subtypeIndexExpr[A](leaves).flatMap { subtypeIndex =>
+          setCachedAndGet[A](
+            sctx.cache,
+            Expr.quote {
+              SchemaUtils.enrichSchema[A](
+                SchemaUtils.coproductSchema[A](
+                  Expr.splice(name),
+                  Expr.splice(subtypesWithValues),
+                  Expr.splice(discriminatorField),
+                  Expr.splice(subtypeIndex)
+                ),
+                Expr.splice(annotations)
+              )
+            }
+          )
+        }
       }
+  }
+
+  /** `(value: A) => value match { case _: Leaf0 => 0; case _: Leaf1 => 1; ... }`, the dispatch behind `SCoproduct.subtypeSchema` (and hence
+    * `Schema.applyValidation`). A type-test match, generated with Hearth's `Enum.matchOn`, is the only dispatch that handles parameterless
+    * Scala 3 enum cases (all one runtime class) and nested classes alike. `matchOn` sees one level of the hierarchy at a time, so
+    * intermediate sealed traits are descended recursively until a leaf is reached.
+    */
+  private def subtypeIndexExpr[A: Type](leaves: List[(String, ??<:[A])]): MIO[Expr[A => Int]] = {
+    implicit val IntT: Type[Int] = STypes.IntT
+    implicit val FnT: Type[A => Int] = STypes.IndexFnOf[A]
+    val keys = leaves.map { case (_, leaf) => leaf.Underlying.plainPrint }
+
+    def indexOf[B: Type](value: Expr[B]): MIO[Expr[Int]] =
+      keys.indexOf(Type[B].plainPrint) match {
+        case -1 =>
+          Enum.parse[B].toEither match {
+            case Right(e) =>
+              e.matchOn[MIO, Int](value) { matched =>
+                import matched.{Underlying as Child, value as child}
+                indexOf[Child](child)
+              }.map(_.getOrElse(Expr(-1)))
+            case Left(_) => MIO.pure(Expr(-1))
+          }
+        case index => MIO.pure(Expr(index))
+      }
+
+    LambdaBuilder.of1[A]("value").traverse(indexOf[A](_)).map(_.build[Int])
   }
 
   /** An all-singleton hierarchy (`Shape.Enumeration`): `SString` plus a `Validator.enumeration` of the singleton values — the schema
