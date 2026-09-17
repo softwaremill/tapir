@@ -1736,7 +1736,10 @@ lazy val nimaServer: ProjectMatrix = (projectMatrix in file("server/nima-server"
       "io.helidon.logging" % "helidon-logging-slf4j" % Versions.helidon
     )
   )
-  .jvmPlatform(scalaVersions = scala2_13And3Versions, settings = commonJvmSettings)
+  .jvmPlatform(
+    scalaVersions = scala2_13And3Versions,
+    settings = commonJvmSettings ++ Seq(javaOutputVersion := "21") // Helidon Nima requires JDK 21
+  )
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx-server"))
