@@ -15,7 +15,7 @@ import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
   import SchemaDerivationTest._
 
-  import generic.auto._
+  import generic.auto.*
   def implicitlySchema[T: Pickler]: Schema[T] = summon[Pickler[T]].schema
 
   "Schema auto derivation" should "find schema for simple types" in {
@@ -208,7 +208,10 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
     val schema = implicitlySchema[Test1]
 
     // when
-    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.SchemaDerivationTest.<local SchemaDerivationTest>.Test1"))
+    // No `<local SchemaDerivationTest>` segment for a class defined inside a method: tapir core's
+    // `SNameMacros.typeFullNameFromTpe` skips synthetic `<...>` owners, and emitting them would leak a compiler-internal
+    // marker into OpenAPI component names.
+    schema.name shouldBe Some(SName("sttp.tapir.json.pickler.SchemaDerivationTest.Test1"))
     schema.schemaType shouldBe SProduct[Test1](
       List(
         field(FieldName("f1"), implicitlySchema[String]),
@@ -490,7 +493,7 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
 }
 
 object SchemaDerivationTest {
-  import generic.auto._
+  import generic.auto.*
   def implicitlySchema[A: Pickler]: Schema[A] = summon[Pickler[A]].schema
 
   private[json] val stringSchema = implicitlySchema[String]
