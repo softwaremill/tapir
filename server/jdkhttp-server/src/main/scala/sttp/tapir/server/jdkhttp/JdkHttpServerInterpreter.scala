@@ -6,7 +6,7 @@ import sttp.shared.Identity
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.jdkhttp.internal._
 
 import scala.jdk.CollectionConverters._
@@ -15,7 +15,7 @@ trait JdkHttpServerInterpreter {
   def jdkHttpServerOptions: JdkHttpServerOptions
 
   def toHandler(ses: List[ServerEndpoint[Any, Identity]]): HttpHandler = {
-    val filteredEndpoints = FilterServerEndpoints[Any, Identity](ses)
+    val filteredEndpoints = PrepareServerEndpoints[Any, Identity](ses)
     val requestBody = new JdkHttpRequestBody(
       jdkHttpServerOptions.createFile,
       jdkHttpServerOptions.deleteFile,

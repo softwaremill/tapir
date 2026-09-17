@@ -19,7 +19,7 @@ import sttp.monad.MonadAsyncError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.armeria._
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 
 private[cats] final case class TapirCatsService[F[_]: Async](
     serverEndpoints: List[ServerEndpoint[Fs2Streams[F], F]],
@@ -41,7 +41,7 @@ private[cats] final case class TapirCatsService[F[_]: Async](
 
     val interpreter: ServerInterpreter[Fs2Streams[F], F, ArmeriaResponseType, Fs2Streams[F]] =
       new ServerInterpreter(
-        FilterServerEndpoints(serverEndpoints),
+        PrepareServerEndpoints(serverEndpoints),
         new ArmeriaRequestBody(armeriaServerOptions, fs2StreamCompatible),
         new ArmeriaToResponseBody(fs2StreamCompatible),
         RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),

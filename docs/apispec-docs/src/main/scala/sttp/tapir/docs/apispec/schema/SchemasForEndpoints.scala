@@ -3,7 +3,7 @@ package sttp.tapir.docs.apispec.schema
 import sttp.apispec.{Schema => ASchema}
 import sttp.tapir.Schema.SName
 import sttp.tapir._
-import sttp.tapir.internal.IterableToListMap
+import sttp.tapir.internal._
 
 import scala.collection.immutable.ListMap
 
@@ -74,6 +74,7 @@ class SchemasForEndpoints(
       case EndpointIO.Pair(left, right, _, _)                            => forIO(left) ++ forIO(right)
       case EndpointIO.Header(_, codec, _)                                => ToKeyedSchemas(codec)
       case EndpointIO.Headers(_, _)                                      => List.empty
+      case b @ EndpointIO.Body(_, _, _) if b.isSecondary                 => List.empty
       case EndpointIO.Body(_, codec, _)                                  => ToKeyedSchemas(codec)
       case EndpointIO.OneOfBody(variants, _)                             => variants.flatMap(v => forIO(v.bodyAsAtom))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => ToKeyedSchemas(codec.schema)
