@@ -18,6 +18,9 @@ import sttp.tapir.server.vertx.streams.websocket._
 import sttp.tapir.server.vertx.streams._
 import sttp.ws.WebSocketFrame
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicReference
+
 import scala.collection.immutable.{Queue => SQueue}
 
 object fs2 {
@@ -39,76 +42,76 @@ object fs2 {
       override def asReadStream(stream: Stream[F, Byte]): ReadStream[Buffer] =
         mapToReadStream[Chunk[Byte], Buffer](stream.chunks, chunk => Buffer.buffer(chunk.toArray))
 
-      private def mapToReadStream[I, O](stream: Stream[F, I], fn: I => O): ReadStream[O] =
-        opts.dispatcher.unsafeRunSync {
-          for {
-            promise <- Deferred[F, Unit]
-            state <- Ref.of(StreamState.empty[F, O](promise))
-            _ <- GenSpawn[F].start(
-              stream
-                .evalMap({ chunk =>
-                  val buffer = fn(chunk)
-                  state.get.flatMap {
-                    case StreamState(None, handler, _, _) =>
-                      Sync[F].delay(handler.handle(buffer))
-                    case StreamState(Some(promise), _, _, _) =>
-                      for {
-                        _ <- promise.get
-                        // Handler in state may be updated since the moment when we wait
-                        // promise so let's get more recent version.
-                        updatedState <- state.get
-                      } yield updatedState.handler.handle(buffer)
-                  }
-                })
-                .onFinalizeCase({
-                  case Succeeded =>
-                    state.get.flatMap { state =>
-                      Sync[F].delay(state.endHandler.handle(null))
-                    }
-                  case Canceled =>
-                    state.get.flatMap { state =>
-                      Sync[F].delay(state.errorHandler.handle(new Exception("Cancelled!")))
-                    }
-                  case Errored(cause) =>
-                    state.get.flatMap { state =>
-                      Sync[F].delay(state.errorHandler.handle(cause))
-                    }
-                })
-                .compile
-                .drain
-            )
-          } yield new ReadStream[O] {
-            self =>
-            override def handler(handler: Handler[O]): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(state.update(_.copy(handler = handler)).as(self))
+      private def mapToReadStream[I, O](stream: Stream[F, I], fn: I => O): ReadStream[O] = {
+        @volatile var itemHandler: Handler[O] = (_: O) => ()
+        @volatile var streamEndHandler: Handler[Void] = (_: Void) => ()
+        @volatile var streamErrorHandler: Handler[Throwable] = (_: Throwable) => ()
+        // Stream starts paused, matching StreamState.empty behaviour.
+        val pauseGate = new AtomicReference[CompletableFuture[Unit]](new CompletableFuture[Unit]())
 
-            override def endHandler(handler: Handler[Void]): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(state.update(_.copy(endHandler = handler)).as(self))
-
-            override def exceptionHandler(handler: Handler[Throwable]): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(state.update(_.copy(errorHandler = handler)).as(self))
-
-            override def pause(): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(for {
-                deferred <- Deferred[F, Unit]
-                _ <- state.update {
-                  case cur @ StreamState(Some(_), _, _, _) =>
-                    cur
-                  case cur @ StreamState(None, _, _, _) =>
-                    cur.copy(paused = Some(deferred))
-                }
-              } yield self)
-
-            override def resume(): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(for {
-                oldState <- state.getAndUpdate(_.copy(paused = None))
-                _ <- oldState.paused.fold(Async[F].unit)(_.complete(()))
-              } yield self)
-
-            override def fetch(n: Long): ReadStream[O] =
-              self
+        def waitIfPaused: F[Unit] =
+          Async[F].async[Unit] { cb =>
+            val gate = pauseGate.get()
+            if (gate == null || gate.isDone) {
+              cb(Right(()))
+              Sync[F].pure(None)
+            } else {
+              gate.whenComplete((_, t) => if (t != null) cb(Left(t)) else cb(Right(())))
+              Sync[F].pure(None)
+            }
           }
+
+        opts.dispatcher.unsafeRunAndForget(
+          stream
+            .evalMap { chunk =>
+              val buffer = fn(chunk)
+              waitIfPaused >> Sync[F].delay(itemHandler.handle(buffer))
+            }
+            .onFinalizeCase({
+              case Succeeded =>
+                Sync[F].delay(streamEndHandler.handle(null))
+              case Canceled =>
+                Sync[F].delay(streamErrorHandler.handle(new Exception("Cancelled!")))
+              case Errored(cause) =>
+                Sync[F].delay(streamErrorHandler.handle(cause))
+            })
+            .compile
+            .drain
+        )
+
+        new ReadStream[O] { self =>
+          override def handler(handler: Handler[O]): ReadStream[O] = {
+            itemHandler = handler
+            self
+          }
+
+          override def endHandler(handler: Handler[Void]): ReadStream[O] = {
+            streamEndHandler = handler
+            self
+          }
+
+          override def exceptionHandler(handler: Handler[Throwable]): ReadStream[O] = {
+            streamErrorHandler = handler
+            self
+          }
+
+          override def pause(): ReadStream[O] = {
+            pauseGate.updateAndGet { current =>
+              if (current == null || current.isDone) new CompletableFuture[Unit]()
+              else current
+            }
+            self
+          }
+
+          override def resume(): ReadStream[O] = {
+            Option(pauseGate.getAndSet(null)).foreach(_.complete(()))
+            self
+          }
+
+          override def fetch(n: Long): ReadStream[O] =
+            self
         }
+      }
 
       override def fromReadStream(readStream: ReadStream[Buffer], maxBytes: Option[Long]): Stream[F, Byte] = {
         val stream = fromReadStreamInternal(readStream).map(buffer => Chunk.array(buffer.getBytes)).unchunks
