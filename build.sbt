@@ -92,6 +92,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   evictionErrorLevel := Level.Info
 )
 
+lazy val javaOutputVersion = settingKey[String]("Java version to emit Scala 3 bytecode for")
+
 val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
 
 val enableMimaSettings = Seq(
@@ -135,10 +137,13 @@ val commonJvmSettings: Seq[Def.Setting[_]] = Seq(
       case _            => Seq.empty[String]
     }
   },
-  // -Yfuture-lazy-vals is backed by VarHandle, hence the Java 11 output. It only exists in the 3.3 LTS line;
-  // from 3.8 on the same encoding is the default.
+  // -Yfuture-lazy-vals is backed by VarHandle, hence the Java output version. It only exists in the 3.3 LTS
+  // line; from 3.8 on the same encoding is the default.
+  javaOutputVersion := "11",
   scalacOptions ++=
-    (if (scalaVersion.value == scala3) Seq("-Yfuture-lazy-vals", "-java-output-version", "11") else Seq.empty)
+    (if (scalaVersion.value == scala3)
+       Seq("-Yfuture-lazy-vals", "-java-output-version", javaOutputVersion.value)
+     else Seq.empty)
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -1690,7 +1695,10 @@ lazy val nettyServerSync: ProjectMatrix =
         "com.softwaremill.ox" %% "flow-reactive-streams" % Versions.ox
       )
     )
-    .jvmPlatform(scalaVersions = List(scala3), settings = commonJvmSettings)
+    .jvmPlatform(
+      scalaVersions = List(scala3),
+      settings = commonJvmSettings ++ Seq(javaOutputVersion := "21") // ox requires JDK 21
+    )
     .dependsOn(nettyServer, serverTests % Test)
 
 lazy val nettyServerCats: ProjectMatrix = nettyServerProject("cats", catsEffect)
