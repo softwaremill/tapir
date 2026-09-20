@@ -2,8 +2,9 @@ package sttp.tapir.redoc.bundle
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
+import com.comcast.ip4s.Port
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import org.scalatest.Assertion
 import org.scalatest.funsuite.AsyncFunSuite
@@ -67,10 +68,11 @@ class RedocInterpreterTest extends AsyncFunSuite with Matchers {
           .fromEndpoints[IO](List(testEndpoint), "The tapir library", "1.0.0")
       )
 
-    BlazeServerBuilder[IO]
-      .bindHttp(0, "localhost")
+    EmberServerBuilder
+      .default[IO]
+      .withPort(Port.fromInt(0).get)
       .withHttpApp(Router(s"/${context.mkString("/")}" -> redocUIRoutes).orNotFound)
-      .resource
+      .build
       .use { server =>
         IO {
           val port = server.address.getPort

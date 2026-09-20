@@ -449,10 +449,7 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
     publish / skip := true,
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
-      // blaze-server is versioned independently and pulls in an older http4s-server; pin it to the core version so
-      // the server and core bytecode stay consistent (mixing them caused a NoSuchMethodError with core 0.23.35)
-      "org.http4s" %% "http4s-server" % Versions.http4s,
+      "org.http4s" %% "http4s-ember-server" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       logback
     ),
@@ -605,7 +602,7 @@ lazy val perfTestsE2e: ProjectMatrix = (projectMatrix in file("perf-tests/perf-t
       "io.github.classgraph" % "classgraph" % "4.8.195",
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
+      "org.http4s" %% "http4s-ember-server" % Versions.http4s,
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       logback
     ),
@@ -1332,7 +1329,7 @@ lazy val swaggerUiBundle: ProjectMatrix = (projectMatrix in file("docs/swagger-u
     name := "tapir-swagger-ui-bundle",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test,
+      "org.http4s" %% "http4s-ember-server" % Versions.http4s % Test,
       scalaTest.value % Test
     )
   )
@@ -1358,7 +1355,7 @@ lazy val redocBundle: ProjectMatrix = (projectMatrix in file("docs/redoc-bundle"
     name := "tapir-redoc-bundle",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test,
+      "org.http4s" %% "http4s-ember-server" % Versions.http4s % Test,
       scalaTest.value % Test
     )
   )
@@ -1384,7 +1381,7 @@ lazy val scalarBundle: ProjectMatrix = (projectMatrix in file("docs/scalar-bundl
     name := "tapir-scalar-bundle",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test,
+      "org.http4s" %% "http4s-ember-server" % Versions.http4s % Test,
       scalaTest.value % Test
     )
   )
@@ -1519,7 +1516,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     scalaVersions = scala2And3Versions,
     settings = commonJvmSettings ++ Seq {
       libraryDependencies ++= Seq(
-        "org.http4s" %%% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
+        "org.http4s" %%% "http4s-ember-server" % Versions.http4s % Test
       )
     }
   )
@@ -1541,7 +1538,7 @@ lazy val http4sServerZio: ProjectMatrix = (projectMatrix in file("server/http4s-
     name := "tapir-http4s-server-zio",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer % Test
+      "org.http4s" %% "http4s-ember-server" % Versions.http4s % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
@@ -2125,7 +2122,7 @@ lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-cli
     name := "tapir-http4s-client",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-core" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-client" % Versions.http4sBlazeClient % Test,
+      "org.http4s" %% "http4s-ember-client" % Versions.http4s % Test,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
     )
   )
@@ -2377,7 +2374,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.github.jwt-scala" %% "jwt-circe" % Versions.jwtScala,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
+      "org.http4s" %% "http4s-ember-server" % Versions.http4s,
       "org.mock-server" % "mockserver-netty" % Versions.mockServer,
       "io.opentelemetry" % "opentelemetry-sdk" % Versions.openTelemetry,
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % Versions.openTelemetry,
@@ -2456,7 +2453,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     dependencyOverrides += "com.lihaoyi" %% "upickle" % Versions.upickle3,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play-netty-server" % Versions.playServer,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sBlazeServer,
+      "org.http4s" %% "http4s-ember-server" % Versions.http4s,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "asyncapi-circe-yaml" % Versions.sttpApispec
     )
