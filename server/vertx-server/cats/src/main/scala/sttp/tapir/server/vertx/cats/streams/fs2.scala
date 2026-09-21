@@ -47,17 +47,17 @@ object fs2 {
             _ <- GenSpawn[F].start(
               stream
                 .evalMap({ chunk =>
-                  val buffer = fn(chunk)
                   state.get.flatMap {
                     case StreamState(None, handler, _, _) =>
-                      Sync[F].delay(handler.handle(buffer))
+                      Sync[F].delay(handler.handle(fn(chunk)))
                     case StreamState(Some(promise), _, _, _) =>
                       for {
                         _ <- promise.get
                         // Handler in state may be updated since the moment when we wait
                         // promise so let's get more recent version.
                         updatedState <- state.get
-                      } yield updatedState.handler.handle(buffer)
+                        _ <- Sync[F].delay(updatedState.handler.handle(fn(chunk)))
+                      } yield ()
                   }
                 })
                 .onFinalizeCase({

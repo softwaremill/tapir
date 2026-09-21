@@ -1,10 +1,9 @@
 package sttp.tapir.client.http4s
 
-import org.http4s.blaze.client.BlazeClientBuilder
+import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.{Request, Response, Uri}
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
-import scala.concurrent.ExecutionContext.global
 import scala.concurrent.Future
 import cats.effect._
 import cats.effect.unsafe.IORuntime
@@ -44,7 +43,9 @@ abstract class Http4sClientTests[R] extends ClientTests[R] {
   private implicit val ioRT: IORuntime = cats.effect.unsafe.implicits.global
 
   private def sendAndParseResponse[Result](request: Request[IO], parseResponse: Response[IO] => IO[Result]) =
-    BlazeClientBuilder[IO](global).resource
+    EmberClientBuilder
+      .default[IO]
+      .build
       .use { client =>
         client.run(request).use(parseResponse)
       }
