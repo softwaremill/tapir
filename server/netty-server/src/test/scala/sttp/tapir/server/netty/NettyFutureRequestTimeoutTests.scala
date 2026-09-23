@@ -90,26 +90,37 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         .unsafeToFuture()
     },
     Test("respond with status 408 when not all declared request body bytes are received") {
-      statusLinesForTimingOutRequest { (socket, port) =>
+      statusLinesFromShortTimeoutServer { (socket, port) =>
         for {
-          _ <- send(socket, requestHead(port))
-          // the pause makes the fragment arrive as its own read, as a stalled upload would
-          _ <- IO.sleep(pauseBetweenWrites)
-          _ <- send(socket, bodyFragment)
-        } yield ()
+          _ <- send(socket, incompleteRequestHead(port))
+          status <- readStatusLine(socket)
+        } yield List(status)
       }.map { statusLines =>
         statusLines shouldBe List("HTTP/1.1 408 Request Timeout")
       }.unsafeToFuture()
     },
     Test("respond with status 408 for an incomplete request following a complete one on the same connection") {
-      statusLinesForTimingOutRequest { (socket, port) =>
+      statusLinesFromShortTimeoutServer { (socket, port) =>
         for {
-          _ <- send(socket, requestHead(port, bodyFragment.length) ++ bodyFragment)
-          _ <- IO.sleep(pauseBetweenWrites)
-          _ <- send(socket, requestHead(port))
-        } yield ()
+          _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
+          first <- readStatusLine(socket)
+          _ <- send(socket, incompleteRequestHead(port))
+          second <- readStatusLine(socket)
+        } yield List(first, second)
       }.map { statusLines =>
         statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
+    Test("respond with status 503, not 408, for a slow but complete request following a complete fast one on the same connection") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
+          first <- readStatusLine(socket)
+          _ <- send(socket, requestHead(port, slowBody.length) ++ slowBody)
+          second <- readStatusLine(socket)
+        } yield List(first, second)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 503 Service Unavailable")
       }.unsafeToFuture()
     }
   )
