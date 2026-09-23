@@ -13,11 +13,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: ExecutionContext) {
 
-  private val shortRequestTimeout = 1.second
-
   val completeBody: Array[Byte] = "test".getBytes(US_ASCII)
-
   val slowBody: Array[Byte] = "slow".getBytes(US_ASCII)
+
+  private val shortRequestTimeout = 1.second
+  private val socketReadTimeout = shortRequestTimeout * 20
   private val slowBodyString = new String(slowBody, US_ASCII)
 
   def requestHead(port: Int, contentLength: Int): Array[Byte] =
@@ -40,10 +40,10 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
     if (headers.exists(_.toLowerCase.contains("chunked"))) {
       var chunkSize = in.readLine()
       while (chunkSize != "0") {
-        in.readLine() // the chunk's data
+        in.readLine()
         chunkSize = in.readLine()
       }
-      in.readLine() // blank line trailing the terminal chunk
+      in.readLine()
     }
     statusLine
   }
@@ -75,8 +75,6 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
         }
       }
   }
-
-  private val socketReadTimeout = shortRequestTimeout * 20
 
   private def clientSocket(port: Int): Socket = {
     val socket = new Socket("localhost", port)
