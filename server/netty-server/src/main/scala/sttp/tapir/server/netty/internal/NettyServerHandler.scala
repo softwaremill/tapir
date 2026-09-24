@@ -23,7 +23,7 @@ import sttp.tapir.server.netty.NettyResponseContent.{
 }
 import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, SubscribeTrackingStreamedHttpRequest}
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
-import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, RequestBodyCompletionTracker, Route}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -72,8 +72,13 @@ class NettyServerHandler[F[_]](
   // connection is closed along with the response. A plain var, as it's only touched on the channel's event loop.
   private[this] var requestTimeoutHandled = false
 
+  // Present only if a request timeout is set, and the pipeline has the HTTP codec registered under `ServerCodecHandlerName`. If absent, an
+  // exceeded request timeout is always reported as 503.
+  private[this] var requestBodyTracker: Option[RequestBodyCompletionTracker] = None
+
   private val logger = LoggerFactory.getLogger(getClass.getName)
   private final val WebSocketAutoPingHandlerName = "wsAutoPingHandler"
+  private final val RequestBodyTrackerHandlerName = "requestBodyTracker"
 
   override def handlerAdded(ctx: ChannelHandlerContext): Unit =
     if (ctx.channel.isActive) {
@@ -90,6 +95,11 @@ class NettyServerHandler[F[_]](
       eventLoopContext = ExecutionContext.fromExecutor(ctx.channel.eventLoop)
       config.idleTimeout.foreach { idleTimeout =>
         ctx.pipeline().addFirst(new IdleStateHandler(0, 0, idleTimeout.toMillis, TimeUnit.MILLISECONDS))
+      }
+      if (config.requestTimeout.isDefined && ctx.pipeline().context(ServerCodecHandlerName) != null) {
+        val tracker = new RequestBodyCompletionTracker
+        ctx.pipeline().addAfter(ServerCodecHandlerName, RequestBodyTrackerHandlerName, tracker)
+        requestBodyTracker = Some(tracker)
       }
       // When the channel closes we want to cancel any pending dispatches.
       // Since the listener will be executed from the channels EventLoop everything is thread safe.
@@ -113,7 +123,7 @@ class NettyServerHandler[F[_]](
 
   private def handleRequestTimeout(ctx: ChannelHandlerContext): Unit = {
     val timeoutDescription = config.requestTimeout.map(_.toString).getOrElse("(not set)")
-    if (RequestBodyCompletionTracker.wasRequestBodyFullyReceived(ctx)) {
+    if (requestBodyTracker.forall(_.bodyFullyReceived)) {
       logger.error(s"Closing connection with 503: no response produced within the request timeout of $timeoutDescription")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
@@ -369,7 +379,7 @@ class NettyServerHandler[F[_]](
       handshakeReq: HttpRequest
   ) = {
     ctx.pipeline().remove(this)
-    Option(ctx.pipeline().get(classOf[RequestBodyCompletionTracker])).foreach(tracker => ctx.pipeline().remove(tracker))
+    requestBodyTracker.foreach(ctx.pipeline().remove(_))
     ctx
       .pipeline()
       .addAfter(

@@ -27,8 +27,7 @@ import scala.concurrent.duration._
   *
   * @param initPipeline
   *   The function to create the Netty pipeline, using the configuration instance, the pipeline created so far, and the handler which
-  *   contains tapir's server processing logic. A pipeline without [[RequestBodyCompletionTracker]] reports an exceeded `requestTimeout` as
-  *   `503`, never `408`.
+  *   contains tapir's server processing logic.
   *
   * @param requestTimeout
   *   The maximum duration between receiving the request headers and producing a response; it therefore also bounds how long the client has
@@ -150,10 +149,6 @@ object NettyConfig {
     pipeline.addLast(ServerCodecHandlerName, new HttpServerCodec())
     if (cfg.compressionConfig.enabled) {
       pipeline.addLast(new HttpContentCompressor())
-    }
-    // only read when a request timeout fires; placement is significant, see RequestBodyCompletionTracker
-    if (cfg.requestTimeout.isDefined) {
-      pipeline.addLast(new RequestBodyCompletionTracker)
     }
     pipeline.addLast(new HttpStreamsServerHandler())
     pipeline.addLast(handler)
