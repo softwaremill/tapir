@@ -29,6 +29,9 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
     interval = org.scalatest.time.Span(150, org.scalatest.time.Millis)
   )
 
+  private val timingOutRequest = new TimingOutRequestSpecData(eventLoopGroup)
+  import timingOutRequest._
+
   def tests(): List[Test] = List(
     Test("properly update metrics when a request times out") {
       val e = endpoint.post
@@ -85,6 +88,40 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
           }
         }
         .unsafeToFuture()
+    },
+    Test("respond with status 408 when not all declared request body bytes are received") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, incompleteRequestHead(port))
+          status <- readStatusLine(socket)
+        } yield List(status)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
+    Test("respond with status 408 for an incomplete request following a complete one on the same connection") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
+          first <- readStatusLine(socket)
+          _ <- send(socket, incompleteRequestHead(port))
+          second <- readStatusLine(socket)
+        } yield List(first, second)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
+    Test("respond with status 503, not 408, for a slow but complete request following a complete fast one on the same connection") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
+          first <- readStatusLine(socket)
+          _ <- send(socket, requestHead(port, slowBody.length) ++ slowBody)
+          second <- readStatusLine(socket)
+        } yield List(first, second)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 503 Service Unavailable")
+      }.unsafeToFuture()
     }
   )
 }
