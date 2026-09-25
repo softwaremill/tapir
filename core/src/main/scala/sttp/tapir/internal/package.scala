@@ -360,4 +360,9 @@ package object internal {
     case null          => true
     case _             => false
   }
+
+  def isSecondaryBodyInput(input: EndpointInput[?]): Boolean = input match {
+    case b: EndpointIO.Body[?, ?] => b.isSecondary
+    case _                        => false
+  }
 }
