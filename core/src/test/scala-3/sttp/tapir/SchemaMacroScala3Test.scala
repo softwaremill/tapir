@@ -18,6 +18,10 @@ class SchemaMacroScala3Test extends AnyFlatSpec with Matchers:
     coproduct.subtypeSchema(Fruit.Apple).map(_.value) shouldBe Some(Fruit.Apple)
   }
 
+  it should "apply customise annotations when deriving a schema for an enum" in {
+    Schema.derivedEnumeration[CustomisedFruit].defaultStringBased.format shouldBe Some("fruit")
+  }
+
   it should "derive schema for union types" in {
     // when
     val s: Schema[String | Int] = Schema.derivedUnion
@@ -162,6 +166,10 @@ class SchemaMacroScala3Test extends AnyFlatSpec with Matchers:
 
 object SchemaMacroScala3Test:
   enum Fruit:
+    case Apple, Banana
+
+  @Schema.annotations.customise(_.format("fruit"))
+  enum CustomisedFruit:
     case Apple, Banana
 
   type StringOrInt = String | Int

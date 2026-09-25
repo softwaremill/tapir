@@ -374,6 +374,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
       case _ => Assertions.fail()
     }
     actual.description shouldBe expected.description
+    actual.format shouldBe Some("letters")
   }
 
   it should "derive schema for a scala enumeration and enrich schema" in {
@@ -402,6 +403,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     actual.description shouldBe expected.description
     actual.default shouldBe expected.default
     actual.name shouldBe expected.name
+    actual.format shouldBe Some("country")
   }
 
   it should "derive a customised schema for a scala enumeration and enrich schema" in {

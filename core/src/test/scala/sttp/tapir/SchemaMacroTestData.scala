@@ -50,12 +50,14 @@ object SchemaMacroTestData {
   @description("country")
   @default(Countries.PL)
   @encodedName("country-encoded-name")
+  @customise(_.format("country"))
   object Countries extends Enumeration {
     type Country = Value
     val PL, NL = Value
   }
 
   @description("it's a small alphabet")
+  @customise(_.format("letters"))
   sealed trait Letters
   object Letters {
     case object A extends Letters
