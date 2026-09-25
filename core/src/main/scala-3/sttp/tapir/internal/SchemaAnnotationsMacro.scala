@@ -73,7 +73,12 @@ private[tapir] object SchemaAnnotationsMacro {
         sa => firstAnnArg(EncodedNameAnn).map(arg => '{ ${ sa }.copy(encodedName = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => '{ ${ sa }.copy(validate = ${ Expr.ofList(allAnnArg(ValidateAnn).map(_.asExprOf[sttp.tapir.Validator[T]])) }) },
         sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) },
-        sa => allAnnArg(CustomiseAnn).foldLeft(sa)((acc, arg) => '{ ${ acc }.withCustomise(${ arg.asExprOf[Schema[Any] => Schema[Any]] }) })
+        sa => {
+          // annotations are listed in reverse declaration order
+          val customise =
+            allAnnArg(CustomiseAnn).reverse.map(arg => '{ ${ arg.asExprOf[Schema[?] => Schema[?]] }.asInstanceOf[Schema[T] => Schema[T]] })
+          '{ ${ sa }.copy(customise = ${ Expr.ofList(customise) }) }
+        }
       )
 
     transformations.foldLeft('{ SchemaAnnotations.empty[T] })((sa, t) => t(sa))

@@ -508,14 +508,11 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * sealed trait OrderStatus
       * }}}
       *
-      * All `@customise` annotations are applied, in declaration order. `Schema.derived` and auto derivation apply annotations in
-      * declaration order; `Schema.derivedEnumeration` and the enumeration / enumeratum codecs apply `f` after the metadata annotations and
-      * before [[validate]] / [[validateEach]].
-      *
-      * `f` is `Schema[Any] => Schema[Any]`, not `Schema[?] => Schema[?]`: the Scala 2 macro splices its tree, and an existential parameter
-      * type carries a skolem that can't be lifted.
+      * All `@customise` annotations are applied. `Schema.derived` and auto derivation apply annotations in declaration order (reversed in
+      * Scala 3). `Schema.derivedEnumeration` and the enumeration / enumeratum codecs apply them in declaration order, after the metadata
+      * annotations and before [[validate]] / [[validateEach]].
       */
-    class customise(val f: Schema[Any] => Schema[Any]) extends StaticAnnotation with Serializable
+    class customise(val f: Schema[?] => Schema[?]) extends StaticAnnotation with Serializable
   }
 
   /** Wraps the given schema with a single-field product, where `fieldName` maps to `schema`.

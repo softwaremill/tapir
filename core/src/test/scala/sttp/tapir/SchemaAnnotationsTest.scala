@@ -3,7 +3,7 @@ package sttp.tapir
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
-import sttp.tapir.SchemaAnnotationsTestData.MyString
+import sttp.tapir.SchemaAnnotationsTestData.{MyCustomisedString, MyString}
 
 class SchemaAnnotationsTest extends AnyFlatSpec with Matchers {
   behavior of "SchemaAnnotations enrich"
@@ -25,16 +25,20 @@ class SchemaAnnotationsTest extends AnyFlatSpec with Matchers {
       .validate(Validator.pass[MyString])
   }
 
+  it should "apply customise annotations in declaration order, after the metadata annotations" in {
+    val enriched = implicitly[SchemaAnnotations[MyCustomisedString]].enrich(Schema.string[MyCustomisedString])
+
+    enriched.format shouldBe Some("c1-c2")
+  }
+
   behavior of "SchemaAnnotations copy"
 
-  // `copy` is hand-written, hence the explicit type argument
-  it should "carry over the customise functions" in {
-    val baseSchema: Schema[MyString] = Schema.string[MyString]
-    val annotations = SchemaAnnotations.empty[MyString].withCustomise(_.format("f"))
+  it should "keep the customise functions" in {
+    val annotations = implicitly[SchemaAnnotations[MyCustomisedString]].copy(description = Some("d"))
 
-    val enriched = annotations.copy[MyString](description = Some("d")).enrich(baseSchema)
+    val enriched = annotations.enrich(Schema.string[MyCustomisedString])
 
     enriched.description shouldBe Some("d")
-    enriched.format shouldBe Some("f")
+    enriched.format shouldBe Some("c1-c2")
   }
 }
