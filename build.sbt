@@ -96,19 +96,15 @@ val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
 
 val enableMimaSettings = Seq(
   mimaPreviousArtifacts := {
-    // currently only 2.* versions are stable; skipping mima for scala3
-    if (scalaVersion.value == scala3) Set.empty
-    else {
-      val current = version.value
-      val isRcOrMilestone = current.contains("M") || current.contains("RC")
-      if (!isRcOrMilestone) {
-        val previous = previousStableVersion.value
-        println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
-        previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
-      } else {
-        println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
-        Set.empty
-      }
+    val current = version.value
+    val isRcOrMilestone = current.contains("M") || current.contains("RC")
+    if (!isRcOrMilestone) {
+      val previous = previousStableVersion.value
+      println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
+      previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
+    } else {
+      println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
+      Set.empty
     }
   },
   mimaBinaryIssueFilters ++= Seq(
