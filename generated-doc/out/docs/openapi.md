@@ -14,7 +14,7 @@ To generate OpenAPI documentation and expose it using the [Swagger UI](https://g
 in a single step, first add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "1.13.32"
 ```
 
 Then, you can interpret a list of endpoints using `SwaggerInterpreter`. The result will be a list of file-serving 
@@ -56,7 +56,7 @@ for details.
 For [Redoc](https://github.com/redocly/redoc), you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % "1.13.32"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.RedocInterpreter` class.
@@ -66,7 +66,7 @@ And the server endpoints can be generated using the `sttp.tapir.redoc.bundle.Red
 For [Scalar](https://github.com/scalar/scalar), you'll need the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-scalar-bundle" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-scalar-bundle" % "1.13.32"
 ```
 
 And the server endpoints can be generated using the `sttp.tapir.scalar.bundle.ScalarInterpreter` class.
@@ -76,7 +76,7 @@ And the server endpoints can be generated using the `sttp.tapir.scalar.bundle.Sc
 To generate the docs in the OpenAPI yaml format, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.13.32"
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
@@ -144,7 +144,7 @@ For example, generating the OpenAPI 3.0.3 YAML string can be achieved by perform
 
 Firstly add dependencies:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "1.13.32"
 "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "..." // see https://github.com/softwaremill/sttp-apispec
 ```
 
@@ -174,12 +174,12 @@ The modules `tapir-swagger-ui` and `tapir-redoc` contain server endpoint definit
 yaml format, will expose it using the given context path. To use, add as a dependency either
 `tapir-swagger-ui`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui" % "1.13.32"
 ```
 
 or `tapir-redoc`:
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc" % "1.13.32"
 ```
 
 Then, you'll need to pass the server endpoints to your server interpreter. For example, using akka-http:
@@ -233,6 +233,72 @@ Options can be customised by providing an instance of `OpenAPIDocsOptions` to th
 All named schemas (that is, schemas which have the `Schema.name` property defined) will be referenced at point of
 use, and their definitions will be part of the `components` section. If you'd like a schema to be inlined, instead
 of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
+
+## Reusable parameters and headers
+
+By default, every parameter is inlined into each operation that uses it. A parameter shared by many endpoints is
+therefore serialised in full many times over.
+
+To emit a parameter once into the `components` section and reference it from each use site, mark it with
+`.reusableComponent`. The marker is available on a `query`, `path` or `cookie` parameter, and on a header — request or
+response:
+
+```scala
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.ReusableComponentAttribute.*
+
+val tenantId = query[String]("tenantId").description("The tenant").reusableComponent
+
+val listBooks = endpoint.get.in("books").in(tenantId)
+val listMagazines = endpoint.get.in("magazines").in(tenantId)
+```
+
+Both operations then contain `$ref: '#/components/parameters/tenantId'`, and the definition appears once under
+`components.parameters`.
+
+The same marker works for request headers (which are also emitted into `components.parameters`) and response headers (emitted into `components.headers`).
+
+Response header example:
+
+```scala
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.ReusableComponentAttribute.*
+
+val rateLimit = header[String]("X-Rate-Limit").description("Requests left").reusableComponent
+
+val listBooks = endpoint.get.in("books").out(stringBody).out(rateLimit)
+val listMagazines = endpoint.get.in("magazines").out(stringBody).out(rateLimit)
+```
+
+`components.parameters` and `components.headers` are independent namespaces, so the same name may appear in both — as it
+does when one `val` is used as a request header on one endpoint and a response header on another.
+
+The component's key defaults to the parameter's own name. Pass one explicitly if you need a different key, or to
+resolve a clash:
+
+```scala
+import sttp.tapir.*
+import sttp.tapir.docs.openapi.ReusableComponentAttribute.*
+
+val tenantId = query[String]("tenantId").reusableComponent("TenantId")
+```
+
+Notes:
+
+* Each use site decides for itself: `query[String]("tenantId")` is inlined, `query[String]("tenantId").reusableComponent`
+  is referenced. Marking a shared `val` once covers every endpoint that uses it.
+* Marked parameters that are identical share one component, so the same parameter defined in two places is emitted once.
+* The marker is copied along with the parameter, so modifying a marked `val` at one use site — e.g. adding an example —
+  produces a second, different component claiming the same key, and generation fails. If you want per-endpoint
+  variations, keep the base parameter unmarked and mark the use sites that should be referenced.
+* A marked parameter is always moved into `components`, even when only one endpoint uses it, so the document does not
+  change shape as endpoints are added or removed.
+* To mark a path capture, either name it (`path[String]("bookId")`) or give the component an explicit key.
+* A marked input that is hidden (`.schema(_.hidden(true))`) produces no component. `hidden` has no effect on response
+  headers, so a marked one always becomes a component.
+* Marking an input inside an authentication input, e.g. `auth.apiKey(header[String]("X-Api-Key").reusableComponent)`, has
+  no effect: authentication inputs are emitted once under `components.securitySchemes` and referenced from each
+  operation's `security`.
 
 ## Authentication inputs and security requirements
 

@@ -30,10 +30,10 @@ dependency:
 
 ```scala
 // used below, sttp-client v4
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.13.32"
 
 // for sttp-client v3
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.13.32"
 ```
 
 Let's assume you are using the [pekko http](server/pekkohttp.md) interpreter. Given the following server endpoint:
@@ -155,10 +155,10 @@ Similarly as when testing server interpreters, add the dependency:
 
 ```scala
 // used below, sttp-client v4
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub4-server" % "1.13.32"
 
 // for sttp-client v3
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.13.32"
 ```
 
 And the following imports:
@@ -212,7 +212,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "sttp-mock-server" % "1.13.32"
 ```
 
 Imports:
@@ -287,7 +287,7 @@ result == out
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-testing" % "1.13.32"
 ```
 
 ### Shadowed endpoints
@@ -313,7 +313,7 @@ Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x/y/x, is shadowed by: GET /x/*, GET /x, is shadowed by: GET /x/*)"
+// res2: String = "Set(GET /x, is shadowed by: GET /x/*, GET /x/y/x, is shadowed by: GET /x/*)"
 ```
 
 Example 2:
@@ -410,7 +410,7 @@ The `OpenAPIVerifier` provides utilities for verifying that client and server en
 To use the `OpenAPIVerifier`, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-verifier" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-verifier" % "1.13.32"
 ```
 
 The `OpenAPIVerifier` supports two key verification scenarios:
