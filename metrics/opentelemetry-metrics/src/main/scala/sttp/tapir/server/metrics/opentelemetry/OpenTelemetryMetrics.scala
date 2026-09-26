@@ -82,9 +82,6 @@ object OpenTelemetryMetrics {
     *   - `http.server.active_requests` (up-down-counter)
     *   - `http.server.request.total` (counter) - not part of the OpenTelemetry HTTP semantic conventions
     *   - `http.server.request.duration` (histogram, in seconds) - follows the OpenTelemetry HTTP server conventions
-    *
-    * The `phase` attribute is added to the duration histogram and can be either `headers` or `body` - request duration is measured
-    * separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
   def default[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] =
     default(defaultMeter(otel), OpenTelemetryAttributes)
@@ -97,9 +94,6 @@ object OpenTelemetryMetrics {
     *   - `http.server.active_requests` (up-down-counter)
     *   - `http.server.request.total` (counter) - not part of the OpenTelemetry HTTP semantic conventions
     *   - `http.server.request.duration` (histogram, in seconds) - follows the OpenTelemetry HTTP server conventions
-    *
-    * The `phase` attribute is added to the duration histogram and can be either `headers` or `body` - request duration is measured
-    * separately up to the point where the headers are determined, and then once again when the whole response body is complete.
     */
   def default[F[_]](meter: Meter): OpenTelemetryMetrics[F] = default(meter, OpenTelemetryAttributes)
 
@@ -146,7 +140,7 @@ object OpenTelemetryMetrics {
             .onResponseBody { (ep, res) =>
               m.eval {
                 val otLabels =
-                  merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Right(res), None))
+                  merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Right(res)))
 
                 counter.add(1, otLabels)
               }
@@ -154,14 +148,14 @@ object OpenTelemetryMetrics {
             .onException { (ep, ex) =>
               m.eval {
                 val otLabels =
-                  merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Left(ex), None))
+                  merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Left(ex)))
                 counter.add(1, otLabels)
               }
             }
             .onInterceptorResponse { res =>
               m.eval {
                 val otLabels =
-                  merge(asOpenTelemetryAttributesFromRequest(labels, req), asOpenTelemetryAttributes(labels, Right(res), None))
+                  merge(asOpenTelemetryAttributesFromRequest(labels, req), asOpenTelemetryAttributes(labels, Right(res)))
                 counter.add(1, otLabels)
               }
             }
@@ -182,22 +176,12 @@ object OpenTelemetryMetrics {
           val requestStartNanos = System.nanoTime()
           def duration = (System.nanoTime() - requestStartNanos).toDouble / 1e9
           EndpointMetric()
-            .onResponseHeaders { (ep, res) =>
-              m.eval {
-                val otLabels =
-                  merge(
-                    asOpenTelemetryAttributes(labels, ep, req),
-                    asOpenTelemetryAttributes(labels, Right(res), Some(labels.forResponsePhase.headersValue))
-                  )
-                recorder.record(duration, otLabels)
-              }
-            }
             .onResponseBody { (ep, res) =>
               m.eval {
                 val otLabels =
                   merge(
                     asOpenTelemetryAttributes(labels, ep, req),
-                    asOpenTelemetryAttributes(labels, Right(res), Some(labels.forResponsePhase.bodyValue))
+                    asOpenTelemetryAttributes(labels, Right(res))
                   )
                 recorder.record(duration, otLabels)
               }
@@ -205,7 +189,7 @@ object OpenTelemetryMetrics {
             .onException { (ep, ex) =>
               m.eval {
                 val otLabels =
-                  merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Left(ex), None))
+                  merge(asOpenTelemetryAttributes(labels, ep, req), asOpenTelemetryAttributes(labels, Left(ex)))
                 recorder.record(duration, otLabels)
               }
             }
@@ -214,7 +198,7 @@ object OpenTelemetryMetrics {
                 val otLabels =
                   merge(
                     asOpenTelemetryAttributesFromRequest(labels, req),
-                    asOpenTelemetryAttributes(labels, Right(res), Some(labels.forResponsePhase.bodyValue))
+                    asOpenTelemetryAttributes(labels, Right(res))
                   )
                 recorder.record(duration, otLabels)
               }
@@ -234,12 +218,11 @@ object OpenTelemetryMetrics {
     l.forEndpoint.foldLeft(builder)((b, label) => { b.put(label._1, label._2(ep)) }).build()
   }
 
-  private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Attributes = {
+  private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[_]]): Attributes = {
     val builder = Attributes.builder()
     l.forResponse.foreach { case (key, valueFn) =>
       valueFn(res).foreach(value => builder.put(key, value))
     }
-    phase.foreach(v => builder.put(l.forResponsePhase.name, v))
     builder.build()
   }
 

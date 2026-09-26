@@ -15,6 +15,7 @@ import org.typelevel.otel4s.semconv.attributes.{ErrorAttributes, HttpAttributes,
 import org.typelevel.otel4s.semconv.experimental.metrics.HttpExperimentalMetrics
 import org.typelevel.otel4s.semconv.metrics.HttpMetrics
 import sttp.capabilities.Streams
+import sttp.model.Method
 import sttp.model.Uri._
 import sttp.monad.MonadError
 import sttp.tapir.{AttributeKey => _, _}
@@ -25,6 +26,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.TestUtil.StringToResponseBody
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
+import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectInterceptor}
 import sttp.tapir.server.interpreter._
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabelsTyped}
 import sttp.tapir.server.metrics.otel4s.Otel4sMetrics.{requestAttrs, responseAttrs}
@@ -145,6 +147,52 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
     ).unsafeToFuture()
   }
 
+  it should "record request duration for interceptor response" in {
+    OtelJavaTestkit
+      .inMemory[IO]()
+      .use(testkit =>
+        for {
+          meter <- testkit.meterProvider.get("Test Meter")
+          interpreter = new ServerInterpreter[Any, IO, String, NoStreams](
+            serverEndpoints = _ =>
+              List(
+                endpoint.get
+                  .in("person")
+                  .in(query[String]("name"))
+                  .out(stringBody)
+                  .serverLogic[IO](_ => IO(Right("hello")))
+              ),
+            requestBody = ioTestRequestBody,
+            toResponseBody = StringToResponseBody,
+            interceptors = List(
+              Otel4sMetrics[IO](Nil).addRequestsDuration(meter).metricsInterceptor(),
+              new RejectInterceptor(DefaultRejectHandler[IO])
+            ),
+            deleteFile = _ => IO.pure(())
+          )
+          _ <- interpreter(serverRequestFromUri(uri"http://example.com/person?name=Adam", _method = Method.POST))
+          metrics <- testkit.collectMetrics
+        } yield assertMetrics(
+          metrics,
+          List(
+            MetricExpectation
+              .histogram(HttpMetrics.ServerRequestDuration.name)
+              .pointCount(1)
+              .containsPoints(
+                PointExpectation.histogram
+                  .count(1L)
+                  .attributesExact(
+                    HttpAttributes.HttpRequestMethod("POST"),
+                    UrlAttributes.UrlScheme("http"),
+                    HttpAttributes.HttpResponseStatusCode(405L)
+                  )
+              )
+          )
+        )
+      )
+      .unsafeToFuture()
+  }
+
   private def testEndpointWithMetrics(endpoint: ServerEndpoint[Any, IO], requests: ServerRequest*)(
       expectedCount: Int,
       expectedStatusCode: Long,
@@ -207,8 +255,8 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
         onRequest = (req, gaugeM, m) =>
           m.map(gaugeM) { gauge =>
             EndpointMetric()
-              .onResponseBody((ep, res) => gauge.record(10, requestAttrs(labels, ep, req) ++ responseAttrs(labels, Right(res), None)))
-              .onException((ep, ex) => gauge.record(11, requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex), None)))
+              .onResponseBody((ep, res) => gauge.record(10, requestAttrs(labels, ep, req) ++ responseAttrs(labels, Right(res))))
+              .onException((ep, ex) => gauge.record(11, requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex))))
           }
       )
 
@@ -270,35 +318,17 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
           )
       )
 
-  private def requestDurationExpectation(expectedCount: Int, expectedStatusCode: Long, isFailure: Boolean): MetricExpectation.Histogram = {
-    val base = MetricExpectation
+  private def requestDurationExpectation(expectedCount: Int, expectedStatusCode: Long, isFailure: Boolean): MetricExpectation.Histogram =
+    MetricExpectation
       .histogram(HttpMetrics.ServerRequestDuration.name)
       .unit(HttpMetrics.ServerRequestDuration.unit)
       .description(HttpMetrics.ServerRequestDuration.description)
-
-    if (isFailure) {
-      base
-        .pointCount(1)
-        .containsPoints(
-          PointExpectation.histogram
-            .count(expectedCount.toLong)
-            .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
-        )
-    } else {
-      base
-        .pointCount(2)
-        .containsPoints(
-          PointExpectation.histogram
-            .count(expectedCount.toLong)
-            .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ phaseAttribute("headers")): _*)
-        )
-        .containsPoints(
-          PointExpectation.histogram
-            .count(expectedCount.toLong)
-            .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ phaseAttribute("body")): _*)
-        )
-    }
-  }
+      .pointCount(1)
+      .containsPoints(
+        PointExpectation.histogram
+          .count(expectedCount.toLong)
+          .attributesExact((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
+      )
 
   private def customGaugeExpectation(isFailure: Boolean): MetricExpectation.Numeric[Long] = {
     val value = if (isFailure) 11L else 10L
@@ -338,9 +368,6 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
 
   private def failureAttributes(isFailure: Boolean): List[Attribute[_]] =
     if (isFailure) List(ErrorAttributes.ErrorType("java.lang.RuntimeException")) else Nil
-
-  private def phaseAttribute(phase: String): List[Attribute[_]] =
-    List(Attribute("phase", phase))
 
   private def assertMetrics(metrics: List[io.opentelemetry.sdk.metrics.data.MetricData], expectations: List[MetricExpectation]): Assertion =
     MetricExpectations.checkAll(metrics, expectations) match {
