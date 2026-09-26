@@ -1253,13 +1253,7 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
       "com.softwaremill.quicklens" %%% "quicklens" % Versions.quicklens,
       "com.softwaremill.sttp.apispec" %%% "openapi-model" % Versions.sttpApispec,
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % Versions.sttpApispec % Test
-    ),
-    Test / scalacOptions ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((3, _)) => Seq("-Yretain-trees")
-        case _            => Seq()
-      }
-    }
+    )
   )
   .jvmPlatform(
     scalaVersions = scala2And3Versions,
@@ -1269,7 +1263,7 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
-  .dependsOn(core, apispecDocs, tests % Test)
+  .dependsOn(core, apispecDocs, enumeratum % Test, tests % Test)
 
 lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-verifier"))
   .settings(commonSettings)
@@ -1291,10 +1285,6 @@ lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-v
     settings = commonJsSettings
   )
   .dependsOn(core, openapiDocs, tests % Test)
-
-lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn(enumeratum.jvm(scala3) % Test)
-lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
-lazy val openapiDocs2_12 = openapiDocs.jvm(scala2_12).dependsOn(enumeratum.jvm(scala2_12))
 
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
   .settings(commonSettings)
