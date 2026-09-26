@@ -107,8 +107,9 @@ trait SchemaMagnoliaDerivation {
         }
       }
 
+      // `primary` is in reverse declaration order (as returned by the Scala 3 compiler)
       private def mergeAnnotations[T](primary: Seq[Any], inherited: Seq[Any]): Seq[Any] =
-        primary ++ inherited.distinct.filter {
+        primary.reverse ++ inherited.distinct.filter {
           // skip inherited annotation from definition if defined in implementation
           case a if primary.exists(_.getClass.equals(a.getClass)) => false
           case _                                                  => true

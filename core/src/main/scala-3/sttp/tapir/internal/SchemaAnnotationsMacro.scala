@@ -1,7 +1,7 @@
 package sttp.tapir.internal
 
 import sttp.tapir.Schema.annotations.format
-import sttp.tapir.SchemaAnnotations
+import sttp.tapir.{Schema, SchemaAnnotations}
 
 import scala.quoted.*
 
@@ -19,14 +19,17 @@ private[tapir] object SchemaAnnotationsMacro {
     val EncodedNameAnn = TypeTree.of[sttp.tapir.Schema.annotations.encodedName].tpe
     val ValidateAnn = TypeTree.of[sttp.tapir.Schema.annotations.validate[_]].tpe
     val ValidateEachAnn = TypeTree.of[sttp.tapir.Schema.annotations.validateEach[_]].tpe
+    val CustomiseAnn = TypeTree.of[sttp.tapir.Schema.annotations.customise].tpe
 
     val tpe = TypeRepr.of[T]
 
     // if derivation is for Enumeration.Value then we lookup annotations on parent object that extend Enumeration
-    val annotations = if (tpe <:< EnumerationValue) {
+    val annotationsSymbol = if (tpe <:< EnumerationValue) {
       val enumerationPath = tpe.show.split("\\.").dropRight(1).mkString(".")
-      Symbol.requiredModule(enumerationPath).annotations
-    } else tpe.typeSymbol.annotations
+      Symbol.requiredModule(enumerationPath)
+    } else tpe.typeSymbol
+    // listed in reverse declaration order
+    val annotations = annotationsSymbol.annotations.reverse
 
     def firstAnnArg(tpe: TypeRepr): Option[Tree] = {
       annotations
@@ -71,7 +74,12 @@ private[tapir] object SchemaAnnotationsMacro {
         sa => annotations.find { _.tpe <:< HiddenAnn }.map(_ => '{ ${ sa }.copy(hidden = Some(true)) }).getOrElse(sa),
         sa => firstAnnArg(EncodedNameAnn).map(arg => '{ ${ sa }.copy(encodedName = Some(${ arg.asExprOf[String] })) }).getOrElse(sa),
         sa => '{ ${ sa }.copy(validate = ${ Expr.ofList(allAnnArg(ValidateAnn).map(_.asExprOf[sttp.tapir.Validator[T]])) }) },
-        sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) }
+        sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) },
+        sa => {
+          val customise =
+            allAnnArg(CustomiseAnn).map(arg => '{ ${ arg.asExprOf[Schema[?] => Schema[?]] }.asInstanceOf[Schema[T] => Schema[T]] })
+          '{ ${ sa }.copy(customise = ${ Expr.ofList(customise) }) }
+        }
       )
 
     transformations.foldLeft('{ SchemaAnnotations.empty[T] })((sa, t) => t(sa))

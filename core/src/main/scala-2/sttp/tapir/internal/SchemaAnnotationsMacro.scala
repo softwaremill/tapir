@@ -18,6 +18,7 @@ private[tapir] object SchemaAnnotationsMacro {
     val EncodedNameAnn = typeOf[sttp.tapir.Schema.annotations.encodedName]
     val ValidateAnn = typeOf[sttp.tapir.Schema.annotations.validate[_]]
     val ValidateEachAnn = typeOf[sttp.tapir.Schema.annotations.validateEach[_]]
+    val CustomiseAnn = typeOf[sttp.tapir.Schema.annotations.customise]
 
     val weakType = weakTypeOf[T]
 
@@ -28,6 +29,26 @@ private[tapir] object SchemaAnnotationsMacro {
         case _                    => c.abort(c.enclosingPosition, s"Cannot extract TypeRef from type ${weakType.typeSymbol.fullName}")
       }
     } else weakType.typeSymbol.annotations
+
+    // A lambda typed against `Schema[?]` has an existential parameter type, which leaks into inferred type arguments (e.g. of implicit
+    // conversions). These survive untypechecking, and fail to typecheck again once spliced (also when magnolia untypechecks its whole
+    // expansion). Hence, the parameter is re-declared with the concrete schema type, and the leaked type arguments are dropped.
+    def isExistential(t: Type): Boolean = t.typeSymbol.isType && t.typeSymbol.asType.isExistential
+    object DropExistentialTypeArgs extends Transformer {
+      override def transform(tree: Tree): Tree = tree match {
+        case TypeApply(fun, args) if args.exists(a => a.tpe != null && a.tpe.exists(isExistential)) => transform(fun)
+        case _                                                                                      => super.transform(tree)
+      }
+    }
+
+    def customiseFn(f: Tree): Tree = {
+      val schemaType = tq"_root_.sttp.tapir.Schema[$weakType]"
+      c.untypecheck(f) match {
+        case Function(List(ValDef(mods, name, _, rhs)), body) =>
+          Function(List(ValDef(mods, name, schemaType, rhs)), q"${DropExistentialTypeArgs.transform(body)}.asInstanceOf[$schemaType]")
+        case other => q"$other.asInstanceOf[$schemaType => $schemaType]"
+      }
+    }
 
     val firstArg: Annotation => Tree = a => a.tree.children.tail.head
     val firstTwoArgs: Annotation => (Tree, Tree) = a => (a.tree.children.tail.head, a.tree.children.tail(1))
@@ -41,9 +62,10 @@ private[tapir] object SchemaAnnotationsMacro {
     val encodedName = annotations.collectFirst { case ann if ann.tree.tpe <:< EncodedNameAnn => firstArg(ann) }
     val validate = annotations.collect { case ann if ann.tree.tpe <:< ValidateAnn => firstArg(ann) }
     val validateEach = annotations.collect { case ann if ann.tree.tpe <:< ValidateEachAnn => firstArg(ann) }
+    val customise = annotations.collect { case ann if ann.tree.tpe <:< CustomiseAnn => customiseFn(firstArg(ann)) }
 
     c.Expr[SchemaAnnotations[T]](
-      q"""_root_.sttp.tapir.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $hidden, $encodedName, _root_.scala.List(..$validate), _root_.scala.List(..$validateEach))"""
+      q"""_root_.sttp.tapir.SchemaAnnotations.apply($description, $encodedExample, $default, $format, $deprecated, $hidden, $encodedName, _root_.scala.List(..$validate), _root_.scala.List(..$validateEach), _root_.scala.List(..$customise))"""
     )
   }
 }

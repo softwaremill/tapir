@@ -55,7 +55,7 @@ def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List
 
 def versionedScalaJvmSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case Some((3, _))            => List(sourceDir / "scalajvm-3")
+    case Some((3, _))            => List(sourceDir / "scalajvm-3", sourceDir / "scalajvm-3-2.13+")
     case Some((2, n)) if n >= 13 => List(sourceDir / "scalajvm-2", sourceDir / "scalajvm-3-2.13+")
     case _                       => List(sourceDir / "scalajvm-2")
   }
@@ -98,19 +98,15 @@ val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
 
 val enableMimaSettings = Seq(
   mimaPreviousArtifacts := {
-    // currently only 2.* versions are stable; skipping mima for scala3
-    if (scalaVersion.value == scala3) Set.empty
-    else {
-      val current = version.value
-      val isRcOrMilestone = current.contains("M") || current.contains("RC")
-      if (!isRcOrMilestone) {
-        val previous = previousStableVersion.value
-        println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
-        previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
-      } else {
-        println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
-        Set.empty
-      }
+    val current = version.value
+    val isRcOrMilestone = current.contains("M") || current.contains("RC")
+    if (!isRcOrMilestone) {
+      val previous = previousStableVersion.value
+      println(s"[info] Not a M or RC version, using previous version for MiMa check: $previous")
+      previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
+    } else {
+      println(s"[info] $current is an M or RC version, no previous version to check with MiMa")
+      Set.empty
     }
   },
   mimaBinaryIssueFilters ++= Seq(
@@ -1273,7 +1269,7 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
     scalaVersions = scala2And3Versions,
     settings = commonJsSettings
   )
-  .dependsOn(core, apispecDocs, tests % Test)
+  .dependsOn(core, apispecDocs, enumeratum % Test, tests % Test)
 
 lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-verifier"))
   .settings(commonSettings)
@@ -1295,10 +1291,6 @@ lazy val openapiVerifier: ProjectMatrix = (projectMatrix in file("docs/openapi-v
     settings = commonJsSettings
   )
   .dependsOn(core, openapiDocs, tests % Test)
-
-lazy val openapiDocs3 = openapiDocs.jvm(scala3).dependsOn()
-lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
-lazy val openapiDocs2_12 = openapiDocs.jvm(scala2_12).dependsOn(enumeratum.jvm(scala2_12))
 
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
   .settings(commonSettings)

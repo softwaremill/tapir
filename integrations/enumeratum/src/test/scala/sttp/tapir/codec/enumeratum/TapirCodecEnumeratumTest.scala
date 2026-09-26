@@ -7,7 +7,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.Schema.SName
-import sttp.tapir.Schema.annotations.{default, description}
+import sttp.tapir.Schema.annotations.{customise, default, description}
 import sttp.tapir.SchemaType.{SInteger, SString}
 import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
@@ -30,6 +30,7 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     implicitly[Schema[TestShortEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestShortEnumEntry]].isOptional shouldBe false
     implicitly[Schema[TestShortEnumEntry]].description shouldBe Some("test short enum entry")
+    implicitly[Schema[TestShortEnumEntry]].format shouldBe Some("short")
     implicitly[Schema[TestStringEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestStringEnumEntry]].isOptional shouldBe false
     implicitly[Schema[TestStringEnumEntry]].description shouldBe Some("test string enum entry")
@@ -189,6 +190,7 @@ object TapirCodecEnumeratumTest {
   }
 
   @description("test short enum entry")
+  @customise(_.format("short"))
   sealed abstract class TestShortEnumEntry(val value: Short) extends ShortEnumEntry
 
   object TestShortEnumEntry extends ShortEnum[TestShortEnumEntry] {
