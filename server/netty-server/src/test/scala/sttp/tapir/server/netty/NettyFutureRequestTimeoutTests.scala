@@ -3,6 +3,7 @@ package sttp.tapir.server.netty
 import sttp.tapir._
 import sttp.tapir.tests.Test
 import scala.concurrent.Future
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.duration.DurationInt
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
@@ -34,11 +35,13 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
 
   def tests(): List[Test] = List(
     Test("properly update metrics when a request times out") {
+      // the logic completes only once the timeout response has been received, so a stalled JVM can't let it finish first
+      val timeoutResponseReceived = new CountDownLatch(1)
       val e = endpoint.post
         .in(stringBody)
         .out(stringBody)
         .serverLogicSuccess[Future] { body =>
-          Thread.sleep(2000); Future.successful(body)
+          awaitLatch(timeoutResponseReceived); Future.successful(body)
         }
 
       val activeRequests = new AtomicInteger()
@@ -76,16 +79,22 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
         .map(_.port)
         .use { port =>
-          basicRequest.post(uri"http://localhost:$port").body("test").send(backend).map { response =>
-            response.body should matchPattern { case Left(_) => }
-            response.code shouldBe StatusCode.ServiceUnavailable
-            // the metrics will only be updated when the endpoint's logic completes, which is ~1 second
-            // after receiving the timeout response (and possibly later on a loaded CI machine)
-            eventually {
-              activeRequests.get() shouldBe 0
-              totalRequests.get() shouldBe 1
+          basicRequest
+            .post(uri"http://localhost:$port")
+            .body("test")
+            .send(backend)
+            .map { response =>
+              response.body should matchPattern { case Left(_) => }
+              response.code shouldBe StatusCode.ServiceUnavailable
             }
-          }
+            .guarantee(IO(timeoutResponseReceived.countDown()))
+            .map { _ =>
+              // the metrics are only updated when the endpoint's logic completes, which happens asynchronously after the latch is released
+              eventually {
+                activeRequests.get() shouldBe 0
+                totalRequests.get() shouldBe 1
+              }
+            }
         }
         .unsafeToFuture()
     },
