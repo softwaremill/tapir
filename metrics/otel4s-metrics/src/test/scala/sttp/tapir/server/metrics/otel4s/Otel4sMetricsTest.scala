@@ -207,8 +207,8 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
         onRequest = (req, gaugeM, m) =>
           m.map(gaugeM) { gauge =>
             EndpointMetric()
-              .onResponseBody((ep, res) => gauge.record(10, requestAttrs(labels, ep, req) ++ responseAttrs(labels, Right(res), None)))
-              .onException((ep, ex) => gauge.record(11, requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex), None)))
+              .onResponseBody((ep, res) => gauge.record(10, requestAttrs(labels, ep, req) ++ responseAttrs(labels, Right(res))))
+              .onException((ep, ex) => gauge.record(11, requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex))))
           }
       )
 
@@ -270,35 +270,17 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
           )
       )
 
-  private def requestDurationExpectation(expectedCount: Int, expectedStatusCode: Long, isFailure: Boolean): MetricExpectation.Histogram = {
-    val base = MetricExpectation
+  private def requestDurationExpectation(expectedCount: Int, expectedStatusCode: Long, isFailure: Boolean): MetricExpectation.Histogram =
+    MetricExpectation
       .histogram(HttpMetrics.ServerRequestDuration.name)
       .unit(HttpMetrics.ServerRequestDuration.unit)
       .description(HttpMetrics.ServerRequestDuration.description)
-
-    if (isFailure) {
-      base
-        .pointCount(1)
-        .containsPoints(
-          PointExpectation.histogram
-            .count(expectedCount.toLong)
-            .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
-        )
-    } else {
-      base
-        .pointCount(2)
-        .containsPoints(
-          PointExpectation.histogram
-            .count(expectedCount.toLong)
-            .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ phaseAttribute("headers")): _*)
-        )
-        .containsPoints(
-          PointExpectation.histogram
-            .count(expectedCount.toLong)
-            .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ phaseAttribute("body")): _*)
-        )
-    }
-  }
+      .pointCount(1)
+      .containsPoints(
+        PointExpectation.histogram
+          .count(expectedCount.toLong)
+          .attributesExact((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
+      )
 
   private def customGaugeExpectation(isFailure: Boolean): MetricExpectation.Numeric[Long] = {
     val value = if (isFailure) 11L else 10L
@@ -338,9 +320,6 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
 
   private def failureAttributes(isFailure: Boolean): List[Attribute[_]] =
     if (isFailure) List(ErrorAttributes.ErrorType("java.lang.RuntimeException")) else Nil
-
-  private def phaseAttribute(phase: String): List[Attribute[_]] =
-    List(Attribute("phase", phase))
 
   private def assertMetrics(metrics: List[io.opentelemetry.sdk.metrics.data.MetricData], expectations: List[MetricExpectation]): Assertion =
     MetricExpectations.checkAll(metrics, expectations) match {
