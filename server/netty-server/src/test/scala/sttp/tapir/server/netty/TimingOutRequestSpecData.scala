@@ -8,8 +8,9 @@ import sttp.tapir._
 import java.io.{BufferedReader, InputStreamReader}
 import java.net.Socket
 import java.nio.charset.StandardCharsets.US_ASCII
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, blocking}
 
 class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: ExecutionContext) {
 
@@ -48,12 +49,16 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
     statusLine
   }
 
+  /** Runs `interact` against a server with a short request timeout. A request with `slowBody` is only answered after `interact` completes,
+    * so the request timeout is guaranteed to fire first, regardless of how long the JVM is stalled for.
+    */
   def statusLinesFromShortTimeoutServer(interact: (Socket, Int) => IO[List[String]]): IO[List[String]] = {
+    val interactionDone = new CountDownLatch(1)
     val e = endpoint.put
       .in(stringBody)
       .out(stringBody)
       .serverLogicSuccess[Future] { body =>
-        if (body == slowBodyString) Thread.sleep((shortRequestTimeout * 2).toMillis)
+        if (body == slowBodyString) awaitLatch(interactionDone)
         Future.successful(body)
       }
 
@@ -70,10 +75,18 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
       .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
       .map(_.port)
       .use { port =>
-        Resource.fromAutoCloseable(IO(clientSocket(port))).use { socket =>
-          interact(socket, port)
-        }
+        Resource
+          .fromAutoCloseable(IO(clientSocket(port)))
+          .use { socket =>
+            interact(socket, port)
+          }
+          .guarantee(IO(interactionDone.countDown()))
       }
+  }
+
+  /** Blocks server logic until the latch is released; bounded, so that a failing test doesn't leave a thread blocked forever. */
+  def awaitLatch(latch: CountDownLatch): Unit = blocking {
+    val _ = latch.await(socketReadTimeout.toMillis, TimeUnit.MILLISECONDS)
   }
 
   private def clientSocket(port: Int): Socket = {
