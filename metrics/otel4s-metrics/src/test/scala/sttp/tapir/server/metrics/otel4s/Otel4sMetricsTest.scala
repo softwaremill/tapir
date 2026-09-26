@@ -15,6 +15,7 @@ import org.typelevel.otel4s.semconv.attributes.{ErrorAttributes, HttpAttributes,
 import org.typelevel.otel4s.semconv.experimental.metrics.HttpExperimentalMetrics
 import org.typelevel.otel4s.semconv.metrics.HttpMetrics
 import sttp.capabilities.Streams
+import sttp.model.Method
 import sttp.model.Uri._
 import sttp.monad.MonadError
 import sttp.tapir.{AttributeKey => _, _}
@@ -25,6 +26,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.TestUtil.StringToResponseBody
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
+import sttp.tapir.server.interceptor.reject.{DefaultRejectHandler, RejectInterceptor}
 import sttp.tapir.server.interpreter._
 import sttp.tapir.server.metrics.{EndpointMetric, Metric, MetricLabelsTyped}
 import sttp.tapir.server.metrics.otel4s.Otel4sMetrics.{requestAttrs, responseAttrs}
@@ -143,6 +145,52 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
     )(
       isFailure = true
     ).unsafeToFuture()
+  }
+
+  it should "record request duration for interceptor response" in {
+    OtelJavaTestkit
+      .inMemory[IO]()
+      .use(testkit =>
+        for {
+          meter <- testkit.meterProvider.get("Test Meter")
+          interpreter = new ServerInterpreter[Any, IO, String, NoStreams](
+            serverEndpoints = _ =>
+              List(
+                endpoint.get
+                  .in("person")
+                  .in(query[String]("name"))
+                  .out(stringBody)
+                  .serverLogic[IO](_ => IO(Right("hello")))
+              ),
+            requestBody = ioTestRequestBody,
+            toResponseBody = StringToResponseBody,
+            interceptors = List(
+              Otel4sMetrics[IO](Nil).addRequestsDuration(meter).metricsInterceptor(),
+              new RejectInterceptor(DefaultRejectHandler[IO])
+            ),
+            deleteFile = _ => IO.pure(())
+          )
+          _ <- interpreter(serverRequestFromUri(uri"http://example.com/person?name=Adam", _method = Method.POST))
+          metrics <- testkit.collectMetrics
+        } yield assertMetrics(
+          metrics,
+          List(
+            MetricExpectation
+              .histogram(HttpMetrics.ServerRequestDuration.name)
+              .pointCount(1)
+              .containsPoints(
+                PointExpectation.histogram
+                  .count(1L)
+                  .attributesExact(
+                    HttpAttributes.HttpRequestMethod("POST"),
+                    UrlAttributes.UrlScheme("http"),
+                    HttpAttributes.HttpResponseStatusCode(405L)
+                  )
+              )
+          )
+        )
+      )
+      .unsafeToFuture()
   }
 
   private def testEndpointWithMetrics(endpoint: ServerEndpoint[Any, IO], requests: ServerRequest*)(
