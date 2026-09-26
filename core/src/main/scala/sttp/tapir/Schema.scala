@@ -508,8 +508,8 @@ object Schema extends LowPrioritySchema with SchemaCompanionMacros {
       * sealed trait OrderStatus
       * }}}
       *
-      * All `@customise` annotations are applied. `Schema.derived` and auto derivation apply annotations in declaration order (reversed in
-      * Scala 3). `Schema.derivedEnumeration` and the enumeration / enumeratum codecs apply them in declaration order, after the metadata
+      * All `@customise` annotations are applied, in declaration order. `Schema.derived` and auto derivation apply all annotations in
+      * declaration order; `Schema.derivedEnumeration` and the enumeration / enumeratum codecs apply `@customise` after the metadata
       * annotations and before [[validate]] / [[validateEach]].
       */
     class customise(val f: Schema[?] => Schema[?]) extends StaticAnnotation with Serializable

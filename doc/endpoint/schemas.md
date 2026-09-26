@@ -307,7 +307,7 @@ field of a case class. One way the automatic & semi-automatic derivation can be 
   value contained in an `Option` (when it's defined), and collection elements
 * `@customise` applies an arbitrary `Schema[?] => Schema[?]` function to the schema derived for the annotated
   class, field or enumeration; an escape hatch for what the annotations above can't express. All `@customise`
-  annotations are applied
+  annotations are applied, in declaration order
 
 These annotations will adjust schemas, after they are looked up using the normal implicit mechanisms.
 

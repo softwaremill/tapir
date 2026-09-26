@@ -24,10 +24,12 @@ private[tapir] object SchemaAnnotationsMacro {
     val tpe = TypeRepr.of[T]
 
     // if derivation is for Enumeration.Value then we lookup annotations on parent object that extend Enumeration
-    val annotations = if (tpe <:< EnumerationValue) {
+    val annotationsSymbol = if (tpe <:< EnumerationValue) {
       val enumerationPath = tpe.show.split("\\.").dropRight(1).mkString(".")
-      Symbol.requiredModule(enumerationPath).annotations
-    } else tpe.typeSymbol.annotations
+      Symbol.requiredModule(enumerationPath)
+    } else tpe.typeSymbol
+    // listed in reverse declaration order
+    val annotations = annotationsSymbol.annotations.reverse
 
     def firstAnnArg(tpe: TypeRepr): Option[Tree] = {
       annotations
@@ -74,9 +76,8 @@ private[tapir] object SchemaAnnotationsMacro {
         sa => '{ ${ sa }.copy(validate = ${ Expr.ofList(allAnnArg(ValidateAnn).map(_.asExprOf[sttp.tapir.Validator[T]])) }) },
         sa => '{ ${ sa }.copy(validateEach = ${ Expr.ofList(allAnnArg(ValidateEachAnn).map(_.asExprOf[sttp.tapir.Validator[Any]])) }) },
         sa => {
-          // annotations are listed in reverse declaration order
           val customise =
-            allAnnArg(CustomiseAnn).reverse.map(arg => '{ ${ arg.asExprOf[Schema[?] => Schema[?]] }.asInstanceOf[Schema[T] => Schema[T]] })
+            allAnnArg(CustomiseAnn).map(arg => '{ ${ arg.asExprOf[Schema[?] => Schema[?]] }.asInstanceOf[Schema[T] => Schema[T]] })
           '{ ${ sa }.copy(customise = ${ Expr.ofList(customise) }) }
         }
       )
