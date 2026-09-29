@@ -7,12 +7,15 @@ import sttp.monad.syntax._
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.interpreter.PrepareServerEndpoints
 
 class TapirStubInterpreter[F[_], R, OPTIONS](
     private val endpoints: List[ServerEndpoint[R, F]],
     private val interceptors: List[Interceptor[F]],
     private val stub: SttpBackendStub[F, R]
 ) {
+
+  private lazy val filterServerEndpoints = PrepareServerEndpoints(endpoints)
 
   def whenEndpoint[I, E, O](endpoint: Endpoint[_, I, E, O, _]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
 
@@ -27,7 +30,7 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
 
   /** Returns `SttpBackend` which handles sent requests using a `ServerInterpreter`. */
   def backend(): SttpBackend[F, R] =
-    stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, endpoints, interceptors))
+    stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, filterServerEndpoints, interceptors))
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
     def thenRespond(response: O): TapirStubInterpreter[F, R, OPTIONS] =

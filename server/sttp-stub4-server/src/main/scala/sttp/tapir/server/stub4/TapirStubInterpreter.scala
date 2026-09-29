@@ -26,6 +26,7 @@ import sttp.shared.Identity
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.interpreter.PrepareServerEndpoints
 
 class TapirSyncStubInterpreter[OPTIONS](
     endpoints: List[ServerEndpoint[Any, Identity]],
@@ -203,6 +204,8 @@ abstract class AbstractTapirStubInterpreter[F[_], R, OPTIONS](
     private val stub: AbstractBackendStub[F, R]
 ) { outer =>
 
+  private lazy val filterServerEndpoints = PrepareServerEndpoints(endpoints)
+
   type StubType <: AbstractTapirStubInterpreter[F, R, OPTIONS] {
     type StubType <: outer.StubType
   }
@@ -225,7 +228,7 @@ abstract class AbstractTapirStubInterpreter[F[_], R, OPTIONS](
   //   )
 
   protected def handleRequest(req: GenericRequest[_, _]): F[Response[StubBody]] =
-    StubServerInterpreter(req, endpoints, interceptors)
+    StubServerInterpreter(req, filterServerEndpoints, interceptors)
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
     def thenRespond(response: O): StubType =

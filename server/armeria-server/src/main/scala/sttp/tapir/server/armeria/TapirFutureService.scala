@@ -20,6 +20,7 @@ private[armeria] final case class TapirFutureService(
 ) extends TapirService[ArmeriaStreams, Future] {
 
   private implicit val futureConversion: FutureConversion[Future] = FutureConversion.identity
+  private val filterServerEndpoints = PrepareServerEndpoints(serverEndpoints)
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())
@@ -29,7 +30,7 @@ private[armeria] final case class TapirFutureService(
     val serverRequest = new ArmeriaServerRequest(ctx)
     val future = new CompletableFuture[HttpResponse]()
     val interpreter: ServerInterpreter[ArmeriaStreams, Future, ArmeriaResponseType, ArmeriaStreams] = new ServerInterpreter(
-      PrepareServerEndpoints(serverEndpoints),
+      filterServerEndpoints,
       new ArmeriaRequestBody(armeriaServerOptions, ArmeriaStreamCompatible),
       new ArmeriaToResponseBody(ArmeriaStreamCompatible),
       RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),

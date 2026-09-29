@@ -35,13 +35,14 @@ private[cats] final case class TapirCatsService[F[_]: Async](
   private[this] implicit val bodyListener: BodyListener[F, ArmeriaResponseType] = new ArmeriaBodyListener
 
   private[this] val fs2StreamCompatible: StreamCompatible[Fs2Streams[F]] = Fs2StreamCompatible(dispatcher)
+  private[this] val filterServerEndpoints = PrepareServerEndpoints(serverEndpoints)
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())
 
     val interpreter: ServerInterpreter[Fs2Streams[F], F, ArmeriaResponseType, Fs2Streams[F]] =
       new ServerInterpreter(
-        PrepareServerEndpoints(serverEndpoints),
+        filterServerEndpoints,
         new ArmeriaRequestBody(armeriaServerOptions, fs2StreamCompatible),
         new ArmeriaToResponseBody(fs2StreamCompatible),
         RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),

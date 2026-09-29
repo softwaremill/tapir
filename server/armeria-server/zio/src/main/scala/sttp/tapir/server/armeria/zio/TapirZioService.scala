@@ -30,13 +30,14 @@ private[zio] final case class TapirZioService[R](
   private[this] implicit val bodyListener: ArmeriaBodyListener[RIO[R, *]] = new ArmeriaBodyListener
 
   private[this] val zioStreamCompatible: StreamCompatible[ZioStreams] = ZioStreamCompatible(runtime)
+  private[this] val filterServerEndpoints = PrepareServerEndpoints(serverEndpoints)
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())
 
     val interpreter: ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams] =
       new ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams](
-        PrepareServerEndpoints(serverEndpoints),
+        filterServerEndpoints,
         new ArmeriaRequestBody(armeriaServerOptions, zioStreamCompatible),
         new ArmeriaToResponseBody(zioStreamCompatible),
         RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),
