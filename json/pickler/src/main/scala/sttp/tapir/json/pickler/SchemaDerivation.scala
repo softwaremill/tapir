@@ -166,16 +166,18 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
   private object Annotations:
     val Empty: Annotations = Annotations(Nil, Nil)
 
+    // the compiler lists annotations in reverse declaration order
+    private def declared(s: Symbol): List[Term] = s.annotations.reverse.filter(filterAnnotation)
+
     def onType(tpe: TypeRepr): Annotations =
-      val topLevel: List[Term] = tpe.typeSymbol.annotations.filter(filterAnnotation)
+      val topLevel: List[Term] = declared(tpe.typeSymbol)
       val inherited: List[Term] =
         tpe.baseClasses
           .filterNot(isObjectOrScala)
           .collect {
-            case s if s != tpe.typeSymbol => s.annotations
+            case s if s != tpe.typeSymbol => declared(s)
           } // skip self
           .flatten
-          .filter(filterAnnotation)
       Annotations(topLevel, inherited)
 
     def onParams(tpe: TypeRepr): Map[String, Annotations] =
@@ -198,13 +200,13 @@ private class SchemaDerivation(genericDerivationConfig: Expr[Configuration])(usi
         }
 
       def fromConstructor(from: Symbol): List[(String, List[Term])] =
-        from.primaryConstructor.paramSymss.flatten.map { field => field.name -> field.annotations.filter(filterAnnotation) }
+        from.primaryConstructor.paramSymss.flatten.map { field => field.name -> declared(field) }
 
       def fromDeclarations(from: Symbol): List[(String, List[Term])] =
         from.declarations.collect {
           // using TypeTest
           case field: Symbol if (field.tree match { case _: ValDef => true; case _ => false }) =>
-            field.name -> field.annotations.filter(filterAnnotation)
+            field.name -> declared(field)
         }
 
       def groupByParamName(anns: List[(String, List[Term])]) =

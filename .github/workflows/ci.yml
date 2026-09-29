@@ -38,9 +38,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v7
-    - uses: sbt/setup-sbt@c7d2d6258b4bd0d3ec5129e6b3453199d3c79729 # v1, specifically v1.5.8
+    - uses: sbt/setup-sbt@82da71df4e122282484a99a8d70096bc2369dbd8 # v1, specifically v1.5.9
     - name: Set up JDK 
-      uses: actions/setup-java@v6.0.0
+      uses: actions/setup-java@v6.0.1
       with:
         distribution: 'temurin'
         cache: 'sbt'
@@ -71,7 +71,7 @@ jobs:
         echo "STTP_NATIVE=1" >> $GITHUB_ENV
     - name: Install scala-cli
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
-      uses: VirtusLab/scala-cli-setup@8db5313925605c20e292348c1749e80dac7eed0f # main, specifically v1.16.0
+      uses: VirtusLab/scala-cli-setup@c33dfbf1a5f16ee60efff453b7f9a987d2b6955b # main, specifically v1.17.1
       with:
         jvm: '' # needed because scala-cli-setup otherwise forces the installation of their default JVM (17)
     - name: Enable Loom-specific modules
@@ -199,9 +199,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - uses: sbt/setup-sbt@c7d2d6258b4bd0d3ec5129e6b3453199d3c79729 # v1, specifically v1.5.8
+      - uses: sbt/setup-sbt@82da71df4e122282484a99a8d70096bc2369dbd8 # v1, specifically v1.5.9
       - name: Set up JDK
-        uses: actions/setup-java@v6.0.0
+        uses: actions/setup-java@v6.0.1
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}

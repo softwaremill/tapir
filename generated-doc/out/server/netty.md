@@ -4,16 +4,16 @@ To expose an endpoint using a [Netty](https://netty.io)-based server, first add 
 
 ```scala
 // if you want to use Java 21+ Virtual Threads & direct-style:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-sync" % "1.13.32"
 
 // if you are using Future:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server" % "1.13.32"
 
 // if you are using cats-effect:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-cats" % "1.13.32"
 
 // if you are using zio:
-"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.13.31"
+"com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % "1.13.32"
 ```
 
 Then, use:
@@ -100,7 +100,7 @@ Tapir's endpoints) are added to a Netty server.
 
 `NettyConfig` exposes a number of configuration options which allows to
 customise the server socket, such as:
-* request timeout
+* request timeout, see [request timeout](#request-timeout) below
 * connection timeout
 * linger timeout
 * graceful shutdown timeout: when stopped e.g. using
@@ -120,6 +120,15 @@ import scala.concurrent.duration.*
 
 val config = NettyConfig.default.requestTimeout(5.seconds)
 ```
+
+### Request timeout
+
+Spans from receiving the request headers to starting to write a response, so it
+also bounds how long the client has to send the body: keep it higher than your
+longest upload, and lower than `idleTimeout`. When exceeded, an empty response
+with `Connection: close` is sent and the connection is closed - `503` if the
+request had been received in full, `408` if the body was still incomplete.
+Ignored for Web Sockets, once the handshake has been established.
 
 ## Web sockets
 

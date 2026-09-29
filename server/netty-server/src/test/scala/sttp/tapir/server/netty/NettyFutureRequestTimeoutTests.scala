@@ -3,6 +3,7 @@ package sttp.tapir.server.netty
 import sttp.tapir._
 import sttp.tapir.tests.Test
 import scala.concurrent.Future
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.duration.DurationInt
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
@@ -29,13 +30,18 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
     interval = org.scalatest.time.Span(150, org.scalatest.time.Millis)
   )
 
+  private val timingOutRequest = new TimingOutRequestSpecData(eventLoopGroup)
+  import timingOutRequest._
+
   def tests(): List[Test] = List(
     Test("properly update metrics when a request times out") {
+      // the logic completes only once the timeout response has been received, so a stalled JVM can't let it finish first
+      val timeoutResponseReceived = new CountDownLatch(1)
       val e = endpoint.post
         .in(stringBody)
         .out(stringBody)
         .serverLogicSuccess[Future] { body =>
-          Thread.sleep(2000); Future.successful(body)
+          awaitLatch(timeoutResponseReceived); Future.successful(body)
         }
 
       val activeRequests = new AtomicInteger()
@@ -73,18 +79,58 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
         .map(_.port)
         .use { port =>
-          basicRequest.post(uri"http://localhost:$port").body("test").send(backend).map { response =>
-            response.body should matchPattern { case Left(_) => }
-            response.code shouldBe StatusCode.ServiceUnavailable
-            // the metrics will only be updated when the endpoint's logic completes, which is ~1 second
-            // after receiving the timeout response (and possibly later on a loaded CI machine)
-            eventually {
-              activeRequests.get() shouldBe 0
-              totalRequests.get() shouldBe 1
+          basicRequest
+            .post(uri"http://localhost:$port")
+            .body("test")
+            .send(backend)
+            .map { response =>
+              response.body should matchPattern { case Left(_) => }
+              response.code shouldBe StatusCode.ServiceUnavailable
             }
-          }
+            .guarantee(IO(timeoutResponseReceived.countDown()))
+            .map { _ =>
+              // the metrics are only updated when the endpoint's logic completes, which happens asynchronously after the latch is released
+              eventually {
+                activeRequests.get() shouldBe 0
+                totalRequests.get() shouldBe 1
+              }
+            }
         }
         .unsafeToFuture()
+    },
+    Test("respond with status 408 when not all declared request body bytes are received") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, incompleteRequestHead(port))
+          status <- readStatusLine(socket)
+        } yield List(status)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
+    Test("respond with status 408 for an incomplete request following a complete one on the same connection") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
+          first <- readStatusLine(socket)
+          _ <- send(socket, incompleteRequestHead(port))
+          second <- readStatusLine(socket)
+        } yield List(first, second)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
+    Test("respond with status 503, not 408, for a slow but complete request following a complete fast one on the same connection") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
+          first <- readStatusLine(socket)
+          _ <- send(socket, requestHead(port, slowBody.length) ++ slowBody)
+          second <- readStatusLine(socket)
+        } yield List(first, second)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 503 Service Unavailable")
+      }.unsafeToFuture()
     }
   )
 }

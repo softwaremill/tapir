@@ -68,8 +68,17 @@ class NettyServerHandler[F[_]](
   // if the connection gets closed.
   private[this] val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
+  // `IdleStateHandler` re-fires `WRITER_IDLE` every `requestTimeout` until a write completes; only the first firing is answered, as the
+  // connection is closed along with the response. A plain var, as it's only touched on the channel's event loop.
+  private[this] var requestTimeoutHandled = false
+
+  // Present only if a request timeout is set, and the pipeline has the HTTP codec registered under `ServerCodecHandlerName`. If absent, an
+  // exceeded request timeout is always reported as 503.
+  private[this] var requestBodyTracker: Option[RequestBodyCompletionTracker] = None
+
   private val logger = LoggerFactory.getLogger(getClass.getName)
   private final val WebSocketAutoPingHandlerName = "wsAutoPingHandler"
+  private final val RequestBodyTrackerHandlerName = "requestBodyTracker"
 
   override def handlerAdded(ctx: ChannelHandlerContext): Unit =
     if (ctx.channel.isActive) {
@@ -85,7 +94,12 @@ class NettyServerHandler[F[_]](
       // Initialize our ExecutionContext
       eventLoopContext = ExecutionContext.fromExecutor(ctx.channel.eventLoop)
       config.idleTimeout.foreach { idleTimeout =>
-        ctx.pipeline().addFirst(new IdleStateHandler(0, 0, idleTimeout.toMillis.toInt, TimeUnit.MILLISECONDS))
+        ctx.pipeline().addFirst(new IdleStateHandler(0, 0, idleTimeout.toMillis, TimeUnit.MILLISECONDS))
+      }
+      if (config.requestTimeout.isDefined && ctx.pipeline().context(ServerCodecHandlerName) != null) {
+        val tracker = new RequestBodyCompletionTracker
+        ctx.pipeline().addAfter(ServerCodecHandlerName, RequestBodyTrackerHandlerName, tracker)
+        requestBodyTracker = Some(tracker)
       }
       // When the channel closes we want to cancel any pending dispatches.
       // Since the listener will be executed from the channels EventLoop everything is thread safe.
@@ -100,27 +114,37 @@ class NettyServerHandler[F[_]](
     }
   }
 
-  def writeError503ThenClose(ctx: ChannelHandlerContext): Unit = {
-    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE)
+  private def writeErrorThenClose(ctx: ChannelHandlerContext, status: HttpResponseStatus): Unit = {
+    val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status)
     res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
     res.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
     val _ = ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE)
   }
 
+  private def handleRequestTimeout(ctx: ChannelHandlerContext): Unit = {
+    val timeoutDescription = config.requestTimeout.map(_.toString).getOrElse("(not set)")
+    if (requestBodyTracker.forall(_.bodyFullyReceived)) {
+      logger.error(s"Closing connection with 503: no response produced within the request timeout of $timeoutDescription")
+      writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
+    } else {
+      logger.debug(s"Closing connection with 408: request body not fully received within the request timeout of $timeoutDescription")
+      writeErrorThenClose(ctx, HttpResponseStatus.REQUEST_TIMEOUT)
+    }
+  }
+
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
     evt match {
       case e: IdleStateEvent =>
-        if (e.state() == IdleState.WRITER_IDLE) {
-          logger.error(
-            s"Closing connection due to exceeded response timeout of ${config.requestTimeout.map(_.toString).getOrElse("(not set)")}"
-          )
-          writeError503ThenClose(ctx)
+        e.state() match {
+          case IdleState.WRITER_IDLE if !requestTimeoutHandled =>
+            requestTimeoutHandled = true
+            handleRequestTimeout(ctx)
+          case IdleState.ALL_IDLE =>
+            logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
+            val _ = ctx.close()
+          case _ => ()
         }
-        if (e.state() == IdleState.ALL_IDLE) {
-          logger.debug(s"Closing connection due to exceeded idle timeout of ${config.idleTimeout.map(_.toString).getOrElse("(not set)")}")
-          val _ = ctx.close()
-        }
-      case other =>
+      case _ =>
         super.userEventTriggered(ctx, evt)
     }
   }
@@ -138,7 +162,7 @@ class NettyServerHandler[F[_]](
 
     def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
       val requestTimeoutHandler = config.requestTimeout.map { requestTimeout =>
-        new IdleStateHandler(0, requestTimeout.toMillis.toInt, 0, TimeUnit.MILLISECONDS)
+        new IdleStateHandler(0, requestTimeout.toMillis, 0, TimeUnit.MILLISECONDS)
       }
       requestTimeoutHandler.foreach(h => ctx.pipeline().addFirst(h))
       val (runningFuture, cancellationSwitch) = unsafeRunAsync { () =>
@@ -222,7 +246,7 @@ class NettyServerHandler[F[_]](
 
     if (isShuttingDown.get()) {
       logger.info("Rejecting request, server is shutting down")
-      writeError503ThenClose(ctx)
+      writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else if (HttpUtil.is100ContinueExpected(request)) {
       ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
       ()
@@ -355,6 +379,7 @@ class NettyServerHandler[F[_]](
       handshakeReq: HttpRequest
   ) = {
     ctx.pipeline().remove(this)
+    requestBodyTracker.foreach(ctx.pipeline().remove(_))
     ctx
       .pipeline()
       .addAfter(

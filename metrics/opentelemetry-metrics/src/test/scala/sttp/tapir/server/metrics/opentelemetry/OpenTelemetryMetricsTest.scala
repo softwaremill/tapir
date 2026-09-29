@@ -155,21 +155,19 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpret(200)
     interpret(300)
 
-    val point = reader.collectAllMetrics().asScala.head.getHistogramData.getPoints.asScala
-    point.map(_.getAttributes) should contain(
-      Attributes.of(
-        AttributeKey.stringKey("http.request.method"),
-        "GET",
-        AttributeKey.stringKey("http.route"),
-        "/person",
-        AttributeKey.stringKey("http.response.status_code"),
-        "200",
-        AttributeKey.stringKey("phase"),
-        "body",
-        AttributeKey.stringKey("url.scheme"),
-        "http"
-      )
+    val points = reader.collectAllMetrics().asScala.head.getHistogramData.getPoints.asScala
+    points should have size 1
+    points.head.getAttributes shouldBe Attributes.of(
+      AttributeKey.stringKey("http.request.method"),
+      "GET",
+      AttributeKey.stringKey("http.route"),
+      "/person",
+      AttributeKey.stringKey("http.response.status_code"),
+      "200",
+      AttributeKey.stringKey("url.scheme"),
+      "http"
     )
+    points.head.getCount shouldBe 3
   }
 
   "default metrics" should "customize labels" in {
@@ -280,18 +278,16 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     val points = reader.collectAllMetrics().asScala.head.getHistogramData.getPoints.asScala
-    points.map(_.getAttributes) should contain(
-      Attributes.of(
-        AttributeKey.stringKey("http.request.method"),
-        "POST",
-        AttributeKey.stringKey("url.scheme"),
-        "http",
-        AttributeKey.stringKey("http.response.status_code"),
-        "405",
-        AttributeKey.stringKey("phase"),
-        "body"
-      )
+    points should have size 1
+    points.head.getAttributes shouldBe Attributes.of(
+      AttributeKey.stringKey("http.request.method"),
+      "POST",
+      AttributeKey.stringKey("url.scheme"),
+      "http",
+      AttributeKey.stringKey("http.response.status_code"),
+      "405"
     )
+    points.head.getCount shouldBe 1
   }
 
   private def longSumData(reader: InMemoryMetricReader): List[LongPointData] =

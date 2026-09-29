@@ -119,13 +119,13 @@ object Otel4sMetrics {
         m.map(counterM) { counter =>
           EndpointMetric()
             .onResponseBody { (ep, res) =>
-              counter.inc(requestAttrs(labels, ep, req) ++ responseAttrs(labels, Right(res), None))
+              counter.inc(requestAttrs(labels, ep, req) ++ responseAttrs(labels, Right(res)))
             }
             .onException { (ep, ex) =>
-              counter.inc(requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex), None))
+              counter.inc(requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex)))
             }
             .onInterceptorResponse { res =>
-              counter.inc(requestAttrsFromRequest(labels, req) ++ responseAttrs(labels, Right(res), None))
+              counter.inc(requestAttrsFromRequest(labels, req) ++ responseAttrs(labels, Right(res)))
             }
         }
     )
@@ -145,28 +145,22 @@ object Otel4sMetrics {
           def duration = Duration.between(requestStart, Instant.now()).toNanos / 1000000000d
 
           EndpointMetric()
-            .onResponseHeaders { (ep, res) =>
-              recorder.record(
-                duration,
-                requestAttrs(labels, ep, req) ++ responseAttrs(labels, Right(res), Some(labels.forResponsePhase.headersValue))
-              )
-            }
             .onResponseBody { (ep, res) =>
               recorder.record(
                 duration,
-                requestAttrs(labels, ep, req) ++ responseAttrs(labels, Right(res), Some(labels.forResponsePhase.bodyValue))
+                requestAttrs(labels, ep, req) ++ responseAttrs(labels, Right(res))
               )
             }
             .onException { (ep, ex) =>
               recorder.record(
                 duration,
-                requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex), None)
+                requestAttrs(labels, ep, req) ++ responseAttrs(labels, Left(ex))
               )
             }
             .onInterceptorResponse { res =>
               recorder.record(
                 duration,
-                requestAttrsFromRequest(labels, req) ++ responseAttrs(labels, Right(res), Some(labels.forResponsePhase.bodyValue))
+                requestAttrsFromRequest(labels, req) ++ responseAttrs(labels, Right(res))
               )
             }
         }
@@ -184,9 +178,8 @@ object Otel4sMetrics {
       .addAll(l.forRequest.map(label => label(req)))
       .result()
 
-  private[otel4s] def responseAttrs(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Attributes =
+  private[otel4s] def responseAttrs(l: MetricLabels, res: Either[Throwable, ServerResponse[_]]): Attributes =
     Attributes.newBuilder
       .addAll(l.forResponse.flatMap(label => label(res)))
-      .addAll(phase.map(v => Attribute.from(l.forResponsePhase.name, v)))
       .result()
 }
