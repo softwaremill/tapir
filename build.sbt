@@ -92,7 +92,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   evictionErrorLevel := Level.Info
 )
 
-lazy val javaOutputVersion = settingKey[String]("Java version to emit Scala 3 bytecode for")
+lazy val javaOutputVersion = settingKey[String]("Java version to emit bytecode for, and whose API to compile against")
 
 val versioningSchemeSettings = Seq(versionScheme := Some("early-semver"))
 
@@ -127,19 +127,12 @@ val commonJvmSettings: Seq[Def.Setting[_]] = Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
   Test / testOptions += Tests.Argument("-oD"), // js has other options which conflict with timings
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, _)) => Seq("-target:jvm-1.8") // some users are on java 8
-      case _            => Seq.empty[String]
-    }
-  },
+  // the build runs on JDK 17+, while published artifacts should work on JDK 11+
+  javaOutputVersion := "11",
+  scalacOptions ++= Seq("-release", javaOutputVersion.value),
   // -Yfuture-lazy-vals is backed by VarHandle, hence the Java output version. It only exists in the 3.3 LTS
   // line; from 3.8 on the same encoding is the default.
-  javaOutputVersion := "11",
-  scalacOptions ++=
-    (if (scalaVersion.value == scala3)
-       Seq("-Yfuture-lazy-vals", "-java-output-version", javaOutputVersion.value)
-     else Seq.empty)
+  scalacOptions ++= (if (scalaVersion.value == scala3) Seq("-Yfuture-lazy-vals") else Seq.empty)
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -274,16 +267,9 @@ lazy val rawAllAggregates = core.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
 
-lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
-
-// zio-json's JVM artifact requires JDK 17+, so the JVM variant is built on the JDK 21 jobs (alongside the Loom
-// projects). The JS/Native variants are unaffected (no JVM runtime loads their classes), and stay on the JDK 11 jobs.
-lazy val zioJvmProjects: Seq[String] =
-  zioJson.projectRefs.flatMap(projectId).filterNot(id => id.contains("JS") || id.contains("Native"))
-
-// mockserver-netty 7.x (a test-only dependency of sttp-mock-server) requires JDK 17+, so the module is built and
-// tested only on the JDK 21 jobs (alongside the Loom and zio-json JVM projects), not on the JDK 11 jobs.
-lazy val jdk17Projects: Seq[String] = sttpMockServer.projectRefs.flatMap(projectId)
+// projects requiring JDK 21; perfTestsE2e is included as it depends on nimaServer
+lazy val loomProjects: Seq[String] =
+  Seq(nettyServerSync, nimaServer, perfTestsE2e, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
 
 def projectId(projectRef: ProjectReference): Option[String] =
   projectRef match {
@@ -300,25 +286,15 @@ lazy val allAggregates: Seq[ProjectReference] = {
     println("[info] STTP_NATIVE *not* defined, *not* including native in the aggregate projects")
     rawAllAggregates.filterNot(_.toString.contains("Native"))
   }
-  // zio-json's JVM artifact requires JDK 17+, so it's only included on the JDK 21 jobs (where WITH_ZIO is set)
-  val filteredByZio = if (sys.env.isDefinedAt("WITH_ZIO")) {
-    println("[info] WITH_ZIO defined, including zio-json JVM in the aggregate projects")
-    filteredByNative
-  } else {
-    println("[info] WITH_ZIO *not* defined, *not* including zio-json JVM in the aggregate projects")
-    filteredByNative.filterNot(p => projectId(p).forall(zioJvmProjects.contains))
-  }
   if (sys.env.isDefinedAt("ONLY_LOOM")) {
-    println("[info] ONLY_LOOM defined, including only loom-based, zio-json JVM and JDK17+ projects")
-    filteredByZio.filter(p =>
-      projectId(p).forall(id => loomProjects.contains(id) || zioJvmProjects.contains(id) || jdk17Projects.contains(id))
-    )
+    println("[info] ONLY_LOOM defined, including only loom-based projects")
+    filteredByNative.filter(p => projectId(p).forall(loomProjects.contains))
   } else if (sys.env.isDefinedAt("ALSO_LOOM")) {
     println("[info] ALSO_LOOM defined, including also loom-based projects")
-    filteredByZio
+    filteredByNative
   } else {
-    println("[info] ONLY_LOOM *not* defined, *not* including loom-based and JDK17+ projects")
-    filteredByZio.filterNot(p => projectId(p).forall(id => loomProjects.contains(id) || jdk17Projects.contains(id)))
+    println("[info] ONLY_LOOM *not* defined, *not* including loom-based projects")
+    filteredByNative.filterNot(p => projectId(p).forall(loomProjects.contains))
   }
 }
 
