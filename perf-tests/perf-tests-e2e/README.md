@@ -2,26 +2,26 @@
 
 To work with performance tests, make sure you are running JDK 21+, and that the `ALSO_LOOM` environment variable is set, because the `perf-tests` project includes `tapir-nima`, which require Loom JDK feature to be available.
 
-Performance tests are executed by running `perfTests/Gatling/testOnly sttp.tapir.perf.SimulationClassName`, assuming that a server under tests is available on `localhost:8080`.
+Performance tests are executed by running `perfTestsE2e2_13/Test/runMain io.gatling.app.Gatling -rf target/gatling -s sttp.tapir.perf.SimulationClassName`, assuming that a server under tests is available on `localhost:8080`.
 
 ## Starting the server
 To run a test server, use a separate sbt session and start it using `ServerRunner`:
 ```
-perfTests/runMain sttp.tapir.perf.apis.ServerRunner http4s.TapirMulti
+perfTestsE2e2_13/runMain sttp.tapir.perf.apis.ServerRunner http4s.TapirMulti
 ```
 Run it without server name to see a list of all available names. 
 Exception: If you're testing `NettySyncServer` (tapir-server-netty-sync), its server runner is located elsewhere:
 ```
-nettyServerSync3/Test/runMain sttp.tapir.server.netty.sync.perf.NettySyncServerRunner
+nettyServerSync/Test/runMain sttp.tapir.server.netty.sync.perf.NettySyncServerRunner
 ```
 This is caused by `perf-tests` using Scala 2.13 forced by Gatling, while `NettySyncServer` is written exclusively for Scala 3.
 
 ## Configuring and running simulations
 
-Simulations can be found in `sttp.tapir.perf.Simulations.scala`. To run one, use Gatling/testOnly:
+Simulations can be found in `sttp.tapir.perf.Simulations.scala`. To run one, use Gatling's main class (the reports are written to `-rf`):
 
 ```
-perfTests/Gatling/testOnly sttp.tapir.perf.SimpleGetSimulation
+perfTestsE2e2_13/Test/runMain io.gatling.app.Gatling -rf target/gatling -s sttp.tapir.perf.SimpleGetSimulation
 ```
 
 The simulation will first run in warmup mode, then it will run with specified user count and duration. To set these values, use system properties:
