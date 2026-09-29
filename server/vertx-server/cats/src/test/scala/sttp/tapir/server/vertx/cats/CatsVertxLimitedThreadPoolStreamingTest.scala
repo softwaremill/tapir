@@ -20,10 +20,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 // Reproduces https://github.com/softwaremill/tapir/issues/5458: with a compute pool that can't compensate for blocked
-// threads (unlike cats-effect's work-stealing pool, e.g. a ZIO executor), as many concurrent streaming requests or responses as
+// threads (unlike cats-effect's work-stealing pool, e.g. a ZIO executor), more concurrent streaming requests or responses than
 // there are compute threads must not freeze the server.
 class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers {
   private val Threads = 2
+  private val Requests = Threads * 4
 
   test("streaming responses don't deadlock when the effect runs on a small fixed thread pool") {
     val streamEndpoint = endpoint.get
@@ -33,11 +34,11 @@ class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers 
 
     val bodies = withServer(streamEndpoint)(port => sendConcurrently(request(port, "stream").GET()))
 
-    bodies shouldBe List.fill(Threads)("hello, world!")
+    bodies shouldBe List.fill(Requests)("hello, world!")
   }
 
   test("streaming requests don't deadlock when the effect runs on a small fixed thread pool") {
-    // the body is decoded only after the security logic, so the sleep makes both requests enter the stream bridge together
+    // the body is decoded only after the security logic, so the sleep makes the requests enter the stream bridge together
     val echoEndpoint = endpoint.post
       .in("echo")
       .in(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain(), None))
@@ -48,7 +49,7 @@ class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers 
     val bodies =
       withServer(echoEndpoint)(port => sendConcurrently(request(port, "echo").POST(HttpRequest.BodyPublishers.ofString("hello, world!"))))
 
-    bodies shouldBe List.fill(Threads)("hello, world!")
+    bodies shouldBe List.fill(Requests)("hello, world!")
   }
 
   private def request(port: Int, path: String): HttpRequest.Builder =
@@ -56,7 +57,7 @@ class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers 
 
   private def sendConcurrently(request: HttpRequest.Builder): List[String] = {
     val client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
-    val responses = (1 to Threads).map(_ => client.sendAsync(request.build(), HttpResponse.BodyHandlers.ofString()))
+    val responses = (1 to Requests).map(_ => client.sendAsync(request.build(), HttpResponse.BodyHandlers.ofString()))
 
     CompletableFuture.allOf(responses: _*).get(20, TimeUnit.SECONDS)
 

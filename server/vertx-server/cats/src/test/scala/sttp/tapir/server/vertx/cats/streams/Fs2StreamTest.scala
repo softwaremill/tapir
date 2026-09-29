@@ -144,16 +144,51 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
     } yield succeed).unsafeToFuture()
   }
 
-  it should "release the dispatcher while the read stream is paused" in {
-    (for {
-      allocated <- Dispatcher.parallel[IO].allocated
-      (ownDispatcher, release) = allocated
-      readStream = streams.fs2
-        .fs2ReadStreamCompatible[IO](options.copy(dispatcher = ownDispatcher))
-        .asReadStream(Stream.repeatEval(IO.pure(intAsBuffer(0))).unchunks)
-      _ <- IO.delay(readStream.handler(_ => ()))
-      _ <- release.timeout(5.seconds)
-    } yield succeed).unsafeToFuture()
+  // with a sequential dispatcher, a stream run without forking would block the completions that wake it up; the
+  // pause in the handler, and the sleep before sending data, make sure the streams wait for such a completion
+  it should "convert fs2 stream to read stream with a sequential dispatcher" in {
+    Dispatcher
+      .sequential[IO]
+      .use { sequential =>
+        for {
+          received <- Deferred[IO, Unit]
+          ended <- Deferred[IO, Unit]
+          readStream = streams.fs2
+            .fs2ReadStreamCompatible[IO](options.copy(dispatcher = sequential))
+            .asReadStream(Stream.emits(List(1, 2, 3)).map(intAsBuffer).unchunks)
+          _ <- IO.delay {
+            readStream.handler { _ =>
+              if (received.complete(()).unsafeRunSync()) { val _ = readStream.pause() }
+            }
+            readStream.endHandler(_ => ended.complete(()).void.unsafeRunSync())
+            readStream.resume()
+          }
+          _ <- received.get.timeout(5.seconds)
+          _ <- IO.sleep(100.millis)
+          _ <- IO.delay(readStream.resume())
+          _ <- ended.get.timeout(5.seconds)
+        } yield succeed
+      }
+      .unsafeToFuture()
+  }
+
+  it should "convert read stream to fs2 stream with a sequential dispatcher" in {
+    Dispatcher
+      .sequential[IO]
+      .use { sequential =>
+        val readStream = new FakeStream()
+        val stream = streams.fs2.fs2ReadStreamCompatible[IO](options.copy(dispatcher = sequential)).fromReadStream(readStream, None)
+        for {
+          resultFiber <- stream.chunkN(4).map(chunkAsInt).compile.toList.start
+          _ <- IO.sleep(100.millis)
+          _ <- IO.delay {
+            (1 to 3).foreach(i => readStream.handle(intAsVertxBuffer(i)))
+            readStream.end()
+          }
+          result <- resultFiber.joinWith(IO.pure(Nil)).timeout(5.seconds)
+        } yield result shouldBe List(1, 2, 3)
+      }
+      .unsafeToFuture()
   }
 
   it should "drain read stream without pauses if buffer has enough space" in {
