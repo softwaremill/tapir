@@ -37,17 +37,18 @@ class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers 
   }
 
   test("streaming requests don't deadlock when the effect runs on a small fixed thread pool") {
-    val uploadEndpoint = endpoint.post
-      .in("upload")
-      .in(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream()))
+    // the body is decoded only after the security logic, so the sleep makes both requests enter the stream bridge together
+    val echoEndpoint = endpoint.post
+      .in("echo")
+      .in(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain(), None))
       .out(stringBody)
-      .serverLogicSuccess[IO](body => body.compile.count.map(_.toString))
+      .serverSecurityLogicSuccess[Unit, IO](_ => IO.sleep(200.millis))
+      .serverLogicSuccess(_ => body => body.through(fs2.text.utf8.decode).compile.string)
 
-    val bodies = withServer(uploadEndpoint)(port =>
-      sendConcurrently(request(port, "upload").POST(HttpRequest.BodyPublishers.ofString("hello, world!")))
-    )
+    val bodies =
+      withServer(echoEndpoint)(port => sendConcurrently(request(port, "echo").POST(HttpRequest.BodyPublishers.ofString("hello, world!"))))
 
-    bodies shouldBe List.fill(Threads)("13")
+    bodies shouldBe List.fill(Threads)("hello, world!")
   }
 
   private def request(port: Int, path: String): HttpRequest.Builder =
