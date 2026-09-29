@@ -8,6 +8,8 @@ import sttp.tapir.{InputStreamRange, RawBodyType}
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
+import scala.util.Try
 
 /** Reads a bytes-like request body from `delegate` at most once, buffering the bytes so that subsequent reads - e.g. a secondary body
   * decoded during the security phase, followed by the endpoint's own body - are served from memory.
@@ -24,7 +26,8 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     bodyType match {
-      case RawBodyType.StringBody(charset) =>
+      case RawBodyType.StringBody(defaultCharset) =>
+        val charset = requestCharset(serverRequest).getOrElse(defaultCharset)
         bytes(serverRequest, maxBytes).map(bs => RawValue(new String(bs, charset)))
       case RawBodyType.ByteArrayBody =>
         // identity codec: without the clone, a caller mutating the array would corrupt the cache
@@ -43,6 +46,9 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     delegate.toStream(serverRequest, maxBytes).asInstanceOf[streams.BinaryStream]
+
+  private def requestCharset(serverRequest: ServerRequest): Option[Charset] =
+    serverRequest.contentTypeParsed.flatMap(_.charset).flatMap(cs => Try(Charset.forName(cs)).toOption)
 
   // only the first call's maxBytes applies; both phases derive it from the same EndpointInfo, so they agree
   private def bytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =
