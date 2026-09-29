@@ -79,6 +79,9 @@ Note that a *single* body input needs no marking: an endpoint which reads the bo
 with no body declared in `in`, reads the request exactly once. It works without `asSecondary`, and stays
 fully documented and visible to clients.
 
+A string, byte array, byte buffer or input stream body with a hidden schema, e.g.
+`byteArrayBody.schema(_.hidden(true))`, is also decoded on the server as a secondary body.
+
 Both kinds of problem, along with endpoints whose contract is merely suspect, are also reported by
 [`EndpointVerifier`](../testing.md#invalid-request-body-definitions).
 

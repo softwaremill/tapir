@@ -54,6 +54,50 @@ class ServerInterpreterSecondaryBodyTest extends AnyFlatSpec with Matchers {
     requestBody.reads shouldBe 1
   }
 
+  it should "decode a hidden security body like a secondary one, reading the body once" in {
+    val se = endpoint.post
+      .in("test")
+      .securityIn(byteArrayBody.schema(_.hidden(true)))
+      .in(stringBody)
+      .out(stringBody)
+      .serverSecurityLogic[String, Identity](raw => Right(s"security:${new String(raw, StandardCharsets.UTF_8)}"))
+      .serverLogic(principal => body => Right(s"$principal|logic:$body"))
+
+    val requestBody = new CountingRequestBody("payload")
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(se),
+      requestBody,
+      StringToResponseBody,
+      Nil,
+      _ => ()
+    )
+
+    val result = interpreter.apply(createTestRequest(List("test"), _method = Method.POST))
+
+    result.asInstanceOf[RequestResult.Response[String]].response.body shouldBe Some("security:payload|logic:payload")
+    requestBody.reads shouldBe 1
+  }
+
+  it should "decode a lone hidden body" in {
+    val se = endpoint.post
+      .in("test")
+      .in(stringBody.schema(_.hidden(true)))
+      .out(stringBody)
+      .serverLogic[Identity](body => Right(s"logic:$body"))
+
+    val interpreter = new ServerInterpreter[Any, Identity, String, NoStreams](
+      _ => List(se),
+      new CountingRequestBody("payload"),
+      StringToResponseBody,
+      Nil,
+      _ => ()
+    )
+
+    val result = interpreter.apply(createTestRequest(List("test"), _method = Method.POST))
+
+    result.asInstanceOf[RequestResult.Response[String]].response.body shouldBe Some("logic:payload")
+  }
+
   it should "not read the body a second time when security logic fails" in {
     val se = endpoint.post
       .in("test")

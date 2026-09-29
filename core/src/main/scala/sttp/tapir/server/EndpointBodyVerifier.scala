@@ -2,7 +2,7 @@ package sttp.tapir.server
 
 import sttp.model.Method
 import sttp.tapir.internal._
-import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput, RawBodyType}
+import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
 /** Errors make an endpoint unserveable; warnings describe one that works, but whose published contract probably isn't what was intended. */
 private[tapir] case class EndpointBodyProblems(errors: List[String], warnings: List[String]) {
@@ -29,11 +29,11 @@ private[tapir] object EndpointBodyVerifier {
     val ordinaryInputs = endpoint.input.asVectorOfBasicInputs()
     val inputs = securityInputs ++ ordinaryInputs
 
-    val secondary = inputs.collect { case b: EndpointIO.Body[?, ?] if b.isSecondary => b }
+    val markedSecondary = inputs.collect { case b: EndpointIO.Body[?, ?] if b.isSecondary => b }
     def primaryBodiesOf(basics: Vector[EndpointInput.Basic[?]]): Vector[EndpointInput.Basic[?]] = basics.collect {
-      case b: EndpointIO.Body[?, ?] if !b.isSecondary => b
-      case b: EndpointIO.OneOfBody[?, ?]              => b
-      case b: EndpointIO.StreamBodyWrapper[?, ?]      => b
+      case b: EndpointIO.Body[?, ?] if !decodesAsSecondary(b) => b
+      case b: EndpointIO.OneOfBody[?, ?]                      => b
+      case b: EndpointIO.StreamBodyWrapper[?, ?]              => b
     }
     val securityPrimaryBodies = primaryBodiesOf(securityInputs)
     val inPrimaryBodies = primaryBodiesOf(ordinaryInputs)
@@ -45,13 +45,8 @@ private[tapir] object EndpointBodyVerifier {
     val primaryBodyAtoms: Vector[EndpointInput.Basic[?]] = primaryBodies.flatMap(asAtoms)
     val streamingPrimary = primaryBodyAtoms.exists(_.isInstanceOf[EndpointIO.StreamBodyWrapper[?, ?]])
     val nonReplayablePrimary = primaryBodyAtoms.exists {
-      case b: EndpointIO.Body[?, ?] =>
-        b.bodyType match {
-          case RawBodyType.FileBody         => true
-          case _: RawBodyType.MultipartBody => true
-          case _                            => false
-        }
-      case _ => false
+      case b: EndpointIO.Body[?, ?] => !isReplayable(b.bodyType)
+      case _                        => false
     }
     val shown = endpoint.showShort
 
@@ -88,7 +83,7 @@ private[tapir] object EndpointBodyVerifier {
       else Nil
 
     val streamWithSecondary =
-      if (streamingPrimary && secondary.nonEmpty)
+      if (streamingPrimary && markedSecondary.nonEmpty)
         List(
           s"Endpoint $shown combines a streaming body with a secondary body. The request body can either be " +
             s"streamed lazily or buffered for repeated reads, not both."
@@ -96,7 +91,7 @@ private[tapir] object EndpointBodyVerifier {
       else Nil
 
     val nonReplayableWithSecondary =
-      if (nonReplayablePrimary && secondary.nonEmpty)
+      if (nonReplayablePrimary && markedSecondary.nonEmpty)
         List(
           s"Endpoint $shown combines a file or multipart body with a secondary body. Reading the secondary body " +
             s"consumes the request; the file or multipart body would then be read from an already-drained request."
@@ -105,7 +100,7 @@ private[tapir] object EndpointBodyVerifier {
 
     val bodyCarryingMethod = endpoint.method.exists(m => m == Method.POST || m == Method.PUT || m == Method.PATCH)
     val secondaryWithoutPrimary =
-      if (secondary.nonEmpty && primaryBodies.isEmpty && bodyCarryingMethod)
+      if (markedSecondary.nonEmpty && primaryBodies.isEmpty && bodyCarryingMethod)
         List(
           s"Endpoint $shown reads a secondary request body, but no request body is part of the API contract: it " +
             s"will be absent from the documentation and clients will not send it. Either declare the body in `in` " +
@@ -114,7 +109,7 @@ private[tapir] object EndpointBodyVerifier {
       else Nil
 
     val uselessMetadata =
-      secondary.filter(b => b.info.description.isDefined || b.info.examples.nonEmpty).map { b =>
+      markedSecondary.filter(b => b.info.description.isDefined || b.info.examples.nonEmpty).map { b =>
         s"Endpoint $shown sets a description or example on the secondary body ${b.show}, which never reaches the " +
           s"documentation, as secondary bodies are excluded from it."
       }

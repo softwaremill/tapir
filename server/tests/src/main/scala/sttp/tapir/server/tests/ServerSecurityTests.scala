@@ -172,6 +172,22 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
         .body("payload")
         .send(backend)
         .map(_.body shouldBe "denied")
+    },
+    testServerLogic(
+      endpoint.post
+        .in("hidden")
+        .securityIn(byteArrayBody.schema(_.hidden(true)))
+        .in(stringBody)
+        .out(stringBody)
+        .serverSecurityLogic((raw: Array[Byte]) => pureResult(s"security:${new String(raw, "UTF-8")}".asRight[Unit]))
+        .serverLogic(principal => body => pureResult(s"$principal|logic:$body".asRight[Unit])),
+      "hidden security body is decoded like a secondary body"
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/hidden")
+        .body("payload")
+        .send(backend)
+        .map(_.body shouldBe "security:payload|logic:payload")
     }
   ) ++
     correctAuthTests ++
