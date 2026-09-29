@@ -11,6 +11,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir._
+import sttp.tapir.server.ServerEndpoint
 
 import java.net.URI
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
@@ -19,12 +20,49 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 // Reproduces https://github.com/softwaremill/tapir/issues/5458: with a compute pool that can't compensate for blocked
-// threads (unlike cats-effect's work-stealing pool, e.g. a ZIO executor), as many concurrent streaming responses as
+// threads (unlike cats-effect's work-stealing pool, e.g. a ZIO executor), as many concurrent streaming requests or responses as
 // there are compute threads must not freeze the server.
 class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers {
   private val Threads = 2
 
   test("streaming responses don't deadlock when the effect runs on a small fixed thread pool") {
+    val streamEndpoint = endpoint.get
+      .in("stream")
+      .out(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain(), None))
+      .serverLogicSuccess[IO](_ => IO.sleep(200.millis).as(Stream.emits("hello, world!".getBytes.toIndexedSeq)))
+
+    val bodies = withServer(streamEndpoint)(port => sendConcurrently(request(port, "stream").GET()))
+
+    bodies shouldBe List.fill(Threads)("hello, world!")
+  }
+
+  test("streaming requests don't deadlock when the effect runs on a small fixed thread pool") {
+    val uploadEndpoint = endpoint.post
+      .in("upload")
+      .in(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream()))
+      .out(stringBody)
+      .serverLogicSuccess[IO](body => body.compile.count.map(_.toString))
+
+    val bodies = withServer(uploadEndpoint)(port =>
+      sendConcurrently(request(port, "upload").POST(HttpRequest.BodyPublishers.ofString("hello, world!")))
+    )
+
+    bodies shouldBe List.fill(Threads)("13")
+  }
+
+  private def request(port: Int, path: String): HttpRequest.Builder =
+    HttpRequest.newBuilder(URI.create(s"http://127.0.0.1:$port/$path"))
+
+  private def sendConcurrently(request: HttpRequest.Builder): List[String] = {
+    val client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
+    val responses = (1 to Threads).map(_ => client.sendAsync(request.build(), HttpResponse.BodyHandlers.ofString()))
+
+    CompletableFuture.allOf(responses: _*).get(20, TimeUnit.SECONDS)
+
+    responses.map(_.get().body()).toList
+  }
+
+  private def withServer[T](e: ServerEndpoint[Fs2Streams[IO], IO])(f: Int => T): T = {
     val computePool = Executors.newFixedThreadPool(Threads)
     val blockingPool = Executors.newCachedThreadPool()
     val (scheduler, shutdownScheduler) = Scheduler.createDefaultScheduler()
@@ -37,11 +75,6 @@ class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers 
     )
     val vertx = Vertx.vertx()
 
-    val streamEndpoint = endpoint.get
-      .in("stream")
-      .out(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain(), None))
-      .serverLogicSuccess[IO](_ => IO.sleep(200.millis).as(Stream.emits("hello, world!".getBytes.toIndexedSeq)))
-
     // the dispatcher isn't released: on deadlock, the compute pool it would run on is stuck
     val port = Dispatcher
       .parallel[IO]
@@ -49,21 +82,14 @@ class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers 
       .flatMap { case (dispatcher, _) =>
         IO.fromCompletableFuture(IO.delay {
           val router = Router.router(vertx)
-          val _ = VertxCatsServerInterpreter[IO](dispatcher).route(streamEndpoint)(router)
+          val _ = VertxCatsServerInterpreter[IO](dispatcher).route(e)(router)
           vertx.createHttpServer(new HttpServerOptions()).requestHandler(router).listen(0).toCompletionStage.toCompletableFuture
         }).map(_.actualPort())
       }
       .unsafeRunSync()(runtime)
 
-    try {
-      val client = HttpClient.newHttpClient()
-      val request = HttpRequest.newBuilder(URI.create(s"http://127.0.0.1:$port/stream")).GET().build()
-      val responses = (1 to Threads).map(_ => client.sendAsync(request, HttpResponse.BodyHandlers.ofString()))
-
-      CompletableFuture.allOf(responses: _*).get(20, TimeUnit.SECONDS)
-
-      responses.map(_.get().body()) shouldBe List.fill(Threads)("hello, world!")
-    } finally {
+    try f(port)
+    finally {
       computePool.shutdownNow()
       blockingPool.shutdownNow()
       shutdownScheduler()

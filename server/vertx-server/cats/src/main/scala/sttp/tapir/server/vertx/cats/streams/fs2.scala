@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx.cats.streams
 import _root_.fs2.{Chunk, Stream}
 import _root_.fs2.concurrent.Channel
 import cats.effect.kernel.Resource.ExitCase.{Canceled, Errored, Succeeded}
-import cats.effect.{Deferred, Ref, Sync, Async, GenSpawn}
+import cats.effect.{Deferred, Sync, Async}
 import cats.syntax.all._
 import cats.effect.implicits._
 import io.vertx.core.Handler
@@ -18,6 +18,7 @@ import sttp.tapir.server.vertx.streams.websocket._
 import sttp.tapir.server.vertx.streams._
 import sttp.ws.WebSocketFrame
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable.{Queue => SQueue}
 
 object fs2 {
@@ -39,143 +40,154 @@ object fs2 {
       override def asReadStream(stream: Stream[F, Byte]): ReadStream[Buffer] =
         mapToReadStream[Chunk[Byte], Buffer](stream.chunks, chunk => Buffer.buffer(chunk.toArray))
 
-      private def mapToReadStream[I, O](stream: Stream[F, I], fn: I => O): ReadStream[O] =
-        opts.dispatcher.unsafeRunSync {
-          for {
-            promise <- Deferred[F, Unit]
-            state <- Ref.of(StreamState.empty[F, O](promise))
-            _ <- GenSpawn[F].start(
-              stream
-                .evalMap({ chunk =>
-                  state.get.flatMap {
-                    case StreamState(None, handler, _, _) =>
-                      Sync[F].delay(handler.handle(fn(chunk)))
-                    case StreamState(Some(promise), _, _, _) =>
-                      for {
-                        _ <- promise.get
-                        // Handler in state may be updated since the moment when we wait
-                        // promise so let's get more recent version.
-                        updatedState <- state.get
-                        _ <- Sync[F].delay(updatedState.handler.handle(fn(chunk)))
-                      } yield ()
-                  }
-                })
-                .onFinalizeCase({
-                  case Succeeded =>
-                    state.get.flatMap { state =>
-                      Sync[F].delay(state.endHandler.handle(null))
-                    }
-                  case Canceled =>
-                    state.get.flatMap { state =>
-                      Sync[F].delay(state.errorHandler.handle(new Exception("Cancelled!")))
-                    }
-                  case Errored(cause) =>
-                    state.get.flatMap { state =>
-                      Sync[F].delay(state.errorHandler.handle(cause))
-                    }
-                })
-                .compile
-                .drain
-            )
-          } yield new ReadStream[O] {
-            self =>
-            override def handler(handler: Handler[O]): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(state.update(_.copy(handler = handler)).as(self))
+      private def mapToReadStream[I, O](stream: Stream[F, I], fn: I => O): ReadStream[O] = {
+        val state = new AtomicReference(StreamState.empty[F, O](Deferred.unsafe[F, Unit]))
+        val readState = Sync[F].delay(state.get)
 
-            override def endHandler(handler: Handler[Void]): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(state.update(_.copy(endHandler = handler)).as(self))
-
-            override def exceptionHandler(handler: Handler[Throwable]): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(state.update(_.copy(errorHandler = handler)).as(self))
-
-            override def pause(): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(for {
-                deferred <- Deferred[F, Unit]
-                _ <- state.update {
-                  case cur @ StreamState(Some(_), _, _, _) =>
-                    cur
-                  case cur @ StreamState(None, _, _, _) =>
-                    cur.copy(paused = Some(deferred))
+        opts.dispatcher.unsafeRunAndForget(
+          stream
+            .evalMap({ chunk =>
+              readState.flatMap {
+                case StreamState(None, handler, _, _) =>
+                  Sync[F].delay(handler.handle(fn(chunk)))
+                case StreamState(Some(promise), _, _, _) =>
+                  for {
+                    _ <- promise.get
+                    // Handler in state may be updated since the moment when we wait
+                    // promise so let's get more recent version.
+                    updatedState <- readState
+                    _ <- Sync[F].delay(updatedState.handler.handle(fn(chunk)))
+                  } yield ()
+              }
+            })
+            .onFinalizeCase({
+              case Succeeded =>
+                readState.flatMap { state =>
+                  Sync[F].delay(state.endHandler.handle(null))
                 }
-              } yield self)
+              case Canceled =>
+                readState.flatMap { state =>
+                  Sync[F].delay(state.errorHandler.handle(new Exception("Cancelled!")))
+                }
+              case Errored(cause) =>
+                readState.flatMap { state =>
+                  Sync[F].delay(state.errorHandler.handle(cause))
+                }
+            })
+            .compile
+            .drain
+            // forked so that a long-running stream doesn't hold up a sequential dispatcher, and isn't cancelled when it's released
+            .start
+            .void
+        )
 
-            override def resume(): ReadStream[O] =
-              opts.dispatcher.unsafeRunSync(for {
-                oldState <- state.getAndUpdate(_.copy(paused = None))
-                _ <- oldState.paused.fold(Async[F].unit)(_.complete(()))
-              } yield self)
-
-            override def fetch(n: Long): ReadStream[O] =
-              self
+        new ReadStream[O] {
+          self =>
+          override def handler(handler: Handler[O]): ReadStream[O] = {
+            state.updateAndGet(_.copy(handler = handler))
+            self
           }
+
+          override def endHandler(handler: Handler[Void]): ReadStream[O] = {
+            state.updateAndGet(_.copy(endHandler = handler))
+            self
+          }
+
+          override def exceptionHandler(handler: Handler[Throwable]): ReadStream[O] = {
+            state.updateAndGet(_.copy(errorHandler = handler))
+            self
+          }
+
+          override def pause(): ReadStream[O] = {
+            val deferred: DeferredLike[F, Unit] = Deferred.unsafe[F, Unit]
+            state.updateAndGet {
+              case cur @ StreamState(Some(_), _, _, _) => cur
+              case cur @ StreamState(None, _, _, _)    => cur.copy(paused = Some(deferred))
+            }
+            self
+          }
+
+          override def resume(): ReadStream[O] = {
+            val oldState = state.getAndUpdate(_.copy(paused = None))
+            oldState.paused.foreach(deferred => opts.dispatcher.unsafeRunAndForget(deferred.complete(())))
+            self
+          }
+
+          override def fetch(n: Long): ReadStream[O] =
+            self
         }
+      }
 
       override def fromReadStream(readStream: ReadStream[Buffer], maxBytes: Option[Long]): Stream[F, Byte] = {
         val stream = fromReadStreamInternal(readStream).map(buffer => Chunk.array(buffer.getBytes)).unchunks
         maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
       }
 
-      private def fromReadStreamInternal[T](readStream: ReadStream[T]): Stream[F, T] =
-        opts.dispatcher.unsafeRunSync {
+      private def fromReadStreamInternal[T](readStream: ReadStream[T]): Stream[F, T] = {
+        val state = new AtomicReference(ReadStreamState[F, T](Queued(SQueue.empty), Queued(SQueue.empty)))
+        // Vert.x delivers events in order, so the state changes happen synchronously; only the resulting completions are dispatched
+        def update(f: ReadStreamState[F, T] => (ReadStreamState[F, T], List[F[Unit]])): Unit = {
+          val actions = Pipe.modify(state, f)
+          if (actions.nonEmpty) opts.dispatcher.unsafeRunAndForget(actions.sequence_)
+        }
+
+        val stream = Stream.unfoldEval[F, Unit, T](()) { _ =>
           for {
-            stateRef <- Ref.of(ReadStreamState[F, T](Queued(SQueue.empty), Queued(SQueue.empty)))
-            stream = Stream.unfoldEval[F, Unit, T](()) { _ =>
+            dfd <- Deferred[F, WrappedBuffer[T]]
+            tuple <- Sync[F].delay(Pipe.modify(state, (s: ReadStreamState[F, T]) => s.dequeueBuffer(dfd)))
+            (mbBuffer, mbAction) = tuple
+            _ <- mbAction.traverse(identity)
+            wrappedBuffer <- mbBuffer match {
+              case Left(deferred) =>
+                deferred.get
+              case Right(buffer) =>
+                buffer.pure[F]
+            }
+            result <- wrappedBuffer match {
+              case Right(buffer)     => Some((buffer, ())).pure[F]
+              case Left(None)        => None.pure[F]
+              case Left(Some(cause)) => Async[F].raiseError(cause)
+            }
+          } yield result
+        }
+
+        opts.dispatcher.unsafeRunAndForget(
+          Stream
+            .unfoldEval[F, Unit, ActivationEvent](())({ _ =>
               for {
-                dfd <- Deferred[F, WrappedBuffer[T]]
-                tuple <- stateRef.modify(_.dequeueBuffer(dfd))
-                (mbBuffer, mbAction) = tuple
-                _ <- mbAction.traverse(identity)
-                wrappedBuffer <- mbBuffer match {
+                dfd <- Deferred[F, WrappedEvent]
+                mbEvent <- Sync[F].delay(Pipe.modify(state, (s: ReadStreamState[F, T]) => s.dequeueActivationEvent(dfd)))
+                result <- mbEvent match {
                   case Left(deferred) =>
                     deferred.get
-                  case Right(buffer) =>
-                    buffer.pure[F]
+                  case Right(event) =>
+                    event.pure[F]
                 }
-                result <- wrappedBuffer match {
-                  case Right(buffer)     => Some((buffer, ())).pure[F]
-                  case Left(None)        => None.pure[F]
-                  case Left(Some(cause)) => Async[F].raiseError(cause)
-                }
-              } yield result
-            }
+              } yield result.map((_, ()))
+            })
+            .evalMap({
+              // Vert.x 5 throws an IllegalStateException when pausing/resuming a fully-read request; it's safe to ignore (Vert.x 4 treated it as a no-op)
+              case Pause  => Sync[F].delay(readStream.pause()).attempt.void
+              case Resume => Sync[F].delay(readStream.resume()).attempt.void
+            })
+            .compile
+            .drain
+            .start
+            .void
+        )
 
-            _ <- GenSpawn[F].start(
-              Stream
-                .unfoldEval[F, Unit, ActivationEvent](())({ _ =>
-                  for {
-                    dfd <- Deferred[F, WrappedEvent]
-                    mbEvent <- stateRef.modify(_.dequeueActivationEvent(dfd))
-                    result <- mbEvent match {
-                      case Left(deferred) =>
-                        deferred.get
-                      case Right(event) =>
-                        event.pure[F]
-                    }
-                  } yield result.map((_, ()))
-                })
-                .evalMap({
-                  // Vert.x 5 throws an IllegalStateException when pausing/resuming a fully-read request; it's safe to ignore (Vert.x 4 treated it as a no-op)
-                  case Pause  => Sync[F].delay(readStream.pause()).attempt.void
-                  case Resume => Sync[F].delay(readStream.resume()).attempt.void
-                })
-                .compile
-                .drain
-            )
-          } yield {
-            readStream.endHandler { _ =>
-              opts.dispatcher.unsafeRunSync(stateRef.modify(_.halt(None)).flatMap(_.sequence_))
-            }
-            readStream.exceptionHandler { cause =>
-              opts.dispatcher.unsafeRunSync(stateRef.modify(_.halt(Some(cause))).flatMap(_.sequence_))
-            }
-            readStream.handler { buffer =>
-              val maxSize = opts.maxQueueSizeForReadStream
-              opts.dispatcher.unsafeRunSync(stateRef.modify(_.enqueue(buffer, maxSize)).flatMap(_.sequence_))
-            }
-
-            stream
-          }
+        readStream.endHandler { _ =>
+          update(_.halt(None))
         }
+        readStream.exceptionHandler { cause =>
+          update(_.halt(Some(cause)))
+        }
+        readStream.handler { buffer =>
+          update(_.enqueue(buffer, opts.maxQueueSizeForReadStream))
+        }
+
+        stream
+      }
 
       private def decodeFrame[REQ, RESP](
           frame: WebSocketFrame,

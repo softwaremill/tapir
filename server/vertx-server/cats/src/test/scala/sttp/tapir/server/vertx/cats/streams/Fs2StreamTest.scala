@@ -144,6 +144,18 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
     } yield succeed).unsafeToFuture()
   }
 
+  it should "release the dispatcher while the read stream is paused" in {
+    (for {
+      allocated <- Dispatcher.parallel[IO].allocated
+      (ownDispatcher, release) = allocated
+      readStream = streams.fs2
+        .fs2ReadStreamCompatible[IO](options.copy(dispatcher = ownDispatcher))
+        .asReadStream(Stream.repeatEval(IO.pure(intAsBuffer(0))).unchunks)
+      _ <- IO.delay(readStream.handler(_ => ()))
+      _ <- release.timeout(5.seconds)
+    } yield succeed).unsafeToFuture()
+  }
+
   it should "drain read stream without pauses if buffer has enough space" in {
     val opts = options.copy(maxQueueSizeForReadStream = 128)
     val count = 100
