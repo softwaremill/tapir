@@ -114,15 +114,28 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.errors.head should include("file")
   }
 
+  it should "report each kind of non-replayable primary body alongside a secondary body" in {
+    val e = endpoint.post
+      .in("people")
+      .securityIn(stringBody.asSecondary)
+      .in[Nothing, Nothing, Unit, NoStreams](streamTextBody(NoStreams)(CodecFormat.TextPlain()))
+      .in(fileBody)
+    val problems = EndpointBodyVerifier.verifyOne(e)
+
+    problems.errors.exists(_.contains("streaming body")) shouldBe true
+    problems.errors.exists(_.contains("file or multipart body")) shouldBe true
+  }
+
   it should "reject a secondary body variant inside a oneOfBody" in {
     val e = endpoint.post.in("people").securityIn(oneOfBody(stringBody.asSecondary)).in(byteArrayBody)
     val problems = EndpointBodyVerifier.verifyOne(e)
 
-    problems.errors should have size 1
+    problems.errors should have size 2
     problems.errors.head should include("marks a oneOfBody variant as secondary")
+    problems.errors(1) should include("declares a request body in both securityIn and in")
   }
 
-  it should "warn about a secondary body with no primary body on POST" in {
+  it should "warn about a secondary body with no primary body" in {
     val e = endpoint.post.in("ingest").securityIn(stringBody.asSecondary)
     val problems = EndpointBodyVerifier.verifyOne(e)
 
@@ -131,9 +144,9 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.warnings.head should include("no request body is part of the API contract")
   }
 
-  it should "not warn about a secondary body with no primary body on GET" in {
+  it should "warn about a secondary body with no primary body whatever the method" in {
     val e = endpoint.get.in("ping").securityIn(stringBody.asSecondary)
-    EndpointBodyVerifier.verifyOne(e).warnings shouldBe empty
+    EndpointBodyVerifier.verifyOne(e).warnings.head should include("no request body is part of the API contract")
   }
 
   it should "warn about metadata on a secondary body" in {

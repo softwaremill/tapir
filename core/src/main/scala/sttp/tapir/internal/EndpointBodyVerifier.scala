@@ -1,6 +1,5 @@
 package sttp.tapir.internal
 
-import sttp.model.Method
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
 /** Errors make an endpoint unserveable; warnings describe one that works, but whose published contract probably isn't what was intended. */
@@ -51,19 +50,16 @@ private[tapir] object EndpointBodyVerifier {
       case b: EndpointIO.Body[?, ?] => !isReplayable(b.bodyType)
       case _                        => false
     }
-    val shown = endpoint.showShort
+    lazy val shown = endpoint.showShort
 
     // asSecondary can be called on a variant, as oneOfBody takes bodies, but the server interpreters only look for
     // the marker on a top-level body input - so accepting it here would silently fall back to reading the body once
     val secondaryInsideOneOfBody: List[String] =
-      inputs
-        .collect { case ob: EndpointIO.OneOfBody[?, ?] => ob }
-        .collect {
-          case ob if ob.variants.map(_.bodyAsAtom).exists { case b: EndpointIO.Body[?, ?] => b.isSecondary; case _ => false } =>
-            s"Endpoint $shown marks a oneOfBody variant as secondary. Only a body input used on its own can be " +
-              s"secondary; a oneOfBody is always part of the API contract."
-        }
-        .toList
+      inputs.collect {
+        case ob: EndpointIO.OneOfBody[?, ?] if asAtoms(ob).exists { case b: EndpointIO.Body[?, ?] => b.isSecondary; case _ => false } =>
+          s"Endpoint $shown marks a oneOfBody variant as secondary. Only a body input used on its own can be " +
+            s"secondary; a oneOfBody is always part of the API contract."
+      }.toList
 
     val secondaryOutputs: List[String] =
       List(endpoint.output, endpoint.errorOutput)
@@ -81,8 +77,7 @@ private[tapir] object EndpointBodyVerifier {
         .toList
 
     val tooManyPrimaries: List[String] =
-      if (secondaryInsideOneOfBody.nonEmpty) Nil
-      else if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
+      if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
         List(
           s"Endpoint $shown declares a request body in both securityIn and in. Only one may be part of the API " +
             s"contract. If both should decode the same request body, mark the securityIn one: " +
@@ -100,25 +95,19 @@ private[tapir] object EndpointBodyVerifier {
         )
       else Nil
 
-    val streamWithSecondary =
-      if (streamingPrimary && markedSecondary.nonEmpty)
-        List(
-          s"Endpoint $shown combines a streaming body with a secondary body. The request body can either be " +
-            s"streamed lazily or buffered for repeated reads, not both."
-        )
+    val nonReplayablePrimaryKinds = List(streamingPrimary -> "streaming", nonReplayablePrimary -> "file or multipart").collect {
+      case (true, kind) => kind
+    }
+    val nonReplayablePrimaryWithSecondary =
+      if (markedSecondary.nonEmpty)
+        nonReplayablePrimaryKinds.map { kind =>
+          s"Endpoint $shown combines a $kind body with a secondary body. The request body is buffered to decode the " +
+            s"secondary body, so it can't also be read as a $kind body."
+        }
       else Nil
 
-    val nonReplayableWithSecondary =
-      if (nonReplayablePrimary && markedSecondary.nonEmpty)
-        List(
-          s"Endpoint $shown combines a file or multipart body with a secondary body. Reading the secondary body " +
-            s"consumes the request; the file or multipart body would then be read from an already-drained request."
-        )
-      else Nil
-
-    val bodyCarryingMethod = endpoint.method.exists(m => m == Method.POST || m == Method.PUT || m == Method.PATCH)
     val secondaryWithoutPrimary =
-      if (markedSecondary.nonEmpty && primaryBodies.isEmpty && bodyCarryingMethod)
+      if (markedSecondary.nonEmpty && primaryBodies.isEmpty)
         List(
           s"Endpoint $shown reads a secondary request body, but no request body is part of the API contract: it " +
             s"will be absent from the documentation and clients will not send it. Either declare the body in `in` " +
@@ -134,7 +123,7 @@ private[tapir] object EndpointBodyVerifier {
 
     EndpointBodyProblems(
       errors =
-        nonReplayableSecondary ++ secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyPrimaries ++ streamWithSecondary ++ nonReplayableWithSecondary,
+        nonReplayableSecondary ++ secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyPrimaries ++ nonReplayablePrimaryWithSecondary,
       warnings = (secondaryWithoutPrimary ++ uselessMetadata).toList
     )
   }
