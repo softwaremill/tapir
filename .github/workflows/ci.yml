@@ -102,9 +102,7 @@ jobs:
     - name: Verify that examples compile using Scala CLI
       if: matrix.target-platform == 'JVM' && matrix.java == '21' && matrix.scala-version == '3'
       timeout-minutes: 15
-      run: |
-        sbt shutdown
-        sbt -v examples/verifyExamplesCompileUsingScalaCli
+      run: sbt --server -v examples/verifyExamplesCompileUsingScalaCli
     - name: Test
       if: matrix.target-platform != 'JS'
       uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v3, specifically v4.0.0
