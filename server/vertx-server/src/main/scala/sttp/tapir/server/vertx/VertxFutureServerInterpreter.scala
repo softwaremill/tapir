@@ -4,7 +4,8 @@ import io.vertx.core.{Handler, Future => VFuture}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.WebSockets
 import sttp.monad.FutureMonad
-import sttp.tapir.server.{EndpointBodyVerifier, ServerEndpoint}
+import sttp.tapir.internal.EndpointBodyVerifier
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxFutureServerInterpreter.{FutureFromVFuture, FutureRunAsync, VertxFutureToScalaFuture}
@@ -26,7 +27,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
     *   A function, that given a router, will attach this endpoint to it
     */
   def route[A, U, I, E, O](e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
-    EndpointBodyVerifier.throwOnErrors(EndpointBodyVerifier.verifyOne(e.endpoint))
+    EndpointBodyVerifier.verifyOrThrow(e.endpoint)
 
     val routeDef = extractRouteDefinition(e.endpoint)
     optionsRouteIfCORSDefined(e)(router, routeDef, vertxFutureServerOptions)
@@ -42,7 +43,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
     *   A function, that given a router, will attach this endpoint to it
     */
   def blockingRoute(e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
-    EndpointBodyVerifier.throwOnErrors(EndpointBodyVerifier.verifyOne(e.endpoint))
+    EndpointBodyVerifier.verifyOrThrow(e.endpoint)
 
     val routeDef = extractRouteDefinition(e.endpoint)
     optionsRouteIfCORSDefined(e)(router, routeDef, vertxFutureServerOptions)

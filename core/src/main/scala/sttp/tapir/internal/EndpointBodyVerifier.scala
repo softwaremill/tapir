@@ -1,7 +1,6 @@
-package sttp.tapir.server
+package sttp.tapir.internal
 
 import sttp.model.Method
-import sttp.tapir.internal._
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
 /** Errors make an endpoint unserveable; warnings describe one that works, but whose published contract probably isn't what was intended. */
@@ -14,14 +13,18 @@ private[tapir] object EndpointBodyProblems {
   val Empty: EndpointBodyProblems = EndpointBodyProblems(Nil, Nil)
 }
 
-/** Verifies that endpoint descriptions are structurally serveable. Run by server interpreters when routes are constructed; warnings are not
-  * logged anywhere, so call this directly to assert on them.
+/** Verifies that endpoint descriptions are structurally serveable. Errors are thrown by server interpreters when routes are constructed;
+  * both errors and warnings are reported by `EndpointVerifier`.
   */
 private[tapir] object EndpointBodyVerifier {
   def verify(endpoints: List[AnyEndpoint]): EndpointBodyProblems =
     endpoints.map(verifyOne).foldLeft(EndpointBodyProblems.Empty)(_ ++ _)
 
-  private[tapir] def throwOnErrors(problems: EndpointBodyProblems): Unit =
+  def verifyOrThrow(endpoints: List[AnyEndpoint]): Unit = throwOnErrors(verify(endpoints))
+
+  def verifyOrThrow(endpoint: AnyEndpoint): Unit = throwOnErrors(verifyOne(endpoint))
+
+  private def throwOnErrors(problems: EndpointBodyProblems): Unit =
     if (problems.errors.nonEmpty) throw new IllegalArgumentException(problems.errors.mkString("\n"))
 
   def verifyOne(endpoint: AnyEndpoint): EndpointBodyProblems = {

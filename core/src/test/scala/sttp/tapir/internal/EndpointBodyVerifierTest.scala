@@ -1,4 +1,4 @@
-package sttp.tapir.server
+package sttp.tapir.internal
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
