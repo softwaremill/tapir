@@ -2,24 +2,29 @@ package sttp.tapir
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.internal.SecondaryBody
 
 class SecondaryBodyTest extends AnyFlatSpec with Matchers {
   it should "mark a string body as secondary" in {
-    stringBody.asSecondary.attribute(SecondaryBody.attributeKey) shouldBe Some(SecondaryBody())
+    stringBody.asSecondary.attribute(SecondaryBody.Attribute) shouldBe Some(SecondaryBody())
   }
 
   it should "mark a json-style string body as secondary" in {
     val body = stringBodyUtf8AnyFormat(Codec.string)
-    body.asSecondary.attribute(SecondaryBody.attributeKey) shouldBe Some(SecondaryBody())
+    body.asSecondary.attribute(SecondaryBody.Attribute) shouldBe Some(SecondaryBody())
   }
 
   it should "leave a plain body unmarked" in {
-    stringBody.attribute(SecondaryBody.attributeKey) shouldBe None
+    stringBody.attribute(SecondaryBody.Attribute) shouldBe None
     stringBody.isSecondary shouldBe false
   }
 
   it should "report a marked body through isSecondary" in {
     stringBody.asSecondary.isSecondary shouldBe true
+  }
+
+  it should "not treat a key built from the same name as a secondary marker" in {
+    fileBody.attribute(new AttributeKey[Unit]("sttp.tapir.internal.SecondaryBody"), ()).isSecondary shouldBe false
   }
 
   it should "preserve the codec and body type" in {

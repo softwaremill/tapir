@@ -71,6 +71,12 @@ private[tapir] object EndpointBodyVerifier {
         })
         .map(b => s"Endpoint $shown marks the response body ${b.show} as secondary. Only request bodies can be secondary.")
 
+    val nonReplayableSecondary: List[String] =
+      markedSecondary
+        .filterNot(b => isReplayable(b.bodyType))
+        .map(b => s"Endpoint $shown marks ${b.show} as secondary, but only bodies which can be re-read from buffered bytes can be.")
+        .toList
+
     val tooManyPrimaries: List[String] =
       if (secondaryInsideOneOfBody.nonEmpty) Nil
       else if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
@@ -124,7 +130,8 @@ private[tapir] object EndpointBodyVerifier {
       }
 
     EndpointBodyProblems(
-      errors = secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyPrimaries ++ streamWithSecondary ++ nonReplayableWithSecondary,
+      errors =
+        nonReplayableSecondary ++ secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyPrimaries ++ streamWithSecondary ++ nonReplayableWithSecondary,
       warnings = (secondaryWithoutPrimary ++ uselessMetadata).toList
     )
   }

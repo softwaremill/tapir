@@ -54,6 +54,13 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     all(problems.errors) should include("Only request bodies can be secondary")
   }
 
+  it should "reject a file body carrying the secondary marker copied from another body" in {
+    val marked = fileBody.copy(info = fileBody.info.copy(attributes = stringBody.asSecondary.info.attributes))
+    val problems = EndpointBodyVerifier.verifyOne(endpoint.post.in("people").securityIn(marked).in(stringBody))
+
+    problems.errors.head should include("only bodies which can be re-read from buffered bytes")
+  }
+
   it should "reject two primary bodies across securityIn and in" in {
     val e = endpoint.post.in("people").securityIn(stringBody).in(stringBody)
     val problems = EndpointBodyVerifier.verifyOne(e)
