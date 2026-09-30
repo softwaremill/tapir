@@ -24,6 +24,8 @@ object DecodeBasicInputsResult {
   ) extends DecodeBasicInputsResult {
     override def hasSecondaryBody: Boolean = secondaryBodyInputsWithIndex.nonEmpty
 
+    // the body verifier rejects these before serving; only decoding that bypasses it (a hand-built ServerInterpreter,
+    // SttpStubServer's matchers) gets here
     private def verifyNoBody(input: EndpointInput[?]): Unit = if (bodyInputWithIndex.isDefined) {
       throw new IllegalStateException(s"Double body definition: $input")
     }

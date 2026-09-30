@@ -59,7 +59,8 @@ val secureEndpoint = endpoint.post
 A secondary body is still decoded on the server, using its own codec, but it isn't part of the endpoint's API
 contract: there's only one request body on the wire, so the secondary declaration is excluded from the generated
 documentation, and ignored by client interpreters. The unmarked body - `jsonBody[Person]` above - is the one that's
-documented, and the one clients actually send.
+documented, and the one clients actually send. Clients still need a value for the secondary body, since it's part of
+the input type.
 
 Only bodies which can be re-read from buffered bytes can be secondary: string, byte array, byte buffer, input stream
 and input stream range bodies. File and multipart bodies aren't accepted. The restriction is enforced at compile
