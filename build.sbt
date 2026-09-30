@@ -125,10 +125,13 @@ val commonJvmSettings: Seq[Def.Setting[?]] = Seq(
   // -Yfuture-lazy-vals is backed by VarHandle (Java 9+). It only exists in the 3.3 LTS line; from 3.8 on the same
   // encoding is the default.
   javaOutputVersion := "11",
-  scalacOptions ++=
-    (if (scalaVersion.value == scala3)
-       Seq("-Yfuture-lazy-vals", "-java-output-version", javaOutputVersion.value)
-     else Seq(s"-release:${javaOutputVersion.value}"))
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, _))                      => Seq(s"-release:${javaOutputVersion.value}")
+      case _ if scalaVersion.value == scala3 => Seq("-Yfuture-lazy-vals", "-java-output-version", javaOutputVersion.value)
+      case _                                 => Seq.empty // the next Scala 3 version checked on CI, which targets Java 17+
+    }
+  }
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -262,7 +265,8 @@ lazy val rawAllAggregates = core.projectRefs ++
   derevo.projectRefs ++
   awsCdk.projectRefs
 
-lazy val loomProjects: Seq[String] = Seq(nettyServerSync, nimaServer, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
+lazy val loomProjects: Seq[String] =
+  Seq(nettyServerSync, nimaServer, perfTestsE2e, examples, documentation).flatMap(_.projectRefs).flatMap(projectId)
 
 // zio-json's JVM artifact requires JDK 17+, so the JVM variant is built on the JDK 21 jobs (alongside the Loom
 // projects). The JS/Native variants are unaffected (no JVM runtime loads their classes), and stay on the JDK 11 jobs.
@@ -459,7 +463,7 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
     ),
     // the test server needs to be started before running any client tests
     clientTestServerPort := 51823,
-    Compile / bgRunMain / fork := true,
+    Compile / run / fork := true,
     startClientTestServer := Def.uncached(Def.taskDyn {
       val port = clientTestServerPort.value
       if (PollingUtils.urlConnectionAvailable(uri(s"http://localhost:$port").toURL)) Def.task(())
