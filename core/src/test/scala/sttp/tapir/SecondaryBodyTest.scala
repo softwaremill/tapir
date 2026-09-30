@@ -36,11 +36,4 @@ class SecondaryBodyTest extends AnyFlatSpec with Matchers {
   it should "render a plain body unchanged in show" in {
     stringBody.show shouldBe "{body as text/plain (UTF-8)}"
   }
-
-  it should "report secondary bodies through the internal predicate" in {
-    import sttp.tapir.internal._
-    isSecondaryBodyInput(stringBody.asSecondary) shouldBe true
-    isSecondaryBodyInput(stringBody) shouldBe false
-    isSecondaryBodyInput(query[String]("q")) shouldBe false
-  }
 }

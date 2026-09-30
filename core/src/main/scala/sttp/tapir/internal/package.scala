@@ -361,11 +361,6 @@ package object internal {
     case _             => false
   }
 
-  def isSecondaryBodyInput(input: EndpointInput[?]): Boolean = input match {
-    case b: EndpointIO.Body[?, ?] => b.isSecondary
-    case _                        => false
-  }
-
   // #3617: a replayable hidden body is how the request body was read twice before asSecondary existed
   def decodesAsSecondary(body: EndpointIO.Body[?, ?]): Boolean =
     body.isSecondary || (body.codec.schema.hidden && isReplayable(body.bodyType))
