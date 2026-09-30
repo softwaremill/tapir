@@ -20,9 +20,7 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
 
   override val streams: Streams[S] = delegate.streams
 
-  // The interpreter sequences the reads and this instance is per-request, so a plain var would do; @volatile only
-  // guards against the happens-before coming from an arbitrary backend's F.
-  @volatile private var cachedBytes: Option[Array[Byte]] = None
+  private var cachedBytes: Option[Array[Byte]] = None
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     bodyType match {
