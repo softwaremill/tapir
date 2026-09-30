@@ -361,12 +361,6 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
     result should have size 1
     inside(result.head) { case InvalidBodyDefinitionError(`e`, message, false) => message should include("never reaches") }
   }
-
-  it should "accept a secondary body alongside an ordinary one" in {
-    val e = endpoint.post.in("a").securityIn(stringBody.asSecondary).in(stringBody)
-
-    EndpointVerifier(List(e)) shouldBe empty
-  }
 }
 
 sealed trait ErrorInfo

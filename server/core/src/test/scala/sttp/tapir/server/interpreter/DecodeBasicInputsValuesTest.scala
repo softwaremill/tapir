@@ -8,7 +8,7 @@ class DecodeBasicInputsValuesTest extends AnyFlatSpec with Matchers {
   private def emptyValues(size: Int) =
     DecodeBasicInputsResult.Values(Vector.fill[Any](size)(null), None)
 
-  it should "record an secondary body separately from the primary body" in {
+  it should "record a secondary body separately from the primary body" in {
     val result = emptyValues(1).addBodyInput(stringBody.asSecondary, 0)
 
     result.bodyInputWithIndex shouldBe None
