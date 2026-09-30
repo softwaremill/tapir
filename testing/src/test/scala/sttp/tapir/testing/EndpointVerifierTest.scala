@@ -1,6 +1,7 @@
 package sttp.tapir.testing
 
 import io.circe.generic.auto._
+import org.scalatest.Inside._
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import sttp.model.{Method, StatusCode}
@@ -338,20 +339,30 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
     val result = EndpointVerifier(List(e))
 
     result should have size 1
-    result.head shouldBe a[InvalidBodyDefinitionError]
-    result.head.toString should include("asSecondary")
+    inside(result.head) { case InvalidBodyDefinitionError(`e`, message, true) => message should include("asSecondary") }
   }
 
-  it should "report an secondary body with no body in the API contract" in {
+  it should "report a secondary body with no body in the API contract, without it being thrown at startup" in {
     val e = endpoint.post.in("ingest").securityIn(stringBody.asSecondary)
 
     val result = EndpointVerifier(List(e))
 
     result should have size 1
-    result.head shouldBe a[InvalidBodyDefinitionError]
+    inside(result.head) { case error @ InvalidBodyDefinitionError(`e`, _, false) =>
+      error.toString should include("(not thrown at startup)")
+    }
   }
 
-  it should "accept an secondary body alongside an ordinary one" in {
+  it should "report a description on a secondary body, without it being thrown at startup" in {
+    val e = endpoint.post.in("a").securityIn(stringBody.description("raw payload").asSecondary).in(stringBody)
+
+    val result = EndpointVerifier(List(e))
+
+    result should have size 1
+    inside(result.head) { case InvalidBodyDefinitionError(`e`, message, false) => message should include("never reaches") }
+  }
+
+  it should "accept a secondary body alongside an ordinary one" in {
     val e = endpoint.post.in("a").securityIn(stringBody.asSecondary).in(stringBody)
 
     EndpointVerifier(List(e)) shouldBe empty

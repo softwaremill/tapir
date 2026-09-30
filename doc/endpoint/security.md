@@ -82,8 +82,8 @@ fully documented and visible to clients.
 A string, byte array, byte buffer or input stream body with a hidden schema, e.g.
 `byteArrayBody.schema(_.hidden(true))`, is also decoded on the server as a secondary body.
 
-Both kinds of problem, along with endpoints whose contract is merely suspect, are also reported by
-[`EndpointVerifier`](../testing.md#invalid-request-body-definitions).
+Both kinds of problem, along with endpoints which can be served but whose contract probably isn't what was intended,
+are also reported by [`EndpointVerifier`](../testing.md#invalid-request-body-definitions).
 
 ## Authentication challenges
 

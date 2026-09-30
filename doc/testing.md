@@ -402,11 +402,13 @@ result3.toString
 
 Only one request body may be part of an endpoint's API contract, and a body which can't be re-read can't be combined
 with one marked using [`asSecondary`](endpoint/security.md#using-the-request-body-in-security-logic). Such
-endpoints can't be served, and are reported as errors here; they are also thrown when routes are constructed.
+endpoints can't be served. They're reported here as an `InvalidBodyDefinitionError` with `thrownAtStartup = true`,
+and an exception describing the same problem is thrown when routes are constructed.
 
-Endpoints whose contract is merely suspect - for example an `asSecondary` body with no body declared in
-`in`, which clients will never send and which won't appear in the documentation - are reported here as well. These
-aren't fatal, and aren't reported anywhere else, so verifying endpoints in a test is the only way to see them.
+Endpoints which can be served, but whose contract probably isn't what was intended - for example an `asSecondary`
+body with no body declared in `in`, which clients will never send and which won't appear in the documentation - are
+reported with `thrownAtStartup = false`. They aren't reported anywhere else, so verifying endpoints in a test is the
+only way to see them.
 
 Example 1:
 
@@ -421,6 +423,17 @@ Results in:
 
 ```scala mdoc
 result4.toString
+```
+
+To keep only the problems which prevent serving:
+
+```scala mdoc:compile-only
+import sttp.tapir.testing.InvalidBodyDefinitionError
+
+EndpointVerifier(List(ep7)).filter {
+  case b: InvalidBodyDefinitionError => b.thrownAtStartup
+  case _                             => true
+}
 ```
 
 ## OpenAPI schema compatibility
