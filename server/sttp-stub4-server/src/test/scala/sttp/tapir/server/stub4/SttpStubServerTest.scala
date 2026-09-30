@@ -133,6 +133,19 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
     response2.code shouldBe StatusCode.InternalServerError
   }
 
+  it should "match on a secondary body input" in {
+    // given
+    val endpoint = sttp.tapir.endpoint.post.securityIn(plainBody[Int].asSecondary).in(plainBody[Int]).out(plainBody[Int])
+
+    val backend: SyncBackendStub = BackendStub.synchronous
+      .whenSecurityInputMatches(endpoint) { body => body > 2 }
+      .thenSuccess(42)
+
+    val response =
+      SttpClientInterpreter().toSecureRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(10).apply(10).send(backend)
+    response.body shouldBe Right(42)
+  }
+
   it should "apply the mapping of a one-of body input when encoding the request and decoding it in the stub" in {
     // given
     val endpoint = sttp.tapir.endpoint.post
