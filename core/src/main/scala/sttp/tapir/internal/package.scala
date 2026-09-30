@@ -374,6 +374,6 @@ package object internal {
     case RawBodyType.StringBody(_) | RawBodyType.ByteArrayBody | RawBodyType.ByteBufferBody | RawBodyType.InputStreamBody |
         RawBodyType.InputStreamRangeBody =>
       true
-    case _ => false
+    case RawBodyType.FileBody | _: RawBodyType.MultipartBody => false
   }
 }

@@ -38,8 +38,8 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
       case RawBodyType.InputStreamRangeBody =>
         bytes(serverRequest, maxBytes)
           .map(bs => RawValue(InputStreamRange(() => new ByteArrayInputStream(bs))))
-      // file and multipart are never cached; EndpointBodyVerifier rejects them alongside a secondary body
-      case other => delegate.toRaw(serverRequest, other, maxBytes)
+      // never cached: EndpointBodyVerifier rejects these alongside a secondary body
+      case RawBodyType.FileBody | _: RawBodyType.MultipartBody => delegate.toRaw(serverRequest, bodyType, maxBytes)
     }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
