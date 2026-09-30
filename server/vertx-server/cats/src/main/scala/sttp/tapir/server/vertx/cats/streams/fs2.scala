@@ -41,7 +41,9 @@ object fs2 {
         mapToReadStream[Chunk[Byte], Buffer](stream.chunks, chunk => Buffer.buffer(chunk.toArray))
 
       private def mapToReadStream[I, O](stream: Stream[F, I], fn: I => O): ReadStream[O] = {
-        val state = new AtomicReference(StreamState.empty[F, O](Deferred.unsafe[F, Unit]))
+        // completed on the first resume(), which Vert.x calls after setting the handlers
+        val started = Deferred.unsafe[F, Unit]
+        val state = new AtomicReference(StreamState.empty[F, O](started))
         val readState = Sync[F].delay(state.get)
 
         opts.dispatcher.unsafeRunAndForget(
@@ -60,20 +62,16 @@ object fs2 {
                   } yield ()
               }
             })
-            .onFinalizeCase({
-              case Succeeded =>
-                readState.flatMap { state =>
-                  Sync[F].delay(state.endHandler.handle(null))
+            // an empty or failing stream can finish before the end/exception handlers are set
+            .onFinalizeCase(exitCase =>
+              started.get >> readState.flatMap { state =>
+                exitCase match {
+                  case Succeeded      => Sync[F].delay(state.endHandler.handle(null))
+                  case Canceled       => Sync[F].delay(state.errorHandler.handle(new Exception("Cancelled!")))
+                  case Errored(cause) => Sync[F].delay(state.errorHandler.handle(cause))
                 }
-              case Canceled =>
-                readState.flatMap { state =>
-                  Sync[F].delay(state.errorHandler.handle(new Exception("Cancelled!")))
-                }
-              case Errored(cause) =>
-                readState.flatMap { state =>
-                  Sync[F].delay(state.errorHandler.handle(cause))
-                }
-            })
+              }
+            )
             .compile
             .drain
             // forked so that a long-running stream doesn't hold up a sequential dispatcher, and isn't cancelled when it's released

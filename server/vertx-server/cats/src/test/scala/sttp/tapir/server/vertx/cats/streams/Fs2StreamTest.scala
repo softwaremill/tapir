@@ -144,6 +144,19 @@ class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
     } yield succeed).unsafeToFuture()
   }
 
+  it should "end the read stream when an empty stream completes before the handlers are set" in {
+    val readStream = streams.fs2.fs2ReadStreamCompatible[IO](options).asReadStream(Stream.empty)
+    (for {
+      ended <- Deferred[IO, Unit]
+      _ <- IO.sleep(100.millis) // lets the stream complete
+      _ <- IO.delay {
+        readStream.endHandler(_ => ended.complete(()).void.unsafeRunSync())
+        readStream.resume()
+      }
+      _ <- ended.get.timeout(5.seconds)
+    } yield succeed).unsafeToFuture()
+  }
+
   // with a sequential dispatcher, a stream run without forking would block the completions that wake it up; the
   // pause in the handler, and the sleep before sending data, make sure the streams wait for such a completion
   it should "convert fs2 stream to read stream with a sequential dispatcher" in {
