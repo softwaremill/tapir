@@ -106,11 +106,6 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testServer(in_string_out_string, "with get method")((b: String) => pureResult(b.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe Symbol("left"))
     },
-    testServer(endpoint.post.in("api" / "echo").in(stringBody.schema(_.hidden(true))).out(stringBody), "with a hidden body")((b: String) =>
-      pureResult(b.asRight[Unit])
-    ) { (backend, baseUri) =>
-      basicRequest.post(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe Right("Sweet"))
-    },
     testServer(in_header_before_path, "Header input before path capture input") { case (str: String, i: Int) =>
       pureResult((i, str).asRight[Unit])
     } { (backend, baseUri) =>

@@ -31,11 +31,11 @@ private[tapir] object EndpointBodyVerifier {
     val ordinaryInputs = endpoint.input.asVectorOfBasicInputs()
     val inputs = securityInputs ++ ordinaryInputs
 
-    val markedSecondary = inputs.collect { case b: EndpointIO.Body[?, ?] if b.isSecondary => b }
+    val secondary = inputs.collect { case b: EndpointIO.Body[?, ?] if b.isSecondary => b }
     def primaryBodiesOf(basics: Vector[EndpointInput.Basic[?]]): Vector[EndpointInput.Basic[?]] = basics.collect {
-      case b: EndpointIO.Body[?, ?] if !decodesAsSecondary(b) => b
-      case b: EndpointIO.OneOfBody[?, ?]                      => b
-      case b: EndpointIO.StreamBodyWrapper[?, ?]              => b
+      case b: EndpointIO.Body[?, ?] if !b.isSecondary => b
+      case b: EndpointIO.OneOfBody[?, ?]              => b
+      case b: EndpointIO.StreamBodyWrapper[?, ?]      => b
     }
     val securityPrimaryBodies = primaryBodiesOf(securityInputs)
     val inPrimaryBodies = primaryBodiesOf(ordinaryInputs)
@@ -71,27 +71,32 @@ private[tapir] object EndpointBodyVerifier {
         .map(b => s"Endpoint $shown marks the response body ${b.show} as secondary. Only request bodies can be secondary.")
 
     val nonReplayableSecondary: List[String] =
-      markedSecondary
+      secondary
         .filterNot(b => isReplayable(b.bodyType))
         .map(b => s"Endpoint $shown marks ${b.show} as secondary, but only bodies which can be re-read from buffered bytes can be.")
         .toList
+
+    val hiddenSchemaHint =
+      if (primaryBodies.exists { case b: EndpointIO.Body[?, ?] => b.codec.schema.hidden; case _ => false })
+        " A hidden schema doesn't make a body secondary."
+      else ""
 
     val tooManyPrimaries: List[String] =
       if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
         List(
           s"Endpoint $shown declares a request body in both securityIn and in. Only one may be part of the API " +
             s"contract. If both should decode the same request body, mark the securityIn one: " +
-            s"stringBody.asSecondary."
+            s"stringBody.asSecondary.$hiddenSchemaHint"
         )
       else if (securityPrimaryBodies.size > 1)
         List(
           s"Endpoint $shown declares more than one request body in securityIn. Only one request body may be part " +
-            s"of the API contract."
+            s"of the API contract.$hiddenSchemaHint"
         )
       else if (inPrimaryBodies.size > 1)
         List(
           s"Endpoint $shown declares more than one request body in in. Only one request body may be part of the " +
-            s"API contract."
+            s"API contract.$hiddenSchemaHint"
         )
       else Nil
 
@@ -99,7 +104,7 @@ private[tapir] object EndpointBodyVerifier {
       case (true, kind) => kind
     }
     val nonReplayablePrimaryWithSecondary =
-      if (markedSecondary.nonEmpty)
+      if (secondary.nonEmpty)
         nonReplayablePrimaryKinds.map { kind =>
           s"Endpoint $shown combines a $kind body with a secondary body. The request body is buffered to decode the " +
             s"secondary body, so it can't also be read as a $kind body."
@@ -107,7 +112,7 @@ private[tapir] object EndpointBodyVerifier {
       else Nil
 
     val secondaryWithoutPrimary =
-      if (markedSecondary.nonEmpty && primaryBodies.isEmpty)
+      if (secondary.nonEmpty && primaryBodies.isEmpty)
         List(
           s"Endpoint $shown reads a secondary request body, but no request body is part of the API contract: it " +
             s"will be absent from the documentation and clients will not send it. Either declare the body in `in` " +
@@ -116,7 +121,7 @@ private[tapir] object EndpointBodyVerifier {
       else Nil
 
     val uselessMetadata =
-      markedSecondary.filter(b => b.info.description.isDefined || b.info.examples.nonEmpty).map { b =>
+      secondary.filter(b => b.info.description.isDefined || b.info.examples.nonEmpty).map { b =>
         s"Endpoint $shown sets a description or example on the secondary body ${b.show}, which never reaches the " +
           s"documentation, as secondary bodies are excluded from it."
       }

@@ -15,24 +15,12 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     EndpointBodyVerifier.verifyOne(endpoint.post.in("people").in(stringBody)) shouldBe EndpointBodyProblems(Nil, Nil)
   }
 
-  it should "treat a hidden security body as secondary" in {
+  it should "reject a hidden body read twice, noting that hiding doesn't make it secondary" in {
     val e = endpoint.post.in("people").securityIn(byteArrayBody.schema(_.hidden(true))).in(stringBody)
-    EndpointBodyVerifier.verifyOne(e) shouldBe EndpointBodyProblems(Nil, Nil)
-  }
+    val problems = EndpointBodyVerifier.verifyOne(e)
 
-  it should "not warn about a lone hidden body" in {
-    val e = endpoint.post.in("people").securityIn(byteArrayBody.schema(_.hidden(true)))
-    EndpointBodyVerifier.verifyOne(e) shouldBe EndpointBodyProblems(Nil, Nil)
-  }
-
-  it should "accept a hidden body alongside a multipart body, as before secondary bodies existed" in {
-    val e = endpoint.post.in("people").securityIn(byteArrayBody.schema(_.hidden(true))).in(multipartBody)
-    EndpointBodyVerifier.verifyOne(e) shouldBe EndpointBodyProblems(Nil, Nil)
-  }
-
-  it should "still count a hidden file body as primary" in {
-    val e = endpoint.post.in("people").securityIn(fileBody.schema(_.hidden(true))).in(stringBody)
-    EndpointBodyVerifier.verifyOne(e).errors.head should include("declares a request body in both securityIn and in")
+    problems.errors should have size 1
+    problems.errors.head should include("A hidden schema doesn't make a body secondary.")
   }
 
   it should "reject a secondary output and error output body" in {

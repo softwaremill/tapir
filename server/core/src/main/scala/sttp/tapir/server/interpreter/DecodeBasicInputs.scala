@@ -30,7 +30,7 @@ object DecodeBasicInputsResult {
       throw new IllegalStateException(s"Double body definition: $input")
     }
     def addBodyInput[O](input: EndpointIO.Body[?, O], bodyIndex: Int): Values =
-      if (decodesAsSecondary(input)) copy(secondaryBodyInputsWithIndex = secondaryBodyInputsWithIndex :+ ((input, bodyIndex)))
+      if (input.isSecondary) copy(secondaryBodyInputsWithIndex = secondaryBodyInputsWithIndex :+ ((input, bodyIndex)))
       else {
         verifyNoBody(input)
         copy(bodyInputWithIndex = Some((Left(oneOfBody(ContentTypeRange.AnyRange -> input)), bodyIndex)))
