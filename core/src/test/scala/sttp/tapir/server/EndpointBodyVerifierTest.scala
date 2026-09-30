@@ -35,6 +35,25 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     EndpointBodyVerifier.verifyOne(e).errors.head should include("declares a request body in both securityIn and in")
   }
 
+  it should "reject a secondary output and error output body" in {
+    val e = endpoint.post.in("people").out(stringBody.asSecondary).errorOut(stringBody.asSecondary)
+    val problems = EndpointBodyVerifier.verifyOne(e)
+
+    problems.errors should have size 2
+    all(problems.errors) should include("Only request bodies can be secondary")
+  }
+
+  it should "reject a secondary output body nested in oneOfBody and oneOf variants" in {
+    val e = endpoint.post
+      .in("people")
+      .out(oneOfBody(stringBody.asSecondary))
+      .errorOut(sttp.tapir.oneOf[String](oneOfDefaultVariant(stringBody.asSecondary)))
+    val problems = EndpointBodyVerifier.verifyOne(e)
+
+    problems.errors should have size 2
+    all(problems.errors) should include("Only request bodies can be secondary")
+  }
+
   it should "reject two primary bodies across securityIn and in" in {
     val e = endpoint.post.in("people").securityIn(stringBody).in(stringBody)
     val problems = EndpointBodyVerifier.verifyOne(e)

@@ -4,6 +4,10 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir._
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+import sttp.tapir.tests.data.FruitAmount
+import io.circe.generic.auto._
 
 class SecondaryBodyDocsTest extends AnyFlatSpec with Matchers {
   it should "document only the primary body" in {
@@ -26,5 +30,13 @@ class SecondaryBodyDocsTest extends AnyFlatSpec with Matchers {
     val yaml = OpenAPIDocsInterpreter().toOpenAPI(e, "Test", "1.0").toYaml
 
     yaml should not include ("requestBody")
+  }
+
+  it should "register the schema of an output body marked as secondary" in {
+    val e = endpoint.get.in("fruit").out(jsonBody[FruitAmount].asSecondary)
+
+    val openAPI = OpenAPIDocsInterpreter().toOpenAPI(e, "Test", "1.0")
+
+    openAPI.components.map(_.schemas.keySet) shouldBe Some(Set("FruitAmount"))
   }
 }

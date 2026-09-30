@@ -62,6 +62,15 @@ private[tapir] object EndpointBodyVerifier {
         }
         .toList
 
+    val secondaryOutputs: List[String] =
+      List(endpoint.output, endpoint.errorOutput)
+        .flatMap(_.traverseOutputs[EndpointIO.Body[?, ?]] {
+          case b: EndpointIO.Body[?, ?] if b.isSecondary => Vector(b)
+          case ob: EndpointIO.OneOfBody[?, ?]            =>
+            ob.variants.map(_.bodyAsAtom).collect { case b: EndpointIO.Body[?, ?] if b.isSecondary => b }.toVector
+        })
+        .map(b => s"Endpoint $shown marks the response body ${b.show} as secondary. Only request bodies can be secondary.")
+
     val tooManyPrimaries: List[String] =
       if (secondaryInsideOneOfBody.nonEmpty) Nil
       else if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
@@ -115,7 +124,7 @@ private[tapir] object EndpointBodyVerifier {
       }
 
     EndpointBodyProblems(
-      errors = secondaryInsideOneOfBody ++ tooManyPrimaries ++ streamWithSecondary ++ nonReplayableWithSecondary,
+      errors = secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyPrimaries ++ streamWithSecondary ++ nonReplayableWithSecondary,
       warnings = (secondaryWithoutPrimary ++ uselessMetadata).toList
     )
   }
