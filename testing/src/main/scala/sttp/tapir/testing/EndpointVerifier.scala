@@ -20,8 +20,8 @@ object EndpointVerifier {
   private def findInvalidBodyDefinitions(endpoints: List[AnyEndpoint]): List[InvalidBodyDefinitionError] =
     endpoints.flatMap { e =>
       val problems = EndpointBodyVerifier.verifyOne(e)
-      problems.errors.map(InvalidBodyDefinitionError(e, _, thrownAtStartup = true)) ++
-        problems.warnings.map(InvalidBodyDefinitionError(e, _, thrownAtStartup = false))
+      problems.errors.map(InvalidBodyDefinitionError(e, _, rejectedByServers = true)) ++
+        problems.warnings.map(InvalidBodyDefinitionError(e, _, rejectedByServers = false))
     }
 
   private def findIncorrectPaths(endpoints: List[AnyEndpoint]): List[IncorrectPathsError] = {

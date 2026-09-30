@@ -342,18 +342,18 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
     inside(result.head) { case InvalidBodyDefinitionError(`e`, message, true) => message should include("asSecondary") }
   }
 
-  it should "report a secondary body with no body in the API contract, without it being thrown at startup" in {
+  it should "report a secondary body with no body in the API contract, without servers rejecting it" in {
     val e = endpoint.post.in("ingest").securityIn(stringBody.asSecondary)
 
     val result = EndpointVerifier(List(e))
 
     result should have size 1
     inside(result.head) { case error @ InvalidBodyDefinitionError(`e`, _, false) =>
-      error.toString should include("(not thrown at startup)")
+      error.toString should include("(not rejected by servers)")
     }
   }
 
-  it should "report a description on a secondary body, without it being thrown at startup" in {
+  it should "report a description on a secondary body, without servers rejecting it" in {
     val e = endpoint.post.in("a").securityIn(stringBody.description("raw payload").asSecondary).in(stringBody)
 
     val result = EndpointVerifier(List(e))
