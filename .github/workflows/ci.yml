@@ -25,7 +25,7 @@ jobs:
       matrix:
         scala-version: [ "2.12", "2.13", "3" ]
         target-platform: [ "JVM", "JS", "Native" ]
-        java: [ "11", "21" ]
+        java: [ "17", "21" ]
         exclude:
           - java: "21"
         include: # Restricted to build only specific Loom-based modules
@@ -46,20 +46,20 @@ jobs:
         cache: 'sbt'
         java-version: ${{ matrix.java }}
     - name: Install sam cli
-      if: matrix.java == '11'
+      if: matrix.java == '17'
       run: |
         wget -q https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
         unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
         sudo ./sam-installation/install --update
         sam --version
     - name: Install NPM
-      if: matrix.java == '11'
+      if: matrix.java == '17'
       uses: actions/setup-node@v7
       with:
         node-version: 18
     - run: npm --version
     - name: Install AWS CDK
-      if: matrix.java == '11'
+      if: matrix.java == '17'
       run: |
         npm install -g aws-cdk
         cdk --version
@@ -77,19 +77,19 @@ jobs:
     - name: Enable Loom-specific modules
       if: matrix.java == '21'
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
-    - name: Enable ZIO-specific modules # zio-json requires JDK 17+
-      if: matrix.java == '21'
-      run: echo "WITH_ZIO=1" >> $GITHUB_ENV
     - name: Compile
       run: sbt $SBT_JAVA_OPTS -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     - name: Compile core & server-core with next Scala 3
       if: matrix.scala-version == '3' && matrix.target-platform == 'JVM' && matrix.java == '21'
       env:
         SCALA_3_NEXT: "3.8.3"
+      # Scala 3.8+ doesn't support -release below 17
       run: |
         sbt $SBT_JAVA_OPTS -v \
           "set LocalProject(\"core3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
           "set LocalProject(\"serverCore3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
+          "set LocalProject(\"core3\") / javaOutputVersion := \"17\"" \
+          "set LocalProject(\"serverCore3\") / javaOutputVersion := \"17\"" \
           "set LocalProject(\"coreJS3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
           "set LocalProject(\"serverCoreJS3\") / scalaVersion := \"$SCALA_3_NEXT\"" \
           core3/Test/compile serverCore3/Test/compile \
@@ -195,7 +195,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix: 
-        java: [ "11", "21" ]
+        java: [ "17", "21" ]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -207,18 +207,16 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: 'sbt'
       - name: Install libidn2-dev libcurl3-dev
-        if: matrix.java == '11'
+        if: matrix.java == '17'
         run: |
           sudo apt-get update
           sudo apt-get install libidn2-dev libcurl3-dev
       - name: Enable Native-specific modules
-        if: matrix.java == '11'
+        if: matrix.java == '17'
         run: echo "STTP_NATIVE=1" >> $GITHUB_ENV
-      - name: Enable Loom and ZIO-specific modules # zio-json requires JDK 17+
+      - name: Enable Loom-specific modules
         if: matrix.java == '21'
-        run: |
-          echo "ONLY_LOOM=1" >> $GITHUB_ENV
-          echo "WITH_ZIO=1" >> $GITHUB_ENV
+        run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
       - name: Compile
         run: sbt $SBT_JAVA_OPTS compile
       - name: Publish artifacts
@@ -229,14 +227,14 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
       - name: Extract version from commit message
-        if: matrix.java == '11'
+        if: matrix.java == '17'
         run: |
           version=${GITHUB_REF/refs\/tags\/v/}
           echo "VERSION=$version" >> $GITHUB_ENV
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - name: Publish release notes
-        if: matrix.java == '11'
+        if: matrix.java == '17'
         uses: release-drafter/release-drafter@34d80673e067bdc0c24568d3af899c216adcfaa9 # v6, specifically v7.7.0
         with:
           config-name: release-drafter.yml
