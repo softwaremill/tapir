@@ -809,6 +809,194 @@ object TestHelpers {
      |          default: PT1H30M
      |""".stripMargin
 
+  // 'application/<something>+json' types should be (de)serialised as json, keeping the declared media type
+  val structuredSyntaxSuffixJsonYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: structured syntax suffix json test
+     |  version: '1.0'
+     |paths:
+     |  /widgets/{id}:
+     |    parameters:
+     |    - name: id
+     |      in: path
+     |      required: true
+     |      schema:
+     |        type: string
+     |    patch:
+     |      operationId: patchWidget
+     |      requestBody:
+     |        required: false
+     |        content:
+     |          application/merge-patch+json:
+     |            schema:
+     |              $ref: '#/components/schemas/Widget'
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/vnd.example.widget+json:
+     |              schema:
+     |                type: array
+     |                items:
+     |                  $ref: '#/components/schemas/Widget'
+     |        '400':
+     |          description: ''
+     |          content:
+     |            application/json:
+     |              schema:
+     |                $ref: '#/components/schemas/Problem'
+     |            application/problem+json:
+     |              schema:
+     |                $ref: '#/components/schemas/Problem'
+     |        '404':
+     |          description: ''
+     |          content:
+     |            application/problem+json:
+     |              schema:
+     |                $ref: '#/components/schemas/Problem'
+     |    put:
+     |      operationId: putWidget
+     |      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+     |      requestBody:
+     |        required: false
+     |        content:
+     |          application/merge-patch+json:
+     |            schema:
+     |              $ref: '#/components/schemas/Widget'
+     |      responses:
+     |        '204':
+     |          description: ''
+     |components:
+     |  schemas:
+     |    Widget:
+     |      required:
+     |      - name
+     |      type: object
+     |      properties:
+     |        name:
+     |          type: string
+     |        colour:
+     |          type: string
+     |    Problem:
+     |      required:
+     |      - type
+     |      - title
+     |      type: object
+     |      properties:
+     |        type:
+     |          type: string
+     |        title:
+     |          type: string
+     |        status:
+     |          type: integer
+     |          format: int32
+     |""".stripMargin
+
+  val structuredSyntaxSuffixStreamingYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: structured syntax suffix streaming test
+     |  version: '1.0'
+     |paths:
+     |  /widgets:
+     |    get:
+     |      operationId: streamWidgets
+     |      x-tapir-codegen-directives: [ 'force-resp-body-streaming' ]
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/vnd.example.widget+json:
+     |              schema:
+     |                type: array
+     |                items:
+     |                  $ref: '#/components/schemas/Widget'
+     |components:
+     |  schemas:
+     |    Widget:
+     |      type: object
+     |      properties:
+     |        name:
+     |          type: string
+     |""".stripMargin
+
+  val eagerXmlWithoutSerdesYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: eager xml without serdes test
+     |  version: '1.0'
+     |paths:
+     |  /gadgets:
+     |    get:
+     |      operationId: getGadget
+     |      responses:
+     |        '204':
+     |          description: ''
+     |        '400':
+     |          description: ''
+     |          content:
+     |            application/xml:
+     |              schema:
+     |                type: string
+     |            application/problem+xml:
+     |              schema:
+     |                type: string
+     |""".stripMargin
+
+  // 'application/<something>+xml' types should be (de)serialised as xml, keeping the declared media type
+  val structuredSyntaxSuffixXmlYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: structured syntax suffix xml test
+     |  version: '1.0'
+     |paths:
+     |  /gadgets:
+     |    post:
+     |      operationId: createGadget
+     |      requestBody:
+     |        required: true
+     |        content:
+     |          application/vnd.example.gadget+xml:
+     |            schema:
+     |              $ref: '#/components/schemas/Gadget'
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/atom+xml:
+     |              schema:
+     |                $ref: '#/components/schemas/Gadget'
+     |        '400':
+     |          description: ''
+     |          content:
+     |            application/problem+xml:
+     |              schema:
+     |                $ref: '#/components/schemas/Fault'
+     |components:
+     |  schemas:
+     |    Gadget:
+     |      required:
+     |      - name
+     |      type: object
+     |      properties:
+     |        name:
+     |          type: string
+     |        colour:
+     |          type: string
+     |    Fault:
+     |      required:
+     |      - reason
+     |      type: object
+     |      properties:
+     |        reason:
+     |          type: string
+     |""".stripMargin
+
   val withDefaultsYaml =
     """
      |openapi: 3.1.0
