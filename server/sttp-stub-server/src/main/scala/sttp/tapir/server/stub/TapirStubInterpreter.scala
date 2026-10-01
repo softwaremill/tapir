@@ -15,8 +15,6 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
     private val stub: SttpBackendStub[F, R]
 ) {
 
-  private lazy val filterServerEndpoints = PrepareServerEndpoints(endpoints)
-
   def whenEndpoint[I, E, O](endpoint: Endpoint[_, I, E, O, _]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
 
   def whenServerEndpoint[A, U, I, E, O](serverEndpoint: ServerEndpoint.Full[A, U, I, E, O, R, F]) = new TapirServerEndpointStub(
@@ -29,8 +27,10 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
     serverEndpoints.foldLeft(this) { case (stub, sep) => stub.append(sep) }
 
   /** Returns `SttpBackend` which handles sent requests using a `ServerInterpreter`. */
-  def backend(): SttpBackend[F, R] =
+  def backend(): SttpBackend[F, R] = {
+    val filterServerEndpoints = PrepareServerEndpoints(endpoints)
     stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, filterServerEndpoints, interceptors))
+  }
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
     def thenRespond(response: O): TapirStubInterpreter[F, R, OPTIONS] =
