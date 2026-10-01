@@ -15,7 +15,7 @@ import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiResponseContent, OpenapiResponseDef}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaOneOf, OpenapiSchemaRef, OpenapiSchemaSimpleType}
 import sttp.tapir.codegen.util.ErrUtils.bail
-import sttp.tapir.codegen.util.{JavaEscape, Location, NameHelpers}
+import sttp.tapir.codegen.util.{ContentTypes, JavaEscape, Location, NameHelpers}
 import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.validation.ValidationDefns
 import sttp.tapir.codegen.xml.XmlSerdeLib.XmlSerdeLib
@@ -111,7 +111,7 @@ object OutComponent {
           (s"$decl$d", Some(tpe), maybeInlineDefn)
         case seq =>
           // We cannot mix eager and streaming types when using oneOfBody
-          val preferEager = seq.exists(c => eagerTypes.contains(c.contentType))
+          val preferEager = seq.exists(c => ContentTypes.isEager(c.contentType))
           val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent(_, preferEager)).unzip3
           val distinctTypes = tpes.distinct
           // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
@@ -393,7 +393,6 @@ object OutComponent {
             .map { case (k, vs) => k -> vs.map(_._2) }
             .toMap
           val traitName = s"${endpointName.capitalize}Body${if (isErrorPosition) "Err" else "Out"}"
-          val mappable = Set("application/json", "application/xml", "multipart/form-data")
           val bodyIsStreaming = (!isErrorPosition && tapirCodegenDirectives.contains(forceRespStreaming)) ||
             (!isErrorPosition && tapirCodegenDirectives.contains(forceStreaming))
           val bodyIsEager = !bodyIsStreaming && (isErrorPosition ||
@@ -402,7 +401,7 @@ object OutComponent {
           val allElemTypes = many
             .flatMap(y =>
               y.content.map(x =>
-                (x.contentType, x.schema, y.content.size > 1 && y.content.map(_.contentType).exists(!mappable.contains(_)))
+                (x.contentType, x.schema, y.content.size > 1 && y.content.map(_.contentType).exists(!ContentTypes.isClassMappable(_)))
               )
             )
             .map {
@@ -410,12 +409,12 @@ object OutComponent {
               case (_, _, true)                                            => traitName
               case (ct, _, _) if ct.startsWith("text/") && isErrorPosition => "String"
               case ("text/plain" | "text/html", _, _)                      => "String"
-              case ("application/json", _, _) if tapirCodegenDirectives.contains(jsonBodyAsString) => "String"
-              case (ct, r: OpenapiSchemaRef, _) if mappable.contains(ct)                           => r.stripped
-              case (ct, x: OpenapiSchemaSimpleType, _) if mappable.contains(ct)                    => mapSchemaSimpleTypeToType(x)._1
-              case (ct, x, _) if mappable.contains(ct) => bail(s"Unexpected oneOf elem type $x with content type $ct")
-              case (_, _, _) if bodyIsEager            => "Array[Byte]"
-              case (_, _, _)                           => capabilityType(streamingImplementation)
+              case (ct, _, _) if ContentTypes.isJson(ct) && tapirCodegenDirectives.contains(jsonBodyAsString) => "String"
+              case (ct, r: OpenapiSchemaRef, _) if ContentTypes.isClassMappable(ct)                           => r.stripped
+              case (ct, x: OpenapiSchemaSimpleType, _) if ContentTypes.isClassMappable(ct) => mapSchemaSimpleTypeToType(x)._1
+              case (ct, x, _) if ContentTypes.isClassMappable(ct) => bail(s"Unexpected oneOf elem type $x with content type $ct")
+              case (_, _, _) if bodyIsEager                       => "Array[Byte]"
+              case (_, _, _)                                      => capabilityType(streamingImplementation)
             }
             .distinct
           val commmonType = {
