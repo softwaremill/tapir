@@ -8,7 +8,6 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
 import sttp.tapir.codegen.security.SecurityGenerator
 import sttp.tapir.codegen.util.ContentTypes
-import sttp.tapir.codegen.util.JavaEscape
 import sttp.tapir.codegen.util.NameHelpers
 import sttp.tapir.codegen.util.NameValidation
 import sttp.tapir.codegen.validation.{ValidationDefns, ValidationGenerator}
@@ -244,7 +243,6 @@ object RootGenerator {
       }
       .mkString("\n")
 
-    val mediaType = "([^/]+)/(.+)".r
     val customTypes = doc.paths
       .flatMap(
         _.methods.flatMap(m =>
@@ -255,13 +253,10 @@ object RootGenerator {
       .distinct
       .sorted
       .filterNot(ContentTypes.isNativeContentType)
-      .map {
-        case ct @ mediaType(mainType, subType) =>
-          s"""case class ${NameHelpers.codecFormatName(ct)}() extends CodecFormat {
-           |  override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "${JavaEscape
-              .escapeString(mainType)}", subType = "${JavaEscape.escapeString(subType)}")
+      .map { ct =>
+        s"""case class ${NameHelpers.codecFormatName(ct)}() extends CodecFormat {
+           |  override val mediaType: sttp.model.MediaType = ${ContentTypes.mediaTypeExpr(ct)}
            |}""".stripMargin
-        case ct => throw new NotImplementedError(s"Cannot handle content type '$ct'")
       }
       .mkString("\n")
     val extraImports =

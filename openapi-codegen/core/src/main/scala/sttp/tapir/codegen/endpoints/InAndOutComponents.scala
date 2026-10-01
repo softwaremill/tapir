@@ -109,11 +109,14 @@ object InAndOutComponents {
         }
         val req = if (required) outT else s"Option[$outT]"
         def toList = if (required) ".toList" else ".map(_.toList)"
-        val bodyType = maybeAlias.map(a => s"xmlBody[$a].map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(s"xmlBody[$req]")
+        def xmlBody(t: String) =
+          if (ContentTypes.isSuffixed(ct)) suffixedBody(s"implicitly[sttp.tapir.Codec.XmlCodec[$t]]", ct) else s"xmlBody[$t]"
+        val bodyType = maybeAlias.map(a => s"${xmlBody(a)}.map(_.asInstanceOf[$req]$toList)(_.asInstanceOf[$a])").getOrElse(xmlBody(req))
         MappedContentType(bodyType + v(required), req, maybeInline, maybeTpe)
       case ct if ContentTypes.isJson(ct) && tapirCodegenDirectives.contains(jsonBodyAsString) =>
-        if (required) MappedContentType("stringJsonBody", "String", None)
-        else MappedContentType("stringJsonBody.map(Option(_))(_.orNull)", "Option[String]", None)
+        val body = if (ContentTypes.isSuffixed(ct)) suffixedBody("sttp.tapir.Codec.string", ct) else "stringJsonBody"
+        if (required) MappedContentType(body, "String", None)
+        else MappedContentType(s"$body.map(Option(_))(_.orNull)", "Option[String]", None)
       case ct if ContentTypes.isJson(ct) =>
         val (outT, maybeInline) = schema match {
           case st: OpenapiSchemaSimpleType =>
@@ -130,7 +133,9 @@ object InAndOutComponents {
           case x => bail(s"Can't create non-simple or array params as output (found $x)")
         }
         val req = if (required) outT else s"Option[$outT]"
-        MappedContentType(s"jsonBody[$req]" + v(required), req, maybeInline, maybeInline.map(_ => outT).toSeq)
+        val body =
+          if (ContentTypes.isSuffixed(ct)) suffixedBody(s"implicitly[sttp.tapir.Codec.JsonCodec[$req]]", ct) else s"jsonBody[$req]"
+        MappedContentType(body + v(required), req, maybeInline, maybeInline.map(_ => outT).toSeq)
 
       case "multipart/form-data" =>
         schema match {
@@ -170,15 +175,14 @@ object InAndOutComponents {
       streamingImplementation: StreamingImplementation
   )(implicit location: Location): MappedContentType = {
     def codec(baseType: String, contentType: String) = {
-      val cf = codecFormatName(contentType)
+      val cf = codecFormat(contentType)
       val schema = if (baseType == "Array[Byte]") "Schema.schemaForByteArray" else "Schema.schemaForString"
-      s"Codec.id[$baseType, $cf]($cf(), $schema)"
+      s"Codec.id[$baseType, ${cf.tpe}](${cf.instance}, $schema)"
     }
 
     def eagerBody = contentType match {
       case "application/octet-stream" => "rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody)"
       case o if o.startsWith("text/") => s"stringBodyUtf8AnyFormat(${codec("String", o)})"
-      case o if ContentTypes.isXml(o) => s"EndpointIO.Body(RawBodyType.ByteArrayBody, CodecFormat.Xml(), EndpointIO.Info.empty)"
       case o                          => s"EndpointIO.Body(RawBodyType.ByteArrayBody, ${codec("Array[Byte]", o)}, EndpointIO.Info.empty)"
     }
     def streamingBody = contentType match {
@@ -186,12 +190,10 @@ object InAndOutComponents {
       case "text/html"                         => "CodecFormat.TextHtml()"
       case "multipart/form-data"               => "CodecFormat.MultipartFormData()"
       case "application/grpc"                  => "CodecFormat.Grpc()"
-      case o if ContentTypes.isJson(o)         => "CodecFormat.Json()"
       case "application/octet-stream"          => "CodecFormat.OctetStream()"
-      case o if ContentTypes.isXml(o)          => "CodecFormat.Xml()"
       case "application/x-www-form-urlencoded" => "CodecFormat.XWwwFormUrlencoded()"
       case "application/zip"                   => "CodecFormat.Zip()"
-      case o                                   => s"${codecFormatName(o)}()"
+      case o                                   => codecFormat(o).instance
     }
     if (isEager) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")
     else {
@@ -223,6 +225,21 @@ object InAndOutComponents {
       }
     }
   }
+
+  private case class CodecFormatExpr(tpe: String, instance: String)
+
+  private def codecFormat(contentType: String): CodecFormatExpr = contentType match {
+    case "application/json"                => CodecFormatExpr("CodecFormat.Json", "CodecFormat.Json()")
+    case "application/xml"                 => CodecFormatExpr("CodecFormat.Xml", "CodecFormat.Xml()")
+    case ct if ContentTypes.isSuffixed(ct) =>
+      val instance = s"new sttp.tapir.CodecFormat { override val mediaType: sttp.model.MediaType = ${ContentTypes.mediaTypeExpr(ct)} }"
+      CodecFormatExpr("sttp.tapir.CodecFormat", instance)
+    case ct => CodecFormatExpr(codecFormatName(ct), s"${codecFormatName(ct)}()")
+  }
+
+  /** A string body using `codec`, with the codec format replaced by one with the declared (suffixed) media type. */
+  private def suffixedBody(codec: String, contentType: String): String =
+    s"stringBodyUtf8AnyFormat($codec.format(${codecFormat(contentType).instance}))"
 
   private def inlineDefn(endpointName: String, position: Position, schemaRef: OpenapiSchemaObject) = {
     require(schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]))

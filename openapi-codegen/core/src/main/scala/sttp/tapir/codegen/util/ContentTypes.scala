@@ -3,37 +3,42 @@ package sttp.tapir.codegen.util
 object ContentTypes {
   private val jsonContentType = "application/(.+\\+)?json".r
 
-  /** Returns if the content type is a Json content type. Accepts standard application/json, as well as extended application/foo+json
-    * content types
-    */
+  /** `application/json`, or a structured syntax suffix type such as `application/problem+json`. */
   def isJson(contentType: String): Boolean = jsonContentType.pattern.matcher(contentType).matches
 
   private val xmlContentType = "application/(.+\\+)?xml".r
 
-  /** Returns if the content type is a XML content type. Accepts standard application/xml, as well as extended application/foo+xml content
-    * types
-    */
+  /** `application/xml`, or a structured syntax suffix type such as `application/problem+xml`. */
   def isXml(contentType: String): Boolean = xmlContentType.pattern.matcher(contentType).matches
 
-  private val nativeContentTypes: Set[String] = Set("text/plain", "text/html", "multipart/form-data", "application/octet-stream")
+  /** A `+json` / `+xml` type, e.g. `application/problem+json`. */
+  def isSuffixed(contentType: String): Boolean =
+    isJsonOrXml(contentType) && contentType != "application/json" && contentType != "application/xml"
 
-  /** Returns true if the content type has a native codec in codegen, and does not require a custom codec
-    */
-  def isNativeContentType(contentType: String): Boolean =
-    nativeContentTypes.contains(contentType) || isJson(contentType) || isXml(contentType)
+  private def isJsonOrXml(contentType: String): Boolean = isJson(contentType) || isXml(contentType)
 
-  private val classMappableContentTypes = Set("multipart/form-data")
+  private val nativeContentTypes = Set("text/plain", "text/html", "multipart/form-data", "application/octet-stream")
 
-  /** Returns true if a content type can be mapped to a scala class
-    */
-  def isClassMappable(contentType: String): Boolean =
-    classMappableContentTypes.contains(contentType) || ContentTypes.isJson(contentType) || ContentTypes.isXml(contentType)
+  /** True if no top-level codec format class needs to be generated for the content type. */
+  def isNativeContentType(contentType: String): Boolean = nativeContentTypes.contains(contentType) || isJsonOrXml(contentType)
 
-  // These types all use 'eager' schemas, except for '*/*', which we default to eager for convenience but which has no schema mappings
+  /** True if the body can be mapped to a generated class. */
+  def isClassMappable(contentType: String): Boolean = contentType == "multipart/form-data" || isJsonOrXml(contentType)
+
+  // '*/*' has no schema mappings, but we default to eager for convenience
   private val eagerContentTypes = Set("text/plain", "text/html", "multipart/form-data", "*/*")
 
-  /** Returns true if the content type is eager
+  /** True if the body is read into memory by default. When any body variant of a `oneOfBody` is eager, all variants are generated as eager.
     */
-  def isEager(contentType: String): Boolean =
-    eagerContentTypes.contains(contentType) || ContentTypes.isJson(contentType) || ContentTypes.isXml(contentType)
+  def isEager(contentType: String): Boolean = eagerContentTypes.contains(contentType) || isJsonOrXml(contentType)
+
+  private val mediaType = "([^/]+)/(.+)".r
+
+  /** A Scala expression creating the `sttp.model.MediaType` of the content type. */
+  def mediaTypeExpr(contentType: String): String = contentType match {
+    case mediaType(mainType, subType) =>
+      val (main, sub) = (JavaEscape.escapeString(mainType), JavaEscape.escapeString(subType))
+      s"""sttp.model.MediaType.unsafeApply(mainType = "$main", subType = "$sub")"""
+    case ct => throw new NotImplementedError(s"Cannot handle content type '$ct'")
+  }
 }

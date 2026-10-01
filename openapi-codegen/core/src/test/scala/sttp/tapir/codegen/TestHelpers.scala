@@ -805,8 +805,7 @@ object TestHelpers {
      |          default: PT1H30M
      |""".stripMargin
 
-  // 'application/problem+json' (RFC 9457) and any other 'application/<something>+json' media type should be handled
-  // exactly like 'application/json'
+  // 'application/<something>+json' types should be (de)serialised as json, keeping the declared media type
   val structuredSyntaxSuffixJsonYaml =
     """
      |openapi: 3.1.0
@@ -814,39 +813,17 @@ object TestHelpers {
      |  title: structured syntax suffix json test
      |  version: '1.0'
      |paths:
-     |  /widgets:
-     |    post:
-     |      operationId: createWidget
-     |      requestBody:
-     |        required: true
-     |        content:
-     |          application/json:
-     |            schema:
-     |              $ref: '#/components/schemas/Widget'
-     |      responses:
-     |        '200':
-     |          description: ''
-     |          content:
-     |            application/json:
-     |              schema:
-     |                $ref: '#/components/schemas/Widget'
-     |        '400':
-     |          description: ''
-     |          content:
-     |            application/problem+json:
-     |              schema:
-     |                $ref: '#/components/schemas/Problem'
      |  /widgets/{id}:
+     |    parameters:
+     |    - name: id
+     |      in: path
+     |      required: true
+     |      schema:
+     |        type: string
      |    patch:
      |      operationId: patchWidget
-     |      parameters:
-     |      - name: id
-     |        in: path
-     |        required: true
-     |        schema:
-     |          type: string
      |      requestBody:
-     |        required: true
+     |        required: false
      |        content:
      |          application/merge-patch+json:
      |            schema:
@@ -860,6 +837,33 @@ object TestHelpers {
      |                type: array
      |                items:
      |                  $ref: '#/components/schemas/Widget'
+     |        '400':
+     |          description: ''
+     |          content:
+     |            application/json:
+     |              schema:
+     |                $ref: '#/components/schemas/Problem'
+     |            application/problem+json:
+     |              schema:
+     |                $ref: '#/components/schemas/Problem'
+     |        '404':
+     |          description: ''
+     |          content:
+     |            application/problem+json:
+     |              schema:
+     |                $ref: '#/components/schemas/Problem'
+     |    put:
+     |      operationId: putWidget
+     |      x-tapir-codegen-directives: [ 'json-body-as-string' ]
+     |      requestBody:
+     |        required: false
+     |        content:
+     |          application/merge-patch+json:
+     |            schema:
+     |              $ref: '#/components/schemas/Widget'
+     |      responses:
+     |        '204':
+     |          description: ''
      |components:
      |  schemas:
      |    Widget:
@@ -886,8 +890,60 @@ object TestHelpers {
      |          format: int32
      |""".stripMargin
 
-  // 'application/problem+xml' (RFC 9457) and any other 'application/<something>+xml' media type should be handled
-  // exactly like 'application/xml'
+  val structuredSyntaxSuffixStreamingYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: structured syntax suffix streaming test
+     |  version: '1.0'
+     |paths:
+     |  /widgets:
+     |    get:
+     |      operationId: streamWidgets
+     |      x-tapir-codegen-directives: [ 'force-resp-body-streaming' ]
+     |      responses:
+     |        '200':
+     |          description: ''
+     |          content:
+     |            application/vnd.example.widget+json:
+     |              schema:
+     |                type: array
+     |                items:
+     |                  $ref: '#/components/schemas/Widget'
+     |components:
+     |  schemas:
+     |    Widget:
+     |      type: object
+     |      properties:
+     |        name:
+     |          type: string
+     |""".stripMargin
+
+  val eagerXmlWithoutSerdesYaml =
+    """
+     |openapi: 3.1.0
+     |info:
+     |  title: eager xml without serdes test
+     |  version: '1.0'
+     |paths:
+     |  /gadgets:
+     |    get:
+     |      operationId: getGadget
+     |      responses:
+     |        '204':
+     |          description: ''
+     |        '400':
+     |          description: ''
+     |          content:
+     |            application/xml:
+     |              schema:
+     |                type: string
+     |            application/problem+xml:
+     |              schema:
+     |                type: string
+     |""".stripMargin
+
+  // 'application/<something>+xml' types should be (de)serialised as xml, keeping the declared media type
   val structuredSyntaxSuffixXmlYaml =
     """
      |openapi: 3.1.0

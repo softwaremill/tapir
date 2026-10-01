@@ -299,6 +299,18 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     intercept[Throwable](endpointDecls(doc)).getMessage should include("GHSA-gpcc")
   }
 
+  it should "escape a '+json' content type so it cannot break out of the generated media type literal" in {
+    val evilCt = """application/x") ; System.exit(0) ; ("+json"""
+    val out = endpointDecls(
+      singlePathDoc(
+        getMethod(responses = Seq(OpenapiResponseDef("200", "", Seq(OpenapiResponseContent(evilCt, OpenapiSchemaString(false))))))
+      )
+    )
+    out should include("""x\") ; System.exit(0) ; (\"+json""") // escaped form present
+    out should not include """subType = "x") ;""" // not a live break-out
+    out.shouldCompile()
+  }
+
   it should "not let a server description close the generated block comment" in {
     val out = ServersGenerator
       .genServerDefinitions(Seq(OpenapiServer("https://example.com", description = Some("""*/ ; System.exit(0) ; /*"""))), isScala3)

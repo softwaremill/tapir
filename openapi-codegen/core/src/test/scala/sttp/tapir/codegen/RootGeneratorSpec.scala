@@ -8,7 +8,8 @@ class RootGeneratorSpec extends CompileCheckTestBase {
   def genMap(
       doc: OpenapiDocument,
       useHeadTagForObjectNames: Boolean,
-      jsonSerdeLib: String
+      jsonSerdeLib: String,
+      xmlSerdeLib: String = "cats-xml"
   ) = {
     RootGenerator
       .generateObjects(
@@ -18,7 +19,7 @@ class RootGeneratorSpec extends CompileCheckTestBase {
         targetScala3 = isScala3,
         useHeadTagForObjectNames = useHeadTagForObjectNames,
         jsonSerdeLib = jsonSerdeLib,
-        xmlSerdeLib = "cats-xml",
+        xmlSerdeLib = xmlSerdeLib,
         validateNonDiscriminatedOneOfs = true,
         maxSchemasPerFile = 400,
         streamingImplementation = "fs2",
@@ -31,15 +32,21 @@ class RootGeneratorSpec extends CompileCheckTestBase {
       )
       .allFiles
   }
+  private def codecFormat(applicationSubType: String) =
+    "new sttp.tapir.CodecFormat { override val mediaType: sttp.model.MediaType = " +
+      s"""sttp.model.MediaType.unsafeApply(mainType = "application", subType = "$applicationSubType") }"""
+
   def gen(
       doc: OpenapiDocument,
       useHeadTagForObjectNames: Boolean,
-      jsonSerdeLib: String
+      jsonSerdeLib: String,
+      xmlSerdeLib: String = "cats-xml"
   ) = {
     val genned = genMap(
       doc,
       useHeadTagForObjectNames = useHeadTagForObjectNames,
-      jsonSerdeLib = jsonSerdeLib
+      jsonSerdeLib = jsonSerdeLib,
+      xmlSerdeLib = xmlSerdeLib
     )
     val main = genned("TapirGeneratedEndpoints")
     val schemaKeys = genned.keys.filter(_.startsWith("TapirGeneratedEndpointsSchemas")).toSeq.sorted
@@ -126,23 +133,30 @@ class RootGeneratorSpec extends CompileCheckTestBase {
     })
 
     VersionCheck.runTest(jsonSerdeLib)(
-      it should s"treat 'application/xxx+json' bodies as json using $jsonSerdeLib serdes" in {
+      it should s"map 'application/xxx+json' bodies to json codecs with the declared media type using $jsonSerdeLib serdes" in {
         val doc = TestHelpers.parseYamlDocument(TestHelpers.structuredSyntaxSuffixJsonYaml).fold(err => fail(err.getMessage), identity)
         val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
+        val mergePatch = codecFormat("merge-patch+json")
+        val widget = codecFormat("vnd.example.widget+json")
+        val problem = codecFormat("problem+json")
 
-        // 'application/problem+json' error body
-        generated should include("""errorOut(jsonBody[Problem]""")
-        // 'application/merge-patch+json' request body, and 'application/vnd.example.widget+json' response body
         generated should include(
-          """  lazy val patchWidget =
-            |    endpoint
-            |      .name("patchWidget")
-            |      .patch
-            |      .in(("widgets" / path[String]("id")))
-            |      .in(jsonBody[Widget])
-            |      .out(jsonBody[List[Widget]].description(""))""".stripMargin
+          s".in(stringBodyUtf8AnyFormat(implicitly[sttp.tapir.Codec.JsonCodec[Option[Widget]]].format($mergePatch)))"
         )
-        // '+json' types are mapped to jsonBody, so need no generated CodecFormat
+        generated should include(
+          s""".out(stringBodyUtf8AnyFormat(implicitly[sttp.tapir.Codec.JsonCodec[List[Widget]]].format($widget)).description(""))"""
+        )
+        // 'application/json' and 'application/problem+json' variants of the same body
+        generated should include(
+          s"""oneOfBody[Problem](
+             |        jsonBody[Problem].description(""),
+             |        stringBodyUtf8AnyFormat(implicitly[sttp.tapir.Codec.JsonCodec[Problem]].format($problem)).description(""))""".stripMargin
+        )
+        generated should include(
+          s"oneOfVariant[Problem](sttp.model.StatusCode(404), stringBodyUtf8AnyFormat(implicitly[sttp.tapir.Codec.JsonCodec[Problem]].format($problem))"
+        )
+        // json-body-as-string directive
+        generated should include(s".in(stringBodyUtf8AnyFormat(sttp.tapir.Codec.string.format($mergePatch)).map(Option(_))(_.orNull))")
         generated should not include "extends CodecFormat"
         generated.shouldCompile()
       }
@@ -161,24 +175,28 @@ class RootGeneratorSpec extends CompileCheckTestBase {
     )
   }
 
-  it should "treat 'application/xxx+xml' bodies as xml" in {
+  it should "use the declared media type for streamed 'application/xxx+json' bodies" in {
+    val doc = TestHelpers.parseYamlDocument(TestHelpers.structuredSyntaxSuffixStreamingYaml).fold(err => fail(err.getMessage), identity)
+    val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = "circe")
+
+    generated should include(s"Schema.binary[List[Widget]], ${codecFormat("vnd.example.widget+json")})")
+  }
+
+  it should "map 'application/xxx+xml' bodies to xml codecs with the declared media type" in {
     val doc = TestHelpers.parseYamlDocument(TestHelpers.structuredSyntaxSuffixXmlYaml).fold(err => fail(err.getMessage), identity)
     val generated = genMap(doc, useHeadTagForObjectNames = false, jsonSerdeLib = "circe")
     val endpoints = generated("TapirGeneratedEndpoints")
+    val gadget = codecFormat("vnd.example.gadget+xml")
+    val problem = codecFormat("problem+xml")
+    val atom = codecFormat("atom+xml")
 
-    // 'application/vnd.example.gadget+xml' request body, 'application/atom+xml' response body and
-    // 'application/problem+xml' error body
+    endpoints should include(s".in(stringBodyUtf8AnyFormat(implicitly[sttp.tapir.Codec.XmlCodec[Gadget]].format($gadget)))")
     endpoints should include(
-      """  lazy val createGadget =
-        |    endpoint
-        |      .name("createGadget")
-        |      .post
-        |      .in(("gadgets"))
-        |      .in(xmlBody[Gadget])
-        |      .errorOut(xmlBody[Fault].description("").and(statusCode(sttp.model.StatusCode(400))))
-        |      .out(xmlBody[Gadget].description(""))""".stripMargin
+      s""".errorOut(stringBodyUtf8AnyFormat(implicitly[sttp.tapir.Codec.XmlCodec[Fault]].format($problem)).description("")"""
     )
-    // '+xml' types are mapped to xmlBody, so need no generated CodecFormat
+    endpoints should include(
+      s""".out(stringBodyUtf8AnyFormat(implicitly[sttp.tapir.Codec.XmlCodec[Gadget]].format($atom)).description(""))"""
+    )
     endpoints should not include "extends CodecFormat"
 
     // xml serdes must be generated for types only ever referenced from a '+xml' body
@@ -187,6 +205,15 @@ class RootGeneratorSpec extends CompileCheckTestBase {
     xmlSerdes should include("Encoder[Gadget]")
     xmlSerdes should include("Decoder[Fault]")
     xmlSerdes should include("Encoder[Fault]")
+  }
+
+  it should "map eager xml bodies to raw bytes with the declared media type when xml serdes are disabled" in {
+    val doc = TestHelpers.parseYamlDocument(TestHelpers.eagerXmlWithoutSerdesYaml).fold(err => fail(err.getMessage), identity)
+    val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = "circe", xmlSerdeLib = "none")
+
+    generated should include("Codec.id[Array[Byte], CodecFormat.Xml](CodecFormat.Xml(), Schema.schemaForByteArray)")
+    generated should include(s"Codec.id[Array[Byte], sttp.tapir.CodecFormat](${codecFormat("problem+xml")}, Schema.schemaForByteArray)")
+    generated.shouldCompile()
   }
 
   it should "split models into separate files when seperateFilesForModels is true" in {
