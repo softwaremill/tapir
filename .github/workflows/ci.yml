@@ -77,19 +77,19 @@ jobs:
     - name: Enable Loom-specific modules
       if: matrix.java == '21'
       run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
-    - name: Enable ZIO-specific modules # zio-json requires JDK 17+
-      if: matrix.java == '21'
-      run: echo "WITH_ZIO=1" >> $GITHUB_ENV
     - name: Compile
       run: sbt -v "compileScoped ${{ matrix.scala-version }} ${{ matrix.target-platform }}"
     - name: Compile core & server-core with next Scala 3
       if: matrix.scala-version == '3' && matrix.target-platform == 'JVM' && matrix.java == '21'
       env:
         SCALA_3_NEXT: "3.8.3"
+      # Scala 3.8+ doesn't support -release below 17
       run: |
         sbt -v \
           "set LocalProject(\"core\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
           "set LocalProject(\"serverCore\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
+          "set LocalProject(\"core\") / javaOutputVersion := \"17\" ;" \
+          "set LocalProject(\"serverCore\") / javaOutputVersion := \"17\" ;" \
           "set LocalProject(\"coreJS\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
           "set LocalProject(\"serverCoreJS\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
           "core/Test/compile ; serverCore/Test/compile ;" \
@@ -215,11 +215,9 @@ jobs:
       - name: Enable Native-specific modules
         if: matrix.java == '17'
         run: echo "STTP_NATIVE=1" >> $GITHUB_ENV
-      - name: Enable Loom and ZIO-specific modules # zio-json requires JDK 17+
+      - name: Enable Loom-specific modules
         if: matrix.java == '21'
-        run: |
-          echo "ONLY_LOOM=1" >> $GITHUB_ENV
-          echo "WITH_ZIO=1" >> $GITHUB_ENV
+        run: echo "ONLY_LOOM=1" >> $GITHUB_ENV
       - name: Compile
         run: |
           sbt "compile ; shutdown"
