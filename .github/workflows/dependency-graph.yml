@@ -15,5 +15,5 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: sbt/setup-sbt@ce95da69b39609ea153bad087708da5f37366897 # v1, specifically v1.5.10
+      - uses: sbt/setup-sbt@6158cb0903b8ceeae04f830055f3155e1b6a5ad7 # v1, specifically v1.5.11
       - uses: scalacenter/sbt-dependency-submission@d84eef4c09e633bcf5f113bcad7fd5e9af1baee9 # v3, specifically v3.1.1
