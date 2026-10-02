@@ -18,6 +18,8 @@ trait FinatraServerInterpreter extends Logging {
   def finatraServerOptions: FinatraServerOptions = FinatraServerOptions.default
 
   def toRoute(se: ServerEndpoint[Any, Future]): FinatraRoute = {
+    EndpointBodyVerifier.verifyOrThrow(se.endpoint)
+
     val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
       _ => List(se),
       new FinatraRequestBody(finatraServerOptions),

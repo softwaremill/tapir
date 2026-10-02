@@ -360,4 +360,11 @@ package object internal {
     case null          => true
     case _             => false
   }
+
+  def isReplayable(bodyType: RawBodyType[?]): Boolean = bodyType match {
+    case RawBodyType.StringBody(_) | RawBodyType.ByteArrayBody | RawBodyType.ByteBufferBody | RawBodyType.InputStreamBody |
+        RawBodyType.InputStreamRangeBody =>
+      true
+    case RawBodyType.FileBody | _: RawBodyType.MultipartBody => false
+  }
 }

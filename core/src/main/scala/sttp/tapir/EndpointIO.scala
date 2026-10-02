@@ -12,8 +12,10 @@ import sttp.tapir.model.{ServerRequest, StatusCodeRange}
 import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
+import java.io.InputStream
+import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
-import scala.annotation.StaticAnnotation
+import scala.annotation.{StaticAnnotation, implicitNotFound}
 import scala.collection.immutable.{ListMap, Seq}
 import scala.concurrent.duration.FiniteDuration
 
@@ -486,13 +488,49 @@ object EndpointIO {
     override private[tapir] type L = R
     override private[tapir] type CF = CodecFormat
     override private[tapir] def copyWith[U](c: Codec[R, U, CodecFormat], i: Info[U]): Body[R, U] = copy(codec = c, info = i)
+
+    /** Marks this as a secondary body definition: still decoded on the server, but not part of the API contract - excluded from the
+      * documentation and ignored by client interpreters. Lets the request body be decoded a second time, e.g. once in `serverSecurityLogic`
+      * and once in the main logic. Only bodies which can be re-read from buffered bytes may be secondary.
+      */
+    def asSecondary(implicit ev: Body.ReplayableRawBody[R]): Body[R, T] = {
+      val _ = ev
+      attribute(SecondaryBody.Attribute, SecondaryBody())
+    }
+
+    // keys are equal by name, so a foreign key with the same name must not mark the body secondary
+    def isSecondary: Boolean = info.attribute(SecondaryBody.Attribute).contains(SecondaryBody())
+
     override def show: String = {
       val charset = bodyType.asInstanceOf[RawBodyType[?]] match {
         case RawBodyType.StringBody(charset) => s" (${charset.toString})"
         case _                               => ""
       }
       val format = codec.format.mediaType
-      s"{body as $format$charset}"
+      val secondary = if (isSecondary) "secondary " else ""
+      s"{${secondary}body as $format$charset}"
+    }
+  }
+
+  object Body {
+
+    /** Evidence that a raw body type can be re-read from buffered bytes, and is therefore usable as a secondary body. */
+    @implicitNotFound(
+      "Cannot use a body with raw type ${R} as a secondary body. Only bodies which can be re-read from buffered bytes " +
+        "are supported: string, byte array, byte buffer, input stream. File, multipart and streaming bodies cannot be " +
+        "read twice."
+    )
+    sealed trait ReplayableRawBody[R]
+
+    object ReplayableRawBody {
+      private val instance: ReplayableRawBody[Any] = new ReplayableRawBody[Any] {}
+      private def of[R]: ReplayableRawBody[R] = instance.asInstanceOf[ReplayableRawBody[R]]
+
+      implicit val forString: ReplayableRawBody[String] = of
+      implicit val forByteArray: ReplayableRawBody[Array[Byte]] = of
+      implicit val forByteBuffer: ReplayableRawBody[ByteBuffer] = of
+      implicit val forInputStream: ReplayableRawBody[InputStream] = of
+      implicit val forInputStreamRange: ReplayableRawBody[InputStreamRange] = of
     }
   }
 
