@@ -10,12 +10,18 @@ import sttp.tapir.client.sttp4.ws.WebSocketSttpClientInterpreter
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 abstract class WebSocketSttpClientPekkoTestsSender extends ClientTests[WebSockets with PekkoStreams] {
   implicit val actorSystem: ActorSystem = ActorSystem("tests")
   val backend: WebSocketBackend[Future] = PekkoHttpBackend.usingActorSystem(actorSystem)
   def wsToPipe: WebSocketToPipe[WebSockets with PekkoStreams]
+
+  override protected def afterAll(): Unit = {
+    super.afterAll()
+    Await.result(actorSystem.terminate(), 10.seconds)
+  }
 
   // only web socket tests
   override def send[A, I, E, O](

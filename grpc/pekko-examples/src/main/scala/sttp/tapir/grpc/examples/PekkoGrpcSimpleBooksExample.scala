@@ -82,7 +82,7 @@ class ExampleGrpcServer(system: ActorSystem) extends Logging {
 
 object SimpleBookExampleProtoGenerator extends App {
   ProtoSchemaGenerator.renderToFile(
-    path = "grpc/examples/src/main/protobuf/simple_books_example.proto",
+    path = "grpc/pekko-examples/src/main/protobuf/simple_books_example.proto",
     packageName = "sttp.tapir.grpc.examples.grpc_simple_books_example.gen",
     endpoints = Endpoints.endpoints
   )

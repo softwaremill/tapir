@@ -8,13 +8,20 @@ import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 abstract class PlayClientTests[R] extends ClientTests[R] {
 
   implicit val materializer: Materializer = Materializer(ActorSystem("tests"))
 
   implicit val wsClient: StandaloneWSClient = StandaloneAhcWSClient()
+
+  override protected def afterAll(): Unit = {
+    super.afterAll()
+    wsClient.close()
+    Await.result(materializer.system.terminate(), 10.seconds)
+  }
 
   override def send[A, I, E, O](
       e: Endpoint[A, I, E, O, R],
