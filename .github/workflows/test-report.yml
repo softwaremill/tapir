@@ -1,9 +1,6 @@
 name: 'Test Report'
 on:
-  workflow_run:
-    workflows: ['CI']
-    types:
-      - completed
+  workflow_dispatch:
 
 permissions:
   contents: read
