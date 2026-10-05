@@ -4,7 +4,6 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType.{SArray, SCoproduct, SDate, SDateTime, SInteger, SNumber, SProduct, SProductField, SString}
 import sttp.tapir.{Schema, _}
 import sttp.tapir.grpc.protobuf.model._
-import sttp.tapir.internal._
 
 class EndpointToProtobufMessage {
   def apply(es: List[AnyEndpoint]): List[ProtobufMessage] =

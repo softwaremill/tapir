@@ -1,7 +1,6 @@
 package sttp.tapir.grpc.protobuf
 
 import sttp.tapir._
-import sttp.tapir.internal._
 import sttp.tapir.grpc.protobuf.model._
 import sttp.tapir.EndpointIO.Pair
 import sttp.tapir.EndpointIO.Empty

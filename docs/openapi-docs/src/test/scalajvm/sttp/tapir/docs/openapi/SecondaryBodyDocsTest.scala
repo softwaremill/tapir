@@ -41,11 +41,12 @@ class SecondaryBodyDocsTest extends AnyFlatSpec with Matchers {
     yaml should include("Invalid value for: body")
   }
 
-  it should "register the schema of an output body marked as secondary" in {
+  it should "document neither the body nor its schema when an output body is secondary" in {
     val e = endpoint.get.in("fruit").out(jsonBody[FruitAmount].asSecondary)
 
     val openAPI = OpenAPIDocsInterpreter().toOpenAPI(e, "Test", "1.0")
 
-    openAPI.components.map(_.schemas.keySet) shouldBe Some(Set("FruitAmount"))
+    openAPI.toYaml should not include ("application/json")
+    openAPI.components shouldBe None
   }
 }

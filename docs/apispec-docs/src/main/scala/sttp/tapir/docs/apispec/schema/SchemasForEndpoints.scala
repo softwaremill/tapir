@@ -51,7 +51,7 @@ class SchemasForEndpoints(
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
       case EndpointInput.MappedPair(wrapped, _)   => forInput(wrapped)
       case EndpointInput.Pair(left, right, _, _)  => forInput(left) ++ forInput(right)
-      case op: EndpointIO[_]                      => forIO(op, skipSecondaryBodies = true)
+      case op: EndpointIO[_]                      => forIO(op)
     }
   }
 
@@ -65,20 +65,20 @@ class SchemasForEndpoints(
       case EndpointOutput.Pair(left, right, _, _)       => forOutput(left) ++ forOutput(right)
       case EndpointOutput.WebSocketBodyWrapper(wrapped) =>
         ToKeyedSchemas(wrapped.codec) ++ ToKeyedSchemas(wrapped.requests) ++ ToKeyedSchemas(wrapped.responses)
-      case op: EndpointIO[_] => forIO(op, skipSecondaryBodies = false)
+      case op: EndpointIO[_] => forIO(op)
     }
   }
 
-  private def forIO(io: EndpointIO[_], skipSecondaryBodies: Boolean): List[KeyedSchema] = {
+  private def forIO(io: EndpointIO[_]): List[KeyedSchema] = {
     io match {
-      case EndpointIO.Pair(left, right, _, _) => forIO(left, skipSecondaryBodies) ++ forIO(right, skipSecondaryBodies)
-      case EndpointIO.Header(_, codec, _)     => ToKeyedSchemas(codec)
-      case EndpointIO.Headers(_, _)           => List.empty
-      case b @ EndpointIO.Body(_, _, _) if skipSecondaryBodies && b.isSecondary => List.empty
-      case EndpointIO.Body(_, codec, _)                                         => ToKeyedSchemas(codec)
-      case EndpointIO.OneOfBody(variants, _)                             => variants.flatMap(v => forIO(v.bodyAsAtom, skipSecondaryBodies))
+      case EndpointIO.Pair(left, right, _, _)                            => forIO(left) ++ forIO(right)
+      case EndpointIO.Header(_, codec, _)                                => ToKeyedSchemas(codec)
+      case EndpointIO.Headers(_, _)                                      => List.empty
+      case b @ EndpointIO.Body(_, _, _) if b.isSecondary                 => List.empty
+      case EndpointIO.Body(_, codec, _)                                  => ToKeyedSchemas(codec)
+      case EndpointIO.OneOfBody(variants, _)                             => variants.flatMap(v => forIO(v.bodyAsAtom))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _, _)) => ToKeyedSchemas(codec.schema)
-      case EndpointIO.MappedPair(wrapped, _)                             => forIO(wrapped, skipSecondaryBodies)
+      case EndpointIO.MappedPair(wrapped, _)                             => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)                               => List.empty
       case EndpointIO.Empty(_, _)                                        => List.empty
     }
