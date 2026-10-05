@@ -89,7 +89,7 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
     val _ = latch.await(socketReadTimeout.toMillis, TimeUnit.MILLISECONDS)
   }
 
-  private def clientSocket(port: Int): Socket = {
+  def clientSocket(port: Int): Socket = {
     val socket = new Socket("localhost", port)
     socket.setSoTimeout(socketReadTimeout.toMillis.toInt)
     socket

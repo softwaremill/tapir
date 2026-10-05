@@ -178,6 +178,41 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
       }.map { statusLines =>
         statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 503 Service Unavailable")
       }.unsafeToFuture()
+    },
+    Test("closing the connection mid-body doesn't pass a truncated body to the server logic") {
+      val bodiesSeen = new AtomicReference(Vector.empty[String])
+
+      val e = endpoint.put
+        .in(stringBody)
+        .out(stringBody)
+        .serverLogicSuccess[Future] { body =>
+          bodiesSeen.getAndUpdate(_ :+ body)
+          Future.successful(body)
+        }
+
+      val serverConfig = NettyConfig.default
+        .eventLoopGroup(eventLoopGroup)
+        .randomPort
+        .withDontShutdownEventLoopGroupOnClose
+        .noGracefulShutdown
+        .requestTimeout(1.second)
+
+      val bind = IO.fromFuture(IO.delay(NettyFutureServer(serverConfig).addEndpoints(List(e)).start()))
+      Resource
+        .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
+        .map(_.port)
+        .use { port =>
+          Resource
+            .fromAutoCloseable(IO(clientSocket(port)))
+            .use { socket =>
+              for {
+                _ <- send(socket, incompleteRequestHead(port) ++ slowBody)
+                _ <- IO.blocking(socket.shutdownOutput())
+                _ <- IO.sleep(500.millis)
+              } yield bodiesSeen.get() shouldBe Vector.empty
+            }
+        }
+        .unsafeToFuture()
     }
   )
 }
