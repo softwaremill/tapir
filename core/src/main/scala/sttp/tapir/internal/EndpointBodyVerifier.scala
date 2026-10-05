@@ -70,12 +70,6 @@ private[tapir] object EndpointBodyVerifier {
         })
         .map(b => s"Endpoint $shown marks the response body ${b.show} as secondary. Only request bodies can be secondary.")
 
-    val nonReplayableSecondary: List[String] =
-      secondary
-        .filterNot(b => isReplayable(b.bodyType))
-        .map(b => s"Endpoint $shown marks ${b.show} as secondary, but only bodies which can be re-read from buffered bytes can be.")
-        .toList
-
     val hiddenSchemaHint =
       if (primaryBodies.exists { case b: EndpointIO.Body[?, ?] => b.codec.schema.hidden; case _ => false })
         " A hidden schema doesn't make a body secondary."
@@ -85,8 +79,8 @@ private[tapir] object EndpointBodyVerifier {
       if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
         List(
           s"Endpoint $shown declares a request body in both securityIn and in. Only one may be part of the API " +
-            s"contract. If both should decode the same request body, mark the securityIn one: " +
-            s"stringBody.asSecondary.$hiddenSchemaHint"
+            s"contract. If both should decode the same request body, mark the securityIn one with .asSecondary." +
+            hiddenSchemaHint
         )
       else if (securityPrimaryBodies.size > 1)
         List(
@@ -127,8 +121,7 @@ private[tapir] object EndpointBodyVerifier {
       }
 
     EndpointBodyProblems(
-      errors =
-        nonReplayableSecondary ++ secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyPrimaries ++ nonReplayablePrimaryWithSecondary,
+      errors = secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyPrimaries ++ nonReplayablePrimaryWithSecondary,
       warnings = (secondaryWithoutPrimary ++ uselessMetadata).toList
     )
   }
