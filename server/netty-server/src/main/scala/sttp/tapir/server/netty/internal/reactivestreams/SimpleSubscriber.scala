@@ -4,10 +4,10 @@ import io.netty.buffer.{ByteBuf, ByteBufUtil}
 import io.netty.handler.codec.http.HttpContent
 import org.reactivestreams.{Publisher, Subscription}
 import sttp.capabilities.StreamMaxLengthExceededException
+import sttp.tapir.server.model.ConnectionClosedMidSendException
 
-import java.util.concurrent.LinkedBlockingQueue
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.concurrent.{Await, Future, Promise}
 
 private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends PromisingSubscriber[Array[Byte], HttpContent] {
   // These don't need to be volatile as Reactive Streams guarantees that onSubscribe/onNext/onError/onComplete are
@@ -55,7 +55,11 @@ private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends Promi
   }
 
   override def onComplete(): Unit = (buffers.length, contentLength) match {
-    case (length, Some(contentLength)) if length > 0 && totalLength == contentLength =>
+    case (length, Some(contentLength)) if length > 0 && totalLength != contentLength =>
+      buffers.foreach(_.release())
+      buffers = Vector.empty
+      resultPromise.failure(ConnectionClosedMidSendException(totalLength, contentLength))
+    case (length, _) if length > 0 && contentLength.forall(_ == totalLength) =>
       val mergedArray = new Array[Byte](totalLength)
       var currentIndex = 0
       buffers.foreach { buf =>
@@ -66,9 +70,6 @@ private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends Promi
       }
       buffers = Vector.empty
       resultPromise.success(mergedArray)
-    case (length, Some(contentLength)) if totalLength > 0 && totalLength != contentLength =>
-      buffers = Vector.empty
-      resultPromise.failure(ConnectionClosedMidSendException(length, contentLength))
     case _ => () // result already sent in onNext
   }
 }
@@ -88,8 +89,4 @@ object SimpleSubscriber {
 
   def processAllBlocking(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): Array[Byte] =
     Await.result(processAll(publisher, contentLength, maxBytes), Duration.Inf)
-}
-
-case class ConnectionClosedMidSendException(bytesSend: Long, bytesDeclared: Long) extends Exception {
-  override def toString: String = s"Connection closed with partially received body. $bytesSend out of $bytesDeclared received."
 }

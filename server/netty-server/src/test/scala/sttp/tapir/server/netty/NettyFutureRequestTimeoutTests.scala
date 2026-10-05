@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty
 
-import sttp.tapir.*
+import sttp.tapir._
 import sttp.tapir.tests.Test
 
 import scala.concurrent.Future
@@ -15,11 +15,11 @@ import cats.effect.IO
 import cats.effect.kernel.Resource
 
 import scala.concurrent.ExecutionContext
-import sttp.client4.*
+import sttp.client4._
 import sttp.capabilities.fs2.Fs2Streams
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.Eventually.eventually
-import org.scalatest.matchers.should.Matchers.*
+import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
 
