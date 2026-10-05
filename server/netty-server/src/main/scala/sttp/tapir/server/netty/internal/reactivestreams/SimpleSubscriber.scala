@@ -54,8 +54,8 @@ private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends Promi
     resultPromise.failure(t)
   }
 
-  override def onComplete(): Unit = {
-    if (buffers.nonEmpty) {
+  override def onComplete(): Unit = (buffers.length, contentLength) match {
+    case (length, Some(contentLength)) if length > 0 && totalLength == contentLength =>
       val mergedArray = new Array[Byte](totalLength)
       var currentIndex = 0
       buffers.foreach { buf =>
@@ -66,11 +66,11 @@ private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends Promi
       }
       buffers = Vector.empty
       resultPromise.success(mergedArray)
-    } else {
-      () // result already sent in onNext
-    }
+    case (length, Some(contentLength)) if totalLength > 0 && totalLength != contentLength =>
+      buffers = Vector.empty
+      resultPromise.failure(ConnectionClosedMidSendException(length, contentLength))
+    case _ => () // result already sent in onNext
   }
-
 }
 
 object SimpleSubscriber {
@@ -88,4 +88,8 @@ object SimpleSubscriber {
 
   def processAllBlocking(publisher: Publisher[HttpContent], contentLength: Option[Long], maxBytes: Option[Long]): Array[Byte] =
     Await.result(processAll(publisher, contentLength, maxBytes), Duration.Inf)
+}
+
+case class ConnectionClosedMidSendException(bytesSend: Long, bytesDeclared: Long) extends Exception {
+  override def toString: String = s"Connection closed with partially received body. $bytesSend out of $bytesDeclared received."
 }
