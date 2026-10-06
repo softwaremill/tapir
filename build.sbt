@@ -469,7 +469,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
-          Seq("com.softwaremill.magnolia1_3" %% "magnolia" % "1.3.23")
+          Seq("com.softwaremill.magnolia1_3" %% "magnolia" % "1.3.24")
         case _ =>
           Seq(
             "com.softwaremill.magnolia1_2" %% "magnolia" % "1.1.14",
@@ -1950,7 +1950,7 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-literal" % Versions.circe,
-      "org.typelevel" %% "jawn-parser" % "1.7.0"
+      "org.typelevel" %% "jawn-parser" % "1.8.0"
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
