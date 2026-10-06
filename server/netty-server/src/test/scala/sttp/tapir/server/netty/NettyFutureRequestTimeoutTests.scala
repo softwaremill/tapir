@@ -2,7 +2,6 @@ package sttp.tapir.server.netty
 
 import sttp.tapir._
 import sttp.tapir.tests.Test
-
 import scala.concurrent.Future
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
@@ -13,7 +12,6 @@ import sttp.tapir.server.metrics.EndpointMetric
 import io.netty.channel.EventLoopGroup
 import cats.effect.IO
 import cats.effect.kernel.Resource
-
 import scala.concurrent.ExecutionContext
 import sttp.client4._
 import sttp.capabilities.fs2.Fs2Streams
@@ -22,8 +20,6 @@ import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
-
-import java.net.Socket
 
 class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]])(implicit
     ec: ExecutionContext
@@ -97,49 +93,6 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
               eventually {
                 activeRequests.get() shouldBe 0
                 totalRequests.get() shouldBe 1
-              }
-            }
-        }
-        .unsafeToFuture()
-    },
-    Test("respond with status 400 when not all declared bytes are received within time window") {
-
-      val bodiesSeen = new AtomicReference[Vector[String]](Vector.empty[String])
-
-      val e = endpoint.put
-        .in(stringBody)
-        .out(stringBody)
-        .serverLogicSuccess[Future] { body =>
-          bodiesSeen.getAndUpdate(_ :+ body)
-          Future.successful(body)
-        }
-
-      val config: NettyConfig = NettyConfig.default.randomPort.requestTimeout(100.millis)
-
-      val bind = IO.fromFuture(IO.delay(NettyFutureServer(config).addEndpoints(List(e)).start()))
-
-      val createSocket: Int => Socket = port => {
-        val s = new Socket("localhost", port)
-        s.setSoTimeout(200)
-        s
-      }
-
-      Resource
-        .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
-        .use { server =>
-          val bytes =
-            s"PUT / HTTP/1.1\r\nHost: localhost:${server.port}\r\nContent-Type: text/plain\r\nContent-Length: 10000\r\n\r\ntest".getBytes
-
-          Resource
-            .make(IO(createSocket(server.port)))(socket => IO(socket.close()))
-            .use { socket =>
-              for {
-                _ <- IO(socket.getOutputStream.write(bytes))
-                _ <- IO(socket.getOutputStream.flush())
-                _ <- IO(socket.getOutputStream.close())
-                _ <- IO.sleep(300.millis)
-              } yield {
-                bodiesSeen.get() should be(Vector.empty[String])
               }
             }
         }

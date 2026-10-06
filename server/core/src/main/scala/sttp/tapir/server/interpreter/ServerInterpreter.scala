@@ -7,8 +7,8 @@ import sttp.monad.syntax._
 import sttp.tapir.internal.{Params, ParamsAsAny, RichOneOfBody}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor._
-import sttp.tapir.server.model.{InvalidMultipartBodyException, MaxContentLength, ServerResponse, ValuedEndpointOutput}
-import sttp.tapir.server.{model, _}
+import sttp.tapir.server.model._
+import sttp.tapir.server._
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
 import sttp.tapir.EndpointInfo
 import sttp.tapir.AttributeKey
@@ -226,8 +226,9 @@ class ServerInterpreter[R, F[_], B, S](
       }
       // if the exception is "known" - might be the result of a malformed body - treating as a decode failure
       // otherwise, it's a bug in the interpreter
-      .handleError { case e @ (StreamMaxLengthExceededException(_) | InvalidMultipartBodyException(_, _)) =>
-        (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.Error("", e)): DecodeBasicInputsResult).unit
+      .handleError {
+        case e @ (StreamMaxLengthExceededException(_) | InvalidMultipartBodyException(_, _) | IncompleteRequestBodyException(_, _)) =>
+          (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.Error("", e)): DecodeBasicInputsResult).unit
       }
   }
 
