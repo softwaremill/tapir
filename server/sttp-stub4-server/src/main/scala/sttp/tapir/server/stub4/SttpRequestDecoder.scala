@@ -14,9 +14,13 @@ private[stub4] object SttpRequestDecoder {
   def apply(request: GenericRequest[_, _], input: EndpointInput[_]): DecodeBasicInputsResult = {
     DecodeBasicInputs(input, DecodeInputsContext(SttpRequest(request)))._1 match {
       case values: DecodeBasicInputsResult.Values =>
-        def decodeBody[RAW, T](bodyInput: EndpointIO.Body[RAW, T]): DecodeBasicInputsResult = {
+        def decodeBody[RAW, T](
+            values: DecodeBasicInputsResult.Values,
+            bodyInput: EndpointIO.Body[RAW, T],
+            index: Int
+        ): DecodeBasicInputsResult = {
           bodyInput.codec.decode(rawBody(request, bodyInput)) match {
-            case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+            case DecodeResult.Value(bodyV)     => values.setBasicInputValue(bodyV, index)
             case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
           }
         }
@@ -32,11 +36,11 @@ private[stub4] object SttpRequestDecoder {
           }
         }
 
-        values.bodyInputWithIndex match {
-          case Some((Left(oneOfBodyInput), _)) =>
+        val primaryDecoded = values.bodyInputWithIndex match {
+          case Some((Left(oneOfBodyInput), index)) =>
             val requestContentType: Option[String] = request.contentType
             oneOfBodyInput.chooseBodyToDecode(requestContentType.flatMap(MediaType.parse(_).toOption)) match {
-              case Some(Left(body))                                          => decodeBody(body)
+              case Some(Left(body))                                          => decodeBody(values, body, index)
               case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(body)
               case None                                                      =>
                 DecodeBasicInputsResult.Failure(
@@ -47,6 +51,12 @@ private[stub4] object SttpRequestDecoder {
 
           case Some((Right(bodyInput: EndpointIO.StreamBodyWrapper[Any, Any]), _)) => decodeStreamingBody(bodyInput)
           case None                                                                => values
+        }
+
+        values.secondaryBodyInputsWithIndex.foldLeft(primaryDecoded) {
+          case (v: DecodeBasicInputsResult.Values, (bodyInput, index)) =>
+            decodeBody(v, bodyInput.asInstanceOf[EndpointIO.Body[Any, Any]], index)
+          case (failure, _) => failure
         }
       case failure: DecodeBasicInputsResult.Failure => failure
     }

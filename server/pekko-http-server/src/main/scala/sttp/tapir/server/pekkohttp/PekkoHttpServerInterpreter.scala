@@ -22,7 +22,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.pekkohttp.PekkoModel.parseHeadersOrThrowWithoutContentHeaders
 
@@ -43,7 +43,7 @@ trait PekkoHttpServerInterpreter {
       requestBody: (Materializer, ExecutionContext) => RequestBody[Future, PekkoStreams],
       toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[PekkoResponseBody, PekkoStreams]
   )(ses: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]): Route = {
-    val filterServerEndpoints = FilterServerEndpoints(ses)
+    val filterServerEndpoints = PrepareServerEndpoints(ses)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(
       pekkoHttpServerOptions.appendInterceptor(PekkoStreamSizeExceptionInterceptor).interceptors,
       ses

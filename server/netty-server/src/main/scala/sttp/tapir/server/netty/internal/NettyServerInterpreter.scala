@@ -6,7 +6,7 @@ import sttp.tapir.TapirFile
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{Interceptor, RequestResult}
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 import sttp.tapir.server.interpreter.RequestBody
 import sttp.tapir.server.interpreter.ToResponseBody
@@ -22,7 +22,7 @@ object NettyServerInterpreter {
   ): Route[F] = {
     implicit val bodyListener: BodyListener[F, NettyResponse] = new NettyBodyListener(runAsync)
     val serverInterpreter = new ServerInterpreter[Any, F, NettyResponse, NoStreams](
-      FilterServerEndpoints(ses),
+      PrepareServerEndpoints(ses),
       requestBody,
       toResponseBody,
       interceptors,

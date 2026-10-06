@@ -6,7 +6,7 @@ import sttp.monad.syntax._
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 
 private[aws] abstract class AwsServerInterpreter[F[_]: MonadError] {
 
@@ -19,7 +19,7 @@ private[aws] abstract class AwsServerInterpreter[F[_]: MonadError] {
     implicit val bodyListener: BodyListener[F, LambdaResponseBody] = new AwsBodyListener[F]
 
     val interpreter = new ServerInterpreter[Any, F, LambdaResponseBody, NoStreams](
-      FilterServerEndpoints(ses),
+      PrepareServerEndpoints(ses),
       new AwsRequestBody[F](),
       new AwsToResponseBody(awsServerOptions),
       awsServerOptions.interceptors,
