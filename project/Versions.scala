@@ -43,7 +43,7 @@ object Versions {
   val zioJson = "1.0.0"
   val zioOpenTelemetry = "3.1.19"
   val playClient = "3.0.14"
-  val playServer = "3.0.11"
+  val playServer = "3.0.12"
   val play29Client = "2.2.18"
   val play29Server = "2.9.11"
   val tethys = "0.29.8"
