@@ -28,7 +28,7 @@ case class NettyCatsServerOptions[F[_]](
 
 object NettyCatsServerOptions {
 
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] =
+  def default[F[_]](dispatcher: Dispatcher[F])(implicit F: Async[F]): NettyCatsServerOptions[F] =
     customiseInterceptors(dispatcher).options
 
   private def default[F[_]: Async](

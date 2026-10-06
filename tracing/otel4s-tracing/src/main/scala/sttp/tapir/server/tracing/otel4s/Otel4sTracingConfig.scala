@@ -2,7 +2,7 @@ package sttp.tapir.server.tracing.otel4s
 
 import org.typelevel.otel4s.semconv.attributes.{ErrorAttributes, HttpAttributes, ServerAttributes, UrlAttributes}
 import org.typelevel.otel4s.trace.Tracer
-import org.typelevel.otel4s.{Attribute, Attributes}
+import org.typelevel.otel4s.Attributes
 import sttp.model.headers.{Forwarded, Host}
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.AnyEndpoint

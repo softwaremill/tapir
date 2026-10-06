@@ -188,7 +188,12 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case RawBodyType.StringBody(_) =>
         val defaultStringBodyWritable: BodyWritable[String] = implicitly[BodyWritable[String]]
         val bodyWritable = BodyWritable[String](defaultStringBodyWritable.transform, codec.format.mediaType.toString)
-        req.withBody(encoded.asInstanceOf[String])(bodyWritable)
+        locally {
+          // passing the BodyWritable implicitly, as explicitly passing it to a context bound requires `using` in Scala 3;
+          // the name shadows the default instance imported from DefaultBodyWritables, avoiding ambiguity in Scala 2
+          implicit val writeableOf_String: BodyWritable[String] = bodyWritable
+          req.withBody(encoded.asInstanceOf[String])
+        }
       case RawBodyType.ByteArrayBody   => req.withBody(encoded.asInstanceOf[Array[Byte]])
       case RawBodyType.ByteBufferBody  => req.withBody(encoded.asInstanceOf[ByteBuffer])
       case RawBodyType.InputStreamBody =>

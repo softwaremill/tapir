@@ -265,7 +265,7 @@ private[tapir] object SchemaCompanionMacros {
     val symbol = tpe.typeSymbol
     val typeParams = SNameMacros.extractTypeArguments(tpe)
 
-    if (!symbol.isClassDef || !(symbol.flags is Flags.Sealed)) {
+    if (!symbol.isClassDef || !symbol.flags.is(Flags.Sealed)) {
       report.errorAndAbort("Can only generate a coproduct schema for an enum, sealed trait or class.")
     } else {
       val children = symbol.children.toList.sortBy(_.name)

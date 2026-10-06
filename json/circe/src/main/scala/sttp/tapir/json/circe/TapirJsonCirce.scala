@@ -19,7 +19,8 @@ trait TapirJsonCirce {
   def jsonQuery[T: Encoder: Decoder: Schema](name: String): EndpointInput.Query[T] =
     queryAnyFormat[T, CodecFormat.Json](name, sttp.tapir.Codec.jsonQuery(circeCodec))
 
-  implicit def circeCodec[T: Encoder: Decoder: Schema]: JsonCodec[T] =
+  // explicit implicit parameters (instead of context bounds), so that they can be passed explicitly without `using` in Scala 3
+  implicit def circeCodec[T](implicit encoder: Encoder[T], decoder: Decoder[T], schema: Schema[T]): JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>
       io.circe.parser.decodeAccumulating[T](s) match {
         case Validated.Valid(v)               => Value(v)

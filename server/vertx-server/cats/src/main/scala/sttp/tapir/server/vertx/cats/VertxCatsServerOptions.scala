@@ -39,7 +39,7 @@ object VertxCatsServerOptions {
         )
     ).serverLog(defaultServerLog(LoggerFactory.getLogger("tapir-vertx")))
 
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): VertxCatsServerOptions[F] = customiseInterceptors(dispatcher).options
+  def default[F[_]](dispatcher: Dispatcher[F])(implicit F: Async[F]): VertxCatsServerOptions[F] = customiseInterceptors(dispatcher).options
 
   def defaultServerLog[F[_]: Async](log: Logger): ServerLog[F] = {
     DefaultServerLog(
