@@ -103,7 +103,9 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         endpoint.out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream())),
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
-        IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8.encode).interruptAfter(10.seconds)))
+        // not using .interruptAfter: when the interruption races with an emitted element, the stream ends as canceled, and
+        // Ember then never completes the chunked response
+        IO(Right(fs2.Stream.awakeEvery[IO](1.second).take(10).map(_.toString()).through(fs2.text.utf8.encode)))
       ) { (backend, baseUri) =>
         basicRequest
           .get(baseUri)
