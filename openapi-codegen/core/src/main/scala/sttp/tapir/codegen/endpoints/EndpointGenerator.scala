@@ -265,7 +265,7 @@ class EndpointGenerator {
           val queryOrPathParamRefs = m.resolvedParameters
             .collect {
               case queryParam: OpenapiParameter if queryParam.in == "query" || queryParam.in == "path" || queryParam.in == "header" =>
-                queryParam.schema
+                queryParam.schema.`type`
             }
             .collect {
               case ref: OpenapiSchemaRef if ref.isSchema                              => ref.stripped

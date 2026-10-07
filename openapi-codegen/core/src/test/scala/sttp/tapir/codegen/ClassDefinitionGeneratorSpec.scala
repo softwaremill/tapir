@@ -15,7 +15,7 @@ import scala.collection.mutable
 import scala.util.Try
 
 class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
-  def noDefault(f: OpenapiSchemaType): OpenapiSchemaField = OpenapiSchemaField(f, None)
+  def noDefault(f: OpenapiSchemaType): OpenapiAnnotatedSchema = OpenapiAnnotatedSchema(f, None)
 
   it should "generate the example class defs" in {
     new ClassDefinitionGenerator().classDefs(TestHelpers.myBookshopDoc, targetScala3 = isScala3).get.classRepr.shouldCompile()
@@ -30,7 +30,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
+              None
+            )
           )
         )
       ),
@@ -49,16 +52,19 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Event" -> OpenapiSchemaObject(
-              mutable.LinkedHashMap(
-                "name" -> noDefault(OpenapiSchemaString(false)),
-                "eventDate" -> noDefault(OpenapiSchemaDate(false)),
-                "optionalDate" -> noDefault(OpenapiSchemaDate(true)),
-                "duration" -> noDefault(OpenapiSchemaDuration(false)),
-                "optionalDuration" -> noDefault(OpenapiSchemaDuration(true))
+            "Event" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(
+                mutable.LinkedHashMap(
+                  "name" -> noDefault(OpenapiSchemaString(false)),
+                  "eventDate" -> noDefault(OpenapiSchemaDate(false)),
+                  "optionalDate" -> noDefault(OpenapiSchemaDate(true)),
+                  "duration" -> noDefault(OpenapiSchemaDuration(false)),
+                  "optionalDuration" -> noDefault(OpenapiSchemaDuration(true))
+                ),
+                Seq("name", "eventDate", "duration"),
+                false
               ),
-              Seq("name", "eventDate", "duration"),
-              false
+              None
             )
           )
         )
@@ -78,10 +84,13 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaEnum(
-              "string",
-              Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
-              false
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaEnum(
+                "string",
+                Seq(OpenapiSchemaConstantString("paperback"), OpenapiSchemaConstantString("hardback")),
+                false
+              ),
+              None
             )
           )
         )
@@ -101,10 +110,13 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaEnum(
-              "string",
-              Seq("class", "object", "trait", "import", "type", "enum", "given", "using").map(OpenapiSchemaConstantString(_)),
-              false
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaEnum(
+                "string",
+                Seq("class", "object", "trait", "import", "type", "enum", "given", "using").map(OpenapiSchemaConstantString(_)),
+                false
+              ),
+              None
             )
           )
         )
@@ -123,7 +135,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("type" -> noDefault(OpenapiSchemaString(false))), Seq("type"), false)
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(mutable.LinkedHashMap("type" -> noDefault(OpenapiSchemaString(false))), Seq("type"), false),
+              None
+            )
           )
         )
       ),
@@ -142,10 +157,13 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(
-              mutable.LinkedHashMap("texts" -> noDefault(OpenapiSchemaArray(OpenapiSchemaString(false), false))),
-              Seq("texts"),
-              false
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(
+                mutable.LinkedHashMap("texts" -> noDefault(OpenapiSchemaArray(OpenapiSchemaString(false), false))),
+                Seq("texts"),
+                false
+              ),
+              None
             )
           )
         )
@@ -165,10 +183,13 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(
-              mutable.LinkedHashMap("texts" -> noDefault(OpenapiSchemaMap(OpenapiSchemaString(false), false))),
-              Seq("texts"),
-              false
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(
+                mutable.LinkedHashMap("texts" -> noDefault(OpenapiSchemaMap(OpenapiSchemaString(false), false))),
+                Seq("texts"),
+                false
+              ),
+              None
             )
           )
         )
@@ -188,10 +209,13 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(
-              mutable.LinkedHashMap("anyType" -> noDefault(OpenapiSchemaAny(false, AnyType.Any))),
-              Seq("anyType"),
-              false
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(
+                mutable.LinkedHashMap("anyType" -> noDefault(OpenapiSchemaAny(false, AnyType.Any))),
+                Seq("anyType"),
+                false
+              ),
+              None
             )
           )
         )
@@ -211,14 +235,17 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(
-              mutable.LinkedHashMap(
-                "inner" -> noDefault(
-                  OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
-                )
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(
+                mutable.LinkedHashMap(
+                  "inner" -> noDefault(
+                    OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
+                  )
+                ),
+                Seq("inner"),
+                false
               ),
-              Seq("inner"),
-              false
+              None
             )
           )
         )
@@ -239,17 +266,20 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         OpenapiComponent(
           Map(
             "Test" ->
-              OpenapiSchemaObject(
-                mutable.LinkedHashMap(
-                  "objects" -> noDefault(
-                    OpenapiSchemaArray(
-                      OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
-                      false
+              OpenapiAnnotatedSchema(
+                OpenapiSchemaObject(
+                  mutable.LinkedHashMap(
+                    "objects" -> noDefault(
+                      OpenapiSchemaArray(
+                        OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
+                        false
+                      )
                     )
-                  )
+                  ),
+                  Seq("objects"),
+                  false
                 ),
-                Seq("objects"),
-                false
+                None
               )
           )
         )
@@ -270,17 +300,20 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
         OpenapiComponent(
           Map(
             "Test" ->
-              OpenapiSchemaObject(
-                mutable.LinkedHashMap(
-                  "objects" -> noDefault(
-                    OpenapiSchemaMap(
-                      OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
-                      false
+              OpenapiAnnotatedSchema(
+                OpenapiSchemaObject(
+                  mutable.LinkedHashMap(
+                    "objects" -> noDefault(
+                      OpenapiSchemaMap(
+                        OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
+                        false
+                      )
                     )
-                  )
+                  ),
+                  Seq("objects"),
+                  false
                 ),
-                Seq("objects"),
-                false
+                None
               )
           )
         )
@@ -300,7 +333,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false),
+              None
+            )
           )
         )
       ),
@@ -314,7 +350,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false)
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq("text"), false),
+              None
+            )
           )
         )
       ),
@@ -336,7 +375,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false)
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(false))), Seq.empty, false),
+              None
+            )
           )
         )
       ),
@@ -350,7 +392,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false)
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false),
+              None
+            )
           )
         )
       ),
@@ -371,7 +416,10 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Test" -> OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false)
+            "Test" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false),
+              None
+            )
           )
         )
       ),
@@ -433,11 +481,17 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "MyObject" -> OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false),
-            "MyEnum" -> OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false),
-            "MyMapPrimitive" -> OpenapiSchemaMap(OpenapiSchemaString(false), false),
-            "MyMapObject" -> OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MyObject"), false),
-            "MyMapEnum" -> OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MyEnum"), false)
+            "MyObject" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(mutable.LinkedHashMap("text" -> noDefault(OpenapiSchemaString(true))), Seq("text"), false),
+              None
+            ),
+            "MyEnum" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("enum1"), OpenapiSchemaConstantString("enum2")), false),
+              None
+            ),
+            "MyMapPrimitive" -> OpenapiAnnotatedSchema(OpenapiSchemaMap(OpenapiSchemaString(false), false), None),
+            "MyMapObject" -> OpenapiAnnotatedSchema(OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MyObject"), false), None),
+            "MyMapEnum" -> OpenapiAnnotatedSchema(OpenapiSchemaMap(OpenapiSchemaRef("#/components/schemas/MyEnum"), false), None)
           )
         )
       ),
@@ -533,11 +587,11 @@ class ClassDefinitionGeneratorSpec extends CompileCheckTestBase {
       "OneOfValue" -> OpenapiSchemaArray(OpenapiSchemaBinary(false), false),
       "TopObject" -> OpenapiSchemaObject(
         mutable.LinkedHashMap(
-          "innerMap" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/TopMap"), None),
-          "innerArray" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/TopArray"), None),
-          "innerOneOf" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/TopOneOf"), None),
-          "innerBoolean" -> OpenapiSchemaField(OpenapiSchemaBoolean(false), None),
-          "recursiveEntry" -> OpenapiSchemaField(OpenapiSchemaRef("#/components/schemas/TopObject"), None)
+          "innerMap" -> OpenapiAnnotatedSchema(OpenapiSchemaRef("#/components/schemas/TopMap"), None),
+          "innerArray" -> OpenapiAnnotatedSchema(OpenapiSchemaRef("#/components/schemas/TopArray"), None),
+          "innerOneOf" -> OpenapiAnnotatedSchema(OpenapiSchemaRef("#/components/schemas/TopOneOf"), None),
+          "innerBoolean" -> OpenapiAnnotatedSchema(OpenapiSchemaBoolean(false), None),
+          "recursiveEntry" -> OpenapiAnnotatedSchema(OpenapiSchemaRef("#/components/schemas/TopObject"), None)
         ),
         Nil,
         false

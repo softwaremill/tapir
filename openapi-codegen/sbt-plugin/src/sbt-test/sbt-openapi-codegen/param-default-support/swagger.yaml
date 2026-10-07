@@ -1,0 +1,112 @@
+openapi: 3.1.0
+info:
+  title: My Bookshop
+  version: '1.0'
+paths:
+  /books/{id}:
+    get:
+      operationId: createBook
+      parameters:
+        - name: id
+          in: path
+          description: Id of the book to retrieve
+          required: true
+          schema:
+            type: integer
+            format: int32
+            default: 12
+        - name: limit
+          in: query
+          description: Maximum number of books to retrieve
+          required: true
+          schema:
+            type: integer
+            format: int32
+            default: 24
+        - name: limitOpt
+          in: query
+          description: Maximum number of books to retrieve (optional)
+          schema:
+            type: integer
+            format: int32
+            default: 36
+        - name: genre
+          in: query
+          required: true
+          description: Genre of the book to retrieve
+          schema:
+            $ref: '#/components/schemas/Genre'
+        - name: genreOpt
+          in: query
+          description: Genre of the book to retrieve
+          schema:
+            $ref: '#/components/schemas/Genre'
+        - name: header1
+          in: header
+          required: true
+          schema:
+            type: string
+            default: header1Value
+        - name: header1Opt
+          in: header
+          schema:
+            type: string
+            default: header1OptValue
+        - name: genreOverridden
+          in: query
+          schema:
+            $ref: '#/components/schemas/Genre'
+            default: scifi
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum:
+              - paper
+              - ebook
+            default: ebook
+        - $ref: '#/components/parameters/QueryParam'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  parameters:
+    QueryParam:
+      name: queryParamRef
+      in: query
+      description: Some query param
+      required: true
+      schema:
+        type: integer
+        format: int32
+        default: 48
+  schemas:
+    Book:
+      title: Book
+      required:
+        - title
+      type: object
+      properties:
+        title:
+          type: string
+        genre:
+          $ref: '#/components/schemas/Genre'
+    Genre:
+      title: Genre
+      type: string
+      enum:
+        - scifi
+        - fantasy
+        - other
+      default: fantasy
+
