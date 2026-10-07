@@ -4,10 +4,10 @@ import io.netty.buffer.{ByteBuf, ByteBufUtil}
 import io.netty.handler.codec.http.HttpContent
 import org.reactivestreams.{Publisher, Subscription}
 import sttp.capabilities.StreamMaxLengthExceededException
-import sttp.tapir.server.model.IncompleteRequestBodyException
 
+import java.util.concurrent.LinkedBlockingQueue
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 
 private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends PromisingSubscriber[Array[Byte], HttpContent] {
   // These don't need to be volatile as Reactive Streams guarantees that onSubscribe/onNext/onError/onComplete are
@@ -54,12 +54,9 @@ private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends Promi
     resultPromise.failure(t)
   }
 
-  override def onComplete(): Unit = contentLength match {
-    case Some(declaredLength) if totalLength != declaredLength && !resultPromise.isCompleted =>
-      buffers.foreach(_.release())
-      buffers = Vector.empty
-      resultPromise.failure(IncompleteRequestBodyException(totalLength, declaredLength))
-    case _ if !resultPromise.isCompleted =>
+  override def onComplete(): Unit = {
+    // checking the promise rather than the buffers, so that an empty body (e.g. a chunked request without chunks) completes as well
+    if (!resultPromise.isCompleted) {
       val mergedArray = new Array[Byte](totalLength)
       var currentIndex = 0
       buffers.foreach { buf =>
@@ -70,8 +67,11 @@ private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends Promi
       }
       buffers = Vector.empty
       resultPromise.success(mergedArray)
-    case _ => () // result already sent in onNext
+    } else {
+      () // result already sent in onNext
+    }
   }
+
 }
 
 object SimpleSubscriber {

@@ -14,7 +14,6 @@ import sttp.shared.Identity
 import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
-import sttp.tapir.server.model.IncompleteRequestBodyException
 import sttp.tapir.server.netty.internal.NettyRequestBody
 import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
 import sttp.tapir.server.netty.sync.*
@@ -41,41 +40,32 @@ private[sync] class NettySyncRequestBody(
       maxBytes: Option[Long]
   ): RawValue[Seq[RawPart]] = {
     val decoder = new HttpPostMultipartRequestDecoder(httpDataFactory, nettyRequest)
-    def onCompleteLengthCheck[T](received: Long): Option[T] = {
-      serverRequest.contentLength
-        .filter(expected => expected != received)
-        .foreach(expected => throw IncompleteRequestBodyException(received, expected))
-      None
-    }
 
     val rawParts =
       try
         val requestFlow = FlowReactiveStreams.fromPublisher(nettyRequest)
-        requestFlow.mapStatefulConcat(0L)((bytesSoFar, httpContent) =>
-          val newBytesSoFar = bytesSoFar + httpContent.content().readableBytes()
-
-          maxBytes.foreach(value =>
-            if(newBytesSoFar > value) throw StreamMaxLengthExceededException(value)
-          )
-
-          (newBytesSoFar, decoder.decodeChunk(httpContent)),
-          onComplete = onCompleteLengthCheck
-        ).mapConcat(httpData =>
+        (maxBytes match
+          case Some(value) =>
+            requestFlow.mapStatefulConcat(0): (bytesSoFar, httpContent) =>
+              val newBytesSoFar = bytesSoFar + httpContent.content().readableBytes()
+              if (newBytesSoFar > value) throw StreamMaxLengthExceededException(value)
+              (newBytesSoFar, decoder.decodeChunk(httpContent))
+          case None => requestFlow.mapConcat(decoder.decodeChunk)
+        ).mapConcat: httpData =>
           m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType))
-        )
         .runToList()
       catch
         case t: Throwable =>
           decoder.destroy()
           throw t
-          
+
     RawValue.fromParts(rawParts).copy(cleanup = Some(() => decoder.destroy()))
   }
 
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =
     try
       serverRequest.underlying match
-        case r: StreamedHttpRequest => FileWriterSubscriber.processAllBlocking(r, file.toPath, maxBytes, serverRequest.contentLength)
+        case r: StreamedHttpRequest => FileWriterSubscriber.processAllBlocking(r, file.toPath, maxBytes)
         case _                      => ()     // Empty request
     catch
       case e =>

@@ -36,7 +36,7 @@ private[netty] class NettyFutureRequestBody(
 
   override protected def writeToFileUnsafe(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Future[Unit] =
     serverRequest.underlying match {
-      case r: StreamedHttpRequest => FileWriterSubscriber.processAll(r, file.toPath, maxBytes, serverRequest.contentLength)
+      case r: StreamedHttpRequest => FileWriterSubscriber.processAll(r, file.toPath, maxBytes)
       case _                      => monad.unit(()) // Empty request
     }
 

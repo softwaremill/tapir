@@ -2,7 +2,6 @@ package sttp.tapir.server.netty.internal.reactivestreams
 
 import io.netty.handler.codec.http.HttpContent
 import org.reactivestreams.{Publisher, Subscription}
-import sttp.tapir.server.model.IncompleteRequestBodyException
 
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.{Path, StandardOpenOption}
@@ -12,7 +11,7 @@ import scala.concurrent.{Await, Future, Promise}
 
 /** A Reactive Streams subscriber which receives chunks of bytes and writes them to a file.
   */
-class FileWriterSubscriber(path: Path, contentLength: Option[Long]) extends PromisingSubscriber[Unit, HttpContent] {
+class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpContent] {
   import FileWriterSubscriber._
 
   private var subscription: Subscription = _
@@ -81,12 +80,7 @@ class FileWriterSubscriber(path: Path, contentLength: Option[Long]) extends Prom
   private def terminateSuccess(): Unit =
     if (state.getAndSet(Finished) != Finished) {
       fileChannel.close()
-      contentLength match {
-        case Some(declared) if position != declared =>
-          resultPromise.failure(IncompleteRequestBodyException(position, declared))
-        case _ =>
-          resultPromise.success(())
-      }
+      resultPromise.success(())
     }
 
   private def terminateFailure(t: Throwable): Unit =
@@ -103,12 +97,12 @@ object FileWriterSubscriber {
   private final val Completing = 2 // a write is in flight, upstream completed - the write callback will finalize
   private final val Finished = 3 // channel closed and promise completed
 
-  def processAll(publisher: Publisher[HttpContent], path: Path, maxBytes: Option[Long], contentLength: Option[Long]): Future[Unit] = {
-    val subscriber = new FileWriterSubscriber(path, contentLength)
+  def processAll(publisher: Publisher[HttpContent], path: Path, maxBytes: Option[Long]): Future[Unit] = {
+    val subscriber = new FileWriterSubscriber(path)
     publisher.subscribe(maxBytes.map(new LimitedLengthSubscriber(_, subscriber)).getOrElse(subscriber))
     subscriber.future
   }
 
-  def processAllBlocking(publisher: Publisher[HttpContent], path: Path, maxBytes: Option[Long], contentLength: Option[Long]): Unit =
-    Await.result(processAll(publisher, path, maxBytes, contentLength), Duration.Inf)
+  def processAllBlocking(publisher: Publisher[HttpContent], path: Path, maxBytes: Option[Long]): Unit =
+    Await.result(processAll(publisher, path, maxBytes), Duration.Inf)
 }

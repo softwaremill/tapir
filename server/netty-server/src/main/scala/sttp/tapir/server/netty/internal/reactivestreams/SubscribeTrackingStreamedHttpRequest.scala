@@ -1,11 +1,13 @@
 package sttp.tapir.server.netty.internal.reactivestreams
 
 import io.netty.handler.codec.DecoderResult
-import io.netty.handler.codec.http.{HttpContent, HttpHeaders, HttpMethod, HttpRequest, HttpVersion}
+import io.netty.handler.codec.http.{HttpContent, HttpHeaders, HttpMethod, HttpRequest, HttpUtil, HttpVersion}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Subscriber
 
-/** A delegating [[StreamedHttpRequest]] which additionally tracks if the request body was ever subscribed to (see #4539). */
+/** A delegating [[StreamedHttpRequest]] which additionally tracks if the request body was ever subscribed to (see #4539), and fails the
+  * body stream if it ends before the declared `Content-Length` is received (see #4169).
+  */
 class SubscribeTrackingStreamedHttpRequest(request: StreamedHttpRequest) extends StreamedHttpRequest {
 
   @volatile private var subscribed: Boolean = false
@@ -15,7 +17,8 @@ class SubscribeTrackingStreamedHttpRequest(request: StreamedHttpRequest) extends
 
   override def subscribe(s: Subscriber[? >: HttpContent]): Unit = {
     subscribed = true
-    request.subscribe(s)
+    val contentLength = HttpUtil.getContentLength(request, -1L)
+    request.subscribe(if (contentLength >= 0) new ContentLengthCheckingSubscriber(contentLength, s) else s)
   }
 
   //
