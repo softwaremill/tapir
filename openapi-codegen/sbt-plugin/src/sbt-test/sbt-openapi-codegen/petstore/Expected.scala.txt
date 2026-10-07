@@ -286,7 +286,7 @@ object TapirGeneratedEndpoints {
       .get
       .in(("pet" / "findByStatus"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(query[Option[FindPetsByStatusStatus]]("status").description("Status values that need to be considered for filter"))
+      .in(query[Option[FindPetsByStatusStatus]]("status").description("Status values that need to be considered for filter").default(Some(FindPetsByStatusStatus.available)))
       .errorOut(oneOf[FindPetsByStatusResponseErrCode](
         oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid status value").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
         oneOfVariantValueMatcher(emptyOutput.description("Unexpected error").and(statusCode.map(StatusCodeDisambigDefault(_))(_.code))){ case (_: StatusCodeDisambigDefault) => true}))

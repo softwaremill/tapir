@@ -26,7 +26,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSecuritySchemeType.{
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaBinary,
-  OpenapiSchemaField,
+  OpenapiAnnotatedSchema,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
   OpenapiSchemaString
@@ -51,9 +51,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
             OpenapiPathMethod(
               methodType = "get",
               parameters = Seq(
-                Resolved(OpenapiParameter("asd-id", "path", Some(true), None, OpenapiSchemaField(OpenapiSchemaString(false), None))),
-                Resolved(OpenapiParameter("fgh-id", "query", Some(false), None, OpenapiSchemaField(OpenapiSchemaString(false), None))),
-                Resolved(OpenapiParameter("jkl-id", "header", Some(false), None, OpenapiSchemaField(OpenapiSchemaString(false), None)))
+                Resolved(OpenapiParameter("asd-id", "path", Some(true), None, OpenapiAnnotatedSchema(OpenapiSchemaString(false), None))),
+                Resolved(OpenapiParameter("fgh-id", "query", Some(false), None, OpenapiAnnotatedSchema(OpenapiSchemaString(false), None))),
+                Resolved(OpenapiParameter("jkl-id", "header", Some(false), None, OpenapiAnnotatedSchema(OpenapiSchemaString(false), None)))
               ),
               responses = Seq(
                 OpenapiResponseDef(
@@ -197,8 +197,9 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
           Seq(
             OpenapiPathMethod(
               methodType = "get",
-              parameters =
-                Seq(Resolved(OpenapiParameter("id", "path", Some(true), None, OpenapiSchemaField(OpenapiSchemaString(true), None), None))),
+              parameters = Seq(
+                Resolved(OpenapiParameter("id", "path", Some(true), None, OpenapiAnnotatedSchema(OpenapiSchemaString(true), None), None))
+              ),
               responses = Seq(
                 OpenapiResponseDef("202", "Processing", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false)))),
                 OpenapiResponseDef("404", "couldn't find thing", Seq(OpenapiResponseContent("text/plain", OpenapiSchemaString(false))))
@@ -215,7 +216,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
             OpenapiPathMethod(
               methodType = "get",
               parameters =
-                Seq(Resolved(OpenapiParameter("id", "path", Some(true), None, OpenapiSchemaField(OpenapiSchemaString(true), None)))),
+                Seq(Resolved(OpenapiParameter("id", "path", Some(true), None, OpenapiAnnotatedSchema(OpenapiSchemaString(true), None)))),
               responses = Seq(
                 OpenapiResponseDef("204", "No body", Nil),
                 OpenapiResponseDef("403", "Not authorised", Nil)
@@ -291,11 +292,11 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Some(
         OpenapiComponent(
-          schemaFields = Map(
-            "FileUpload" -> OpenapiSchemaField(
+          annotatedSchemas = Map(
+            "FileUpload" -> OpenapiAnnotatedSchema(
               OpenapiSchemaObject(
                 properties = mutable.LinkedHashMap(
-                  "file" -> OpenapiSchemaField(OpenapiSchemaBinary(false), None)
+                  "file" -> OpenapiAnnotatedSchema(OpenapiSchemaBinary(false), None)
                 ),
                 required = Seq("file"),
                 nullable = false
@@ -490,7 +491,7 @@ class EndpointGeneratorSpec extends CompileCheckTestBase {
       ),
       Some(
         OpenapiComponent(
-          schemaFields = Map.empty,
+          annotatedSchemas = Map.empty,
           headers = Map(
             "#/components/headers/RateLimit" ->
               TestHelpers.inlineHeaderDef()

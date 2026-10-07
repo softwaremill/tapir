@@ -3,7 +3,7 @@ info:
   title: My Bookshop
   version: '1.0'
 paths:
-  /books/{id]:
+  /books/{id}:
     get:
       operationId: createBook
       parameters:
@@ -52,6 +52,19 @@ paths:
           schema:
             type: string
             default: header1OptValue
+        - name: genreOverridden
+          in: query
+          schema:
+            $ref: '#/components/schemas/Genre'
+            default: scifi
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum:
+              - paper
+              - ebook
+            default: ebook
         - $ref: '#/components/parameters/QueryParam'
       responses:
         '200':

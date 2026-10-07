@@ -4,12 +4,12 @@ import cats.implicits.toTraverseOps
 import cats.syntax.either._
 import OpenapiSchemaType.{
   OpenapiSchemaAllOf,
-  OpenapiSchemaField,
+  OpenapiAnnotatedSchema,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
   OpenapiSchemaRefDecoder,
   OpenapiSchemaString,
-  ObjectFieldRestrictions
+  AccessRestrictions
 }
 import io.circe.Json
 import sttp.tapir.codegen.util.NameHelpers.strippedToCamelCase
@@ -50,11 +50,11 @@ object OpenapiModels {
   ) {
     def resolveAllOfSchemas: OpenapiDocument = {
       val resolvedComponents = components.map { cs =>
-        val schemas = cs.schemaFields
+        val schemas = cs.annotatedSchemas
         val resolvedSchemas = schemas.map { case (n, f) =>
           val mergedType = f.`type` match {
             case OpenapiSchemaAllOf(s) =>
-              if (s.size == 1) OpenapiSchemaField(s.head, None)
+              if (s.size == 1) f.copy(`type` = s.head)
               else {
                 val resolved = s.map {
                   case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
@@ -71,7 +71,7 @@ object OpenapiModels {
                       s"Only objects and object refs are currently supported in allOf schemas.For $n found ${s.map(_.getClass.getSimpleName)}"
                     )
                 }
-                val merged = resolved.foldLeft((Set.empty[String], mutable.LinkedHashMap.empty[String, OpenapiSchemaField])) {
+                val merged = resolved.foldLeft((Set.empty[String], mutable.LinkedHashMap.empty[String, OpenapiAnnotatedSchema])) {
                   case ((_, accProp), next) if accProp.isEmpty  => next
                   case ((accReq, accProp), (nextReq, nextProp)) =>
                     val dupDecls = accProp.keySet.intersect(nextProp.keySet)
@@ -90,13 +90,13 @@ object OpenapiModels {
                     }
                     (accReq ++ nextReq, accProp ++ nextProp)
                 }
-                OpenapiSchemaField(OpenapiSchemaObject(merged._2, merged._1.toSeq.sorted, nullable = s.forall(_.nullable)), None)
+                f.copy(`type` = OpenapiSchemaObject(merged._2, merged._1.toSeq.sorted, nullable = s.forall(_.nullable)))
               }
             case _ => f
           }
           n -> mergedType
         }
-        cs.copy(schemaFields = resolvedSchemas)
+        cs.copy(annotatedSchemas = resolvedSchemas)
       }
       this.copy(components = resolvedComponents)
     }
@@ -166,7 +166,7 @@ object OpenapiModels {
       in: String,
       required: Option[Boolean],
       description: Option[String],
-      schema: OpenapiSchemaField,
+      schema: OpenapiAnnotatedSchema,
       explode: Option[Boolean] = None
   ) {
     // default is true for query params, but headers must always be 'simple' style -- see https://swagger.io/docs/specification/serialization/
@@ -259,7 +259,7 @@ object OpenapiModels {
             "header",
             Some(true),
             None,
-            OpenapiSchemaField(OpenapiSchemaString(false, Some(validatingRegex), None, None), None)
+            OpenapiAnnotatedSchema(OpenapiSchemaString(false, Some(validatingRegex), None, None), None)
           )
         )
       )
@@ -394,7 +394,7 @@ object OpenapiModels {
 
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
 
-  import OpenapiSchemaType.OpenapiSchemaFieldDecoder
+  import OpenapiSchemaType.OpenapiAnnotatedSchemaDecoder
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
   implicit def ResolvableDecoder[T: Decoder]: Decoder[Resolvable[T]] = { (c: HCursor) =>
     c.as[T].map(Resolved(_)).orElse(c.as[OpenapiSchemaRef].map(r => Ref(r.name)))

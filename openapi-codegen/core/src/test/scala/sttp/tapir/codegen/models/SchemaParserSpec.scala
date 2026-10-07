@@ -9,7 +9,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaDate,
   OpenapiSchemaDateTime,
   OpenapiSchemaDuration,
-  OpenapiSchemaField,
+  OpenapiAnnotatedSchema,
   OpenapiSchemaInt,
   OpenapiSchemaMap,
   OpenapiSchemaObject,
@@ -56,11 +56,11 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
       Some(
         OpenapiComponent(
           Map(
-            "User" -> OpenapiSchemaField(
+            "User" -> OpenapiAnnotatedSchema(
               OpenapiSchemaObject(
                 mutable.LinkedHashMap(
-                  "id" -> OpenapiSchemaField(OpenapiSchemaInt(false, NumericRestrictions()), None),
-                  "name" -> OpenapiSchemaField(OpenapiSchemaString(false), None)
+                  "id" -> OpenapiAnnotatedSchema(OpenapiSchemaInt(false, NumericRestrictions()), None),
+                  "name" -> OpenapiAnnotatedSchema(OpenapiSchemaString(false), None)
                 ),
                 Seq("id", "name"),
                 false
@@ -94,9 +94,9 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
     res shouldBe Right(
       OpenapiComponent(
         Map(
-          "User" -> OpenapiSchemaField(
+          "User" -> OpenapiAnnotatedSchema(
             OpenapiSchemaObject(
-              mutable.LinkedHashMap("attributes" -> OpenapiSchemaField(OpenapiSchemaMap(OpenapiSchemaString(false), false), None)),
+              mutable.LinkedHashMap("attributes" -> OpenapiAnnotatedSchema(OpenapiSchemaMap(OpenapiSchemaString(false), false), None)),
               Seq("attributes"),
               false
             ),
@@ -125,9 +125,9 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
     res shouldBe Right(
       OpenapiComponent(
         Map(
-          "User" -> OpenapiSchemaField(
+          "User" -> OpenapiAnnotatedSchema(
             OpenapiSchemaObject(
-              mutable.LinkedHashMap("anyValue" -> OpenapiSchemaField(OpenapiSchemaAny(false, AnyType.Any), None)),
+              mutable.LinkedHashMap("anyValue" -> OpenapiAnnotatedSchema(OpenapiSchemaAny(false, AnyType.Any), None)),
               Seq("anyValue"),
               false
             ),
@@ -166,12 +166,12 @@ class SchemaParserSpec extends AnyFlatSpec with Matchers with Checkers {
     res shouldBe Right(
       OpenapiComponent(
         Map(
-          "Event" -> OpenapiSchemaField(
+          "Event" -> OpenapiAnnotatedSchema(
             OpenapiSchemaObject(
               mutable.LinkedHashMap(
-                "eventDate" -> OpenapiSchemaField(OpenapiSchemaDate(false), None),
-                "createdAt" -> OpenapiSchemaField(OpenapiSchemaDateTime(false), None),
-                "ttl" -> OpenapiSchemaField(OpenapiSchemaDuration(false), None)
+                "eventDate" -> OpenapiAnnotatedSchema(OpenapiSchemaDate(false), None),
+                "createdAt" -> OpenapiAnnotatedSchema(OpenapiSchemaDateTime(false), None),
+                "ttl" -> OpenapiAnnotatedSchema(OpenapiSchemaDuration(false), None)
               ),
               Seq("eventDate", "createdAt", "ttl"),
               false

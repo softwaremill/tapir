@@ -161,8 +161,8 @@ object SchemaComparer {
 
   private def fieldsEqual(
       fieldName: String,
-      left: OpenapiSchemaField,
-      right: OpenapiSchemaField,
+      left: OpenapiAnnotatedSchema,
+      right: OpenapiAnnotatedSchema,
       leftAll: Map[String, OpenapiSchemaType],
       rightAll: Map[String, OpenapiSchemaType],
       visited: Set[(String, String)]

@@ -1,3 +1,4 @@
+
 package sttp.tapir.generated
 
 object TapirGeneratedEndpoints {
@@ -7,15 +8,15 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generic.auto._
   import sttp.tapir.json.circe._
   import io.circe.generic.semiauto._
-
+  
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
 
 
-
-
-
-
+  
+  
+  
+  
   case class CommaSeparatedValues[T](values: List[T])
   case class ExplodedValues[T](values: List[T])
   trait ExtraParamSupport[T] {
@@ -74,9 +75,9 @@ object TapirGeneratedEndpoints {
   }
   def extraCodecSupport[T <: enumeratum.EnumEntry](enumName: String, T: enumeratum.Enum[T]): ExtraParamSupport[T] =
     EnumExtraParamSupport(enumName, T)
-
-
-
+  
+  
+  
   sealed trait Genre extends enumeratum.EnumEntry
   object Genre extends enumeratum.Enum[Genre] with enumeratum.CirceEnum[Genre] {
     val values = findValues
@@ -94,7 +95,7 @@ object TapirGeneratedEndpoints {
 
 
 
-  type CreateBookEndpoint = Endpoint[Unit, (Int, Int, Option[Int], Genre, Option[Genre], String, Option[String], Int), String, Book, Any]
+  type CreateBookEndpoint = Endpoint[Unit, (Int, Int, Option[Int], Genre, Option[Genre], String, Option[String], Option[Genre], Option[CreateBookFormat], Int), String, Book, Any]
   lazy val createBook: CreateBookEndpoint =
     endpoint
       .name("createBook")
@@ -106,11 +107,22 @@ object TapirGeneratedEndpoints {
       .in(query[Option[Genre]]("genreOpt").description("Genre of the book to retrieve").default(Some(Genre.fantasy)))
       .in(header[String]("header1").default("header1Value"))
       .in(header[Option[String]]("header1Opt").default(Some("header1OptValue")))
+      .in(query[Option[Genre]]("genreOverridden").default(Some(Genre.scifi)))
+      .in(query[Option[CreateBookFormat]]("format").default(Some(CreateBookFormat.ebook)))
       .in(query[Int]("queryParamRef").description("Some query param").default(48))
       .errorOut(stringBody.description("").and(statusCode(sttp.model.StatusCode(400))))
       .out(jsonBody[Book].description(""))
-
-
+  
+  sealed trait CreateBookFormat extends enumeratum.EnumEntry
+  object CreateBookFormat extends enumeratum.Enum[CreateBookFormat] with enumeratum.CirceEnum[CreateBookFormat] {
+    val values = findValues
+    case object paper extends CreateBookFormat
+    case object ebook extends CreateBookFormat
+    implicit val enumCodecSupportCreateBookFormat: ExtraParamSupport[CreateBookFormat] =
+      extraCodecSupport[CreateBookFormat]("CreateBookFormat", CreateBookFormat)
+  }
+  
+  
   lazy val generatedEndpoints = List(createBook)
 
 }

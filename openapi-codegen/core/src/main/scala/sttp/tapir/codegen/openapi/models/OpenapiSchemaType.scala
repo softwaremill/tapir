@@ -141,12 +141,13 @@ object OpenapiSchemaType {
     val nullable = false
     def isSchema: Boolean = name.startsWith("#/components/schemas/")
     def stripped: String = name.stripPrefix("#/components/schemas/")
-    def maybeResolved(doc: OpenapiDocument): Option[OpenapiSchemaField] =
+    def maybeResolved(doc: OpenapiDocument): Option[OpenapiAnnotatedSchema] =
       doc.components
-        .flatMap(_.schemaFields.get(stripped))
+        .flatMap(_.annotatedSchemas.get(stripped))
         .flatMap { f =>
           f.`type` match {
-            case r: OpenapiSchemaRef => r.maybeResolved(doc)
+            // the default closest to the ref wins
+            case r: OpenapiSchemaRef => r.maybeResolved(doc).map(res => res.copy(default = f.default.orElse(res.default)))
             case _                   => Some(f)
           }
         }
@@ -190,14 +191,14 @@ object OpenapiSchemaType {
       restrictions: ArrayRestrictions = ArrayRestrictions()
   ) extends OpenapiSchemaType
 
-  case class ObjectFieldRestrictions(
+  case class AccessRestrictions(
       readOnly: Option[Boolean] = None,
       writeOnly: Option[Boolean] = None
   )
-  case class OpenapiSchemaField(
+  case class OpenapiAnnotatedSchema(
       `type`: OpenapiSchemaType,
       default: Option[Json],
-      restrictions: ObjectFieldRestrictions = ObjectFieldRestrictions()
+      restrictions: AccessRestrictions = AccessRestrictions()
   )
   case class ObjectRestrictions(
       minProperties: Option[Int] = None,
@@ -207,7 +208,7 @@ object OpenapiSchemaType {
   }
   // no readOnly/writeOnly, minProperties/maxProperties support
   case class OpenapiSchemaObject(
-      properties: mutable.LinkedHashMap[String, OpenapiSchemaField],
+      properties: mutable.LinkedHashMap[String, OpenapiAnnotatedSchema],
       required: Seq[String],
       nullable: Boolean,
       xml: Option[OpenapiXml.XmlObjectConfiguration] = None
@@ -382,20 +383,20 @@ object OpenapiSchemaType {
     } yield OpenapiSchemaEnum(tpe, items, nb)
   }
 
-  implicit val OpenapiSchemaFieldDecoder: Decoder[OpenapiSchemaField] = { (c: HCursor) =>
+  implicit val OpenapiAnnotatedSchemaDecoder: Decoder[OpenapiAnnotatedSchema] = { (c: HCursor) =>
     for {
       schemaType <- c.as[OpenapiSchemaType]
       maybeDefault <- c.downField("default").as[Option[Json]]
       readOnly <- c.downField("readOnly").as[Option[Boolean]]
       writeOnly <- c.downField("writeOnly").as[Option[Boolean]]
-    } yield OpenapiSchemaField(schemaType, maybeDefault, ObjectFieldRestrictions(readOnly, writeOnly))
+    } yield OpenapiAnnotatedSchema(schemaType, maybeDefault, AccessRestrictions(readOnly, writeOnly))
   }
   implicit val OpenapiSchemaObjectDecoder: Decoder[OpenapiSchemaObject] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c).ensure(DecodingFailure("Given type is not object!", c.history))(_._1 == "object")
       fields <- c
         .downField("properties")
-        .as[mutable.LinkedHashMap[String, OpenapiSchemaField]]
+        .as[mutable.LinkedHashMap[String, OpenapiAnnotatedSchema]]
       r <- c.downField("required").as[Option[Seq[String]]]
       (_, nb) = p
     } yield {

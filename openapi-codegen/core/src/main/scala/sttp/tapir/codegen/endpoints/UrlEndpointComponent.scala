@@ -52,7 +52,7 @@ object UrlEndpointComponent {
                 (s"""path[$t]("${JavaEscape.escapeString(name)}")$validations$desc""", Some(t), None)
               case e: OpenapiSchemaEnum =>
                 val (param, inlineDefn, tpe, enumName) =
-                  ParamComponent.getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, p, e, false)
+                  ParamComponent.getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, p, e, false, doc)
                 val defns =
                   if (isReused)
                     Some(

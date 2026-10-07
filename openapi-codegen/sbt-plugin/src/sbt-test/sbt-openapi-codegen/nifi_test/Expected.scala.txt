@@ -3373,7 +3373,7 @@ object TapirGeneratedEndpoints {
       .name("createProcessGroup")
       .post
       .in(("process-groups" / path[String]("id").description("The process group id.") / "process-groups"))
-      .in(query[Option[CreateProcessGroupParameterContextHandlingStrategy]]("parameterContextHandlingStrategy").description("Handling Strategy controls whether to keep or replace Parameter Contexts"))
+      .in(query[Option[CreateProcessGroupParameterContextHandlingStrategy]]("parameterContextHandlingStrategy").description("Handling Strategy controls whether to keep or replace Parameter Contexts").default(Some(CreateProcessGroupParameterContextHandlingStrategy.KEEP_EXISTING)))
       .in(jsonBody[ProcessGroupEntity].description("The process group configuration details."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -4394,7 +4394,7 @@ object TapirGeneratedEndpoints {
       .get
       .in(("system-diagnostics"))
       .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
-      .in(query[Option[GetSystemDiagnosticsDiagnosticLevel]]("diagnosticLevel").description("Whether or not to include verbose details. Optional, defaults to false"))
+      .in(query[Option[GetSystemDiagnosticsDiagnosticLevel]]("diagnosticLevel").description("Whether or not to include verbose details. Optional, defaults to false").default(Some(GetSystemDiagnosticsDiagnosticLevel.BASIC)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the status."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(()),

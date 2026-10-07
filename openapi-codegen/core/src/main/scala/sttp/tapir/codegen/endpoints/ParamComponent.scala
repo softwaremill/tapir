@@ -2,7 +2,8 @@ package sttp.tapir.codegen.endpoints
 
 import sttp.tapir.codegen.endpoints.SimpleTypes.mapSchemaSimpleTypeToType
 import sttp.tapir.codegen.json.JsonSerdeLib.JsonSerdeLib
-import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, RenderConfig}
+import io.circe.Json
+import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiParameter}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
@@ -34,13 +35,25 @@ object ParamComponent {
     case (false, false) => s"Option[$baseType]"
   }
 
+  private def renderDefault(
+      doc: OpenapiDocument,
+      tpe: OpenapiSchemaType,
+      isOptional: Boolean,
+      config: RenderConfig,
+      default: Option[Json]
+  ): String = default.fold("") { d =>
+    val allSchemas = doc.components.map(_.schemas).getOrElse(Map.empty)
+    s".default(${DefaultValueRenderer.render(allSchemas, tpe, isOptional, config)(d)})"
+  }
+
   private[endpoints] def getEnumParamDefn(
       endpointName: String,
       targetScala3: Boolean,
       jsonSerdeLib: JsonSerdeLib,
       param: OpenapiParameter,
       e: OpenapiSchemaEnum,
-      isArray: Boolean
+      isArray: Boolean,
+      doc: OpenapiDocument
   ): (String, Some[Seq[String]], String, String) = {
     checkParamLocation(param)
     val enumName = endpointName.capitalize + strippedToCamelCase(param.name).capitalize
@@ -68,7 +81,10 @@ object ParamComponent {
       if (!isArray) "" else if (noOptionWrapper) s".map(_.values)($arrayType(_))" else s".map(_.map(_.values))(_.map($arrayType(_)))"
 
     val desc = param.description.map(d => JavaEscape.escapeString(d)).fold("")(d => s""".description("$d")""")
-    (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$mapToList$desc""", Some(enumDefn), outType, enumName)
+    // path params have no defaults; defaults of inline enum arrays would need wrapping in CommaSeparatedValues / ExplodedValues
+    val default =
+      if (isArray || param.in == "path") "" else renderDefault(doc, e, !required, RenderConfig(Some(enumName)), param.schema.default)
+    (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$mapToList$desc$default""", Some(enumDefn), outType, enumName)
   }
   private[endpoints] def genParamDefn(
       endpointName: String,
@@ -87,15 +103,11 @@ object ParamComponent {
         val required = param.required.getOrElse(false)
         val req = if (required) t else s"Option[$t]"
         val desc = param.description.map(JavaEscape.escapeString).fold("")(d => s""".description("$d")""")
-        // TODO: should probably add enum in RenderConfig ?
-        // Resolve the default value if schema is a ref
-        val defaultValue = param.schema.`type` match {
-          case ref: OpenapiSchemaRef => ref.maybeResolved(doc).flatMap(_.default)
+        val defaultValue = st match {
+          case ref: OpenapiSchemaRef => param.schema.default.orElse(ref.maybeResolved(doc).flatMap(_.default))
           case _                     => param.schema.default
         }
-        val default = defaultValue.fold("")(d =>
-          s".default(${DefaultValueRenderer.render(doc.components.toSeq.flatMap(_.schemas).toMap, st, !required, RenderConfig())(d)})"
-        )
+        val default = renderDefault(doc, st, !required, RenderConfig(), defaultValue)
         val validation = if (generateValidators) ValidationGenerator.mkValidations(doc, st, required) else ""
         (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$validation$desc$default""", None, req)
       case OpenapiSchemaArray(st: OpenapiSchemaSimpleType, _, _, _) =>
@@ -113,11 +125,11 @@ object ParamComponent {
         val outType = toOutType(t, true, noOptionWrapper)
         (s"""${param.in}[$req]("${JavaEscape.escapeString(param.name)}")$mapToList$desc""", None, outType)
       case e @ OpenapiSchemaEnum(_, _, _) =>
-        getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = false) match {
+        getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = false, doc) match {
           case (a, b, c, _) => (a, b, c)
         }
       case OpenapiSchemaArray(e: OpenapiSchemaEnum, _, _, _) =>
-        getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = true) match {
+        getEnumParamDefn(endpointName, targetScala3, jsonSerdeLib, param, e, isArray = true, doc) match {
           case (a, b, c, _) => (a, b, c)
         }
       case x => bail(s"Can't create non-simple params - found $x")
