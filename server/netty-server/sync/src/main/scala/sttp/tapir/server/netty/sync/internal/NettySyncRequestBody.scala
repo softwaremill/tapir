@@ -8,6 +8,7 @@ import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
 import io.netty.handler.codec.http.multipart.{HttpPostMultipartRequestDecoder, InterfaceHttpData}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
+import ox.channels.ChannelClosedException
 import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.monad.{IdentityMonad, MonadError}
 import sttp.shared.Identity
@@ -56,6 +57,9 @@ private[sync] class NettySyncRequestBody(
           m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType))
         .runToList()
       catch
+        case ChannelClosedException.Error(cause) =>
+          decoder.destroy()
+          throw cause
         case t: Throwable =>
           decoder.destroy()
           throw t
