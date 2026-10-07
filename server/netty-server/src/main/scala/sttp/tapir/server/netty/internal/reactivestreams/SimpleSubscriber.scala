@@ -54,12 +54,12 @@ private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends Promi
     resultPromise.failure(t)
   }
 
-  override def onComplete(): Unit = (buffers.length, contentLength) match {
-    case (length, Some(declaredLength)) if length > 0 && totalLength != declaredLength =>
+  override def onComplete(): Unit = contentLength match {
+    case Some(declaredLength) if totalLength != declaredLength && !resultPromise.isCompleted =>
       buffers.foreach(_.release())
       buffers = Vector.empty
       resultPromise.failure(IncompleteRequestBodyException(totalLength, declaredLength))
-    case (length, _) if length > 0 && contentLength.forall(_ == totalLength) =>
+    case _ if !resultPromise.isCompleted =>
       val mergedArray = new Array[Byte](totalLength)
       var currentIndex = 0
       buffers.foreach { buf =>

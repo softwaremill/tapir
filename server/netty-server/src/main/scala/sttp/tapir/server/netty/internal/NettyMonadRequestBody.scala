@@ -8,6 +8,7 @@ import sttp.capabilities.{StreamMaxLengthExceededException, Streams}
 import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
+import sttp.tapir.server.model.IncompleteRequestBodyException
 import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 
 import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
@@ -37,7 +38,6 @@ private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyR
     val future = promise.future
     val ff = fromFuture(future)
     monad.flatten(ff)
-
   }
 
   override final def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): F[Unit] =
@@ -98,9 +98,16 @@ private[netty] trait NettyMonadRequestBody[F[_], S <: Streams[S]] extends NettyR
     }
 
     override def onComplete(): Unit = {
-      val f = seqMonadToMonadOfSeq(acc.get())
-      val r = f.map(p => RawValue.fromParts(p).copy(cleanup = Option(() => decoder.destroy())))
-      val _ = promise.trySuccess(r)
+      val received = currentBytesRead.get()
+      serverRequest.contentLength match {
+        case Some(declaredLength) if declaredLength != received =>
+          val _ = promise.tryFailure(IncompleteRequestBodyException(received, declaredLength))
+          decoder.destroy()
+        case _ =>
+          val f = seqMonadToMonadOfSeq(acc.get())
+          val r = f.map(p => RawValue.fromParts(p).copy(cleanup = Option(() => decoder.destroy())))
+          val _ = promise.trySuccess(r)
+      }
     }
 
     private def addContentSafe(httpContent: HttpContent): Boolean =

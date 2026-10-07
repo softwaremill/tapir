@@ -65,7 +65,7 @@ private[sync] class NettySyncRequestBody(
   override def writeToFile(serverRequest: ServerRequest, file: TapirFile, maxBytes: Option[Long]): Unit =
     try
       serverRequest.underlying match
-        case r: StreamedHttpRequest => FileWriterSubscriber.processAllBlocking(r, file.toPath, maxBytes)
+        case r: StreamedHttpRequest => FileWriterSubscriber.processAllBlocking(r, file.toPath, maxBytes, serverRequest.contentLength)
         case _                      => ()     // Empty request
     catch
       case e =>
