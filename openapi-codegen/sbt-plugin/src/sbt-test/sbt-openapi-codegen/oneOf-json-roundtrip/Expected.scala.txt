@@ -13,6 +13,9 @@ object TapirGeneratedEndpoints {
   import sttp.tapir.generated.TapirGeneratedEndpointsJsonSerdes._
   import TapirGeneratedEndpointsSchemas._
 
+  case class `application/pdfCodecFormat`() extends CodecFormat {
+    override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "pdf")
+  }
   case class `application/zipCodecFormat`() extends CodecFormat {
     override val mediaType: sttp.model.MediaType = sttp.model.MediaType.unsafeApply(mainType = "application", subType = "zip")
   }
@@ -237,24 +240,32 @@ object TapirGeneratedEndpoints {
   
   sealed trait PostJsonStringJsonBodyBodyIn extends Product with java.io.Serializable
   case class PostJsonStringJsonBodyBody1In(value: Array[Byte]) extends PostJsonStringJsonBodyBodyIn
-  case class PostJsonStringJsonBodyBodyOption_String_In(value: Option[String]) extends PostJsonStringJsonBodyBodyIn
+  case class PostJsonStringJsonBodyBodyStringIn(value: String) extends PostJsonStringJsonBodyBodyIn
   
   
   sealed trait PostJsonStringJsonBodyBodyOut extends Product with java.io.Serializable {
     def `application/json`: () => Option[String] = () => throw new RuntimeException("Body for content type application/json not provided")
-    def `application/zip`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/zip not provided")
+    def `application/zip`: () => Option[Array[Byte]] = () => throw new RuntimeException("Body for content type application/zip not provided")
   }
   case class PostJsonStringJsonBodyBodyOutFull (
     override val `application/json`: () => Option[String],
-    override val `application/zip`: () => Array[Byte],
+    override val `application/zip`: () => Option[Array[Byte]],
   ) extends PostJsonStringJsonBodyBodyOut
-  case class PostJsonStringJsonBodyBody1Out(value: Array[Byte]) extends PostJsonStringJsonBodyBodyOut{
-    override def `application/zip`: () => Array[Byte] = () => value
+  case class PostJsonStringJsonBodyBodyOption_Array_Byte__Out(value: Option[Array[Byte]]) extends PostJsonStringJsonBodyBodyOut{
+    override def `application/zip`: () => Option[Array[Byte]] = () => value
   }
   case class PostJsonStringJsonBodyBodyOption_String_Out(value: Option[String]) extends PostJsonStringJsonBodyBodyOut{
     override def `application/json`: () => Option[String] = () => value
   }
   
+  sealed trait PutHeadersTestsResponseHeader
+  case class PutHeadersTestsResponseHeader200(`Content-Disposition`: String) extends PutHeadersTestsResponseHeader
+  case object PutHeadersTestsResponseHeader204 extends PutHeadersTestsResponseHeader
+
+  sealed trait PostHeadersTestsResponseHeader
+  case class PostHeadersTestsResponseHeader200(`Content-Disposition`: String) extends PostHeadersTestsResponseHeader
+  case object PostHeadersTestsResponseHeader204 extends PostHeadersTestsResponseHeader
+
   case class GetForceEagerRequest (
     foo: String,
     bar: Option[java.util.UUID] = None
@@ -562,14 +573,14 @@ object TapirGeneratedEndpoints {
       .in(("json" / "stringJsonBody"))
       .securityIn(auth.bearer[Option[String]]())
       .in(oneOfBody[PostJsonStringJsonBodyBodyIn](
-        stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn],
+        stringJsonBody.map(PostJsonStringJsonBodyBodyStringIn(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn],
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn]))
       .out(oneOf[Option[PostJsonStringJsonBodyBodyOut]](
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), oneOfBody[PostJsonStringJsonBodyBodyOut](
         stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_Out(_))(_.`application/json`())
         .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBodyOption_String_Out(p.`application/json`())).description("Possibly-invalid json"),
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1Out(_))(_.`application/zip`())
-        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBody1Out(p.`application/zip`())).description("Possibly-invalid json")).map(Some(_))(_.orNull)){ case Some(_: PostJsonStringJsonBodyBodyOut) => true },
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_Array_Byte__Out(_))(_.`application/zip`())
+        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBodyOption_Array_Byte__Out(p.`application/zip`())).description("Possibly-invalid json")).map(Some(_))(_.orNull)){ case Some(_: PostJsonStringJsonBodyBodyOut) => true },
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None)))
       .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("json-body-as-string"))
   
@@ -601,7 +612,28 @@ object TapirGeneratedEndpoints {
       .in(("headers" / "tests"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
       .out(statusCode(sttp.model.StatusCode(302)).description("response").and(header[Option[String]]("foo").description("a description")))
+
+  type PutHeadersTestsEndpoint = Endpoint[String, Unit, Unit, (Option[String], PutHeadersTestsResponseHeader), Any]
+  lazy val putHeadersTests: PutHeadersTestsEndpoint =
+    endpoint
+      .put
+      .in(("headers" / "tests"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .out(oneOf[(Option[String], PutHeadersTestsResponseHeader)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), stringBody.map(Option(_))(_.orNull).description("Strict text response with a header").and(header[String]("Content-Disposition").description("").map(PutHeadersTestsResponseHeader200(_))(_.`Content-Disposition`))){ case (Some(_: String), (_: PutHeadersTestsResponseHeader200)) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(None).description("Nothing to do").and(emptyOutputAs(PutHeadersTestsResponseHeader204))){ case (None, PutHeadersTestsResponseHeader204) => true}))
   
+  type PostHeadersTestsEndpoint = Endpoint[String, Unit, Unit, (Option[Array[Byte]], PostHeadersTestsResponseHeader), Any]
+  lazy val postHeadersTests: PostHeadersTestsEndpoint =
+    endpoint
+      .post
+      .in(("headers" / "tests"))
+      .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
+      .out(oneOf[(Option[Array[Byte]], PostHeadersTestsResponseHeader)](
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/pdfCodecFormat`](`application/pdfCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(Option(_))(_.orNull).description("Strict bin response with a header").and(header[String]("Content-Disposition").description("").map(PostHeadersTestsResponseHeader200(_))(_.`Content-Disposition`))){ case (Some(_: Array[Byte]), (_: PostHeadersTestsResponseHeader200)) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(204), emptyOutputAs(None).description("Nothing to do").and(emptyOutputAs(PostHeadersTestsResponseHeader204))){ case (None, PostHeadersTestsResponseHeader204) => true}))
+      .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-resp-body-eager"))
+
   type GetPatternRestrictedObjectEndpoint = Endpoint[String, (String, Option[String], String, Option[String], String), Unit, String, Any]
   lazy val getPatternRestrictedObject: GetPatternRestrictedObjectEndpoint =
     endpoint
@@ -784,7 +816,7 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[Aardvark].description("OK"))
   
   
-  lazy val generatedEndpoints = List(getSecurityGroupSecurityGroupName, getSecurityGroupSecurityGroupNameMorePath, getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, postInlineEnumTest, getOneofErrorSecParamTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getOneofOptionTest, getHeadersTests, getPatternRestrictedObject, getForceEager, putForceEager, postForceEager, patchForceEager, getForceStreaming, putForceStreaming, postForceStreaming, patchForceStreaming, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postAllOf, postValidationTest, postWrappedOneOf)
+  lazy val generatedEndpoints = List(getSecurityGroupSecurityGroupName, getSecurityGroupSecurityGroupNameMorePath, getBinaryTest, postBinaryTest, putOptionalTest, postOptionalTest, putAdtTest, postAdtTest, postInlineEnumTest, getOneofErrorSecParamTest, postJsonStringJsonBody, postJsonStringJsonBodySimple, getOneofOptionTest, getHeadersTests, putHeadersTests, postHeadersTests, getPatternRestrictedObject, getForceEager, putForceEager, postForceEager, patchForceEager, getForceStreaming, putForceStreaming, postForceStreaming, patchForceStreaming, putInlineSimpleObject, postInlineSimpleObject, deleteInlineSimpleObject, patchInlineSimpleObject, postAllOf, postValidationTest, postWrappedOneOf)
   
   
   object Servers {

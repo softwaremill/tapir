@@ -257,7 +257,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), emptyOutput.description("empty response 1").and(emptyOutputAs(StatusCodeDisambig200))){ case StatusCodeDisambig200 => true},
         oneOfVariantValueMatcher(sttp.model.StatusCode(201), emptyOutput.description("empty response 2").and(emptyOutputAs(StatusCodeDisambig201))){ case StatusCodeDisambig201 => true}))
 
-  type PutInlineSimpleObjectEndpoint = Endpoint[Basic_or_Bearer_SecurityIn, PutInlineSimpleObjectRequest, (Array[Byte], PutInlineSimpleObjectResponseErrCode), PutInlineSimpleObjectResponse, Any]
+  type PutInlineSimpleObjectEndpoint = Endpoint[Basic_or_Bearer_SecurityIn, Option[PutInlineSimpleObjectRequest], (Array[Byte], PutInlineSimpleObjectResponseErrCode), PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
       .put
@@ -274,7 +274,7 @@ object TapirGeneratedEndpoints {
         case BasicSecurityIn(x) => (Some(x), None)
         case BearerSecurityIn(x) => (None, Some(x))
       }
-      .in(multipartBody[PutInlineSimpleObjectRequest])
+      .in(multipartBody[PutInlineSimpleObjectRequest].map(Option(_))(_.orNull))
       .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
         oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(StatusCodeDisambig400))){ case (_: Array[Byte], StatusCodeDisambig400) => true },
         oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(StatusCodeDisambig401))){ case (_: Array[Byte], StatusCodeDisambig401) => true }))

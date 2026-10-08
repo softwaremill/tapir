@@ -169,7 +169,7 @@ object TapirGeneratedEndpoints {
   sealed trait UploadFileResponseErrCode extends StatusCodeDisambig
   
   sealed trait PlaceOrderBodyIn extends Product with java.io.Serializable
-  case class PlaceOrderBody2In(value: Array[Byte]) extends PlaceOrderBodyIn
+  case class PlaceOrderBodyOption_Array_Byte__In(value: Option[Array[Byte]]) extends PlaceOrderBodyIn
   case class PlaceOrderBodyOption_Order_In(value: Option[Order]) extends PlaceOrderBodyIn
   
   sealed trait PlaceOrderResponseErrCode extends StatusCodeDisambig
@@ -177,14 +177,14 @@ object TapirGeneratedEndpoints {
   sealed trait DeleteOrderResponseErrCode extends StatusCodeDisambig
   
   sealed trait CreateUserBodyIn extends Product with java.io.Serializable
-  case class CreateUserBody2In(value: Array[Byte]) extends CreateUserBodyIn
+  case class CreateUserBodyOption_Array_Byte__In(value: Option[Array[Byte]]) extends CreateUserBodyIn
   case class CreateUserBodyOption_User_In(value: Option[User]) extends CreateUserBodyIn
   
   sealed trait LoginUserResponseErrCode extends StatusCodeDisambig
   sealed trait GetUserByNameResponseErrCode extends StatusCodeDisambig
   
   sealed trait UpdateUserBodyIn extends Product with java.io.Serializable
-  case class UpdateUserBody2In(value: Array[Byte]) extends UpdateUserBodyIn
+  case class UpdateUserBodyOption_Array_Byte__In(value: Option[Array[Byte]]) extends UpdateUserBodyIn
   case class UpdateUserBodyOption_User_In(value: Option[User]) extends UpdateUserBodyIn
   
   sealed trait UpdateUserResponseErrCode extends StatusCodeDisambig
@@ -415,7 +415,7 @@ object TapirGeneratedEndpoints {
       .in(oneOfBody[PlaceOrderBodyIn](
         jsonBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn],
         xmlBody[Option[Order]].map(PlaceOrderBodyOption_Order_In(_))(_.value).widenBody[PlaceOrderBodyIn],
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PlaceOrderBody2In(_))(_.value).widenBody[PlaceOrderBodyIn]))
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(Option(_))(_.orNull).map(PlaceOrderBodyOption_Array_Byte__In(_))(_.value).widenBody[PlaceOrderBodyIn]))
       .errorOut(oneOf[PlaceOrderResponseErrCode](
         oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("Invalid input").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
         oneOfVariantValueMatcher(sttp.model.StatusCode(422), emptyOutput.description("Validation exception").and(emptyOutputAs(StatusCodeDisambig422))){ case StatusCodeDisambig422 => true},
@@ -462,7 +462,7 @@ object TapirGeneratedEndpoints {
       .in(oneOfBody[CreateUserBodyIn](
         jsonBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"),
         xmlBody[Option[User]].map(CreateUserBodyOption_User_In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object"),
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(CreateUserBody2In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object")))
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(Option(_))(_.orNull).map(CreateUserBodyOption_Array_Byte__In(_))(_.value).widenBody[CreateUserBodyIn].description("Created user object")))
       .errorOut(statusCode.description("Unexpected error"))
       .out(oneOfBody[User](
         jsonBody[User].description("successful operation"),
@@ -533,7 +533,7 @@ object TapirGeneratedEndpoints {
       .in(oneOfBody[UpdateUserBodyIn](
         jsonBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"),
         xmlBody[Option[User]].map(UpdateUserBodyOption_User_In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store"),
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(UpdateUserBody2In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store")))
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/x-www-form-urlencodedCodecFormat`](`application/x-www-form-urlencodedCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(Option(_))(_.orNull).map(UpdateUserBodyOption_Array_Byte__In(_))(_.value).widenBody[UpdateUserBodyIn].description("Update an existent user in the store")))
       .errorOut(oneOf[UpdateUserResponseErrCode](
         oneOfVariantValueMatcher(sttp.model.StatusCode(400), emptyOutput.description("bad request").and(emptyOutputAs(StatusCodeDisambig400))){ case StatusCodeDisambig400 => true},
         oneOfVariantValueMatcher(sttp.model.StatusCode(404), emptyOutput.description("user not found").and(emptyOutputAs(StatusCodeDisambig404))){ case StatusCodeDisambig404 => true},
