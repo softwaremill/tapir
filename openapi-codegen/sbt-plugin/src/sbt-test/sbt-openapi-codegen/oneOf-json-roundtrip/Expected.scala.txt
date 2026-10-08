@@ -239,8 +239,8 @@ object TapirGeneratedEndpoints {
   sealed trait GetOneofErrorSecParamTestResponseErrCode extends StatusCodeDisambig
   
   sealed trait PostJsonStringJsonBodyBodyIn extends Product with java.io.Serializable
-  case class PostJsonStringJsonBodyBody1In(value: Array[Byte]) extends PostJsonStringJsonBodyBodyIn
-  case class PostJsonStringJsonBodyBodyStringIn(value: String) extends PostJsonStringJsonBodyBodyIn
+  case class PostJsonStringJsonBodyBodyOption_Array_Byte__In(value: Option[Array[Byte]]) extends PostJsonStringJsonBodyBodyIn
+  case class PostJsonStringJsonBodyBodyOption_String_In(value: Option[String]) extends PostJsonStringJsonBodyBodyIn
   
   
   sealed trait PostJsonStringJsonBodyBodyOut extends Product with java.io.Serializable {
@@ -573,8 +573,8 @@ object TapirGeneratedEndpoints {
       .in(("json" / "stringJsonBody"))
       .securityIn(auth.bearer[Option[String]]())
       .in(oneOfBody[PostJsonStringJsonBodyBodyIn](
-        stringJsonBody.map(PostJsonStringJsonBodyBodyStringIn(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn],
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn]))
+        stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn],
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_Array_Byte__In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn]))
       .out(oneOf[Option[PostJsonStringJsonBodyBodyOut]](
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), oneOfBody[PostJsonStringJsonBodyBodyOut](
         stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_Out(_))(_.`application/json`())
@@ -651,7 +651,7 @@ object TapirGeneratedEndpoints {
       }.getOrElse(ValidationResult.Valid))))
       .in(header[String]("h2").validate(Validator.minLength(3)))
       .out(jsonBody[String].description("ok"))
-  
+
   type GetForceEagerEndpoint = Endpoint[String, sttp.capabilities.pekko.PekkoStreams.BinaryStream, Unit, String, sttp.capabilities.pekko.PekkoStreams]
   lazy val getForceEager: GetForceEagerEndpoint =
     endpoint
@@ -662,13 +662,13 @@ object TapirGeneratedEndpoints {
       .out(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)).description("An object"))
       .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-resp-body-eager"))
   
-  type PutForceEagerEndpoint = Endpoint[String, String, Unit, String, Any]
+  type PutForceEagerEndpoint = Endpoint[String, Option[String], Unit, String, Any]
   lazy val putForceEager: PutForceEagerEndpoint =
     endpoint
       .put
       .in(("force" / "eager"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)))
+      .in(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)).map(Option(_))(_.orNull))
       .out(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)).description("An object"))
       .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-eager"))
   
@@ -682,13 +682,13 @@ object TapirGeneratedEndpoints {
       .out(jsonBody[PostForceEagerResponse].description("An object"))
       .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-eager"))
   
-  type PatchForceEagerEndpoint = Endpoint[String, String, Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
+  type PatchForceEagerEndpoint = Endpoint[String, Option[String], Unit, sttp.capabilities.pekko.PekkoStreams.BinaryStream, sttp.capabilities.pekko.PekkoStreams]
   lazy val patchForceEager: PatchForceEagerEndpoint =
     endpoint
       .patch
       .in(("force" / "eager"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)))
+      .in(stringBodyUtf8AnyFormat(Codec.id[String, `text/csvCodecFormat`](`text/csvCodecFormat`(), Schema.schemaForString)).map(Option(_))(_.orNull))
       .out(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[PatchForceEagerResponse], `text/csvCodecFormat`()).description("An object"))
       .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-req-body-eager"))
   
@@ -745,13 +745,13 @@ object TapirGeneratedEndpoints {
         .map(_.asInstanceOf[PatchForceStreamingBodyOut])(p => PatchForceStreamingBody1Out(p.`text/plain`())).description("An object"))))
       .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("force-resp-body-streaming"))
   
-  type PutInlineSimpleObjectEndpoint = Endpoint[String, PutInlineSimpleObjectRequest, (Array[Byte], PutInlineSimpleObjectResponseErrCode), PutInlineSimpleObjectResponse, Any]
+  type PutInlineSimpleObjectEndpoint = Endpoint[String, Option[PutInlineSimpleObjectRequest], (Array[Byte], PutInlineSimpleObjectResponseErrCode), PutInlineSimpleObjectResponse, Any]
   lazy val putInlineSimpleObject: PutInlineSimpleObjectEndpoint =
     endpoint
       .put
       .in(("inline" / "simple" / "object"))
       .securityIn(auth.oauth2.implicitFlow("https://petstore3.swagger.io/oauth/authorize", None))
-      .in(multipartBody[PutInlineSimpleObjectRequest])
+      .in(multipartBody[PutInlineSimpleObjectRequest].map(Option(_))(_.orNull))
       .errorOut(oneOf[(Array[Byte], PutInlineSimpleObjectResponseErrCode)](
         oneOfVariantValueMatcher(sttp.model.StatusCode(400), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position").and(emptyOutputAs(StatusCodeDisambig400))){ case (_: Array[Byte], StatusCodeDisambig400) => true },
         oneOfVariantValueMatcher(sttp.model.StatusCode(401), rawBinaryBody(sttp.tapir.RawBodyType.ByteArrayBody).description("application/octet-stream in error position 2").and(emptyOutputAs(StatusCodeDisambig401))){ case (_: Array[Byte], StatusCodeDisambig401) => true }))
