@@ -5,10 +5,11 @@ import io.netty.handler.codec.http.{HttpContent, HttpHeaders, HttpMethod, HttpRe
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Subscriber
 
-/** A delegating [[StreamedHttpRequest]] which additionally tracks if the request body was ever subscribed to (see #4539), and fails the
-  * body stream if it ends before the declared `Content-Length` is received (see #4169).
+/** A delegating [[StreamedHttpRequest]], which additionally:
+  *   - tracks if the request body was ever subscribed to, so that an unused body can be discarded (#4539)
+  *   - fails the body stream if it ends before the declared `Content-Length` is received (#4169)
   */
-class SubscribeTrackingStreamedHttpRequest(request: StreamedHttpRequest) extends StreamedHttpRequest {
+private[netty] class TapirStreamedHttpRequest(request: StreamedHttpRequest) extends StreamedHttpRequest {
 
   @volatile private var subscribed: Boolean = false
   def wasSubscribed: Boolean = subscribed
