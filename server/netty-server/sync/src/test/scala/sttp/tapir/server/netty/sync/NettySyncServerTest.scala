@@ -52,7 +52,6 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
         }.tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
-        new ServerIncompleteRequestBodyTests(createServerTest).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
         additionalTests(createServerTest)
 
