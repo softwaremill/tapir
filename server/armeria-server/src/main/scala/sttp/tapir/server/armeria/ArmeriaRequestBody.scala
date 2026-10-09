@@ -93,7 +93,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       case RawBodyType.FileBody             =>
         for {
           file <- futureConversion.to(serverOptions.createFile())
-          _ <- StreamMessages.writeTo(StreamMessage.of(Array(body): _*), file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).toScala
+          _ <- StreamMessages.writeTo(StreamMessage.of(Array(body)*), file.toPath, ctx.eventLoop(), ctx.blockingTaskExecutor()).toScala
           fileRange = FileRange(file)
         } yield RawValue(fileRange, Seq(fileRange))
       case RawBodyType.MultipartBody(_, _) =>

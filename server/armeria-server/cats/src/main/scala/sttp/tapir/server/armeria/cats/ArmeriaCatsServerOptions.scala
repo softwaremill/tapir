@@ -29,12 +29,12 @@ object ArmeriaCatsServerOptions {
   def customiseInterceptors[F[_]](
       dispatcher: Dispatcher[F]
   )(implicit F: Async[F]): CustomiseInterceptors[F, ArmeriaCatsServerOptions[F]] = {
-    CustomiseInterceptors(
+    CustomiseInterceptors[F, ArmeriaCatsServerOptions[F]](
       createOptions = (ci: CustomiseInterceptors[F, ArmeriaCatsServerOptions[F]]) => {
         ArmeriaCatsServerOptions[F](
           dispatcher,
-          () => defaultCreateFile()(F),
-          file => defaultDeleteFile(file)(F),
+          () => defaultCreateFile()(using F),
+          file => defaultDeleteFile(file)(using F),
           ci.interceptors
         )
       }
@@ -43,9 +43,9 @@ object ArmeriaCatsServerOptions {
 
   private val logger: Logger = LoggerFactory.getLogger(this.getClass.getPackage.getName)
 
-  def defaultCreateFile[F[_]]()(implicit F: Async[F]): F[TapirFile] = blocking(Defaults.createTempFile())
+  def defaultCreateFile[F[_]: Async](): F[TapirFile] = blocking(Defaults.createTempFile())
 
-  def defaultDeleteFile[F[_]](file: TapirFile)(implicit F: Async[F]): F[Unit] = blocking(Defaults.deleteFile()(file))
+  def defaultDeleteFile[F[_]: Async](file: TapirFile): F[Unit] = blocking(Defaults.deleteFile()(file))
 
   def defaultServerLog[F[_]: Async]: DefaultServerLog[F] = DefaultServerLog[F](
     doLogWhenReceived = debugLog(_, None),
@@ -55,7 +55,7 @@ object ArmeriaCatsServerOptions {
     noLog = Async[F].pure(())
   )
 
-  def default[F[_]](dispatcher: Dispatcher[F])(implicit F: Async[F]): ArmeriaCatsServerOptions[F] = customiseInterceptors(dispatcher).options
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): ArmeriaCatsServerOptions[F] = customiseInterceptors(dispatcher).options
 
   private def debugLog[F[_]: Async](msg: String, exOpt: Option[Throwable]): F[Unit] =
     Sync[F].delay(exOpt match {

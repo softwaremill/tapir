@@ -14,14 +14,13 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
 class VertxTestServerInterpreter(vertx: Vertx)
-    extends TestServerInterpreter[Future, VertxStreams with WebSockets, VertxFutureServerOptions, Router => Route] {
+    extends TestServerInterpreter[Future, VertxStreams & WebSockets, VertxFutureServerOptions, Router => Route] {
   import VertxTestServerInterpreter._
 
-  override def route(es: List[ServerEndpoint[VertxStreams with WebSockets, Future]], interceptors: Interceptors): Router => Route = {
-    router =>
-      val options: VertxFutureServerOptions = interceptors(VertxFutureServerOptions.customiseInterceptors).options
-      val interpreter = VertxFutureServerInterpreter(options)
-      es.map(interpreter.route(_)(router)).last
+  override def route(es: List[ServerEndpoint[VertxStreams & WebSockets, Future]], interceptors: Interceptors): Router => Route = { router =>
+    val options: VertxFutureServerOptions = interceptors(VertxFutureServerOptions.customiseInterceptors).options
+    val interpreter = VertxFutureServerInterpreter(options)
+    es.map(interpreter.route(_)(router)).last
   }
 
   override def server(

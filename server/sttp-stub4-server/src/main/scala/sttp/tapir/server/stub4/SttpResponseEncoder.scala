@@ -13,7 +13,7 @@ import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 
 private[stub4] object SttpResponseEncoder {
-  def apply(output: EndpointOutput[_], responseValue: Any, statusCode: StatusCode): Response[Any] = {
+  def apply(output: EndpointOutput[?], responseValue: Any, statusCode: StatusCode): Response[Any] = {
     val outputValues: OutputValues[Any] =
       new EncodeOutputs[Any, AnyStreams](toResponseBody, Seq(ContentTypeRange.AnyRange))
         .apply(output, ParamsAsAny(responseValue), OutputValues.empty)
@@ -46,7 +46,7 @@ private[stub4] object SttpResponseEncoder {
     override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
     override def fromWebSocketPipe[REQ, RESP](
         pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AnyStreams]
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, AnyStreams]
     ): Any = pipe // impossible
   }
 

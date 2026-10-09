@@ -174,7 +174,7 @@ package object streams {
     override def webSocketPipe[REQ, RESP](
         readStream: ReadStream[WebSocketFrame],
         pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, ZioStreams]
     ): ReadStream[WebSocketFrame] = {
       val stream0 = fromReadStreamInternal(readStream)
       val stream1 = optionallyContatenateFrames(stream0, o.concatenateFragmentedFrames)

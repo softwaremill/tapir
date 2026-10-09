@@ -11,7 +11,7 @@ import sttp.tapir._
 private[armeria] object RouteMapping {
 
   def toRoute(e: AnyEndpoint): List[(Route, ExchangeType)] = {
-    val inputs: Seq[EndpointInput.Basic[_]] = e.asVectorOfBasicInputs()
+    val inputs: Seq[EndpointInput.Basic[?]] = e.asVectorOfBasicInputs()
 
     val outputsList = e.output.asBasicOutputsList
     val requestStreaming = inputs.exists(isStreaming)
@@ -42,7 +42,7 @@ private[armeria] object RouteMapping {
     }
   }
 
-  private def isStreaming(output: EndpointTransput.Basic[_]): Boolean = output match {
+  private def isStreaming(output: EndpointTransput.Basic[?]): Boolean = output match {
     case StreamBodyWrapper(_) => true
     case body: Body[_, _]     =>
       body.bodyType match {
@@ -53,7 +53,7 @@ private[armeria] object RouteMapping {
     case _ => false
   }
 
-  private def toPathPatterns(inputs: Seq[EndpointInput.Basic[_]], hasNoTrailingSlash: Boolean): List[String] = {
+  private def toPathPatterns(inputs: Seq[EndpointInput.Basic[?]], hasNoTrailingSlash: Boolean): List[String] = {
     var idxUsed = 0
     var capturePaths = false
     val fragments = inputs.collect {

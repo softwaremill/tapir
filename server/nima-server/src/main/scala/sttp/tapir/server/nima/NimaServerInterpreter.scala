@@ -36,7 +36,7 @@ trait NimaServerInterpreter {
         case RequestResult.Response(tapirResponse, _) =>
           helidonResponse.status(Status.create(tapirResponse.code.code))
           tapirResponse.headers.groupBy(_.name).foreach { case (name, headers) =>
-            helidonResponse.header(name, headers.map(_.value): _*)
+            helidonResponse.header(name, headers.map(_.value)*)
           }
 
           tapirResponse.body.fold(ifEmpty = helidonResponse.send()) { tapirInputStream =>

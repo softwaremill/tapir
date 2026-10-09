@@ -25,7 +25,7 @@ object PekkoHttpServerOptions {
   def customiseInterceptors(implicit
       ec: ExecutionContext
   ): CustomiseInterceptors[Future, PekkoHttpServerOptions] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[Future, PekkoHttpServerOptions](
       createOptions = (ci: CustomiseInterceptors[Future, PekkoHttpServerOptions]) =>
         PekkoHttpServerOptions(defaultCreateFile(_), defaultDeleteFile(_), ci.interceptors)
     ).serverLog(defaultSlf4jServerLog)

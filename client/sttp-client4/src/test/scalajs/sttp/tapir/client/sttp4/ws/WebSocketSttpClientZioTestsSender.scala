@@ -11,21 +11,21 @@ import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 import concurrent.Future
 
-abstract class WebSocketSttpClientZioTestsSender extends ClientTests[WebSockets with ZioStreams] {
+abstract class WebSocketSttpClientZioTestsSender extends ClientTests[WebSockets & ZioStreams] {
   private val runtime: default.UnsafeAPI = default.unsafe
   val backend = FetchZioBackend()
-  def wsToPipe: WebSocketToPipe[WebSockets with ZioStreams]
+  def wsToPipe: WebSocketToPipe[WebSockets & ZioStreams]
 
   override def send[A, I, E, O](
-      e: Endpoint[A, I, E, O, WebSockets with ZioStreams],
+      e: Endpoint[A, I, E, O, WebSockets & ZioStreams],
       port: Port,
       securityArgs: A,
       args: I,
       scheme: String = "http"
   ): Future[Either[E, O]] = {
-    implicit val wst: WebSocketToPipe[WebSockets with ZioStreams] = wsToPipe
+    implicit val wst: WebSocketToPipe[WebSockets & ZioStreams] = wsToPipe
     val send = WebSocketSttpClientInterpreter()
-      .toSecureRequestThrowDecodeFailures[Task, A, I, E, O, WebSockets with ZioStreams](e, Some(uri"$scheme://localhost:$port"))
+      .toSecureRequestThrowDecodeFailures[Task, A, I, E, O, WebSockets & ZioStreams](e, Some(uri"$scheme://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)
@@ -35,14 +35,14 @@ abstract class WebSocketSttpClientZioTestsSender extends ClientTests[WebSockets 
   }
 
   override def safeSend[A, I, E, O](
-      e: Endpoint[A, I, E, O, WebSockets with ZioStreams],
+      e: Endpoint[A, I, E, O, WebSockets & ZioStreams],
       port: Port,
       securityArgs: A,
       args: I
   ): Future[DecodeResult[Either[E, O]]] = {
-    implicit val wst: WebSocketToPipe[WebSockets with ZioStreams] = wsToPipe
+    implicit val wst: WebSocketToPipe[WebSockets & ZioStreams] = wsToPipe
     val send = WebSocketSttpClientInterpreter()
-      .toSecureRequest[Task, A, I, E, O, WebSockets with ZioStreams](e, Some(uri"http://localhost:$port"))
+      .toSecureRequest[Task, A, I, E, O, WebSockets & ZioStreams](e, Some(uri"http://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)

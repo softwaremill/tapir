@@ -16,7 +16,7 @@ private[openapi] case class ReusableComponents(
 private[openapi] object ReusableComponents {
   val empty: ReusableComponents = ReusableComponents(Map.empty, Map.empty)
 
-  def markerOf(atom: EndpointTransput.Atom[_]): Option[ReusableComponent] =
+  def markerOf(atom: EndpointTransput.Atom[?]): Option[ReusableComponent] =
     atom.attribute(ReusableComponentAttribute.reusableComponentAttributeKey)
 
   /** Must run before `nameAllPathCapturesInEndpoint`, which names unnamed captures `p1`, `p2`, ... restarting at `p1` for each endpoint:
@@ -36,7 +36,7 @@ private[openapi] object ReusableComponents {
 private[openapi] class ReusableComponentsForEndpoints(
     es: Iterable[AnyEndpoint],
     tschemaToASchema: TSchemaToASchema,
-    defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]]
+    defaultDecodeFailureOutput: EndpointInput[?] => Option[EndpointOutput[?]]
 ) {
   private val endpointToParameters = new EndpointToParameters(tschemaToASchema)
   private val endpointToHeaders = new EndpointToHeaders(tschemaToASchema)

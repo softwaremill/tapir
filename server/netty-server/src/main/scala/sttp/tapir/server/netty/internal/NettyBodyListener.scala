@@ -12,7 +12,7 @@ class NettyBodyListener[F[_]](runAsync: RunAsync[F])(implicit m: MonadError[F]) 
   override def onComplete(body: NettyResponse)(cb: Try[Unit] => F[Unit]): F[NettyResponse] = {
     m.eval((ctx: ChannelHandlerContext) => {
       val nettyResponseContent = body(ctx)
-      nettyResponseContent.channelPromise.addListener((future: Future[_ >: Void]) => {
+      nettyResponseContent.channelPromise.addListener((future: Future[? >: Void]) => {
         if (future.isSuccess) {
           runAsync(cb(Success(())))
         } else {

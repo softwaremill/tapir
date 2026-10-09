@@ -11,7 +11,7 @@ import scala.scalajs.js.JSConverters._
 
 object AwsJsRouteHandler {
 
-  private def toJsRoute[F[_]](route: Route[F])(implicit monadError: MonadError[F]): JsRoute[F] = { awsJsRequest: AwsJsRequest =>
+  private def toJsRoute[F[_]](route: Route[F])(implicit monadError: MonadError[F]): JsRoute[F] = { (awsJsRequest: AwsJsRequest) =>
     monadError.map(route.apply(AwsJsRequest.toAwsRequest(awsJsRequest)))(AwsJsResponse.fromAwsResponse)
   }
 

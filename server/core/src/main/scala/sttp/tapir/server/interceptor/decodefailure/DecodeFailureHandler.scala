@@ -94,7 +94,7 @@ object DefaultDecodeFailureHandler {
   def apply[F[_]]: DefaultDecodeFailureHandler[F] = DefaultDecodeFailureHandler[F](
     respond(_),
     FailureMessages.failureMessage(_),
-    failureResponse _
+    failureResponse(_, _, _)
   )
 
   /** A [[default]] handler which responds with a `404 Not Found`, instead of a `401 Unauthorized` or `400 Bad Request`, in case any input

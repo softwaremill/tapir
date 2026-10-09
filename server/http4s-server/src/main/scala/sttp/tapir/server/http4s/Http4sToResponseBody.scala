@@ -35,7 +35,7 @@ private[http4s] class Http4sToResponseBody[F[_]: Async](
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, Fs2Streams[F]]
   ): Http4sResponseBody[F] = Left(Http4sWebSockets.pipeToBody(pipe, o))
 
   private def rawValueToEntity[CF <: CodecFormat, R](bodyType: RawBodyType[R], r: R): (EntityBody[F], Option[Long]) = {

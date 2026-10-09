@@ -141,7 +141,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     implicit val testSchemaZonedDateTime: Schema[ZonedDateTime] = Schema.schemaForZonedDateTime.encodedExample(expectedDateTime)
     implicit val testSchemaBook: Schema[Book] = {
       val schema: Schema[Book] = implicitly[Derived[Schema[Book]]].value
-      schema.encodedExample(circeCodec[Book](implicitly, implicitly, schema).encode(expectedBook))
+      schema.encodedExample(circeCodec[Book](using implicitly, implicitly, schema).encode(expectedBook))
     }
 
     val endpoint_with_dateTimes = endpoint.post.in(jsonBody[ZonedDateTime]).out(jsonBody[Book])

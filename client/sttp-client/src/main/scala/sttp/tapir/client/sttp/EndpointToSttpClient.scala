@@ -34,7 +34,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
           req1
         )
 
-      val req3: RequestT[Identity, _, _] =
+      val req3: RequestT[Identity, ?, ?] =
         req2.copy(
           method = sttp.model.Method(e.method.getOrElse(Method.GET).method): Identity[Method],
           uri = uri2: Identity[Uri]
@@ -60,7 +60,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       req3.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], R]]
   }
 
-  private type PartialAnyRequest = PartialRequest[_, _]
+  private type PartialAnyRequest = PartialRequest[?, ?]
 
   @tailrec
   private def setInputParams[I](
@@ -89,7 +89,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
         (uri, req2)
       case EndpointInput.QueryParams(codec, _) =>
         val mqp = codec.encode(value)
-        val uri2 = uri.addParams(mqp.toSeq: _*)
+        val uri2 = uri.addParams(mqp.toSeq*)
         (uri2, req)
       case EndpointIO.Empty(_, _)              => (uri, req)
       case EndpointIO.Body(bodyType, codec, _) =>
@@ -135,8 +135,8 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   def handleInputPair(
-      left: EndpointInput[_],
-      right: EndpointInput[_],
+      left: EndpointInput[?],
+      right: EndpointInput[?],
       params: Params,
       split: SplitParams,
       uri: Uri,
@@ -148,7 +148,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   private def handleMapped[II, T](
-      tuple: EndpointInput[_],
+      tuple: EndpointInput[?],
       codec: Mapping[T, II],
       params: Params,
       uri: Uri,
@@ -206,7 +206,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case RawBodyType.MultipartBody(_, _)  => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
     }
 
-  private def responseAsFromOutputs(out: EndpointOutput[_], isWebSocket: Boolean): ResponseAs[Any, Any] = {
+  private def responseAsFromOutputs(out: EndpointOutput[?], isWebSocket: Boolean): ResponseAs[Any, Any] = {
     ((bodyIsStream(out), isWebSocket) match {
       case (Some(streams), _) => asStreamAlwaysUnsafe(streams)
       case (_, true)          => asWebSocketAlwaysUnsafe
@@ -225,7 +225,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     }).asInstanceOf[ResponseAs[Any, Any]]
   }
 
-  private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
+  private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[?]] = {
     out.traverseOutputs {
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) => Vector(streams)
       case EndpointIO.OneOfBody(variants, _) => variants.flatMap(_.body.toOption).map(_.wrapped.streams).toVector
@@ -239,15 +239,15 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   private val clientOutputParams = new ClientOutputParams {
-    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] = {
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[?, ?, ?, ?, ?], body: Any): DecodeResult[Any] = {
       val streams = o.streams.asInstanceOf[wsToPipe.S]
       o.codec
-        .asInstanceOf[Codec[Any, _, CodecFormat]]
+        .asInstanceOf[Codec[Any, ?, CodecFormat]]
         .decode(
           wsToPipe
             .apply(streams)(
               body.asInstanceOf[WebSocket[wsToPipe.F]],
-              o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
+              o.asInstanceOf[WebSocketBodyOutput[Any, ?, ?, ?, wsToPipe.S]]
             )
         )
     }

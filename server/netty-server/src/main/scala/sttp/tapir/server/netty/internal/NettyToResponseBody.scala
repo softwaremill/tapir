@@ -34,7 +34,7 @@ private[netty] class NettyToResponseBody[F[_]](runAsync: RunAsync[F])(implicit m
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, NoStreams]
   ): NettyResponse = throw new UnsupportedOperationException
 }
 

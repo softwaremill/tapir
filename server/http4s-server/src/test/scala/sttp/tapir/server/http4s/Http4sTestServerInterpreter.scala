@@ -19,9 +19,9 @@ object Http4sTestServerInterpreter {
   type Routes = WebSocketBuilder2[IO] => HttpRoutes[IO]
 }
 
-class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, Http4sServerOptions[IO], Routes] {
+class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] & WebSockets, Http4sServerOptions[IO], Routes] {
 
-  override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]], interceptors: Interceptors): Routes = {
+  override def route(es: List[ServerEndpoint[Fs2Streams[IO] & WebSockets, IO]], interceptors: Interceptors): Routes = {
     val serverOptions: Http4sServerOptions[IO] = interceptors(Http4sServerOptions.customiseInterceptors[IO]).options
     Http4sServerInterpreter(serverOptions).toWebSocketRoutes(es)
   }

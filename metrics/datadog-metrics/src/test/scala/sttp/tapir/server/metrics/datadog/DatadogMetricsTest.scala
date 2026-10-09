@@ -183,7 +183,7 @@ class DatadogMetricsTest extends AnyFlatSpec with Matchers with BeforeAndAfter w
         StringToResponseBody,
         List(metrics.metricsInterceptor()),
         _ => ()
-      )(implicitly, waitBodyListener(sleepBody)).apply(PersonsApi.request("Jacob"))
+      )(using implicitly, waitBodyListener(sleepBody)).apply(PersonsApi.request("Jacob"))
 
     // when
     interpret(100, 1000)

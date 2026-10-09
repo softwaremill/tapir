@@ -20,7 +20,7 @@ private[sam] object EndpointsToSamTemplate {
       }
       .toMap
 
-    val parameters = options.parameters.map(parameters => SortedMap(parameters.map(Parameter.apply).toList: _*))
+    val parameters = options.parameters.map(parameters => SortedMap(parameters.map(Parameter.apply).toList*))
     val auths = {
       for {
         httpApi <- options.httpApi

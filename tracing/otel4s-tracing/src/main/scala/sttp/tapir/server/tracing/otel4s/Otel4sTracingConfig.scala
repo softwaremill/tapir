@@ -35,7 +35,7 @@ case class Otel4sTracingConfig[F[_]](
     spanName: ServerRequest => String,
     requestAttributes: ServerRequest => Attributes,
     spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes),
-    responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes,
+    responseAttributes: (ServerRequest, ServerResponse[?]) => Attributes,
     errorAttributes: Either[StatusCode, Throwable] => Attributes
 )
 
@@ -45,7 +45,7 @@ object Otel4sTracingConfig {
       spanName: ServerRequest => String = Defaults.spanName,
       requestAttributes: ServerRequest => Attributes = Defaults.requestAttributes,
       spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes) = Defaults.spanNameFromEndpointAndAttributes,
-      responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes = Defaults.responseAttributes,
+      responseAttributes: (ServerRequest, ServerResponse[?]) => Attributes = Defaults.responseAttributes,
       errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes
   ): Otel4sTracingConfig[F] =
     new Otel4sTracingConfig(
@@ -90,7 +90,7 @@ object Otel4sTracingConfig {
 
     def spanName(request: ServerRequest): String = s"${request.method.method}"
 
-    def responseAttributes(request: ServerRequest, response: ServerResponse[_]): Attributes =
+    def responseAttributes(request: ServerRequest, response: ServerResponse[?]): Attributes =
       Attributes(HttpAttributes.HttpResponseStatusCode(response.code.code.toLong))
 
     def errorAttributes(e: Either[StatusCode, Throwable]): Attributes = Attributes(e match {

@@ -99,7 +99,7 @@ object TestUtil {
             ctx: DecodeSuccessContext[Identity, A, U, I]
         )(implicit monad: MonadError[Identity], bodyListener: BodyListener[Identity, B]): Identity[ServerResponse[B]] = {
           addCallTrail(s"$prefix success")
-          endpointHandler.onDecodeSuccess(ctx)(monad, bodyListener)
+          endpointHandler.onDecodeSuccess(ctx)(using monad, bodyListener)
         }
 
         override def onSecurityFailure[A](ctx: SecurityFailureContext[Identity, A])(implicit
@@ -107,14 +107,14 @@ object TestUtil {
             bodyListener: BodyListener[Identity, B]
         ): Identity[ServerResponse[B]] = {
           addCallTrail(s"$prefix security failure")
-          endpointHandler.onSecurityFailure(ctx)(monad, bodyListener)
+          endpointHandler.onSecurityFailure(ctx)(using monad, bodyListener)
         }
 
         override def onDecodeFailure(
             ctx: DecodeFailureContext
         )(implicit monad: MonadError[Identity], bodyListener: BodyListener[Identity, B]): Identity[Option[ServerResponse[B]]] = {
           addCallTrail(s"$prefix failure")
-          endpointHandler.onDecodeFailure(ctx)(monad, bodyListener)
+          endpointHandler.onDecodeFailure(ctx)(using monad, bodyListener)
         }
       }
   }

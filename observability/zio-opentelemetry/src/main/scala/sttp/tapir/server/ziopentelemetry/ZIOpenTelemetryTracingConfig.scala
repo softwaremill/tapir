@@ -104,7 +104,7 @@ object ZIOpenTelemetryTracingConfig {
     @nowarn
     def responseAttributes(
         request: ServerRequest,
-        response: ServerResponse[_]
+        response: ServerResponse[?]
     ): Attributes =
       Attributes.of(
         HttpAttributes.HTTP_RESPONSE_STATUS_CODE,

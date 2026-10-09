@@ -7,9 +7,9 @@ import sttp.tapir.client.tests.ClientWebSocketTests
 import zio.stream.{Stream, ZStream}
 import concurrent.Future
 
-class SttpClientWebSocketZioTests extends SttpClientZioTests[WebSockets with ZioStreams] with ClientWebSocketTests[ZioStreams] {
+class SttpClientWebSocketZioTests extends SttpClientZioTests[WebSockets & ZioStreams] with ClientWebSocketTests[ZioStreams] {
   override val streams: ZioStreams = ZioStreams
-  override def wsToPipe: WebSocketToPipe[WebSockets with ZioStreams] = implicitly
+  override def wsToPipe: WebSocketToPipe[WebSockets & ZioStreams] = implicitly
 
   override def sendAndReceiveLimited[A, B](
       p: Stream[Throwable, A] => Stream[Throwable, B],
@@ -17,7 +17,7 @@ class SttpClientWebSocketZioTests extends SttpClientZioTests[WebSockets with Zio
       as: List[A]
   ): Future[List[B]] = {
     unsafeToFuture(
-      ZStream(as: _*).viaFunction(p).take(receiveCount).runCollect.map(_.toList)
+      ZStream(as*).viaFunction(p).take(receiveCount).runCollect.map(_.toList)
     ).future
   }
 

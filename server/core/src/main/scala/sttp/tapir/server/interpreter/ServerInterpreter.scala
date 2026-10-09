@@ -262,7 +262,7 @@ class ServerInterpreter[R, F[_], B, S](
       override def onDecodeFailure(
           ctx: DecodeFailureContext
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] =
-        (None: Option[ServerResponse[B]]).unit(monad)
+        (None: Option[ServerResponse[B]]).unit(using monad)
     }
 
   private def responder(defaultStatusCode: StatusCode): Responder[F, B] = new Responder[F, B] {

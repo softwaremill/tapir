@@ -17,7 +17,7 @@ import scala.concurrent.duration.FiniteDuration
   */
 class WebSocketAutoPingHandler(pingInterval: FiniteDuration, frame: sttp.ws.WebSocketFrame.Ping) extends ChannelInboundHandlerAdapter {
   val nettyFrame = new PingWebSocketFrame(Unpooled.copiedBuffer(frame.payload))
-  private var pingTask: ScheduledFuture[_] = _
+  private var pingTask: ScheduledFuture[?] = null
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
 

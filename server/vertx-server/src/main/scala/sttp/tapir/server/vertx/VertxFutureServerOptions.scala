@@ -31,7 +31,7 @@ object VertxFutureServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors: CustomiseInterceptors[Future, VertxFutureServerOptions] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[Future, VertxFutureServerOptions](
       createOptions = (ci: CustomiseInterceptors[Future, VertxFutureServerOptions]) =>
         VertxFutureServerOptions(
           VertxServerOptions.uploadDirectory(),

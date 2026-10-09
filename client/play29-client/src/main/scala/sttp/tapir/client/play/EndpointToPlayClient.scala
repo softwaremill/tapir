@@ -114,7 +114,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
         req2
       case EndpointInput.QueryParams(codec, _) =>
         val mqp = codec.encode(value)
-        req.addQueryStringParameters(mqp.toSeq: _*)
+        req.addQueryStringParameters(mqp.toSeq*)
       case EndpointIO.Empty(_, _)              => req
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
@@ -157,8 +157,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
   }
 
   def handleInputPair(
-      left: EndpointInput[_],
-      right: EndpointInput[_],
+      left: EndpointInput[?],
+      right: EndpointInput[?],
       params: Params,
       split: SplitParams,
       req: StandaloneWSRequest
@@ -188,12 +188,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case RawBodyType.StringBody(_) =>
         val defaultStringBodyWritable: BodyWritable[String] = implicitly[BodyWritable[String]]
         val bodyWritable = BodyWritable[String](defaultStringBodyWritable.transform, codec.format.mediaType.toString)
-        locally {
-          // passing the BodyWritable implicitly, as explicitly passing it to a context bound requires `using` in Scala 3;
-          // the name shadows the default instance imported from DefaultBodyWritables, avoiding ambiguity in Scala 2
-          implicit val writeableOf_String: BodyWritable[String] = bodyWritable
-          req.withBody(encoded.asInstanceOf[String])
-        }
+        req.withBody(encoded.asInstanceOf[String])(using bodyWritable)
       case RawBodyType.ByteArrayBody   => req.withBody(encoded.asInstanceOf[Array[Byte]])
       case RawBodyType.ByteBufferBody  => req.withBody(encoded.asInstanceOf[ByteBuffer])
       case RawBodyType.InputStreamBody =>
@@ -226,7 +221,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
     }
 
-  private def responseFromOutput(out: EndpointOutput[_]): StandaloneWSResponse => Any = { response =>
+  private def responseFromOutput(out: EndpointOutput[?]): StandaloneWSResponse => Any = { response =>
     bodyIsStream(out) match {
       case Some(streams) =>
         streams match {
@@ -255,14 +250,14 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     }
   }
 
-  private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
+  private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[?]] = {
     out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
       Vector(streams)
     }.headOption
   }
 
   private val clientOutputParams = new ClientOutputParams {
-    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[?, ?, ?, ?, ?], body: Any): DecodeResult[Any] =
       DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
   }
 }

@@ -76,14 +76,14 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
     tracer = tracerProvider.get("TracingTest")
   } yield (spanExporter, tracer)
 
-  val inMemoryTracerLayer: ULayer[InMemorySpanExporter with Tracer] =
+  val inMemoryTracerLayer: ULayer[InMemorySpanExporter & Tracer] =
     ZLayer.fromZIOEnvironment(inMemoryTracer.map { case (inMemorySpanExporter, tracer) =>
       ZEnvironment(inMemorySpanExporter).add(tracer)
     })
 
   def tracingMockLayer(
       logAnnotated: Boolean = false
-  ): URLayer[ContextStorage, Tracing with InMemorySpanExporter with Tracer] =
+  ): URLayer[ContextStorage, Tracing & InMemorySpanExporter & Tracer] =
     inMemoryTracerLayer >>> (Tracing.live(logAnnotated) ++ inMemoryTracerLayer)
 
   /** Helper: create an interpreter with the given interceptor and endpoints, run a request, return finished spans. */
@@ -91,7 +91,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
       endpoints: List[ServerEndpoint[Any, Task]],
       request: ServerRequest,
       config: ZIOpenTelemetryTracingConfig = ZIOpenTelemetryTracingConfig()
-  ): ZIO[Tracing with InMemorySpanExporter, Throwable, java.util.List[SpanData]] =
+  ): ZIO[Tracing & InMemorySpanExporter, Throwable, java.util.List[SpanData]] =
     for {
       tracing <- ZIO.service[Tracing]
       exported <- ZIO.service[InMemorySpanExporter]
@@ -111,7 +111,7 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
       endpoints: List[ServerEndpoint[ZioStreams, Task]],
       request: ServerRequest,
       config: ZIOpenTelemetryTracingConfig
-  ): ZIO[Tracing with InMemorySpanExporter, Throwable, java.util.List[SpanData]] =
+  ): ZIO[Tracing & InMemorySpanExporter, Throwable, java.util.List[SpanData]] =
     for {
       tracing <- ZIO.service[Tracing]
       exported <- ZIO.service[InMemorySpanExporter]
@@ -149,14 +149,14 @@ object ZIOpenTelemetryTracingSpec extends ZIOSpecDefault {
       endpoints: List[ServerEndpoint[Any, Task]],
       request: ServerRequest,
       config: ZIOpenTelemetryTracingConfig = ZIOpenTelemetryTracingConfig()
-  ): ZIO[Tracing with InMemorySpanExporter, Throwable, SpanData] =
+  ): ZIO[Tracing & InMemorySpanExporter, Throwable, SpanData] =
     runRequest(endpoints, request, config).map(_.get(0))
 
   private def runRequestStreamSingleSpan(
       endpoints: List[ServerEndpoint[ZioStreams, Task]],
       request: ServerRequest,
       config: ZIOpenTelemetryTracingConfig = ZIOpenTelemetryTracingConfig()
-  ): ZIO[Tracing with InMemorySpanExporter, Throwable, SpanData] =
+  ): ZIO[Tracing & InMemorySpanExporter, Throwable, SpanData] =
     runRequestStream(endpoints, request, config).map(_.get(0))
 
   // Tests are provided with layers at the suite level via .provide()

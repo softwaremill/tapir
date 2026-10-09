@@ -82,6 +82,15 @@ scalacOptions ++= {
     case _            => Seq("-Xmax-inlines", "64")
   }
 }
+scalacOptions ++= {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, 12)) => Seq("-Xsource:3")
+    // report the Scala 3 migration issues (such as the access modifiers of `copy` and `apply` of case classes with a
+    // non-public constructor) as warnings, not errors
+    case Some((2, _)) => Seq("-Xsource:3", "-Wconf:cat=scala3-migration:w")
+    case _            => Nil
+  }
+}
 scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s"
 scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s"
 evictionErrorLevel := Level.Info
@@ -2226,8 +2235,6 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
     ),
     libraryDependencies ++= (if (scalaBinaryVersion.value == "3") Nil
                              else Seq(scalaOrganization.value % "scala-reflect" % scalaVersion.value)),
-    // the warnings for the codegen-core sources are already reported when compiling openapiCodegenCore
-    scalacOptions += "-Wconf:src=.*openapi-codegen/core/src/.*:s",
     name := "sbt-openapi-codegen",
     sbtPlugin := true,
     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),

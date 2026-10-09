@@ -12,22 +12,22 @@ class ModifyFunctorInstancesTest extends AnyFlatSpec with Matchers with ModifyFu
 
   it should "modify elements in NonEmptyList" in {
     implicitly[Schema[NonEmptyListWrapper]]
-      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
+      .modify(_.f1.each)(_.format("xyz")) `shouldContainACollectionElementWithSchema` ("f1", Schema(SString()).format("xyz"))
   }
 
   it should "modify elements in NonEmptySet" in {
     implicitly[Schema[NonEmptySetWrapper]]
-      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
+      .modify(_.f1.each)(_.format("xyz")) `shouldContainACollectionElementWithSchema` ("f1", Schema(SString()).format("xyz"))
   }
 
   it should "modify elements in Chain" in {
     implicitly[Schema[ChainWrapper]]
-      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
+      .modify(_.f1.each)(_.format("xyz")) `shouldContainACollectionElementWithSchema` ("f1", Schema(SString()).format("xyz"))
   }
 
   it should "modify elements in NonEmptyChain" in {
     implicitly[Schema[NonEmptyChainWrapper]]
-      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
+      .modify(_.f1.each)(_.format("xyz")) `shouldContainACollectionElementWithSchema` ("f1", Schema(SString()).format("xyz"))
   }
 
   implicit class CollectionSchemaMatcher[A](schema: Schema[A]) {

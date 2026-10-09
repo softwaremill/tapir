@@ -173,7 +173,7 @@ object JsoniterSerdeImpl {
            |""".stripMargin
 
     val serdesDefn = (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
-      .flatMap { (getSerdeString _).tupled }
+      .flatMap { case (n, t, isJson) => getSerdeString(n, t, isJson) }
       // an inline enum can be reached by multiple paths (or also be emitted at top level); duplicate decls won't compile
       .distinct
       .sorted

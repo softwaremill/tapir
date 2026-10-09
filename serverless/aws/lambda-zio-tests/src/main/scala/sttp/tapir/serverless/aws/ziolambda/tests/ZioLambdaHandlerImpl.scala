@@ -10,7 +10,7 @@ import zio.{Runtime, Unsafe}
 import java.io.{InputStream, OutputStream}
 
 class ZioLambdaHandlerImpl extends RequestStreamHandler {
-  private implicit val m = new RIOMonadError[Any]
+  private implicit val m: RIOMonadError[Any] = new RIOMonadError[Any]
   private val handler = ZioLambdaHandler.default[Any](allEndpoints.toList)
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {

@@ -114,7 +114,7 @@ private[jdkhttp] class JdkHttpToResponseBody extends ToResponseBody[JdkHttpRespo
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, NoStreams]
   ): JdkHttpResponseBody = throw new UnsupportedOperationException
 }
 

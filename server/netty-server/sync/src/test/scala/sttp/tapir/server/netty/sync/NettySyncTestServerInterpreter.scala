@@ -15,8 +15,8 @@ import scala.annotation.nowarn
 
 @nowarn
 class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
-    extends TestServerInterpreter[Identity, OxStreams with WebSockets, NettySyncServerOptions, IdRoute] {
-  override def route(es: List[ServerEndpoint[OxStreams with WebSockets, Identity]], interceptors: Interceptors): IdRoute = {
+    extends TestServerInterpreter[Identity, OxStreams & WebSockets, NettySyncServerOptions, IdRoute] {
+  override def route(es: List[ServerEndpoint[OxStreams & WebSockets, Identity]], interceptors: Interceptors): IdRoute = {
     val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
     supervised { // not a correct way, but this method is only used in a few tests which don't test anything related to scopes
       NettySyncServerInterpreter(serverOptions).toRoute(es, inScopeRunner())
@@ -39,7 +39,7 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     useInScope(NettySyncServer(options, customizedConfig).addRoute(route).start())(_.stop())
 
   def scopedServerWithInterceptorsStop(
-      endpoint: ServerEndpoint[OxStreams with WebSockets, Identity],
+      endpoint: ServerEndpoint[OxStreams & WebSockets, Identity],
       interceptors: Interceptors = identity,
       gracefulShutdownTimeout: Option[FiniteDuration] = None
   )(using Ox): NettySyncServerBinding =

@@ -16,7 +16,7 @@ import cats.effect.implicits._
 private[http4s] object Http4sWebSockets {
   def pipeToBody[F[_]: Temporal, REQ, RESP](
       pipe: Pipe[F, REQ, RESP],
-      o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
+      o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, ?, Fs2Streams[F]]
   ): F[Pipe[F, Http4sWebSocketFrame, Http4sWebSocketFrame]] = {
     if ((!o.autoPongOnPing) && o.autoPing.isEmpty) {
       // fast track: lift Http4sWebSocketFrames into REQ, run through pipe, convert RESP back to Http4sWebSocketFrame

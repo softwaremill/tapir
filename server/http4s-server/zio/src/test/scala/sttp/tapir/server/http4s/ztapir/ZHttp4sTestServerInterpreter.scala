@@ -26,7 +26,7 @@ object ZHttp4sTestServerInterpreter {
   type ServerOptions = Http4sServerOptions[F]
 }
 
-class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams with WebSockets, ServerOptions, Routes] {
+class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStreams & WebSockets, ServerOptions, Routes] {
 
   private val anyAvailablePort = ip4s.Port.fromInt(0).get
   private val serverBuilder = EmberServerBuilder
@@ -36,7 +36,7 @@ class ZHttp4sTestServerInterpreter extends TestServerInterpreter[Task, ZioStream
       List(fs2.io.net.SocketOption.noDelay(true)) // https://github.com/http4s/http4s/issues/7668
     )
 
-  override def route(es: List[ZServerEndpoint[Any, ZioStreams with WebSockets]], interceptors: Interceptors): Routes = {
+  override def route(es: List[ZServerEndpoint[Any, ZioStreams & WebSockets]], interceptors: Interceptors): Routes = {
     val serverOptions: ServerOptions = interceptors(Http4sServerOptions.customiseInterceptors[Task]).options
     ZHttp4sServerInterpreter(serverOptions).fromWebSocket(es).toRoutes
   }

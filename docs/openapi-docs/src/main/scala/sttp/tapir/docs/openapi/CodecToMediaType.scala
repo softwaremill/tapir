@@ -8,7 +8,7 @@ import scala.collection.immutable.ListMap
 
 private[openapi] class CodecToMediaType(tschemaToASchema: TSchemaToASchema) {
   def apply[T, CF <: CodecFormat](
-      o: Codec[_, T, CF],
+      o: Codec[?, T, CF],
       examples: List[EndpointIO.Example[T]],
       forcedContentType: Option[String],
       additionalEncodedExamples: List[EndpointIO.Example[Any]]

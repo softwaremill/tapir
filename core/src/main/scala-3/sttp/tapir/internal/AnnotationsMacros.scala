@@ -146,7 +146,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
 
     result.tpe.asType match {
       case '[EndpointOutput[r]] =>
-        val inputIdxToFieldIdx = mutable.Map((0 until outputs.size).map(i => (i, i)): _*)
+        val inputIdxToFieldIdx = mutable.Map((0 until outputs.size).map(i => (i, i))*)
         '{
           ${ result.asExprOf[EndpointOutput[r]] }.map[T](${ mapToTargetFunc[r](inputIdxToFieldIdx) })(${
             mapFromTargetFunc[r](inputIdxToFieldIdx)
@@ -217,7 +217,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   }
 
   private def makeBodyIO[f: Type](field: CaseClassField[q.type, T])(ann: Term): Expr[EndpointIO.Basic[f]] = {
-    val annExp = ann.asExprOf[EndpointIO.annotations.body[_, _]]
+    val annExp = ann.asExprOf[EndpointIO.annotations.body[?, ?]]
 
     ann.tpe.asType match {
       case '[EndpointIO.annotations.multipartBody] =>
@@ -352,7 +352,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       .getOrElse(input)
 
   private def setSecuritySchemeName[f: Type](
-      auth: Expr[EndpointInput.Auth[f, _]],
+      auth: Expr[EndpointInput.Auth[f, ?]],
       schemeName: Option[Term]
   ): Expr[EndpointInput.Single[f]] =
     schemeName
@@ -405,7 +405,7 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       t =>
         field
           .extractTreeFromAnnotation(customiseAnnotationSymbol)
-          .map(f => '{ AnnotationsMacros.customise($t, ${ f.asExprOf[EndpointTransput[_] => EndpointTransput[_]] }) })
+          .map(f => '{ AnnotationsMacros.customise($t, ${ f.asExprOf[EndpointTransput[?] => EndpointTransput[?]] }) })
           .getOrElse(t)
     )
 
@@ -462,4 +462,4 @@ private[tapir] class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
 // TODO: make private[tapir] once Scala3 compilation is fixed
 object AnnotationsMacros:
   // we assume that the customisation function doesn't return a value of a different type
-  def customise[X <: EndpointTransput[_]](i: X, f: EndpointTransput[_] => EndpointTransput[_]): X = f(i).asInstanceOf[X]
+  def customise[X <: EndpointTransput[?]](i: X, f: EndpointTransput[?] => EndpointTransput[?]): X = f(i).asInstanceOf[X]

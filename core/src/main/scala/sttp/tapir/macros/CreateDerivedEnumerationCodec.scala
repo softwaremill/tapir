@@ -44,5 +44,5 @@ class CreateDerivedEnumerationCodec[L, T](validator: Validator.Enumeration[T], s
       s => validator.possibleValues.find(_.toString.equalsIgnoreCase(s.asInstanceOf[String])), // we know that L == String
       _.toString.asInstanceOf[L],
       None
-    )(Codec.string.asInstanceOf[PlainCodec[L]])
+    )(using Codec.string.asInstanceOf[PlainCodec[L]])
 }

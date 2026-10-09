@@ -33,7 +33,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter with Vert
     *   A function, that given a router, will attach this endpoint to it
     */
   def route(
-      e: ServerEndpoint[Fs2Streams[F] with WebSockets, F]
+      e: ServerEndpoint[Fs2Streams[F] & WebSockets, F]
   ): Router => Route = { router =>
     val routeDef = extractRouteDefinition(e.endpoint)
     val readStreamCompatible = fs2ReadStreamCompatible(vertxCatsServerOptions)
@@ -44,17 +44,17 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter with Vert
   }
 
   private def endpointHandler[S <: Streams[S]](
-      e: ServerEndpoint[Fs2Streams[F] with WebSockets, F],
+      e: ServerEndpoint[Fs2Streams[F] & WebSockets, F],
       readStreamCompatible: ReadStreamCompatible[S]
   ): Handler[RoutingContext] = {
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Future[Void]] =
       new VertxBodyListener[F](new CatsRunAsync(vertxCatsServerOptions.dispatcher))
     val fFromVFuture = new CatsFFromVFuture[F]
-    val interpreter: ServerInterpreter[Fs2Streams[F] with WebSockets, F, RoutingContext => Future[Void], S] = new ServerInterpreter(
+    val interpreter: ServerInterpreter[Fs2Streams[F] & WebSockets, F, RoutingContext => Future[Void], S] = new ServerInterpreter(
       _ => List(e),
-      new VertxRequestBody(vertxCatsServerOptions, fFromVFuture)(readStreamCompatible),
-      new VertxToResponseBody(vertxCatsServerOptions)(readStreamCompatible),
+      new VertxRequestBody(vertxCatsServerOptions, fFromVFuture)(using readStreamCompatible),
+      new VertxToResponseBody(vertxCatsServerOptions)(using readStreamCompatible),
       vertxCatsServerOptions.interceptors,
       vertxCatsServerOptions.deleteFile
     )
@@ -99,7 +99,7 @@ object VertxCatsServerInterpreter {
   def apply[F[_]](dispatcher: Dispatcher[F])(implicit _fa: Async[F]): VertxCatsServerInterpreter[F] = {
     new VertxCatsServerInterpreter[F] {
       override implicit def fa: Async[F] = _fa
-      override def vertxCatsServerOptions: VertxCatsServerOptions[F] = VertxCatsServerOptions.default[F](dispatcher)(fa)
+      override def vertxCatsServerOptions: VertxCatsServerOptions[F] = VertxCatsServerOptions.default[F](dispatcher)(using fa)
     }
   }
 

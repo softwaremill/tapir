@@ -8,9 +8,9 @@ import sttp.tapir.{SchemaType, Schema => TSchema}
 private[docs] case class SchemaKey(name: TSchema.SName, fields: Set[String])
 
 private[docs] object SchemaKey {
-  def apply(schema: TSchema[_]): Option[SchemaKey] = schema.name.map(apply(schema, _))
+  def apply(schema: TSchema[?]): Option[SchemaKey] = schema.name.map(apply(schema, _))
 
-  def apply(schema: TSchema[_], name: TSchema.SName): SchemaKey = {
+  def apply(schema: TSchema[?], name: TSchema.SName): SchemaKey = {
     val fields = schema.schemaType match {
       case SchemaType.SProduct(fields)        => fields.map(_.name.name).toSet
       case SchemaType.SOpenProduct(fields, _) => fields.map(_.name.name).toSet

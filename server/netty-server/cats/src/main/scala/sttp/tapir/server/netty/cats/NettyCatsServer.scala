@@ -26,13 +26,13 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case class NettyCatsServer[F[_]: Async](
-    serverEndpoints: Vector[ServerEndpoint[Fs2Streams[F] with WebSockets, F]],
+    serverEndpoints: Vector[ServerEndpoint[Fs2Streams[F] & WebSockets, F]],
     otherRoutes: Vector[Route[F]],
     options: NettyCatsServerOptions[F],
     config: NettyConfig
 ) {
-  def addEndpoint(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): NettyCatsServer[F] = addEndpoints(List(se))
-  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): NettyCatsServer[F] =
+  def addEndpoint(se: ServerEndpoint[Fs2Streams[F] & WebSockets, F]): NettyCatsServer[F] = addEndpoints(List(se))
+  def addEndpoints(ses: List[ServerEndpoint[Fs2Streams[F] & WebSockets, F]]): NettyCatsServer[F] =
     copy(serverEndpoints = serverEndpoints ++ ses)
 
   /** Adds a custom route to the server. When a request is received, it is first processed by routes generated from the defined endpoints

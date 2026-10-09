@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference
 trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErrorHandler {
   def vertxZioServerOptions[R2 <: R]: VertxZioServerOptions[R2] = VertxZioServerOptions.default[R].widen
 
-  def route[R2](e: ZServerEndpoint[R2, ZioStreams with WebSockets])(implicit
+  def route[R2](e: ZServerEndpoint[R2, ZioStreams & WebSockets])(implicit
       runtime: Runtime[R & R2]
   ): Router => Route = { router =>
     val routeDef = extractRouteDefinition(e.endpoint)
@@ -33,17 +33,17 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
   }
 
   private def endpointHandler[R2](
-      e: ZServerEndpoint[R2, ZioStreams with WebSockets]
+      e: ZServerEndpoint[R2, ZioStreams & WebSockets]
   )(implicit runtime: Runtime[R & R2]): Handler[RoutingContext] = {
     val fromVFuture = new RioFromVFuture[R & R2]
     implicit val monadError: RIOMonadError[R & R2] = new RIOMonadError[R & R2]
     implicit val bodyListener: BodyListener[RIO[R & R2, *], RoutingContext => Future[Void]] =
       new VertxBodyListener[RIO[R & R2, *]](new ZioRunAsync(runtime))
     val zioReadStream = zioReadStreamCompatible(vertxZioServerOptions[R & R2])
-    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], RoutingContext => Future[Void], ZioStreams](
+    val interpreter = new ServerInterpreter[ZioStreams & WebSockets, RIO[R & R2, *], RoutingContext => Future[Void], ZioStreams](
       _ => List(e.widen[R & R2]),
-      new VertxRequestBody[RIO[R & R2, *], ZioStreams](vertxZioServerOptions[R & R2], fromVFuture)(zioReadStream),
-      new VertxToResponseBody(vertxZioServerOptions)(zioReadStream),
+      new VertxRequestBody[RIO[R & R2, *], ZioStreams](vertxZioServerOptions[R & R2], fromVFuture)(using zioReadStream),
+      new VertxToResponseBody(vertxZioServerOptions)(using zioReadStream),
       vertxZioServerOptions.interceptors,
       vertxZioServerOptions.deleteFile
     )

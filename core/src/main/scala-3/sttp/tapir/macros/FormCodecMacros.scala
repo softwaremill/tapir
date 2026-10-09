@@ -40,7 +40,7 @@ private[tapir] object FormCodecMacros {
         fieldEncode
       }
 
-      '{ List(${ Varargs(fieldsEncode) }: _*).flatten }.asTerm
+      '{ List(${ Varargs(fieldsEncode) }*).flatten }.asTerm
     }
 
     val encodeDefSymbol = Symbol.newMethod(
@@ -76,7 +76,7 @@ private[tapir] object FormCodecMacros {
       '{
         val paramsMap: Map[String, Seq[String]] =
           ${ paramsTerm.asExprOf[Seq[(String, String)]] }.groupBy(_._1).transform((_, v) => v.map(_._2))
-        val decodeResults = List(${ Varargs(fieldsDecode('paramsMap)) }: _*)
+        val decodeResults = List(${ Varargs(fieldsDecode('paramsMap)) }*)
         DecodeResult.sequence(decodeResults).map(values => ${ caseClass.instanceFromValues('{ values }) })
       }.asTerm
     }

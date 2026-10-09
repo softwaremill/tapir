@@ -56,7 +56,7 @@ trait SchemaMagnoliaDerivation {
         }
       }
 
-      private def subtypeNameToSchemaName(subtype: SealedTrait.Subtype[Typeclass, _, ?]): Schema.SName =
+      private def subtypeNameToSchemaName(subtype: SealedTrait.Subtype[Typeclass, ?, ?]): Schema.SName =
         typeNameToSchemaName(subtype.typeInfo, subtype.annotations)
 
       private def getEncodedName(annotations: Seq[Any]): Option[String] =
@@ -94,7 +94,7 @@ trait SchemaMagnoliaDerivation {
           )
           val coproduct = genericDerivationConfig.discriminator match {
             case Some(d) =>
-              val discriminatorMapping: Map[String, SRef[_]] =
+              val discriminatorMapping: Map[String, SRef[?]] =
                 ctx.subtypes.map { s =>
                   val schemaName = subtypeNameToSchemaName(s)
                   genericDerivationConfig.toDiscriminatorValue(schemaName) -> SRef(schemaName)

@@ -39,7 +39,7 @@ object NettyZioServerOptions {
     )
 
   def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], NettyZioServerOptions[R]] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[RIO[R, *], NettyZioServerOptions[R]](
       createOptions = (ci: CustomiseInterceptors[RIO[R, *], NettyZioServerOptions[R]]) => default(ci.interceptors)
     ).serverLog(defaultServerLog[R]).rejectHandler(DefaultRejectHandler.orNotFound[RIO[R, *]])
 

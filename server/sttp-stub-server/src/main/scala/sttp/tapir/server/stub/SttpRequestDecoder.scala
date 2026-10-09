@@ -12,7 +12,7 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
 private[stub] object SttpRequestDecoder {
-  def apply(request: Request[_, _], input: EndpointInput[_]): DecodeBasicInputsResult = {
+  def apply(request: Request[?, ?], input: EndpointInput[?]): DecodeBasicInputsResult = {
     DecodeBasicInputs(input, DecodeInputsContext(SttpRequest(request)))._1 match {
       case values: DecodeBasicInputsResult.Values =>
         def decodeBody[RAW, T](bodyInput: EndpointIO.Body[RAW, T]): DecodeBasicInputsResult = {
@@ -53,7 +53,7 @@ private[stub] object SttpRequestDecoder {
     }
   }
 
-  private def rawBody[RAW](request: Request[_, _], body: EndpointIO.Body[RAW, _]): RAW = {
+  private def rawBody[RAW](request: Request[?, ?], body: EndpointIO.Body[RAW, ?]): RAW = {
     val asByteArray = request.forceBodyAsByteArray
     body.bodyType match {
       case RawBodyType.StringBody(charset)  => new String(asByteArray, charset)

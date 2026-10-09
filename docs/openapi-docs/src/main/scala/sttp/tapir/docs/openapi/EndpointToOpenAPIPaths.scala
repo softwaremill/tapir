@@ -46,7 +46,7 @@ private[openapi] class EndpointToOpenAPIPaths(
     (e.showPathTemplate(showQueryParam = None, includeAuth = false, showNoPathAs = "/", showPathsAs = None), pathItem)
   }
 
-  private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[_]]): Operation = {
+  private def endpointToOperation(defaultId: String, e: AnyEndpoint, inputs: Vector[EndpointInput.Basic[?]]): Operation = {
     val parameters: List[ReferenceOr[Parameter]] = endpointToParameters
       .withSourceAtoms(inputs)
       .map { case (atom, parameter) =>
@@ -75,7 +75,7 @@ private[openapi] class EndpointToOpenAPIPaths(
     )
   }
 
-  private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
+  private def operationInputBody(inputs: Vector[EndpointInput.Basic[?]]) = {
     inputs.collect {
       case EndpointIO.Body(_, codec, info) =>
         Right(

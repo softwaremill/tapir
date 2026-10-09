@@ -43,7 +43,7 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
       Nil,
       null,
       Nil,
-      Some(OpenapiComponent(Map(schemaName -> OpenapiSchemaObject(mutable.LinkedHashMap(props: _*), props.map(_._1), false)))),
+      Some(OpenapiComponent(Map(schemaName -> OpenapiSchemaObject(mutable.LinkedHashMap(props*), props.map(_._1), false)))),
       Nil
     )
 

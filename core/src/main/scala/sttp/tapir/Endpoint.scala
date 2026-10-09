@@ -68,20 +68,20 @@ case class Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, -R](
   override type ThisType[-_R] = Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, _R]
   override private[tapir] def withSecurityInput[A2, R2](
       securityInput: EndpointInput[A2]
-  ): Endpoint[A2, INPUT, ERROR_OUTPUT, OUTPUT, R with R2] =
+  ): Endpoint[A2, INPUT, ERROR_OUTPUT, OUTPUT, R & R2] =
     this.copy(securityInput = securityInput)
-  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): Endpoint[SECURITY_INPUT, I2, ERROR_OUTPUT, OUTPUT, R with R2] =
+  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): Endpoint[SECURITY_INPUT, I2, ERROR_OUTPUT, OUTPUT, R & R2] =
     this.copy(input = input)
   override private[tapir] def withErrorOutput[E2, R2](
       errorOutput: EndpointOutput[E2]
-  ): Endpoint[SECURITY_INPUT, INPUT, E2, OUTPUT, R with R2] =
+  ): Endpoint[SECURITY_INPUT, INPUT, E2, OUTPUT, R & R2] =
     this.copy(errorOutput = errorOutput)
   override private[tapir] def withErrorOutputVariant[E2, R2](
       errorOutput: EndpointOutput[E2],
       embedE: ERROR_OUTPUT => E2
-  ): Endpoint[SECURITY_INPUT, INPUT, E2, OUTPUT, R with R2] =
+  ): Endpoint[SECURITY_INPUT, INPUT, E2, OUTPUT, R & R2] =
     this.copy(errorOutput = errorOutput)
-  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]): Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, O2, R with R2] =
+  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]): Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, O2, R & R2] =
     this.copy(output = output)
   override private[tapir] def withInfo(info: EndpointInfo): Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, R] =
     this.copy(info = info)
@@ -91,7 +91,7 @@ case class Endpoint[SECURITY_INPUT, INPUT, ERROR_OUTPUT, OUTPUT, -R](
 trait EndpointSecurityInputsOps[A, I, E, O, -R] extends EndpointSecurityInputsMacros[A, I, E, O, R] {
   type EndpointType[_A, _I, _E, _O, -_R]
   def securityInput: EndpointInput[A]
-  private[tapir] def withSecurityInput[A2, R2](securityInput: EndpointInput[A2]): EndpointType[A2, I, E, O, R with R2]
+  private[tapir] def withSecurityInput[A2, R2](securityInput: EndpointInput[A2]): EndpointType[A2, I, E, O, R & R2]
 
   def securityIn[B, AB](i: EndpointInput[B])(implicit concat: ParamConcat.Aux[A, B, AB]): EndpointType[AB, I, E, O, R] =
     withSecurityInput(securityInput.and(i))
@@ -112,7 +112,7 @@ trait EndpointSecurityInputsOps[A, I, E, O, -R] extends EndpointSecurityInputsMa
 trait EndpointInputsOps[A, I, E, O, -R] extends EndpointInputsMacros[A, I, E, O, R] {
   type EndpointType[_A, _I, _E, _O, -_R]
   def input: EndpointInput[I]
-  private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): EndpointType[A, I2, E, O, R with R2]
+  private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): EndpointType[A, I2, E, O, R & R2]
 
   def get: EndpointType[A, I, E, O, R] = method(Method.GET)
   def post: EndpointType[A, I, E, O, R] = method(Method.POST)
@@ -131,12 +131,12 @@ trait EndpointInputsOps[A, I, E, O, -R] extends EndpointInputsMacros[A, I, E, O,
   def prependIn[J, JI](i: EndpointInput[J])(implicit concat: ParamConcat.Aux[J, I, JI]): EndpointType[A, JI, E, O, R] =
     withInput(i.and(input))
 
-  def in[BS, J, IJ, R2](i: StreamBodyIO[BS, J, R2])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointType[A, IJ, E, O, R with R2] =
+  def in[BS, J, IJ, R2](i: StreamBodyIO[BS, J, R2])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointType[A, IJ, E, O, R & R2] =
     withInput(input.and(i.toEndpointIO))
 
   def prependIn[BS, J, JI, R2](i: StreamBodyIO[BS, J, R2])(implicit
       concat: ParamConcat.Aux[J, I, JI]
-  ): EndpointType[A, JI, E, O, R with R2] =
+  ): EndpointType[A, JI, E, O, R & R2] =
     withInput(i.toEndpointIO.and(input))
 
   def mapIn[II](m: Mapping[I, II]): EndpointType[A, II, E, O, R] =
@@ -152,7 +152,7 @@ trait EndpointInputsOps[A, I, E, O, -R] extends EndpointInputsMacros[A, I, E, O,
 trait EndpointErrorOutputsOps[A, I, E, O, -R] extends EndpointErrorOutputsMacros[A, I, E, O, R] {
   type EndpointType[_A, _I, _E, _O, -_R]
   def errorOutput: EndpointOutput[E]
-  private[tapir] def withErrorOutput[E2, R2](output: EndpointOutput[E2]): EndpointType[A, I, E2, O, R with R2]
+  private[tapir] def withErrorOutput[E2, R2](output: EndpointOutput[E2]): EndpointType[A, I, E2, O, R & R2]
 
   def errorOut[F, EF](o: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): EndpointType[A, I, EF, O, R] =
     withErrorOutput(errorOutput.and(o))
@@ -172,7 +172,7 @@ trait EndpointErrorOutputsOps[A, I, E, O, -R] extends EndpointErrorOutputsMacros
 trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
   type EndpointType[_A, _I, _E, _O, -_R]
   def errorOutput: EndpointOutput[E]
-  private[tapir] def withErrorOutputVariant[E2, R2](output: EndpointOutput[E2], embedE: E => E2): EndpointType[A, I, E2, O, R with R2]
+  private[tapir] def withErrorOutputVariant[E2, R2](output: EndpointOutput[E2], embedE: E => E2): EndpointType[A, I, E2, O, R & R2]
 
   /** Replaces the current error output with a [[Tapir.oneOf]] output, where:
     *   - the first output variant is the current output: `oneOfVariant(errorOutput)`
@@ -231,14 +231,14 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
 
   /** Same as [[errorOutVariantPrepend]], but allows appending multiple variants in one go. */
   def errorOutVariantsPrepend[E2 >: E](first: OneOfVariant[? <: E2], other: OneOfVariant[? <: E2]*): EndpointType[A, I, E2, O, R] =
-    withErrorOutputVariant(oneOf[E2](first, other :+ oneOfDefaultVariant(errorOutput): _*), identity)
+    withErrorOutputVariant(oneOf[E2](first, (other :+ oneOfDefaultVariant(errorOutput))*), identity)
 
   /** Same as [[errorOutVariant]], but allows appending multiple variants in one go. */
   def errorOutVariants[E2 >: E](first: OneOfVariant[? <: E2], other: OneOfVariant[? <: E2]*)(implicit
       ct: ClassTag[E],
       eEqualToErasure: ErasureSameAsType[E]
   ): EndpointType[A, I, E2, O, R] =
-    withErrorOutputVariant(oneOf[E2](oneOfVariant[E](errorOutput), first +: other: _*), identity)
+    withErrorOutputVariant(oneOf[E2](oneOfVariant[E](errorOutput), (first +: other)*), identity)
 
   /** Replace the error output with a [[Tapir.oneOf]] output, using the variants returned by `variants`. The current output should be
     * included in one of the returned variants.
@@ -281,7 +281,7 @@ trait EndpointErrorOutputVariantsOps[A, I, E, O, -R] {
 trait EndpointOutputsOps[A, I, E, O, -R] extends EndpointOutputsMacros[A, I, E, O, R] {
   type EndpointType[_A, _I, _E, _O, -_R]
   def output: EndpointOutput[O]
-  private[tapir] def withOutput[O2, R2](input: EndpointOutput[O2]): EndpointType[A, I, E, O2, R with R2]
+  private[tapir] def withOutput[O2, R2](input: EndpointOutput[O2]): EndpointType[A, I, E, O2, R & R2]
 
   def out[P, OP](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[A, I, E, OP, R] =
     withOutput(output.and(i))
@@ -289,19 +289,19 @@ trait EndpointOutputsOps[A, I, E, O, -R] extends EndpointOutputsMacros[A, I, E, 
   def prependOut[P, PO](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[A, I, E, PO, R] =
     withOutput(i.and(output))
 
-  def out[BS, P, OP, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[A, I, E, OP, R with R2] =
+  def out[BS, P, OP, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[A, I, E, OP, R & R2] =
     withOutput(output.and(i.toEndpointIO))
 
-  def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[A, I, E, PO, R with R2] =
+  def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[A, I, E, PO, R & R2] =
     withOutput(i.toEndpointIO.and(output))
 
   def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, ?, ?, P, R2])(implicit
       ts: ParamConcat.Aux[O, P, OP]
-  ): EndpointType[A, I, E, OP, R with R2 with WebSockets] = withOutput(output.and(i.toEndpointOutput))
+  ): EndpointType[A, I, E, OP, R & R2 & WebSockets] = withOutput(output.and(i.toEndpointOutput))
 
   def prependOut[PIPE_REQ_RESP, P, PO, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, ?, ?, P, R2])(implicit
       ts: ParamConcat.Aux[P, O, PO]
-  ): EndpointType[A, I, E, PO, R with R2 with WebSockets] = withOutput(i.toEndpointOutput.and(output))
+  ): EndpointType[A, I, E, PO, R & R2 & WebSockets] = withOutput(i.toEndpointOutput.and(output))
 
   def mapOut[OO](m: Mapping[O, OO]): EndpointType[A, I, E, OO, R] =
     withOutput(output.map(m))
@@ -658,7 +658,7 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
   def handleSecurityRecoverErrors[PRINCIPAL](
       f: A => PRINCIPAL
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpointSync[A, PRINCIPAL, I, E, O, R] =
-    PartialServerEndpointSync(this, recoverErrors1[A, E, PRINCIPAL, Identity](f)(implicitly, implicitly)(IdentityMonad))
+    PartialServerEndpointSync(this, recoverErrors1[A, E, PRINCIPAL, Identity](f)(using implicitly, implicitly)(IdentityMonad))
 
   /** Direct-style variant of [[serverSecurityLogicOption]], using the [[Identity]] "effect". */
   def handleSecurityOption[PRINCIPAL](f: A => Option[PRINCIPAL])(implicit
@@ -698,7 +698,7 @@ trait EndpointServerLogicOps[A, I, E, O, -R] { outer: Endpoint[A, I, E, O, R] =>
     PartialServerEndpointWithSecurityOutputSync(
       this.output,
       this.copy(output = emptyOutput),
-      recoverErrors1[A, E, (O, PRINCIPAL), Identity](f)(implicitly, implicitly)(IdentityMonad)
+      recoverErrors1[A, E, (O, PRINCIPAL), Identity](f)(using implicitly, implicitly)(IdentityMonad)
     )
 
   /** Direct-style variant of [[serverSecurityLogicOptionWithOutput]], using the [[Identity]] "effect". */

@@ -39,32 +39,32 @@ trait Http4sServerInterpreter[F[_]] {
   def toRoutes(serverEndpoints: List[ServerEndpoint[Fs2Streams[F], F]]): HttpRoutes[F] =
     toRoutes(serverEndpoints, None)
 
-  def toWebSocketRoutes(se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]): WebSocketBuilder2[F] => HttpRoutes[F] =
+  def toWebSocketRoutes(se: ServerEndpoint[Fs2Streams[F] & WebSockets, F]): WebSocketBuilder2[F] => HttpRoutes[F] =
     toWebSocketRoutes(List(se))
 
   def toWebSocketRoutes(
-      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] & WebSockets, F]]
   ): WebSocketBuilder2[F] => HttpRoutes[F] = wsb => toRoutes(serverEndpoints, Some(wsb))
 
-  def toContextRoutes[T: ClassTag](se: ServerEndpoint[Fs2Streams[F] with Context[T], F]): ContextRoutes[T, F] =
+  def toContextRoutes[T: ClassTag](se: ServerEndpoint[Fs2Streams[F] & Context[T], F]): ContextRoutes[T, F] =
     toContextRoutes(contextAttributeKey[T], List(se), None)
 
-  def toContextRoutes[T: ClassTag](ses: List[ServerEndpoint[Fs2Streams[F] with Context[T], F]]): ContextRoutes[T, F] =
+  def toContextRoutes[T: ClassTag](ses: List[ServerEndpoint[Fs2Streams[F] & Context[T], F]]): ContextRoutes[T, F] =
     toContextRoutes(contextAttributeKey[T], ses, None)
 
   def toContextWebSocketRoutes[T: ClassTag](
-      se: ServerEndpoint[Fs2Streams[F] with Context[T] with WebSockets, F]
+      se: ServerEndpoint[Fs2Streams[F] & Context[T] & WebSockets, F]
   ): WebSocketBuilder2[F] => ContextRoutes[T, F] =
     wsb => toContextRoutes(contextAttributeKey[T], List(se), Some(wsb))
 
   def toContextWebSocketRoutes[T: ClassTag](
-      ses: List[ServerEndpoint[Fs2Streams[F] with Context[T] with WebSockets, F]]
+      ses: List[ServerEndpoint[Fs2Streams[F] & Context[T] & WebSockets, F]]
   ): WebSocketBuilder2[F] => ContextRoutes[T, F] =
     wsb => toContextRoutes(contextAttributeKey[T], ses, Some(wsb))
 
   private def createInterpreter[T](
-      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets with Context[T], F]]
-  ): ServerInterpreter[Fs2Streams[F] with WebSockets with Context[T], F, Http4sResponseBody[F], Fs2Streams[F]] = {
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] & WebSockets & Context[T], F]]
+  ): ServerInterpreter[Fs2Streams[F] & WebSockets & Context[T], F, Http4sResponseBody[F], Fs2Streams[F]] = {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
     implicit val bodyListener: BodyListener[F, Http4sResponseBody[F]] = new Http4sBodyListener[F]
 
@@ -78,7 +78,7 @@ trait Http4sServerInterpreter[F[_]] {
   }
 
   private def toResponse[T](
-      interpreter: ServerInterpreter[Fs2Streams[F] with WebSockets with Context[T], F, Http4sResponseBody[F], Fs2Streams[F]],
+      interpreter: ServerInterpreter[Fs2Streams[F] & WebSockets & Context[T], F, Http4sResponseBody[F], Fs2Streams[F]],
       serverRequest: Http4sServerRequest[F],
       webSocketBuilder: Option[WebSocketBuilder2[F]]
   ): OptionT[F, Response[F]] =
@@ -88,7 +88,7 @@ trait Http4sServerInterpreter[F[_]] {
     })
 
   private def toRoutes(
-      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]],
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] & WebSockets, F]],
       webSocketBuilder: Option[WebSocketBuilder2[F]]
   ): HttpRoutes[F] = {
     val interpreter = createInterpreter(serverEndpoints)
@@ -101,7 +101,7 @@ trait Http4sServerInterpreter[F[_]] {
 
   private def toContextRoutes[T](
       contextAttributeKey: AttributeKey[T],
-      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets with Context[T], F]],
+      serverEndpoints: List[ServerEndpoint[Fs2Streams[F] & WebSockets & Context[T], F]],
       webSocketBuilder: Option[WebSocketBuilder2[F]]
   ): ContextRoutes[T, F] = {
     val interpreter = createInterpreter(serverEndpoints)

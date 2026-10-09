@@ -158,14 +158,14 @@ object TapirWebSocketStubInterpreter {
 //
 
 class TapirWebSocketStreamStubInterpreter[F[_], S, OPTIONS](
-    endpoints: List[ServerEndpoint[WebSockets with S, F]],
+    endpoints: List[ServerEndpoint[WebSockets & S, F]],
     interceptors: List[Interceptor[F]],
     stub: WebSocketStreamBackendStub[F, S]
-) extends AbstractTapirStubInterpreter[F, WebSockets with S, OPTIONS](endpoints, interceptors, stub) {
+) extends AbstractTapirStubInterpreter[F, WebSockets & S, OPTIONS](endpoints, interceptors, stub) {
 
   override type StubType = TapirWebSocketStreamStubInterpreter[F, S, OPTIONS]
 
-  override protected def append(sep: ServerEndpoint[WebSockets with S, F]): StubType =
+  override protected def append(sep: ServerEndpoint[WebSockets & S, F]): StubType =
     new TapirWebSocketStreamStubInterpreter[F, S, OPTIONS](endpoints :+ sep, interceptors, stub)
 
   override protected def thisAsStubType: StubType = this
@@ -207,7 +207,7 @@ abstract class AbstractTapirStubInterpreter[F[_], R, OPTIONS](
     type StubType <: outer.StubType
   }
 
-  def whenEndpoint[I, E, O](endpoint: Endpoint[_, I, E, O, _]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
+  def whenEndpoint[I, E, O](endpoint: Endpoint[?, I, E, O, ?]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
 
   def whenServerEndpoint[A, U, I, E, O](serverEndpoint: ServerEndpoint.Full[A, U, I, E, O, R, F]) = new TapirServerEndpointStub(
     serverEndpoint
@@ -224,10 +224,10 @@ abstract class AbstractTapirStubInterpreter[F[_], R, OPTIONS](
 
   //   )
 
-  protected def handleRequest(req: GenericRequest[_, _]): F[Response[StubBody]] =
+  protected def handleRequest(req: GenericRequest[?, ?]): F[Response[StubBody]] =
     StubServerInterpreter(req, endpoints, interceptors)
 
-  class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
+  class TapirEndpointStub[I, E, O](ep: Endpoint[?, I, E, O, ?]) {
     def thenRespond(response: O): StubType =
       append(publicEndpoint(logic = _ => _ => (Right(response): Either[E, O]).unit))
 

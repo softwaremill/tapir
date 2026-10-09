@@ -111,11 +111,11 @@ class TapirJsonPlayTests extends AnyFlatSpec with TapirJsonPlayTestExtensions wi
   }
 
   it should "return a coproduct schema for a JsValue" in {
-    schemaForPlayJsValue.schemaType shouldBe a[SCoproduct[_]]
+    schemaForPlayJsValue.schemaType shouldBe a[SCoproduct[?]]
   }
 
   it should "return a product schema for a JsObject" in {
-    schemaForPlayJsObject.schemaType shouldBe a[SProduct[_]]
+    schemaForPlayJsObject.schemaType shouldBe a[SProduct[?]]
   }
 
 }

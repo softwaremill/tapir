@@ -59,7 +59,7 @@ class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers 
     val client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
     val responses = (1 to Requests).map(_ => client.sendAsync(request.build(), HttpResponse.BodyHandlers.ofString()))
 
-    CompletableFuture.allOf(responses: _*).get(20, TimeUnit.SECONDS)
+    CompletableFuture.allOf(responses*).get(20, TimeUnit.SECONDS)
 
     responses.map(_.get().body()).toList
   }
@@ -88,7 +88,7 @@ class CatsVertxLimitedThreadPoolStreamingTest extends AnyFunSuite with Matchers 
           vertx.createHttpServer(new HttpServerOptions()).requestHandler(router).listen(0).toCompletionStage.toCompletableFuture
         }).map(_.actualPort())
       }
-      .unsafeRunSync()(runtime)
+      .unsafeRunSync()(using runtime)
 
     try f(port)
     finally {

@@ -44,7 +44,7 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
     ): ResponseBodyType = ???
     override def fromWebSocketPipe[REQ, RESP](
         pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, RequestBodyType]
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, RequestBodyType]
     ): ResponseBodyType = ???
   }
 
@@ -87,7 +87,7 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
     def logic(input: Unit): ZIO[Any, TestError, String] = ZIO.attempt(10 / 0).orDie.map(_.toString)
     val serverEndpoint: ZServerEndpoint[Any, Any] = testEndpoint.zServerLogic(logic)
 
-    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
+    val interpreter = new ServerInterpreter[ZioStreams & WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
       _ => List(serverEndpoint),
       exampleRequestBody,
       exampleToResponse,
@@ -116,7 +116,7 @@ object ZTapirTest extends ZIOSpecDefault with ZTapir {
     val serverEndpoint: ZServerEndpoint[Any, Any] =
       testPartialEndpoint.serverLogic[Any](user => unit => logic(user, unit))
 
-    val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
+    val interpreter = new ServerInterpreter[ZioStreams & WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
       _ => List(serverEndpoint),
       exampleRequestBody,
       exampleToResponse,

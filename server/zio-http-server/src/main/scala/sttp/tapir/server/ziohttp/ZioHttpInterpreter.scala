@@ -19,10 +19,10 @@ import scala.util.chaining._
 trait ZioHttpInterpreter[R] {
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  def toHttp[R2](se: ZServerEndpoint[R2, ZioStreams with WebSockets]): Routes[R & R2, Response] =
+  def toHttp[R2](se: ZServerEndpoint[R2, ZioStreams & WebSockets]): Routes[R & R2, Response] =
     toHttp(List(se))
 
-  def toHttp[R2](ses: List[ZServerEndpoint[R2, ZioStreams with WebSockets]]): Routes[R & R2, Response] = {
+  def toHttp[R2](ses: List[ZServerEndpoint[R2, ZioStreams & WebSockets]]): Routes[R & R2, Response] = {
     implicit val bodyListener: ZioHttpBodyListener[R & R2] = new ZioHttpBodyListener[R & R2]
     implicit val monadError: MonadError[RIO[R & R2, *]] = new RIOMonadError[R & R2]
     val widenedSes = ses.map(_.widen[R & R2])
@@ -33,11 +33,11 @@ trait ZioHttpInterpreter[R] {
 
     def handleRequest(
         req: Request,
-        filteredEndpoints: List[ZServerEndpoint[R & R2, ZioStreams with WebSockets]],
+        filteredEndpoints: List[ZServerEndpoint[R & R2, ZioStreams & WebSockets]],
         contextPathSegments: Int
     ) =
       Handler.fromZIO {
-        val interpreter = new ServerInterpreter[ZioStreams with WebSockets, RIO[R & R2, *], ZioResponseBody, ZioStreams](
+        val interpreter = new ServerInterpreter[ZioStreams & WebSockets, RIO[R & R2, *], ZioResponseBody, ZioStreams](
           _ => filteredEndpoints,
           zioHttpRequestBody,
           zioHttpResponseBody,
@@ -84,7 +84,7 @@ trait ZioHttpInterpreter[R] {
     }
 
     /** The number of path segments matched by the pattern; the wildcard, which matches any number of them, is not counted. */
-    def fixedSegmentsOf(p: RoutePattern[_]): Int =
+    def fixedSegmentsOf(p: RoutePattern[?]): Int =
       p.pathCodec.segments.count(s => s.nonEmpty && s != SegmentCodec.Trailing)
 
     def endWithWildcard(p: RoutePattern[Any]): PatternWithShape.Wildcard = {
@@ -97,10 +97,10 @@ trait ZioHttpInterpreter[R] {
         index: Int,
         pathTemplate: Vector[String],
         routePattern: PatternWithShape,
-        endpoint: ZServerEndpoint[R & R2, ZioStreams with WebSockets]
+        endpoint: ZServerEndpoint[R & R2, ZioStreams & WebSockets]
     )
 
-    def toPattern(se: ZServerEndpoint[R & R2, ZioStreams with WebSockets], index: Int): ServerEndpointWithPattern = {
+    def toPattern(se: ZServerEndpoint[R & R2, ZioStreams & WebSockets], index: Int): ServerEndpointWithPattern = {
       val e = se.endpoint
       val inputs = e.securityInput.and(e.input).asVectorOfBasicInputs()
 

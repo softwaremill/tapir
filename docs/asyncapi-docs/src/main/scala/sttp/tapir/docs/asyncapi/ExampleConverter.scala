@@ -6,7 +6,7 @@ import sttp.tapir.{Codec, EndpointIO}
 import sttp.ws.WebSocketFrame
 
 private[asyncapi] object ExampleConverter {
-  def convertExamples[T](c: Codec[WebSocketFrame, T, _], examples: List[EndpointIO.Example[T]]): List[MessageExample] = {
+  def convertExamples[T](c: Codec[WebSocketFrame, T, ?], examples: List[EndpointIO.Example[T]]): List[MessageExample] = {
     examples
       .flatMap { example =>
         c.encode(example.value) match {

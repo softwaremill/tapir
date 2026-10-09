@@ -20,7 +20,7 @@ import scala.concurrent.Future
   */
 private[pekkohttp] object PekkoStreamSizeExceptionInterceptor
     extends ExceptionInterceptor[Future](new ExceptionHandler[Future] {
-      override def apply(ctx: ExceptionContext)(implicit monad: MonadError[Future]): Future[Option[ValuedEndpointOutput[_]]] = {
+      override def apply(ctx: ExceptionContext)(implicit monad: MonadError[Future]): Future[Option[ValuedEndpointOutput[?]]] = {
         ctx.e match {
           case ex: Exception if ex.getCause().isInstanceOf[EntityStreamSizeException] =>
             monad.error(StreamMaxLengthExceededException(ex.getCause().asInstanceOf[EntityStreamSizeException].limit))

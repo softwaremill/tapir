@@ -17,7 +17,7 @@ private[stub] object StubServerInterpreter {
       req: Request[T, R],
       endpoints: List[ServerEndpoint[R, F]],
       interceptors: List[Interceptor[F]]
-  ): F[Response[_]] = {
+  ): F[Response[?]] = {
 
     implicit val bodyListener: BodyListener[F, Any] = new BodyListener[F, Any] {
       override def onComplete(body: Any)(cb: Try[Unit] => F[Unit]): F[Any] = cb(Success(())).map(_ => body)

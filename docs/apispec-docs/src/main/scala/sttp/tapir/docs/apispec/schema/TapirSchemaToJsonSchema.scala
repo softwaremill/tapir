@@ -12,7 +12,7 @@ import sttp.tapir.SchemaType
   */
 object TapirSchemaToJsonSchema {
   def apply(
-      schema: TSchema[_],
+      schema: TSchema[?],
       markOptionsAsNullable: Boolean,
       failOnDuplicateSchemaName: Boolean = false,
       metaSchema: MetaSchema = MetaSchemaDraft202012,
@@ -27,7 +27,7 @@ object TapirSchemaToJsonSchema {
     // - the top-level schema is an array
     // - the top-level schema is referenced in the schema itself (recursive)
     // In other cases, dropping the first schema, as it will be rendered at the top-level instead.
-    if (!schema.schemaType.isInstanceOf[SchemaType.SArray[_, _]] && !rootRecursive) {
+    if (!schema.schemaType.isInstanceOf[SchemaType.SArray[?, ?]] && !rootRecursive) {
       asKeyedSchemas = asKeyedSchemas.drop(1)
     }
 
@@ -49,9 +49,9 @@ object TapirSchemaToJsonSchema {
   }
 
   /** @return true iff there is a reference ([[SchemaType.SRef]]) to the root schema in the schema itself. */
-  private def isRootRecursive(schema: TSchema[_]): Boolean = schema.name.exists(hasReferenceTo(schema, _))
+  private def isRootRecursive(schema: TSchema[?]): Boolean = schema.name.exists(hasReferenceTo(schema, _))
 
-  private def hasReferenceTo(schema: TSchema[_], name: TSchema.SName): Boolean = {
+  private def hasReferenceTo(schema: TSchema[?], name: TSchema.SName): Boolean = {
     schema.schemaType match {
       case SchemaType.SProduct(fields)            => fields.exists(f => hasReferenceTo(f.schema, name))
       case SchemaType.SCoproduct(subtypes, _)     => subtypes.exists(s => hasReferenceTo(s, name))

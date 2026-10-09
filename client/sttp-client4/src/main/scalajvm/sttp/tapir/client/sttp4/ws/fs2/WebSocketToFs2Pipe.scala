@@ -13,11 +13,11 @@ import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.reflect.ClassTag
 
-class WebSocketToFs2Pipe[_F[_]: Concurrent, R <: Fs2Streams[_F] with WebSockets] extends WebSocketToPipe[R] {
+class WebSocketToFs2Pipe[_F[_]: Concurrent, R <: Fs2Streams[_F] & WebSockets] extends WebSocketToPipe[R] {
   override type S = Fs2Streams[F]
   override type F[X] = _F[X]
 
-  override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, Fs2Streams[F]]): Any = {
+  override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, ?, Fs2Streams[F]]): Any = {
     (in: Stream[F, REQ]) =>
       val sends = in
         .map(o.requests.encode)

@@ -314,7 +314,7 @@ object DecodeBasicInputs {
         (codec.decode(ctx.header(name)), ctx)
 
       case EndpointIO.Headers(codec, _) =>
-        (codec.decode(ctx.headers.map((sttp.model.Header.apply _).tupled).toList), ctx)
+        (codec.decode(ctx.headers.map { case (n, v) => sttp.model.Header(n, v) }.toList), ctx)
 
       case EndpointInput.ExtractFromRequest(codec, _) =>
         (codec.decode(ctx.request), ctx)
@@ -347,7 +347,7 @@ object DecodeBasicInputs {
     fs match {
       case f +: tail =>
         f(values, ctx) match {
-          case (values2: DecodeBasicInputsResult.Values, ctx2) => compose(tail: _*)(values2, ctx2)
+          case (values2: DecodeBasicInputsResult.Values, ctx2) => compose(tail*)(values2, ctx2)
           case r                                               => r
         }
       case _ => (values, ctx)

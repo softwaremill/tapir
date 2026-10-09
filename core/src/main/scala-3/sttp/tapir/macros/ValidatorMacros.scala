@@ -44,7 +44,7 @@ private[tapir] object ValidatorMacros {
 
     '{
       Validator.Enumeration.documentationOnly[T](
-        List(${ Varargs(instances) }: _*).asInstanceOf[List[T]],
+        List(${ Varargs(instances) }*).asInstanceOf[List[T]],
         None,
         ${ name }
       )

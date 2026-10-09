@@ -12,28 +12,28 @@ import sttp.ws.WebSocketFrame
 import scala.collection.immutable.ListMap
 
 private[asyncapi] class MessagesForEndpoints(tschemaToASchema: TSchemaToASchema, schemaName: SName => String) {
-  private type CodecData = Either[(SName, MediaType), TSchema[_]]
+  private type CodecData = Either[(SName, MediaType), TSchema[?]]
 
-  private case class CodecWithInfo[T](codec: Codec[WebSocketFrame, T, _ <: CodecFormat], info: EndpointIO.Info[T])
+  private case class CodecWithInfo[T](codec: Codec[WebSocketFrame, T, ? <: CodecFormat], info: EndpointIO.Info[T])
 
-  def apply(wss: Iterable[WebSocketBodyWrapper[_, _]]): (Map[Codec[_, _, _ <: CodecFormat], MessageKey], ListMap[MessageKey, Message]) = {
-    val codecs: Iterable[CodecWithInfo[_]] = wss.flatMap(ws => codecsFor(ws.wrapped))
-    val codecToData: ListMap[CodecWithInfo[_], CodecData] = codecs.toList.map(ci => ci -> toData(ci.codec)).toListMap
+  def apply(wss: Iterable[WebSocketBodyWrapper[?, ?]]): (Map[Codec[?, ?, ? <: CodecFormat], MessageKey], ListMap[MessageKey, Message]) = {
+    val codecs: Iterable[CodecWithInfo[?]] = wss.flatMap(ws => codecsFor(ws.wrapped))
+    val codecToData: ListMap[CodecWithInfo[?], CodecData] = codecs.toList.map(ci => ci -> toData(ci.codec)).toListMap
 
     val dataToKey = calculateUniqueIds(codecToData.values.toList.distinct, dataToName, failOnDuplicateName = false)
-    val codecToKey = codecToData.map { case (ci, data) => ci.codec -> dataToKey(data) }.toMap[Codec[_, _, _ <: CodecFormat], String]
+    val codecToKey = codecToData.map { case (ci, data) => ci.codec -> dataToKey(data) }.toMap[Codec[?, ?, ? <: CodecFormat], String]
     val keyToMessage = codecToData.map { case (ci, data) => dataToKey(data) -> message(ci) }
 
     (codecToKey, keyToMessage)
   }
 
-  private def toData(codec: Codec[_, _, _ <: CodecFormat]): CodecData =
+  private def toData(codec: Codec[?, ?, ? <: CodecFormat]): CodecData =
     ToKeyedSchemas.apply(codec).headOption match { // the first element, if any, corresponds to the object
       case Some(os) => Left((os._1.name, codec.format.mediaType))
       case None     => Right(codec.schema.copy(description = None, deprecated = false))
     }
 
-  private def codecsFor[REQ, RESP](w: WebSocketBodyOutput[_, REQ, RESP, _, _]): Iterable[CodecWithInfo[_]] = List(
+  private def codecsFor[REQ, RESP](w: WebSocketBodyOutput[?, REQ, RESP, ?, ?]): Iterable[CodecWithInfo[?]] = List(
     CodecWithInfo(w.requests, w.requestsInfo),
     CodecWithInfo(w.responses, w.responsesInfo)
   )

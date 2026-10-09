@@ -28,7 +28,7 @@ case class NettyCatsServerOptions[F[_]](
 
 object NettyCatsServerOptions {
 
-  def default[F[_]](dispatcher: Dispatcher[F])(implicit F: Async[F]): NettyCatsServerOptions[F] =
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): NettyCatsServerOptions[F] =
     customiseInterceptors(dispatcher).options
 
   private def default[F[_]: Async](
@@ -47,7 +47,7 @@ object NettyCatsServerOptions {
   def customiseInterceptors[F[_]: Async](
       dispatcher: Dispatcher[F]
   ): CustomiseInterceptors[F, NettyCatsServerOptions[F]] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[F, NettyCatsServerOptions[F]](
       createOptions = (ci: CustomiseInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog).rejectHandler(DefaultRejectHandler.orNotFound[F])
 

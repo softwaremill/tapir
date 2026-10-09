@@ -48,8 +48,8 @@ class SttpMockServerClient[F[_]] private[mockserver] (baseUri: Uri, backend: Bac
 
     F.flatMap(responseF) { response =>
       handleResponse(response)(
-        onBadRequest = MockServerException.IncorrectRequestFormat,
-        onNotAcceptable = MockServerException.InvalidExpectation
+        onBadRequest = MockServerException.IncorrectRequestFormat.apply,
+        onNotAcceptable = MockServerException.InvalidExpectation.apply
       )(onSuccess = _ => Right(ExpectationMatched))
         .fold(F.error, F.unit)
     }
@@ -117,8 +117,8 @@ object SttpMockServerClient {
 
       F.flatMap(responseF) { response =>
         handleResponse(response)(
-          onBadRequest = MockServerException.IncorrectRequestFormat,
-          onNotAcceptable = MockServerException.InvalidExpectation
+          onBadRequest = MockServerException.IncorrectRequestFormat.apply,
+          onNotAcceptable = MockServerException.InvalidExpectation.apply
         )(onSuccess = body => decode[List[Expectation]](body))
           .fold(F.error, F.unit)
       }
@@ -189,7 +189,7 @@ object SttpMockServerClient {
       override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
       override def fromWebSocketPipe[REQ, RESP](
           pipe: streams.Pipe[REQ, RESP],
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, NoStreams]
       ): Any = pipe // impossible
     }
     new EncodeOutputs[Any, NoStreams](toResponseBody, Seq(ContentTypeRange.AnyRange))

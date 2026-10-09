@@ -21,7 +21,7 @@ object ZioWebSockets {
 
   def pipeToBody[REQ, RESP](
       pipe: Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
+      o: WebSocketBodyOutput[Pipe[REQ, RESP], REQ, RESP, ?, ZioStreams]
   ): WebSocketHandler = {
     { (in: stream.Stream[Throwable, WebSocketChannelEvent]) =>
       {

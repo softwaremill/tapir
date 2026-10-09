@@ -10,7 +10,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object NettyFutureCreateServerStubTest extends CreateServerStubTest[Future, NettyFutureServerOptions] {
   override def customiseInterceptors: CustomiseInterceptors[Future, NettyFutureServerOptions] =
     NettyFutureServerOptions.customiseInterceptors
-  override def stub: BackendStub[Future] = BackendStub(new FutureMonad()(ExecutionContext.global))
+  override def stub: BackendStub[Future] = BackendStub(new FutureMonad()(using ExecutionContext.global))
   override def asFuture[A]: Future[A] => Future[A] = identity
 }
 
