@@ -12,7 +12,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaDateTime,
   OpenapiSchemaDuration,
   OpenapiSchemaEnum,
-  OpenapiSchemaField,
+  OpenapiAnnotatedSchema,
   OpenapiSchemaMap,
   OpenapiSchemaNumericType,
   OpenapiSchemaObject,

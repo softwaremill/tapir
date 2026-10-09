@@ -284,15 +284,16 @@ object SchemaGenerator {
 
   private def schemaForObject(name: String, recursionParams: (Boolean, Seq[String]), schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => schemaForObject(s"$name${k.capitalize}", recursionParams, `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
+      case (k, OpenapiAnnotatedSchema(`type`: OpenapiSchemaObject, _, _)) =>
+        schemaForObject(s"$name${k.capitalize}", recursionParams, `type`)
+      case (k, OpenapiAnnotatedSchema(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
         schemaForObject(s"$name${k.capitalize}Item", recursionParams, `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
+      case (k, OpenapiAnnotatedSchema(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         schemaForObject(s"$name${k.capitalize}Item", recursionParams, `type`)
-      case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _))                              => schemaForEnum(s"$name${k.capitalize}")
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _, _), _, _)) =>
+      case (k, OpenapiAnnotatedSchema(_: OpenapiSchemaEnum, _, _))                              => schemaForEnum(s"$name${k.capitalize}")
+      case (k, OpenapiAnnotatedSchema(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _, _), _, _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(_: OpenapiSchemaEnum, _, _), _, _)) =>
+      case (k, OpenapiAnnotatedSchema(OpenapiSchemaMap(_: OpenapiSchemaEnum, _, _), _, _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
     } match {
       case s if s.isEmpty => ""

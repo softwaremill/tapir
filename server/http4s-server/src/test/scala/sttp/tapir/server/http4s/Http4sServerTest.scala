@@ -103,7 +103,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] & WebSockets] extends TestSuite with 
         endpoint.out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream())),
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
-        IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8.encode).interruptAfter(10.seconds)))
+        IO(Right(fs2.Stream.awakeEvery[IO](1.second).take(10).map(_.toString()).through(fs2.text.utf8.encode)))
       ) { (backend, baseUri) =>
         basicRequest
           .get(baseUri)

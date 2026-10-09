@@ -91,7 +91,7 @@ class ClassDefinitionGenerator {
     val allSchemas: Map[String, OpenapiSchemaType] = doc.components.toSeq.flatMap(_.schemas).toMap
     val allOneOfSchemas = allSchemas.collect { case (name, oneOf: OpenapiSchemaOneOf) => name -> oneOf }.toSeq
     val (allClassyOneOfSchemas, allOtherOneOfSchemas) = allOneOfSchemas.partition(_._2.types.forall {
-      case r: OpenapiSchemaRef => r.maybeResolved(doc).forall(_.isInstanceOf[OpenapiSchemaObject])
+      case r: OpenapiSchemaRef => r.maybeResolved(doc).forall(_.`type`.isInstanceOf[OpenapiSchemaObject])
       case _                   => false
     })
     val (resolvableNonClassyOneOfSchemas, unresolvableNCOOS) = allOtherOneOfSchemas.partition { p =>
@@ -143,7 +143,7 @@ class ClassDefinitionGenerator {
     def allChildrenDefineDiscriminator(d: String, s: OpenapiSchemaOneOf): Boolean =
       s.types.forall {
         case t: OpenapiSchemaRef =>
-          t.maybeResolved(doc).exists {
+          t.maybeResolved(doc).map(_.`type`).exists {
             case o: OpenapiSchemaObject => o.properties.contains(d)
             case _                      => false
           }
@@ -432,15 +432,15 @@ class ClassDefinitionGenerator {
     def rec(className: String, schemaKey: String, obj: OpenapiSchemaObject, acc: List[String]): Seq[String] = {
       val innerClasses = obj.properties
         .collect {
-          case (propName, OpenapiSchemaField(st: OpenapiSchemaObject, _, _)) =>
+          case (propName, OpenapiAnnotatedSchema(st: OpenapiSchemaObject, _, _)) =>
             val newName = addName(className, propName)
             rec(newName, newName, st, Nil)
 
-          case (propName, OpenapiSchemaField(OpenapiSchemaMap(st: OpenapiSchemaObject, _, _), _, _)) =>
+          case (propName, OpenapiAnnotatedSchema(OpenapiSchemaMap(st: OpenapiSchemaObject, _, _), _, _)) =>
             val newName = addName(addName(className, propName), "item")
             rec(newName, newName, st, Nil)
 
-          case (propName, OpenapiSchemaField(OpenapiSchemaArray(st: OpenapiSchemaObject, _, _, _), _, _)) =>
+          case (propName, OpenapiAnnotatedSchema(OpenapiSchemaArray(st: OpenapiSchemaObject, _, _, _), _, _)) =>
             val newName = addName(addName(className, propName), "item")
             rec(newName, newName, st, Nil)
         }
@@ -472,7 +472,7 @@ class ClassDefinitionGenerator {
 
       val (properties, maybeEnums) = obj.properties.toSeq
         .filterNot(discriminatorDefFields.map(_._1) contains _._1)
-        .map { case (key, OpenapiSchemaField(schemaType, maybeDefault, _)) =>
+        .map { case (key, OpenapiAnnotatedSchema(schemaType, maybeDefault, _)) =>
           val (tpe, maybeEnum) =
             mapSchemaTypeToType(className, key, obj.required.contains(key), schemaType, isJson, jsonSerdeLib, targetScala3)
           val fixedKey = safeVariableName(key)

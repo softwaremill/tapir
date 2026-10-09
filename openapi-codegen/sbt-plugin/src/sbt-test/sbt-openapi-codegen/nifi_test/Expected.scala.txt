@@ -151,7 +151,7 @@ object TapirGeneratedEndpoints {
       .in(("connections" / path[String]("id").description("The connection id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -167,7 +167,7 @@ object TapirGeneratedEndpoints {
       .name("getControllerService")
       .get
       .in(("controller-services" / path[String]("id").description("The controller service id.")))
-      .in(query[Option[Boolean]]("uiOnly"))
+      .in(query[Option[Boolean]]("uiOnly").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -201,7 +201,7 @@ object TapirGeneratedEndpoints {
       .in(("controller-services" / path[String]("id").description("The controller service id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -557,7 +557,7 @@ object TapirGeneratedEndpoints {
       .in(("controller" / "flow-analysis-rules" / path[String]("id").description("The flow analysis rule id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -760,8 +760,8 @@ object TapirGeneratedEndpoints {
       .name("deleteNar")
       .delete
       .in(("controller" / "nar-manager" / "nars" / path[String]("id").description("The id of the NAR.")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged"))
-      .in(query[Option[Boolean]]("force"))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").default(Some(false)))
+      .in(query[Option[Boolean]]("force").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -883,7 +883,7 @@ object TapirGeneratedEndpoints {
       .in(("controller" / "registry-clients" / path[String]("id").description("The flow registry client id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -975,7 +975,7 @@ object TapirGeneratedEndpoints {
       .name("getCounters")
       .get
       .in(("counters"))
-      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false"))
+      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the status."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -1089,7 +1089,7 @@ object TapirGeneratedEndpoints {
       .delete
       .in(("data-transfer" / "output-ports" / path[String]("portId").description("The output port id.") / "transactions" / path[String]("transactionId").description("The transaction id.")))
       .in(query[Int]("responseCode").description("The response code. Available values are CONFIRM_TRANSACTION(12) or CANCEL_TRANSACTION(15)."))
-      .in(query[String]("checksum").description("A checksum calculated at client side using CRC32 to check flow file content integrity. It must match with the value calculated at server side."))
+      .in(query[String]("checksum").description("A checksum calculated at client side using CRC32 to check flow file content integrity. It must match with the value calculated at server side.").default(""))
       .in(streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[io.circe.JsonObject], CodecFormat.OctetStream()))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -1219,7 +1219,7 @@ object TapirGeneratedEndpoints {
       .name("searchCluster")
       .get
       .in(("flow" / "cluster" / "search-results"))
-      .in(query[String]("q").description("Node address to search for."))
+      .in(query[String]("q").description("Node address to search for.").default(""))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -1263,7 +1263,7 @@ object TapirGeneratedEndpoints {
       .name("getConnectionStatistics")
       .get
       .in(("flow" / "connections" / path[String]("id").description("The connection id.") / "statistics"))
-      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false"))
+      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the statistics."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -1280,7 +1280,7 @@ object TapirGeneratedEndpoints {
       .name("getConnectionStatus")
       .get
       .in(("flow" / "connections" / path[String]("id").description("The connection id.") / "status"))
-      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false"))
+      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the status."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -1376,8 +1376,8 @@ object TapirGeneratedEndpoints {
       .name("getControllerServicesFromController")
       .get
       .in(("flow" / "controller" / "controller-services"))
-      .in(query[Option[Boolean]]("uiOnly"))
-      .in(query[Option[Boolean]]("includeReferencingComponents").description("Whether or not to include services' referencing components in the response"))
+      .in(query[Option[Boolean]]("uiOnly").default(Some(false)))
+      .in(query[Option[Boolean]]("includeReferencingComponents").description("Whether or not to include services' referencing components in the response").default(Some(true)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(403), emptyOutput.description("Client is not authorized to make this request."))(()),
@@ -1514,7 +1514,7 @@ object TapirGeneratedEndpoints {
       .name("getInputPortStatus")
       .get
       .in(("flow" / "input-ports" / path[String]("id").description("The input port id.") / "status"))
-      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false"))
+      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the status."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -1562,7 +1562,7 @@ object TapirGeneratedEndpoints {
       .name("getOutputPortStatus")
       .get
       .in(("flow" / "output-ports" / path[String]("id").description("The output port id.") / "status"))
-      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false"))
+      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the status."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -1652,7 +1652,7 @@ object TapirGeneratedEndpoints {
       .name("getFlow")
       .get
       .in(("flow" / "process-groups" / path[String]("id").description("The process group id.")))
-      .in(query[Option[Boolean]]("uiOnly"))
+      .in(query[Option[Boolean]]("uiOnly").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -1699,10 +1699,10 @@ object TapirGeneratedEndpoints {
       .name("getControllerServicesFromGroup")
       .get
       .in(("flow" / "process-groups" / path[String]("id").description("The process group id.") / "controller-services"))
-      .in(query[Option[Boolean]]("includeAncestorGroups").description("Whether or not to include parent/ancestor process groups"))
-      .in(query[Option[Boolean]]("includeDescendantGroups").description("Whether or not to include descendant process groups"))
-      .in(query[Option[Boolean]]("includeReferencingComponents").description("Whether or not to include services' referencing components in the response"))
-      .in(query[Option[Boolean]]("uiOnly"))
+      .in(query[Option[Boolean]]("includeAncestorGroups").description("Whether or not to include parent/ancestor process groups").default(Some(true)))
+      .in(query[Option[Boolean]]("includeDescendantGroups").description("Whether or not to include descendant process groups").default(Some(false)))
+      .in(query[Option[Boolean]]("includeReferencingComponents").description("Whether or not to include services' referencing components in the response").default(Some(true)))
+      .in(query[Option[Boolean]]("uiOnly").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(403), emptyOutput.description("Client is not authorized to make this request."))(()),
@@ -1733,8 +1733,8 @@ object TapirGeneratedEndpoints {
       .name("getProcessGroupStatus")
       .get
       .in(("flow" / "process-groups" / path[String]("id").description("The process group id.") / "status"))
-      .in(query[Option[Boolean]]("recursive").description("Whether all descendant groups and the status of their content will be included. Optional, defaults to false"))
-      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false"))
+      .in(query[Option[Boolean]]("recursive").description("Whether all descendant groups and the status of their content will be included. Optional, defaults to false").default(Some(false)))
+      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the status."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -1797,7 +1797,7 @@ object TapirGeneratedEndpoints {
       .name("getProcessorStatus")
       .get
       .in(("flow" / "processors" / path[String]("id").description("The processor id.") / "status"))
-      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false"))
+      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the status."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -1875,8 +1875,8 @@ object TapirGeneratedEndpoints {
       .name("getVersionDifferences")
       .get
       .in(("flow" / "registries" / path[String]("registry-id").description("The registry client id.") / "branches" / path[String]("branch-id-a").description("The branch id for the base version.") / "buckets" / path[String]("bucket-id-a").description("The bucket id for the base version.") / "flows" / path[String]("flow-id-a").description("The flow id for the base version.") / path[String]("version-a").description("The base version.") / "diff" / "branches" / path[String]("branch-id-b").description("The branch id for the compared version.") / "buckets" / path[String]("bucket-id-b").description("The bucket id for the compared version.") / "flows" / path[String]("flow-id-b").description("The flow id for the compared version.") / path[String]("version-b").description("The compared version.")))
-      .in(query[Option[Int]]("offset").description("Must be a non-negative number. Specifies the starting point of the listing. 0 means start from the beginning."))
-      .in(query[Option[Int]]("limit").description("Limits the number of differences listed. This might lead to partial result. 0 means no limitation is applied."))
+      .in(query[Option[Int]]("offset").description("Must be a non-negative number. Specifies the starting point of the listing. 0 means start from the beginning.").default(Some(0)))
+      .in(query[Option[Int]]("limit").description("Limits the number of differences listed. This might lead to partial result. 0 means no limitation is applied.").default(Some(1000)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -1940,7 +1940,7 @@ object TapirGeneratedEndpoints {
       .name("getRemoteProcessGroupStatus")
       .get
       .in(("flow" / "remote-process-groups" / path[String]("id").description("The remote process group id.") / "status"))
-      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false"))
+      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the status."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -2059,8 +2059,8 @@ object TapirGeneratedEndpoints {
       .name("searchFlow")
       .get
       .in(("flow" / "search-results"))
-      .in(query[Option[String]]("q"))
-      .in(query[Option[String]]("a"))
+      .in(query[Option[String]]("q").default(Some("")))
+      .in(query[Option[String]]("a").default(Some("")))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(403), emptyOutput.description("Client is not authorized to make this request."))(()),
@@ -2249,7 +2249,7 @@ object TapirGeneratedEndpoints {
       .in(("funnels" / path[String]("id").description("The funnel id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2298,7 +2298,7 @@ object TapirGeneratedEndpoints {
       .in(("input-ports" / path[String]("id").description("The input port id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2363,7 +2363,7 @@ object TapirGeneratedEndpoints {
       .in(("labels" / path[String]("id").description("The label id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2412,7 +2412,7 @@ object TapirGeneratedEndpoints {
       .in(("output-ports" / path[String]("id").description("The output port id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2507,7 +2507,7 @@ object TapirGeneratedEndpoints {
       .name("deleteAsset")
       .delete
       .in(("parameter-contexts" / path[String]("contextId").description("The ID of the Parameter Context") / "assets" / path[String]("assetId").description("The ID of the Asset")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged"))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2554,7 +2554,7 @@ object TapirGeneratedEndpoints {
       .name("deleteUpdateRequest")
       .delete
       .in(("parameter-contexts" / path[String]("contextId").description("The ID of the ParameterContext") / "update-requests" / path[String]("requestId").description("The ID of the Update Request")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2601,7 +2601,7 @@ object TapirGeneratedEndpoints {
       .name("deleteValidationRequest")
       .delete
       .in(("parameter-contexts" / path[String]("contextId").description("The ID of the Parameter Context") / "validation-requests" / path[String]("id").description("The ID of the Update Request")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2617,7 +2617,7 @@ object TapirGeneratedEndpoints {
       .name("getParameterContext")
       .get
       .in(("parameter-contexts" / path[String]("id").description("The ID of the Parameter Context")))
-      .in(query[Option[Boolean]]("includeInheritedParameters").description("Whether or not to include inherited parameters from other parameter contexts, and therefore also overridden values.  If true, the result will be the 'effective' parameter context."))
+      .in(query[Option[Boolean]]("includeInheritedParameters").description("Whether or not to include inherited parameters from other parameter contexts, and therefore also overridden values.  If true, the result will be the 'effective' parameter context.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2651,7 +2651,7 @@ object TapirGeneratedEndpoints {
       .in(("parameter-contexts" / path[String]("id").description("The Parameter Context ID.")))
       .in(query[Option[LongParameterInt]]("version").description("The version is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, a new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2700,7 +2700,7 @@ object TapirGeneratedEndpoints {
       .in(("parameter-providers" / path[String]("id").description("The parameter provider id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2889,7 +2889,7 @@ object TapirGeneratedEndpoints {
       .name("deleteApplyParametersRequest")
       .delete
       .in(("parameter-providers" / path[String]("providerId").description("The ID of the Parameter Provider") / "apply-parameters-requests" / path[String]("requestId").description("The ID of the Apply Parameters Request")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -2969,7 +2969,7 @@ object TapirGeneratedEndpoints {
       .in(("policies" / path[String]("id").description("The access policy id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -3000,7 +3000,7 @@ object TapirGeneratedEndpoints {
       .name("deleteReplaceProcessGroupRequest")
       .delete
       .in(("process-groups" / "replace-requests" / path[String]("id").description("The ID of the Update Request")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -3049,7 +3049,7 @@ object TapirGeneratedEndpoints {
       .in(("process-groups" / path[String]("id").description("The process group id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -3127,7 +3127,7 @@ object TapirGeneratedEndpoints {
       .name("exportProcessGroup")
       .get
       .in(("process-groups" / path[String]("id").description("The process group id.") / "download"))
-      .in(query[Option[Boolean]]("includeReferencedServices").description("If referenced services from outside the target group should be included"))
+      .in(query[Option[Boolean]]("includeReferencedServices").description("If referenced services from outside the target group should be included").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -3373,7 +3373,7 @@ object TapirGeneratedEndpoints {
       .name("createProcessGroup")
       .post
       .in(("process-groups" / path[String]("id").description("The process group id.") / "process-groups"))
-      .in(query[Option[CreateProcessGroupParameterContextHandlingStrategy]]("parameterContextHandlingStrategy").description("Handling Strategy controls whether to keep or replace Parameter Contexts"))
+      .in(query[Option[CreateProcessGroupParameterContextHandlingStrategy]]("parameterContextHandlingStrategy").description("Handling Strategy controls whether to keep or replace Parameter Contexts").default(Some(CreateProcessGroupParameterContextHandlingStrategy.KEEP_EXISTING)))
       .in(jsonBody[ProcessGroupEntity].description("The process group configuration details."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
@@ -3430,7 +3430,7 @@ object TapirGeneratedEndpoints {
       .name("getProcessors")
       .get
       .in(("process-groups" / path[String]("id").description("The process group id.") / "processors"))
-      .in(query[Option[Boolean]]("includeDescendantGroups").description("Whether or not to include processors from descendant process groups"))
+      .in(query[Option[Boolean]]("includeDescendantGroups").description("Whether or not to include processors from descendant process groups").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -3576,7 +3576,7 @@ object TapirGeneratedEndpoints {
       .in(("processors" / path[String]("id").description("The processor id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -3782,7 +3782,7 @@ object TapirGeneratedEndpoints {
       .name("getLatestProvenanceEvents")
       .get
       .in(("provenance-events" / "latest" / path[String]("componentId").description("The ID of the component to retrieve the latest Provenance Events for.")))
-      .in(query[Option[Int]]("limit").description("The number of events to limit the response to. Defaults to 10."))
+      .in(query[Option[Int]]("limit").description("The number of events to limit the response to. Defaults to 10.").default(Some(10)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -3933,8 +3933,8 @@ object TapirGeneratedEndpoints {
       .get
       .in(("provenance" / path[String]("id").description("The id of the provenance query.")))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where this query exists if clustered."))
-      .in(query[Option[Boolean]]("summarize").description("Whether or not incremental results are returned. If false, provenance events are only returned once the query completes. This property is true by default."))
-      .in(query[Option[Boolean]]("incrementalResults").description("Whether or not to summarize provenance events returned. This property is false by default."))
+      .in(query[Option[Boolean]]("summarize").description("Whether or not incremental results are returned. If false, provenance events are only returned once the query completes. This property is true by default.").default(Some(false)))
+      .in(query[Option[Boolean]]("incrementalResults").description("Whether or not to summarize provenance events returned. This property is false by default.").default(Some(true)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4015,7 +4015,7 @@ object TapirGeneratedEndpoints {
       .in(("remote-process-groups" / path[String]("id").description("The remote process group id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4159,7 +4159,7 @@ object TapirGeneratedEndpoints {
       .in(("reporting-tasks" / path[String]("id").description("The reporting task id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4377,7 +4377,7 @@ object TapirGeneratedEndpoints {
       .name("deleteSnippet")
       .delete
       .in(("snippets" / path[String]("id").description("The snippet id.")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4393,8 +4393,8 @@ object TapirGeneratedEndpoints {
       .name("getSystemDiagnostics")
       .get
       .in(("system-diagnostics"))
-      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false"))
-      .in(query[Option[GetSystemDiagnosticsDiagnosticLevel]]("diagnosticLevel").description("Whether or not to include verbose details. Optional, defaults to false"))
+      .in(query[Option[Boolean]]("nodewise").description("Whether or not to include the breakdown per node. Optional, defaults to false").default(Some(false)))
+      .in(query[Option[GetSystemDiagnosticsDiagnosticLevel]]("diagnosticLevel").description("Whether or not to include verbose details. Optional, defaults to false").default(Some(GetSystemDiagnosticsDiagnosticLevel.BASIC)))
       .in(query[Option[String]]("clusterNodeId").description("The id of the node where to get the status."))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(()),
@@ -4433,7 +4433,7 @@ object TapirGeneratedEndpoints {
       .name("searchTenants")
       .get
       .in(("tenants" / "search-results"))
-      .in(query[String]("q").description("Identity to search for."))
+      .in(query[String]("q").description("Identity to search for.").default(""))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4513,7 +4513,7 @@ object TapirGeneratedEndpoints {
       .in(("tenants" / "user-groups" / path[String]("id").description("The user group id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4593,7 +4593,7 @@ object TapirGeneratedEndpoints {
       .in(("tenants" / "users" / path[String]("id").description("The user id.")))
       .in(query[Option[LongParameterInt]]("version").description("The revision is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4641,7 +4641,7 @@ object TapirGeneratedEndpoints {
       .name("deleteVersionControlRequest")
       .delete
       .in(("versions" / "active-requests" / path[String]("id").description("The request ID.")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4705,7 +4705,7 @@ object TapirGeneratedEndpoints {
       .in(("versions" / "process-groups" / path[String]("id").description("The process group id.")))
       .in(query[Option[LongParameterInt]]("version").description("The version is used to verify the client is working with the latest version of the flow."))
       .in(query[Option[ClientIdParameterStr]]("clientId").description("If the client id is not specified, a new one will be generated. This value (whether specified or generated) is included in the response."))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4767,7 +4767,7 @@ object TapirGeneratedEndpoints {
       .name("deleteRevertRequest")
       .delete
       .in(("versions" / "revert-requests" / path[String]("id").description("The ID of the Revert Request")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),
@@ -4814,7 +4814,7 @@ object TapirGeneratedEndpoints {
       .name("deleteUpdateRequest_1")
       .delete
       .in(("versions" / "update-requests" / path[String]("id").description("The ID of the Update Request")))
-      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed."))
+      .in(query[Option[Boolean]]("disconnectedNodeAcknowledged").description("Acknowledges that this node is disconnected to allow for mutable requests to proceed.").default(Some(false)))
       .errorOut(oneOf[Unit](
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(400), emptyOutput.description("NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(404), emptyOutput.description("The specified resource could not be found."))(()),

@@ -239,7 +239,7 @@ private[tapir] object SchemaCompanionMacros {
 
       val discriminatorName = _root_.sttp.tapir.FieldName(${ Expr(functionName) }, $conf.toEncodedName(${ Expr(functionName) }))
       val discriminatorMapping = mappingAsMap.collect { case (k, sf @ Schema(_, Some(fname), _, _, _, _, _, _, _, _, _)) =>
-        $asString.apply(k) -> SRef(fname)
+        ($asString.apply(k), SRef(fname))
       }
 
       val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
@@ -276,7 +276,7 @@ private[tapir] object SchemaCompanionMacros {
           TypeIdent(child).tpe.asType match {
             case '[f] => {
               Expr.summon[Schema[f]] match {
-                case Some(subSchema) => '{ ${ Expr(child.name) } -> Schema.wrapWithSingleFieldProduct(${ subSchema })(using $conf) }
+                case Some(subSchema) => '{ (${ Expr(child.name) }, Schema.wrapWithSingleFieldProduct(${ subSchema })(using $conf)) }
                 case None            => {
                   val typeName = TypeRepr.of[f].typeSymbol.name
                   report.errorAndAbort(s"Cannot summon schema for `${typeName}`. Make sure schema derivation is properly configured.")
@@ -284,7 +284,7 @@ private[tapir] object SchemaCompanionMacros {
               }
             }
           }
-        else '{ ${ Expr(child.name) } -> Schema(SchemaType.SProduct[E](Nil), name = Some(Schema.SName(${ Expr(child.name) }))) }
+        else '{ (${ Expr(child.name) }, Schema(SchemaType.SProduct[E](Nil), name = Some(Schema.SName(${ Expr(child.name) })))) }
       )
 
       def subtypeSchema(e: Expr[E], map: Expr[Map[String, Schema[?]]]) = {

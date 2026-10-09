@@ -35,15 +35,19 @@ import scala.collection.mutable
   * `Try(...).isFailure`, so they cannot pass because of an unrelated failure.
   */
 class InjectionSecuritySpec extends CompileCheckTestBase {
-  private def noDefault(f: OpenapiSchemaType): OpenapiSchemaField = OpenapiSchemaField(f, None)
+  private def noDefault(f: OpenapiSchemaType): OpenapiAnnotatedSchema = OpenapiAnnotatedSchema(f, None)
 
-  private def docWithObject(schemaName: String, props: (String, OpenapiSchemaField)*): OpenapiDocument =
+  private def docWithObject(schemaName: String, props: (String, OpenapiAnnotatedSchema)*): OpenapiDocument =
     OpenapiDocument(
       "",
       Nil,
       null,
       Nil,
-      Some(OpenapiComponent(Map(schemaName -> OpenapiSchemaObject(mutable.LinkedHashMap(props*), props.map(_._1), false)))),
+      Some(
+        OpenapiComponent(
+          Map(schemaName -> OpenapiAnnotatedSchema(OpenapiSchemaObject(mutable.LinkedHashMap(props*), props.map(_._1), false), None))
+        )
+      ),
       Nil
     )
 
@@ -85,11 +89,14 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
       Some(
         OpenapiComponent(
           Map(
-            "Color" -> OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("red")), false),
-            "Foo" -> OpenapiSchemaObject(
-              mutable.LinkedHashMap(evil -> noDefault(OpenapiSchemaRef("#/components/schemas/Color"))),
-              Seq(evil),
-              false
+            "Color" -> OpenapiAnnotatedSchema(OpenapiSchemaEnum("string", Seq(OpenapiSchemaConstantString("red")), false), None),
+            "Foo" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(
+                mutable.LinkedHashMap(evil -> noDefault(OpenapiSchemaRef("#/components/schemas/Color"))),
+                Seq(evil),
+                false
+              ),
+              None
             )
           )
         )
@@ -113,7 +120,9 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
   it should "reject a parameter with an unsupported 'in' location" in {
     val evilIn = """query[String]("x")) ; sys.exit(0) ; endpoint.in(query[String]("y"""
     val ex = intercept[Throwable](
-      endpointDecls(endpointWithParam(OpenapiParameter("q", evilIn, Some(false), None, OpenapiSchemaString(false))))
+      endpointDecls(
+        endpointWithParam(OpenapiParameter("q", evilIn, Some(false), None, OpenapiAnnotatedSchema(OpenapiSchemaString(false), None)))
+      )
     )
     ex.getMessage should include("GHSA-gpcc")
   }
@@ -184,7 +193,9 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     // it validates the target. Assert via the FULL generator (endpointDecls) so the guard is exercised at the sink,
     // not just at ingestion — this covers routes the NameValidation walk does not enumerate (e.g. path-shared params).
     val evil = """Int]("z") ; System.exit(0) ; val x = query[Int"""
-    def paramWithRef = Resolved(OpenapiParameter("q", "query", Some(false), None, OpenapiSchemaRef("#/components/schemas/" + evil)))
+    def paramWithRef = Resolved(
+      OpenapiParameter("q", "query", Some(false), None, OpenapiAnnotatedSchema(OpenapiSchemaRef("#/components/schemas/" + evil), None))
+    )
     val comps = Some(OpenapiComponent(Map.empty))
     // method-level parameter
     intercept[Throwable](
@@ -201,7 +212,9 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
 
   it should "escape a query parameter name so it survives as data and cannot break out of the string literal" in {
     val evil = """q") ; sys.error("PWNED") ; val _z = query[String]("z"""
-    val out = endpointDecls(endpointWithParam(OpenapiParameter(evil, "query", Some(false), None, OpenapiSchemaString(false))))
+    val out = endpointDecls(
+      endpointWithParam(OpenapiParameter(evil, "query", Some(false), None, OpenapiAnnotatedSchema(OpenapiSchemaString(false), None)))
+    )
     out should include("""q\") ; sys.error(\"PWNED\")""") // escaped form present
     out should not include """"q") ; sys.error("PWNED")""" // but not as live code
     out.shouldCompile()
@@ -252,7 +265,7 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
   }
 
   it should "escape a string default value so it cannot inject at model construction" in {
-    val evilDefault = OpenapiSchemaField(OpenapiSchemaString(false), Some(Json.fromString("""d"; sys.error("PWNED"); "x""")))
+    val evilDefault = OpenapiAnnotatedSchema(OpenapiSchemaString(false), Some(Json.fromString("""d"; sys.error("PWNED"); "x""")))
     val out = classRepr(docWithObject("Ok", "field" -> evilDefault))
     out should not include """sys.error("PWNED")"""
     out.shouldCompile()
@@ -329,7 +342,12 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
       Nil,
       Some(
         OpenapiComponent(
-          Map("Ok" -> OpenapiSchemaObject(mutable.LinkedHashMap("f" -> noDefault(OpenapiSchemaString(false))), Seq("f"), false)),
+          Map(
+            "Ok" -> OpenapiAnnotatedSchema(
+              OpenapiSchemaObject(mutable.LinkedHashMap("f" -> noDefault(OpenapiSchemaString(false))), Seq("f"), false),
+              None
+            )
+          ),
           Map(evil -> OpenapiSecuritySchemeApiKeyType("header", "X-A"))
         )
       ),

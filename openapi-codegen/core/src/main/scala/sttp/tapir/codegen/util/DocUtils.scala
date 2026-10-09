@@ -5,7 +5,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaAllOf,
   OpenapiSchemaAnyOf,
   OpenapiSchemaArray,
-  OpenapiSchemaField,
+  OpenapiAnnotatedSchema,
   OpenapiSchemaMap,
   OpenapiSchemaNot,
   OpenapiSchemaObject,
@@ -41,7 +41,7 @@ object DocUtils {
       case OpenapiSchemaObject(properties, _, _, _) if properties.isEmpty => None
       case OpenapiSchemaObject(properties, required, nullable, _)         =>
         val propToCheck = properties.head
-        val (propToCheckName, OpenapiSchemaField(propToCheckType, _, _)) = propToCheck
+        val (propToCheckName, OpenapiAnnotatedSchema(propToCheckType, _, _)) = propToCheck
         val objectWithoutHeadField = OpenapiSchemaObject(properties - propToCheckName, required, nullable)
         Some((propToCheckType, checked, objectWithoutHeadField +: tail))
       case _ => None
