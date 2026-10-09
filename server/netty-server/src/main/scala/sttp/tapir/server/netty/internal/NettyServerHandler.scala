@@ -21,7 +21,7 @@ import sttp.tapir.server.netty.NettyResponseContent.{
   ReactivePublisherNettyResponseContent,
   ReactiveWebSocketProcessorNettyResponseContent
 }
-import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, SubscribeTrackingStreamedHttpRequest}
+import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, TapirStreamedHttpRequest}
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
@@ -229,7 +229,7 @@ class NettyServerHandler[F[_]](
               // If a response was created, we should check the subscription status only after the response body is
               // fully produced, as creating the response might at some point use the request body.
               req match {
-                case r: SubscribeTrackingStreamedHttpRequest =>
+                case r: TapirStreamedHttpRequest =>
                   responseCompletedPromise match {
                     case Some(p) =>
                       val _ = p.addListener({ (_: ChannelFuture) =>
@@ -256,8 +256,8 @@ class NettyServerHandler[F[_]](
           val req = full.retain()
           runRoute(req, () => req.release())
         case req: StreamedHttpRequest =>
-          // tracking the request body subscription status to discard of it safely, if it's never used
-          runRoute(new SubscribeTrackingStreamedHttpRequest(req))
+          // tracking the request body subscription status to discard of it safely, if it's never used; validating the body's length
+          runRoute(new TapirStreamedHttpRequest(req))
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
       }
 
