@@ -7,6 +7,8 @@ import sttp.tapir.server.model.IncompleteRequestBodyException
 /** Fails the stream with an [[IncompleteRequestBodyException]] if it completes before `contentLength` bytes are received. When the
   * connection is closed mid-body, Netty completes the body publisher normally, so without this check a truncated body would be
   * indistinguishable from a complete one (#4169).
+  *
+  * Truncated chunked requests (without a `Content-Length`) are not detected.
   */
 private[netty] class ContentLengthCheckingSubscriber(contentLength: Long, delegate: Subscriber[? >: HttpContent])
     extends Subscriber[HttpContent] {

@@ -47,7 +47,7 @@ class NettyFs2StreamingInterruptedTest[OPTIONS, ROUTE](createServerTest: CreateS
           .getBytes(StandardCharsets.UTF_8)
 
       Resource
-        .fromAutoCloseable(IO.blocking(createSocket(port)))
+        .fromAutoCloseable(IO.blocking(new Socket("localhost", port)))
         .use { socket =>
           send(socket, requestHead) >> awaitUntil(logicStarted.get()) >>
             send(socket, "abcd".getBytes(StandardCharsets.UTF_8)) >> IO.blocking(socket.shutdownOutput()) >>
@@ -66,9 +66,4 @@ class NettyFs2StreamingInterruptedTest[OPTIONS, ROUTE](createServerTest: CreateS
       socket.getOutputStream.flush()
     }
 
-  def createSocket(port: Int): Socket = {
-    val socket = new Socket("localhost", port)
-    socket.setSoTimeout(5000)
-    socket
-  }
 }
