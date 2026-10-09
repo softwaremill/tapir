@@ -1,6 +1,6 @@
 package sttp.tapir.server.netty.cats
 
-import cats.effect.{IO, Resource}
+import cats.effect.{Deferred, IO, Resource}
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
@@ -12,7 +12,6 @@ import sttp.tapir.tests.Test
 
 import java.net.Socket
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
 import scala.concurrent.duration._
 
 class NettyFs2StreamingInterruptedTest[OPTIONS, ROUTE](createServerTest: CreateServerTest[IO, Fs2Streams[IO], OPTIONS, ROUTE]) {
@@ -21,8 +20,8 @@ class NettyFs2StreamingInterruptedTest[OPTIONS, ROUTE](createServerTest: CreateS
   implicit val m: MonadError[IO] = new CatsMonadError[IO]()
 
   def tests(): List[Test] = List({
-    val logicStarted = new AtomicBoolean(false)
-    val readResults = new AtomicReference(Vector.empty[Either[Throwable, String]])
+    val logicStarted = Deferred.unsafe[IO, Unit]
+    val readResult = Deferred.unsafe[IO, Either[Throwable, String]]
 
     testServerLogic(
       endpoint.put
@@ -30,13 +29,13 @@ class NettyFs2StreamingInterruptedTest[OPTIONS, ROUTE](createServerTest: CreateS
         .in(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
         .serverLogicSuccess[IO] { body =>
           IO.uncancelable { _ =>
-            IO(logicStarted.set(true)) >>
+            logicStarted.complete(()) >>
               body
                 .through(fs2.text.utf8.decode)
                 .compile
                 .string
                 .attempt
-                .flatMap(result => IO(readResults.getAndUpdate(_ :+ result)).void)
+                .flatMap(readResult.complete(_).void)
           }
         },
       "closing the connection mid-body fails the request body stream"
@@ -49,16 +48,13 @@ class NettyFs2StreamingInterruptedTest[OPTIONS, ROUTE](createServerTest: CreateS
       Resource
         .fromAutoCloseable(IO.blocking(new Socket("localhost", port)))
         .use { socket =>
-          send(socket, requestHead) >> awaitUntil(logicStarted.get()) >>
+          send(socket, requestHead) >> logicStarted.get.timeout(5.seconds) >>
             send(socket, "abcd".getBytes(StandardCharsets.UTF_8)) >> IO.blocking(socket.shutdownOutput()) >>
-            awaitUntil(readResults.get().nonEmpty)
+            readResult.get.timeout(5.seconds)
         }
-        .map(_ => readResults.get() shouldBe Vector(Left(IncompleteRequestBodyException(4, 10000))))
+        .map(_ shouldBe Left(IncompleteRequestBodyException(4, 10000)))
     }
   })
-
-  private def awaitUntil(condition: => Boolean): IO[Unit] =
-    (IO.sleep(10.millis) >> IO(condition)).iterateUntil(identity).timeout(5.seconds).void
 
   private def send(socket: Socket, bytes: Array[Byte]): IO[Unit] =
     IO.blocking {

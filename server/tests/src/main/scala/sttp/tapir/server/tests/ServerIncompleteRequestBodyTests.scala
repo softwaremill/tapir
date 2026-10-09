@@ -62,13 +62,14 @@ class ServerIncompleteRequestBodyTests[F[_], OPTIONS, ROUTE](createServerTest: C
         .use { socket =>
           send(socket, requestHead) >> send(socket, sentBytes) >> IO.blocking(socket.shutdownOutput())
         } >>
-        // servers which cancel request processing when the connection closes might never reach decoding or the logic
         (IO.sleep(10.millis) >> IO(decodeFailure.get().isDefined || logicCalled.get()))
           .iterateUntil(identity)
           .timeoutTo(2.seconds, IO.unit) >>
         IO {
           logicCalled.get() shouldBe false
           decodeFailure.get() should matchPattern {
+            // some servers (e.g. Netty with an effect which supports cancellation) cancel request processing when the connection closes,
+            // so decoding might never complete
             case None                                                                                                                    =>
             case Some(DecodeResult.Error(_, IncompleteRequestBodyException(received, `declaredLength`))) if received == sentBytes.length =>
           }

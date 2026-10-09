@@ -10,7 +10,9 @@ import java.util.{Collections, IdentityHashMap}
   * elements on errors.
   */
 private[sync] class UnconsumedContentTracker(underlying: Publisher[HttpContent]) extends Publisher[HttpContent]:
-  // guarded by `unconsumed`
+  // Guarded by `unconsumed`: `onNext` runs on the Netty event loop, `consumed` and `releaseUnconsumed` on the consumer's thread. The
+  // lock is held for single set operations only. Once https://github.com/softwaremill/ox/issues/528 is done, this class can be replaced
+  // by a callback passed to `Flow.fromPublisher`, which releases the elements that ox buffers but doesn't emit, without a lock.
   private val unconsumed = Collections.newSetFromMap(new IdentityHashMap[HttpContent, java.lang.Boolean]())
   private var closed = false
 
