@@ -32,12 +32,12 @@ trait PlayServerInterpreter {
     Accumulator.source[ByteString].map(Right.apply)
   }
 
-  def toRoutes(e: ServerEndpoint[PekkoStreams with WebSockets, Future]): Routes = {
+  def toRoutes(e: ServerEndpoint[PekkoStreams & WebSockets, Future]): Routes = {
     toRoutes(List(e))
   }
 
   def toRoutes(
-      serverEndpoints: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]
+      serverEndpoints: List[ServerEndpoint[PekkoStreams & WebSockets, Future]]
   ): Routes = {
     implicit val monad: FutureMonad = new FutureMonad()
 

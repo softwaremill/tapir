@@ -12,7 +12,7 @@ import sttp.tapir.server.model.ServerResponse
 
 import java.time.{Duration, Instant}
 
-case class Otel4sMetrics[F[_]](metrics: List[Metric[F, _]]) {
+case class Otel4sMetrics[F[_]](metrics: List[Metric[F, ?]]) {
 
   import Otel4sMetrics._
 
@@ -29,7 +29,7 @@ case class Otel4sMetrics[F[_]](metrics: List[Metric[F, _]]) {
     copy(metrics = metrics :+ requestDuration(meter, labels))
 
   /** Registers a custom metric. */
-  def addCustom(m: Metric[F, _]): Otel4sMetrics[F] = copy(metrics = metrics :+ m)
+  def addCustom(m: Metric[F, ?]): Otel4sMetrics[F] = copy(metrics = metrics :+ m)
 
   /** The interceptor which can be added to a server's options, to enable metrics collection. */
   def metricsInterceptor(ignoreEndpoints: Seq[AnyEndpoint] = Seq.empty): MetricsRequestInterceptor[F] =
@@ -37,7 +37,7 @@ case class Otel4sMetrics[F[_]](metrics: List[Metric[F, _]]) {
 }
 
 object Otel4sMetrics {
-  private type MetricLabels = MetricLabelsTyped[Attribute[_]]
+  private type MetricLabels = MetricLabelsTyped[Attribute[?]]
 
   private val DurationBucketBoundaries = BucketBoundaries(
     0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10
@@ -51,7 +51,7 @@ object Otel4sMetrics {
     */
   def default[F[_]](meter: Meter[F], labels: MetricLabels = DefaultMetricLabels): Otel4sMetrics[F] =
     Otel4sMetrics(
-      List[Metric[F, _]](
+      List[Metric[F, ?]](
         requestActive(meter, labels),
         requestTotal(meter, labels),
         requestDuration(meter, labels)
@@ -66,7 +66,7 @@ object Otel4sMetrics {
     *   - `http.route` - the request path or route template.
     *   - `http.response.status_code` - HTTP response status code (200, 404, etc.).
     */
-  private val DefaultMetricLabels: MetricLabels = MetricLabelsTyped[Attribute[_]](
+  private val DefaultMetricLabels: MetricLabels = MetricLabelsTyped[Attribute[?]](
     forRequest = List(
       { req => HttpAttributes.HttpRequestMethod(req.method.method) },
       { req => UrlAttributes.UrlScheme(req.uri.scheme.getOrElse("unknown")) }
@@ -178,7 +178,7 @@ object Otel4sMetrics {
       .addAll(l.forRequest.map(label => label(req)))
       .result()
 
-  private[otel4s] def responseAttrs(l: MetricLabels, res: Either[Throwable, ServerResponse[_]]): Attributes =
+  private[otel4s] def responseAttrs(l: MetricLabels, res: Either[Throwable, ServerResponse[?]]): Attributes =
     Attributes.newBuilder
       .addAll(l.forResponse.flatMap(label => label(res)))
       .result()

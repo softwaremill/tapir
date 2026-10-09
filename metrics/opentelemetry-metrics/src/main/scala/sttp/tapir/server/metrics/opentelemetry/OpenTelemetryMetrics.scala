@@ -12,7 +12,7 @@ import sttp.tapir.server.model.ServerResponse
 
 import OpenTelemetryMetrics._
 
-case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]]) {
+case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, ?]]) {
 
   /** Registers a `http.server.active_requests` up-down-counter (assuming default labels). */
   def addRequestsActive(labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
@@ -29,7 +29,7 @@ case class OpenTelemetryMetrics[F[_]](meter: Meter, metrics: List[Metric[F, _]])
     copy(metrics = metrics :+ requestDuration(meter, labels))
 
   /** Registers a custom metric. */
-  def addCustom(m: Metric[F, _]): OpenTelemetryMetrics[F] = copy(metrics = metrics :+ m)
+  def addCustom(m: Metric[F, ?]): OpenTelemetryMetrics[F] = copy(metrics = metrics :+ m)
 
   /** The interceptor which can be added to a server's options, to enable metrics collection. */
   def metricsInterceptor(ignoreEndpoints: Seq[AnyEndpoint] = Seq.empty): MetricsRequestInterceptor[F] =
@@ -75,7 +75,7 @@ object OpenTelemetryMetrics {
 
   def apply[F[_]](meter: Meter): OpenTelemetryMetrics[F] = apply(meter, Nil)
   def apply[F[_]](otel: OpenTelemetry): OpenTelemetryMetrics[F] = apply(defaultMeter(otel), Nil)
-  def apply[F[_]](otel: OpenTelemetry, metrics: List[Metric[F, _]]): OpenTelemetryMetrics[F] = apply(defaultMeter(otel), metrics)
+  def apply[F[_]](otel: OpenTelemetry, metrics: List[Metric[F, ?]]): OpenTelemetryMetrics[F] = apply(defaultMeter(otel), metrics)
 
   /** Using the default labels, registers the following metrics:
     *
@@ -101,7 +101,7 @@ object OpenTelemetryMetrics {
   def default[F[_]](meter: Meter, labels: MetricLabels = OpenTelemetryAttributes): OpenTelemetryMetrics[F] =
     OpenTelemetryMetrics(
       meter,
-      List[Metric[F, _]](
+      List[Metric[F, ?]](
         requestActive(meter, labels),
         requestTotal(meter, labels),
         requestDuration(meter, labels)
@@ -218,7 +218,7 @@ object OpenTelemetryMetrics {
     l.forEndpoint.foldLeft(builder)((b, label) => { b.put(label._1, label._2(ep)) }).build()
   }
 
-  private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[_]]): Attributes = {
+  private def asOpenTelemetryAttributes(l: MetricLabels, res: Either[Throwable, ServerResponse[?]]): Attributes = {
     val builder = Attributes.builder()
     l.forResponse.foreach { case (key, valueFn) =>
       valueFn(res).foreach(value => builder.put(key, value))

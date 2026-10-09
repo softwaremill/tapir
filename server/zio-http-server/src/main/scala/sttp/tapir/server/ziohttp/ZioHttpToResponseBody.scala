@@ -10,7 +10,6 @@ import zio.http.FormField
 import zio.http.MediaType
 import zio.stream.ZStream
 
-import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
@@ -34,7 +33,7 @@ class ZioHttpToResponseBody(inputStreamChunkSize: Int) extends ToResponseBody[Zi
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, ZioStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, ZioStreams]
   ): ZioResponseBody =
     Left(ZioWebSockets.pipeToBody(pipe, o))
 

@@ -52,7 +52,7 @@ private[tapir] object SchemaMacros {
           val newAcc = acc match {
 
             /** replace the term controlled by quicklens */
-            case PathElement.TermPathElement(term, xargs @ _*) :: rest => PathElement.FunctorPathElement(f, term, xargs: _*) :: rest
+            case PathElement.TermPathElement(term, xargs @ _*) :: rest => PathElement.FunctorPathElement(f, term, xargs*) :: rest
             case elements => report.errorAndAbort(s"Invalid use of path elements [${elements.mkString(", ")}]. $ShapeInfo, got: ${tree}")
           }
 
@@ -84,7 +84,7 @@ private[tapir] object SchemaMacros {
         })
       }
 
-      $base.modifyUnsafe(pathValue: _*)($modification)
+      $base.modifyUnsafe(pathValue*)($modification)
     }
   }
 }
@@ -122,7 +122,7 @@ private[tapir] trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
     *   The schema that is used when adding the discriminator as a field to child schemas (if it's not yet in the schema).
     */
   inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(
-      mapping: (V, Schema[_])*
+      mapping: (V, Schema[?])*
   )(implicit conf: Configuration, discriminatorSchema: Schema[V]): Schema[E] = ${
     SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf, 'discriminatorSchema)
   }
@@ -209,7 +209,7 @@ private[tapir] object SchemaCompanionMacros {
   }
 
   def generateOneOfUsingField[E: Type, V: Type](extractor: Expr[E => V], asString: Expr[V => String])(
-      mapping: Expr[Seq[(V, Schema[_])]]
+      mapping: Expr[Seq[(V, Schema[?])]]
   )(conf: Expr[Configuration], discriminatorSchema: Expr[Schema[V]])(using q: Quotes): Expr[Schema[E]] = {
     import q.reflect.*
 
@@ -265,18 +265,18 @@ private[tapir] object SchemaCompanionMacros {
     val symbol = tpe.typeSymbol
     val typeParams = SNameMacros.extractTypeArguments(tpe)
 
-    if (!symbol.isClassDef || !(symbol.flags is Flags.Sealed)) {
+    if (!symbol.isClassDef || !symbol.flags.is(Flags.Sealed)) {
       report.errorAndAbort("Can only generate a coproduct schema for an enum, sealed trait or class.")
     } else {
       val children = symbol.children.toList.sortBy(_.name)
 
-      val childSchemas: List[Expr[(String, Schema[_])]] = children.map(child =>
+      val childSchemas: List[Expr[(String, Schema[?])]] = children.map(child =>
         if child.isClassDef
         then // this can be a type (enum case with params / case class with params), or a parameterless enum case / case object
           TypeIdent(child).tpe.asType match {
             case '[f] => {
               Expr.summon[Schema[f]] match {
-                case Some(subSchema) => '{ (${ Expr(child.name) }, Schema.wrapWithSingleFieldProduct(${ subSchema })($conf)) }
+                case Some(subSchema) => '{ (${ Expr(child.name) }, Schema.wrapWithSingleFieldProduct(${ subSchema })(using $conf)) }
                 case None            => {
                   val typeName = TypeRepr.of[f].typeSymbol.name
                   report.errorAndAbort(s"Cannot summon schema for `${typeName}`. Make sure schema derivation is properly configured.")
@@ -287,7 +287,7 @@ private[tapir] object SchemaCompanionMacros {
         else '{ (${ Expr(child.name) }, Schema(SchemaType.SProduct[E](Nil), name = Some(Schema.SName(${ Expr(child.name) })))) }
       )
 
-      def subtypeSchema(e: Expr[E], map: Expr[Map[String, Schema[_]]]) = {
+      def subtypeSchema(e: Expr[E], map: Expr[Map[String, Schema[?]]]) = {
         val eIdent = e.asTerm match {
           case Inlined(_, _, ei: Ident) => ei
           case ei: Ident                => ei
@@ -302,7 +302,7 @@ private[tapir] object SchemaCompanionMacros {
           }
         )
 
-        t.asExprOf[Option[SchemaWithValue[_]]]
+        t.asExprOf[Option[SchemaWithValue[?]]]
       }
 
       '{
@@ -312,8 +312,8 @@ private[tapir] object SchemaCompanionMacros {
         import _root_.sttp.tapir.SchemaType._
         import _root_.scala.collection.immutable.{List, Map}
 
-        val subclassNameToSchema: List[(String, Schema[_])] = List(${ Varargs(childSchemas) }: _*)
-        val subclassNameToSchemaMap: Map[String, Schema[_]] = subclassNameToSchema.toMap
+        val subclassNameToSchema: List[(String, Schema[?])] = List(${ Varargs(childSchemas) }*)
+        val subclassNameToSchemaMap: Map[String, Schema[?]] = subclassNameToSchema.toMap
 
         val sname = SName(SNameMacros.typeFullName[E], ${ Expr(typeParams) })
         Schema(
@@ -372,7 +372,7 @@ private[tapir] object SchemaCompanionMacros {
     val orTypes = findOrTypes(tpe)
 
     // then, looking up schemas for each of the components
-    val schemas: List[Expr[Schema[_]]] = orTypes.map { orType =>
+    val schemas: List[Expr[Schema[?]]] = orTypes.map { orType =>
       orType.asType match {
         case '[f] =>
           Expr.summon[Schema[f]] match {
@@ -444,7 +444,7 @@ private[tapir] object SchemaCompanionMacros {
         else baseCases
       val t = Match(eIdent, cases)
 
-      t.asExprOf[Option[SchemaWithValue[_]]]
+      t.asExprOf[Option[SchemaWithValue[?]]]
     }
 
     // finally, generating code which creates the SCoproduct
@@ -454,7 +454,7 @@ private[tapir] object SchemaCompanionMacros {
       import _root_.sttp.tapir.SchemaType._
       import _root_.scala.collection.immutable.List
 
-      val childSchemas = List(${ Varargs(schemas) }: _*)
+      val childSchemas = List(${ Varargs(schemas) }*)
       val sname = $snameExpr
 
       Schema(

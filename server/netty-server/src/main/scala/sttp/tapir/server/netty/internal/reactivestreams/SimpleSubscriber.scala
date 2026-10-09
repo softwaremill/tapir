@@ -12,7 +12,7 @@ import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends PromisingSubscriber[Array[Byte], HttpContent] {
   // These don't need to be volatile as Reactive Streams guarantees that onSubscribe/onNext/onError/onComplete are
   // called serially (https://github.com/reactive-streams/reactive-streams-jvm?tab=readme-ov-file#1-publisher-code - rule 3)
-  private var subscription: Subscription = _
+  private var subscription: Subscription = null
   private var buffers = Vector[ByteBuf]()
   private var totalLength = 0
 

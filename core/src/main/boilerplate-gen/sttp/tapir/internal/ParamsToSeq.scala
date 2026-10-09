@@ -2,7 +2,7 @@
 package sttp.tapir.internal
 
 private[tapir] object ParamsToSeq {
-  def apply[T](a: Any): Seq[_] = {
+  def apply[T](a: Any): Seq[?] = {
     a match {
       case (v1, v2)                                                      => Seq(v1, v2)
       case (v1, v2, v3)                                                  => Seq(v1, v2, v3)

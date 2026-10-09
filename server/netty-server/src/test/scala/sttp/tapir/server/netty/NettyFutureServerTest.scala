@@ -35,7 +35,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
 
           (tests, eventLoopGroup)
         }) { case (_, eventLoopGroup) =>
-          IO.fromFuture(IO.delay(nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[_])).void
+          IO.fromFuture(IO.delay(nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[?])).void
         }
         .map { case (tests, _) => tests }
     }
@@ -50,7 +50,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
       val ep = endpoint.post.in(query[Int]("x")).in(stringBody).out(stringBody)
       val sep = ep.serverLogic[Future] { case (a, b) => Future.successful(Right(s"$a $b")) }
 
-      val bind = IO.fromFuture(IO.delay(NettyFutureServer()(ec).addEndpoints(List(sep)).start()))
+      val bind = IO.fromFuture(IO.delay(NettyFutureServer()(using ec).addEndpoints(List(sep)).start()))
       Resource
         .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
         .map(_.port)

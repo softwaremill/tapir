@@ -55,7 +55,7 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
     else if upickleMacros.isMemberOfSealedHierarchy[T] then annotate[T](reader, config.discriminator, upickleMacros.tagName[T])
     else reader
 
-  inline def macroSumR[T](childPicklers: List[Pickler[_]], subtypeDiscriminator: SubtypeDiscriminator[T]): Reader[T] =
+  inline def macroSumR[T](childPicklers: List[Pickler[?]], subtypeDiscriminator: SubtypeDiscriminator[T]): Reader[T] =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
     subtypeDiscriminator match {
       case discriminator: CustomSubtypeDiscriminator[T] =>
@@ -66,14 +66,14 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
         val readersFromMapping = discriminator.mapping
           .map { case (k, v) => (k, v.innerUpickle.reader) }
           .map {
-            case (k, leaf) if leaf.isInstanceOf[LeafWrapper[_]] =>
+            case (k, leaf) if leaf.isInstanceOf[LeafWrapper[?]] =>
               TaggedReader
-                .Leaf[T](discriminator.fieldName, discriminator.asString(k), leaf.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
+                .Leaf[T](discriminator.fieldName, discriminator.asString(k), leaf.asInstanceOf[LeafWrapper[?]].r.asInstanceOf[Reader[T]])
             case (_, otherKindOfReader) =>
               otherKindOfReader
           }
 
-        new TaggedReader.Node[T](discriminator.fieldName, readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]: _*)
+        new TaggedReader.Node[T](discriminator.fieldName, readersFromMapping.asInstanceOf[Seq[TaggedReader[T]]]*)
 
       case discriminator: DefaultSubtypeDiscriminator[T] =>
         val readers = childPicklers.map(cp => {
@@ -88,6 +88,6 @@ private[pickler] trait Readers extends ReadersVersionSpecific with UpickleHelper
               cp.innerUpickle.reader.asInstanceOf[Reader[T]]
           }
         })
-        Reader.merge(subtypeDiscriminator.fieldName, readers: _*)
+        Reader.merge(subtypeDiscriminator.fieldName, readers*)
     }
 }

@@ -4,9 +4,9 @@ import sttp.tapir.Schema.{EncodedDiscriminatorValue, Title}
 import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 
 private[docs] object ToKeyedSchemas {
-  def apply[T](codec: Codec[_, T, _]): List[KeyedSchema] = apply(codec.schema)
+  def apply[T](codec: Codec[?, T, ?]): List[KeyedSchema] = apply(codec.schema)
 
-  def apply(schema: TSchema[_]): List[KeyedSchema] = {
+  def apply(schema: TSchema[?]): List[KeyedSchema] = {
     val thisSchema = SchemaKey(schema).map(_ -> schema).toList
     val nestedSchemas = schema match {
       case TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _, _, _, _)            => apply(o)
@@ -45,7 +45,7 @@ private[docs] object ToKeyedSchemas {
   }
 
   /** Combines the two schemas, reverting all per-usage customisable properties to their default values, if their values diverge. */
-  private def combine(s1: TSchema[_], s2: TSchema[_]): TSchema[_] = {
+  private def combine(s1: TSchema[?], s2: TSchema[?]): TSchema[?] = {
     var result = s1
     if (s1.description != s2.description) result = result.copy(description = None)
     if (s1.default != s2.default) result = result.copy(default = None)

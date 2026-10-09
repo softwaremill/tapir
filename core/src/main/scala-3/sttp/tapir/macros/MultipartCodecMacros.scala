@@ -29,20 +29,20 @@ private[tapir] object MultipartCodecMacros {
             .map(c => '{ PartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8), $c) }),
         () =>
           Expr
-            .summon[Codec[List[Part[String]], f, _ <: CodecFormat]]
+            .summon[Codec[List[Part[String]], f, ? <: CodecFormat]]
             .map(c => '{ PartCodec(RawBodyType.StringBody(StandardCharsets.UTF_8), $c) }),
-        () => Expr.summon[Codec[List[Part[Array[Byte]]], f, _ <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.ByteArrayBody, $c) }),
+        () => Expr.summon[Codec[List[Part[Array[Byte]]], f, ? <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.ByteArrayBody, $c) }),
         () =>
           Expr
-            .summon[Codec[List[Part[java.io.InputStream]], f, _ <: CodecFormat]]
+            .summon[Codec[List[Part[java.io.InputStream]], f, ? <: CodecFormat]]
             .map(c => '{ PartCodec(RawBodyType.InputStreamBody, $c) }),
         () =>
-          Expr.summon[Codec[List[Part[java.nio.ByteBuffer]], f, _ <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.ByteBufferBody, $c) }),
-        () => Expr.summon[Codec[List[Part[FileRange]], f, _ <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.FileBody, $c) })
+          Expr.summon[Codec[List[Part[java.nio.ByteBuffer]], f, ? <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.ByteBufferBody, $c) }),
+        () => Expr.summon[Codec[List[Part[FileRange]], f, ? <: CodecFormat]].map(c => '{ PartCodec(RawBodyType.FileBody, $c) })
       )
 
       @tailrec
-      def firstNotEmpty(c: List[() => Option[Expr[PartCodec[_, _]]]]): Expr[PartCodec[_, _]] = c match {
+      def firstNotEmpty(c: List[() => Option[Expr[PartCodec[?, ?]]]]): Expr[PartCodec[?, ?]] = c match {
         case Nil =>
           report.errorAndAbort(s"Cannot find a codec between a List[Part[T]] for some basic type T and: ${field.tpe}")
         case h :: t =>
@@ -60,7 +60,7 @@ private[tapir] object MultipartCodecMacros {
       '{ ${ Expr(encodedName) }.getOrElse($conf.toEncodedName(${ Expr(field.name) })) }
     }
 
-    val partCodecs: Expr[ListMap[String, PartCodec[_, _]]] = {
+    val partCodecs: Expr[ListMap[String, PartCodec[?, ?]]] = {
       val partCodecPairs = caseClass.fields.map { field =>
         val partCodec = field.tpe.asType match
           case '[f] => summonPartCodec[f](field)
@@ -68,7 +68,7 @@ private[tapir] object MultipartCodecMacros {
         '{ ${ fieldTransformedName(field) } -> $partCodec }
       }
 
-      '{ ListMap(${ Varargs(partCodecPairs) }: _*) }
+      '{ ListMap(${ Varargs(partCodecPairs) }*) }
     }
 
     def encodeDefBody(tTerm: Term): Term = {
@@ -79,7 +79,7 @@ private[tapir] object MultipartCodecMacros {
         '{ ${ fieldTransformedName(field) } -> $fieldValue }
       }
 
-      '{ ListMap(${ Varargs(fieldsEncode) }: _*) }.asTerm
+      '{ ListMap(${ Varargs(fieldsEncode) }*) }.asTerm
     }
 
     val encodeDefSymbol =
@@ -105,7 +105,7 @@ private[tapir] object MultipartCodecMacros {
 
       '{
         val partsMap: ListMap[String, Any] = ${ partsTerm.asExprOf[ListMap[String, Any]] }
-        val values = List(${ Varargs(fieldsDecode('partsMap)) }: _*)
+        val values = List(${ Varargs(fieldsDecode('partsMap)) }*)
         ${ caseClass.instanceFromValues('{ values }) }
       }.asTerm
     }

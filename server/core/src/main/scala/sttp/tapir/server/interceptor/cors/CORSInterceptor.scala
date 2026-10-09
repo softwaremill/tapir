@@ -104,19 +104,19 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
 
     def allowMethods(method: Method): Option[Header] = config.allowedMethods match {
       case AllowedMethods.All                                           => Some(Header.accessControlAllowMethods(AnyMethod))
-      case AllowedMethods.Some(methods) if methods.exists(_.is(method)) => Some(Header.accessControlAllowMethods(methods.toList: _*))
+      case AllowedMethods.Some(methods) if methods.exists(_.is(method)) => Some(Header.accessControlAllowMethods(methods.toList*))
       case _                                                            => None
     }
 
     def allowHeaders(requestHeaderNames: Set[String]): Option[Header] = config.allowedHeaders match {
       case AllowedHeaders.All               => Some(AllowAnyHeaders)
-      case AllowedHeaders.Some(headerNames) => Some(Header.accessControlAllowHeaders(headerNames.toList: _*))
-      case AllowedHeaders.Reflect           => Some(Header.accessControlAllowHeaders(requestHeaderNames.toList: _*))
+      case AllowedHeaders.Some(headerNames) => Some(Header.accessControlAllowHeaders(headerNames.toList*))
+      case AllowedHeaders.Reflect           => Some(Header.accessControlAllowHeaders(requestHeaderNames.toList*))
     }
 
     def exposeHeaders: Option[Header] = config.exposedHeaders match {
       case ExposedHeaders.All               => Some(ExposeAllHeaders)
-      case ExposedHeaders.Some(headerNames) => Some(Header.accessControlExposeHeaders(headerNames.toList: _*))
+      case ExposedHeaders.Some(headerNames) => Some(Header.accessControlExposeHeaders(headerNames.toList*))
       case ExposedHeaders.None              => None
     }
 
@@ -143,7 +143,7 @@ class CORSInterceptor[F[_]] private (config: CORSConfig) extends RequestIntercep
 
       origin ++ methods ++ headers match {
         case Nil         => None
-        case headerNames => Some(Header.vary(headerNames: _*))
+        case headerNames => Some(Header.vary(headerNames*))
       }
     }
 

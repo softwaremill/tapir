@@ -13,9 +13,9 @@ private[vertx] class LimitedReadStream(source: ReadStream[Buffer], maxBytes: Lon
 
   // Safe, Vertx uses a single thread
   private var bytesReadSoFar: Long = 0
-  private var endHandler: Handler[Void] = _
-  private var exceptionHandler: Handler[Throwable] = _
-  private var dataHandler: Handler[Buffer] = _
+  private var endHandler: Handler[Void] = null
+  private var exceptionHandler: Handler[Throwable] = null
+  private var dataHandler: Handler[Buffer] = null
 
   override def handler(handler: Handler[Buffer]): ReadStream[Buffer] = {
     dataHandler = (buffer: Buffer) => {

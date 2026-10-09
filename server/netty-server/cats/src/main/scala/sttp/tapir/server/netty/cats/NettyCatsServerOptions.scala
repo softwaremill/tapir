@@ -47,7 +47,7 @@ object NettyCatsServerOptions {
   def customiseInterceptors[F[_]: Async](
       dispatcher: Dispatcher[F]
   ): CustomiseInterceptors[F, NettyCatsServerOptions[F]] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[F, NettyCatsServerOptions[F]](
       createOptions = (ci: CustomiseInterceptors[F, NettyCatsServerOptions[F]]) => default(ci.interceptors, dispatcher)
     ).serverLog(defaultServerLog).rejectHandler(DefaultRejectHandler.orNotFound[F])
 

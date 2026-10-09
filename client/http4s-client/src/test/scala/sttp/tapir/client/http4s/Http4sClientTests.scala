@@ -49,5 +49,5 @@ abstract class Http4sClientTests[R] extends ClientTests[R] {
       .use { client =>
         client.run(request).use(parseResponse)
       }
-      .unsafeToFuture()(ioRT)
+      .unsafeToFuture()
 }

@@ -23,7 +23,7 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](
     m: MonadError[F]
 ) {
 
-  def tests(streams: Streams[_ >: S])(drain: streams.BinaryStream => F[Unit]): List[Test] = {
+  def tests(streams: Streams[? >: S])(drain: streams.BinaryStream => F[Unit]): List[Test] = {
     import createServerTest._
 
     val penPineapple = "pen pineapple apple pen"

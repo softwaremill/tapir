@@ -11,11 +11,11 @@ import zio.stream.{Stream, ZStream}
 
 import scala.reflect.ClassTag
 
-class WebSocketToZioPipe[R <: ZioStreams with WebSockets] extends WebSocketToPipe[R] {
+class WebSocketToZioPipe[R <: ZioStreams & WebSockets] extends WebSocketToPipe[R] {
   override type S = ZioStreams
   override type F[X] = Task[X]
 
-  override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, ZioStreams]): Any = {
+  override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, ?, ZioStreams]): Any = {
     (in: Stream[Throwable, REQ]) =>
       val sends = in
         .map(o.requests.encode)

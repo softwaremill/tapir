@@ -12,7 +12,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.21"
 val scala2_13 = "2.13.18"
-val scala3 = "3.3.8"
+val scala3 = "3.9.0"
 val scala3_7 = "3.7.4"
 
 val scala2Versions = List(scala2_12, scala2_13)
@@ -82,6 +82,15 @@ scalacOptions ++= {
     case _            => Seq("-Xmax-inlines", "64")
   }
 }
+scalacOptions ++= {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, 12)) => Seq("-Xsource:3")
+    // report the Scala 3 migration issues (such as the access modifiers of `copy` and `apply` of case classes with a
+    // non-public constructor) as warnings, not errors
+    case Some((2, _)) => Seq("-Xsource:3", "-Wconf:cat=scala3-migration:w")
+    case _            => Nil
+  }
+}
 scalacOptions += "-Wconf:msg=unused value of type org.scalatest.Assertion:s"
 scalacOptions += "-Wconf:msg=unused value of type org.scalatest.compatible.Assertion:s"
 evictionErrorLevel := Level.Info
@@ -121,12 +130,10 @@ val commonJvmSettings: Seq[Def.Setting[?]] = Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
   Test / testOptions += Tests.Argument("-oD"), // js has other options which conflict with timings
-  // the build runs on JDK 17+, while published artifacts should work on JDK 11+
-  javaOutputVersion := "11",
-  scalacOptions ++= Seq("-release", javaOutputVersion.value),
-  // -Yfuture-lazy-vals is backed by VarHandle, hence the Java output version. It only exists in the 3.3 LTS
-  // line; from 3.8 on the same encoding is the default.
-  scalacOptions ++= (if (scalaVersion.value == scala3) Seq("-Yfuture-lazy-vals") else Seq.empty)
+  // the build runs on JDK 17+, while published artifacts should work on JDK 11+ (Scala 2) / JDK 17+ (Scala 3, as
+  // Scala 3.8+ requires JDK 17)
+  javaOutputVersion := (if (ScalaArtifacts.isScala3(scalaVersion.value)) "17" else "11"),
+  scalacOptions ++= Seq("-release", javaOutputVersion.value)
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -2176,7 +2183,9 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
         Seq(
           "io.github.bishabosha" %% "enum-extensions" % "0.1.1" % Test,
           "org.latestbit" %% "circe-tagged-adt-codec" % "0.11.0" % Test,
-          scalaOrganization.value %% "scala3-compiler" % scalaVersion.value % Test
+          scalaOrganization.value %% "scala3-compiler" % scalaVersion.value % Test,
+          // since Scala 3.8, the REPL (including the ScriptEngine used by CompileCheckTestBase) is a separate artifact
+          scalaOrganization.value %% "scala3-repl" % scalaVersion.value % Test
         )
       } else {
         Seq(
@@ -2212,6 +2221,20 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
     // >   org.scala-lang.modules:scala-collection-compat _3, _2.13
     // ... etc
     scalaVersion := (if (scalaVersion.value.startsWith("3")) scala3_7 else scalaVersion.value),
+    // The plugin is loaded by sbt (sbt 2.0.x runs on Scala 3.8), so it can't depend on the Scala 3 build of
+    // openapiCodegenCore, which is compiled with Scala 3.9 (and its tests need the Scala 3.9 builds of tapir modules).
+    // Instead, the plugin is built directly from the codegen-core sources, using the plugin's Scala version.
+    Compile / unmanagedSourceDirectories ++= {
+      val codegenCoreSources = (ThisBuild / baseDirectory).value / "openapi-codegen" / "core" / "src" / "main"
+      Seq(codegenCoreSources / "scala", codegenCoreSources / s"scala-${scalaBinaryVersion.value.takeWhile(_ != '.')}")
+    },
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %% "circe-yaml" % Versions.circeYaml
+    ),
+    libraryDependencies ++= (if (scalaBinaryVersion.value == "3") Nil
+                             else Seq(scalaOrganization.value % "scala-reflect" % scalaVersion.value)),
     name := "sbt-openapi-codegen",
     sbtPlugin := true,
     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
@@ -2242,7 +2265,7 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       }
     }
   )
-  .dependsOn(openapiCodegenCore, core % Test, circeJson % Test, zioJson % Test)
+  .dependsOn(core % Test, circeJson % Test, zioJson % Test)
 
 lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
   .enablePlugins(BuildInfoPlugin)

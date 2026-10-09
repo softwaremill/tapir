@@ -7,9 +7,9 @@ import io.vertx.core.Handler
 class FakeStream extends ReadStream[Buffer] { self =>
 
   private var demand = Long.MaxValue
-  private var eventHandler: Handler[Buffer] = _
-  private var endHandler: Handler[Void] = _
-  private var exceptionHandler: Handler[Throwable] = _
+  private var eventHandler: Handler[Buffer] = null
+  private var endHandler: Handler[Void] = null
+  private var exceptionHandler: Handler[Throwable] = null
   @volatile var pauseCount: Int = 0
   @volatile var resumeCount: Int = 0
 

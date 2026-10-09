@@ -89,10 +89,10 @@ class TapirJsonZioTest extends AnyFlatSpecLike with Matchers {
   }
 
   it should "return a coproduct schema for a JsonValue" in {
-    schemaForZioJsonValue.schemaType shouldBe a[SCoproduct[_]]
+    schemaForZioJsonValue.schemaType shouldBe a[SCoproduct[?]]
   }
 
   it should "return a coproduct schema for a JsonObject" in {
-    schemaForZioJsonObject.schemaType shouldBe a[SProduct[_]]
+    schemaForZioJsonObject.schemaType shouldBe a[SProduct[?]]
   }
 }

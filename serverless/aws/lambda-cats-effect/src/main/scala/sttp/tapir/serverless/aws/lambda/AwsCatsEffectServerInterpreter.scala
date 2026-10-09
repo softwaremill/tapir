@@ -15,7 +15,7 @@ object AwsCatsEffectServerInterpreter {
 
   def apply[F[_]]()(implicit fa: Sync[F]): AwsCatsEffectServerInterpreter[F] = {
     new AwsCatsEffectServerInterpreter[F] {
-      override def awsServerOptions: AwsServerOptions[F] = AwsCatsEffectServerOptions.default[F](fa)
+      override def awsServerOptions: AwsServerOptions[F] = AwsCatsEffectServerOptions.default[F](using fa)
     }
   }
 }

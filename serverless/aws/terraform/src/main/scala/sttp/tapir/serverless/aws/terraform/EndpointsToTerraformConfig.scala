@@ -12,8 +12,8 @@ private[terraform] object EndpointsToTerraformConfig {
 
       val basicInputs = endpoint.asVectorOfBasicInputs()
 
-      val pathComponents: Seq[(Either[EndpointInput.FixedPath[_], EndpointInput.PathCapture[_]], String)] = basicInputs
-        .foldLeft((Seq.empty[(Either[EndpointInput.FixedPath[_], EndpointInput.PathCapture[_]], String)], 0)) { case ((acc, c), input) =>
+      val pathComponents: Seq[(Either[EndpointInput.FixedPath[?], EndpointInput.PathCapture[?]], String)] = basicInputs
+        .foldLeft((Seq.empty[(Either[EndpointInput.FixedPath[?], EndpointInput.PathCapture[?]], String)], 0)) { case ((acc, c), input) =>
           input match {
             case fp @ EndpointInput.FixedPath(p, _, _)      => (acc :+ Left(fp) -> p, c)
             case pc @ EndpointInput.PathCapture(name, _, _) =>

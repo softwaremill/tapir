@@ -25,7 +25,7 @@ object ArmeriaZioServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], ArmeriaZioServerOptions[RIO[R, *]]] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[RIO[R, *], ArmeriaZioServerOptions[RIO[R, *]]](
       createOptions = (ci: CustomiseInterceptors[RIO[R, *], ArmeriaZioServerOptions[RIO[R, *]]]) => {
         ArmeriaZioServerOptions(
           defaultCreateFile,

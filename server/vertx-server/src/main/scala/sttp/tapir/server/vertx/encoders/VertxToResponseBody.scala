@@ -40,7 +40,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
           v.range
             .flatMap(r => r.startAndEnd.map(s => resp.sendFile(v.file.toPath.toString, s._1, r.contentLength)))
             .getOrElse(resp.sendFile(v.file.toString))
-        case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(serverOptions)(rc)
+        case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, v)(using serverOptions)(rc)
       }
   }
 
@@ -57,7 +57,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, S]
   ): RoutingContext => Future[Void] = { rc =>
     rc.request.toWebSocket
       .flatMap({ (websocket: ServerWebSocket) =>
@@ -65,7 +65,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
           readStreamCompatible.webSocketPipe[REQ, RESP](
             wrapWebSocket(websocket),
             pipe.asInstanceOf[readStreamCompatible.streams.Pipe[REQ, RESP]],
-            o.asInstanceOf[WebSocketBodyOutput[readStreamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, _, S]]
+            o.asInstanceOf[WebSocketBodyOutput[readStreamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, ?, S]]
           ),
           websocket
         )
@@ -75,17 +75,17 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
   }
 
   private def handleMultipleBodyParts[CF <: CodecFormat, R](
-      multipart: RawBodyType[R] with RawBodyType.MultipartBody,
+      multipart: RawBodyType[R] & RawBodyType.MultipartBody,
       r: R
   )(implicit endpointOptions: VertxServerOptions[F]): RoutingContext => Future[Void] = { rc =>
     val resp = rc.response
     resp.setChunked(true)
     resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, "multipart/form-data")
 
-    r.asInstanceOf[Seq[Part[_]]]
+    r.asInstanceOf[Seq[Part[?]]]
       .foldLeft(Future.succeededFuture[Void]())({ (acc, part) =>
         acc.flatMap { _ =>
-          handleBodyPart(multipart, part)(endpointOptions)(rc)
+          handleBodyPart(multipart, part)(using endpointOptions)(rc)
         }
       })
       .flatMap { _ =>
@@ -100,13 +100,13 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
     m.partType(part.name)
       .map { partType =>
         writePartHeaders(part)(resp).flatMap { contentType =>
-          writeBodyPart(partType.asInstanceOf[RawBodyType[Any]], contentType, part.body)(endpointOptions)(rc)
+          writeBodyPart(partType.asInstanceOf[RawBodyType[Any]], contentType, part.body)(using endpointOptions)(rc)
         }
       }
       .getOrElse(Future.succeededFuture[Void]())
   }
 
-  private def writePartHeaders(part: Part[_]): HttpServerResponse => Future[String] = { resp =>
+  private def writePartHeaders(part: Part[?]): HttpServerResponse => Future[String] = { resp =>
     part.headers.foreach { h => resp.headers.add(h.name, h.value) }
     val partContentType = part.contentType.getOrElse("application/octet-stream")
     val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
@@ -152,7 +152,7 @@ class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptio
                   .flatMap(_ => resp.write("\n\n"))
               }
 
-          case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, r)(endpointOptions)(rc)
+          case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, r)(using endpointOptions)(rc)
         }
       }
   }

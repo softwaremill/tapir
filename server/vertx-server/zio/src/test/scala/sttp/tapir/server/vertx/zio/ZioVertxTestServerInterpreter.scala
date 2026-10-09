@@ -14,13 +14,13 @@ import sttp.tapir.server.vertx.VertxTestServerInterpreter
 import scala.concurrent.duration.FiniteDuration
 
 class ZioVertxTestServerInterpreter(vertx: Vertx)
-    extends TestServerInterpreter[Task, ZioStreams with WebSockets, VertxZioServerOptions[Any], Router => Route] {
+    extends TestServerInterpreter[Task, ZioStreams & WebSockets, VertxZioServerOptions[Any], Router => Route] {
   import ZioVertxTestServerInterpreter._
 
-  override def route(es: List[ServerEndpoint[ZioStreams with WebSockets, Task]], interceptors: Interceptors): Router => Route = { router =>
+  override def route(es: List[ServerEndpoint[ZioStreams & WebSockets, Task]], interceptors: Interceptors): Router => Route = { router =>
     val options: VertxZioServerOptions[Any] = interceptors(VertxZioServerOptions.customiseInterceptors).options
     val interpreter = VertxZioServerInterpreter(options)
-    es.map(interpreter.route(_)(runtime)(router)).last
+    es.map(interpreter.route(_)(using runtime)(router)).last
   }
 
   override def server(

@@ -118,7 +118,7 @@ object Files {
     if (!options.fileFilter(input.path))
       (_, _) => LeftUrlNotFound
     else
-      resolveRec _
+      resolveRec
   }
 
   private[files] def files[F[_], R](

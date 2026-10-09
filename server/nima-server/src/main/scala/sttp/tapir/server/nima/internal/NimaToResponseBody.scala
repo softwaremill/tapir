@@ -48,7 +48,7 @@ private[nima] class NimaToResponseBody extends ToResponseBody[InputStream, NoStr
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, NoStreams]
   ): InputStream = throw new UnsupportedOperationException
 }
 

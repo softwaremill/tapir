@@ -23,7 +23,7 @@ private[sttp] class EndpointToSttpClient(clientOptions: SttpClientOptions) exten
   }
 
   private val clientOutputParams = new ClientOutputParams {
-    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[?, ?, ?, ?, ?], body: Any): DecodeResult[Any] =
       throw new RuntimeException("EndpointToSttpClient should not be used when dealing with WebSockets")
   }
 }

@@ -17,7 +17,7 @@ trait SwaggerInterpreter {
   def fromEndpoints[F[_]](
       endpoints: List[AnyEndpoint],
       info: Info,
-      docsExtensions: List[DocsExtension[_]]
+      docsExtensions: List[DocsExtension[?]]
   ): List[ServerEndpoint[Any, F]] = {
     val openapi0 = OpenAPIDocsInterpreter(openAPIInterpreterOptions).toOpenAPI(endpoints, info, docsExtensions)
     val openapi1 = if (addServerWhenContextPathPresent && swaggerUIOptions.contextPath.nonEmpty) {
@@ -40,18 +40,18 @@ trait SwaggerInterpreter {
   ): List[ServerEndpoint[Any, F]] = fromEndpoints(endpoints, Info(title, version), Nil)
 
   def fromServerEndpoints[F[_]](
-      endpoints: List[ServerEndpoint[_, F]],
+      endpoints: List[ServerEndpoint[?, F]],
       info: Info,
-      docsExtensions: List[DocsExtension[_]]
+      docsExtensions: List[DocsExtension[?]]
   ): List[ServerEndpoint[Any, F]] = fromEndpoints(endpoints.map(_.endpoint), info, docsExtensions)
 
   def fromServerEndpoints[F[_]](
-      endpoints: List[ServerEndpoint[_, F]],
+      endpoints: List[ServerEndpoint[?, F]],
       info: Info
   ): List[ServerEndpoint[Any, F]] = fromEndpoints(endpoints.map(_.endpoint), info, Nil)
 
   def fromServerEndpoints[F[_]](
-      endpoints: List[ServerEndpoint[_, F]],
+      endpoints: List[ServerEndpoint[?, F]],
       title: String,
       version: String
   ): List[ServerEndpoint[Any, F]] =

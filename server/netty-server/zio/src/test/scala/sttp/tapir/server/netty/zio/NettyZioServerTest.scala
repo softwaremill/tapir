@@ -42,12 +42,12 @@ class NettyZioServerTest extends TestSuite with EitherValues {
               partOtherHeaderSupport = false
             ).tests() ++
               new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
-              new ServerCancellationTests(createServerTest)(monadError, asyncInstance).tests() ++
+              new ServerCancellationTests(createServerTest)(using monadError, asyncInstance).tests() ++
               new ServerGracefulShutdownTests(createServerTest, zioSleeper).tests()
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
-          IO.fromFuture(IO.delay(FutureUtil.nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[_])).void
+          IO.fromFuture(IO.delay(FutureUtil.nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[?])).void
         }
         .map { case (tests, _) => tests }
     }

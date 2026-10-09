@@ -82,7 +82,7 @@ jobs:
     - name: Compile core & server-core with next Scala 3
       if: matrix.scala-version == '3' && matrix.target-platform == 'JVM' && matrix.java == '21'
       env:
-        SCALA_3_NEXT: "3.8.3"
+        SCALA_3_NEXT: "3.10.0"
       # Scala 3.8+ doesn't support -release below 17
       run: |
         sbt -v \

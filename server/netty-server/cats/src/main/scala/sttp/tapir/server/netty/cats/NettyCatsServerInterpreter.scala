@@ -19,7 +19,7 @@ trait NettyCatsServerInterpreter[F[_]] {
   implicit def async: Async[F]
   def nettyServerOptions: NettyCatsServerOptions[F]
 
-  def toRoute(ses: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]]): Route[F] = {
+  def toRoute(ses: List[ServerEndpoint[Fs2Streams[F] & WebSockets, F]]): Route[F] = {
 
     implicit val monad: MonadError[F] = new CatsMonadError[F]
     val runAsync = new RunAsync[F] {
@@ -31,7 +31,7 @@ trait NettyCatsServerInterpreter[F[_]] {
     val createFile = nettyServerOptions.createFile
     val deleteFile = nettyServerOptions.deleteFile
 
-    val serverInterpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, F, NettyResponse, Fs2Streams[F]](
+    val serverInterpreter = new ServerInterpreter[Fs2Streams[F] & WebSockets, F, NettyResponse, Fs2Streams[F]](
       FilterServerEndpoints(ses),
       new NettyCatsRequestBody(
         createFile,
@@ -61,7 +61,7 @@ object NettyCatsServerInterpreter {
   def apply[F[_]](dispatcher: Dispatcher[F])(implicit _fa: Async[F]): NettyCatsServerInterpreter[F] = {
     new NettyCatsServerInterpreter[F] {
       override implicit def async: Async[F] = _fa
-      override def nettyServerOptions: NettyCatsServerOptions[F] = NettyCatsServerOptions.default(dispatcher)(_fa)
+      override def nettyServerOptions: NettyCatsServerOptions[F] = NettyCatsServerOptions.default(dispatcher)(using _fa)
     }
   }
   def apply[F[_]](options: NettyCatsServerOptions[F])(implicit _fa: Async[F]): NettyCatsServerInterpreter[F] = {

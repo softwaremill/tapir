@@ -10,7 +10,7 @@ import java.time.{Clock, Duration}
 case class DatadogMetrics[F[_]](
     client: StatsDClient,
     namespace: String = "tapir",
-    metrics: List[Metric[F, _]] = Nil
+    metrics: List[Metric[F, ?]] = Nil
 ) {
   import DatadogMetrics._
 
@@ -27,7 +27,7 @@ case class DatadogMetrics[F[_]](
     copy(metrics = metrics :+ requestDuration(client, namespace, labels, clock))
 
   /** Registers a custom metric. */
-  def addCustom(m: Metric[F, _]): DatadogMetrics[F] = copy(metrics = metrics :+ m)
+  def addCustom(m: Metric[F, ?]): DatadogMetrics[F] = copy(metrics = metrics :+ m)
 
   /** The interceptor which can be added to a server's options, to enable metrics collection. */
   def metricsInterceptor(ignoreEndpoints: Seq[AnyEndpoint] = Seq.empty): MetricsRequestInterceptor[F] =
@@ -189,29 +189,29 @@ object DatadogMetrics {
     )
 
   case class Counter(name: String)(client: StatsDClient) {
-    def delta(delta: Long, tags: List[String]): Unit = client.count(name, delta, tags: _*)
-    def delta(delta: Double, tags: List[String]): Unit = client.count(name, delta, tags: _*)
-    def increment(tags: List[String]): Unit = client.incrementCounter(name, tags: _*)
-    def decrement(tags: List[String]): Unit = client.decrementCounter(name, tags: _*)
+    def delta(delta: Long, tags: List[String]): Unit = client.count(name, delta, tags*)
+    def delta(delta: Double, tags: List[String]): Unit = client.count(name, delta, tags*)
+    def increment(tags: List[String]): Unit = client.incrementCounter(name, tags*)
+    def decrement(tags: List[String]): Unit = client.decrementCounter(name, tags*)
   }
 
   case class Gauge(name: String)(client: StatsDClient) {
-    def record(value: Long, tags: List[String]): Unit = client.recordGaugeValue(name, value, tags: _*)
-    def record(value: Double, tags: List[String]): Unit = client.recordGaugeValue(name, value, tags: _*)
+    def record(value: Long, tags: List[String]): Unit = client.recordGaugeValue(name, value, tags*)
+    def record(value: Double, tags: List[String]): Unit = client.recordGaugeValue(name, value, tags*)
   }
 
   case class Timer(name: String)(client: StatsDClient) {
-    def record(milliSeconds: Long, tags: List[String]): Unit = client.recordExecutionTime(name, milliSeconds, tags: _*)
+    def record(milliSeconds: Long, tags: List[String]): Unit = client.recordExecutionTime(name, milliSeconds, tags*)
   }
 
   case class Histogram(name: String)(client: StatsDClient) {
-    def record(value: Long, tags: List[String]): Unit = client.recordHistogramValue(name, value, tags: _*)
-    def record(value: Double, tags: List[String]): Unit = client.recordHistogramValue(name, value, tags: _*)
+    def record(value: Long, tags: List[String]): Unit = client.recordHistogramValue(name, value, tags*)
+    def record(value: Double, tags: List[String]): Unit = client.recordHistogramValue(name, value, tags*)
   }
 
   case class Distribution(name: String)(client: StatsDClient) {
-    def record(value: Long, tags: List[String]): Unit = client.recordDistributionValue(name, value, tags: _*)
-    def record(value: Double, tags: List[String]): Unit = client.recordDistributionValue(name, value, tags: _*)
+    def record(value: Long, tags: List[String]): Unit = client.recordDistributionValue(name, value, tags*)
+    def record(value: Double, tags: List[String]): Unit = client.recordDistributionValue(name, value, tags*)
   }
 
   def mergeTags(names: List[String], values: List[String]): List[String] = names.zip(values).map { case (n, v) =>

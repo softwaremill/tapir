@@ -116,10 +116,10 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
         setStreamingBody(streams)(codec.asInstanceOf[Codec[Any, Any, CodecFormat]].encode(value).asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>
         val headers = codec.encode(value).map(value => Header.Raw(CIString(name), value): Header.ToRaw)
-        req.putHeaders(headers: _*)
+        req.putHeaders(headers*)
       case EndpointIO.Headers(codec, _) =>
         val headers = codec.encode(value).map(h => Header.Raw(CIString(h.name), h.value): Header.ToRaw)
-        req.putHeaders(headers: _*)
+        req.putHeaders(headers*)
       case EndpointIO.FixedHeader(h, _, _)           => req.putHeaders(Header.Raw(CIString(h.name), h.value))
       case EndpointInput.ExtractFromRequest(_, _)    => req // ignoring
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
@@ -142,22 +142,22 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
 
     val newReq = bodyType match {
       case RawBodyType.StringBody(charset) =>
-        val entityEncoder = EntityEncoder.stringEncoder[F](Charset.fromNioCharset(charset))
-        req.withEntity(encoded.asInstanceOf[String])(entityEncoder)
+        val entityEncoder = EntityEncoder.stringEncoder[F](using Charset.fromNioCharset(charset))
+        req.withEntity(encoded.asInstanceOf[String])(using entityEncoder)
       case RawBodyType.ByteArrayBody =>
         req.withEntity(encoded.asInstanceOf[Array[Byte]])
       case RawBodyType.ByteBufferBody =>
         val entityEncoder = EntityEncoder.chunkEncoder[F].contramap(Chunk.byteBuffer)
-        req.withEntity(encoded.asInstanceOf[ByteBuffer])(entityEncoder)
+        req.withEntity(encoded.asInstanceOf[ByteBuffer])(using entityEncoder)
       case RawBodyType.InputStreamBody =>
         val entityEncoder = EntityEncoder.inputStreamEncoder[F, InputStream]
-        req.withEntity(Applicative[F].pure(encoded.asInstanceOf[InputStream]))(entityEncoder)
+        req.withEntity(Applicative[F].pure(encoded.asInstanceOf[InputStream]))(using entityEncoder)
       case RawBodyType.InputStreamRangeBody =>
         val entityEncoder = EntityEncoder.inputStreamEncoder[F, InputStream]
-        req.withEntity(Sync[F].blocking(encoded.asInstanceOf[InputStreamRange].inputStream()))(entityEncoder)
+        req.withEntity(Sync[F].blocking(encoded.asInstanceOf[InputStreamRange].inputStream()))(using entityEncoder)
       case RawBodyType.FileBody =>
         val entityEncoder = EntityEncoder.fileEncoder[F]
-        req.withEntity(encoded.asInstanceOf[FileRange].file)(entityEncoder)
+        req.withEntity(encoded.asInstanceOf[FileRange].file)(using entityEncoder)
       case _: RawBodyType.MultipartBody =>
         throw new IllegalArgumentException("Multipart body isn't supported yet")
     }
@@ -177,8 +177,8 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
     }
 
   private def handleInputPair[I, F[_]: Async](
-      left: EndpointInput[_],
-      right: EndpointInput[_],
+      left: EndpointInput[?],
+      right: EndpointInput[?],
       params: Params,
       split: SplitParams,
       currentReq: Request[F]
@@ -214,7 +214,7 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
     }
   }
 
-  private def responseFromOutput[F[_]: Async](out: EndpointOutput[_]): Response[F] => F[Any] = { response =>
+  private def responseFromOutput[F[_]: Async](out: EndpointOutput[?]): Response[F] => F[Any] = { response =>
     bodyIsStream(out) match {
       case Some(streams) =>
         streams match {
@@ -249,14 +249,14 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
     }
   }
 
-  private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
+  private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[?]] = {
     out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _, _)) =>
       Vector(streams)
     }.headOption
   }
 
   private val clientOutputParams = new ClientOutputParams {
-    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[?, ?, ?, ?, ?], body: Any): DecodeResult[Any] =
       DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
   }
 }

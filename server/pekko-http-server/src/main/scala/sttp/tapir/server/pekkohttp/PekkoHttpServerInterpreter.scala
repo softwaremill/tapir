@@ -34,15 +34,15 @@ trait PekkoHttpServerInterpreter {
 
   def pekkoHttpServerOptions: PekkoHttpServerOptions = PekkoHttpServerOptions.default
 
-  def toRoute(se: ServerEndpoint[PekkoStreams with WebSockets, Future]): Route = toRoute(List(se))
+  def toRoute(se: ServerEndpoint[PekkoStreams & WebSockets, Future]): Route = toRoute(List(se))
 
-  def toRoute(ses: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]): Route =
-    toRoute(new PekkoRequestBody(pekkoHttpServerOptions)(_, _), new PekkoToResponseBody()(_, _))(ses)
+  def toRoute(ses: List[ServerEndpoint[PekkoStreams & WebSockets, Future]]): Route =
+    toRoute(new PekkoRequestBody(pekkoHttpServerOptions)(using _, _), new PekkoToResponseBody()(using _, _))(ses)
 
   protected def toRoute(
       requestBody: (Materializer, ExecutionContext) => RequestBody[Future, PekkoStreams],
       toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[PekkoResponseBody, PekkoStreams]
-  )(ses: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]): Route = {
+  )(ses: List[ServerEndpoint[PekkoStreams & WebSockets, Future]]): Route = {
     val filterServerEndpoints = FilterServerEndpoints(ses)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(
       pekkoHttpServerOptions.appendInterceptor(PekkoStreamSizeExceptionInterceptor).interceptors,

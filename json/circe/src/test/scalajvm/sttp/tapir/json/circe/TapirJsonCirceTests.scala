@@ -65,11 +65,11 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
   }
 
   it should "return a coproduct schema for a Json" in {
-    schemaForCirceJson.schemaType shouldBe a[SCoproduct[_]]
+    schemaForCirceJson.schemaType shouldBe a[SCoproduct[?]]
   }
 
   it should "return a product schema for a JsonObject" in {
-    schemaForCirceJsonObject.schemaType shouldBe a[SProduct[_]]
+    schemaForCirceJsonObject.schemaType shouldBe a[SProduct[?]]
   }
 
   it should "properly define a json query input" in {

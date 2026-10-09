@@ -25,7 +25,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def route[A, U, I, E, O](e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
+  def route[A, U, I, E, O](e: ServerEndpoint[VertxStreams & WebSockets, Future]): Router => Route = { router =>
     val routeDef = extractRouteDefinition(e.endpoint)
     optionsRouteIfCORSDefined(e)(router, routeDef, vertxFutureServerOptions)
       .foreach(_.handler(endpointHandler(e)))
@@ -39,7 +39,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
     * @return
     *   A function, that given a router, will attach this endpoint to it
     */
-  def blockingRoute(e: ServerEndpoint[VertxStreams with WebSockets, Future]): Router => Route = { router =>
+  def blockingRoute(e: ServerEndpoint[VertxStreams & WebSockets, Future]): Router => Route = { router =>
     val routeDef = extractRouteDefinition(e.endpoint)
     optionsRouteIfCORSDefined(e)(router, routeDef, vertxFutureServerOptions)
       .foreach(_.handler(endpointHandler(e)))
@@ -48,16 +48,16 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter with VertxErr
   }
 
   private def endpointHandler(
-      e: ServerEndpoint[VertxStreams with WebSockets, Future]
+      e: ServerEndpoint[VertxStreams & WebSockets, Future]
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = vertxFutureServerOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()
     implicit val bodyListener: BodyListener[Future, RoutingContext => VFuture[Void]] = new VertxBodyListener[Future](FutureRunAsync)
     val reactiveStreamsReadStream: ReadStreamCompatible[VertxStreams] = streams.reactiveStreamsReadStreamCompatible()
-    val interpreter = new ServerInterpreter[VertxStreams with WebSockets, Future, RoutingContext => VFuture[Void], VertxStreams](
+    val interpreter = new ServerInterpreter[VertxStreams & WebSockets, Future, RoutingContext => VFuture[Void], VertxStreams](
       _ => List(e),
-      new VertxRequestBody(vertxFutureServerOptions, FutureFromVFuture)(reactiveStreamsReadStream),
-      new VertxToResponseBody(vertxFutureServerOptions)(reactiveStreamsReadStream),
+      new VertxRequestBody(vertxFutureServerOptions, FutureFromVFuture)(using reactiveStreamsReadStream),
+      new VertxToResponseBody(vertxFutureServerOptions)(using reactiveStreamsReadStream),
       vertxFutureServerOptions.interceptors,
       vertxFutureServerOptions.deleteFile
     )

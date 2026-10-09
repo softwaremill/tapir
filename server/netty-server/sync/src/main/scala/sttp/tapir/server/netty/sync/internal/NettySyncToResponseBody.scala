@@ -35,7 +35,7 @@ private[sync] class NettySyncToResponseBody(inScopeRunner: InScopeRunner)
         // we can only create a publisher from `v` within a concurrency scope; using the main concurrency scope for
         // that, via `externalRunner`. As we need to return a `Publisher` immediately, deferring the flow-to-publisher
         // transformation until the subscriber is known.
-        (s: Subscriber[_ >: HttpContent]) => inScopeRunner.async(
+        (s: Subscriber[? >: HttpContent]) => inScopeRunner.async(
           forkDiscard(
             v.map(chunk => new DefaultHttpContent(Unpooled.wrappedBuffer(chunk.toArray)))
               .toReactiveStreamsPublisher

@@ -47,14 +47,14 @@ package object http4s {
     def contextSecurityIn[T]: AddContextSecurityInput[T] = new AddContextSecurityInput[T]
 
     class AddContextInput[T] {
-      def apply[IT]()(implicit concat: ParamConcat.Aux[I, T, IT], ct: ClassTag[T]): Endpoint[A, IT, E, O, R with Context[T]] = {
+      def apply[IT]()(implicit concat: ParamConcat.Aux[I, T, IT], ct: ClassTag[T]): Endpoint[A, IT, E, O, R & Context[T]] = {
         val attribute = contextAttributeKey[T]
         e.in(extractFromRequest[T](extractContext[T](attribute)))
       }
     }
 
     class AddContextSecurityInput[T] {
-      def apply[AT]()(implicit concat: ParamConcat.Aux[A, T, AT], ct: ClassTag[T]): Endpoint[AT, I, E, O, R with Context[T]] = {
+      def apply[AT]()(implicit concat: ParamConcat.Aux[A, T, AT], ct: ClassTag[T]): Endpoint[AT, I, E, O, R & Context[T]] = {
         val attribute = contextAttributeKey[T]
         e.securityIn(extractFromRequest[T](extractContext[T](attribute)))
       }

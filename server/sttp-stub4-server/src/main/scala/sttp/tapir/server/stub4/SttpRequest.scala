@@ -7,7 +7,7 @@ import sttp.tapir.{AttributeKey, AttributeMap}
 
 import scala.collection.immutable.Seq
 
-case class SttpRequest(r: GenericRequest[_, _], attributes: AttributeMap = AttributeMap.Empty) extends ServerRequest {
+case class SttpRequest(r: GenericRequest[?, ?], attributes: AttributeMap = AttributeMap.Empty) extends ServerRequest {
   override def method: Method = r.method
   override def headers: Seq[Header] = r.headers
   override def queryParameters: QueryParams = r.uri.params
@@ -22,5 +22,5 @@ case class SttpRequest(r: GenericRequest[_, _], attributes: AttributeMap = Attri
   override def attribute[T](k: AttributeKey[T]): Option[T] = attributes.get(k)
   override def attribute[T](k: AttributeKey[T], v: T): SttpRequest = copy(attributes = attributes.put(k, v))
   override def withUnderlying(underlying: Any): ServerRequest =
-    new SttpRequest(r = underlying.asInstanceOf[GenericRequest[_, _]], attributes)
+    new SttpRequest(r = underlying.asInstanceOf[GenericRequest[?, ?]], attributes)
 }

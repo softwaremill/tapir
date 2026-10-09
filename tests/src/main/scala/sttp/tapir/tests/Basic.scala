@@ -27,7 +27,7 @@ object Basic {
 
   val in_two_path_capture: PublicEndpoint[(Int, Int), Unit, (Int, Int), Any] = endpoint
     .in("in" / path[Int] / path[Int])
-    .out(header[Int]("a") and header[Int]("b"))
+    .out(header[Int]("a") `and` header[Int]("b"))
 
   val in_string_out_string: PublicEndpoint[String, Unit, String, Any] = endpoint.post.in("api" / "echo").in(stringBody).out(stringBody)
 
@@ -42,7 +42,7 @@ object Basic {
   val in_header_before_path: PublicEndpoint[(String, Int), Unit, (Int, String), Any] = endpoint
     .in(header[String]("SomeHeader"))
     .in(path[Int])
-    .out(header[Int]("IntHeader") and stringBody)
+    .out(header[Int]("IntHeader") `and` stringBody)
 
   val in_json_out_json: PublicEndpoint[FruitAmount, Unit, FruitAmount, Any] =
     endpoint.post
@@ -119,7 +119,7 @@ object Basic {
     endpoint.get.in(paths).out(stringBody)
 
   val in_path_paths_out_header_body: PublicEndpoint[(Int, List[String]), Unit, (Int, String), Any] =
-    endpoint.get.in("api").in(path[Int]).in("and").in(paths).out(header[Int]("IntPath") and stringBody)
+    endpoint.get.in("api").in(path[Int]).in("and").in(paths).out(header[Int]("IntPath") `and` stringBody)
 
   val in_path_fixed_capture_fixed_capture: PublicEndpoint[(Int, Int), Unit, Unit, Any] =
     endpoint.get.in("customer" / path[Int]("customer_id") / "orders" / path[Int]("order_id"))

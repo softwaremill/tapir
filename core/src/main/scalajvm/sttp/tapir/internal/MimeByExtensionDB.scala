@@ -20,7 +20,7 @@ private[tapir] object MimeByExtensionDB {
           )
       finally s.close()
 
-    Map(pairs: _*)
+    Map(pairs*)
   }
 
   def apply(extension: String): Option[MediaType] = mimeTypes.get(extension.toLowerCase)

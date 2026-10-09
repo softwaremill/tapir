@@ -13,7 +13,7 @@ private[openapi] object EndpointToOpenAPIDocs {
       api: Info,
       es: Iterable[AnyEndpoint],
       options: OpenAPIDocsOptions,
-      docsExtensions: List[DocsExtension[_]]
+      docsExtensions: List[DocsExtension[?]]
   ): OpenAPI = {
     val documentedEs = es.filter(e => findWebSocket(e).isEmpty)
     documentedEs.foreach(ReusableComponents.verifyMarkedPathCapturesAreNamed)
@@ -50,7 +50,7 @@ private[openapi] object EndpointToOpenAPIDocs {
     spec
   }
 
-  private def apiToOpenApi(info: Info, componentsCreator: EndpointToOpenAPIComponents, docsExtensions: List[DocsExtension[_]]): OpenAPI = {
+  private def apiToOpenApi(info: Info, componentsCreator: EndpointToOpenAPIComponents, docsExtensions: List[DocsExtension[?]]): OpenAPI = {
     OpenAPI(
       info = info,
       tags = List.empty,

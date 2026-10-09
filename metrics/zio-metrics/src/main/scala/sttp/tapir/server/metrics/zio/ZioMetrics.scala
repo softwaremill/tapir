@@ -12,7 +12,7 @@ import zio.metrics.MetricLabel
 
 import java.time.{Clock, Duration, Instant}
 
-case class ZioMetrics[F[_]](namespace: String, metrics: List[Metric[F, _]] = List.empty) {
+case class ZioMetrics[F[_]](namespace: String, metrics: List[Metric[F, ?]] = List.empty) {
   import ZioMetrics._
 
   /** Registers a `$namespace.request_active.count|c|#path, method` counter (assuming default labels). */
@@ -28,7 +28,7 @@ case class ZioMetrics[F[_]](namespace: String, metrics: List[Metric[F, _]] = Lis
     copy(metrics = metrics :+ requestDuration(namespace, labels))
 
   /** Registers a custom metric. */
-  def addCustom(m: Metric[F, _]): ZioMetrics[F] = copy(metrics = metrics :+ m)
+  def addCustom(m: Metric[F, ?]): ZioMetrics[F] = copy(metrics = metrics :+ m)
 
   /** A metrics interceptor instance. */
   def metricsInterceptor(ignoreEndpoints: Seq[AnyEndpoint] = Seq.empty): MetricsRequestInterceptor[F] =
@@ -93,7 +93,7 @@ object ZioMetrics {
   }
 
   /** Convert into zio metric labels */
-  private def asZioLabel(l: MetricLabels, res: Either[Throwable, ServerResponse[_]], phase: Option[String]): Set[MetricLabel] = {
+  private def asZioLabel(l: MetricLabels, res: Either[Throwable, ServerResponse[?]], phase: Option[String]): Set[MetricLabel] = {
     val responseLabels = l.forResponse.map { case (key, valueFn) =>
       MetricLabel(key, valueFn(res).getOrElse("unknown"))
     }

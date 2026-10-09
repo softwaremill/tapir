@@ -14,8 +14,8 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 
 class PekkoHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
-    extends TestServerInterpreter[Future, PekkoStreams with WebSockets, PekkoHttpServerOptions, Route] {
-  override def route(es: List[ServerEndpoint[PekkoStreams with WebSockets, Future]], interceptors: Interceptors): Route = {
+    extends TestServerInterpreter[Future, PekkoStreams & WebSockets, PekkoHttpServerOptions, Route] {
+  override def route(es: List[ServerEndpoint[PekkoStreams & WebSockets, Future]], interceptors: Interceptors): Route = {
     import actorSystem.dispatcher
     val serverOptions: PekkoHttpServerOptions = interceptors(PekkoHttpServerOptions.customiseInterceptors).options
     PekkoHttpServerInterpreter(serverOptions).toRoute(es)

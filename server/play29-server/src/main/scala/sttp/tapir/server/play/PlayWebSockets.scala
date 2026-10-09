@@ -11,7 +11,7 @@ import sttp.ws.WebSocketFrame
 private[play] object PlayWebSockets {
   def pipeToBody[REQ, RESP](
       pipe: Flow[REQ, RESP, Any],
-      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, _, AkkaStreams]
+      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, ?, AkkaStreams]
   ): Flow[Message, Message, Any] = {
     Flow[Message]
       .map(messageToFrame)

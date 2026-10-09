@@ -122,13 +122,13 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, PekkoStreams] 
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, PekkoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, PekkoStreams]
   ): PlayResponseBody = Left(PlayWebSockets.pipeToBody(pipe, o))
 
   private def rawPartsToFilePart[T](
       m: RawBodyType.MultipartBody,
       part: Part[T]
-  ): Option[MultipartFormData.FilePart[Source[ByteString, _]]] = {
+  ): Option[MultipartFormData.FilePart[Source[ByteString, ?]]] = {
     m.partType(part.name).flatMap { partType =>
       val entity: HttpEntity = fromRawValue(part.body, part, partType.asInstanceOf[RawBodyType[Any]])
 
@@ -163,7 +163,7 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, PekkoStreams] 
 
   private def multipartFormToStream[A](
       dataParts: Seq[DataPart],
-      fileParts: Seq[FilePart[Source[ByteString, _]]]
+      fileParts: Seq[FilePart[Source[ByteString, ?]]]
   ): Source[ByteString, NotUsed] = {
     val boundary: String = "--------" + scala.util.Random.alphanumeric.take(20).mkString("")
 
@@ -178,7 +178,7 @@ class PlayToResponseBody extends ToResponseBody[PlayResponseBody, PekkoStreams] 
       Codec.utf_8.encode(result)
     }
 
-    def filePartHeader(file: FilePart[_]) = {
+    def filePartHeader(file: FilePart[?]) = {
       val name = s""""${file.key}""""
       val filename = s""""${file.filename}""""
       val contentType = file.contentType

@@ -92,7 +92,7 @@ object Vanilla extends Endpoints {
   def webSocketHandler(vertx: Vertx): Router => Route = { router =>
     router.get("/ws/ts").handler { ctx =>
       val wss = ctx.request().toWebSocket()
-      wss.map { ws: ServerWebSocket =>
+      wss.map { (ws: ServerWebSocket) =>
         ws.textMessageHandler(_ => ())
 
         // Set a periodic timer to send timestamps every 100 milliseconds
@@ -110,7 +110,7 @@ object Vanilla extends Endpoints {
   }
   def route: Int => Vertx => Router => Route = { (nRoutes: Int) => _ => router =>
     (0 until nRoutes).map { n =>
-      router.get(s"/path$n/:id").handler { ctx: RoutingContext =>
+      router.get(s"/path$n/:id").handler { (ctx: RoutingContext) =>
         val id = ctx.request().getParam("id").toInt
         val _ = ctx
           .response()
@@ -118,7 +118,7 @@ object Vanilla extends Endpoints {
           .end(s"${id + n}")
       }
 
-      router.post(s"/path$n").handler(bodyHandler).handler { ctx: RoutingContext =>
+      router.post(s"/path$n").handler(bodyHandler).handler { (ctx: RoutingContext) =>
         val body = ctx.body.asString()
         val _ = ctx
           .response()
@@ -126,7 +126,7 @@ object Vanilla extends Endpoints {
           .end(s"Ok [$n], string length = ${body.length}")
       }
 
-      router.post(s"/pathBytes$n").handler(bodyHandler).handler { ctx: RoutingContext =>
+      router.post(s"/pathBytes$n").handler(bodyHandler).handler { (ctx: RoutingContext) =>
         val bytes = ctx.body().asString()
         val _ = ctx
           .response()
@@ -134,7 +134,7 @@ object Vanilla extends Endpoints {
           .end(s"Ok [$n], bytes length = ${bytes.length}")
       }
 
-      router.post(s"/pathFile$n").handler(bodyHandler).handler { ctx: RoutingContext =>
+      router.post(s"/pathFile$n").handler(bodyHandler).handler { (ctx: RoutingContext) =>
         val filePath = newTempFilePath()
         val fs = ctx.vertx.fileSystem
         val _ = fs

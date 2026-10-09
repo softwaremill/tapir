@@ -33,7 +33,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
           requestHandler: EndpointInterceptor[Identity] => RequestHandler[Identity, R, B]
       ): RequestHandler[Identity, R, B] = RequestHandler.from { (request, endpoints, monad) =>
         callTrail.append("2 request")
-        requestHandler(new AddToTrailInterceptor(callTrail.append(_: String), "2")).apply(request, endpoints)(monad)
+        requestHandler(new AddToTrailInterceptor(callTrail.append(_: String), "2")).apply(request, endpoints)(using monad)
       }
     }
     val interceptor3 = new AddToTrailInterceptor(callTrail.append(_: String), "3")
@@ -71,8 +71,8 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
             endpoint
               // passing the codec explicitly via queryAnyFormat/Body instead of query[T]/plainBody[T],
               // due to Scala 3.8 compatibility (the implicit can no longer be applied as a regular argument)
-              .securityIn(queryAnyFormat[StringWrapper, TextPlain]("x", Codec.listHead(addToTrailCodec("x"))))
-              .in(queryAnyFormat[StringWrapper, TextPlain]("y", Codec.listHead(addToTrailCodec("y"))))
+              .securityIn(queryAnyFormat[StringWrapper, TextPlain]("x", Codec.listHead(using addToTrailCodec("x"))))
+              .in(queryAnyFormat[StringWrapper, TextPlain]("y", Codec.listHead(using addToTrailCodec("y"))))
               .in(
                 EndpointIO
                   .Body(RawBodyType.StringBody(java.nio.charset.StandardCharsets.UTF_8), addToTrailCodec("z"), EndpointIO.Info.empty)

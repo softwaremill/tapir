@@ -38,7 +38,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
           )
             .tests() ++
             new ServerStreamingTests(createServerTest).tests(Fs2Streams[IO])(drainFs2) ++
-            new ServerCancellationTests(createServerTest)(m, IO.asyncForIO).tests() ++
+            new ServerCancellationTests(createServerTest)(using m, IO.asyncForIO).tests() ++
             new NettyFs2StreamingCancellationTest(createServerTest).tests() ++
             new ServerGracefulShutdownTests(createServerTest, ioSleeper).tests() ++
             new ServerWebSocketTests(

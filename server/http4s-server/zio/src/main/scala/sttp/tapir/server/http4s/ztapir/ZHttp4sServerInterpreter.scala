@@ -19,9 +19,9 @@ trait ZHttp4sServerInterpreter[R] {
   def from(serverEndpoints: List[ZServerEndpoint[R, ZioStreams]]): ServerEndpointsToRoutes =
     new ServerEndpointsToRoutes(serverEndpoints)
 
-  def fromWebSocket(se: ZServerEndpoint[R, ZioStreams with WebSockets]): WebSocketServerEndpointsToRoutes = fromWebSocket(List(se))
+  def fromWebSocket(se: ZServerEndpoint[R, ZioStreams & WebSockets]): WebSocketServerEndpointsToRoutes = fromWebSocket(List(se))
 
-  def fromWebSocket(serverEndpoints: List[ZServerEndpoint[R, ZioStreams with WebSockets]]): WebSocketServerEndpointsToRoutes =
+  def fromWebSocket(serverEndpoints: List[ZServerEndpoint[R, ZioStreams & WebSockets]]): WebSocketServerEndpointsToRoutes =
     new WebSocketServerEndpointsToRoutes(serverEndpoints)
 
   class ServerEndpointsToRoutes(
@@ -35,7 +35,7 @@ trait ZHttp4sServerInterpreter[R] {
   }
 
   class WebSocketServerEndpointsToRoutes(
-      serverEndpoints: List[ZServerEndpoint[R, ZioStreams with WebSockets]]
+      serverEndpoints: List[ZServerEndpoint[R, ZioStreams & WebSockets]]
   ) {
     def toRoutes[R2]: WebSocketBuilder2[RIO[R & R2, *]] => HttpRoutes[RIO[R & R2, *]] = {
       Http4sServerInterpreter(zHttp4sServerOptions[R & R2]).toWebSocketRoutes(

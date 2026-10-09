@@ -13,13 +13,13 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 /** A Reactive Streams publisher which emits chunks of HttpContent read from a given file.
   */
 class FileRangePublisher(fileRange: FileRange, chunkSize: Int) extends Publisher[HttpContent] {
-  override def subscribe(subscriber: Subscriber[_ >: HttpContent]): Unit = {
+  override def subscribe(subscriber: Subscriber[? >: HttpContent]): Unit = {
     if (subscriber == null) throw new NullPointerException("Subscriber cannot be null")
     val subscription = new FileRangeSubscription(subscriber, fileRange, chunkSize)
     subscriber.onSubscribe(subscription)
   }
 
-  private class FileRangeSubscription(subscriber: Subscriber[_ >: HttpContent], fileRange: FileRange, chunkSize: Int) extends Subscription {
+  private class FileRangeSubscription(subscriber: Subscriber[? >: HttpContent], fileRange: FileRange, chunkSize: Int) extends Subscription {
     private lazy val channel: AsynchronousFileChannel = AsynchronousFileChannel.open(fileRange.file.toPath(), StandardOpenOption.READ)
     private val demand = new AtomicLong(0L)
     private val position = new AtomicLong(fileRange.range.flatMap(_.start).getOrElse(0L))

@@ -72,6 +72,6 @@ private[lambda] class AwsToResponseBody[F[_]](options: AwsServerOptions[F]) exte
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, NoStreams]
   ): LambdaResponseBody = throw new UnsupportedOperationException
 }

@@ -7,6 +7,6 @@ import sttp.tapir.client.sttp4.WebSocketToPipe
 import scala.concurrent.ExecutionContext
 
 trait TapirSttpClientPekkoHttpWebSockets {
-  implicit def webSocketsSupportedForPekkoStreams(implicit ec: ExecutionContext): WebSocketToPipe[PekkoStreams with WebSockets] =
-    new WebSocketToPekkoPipe[PekkoStreams with WebSockets]
+  implicit def webSocketsSupportedForPekkoStreams(implicit ec: ExecutionContext): WebSocketToPipe[PekkoStreams & WebSockets] =
+    new WebSocketToPekkoPipe[PekkoStreams & WebSockets]
 }

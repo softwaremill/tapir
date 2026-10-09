@@ -25,7 +25,7 @@ object AkkaHttpServerOptions {
   def customiseInterceptors(implicit
       ec: ExecutionContext
   ): CustomiseInterceptors[Future, AkkaHttpServerOptions] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[Future, AkkaHttpServerOptions](
       createOptions = (ci: CustomiseInterceptors[Future, AkkaHttpServerOptions]) =>
         AkkaHttpServerOptions(defaultCreateFile(_), defaultDeleteFile(_), ci.interceptors)
     ).serverLog(defaultSlf4jServerLog)

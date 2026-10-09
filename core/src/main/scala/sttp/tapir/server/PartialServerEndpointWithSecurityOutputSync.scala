@@ -30,13 +30,13 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
 
   override private[tapir] def withInput[I2, R2](
       input: EndpointInput[I2]
-  ): PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL, I2, ERROR_OUTPUT, SECURITY_OUTPUT, OUTPUT, R with R2] =
+  ): PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL, I2, ERROR_OUTPUT, SECURITY_OUTPUT, OUTPUT, R & R2] =
     copy(endpoint = endpoint.copy(input = input))
   override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]) = copy(endpoint = endpoint.copy(output = output))
   override private[tapir] def withErrorOutputVariant[E2, R2](
       errorOutput: EndpointOutput[E2],
       embedE: ERROR_OUTPUT => E2
-  ): PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL, INPUT, E2, SECURITY_OUTPUT, OUTPUT, R with R2] =
+  ): PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL, INPUT, E2, SECURITY_OUTPUT, OUTPUT, R & R2] =
     this.copy(
       endpoint = endpoint.copy(errorOutput = errorOutput),
       securityLogic = a =>
@@ -89,6 +89,7 @@ case class PartialServerEndpointWithSecurityOutputSync[SECURITY_INPUT, PRINCIPAL
         recoverErrors2[(SECURITY_OUTPUT, PRINCIPAL), INPUT, ERROR_OUTPUT, (SECURITY_OUTPUT, OUTPUT), Identity](so_u =>
           i => (so_u._1, f(so_u._2)(i))
         )(
+          using
           implicitly,
           implicitly
         )(IdentityMonad)

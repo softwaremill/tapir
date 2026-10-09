@@ -206,7 +206,7 @@ object OpenapiModels {
     def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef =
       throw new IllegalStateException(s"Header $name cannot be generated: $cause")
   }
-  case class OpenapiHeaderRef($ref: OpenapiSchemaRef) extends OpenapiHeader {
+  case class OpenapiHeaderRef(`$ref`: OpenapiSchemaRef) extends OpenapiHeader {
     def resolved(name: String, doc: OpenapiDocument): OpenapiHeaderDef = resolvedFollowing(name, doc, Seq.empty)
 
     // a header component may itself be a reference, so follow the chain, keeping the visited refs to report a cycle rather than hang
@@ -272,7 +272,7 @@ object OpenapiModels {
   }
   case class OpenapiResponseRef(
       code: String,
-      $ref: OpenapiSchemaRef
+      `$ref`: OpenapiSchemaRef
   ) extends OpenapiResponse {
     def strippedRef: String = $ref.name.stripPrefix("#/components/responses/")
     def resolve(doc: OpenapiDocument): OpenapiResponseDef =
@@ -293,7 +293,7 @@ object OpenapiModels {
     def resolve(doc: OpenapiDocument): OpenapiRequestBodyDefn = this
   }
   case class OpenapiRequestRef(
-      $ref: OpenapiSchemaRef
+      `$ref`: OpenapiSchemaRef
   ) extends OpenapiRequestBody {
     def strippedRef: String = $ref.name.stripPrefix("#/components/requestBodies/")
     def resolve(doc: OpenapiDocument): OpenapiRequestBodyDefn =

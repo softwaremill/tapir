@@ -37,7 +37,7 @@ private[cats] class NettyCatsRequestBody[F[_]: Async](
     toStream(serverRequest, maxBytes)
       .asInstanceOf[streamCompatible.streams.BinaryStream]
       .through(
-        Files[F](Files.forAsync[F]).writeAll(Path.fromNioPath(file.toPath))
+        Files[F](using Files.forAsync[F]).writeAll(Path.fromNioPath(file.toPath))
       )
       .compile
       .drain

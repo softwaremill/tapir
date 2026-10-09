@@ -18,7 +18,7 @@ class VertxBlockingServerTest extends TestSuite {
     .map(backend => new ForceHttp1BackendWrapper(backend))
     .flatMap { backend =>
       vertxResource.map { implicit vertx =>
-        implicit val m: FutureMonad = new FutureMonad()(ExecutionContext.global)
+        implicit val m: FutureMonad = new FutureMonad()(using ExecutionContext.global)
         val interpreter = new VertxTestServerBlockingInterpreter(vertx)
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 

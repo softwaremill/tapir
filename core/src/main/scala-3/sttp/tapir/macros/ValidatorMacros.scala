@@ -27,7 +27,7 @@ private[tapir] object ValidatorMacros {
     val tpe = TypeRepr.of[T]
     val symbol = tpe.typeSymbol
 
-    if (!symbol.isClassDef || !(symbol.flags is Flags.Sealed)) {
+    if (!symbol.isClassDef || !symbol.flags.is(Flags.Sealed)) {
       report.errorAndAbort("Can only enumerate values of a sealed trait, class or enum.")
     }
 
@@ -44,7 +44,7 @@ private[tapir] object ValidatorMacros {
 
     '{
       Validator.Enumeration.documentationOnly[T](
-        List(${ Varargs(instances) }: _*).asInstanceOf[List[T]],
+        List(${ Varargs(instances) }*).asInstanceOf[List[T]],
         None,
         ${ name }
       )

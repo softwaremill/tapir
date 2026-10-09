@@ -29,7 +29,7 @@ private[armeria] final class ArmeriaToResponseBody[S <: Streams[S]](streamCompat
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, S]
   ): ArmeriaResponseType = throw new UnsupportedOperationException()
 
   private def rawValueToHttpData[R](bodyType: RawBodyType[R], v: R): ArmeriaResponseType = {
@@ -73,7 +73,7 @@ private[armeria] final class ArmeriaToResponseBody[S <: Streams[S]](streamCompat
 
       case m: RawBodyType.MultipartBody =>
         val parts = (v: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
-        Left(Multipart.of(parts: _*).toStreamMessage)
+        Left(Multipart.of(parts*).toStreamMessage)
     }
   }
 

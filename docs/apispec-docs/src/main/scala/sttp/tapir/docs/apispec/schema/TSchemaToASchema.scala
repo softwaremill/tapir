@@ -16,7 +16,7 @@ private[docs] class TSchemaToASchema(
     markOptionsAsNullable: Boolean
 ) {
 
-  def apply[T](codec: Codec[T, _, _]): ASchema = apply(codec.schema, allowReference = true)
+  def apply[T](codec: Codec[T, ?, ?]): ASchema = apply(codec.schema, allowReference = true)
 
   /** @param allowReference
     *   Can a reference schema be generated, if this is a named schema - should be `false` for top-level component definitions (otherwise
@@ -108,7 +108,7 @@ private[docs] class TSchemaToASchema(
       .toListMap
   }
 
-  private def addAttributes(oschema: ASchema, tschema: TSchema[_]): ASchema = {
+  private def addAttributes(oschema: ASchema, tschema: TSchema[?]): ASchema = {
     val titleFromAttr = tschema.attributes.get(Title.Attribute).map(_.value)
     // The primary motivation for using schema name as fallback title is to improve Swagger UX with
     // `oneOf` schemas in OpenAPI 3.1. See https://github.com/softwaremill/tapir/issues/3447 for details.
@@ -122,7 +122,7 @@ private[docs] class TSchemaToASchema(
       .copy(const = const)
   }
 
-  private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
+  private def addMetadata(oschema: ASchema, tschema: TSchema[?]): ASchema = {
     oschema.copy(
       description = tschema.description.orElse(oschema.description),
       default = tDefaultToADefault(tschema).orElse(oschema.default),
@@ -135,11 +135,11 @@ private[docs] class TSchemaToASchema(
 
   private def addConstraints(
       oschema: ASchema,
-      vs: Seq[Validator.Primitive[_]],
+      vs: Seq[Validator.Primitive[?]],
       schemaIsWholeNumber: Boolean
   ): ASchema = vs.foldLeft(oschema)(addConstraints(_, _, schemaIsWholeNumber))
 
-  private def addConstraints(aschema: ASchema, v: Validator.Primitive[_], wholeNumbers: Boolean): ASchema = {
+  private def addConstraints(aschema: ASchema, v: Validator.Primitive[?], wholeNumbers: Boolean): ASchema = {
     v match {
       case m @ Validator.Min(v, false) =>
         aschema.copy(minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
@@ -195,8 +195,8 @@ private[docs] class TSchemaToASchema(
 }
 
 object TSchemaToASchema {
-  def tDefaultToADefault(schema: TSchema[_]): Option[ExampleValue] = schema.default.flatMap { case (_, raw) =>
+  def tDefaultToADefault(schema: TSchema[?]): Option[ExampleValue] = schema.default.flatMap { case (_, raw) =>
     raw.flatMap(r => exampleValue(schema, r))
   }
-  def tExampleToAExample(schema: TSchema[_]): Option[ExampleValue] = schema.encodedExample.flatMap(exampleValue(schema, _))
+  def tExampleToAExample(schema: TSchema[?]): Option[ExampleValue] = schema.encodedExample.flatMap(exampleValue(schema, _))
 }

@@ -12,8 +12,8 @@ import sttp.capabilities.fs2.Fs2Streams
 import scala.concurrent.duration.FiniteDuration
 
 class NettyCatsTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, dispatcher: Dispatcher[IO])
-    extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, NettyCatsServerOptions[IO], Route[IO]] {
-  override def route(es: List[ServerEndpoint[Fs2Streams[IO] with WebSockets, IO]], interceptors: Interceptors): Route[IO] = {
+    extends TestServerInterpreter[IO, Fs2Streams[IO] & WebSockets, NettyCatsServerOptions[IO], Route[IO]] {
+  override def route(es: List[ServerEndpoint[Fs2Streams[IO] & WebSockets, IO]], interceptors: Interceptors): Route[IO] = {
     val serverOptions: NettyCatsServerOptions[IO] = interceptors(
       NettyCatsServerOptions.customiseInterceptors[IO](dispatcher)
     ).options

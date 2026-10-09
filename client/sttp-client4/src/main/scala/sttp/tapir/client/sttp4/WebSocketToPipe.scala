@@ -27,7 +27,7 @@ trait WebSocketToPipe[-R] {
 
   I have no idea why.
    */
-  def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, S]): Any
+  def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, ?, S]): Any
 }
 
 object WebSocketToPipe {
@@ -35,7 +35,7 @@ object WebSocketToPipe {
     override type S = Nothing
     override type F[X] = X
 
-    override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, Nothing]): Any =
+    override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, ?, Nothing]): Any =
       throw new RuntimeException("WebSockets are not supported")
   }
   // default case; supporting implementations can import

@@ -24,14 +24,14 @@ private[parameter] object InputParameters {
       concat: ParamConcat.Aux[I, InputParameter, IJ]
   ): InputParameters[IJ] = Cons[I, IJ](head, tail, mkCombine(concat))
 
-  private[parameter] def combine(params: InputParameters[_]): Params =
+  private[parameter] def combine(params: InputParameters[?]): Params =
     params match {
       case InputParameters.Cons(theLast, firstInRow, combiner) => combiner(combine(firstInRow), ParamsAsAny(theLast))
       case InputParameters.Empty                               => ParamsAsAny(())
     }
 
-  private[parameter] def toList(params: InputParameters[_]): List[InputParameter] = {
-    def rec(acc: List[InputParameter], remaining: InputParameters[_]): List[InputParameter] =
+  private[parameter] def toList(params: InputParameters[?]): List[InputParameter] = {
+    def rec(acc: List[InputParameter], remaining: InputParameters[?]): List[InputParameter] =
       remaining match {
         case InputParameters.Empty               => acc
         case InputParameters.Cons(head, tail, _) => rec(head :: acc, tail)

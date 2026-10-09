@@ -58,14 +58,14 @@ case class ZPartialServerEndpoint[R, SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUT
 
   override private[tapir] def withInput[I2, C2](
       input: EndpointInput[I2]
-  ): ZPartialServerEndpoint[R, SECURITY_INPUT, PRINCIPAL, I2, ERROR_OUTPUT, OUTPUT, C with C2] =
+  ): ZPartialServerEndpoint[R, SECURITY_INPUT, PRINCIPAL, I2, ERROR_OUTPUT, OUTPUT, C & C2] =
     copy(endpoint = endpoint.copy(input = input))
   override private[tapir] def withOutput[O2, C2](output: EndpointOutput[O2]) = copy(endpoint = endpoint.copy(output = output))
   override private[tapir] def withInfo(info: EndpointInfo) = copy(endpoint = endpoint.copy(info = info))
   override private[tapir] def withErrorOutputVariant[E2, C2](
       errorOutput: EndpointOutput[E2],
       embedE: ERROR_OUTPUT => E2
-  ): ZPartialServerEndpoint[R, SECURITY_INPUT, PRINCIPAL, INPUT, E2, OUTPUT, C with C2] =
+  ): ZPartialServerEndpoint[R, SECURITY_INPUT, PRINCIPAL, INPUT, E2, OUTPUT, C & C2] =
     this.copy(
       endpoint = endpoint.copy(errorOutput = errorOutput),
       securityLogic = a => securityLogic(a).mapError(embedE)
@@ -75,7 +75,7 @@ case class ZPartialServerEndpoint[R, SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUT
 
   def serverLogic[R0](
       logic: PRINCIPAL => INPUT => ZIO[R0, ERROR_OUTPUT, OUTPUT]
-  ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, C, RIO[R with R0, *]] =
+  ): ServerEndpoint.Full[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT, OUTPUT, C, RIO[R & R0, *]] =
     ServerEndpoint(
       endpoint,
       _ => securityLogic(_: SECURITY_INPUT).either.resurrect,

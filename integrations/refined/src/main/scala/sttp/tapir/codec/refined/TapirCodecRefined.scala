@@ -111,8 +111,8 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
   ): ValidatorForPredicate[N, LP And RP] =
     new ValidatorForPredicate[N, LP And RP] {
       override def validator: Validator[N] = Validator.all(leftPredValidator.validator, rightPredValidator.validator)
-      override def validationErrors(value: N, refinedErrorMessage: String): List[ValidationError[_]] = {
-        val primitivesErrors = Seq[(Validate[N, _], Validator.Primitive[N])](
+      override def validationErrors(value: N, refinedErrorMessage: String): List[ValidationError[?]] = {
+        val primitivesErrors = Seq[(Validate[N, ?], Validator.Primitive[N])](
           leftRefinedValidator -> leftPredValidator.validator,
           rightRefinedValidator -> rightPredValidator.validator
         )
@@ -137,8 +137,8 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
   ): ValidatorForPredicate[N, LP Or RP] =
     new ValidatorForPredicate[N, LP Or RP] {
       override def validator: Validator[N] = Validator.any(leftPredValidator.validator, rightPredValidator.validator)
-      override def validationErrors(value: N, refinedErrorMessage: String): List[ValidationError[_]] = {
-        val primitivesErrors = Seq[(Validate[N, _], Validator.Primitive[N])](
+      override def validationErrors(value: N, refinedErrorMessage: String): List[ValidationError[?]] = {
+        val primitivesErrors = Seq[(Validate[N, ?], Validator.Primitive[N])](
           leftRefinedValidator -> leftPredValidator.validator,
           rightRefinedValidator -> rightPredValidator.validator
         )
@@ -162,19 +162,19 @@ trait ValidatorForPredicate[V, P] {
     case Validator.MinSize(a) => a > 0
     case _                    => false
   }
-  def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]]
+  def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[?]]
 }
 
 trait PrimitiveValidatorForPredicate[V, P] extends ValidatorForPredicate[V, P] {
   def validator: Validator.Primitive[V]
-  def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]]
+  def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[?]]
 }
 
 object ValidatorForPredicate {
   def fromPrimitiveValidator[V, P](primitiveValidator: Validator.Primitive[V]): PrimitiveValidatorForPredicate[V, P] =
     new PrimitiveValidatorForPredicate[V, P] {
       override def validator: Validator.Primitive[V] = primitiveValidator
-      override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
+      override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[?]] =
         List(ValidationError[V](primitiveValidator, value))
     }
 }
@@ -191,7 +191,7 @@ trait LowPriorityValidatorForPredicate {
         }
       ) // for the moment there is no way to get a human description of a predicate/validator without having a concrete value to run it
 
-      override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
+      override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[?]] =
         List(ValidationError[V](validator, value, Nil, Some(refinedErrorMessage)))
     }
 }

@@ -25,8 +25,8 @@ object Fs2StreamCompatible {
       override def fromFile(fileRange: FileRange, chunkSize: Int): streams.BinaryStream = {
         val path = Path.fromNioPath(fileRange.file.toPath)
         fileRange.range
-          .flatMap(r => r.startAndEnd.map(s => Files[F](Files.forAsync[F]).readRange(path, chunkSize, s._1, s._2)))
-          .getOrElse(Files[F](Files.forAsync[F]).readAll(path, chunkSize, Flags.Read))
+          .flatMap(r => r.startAndEnd.map(s => Files[F](using Files.forAsync[F]).readRange(path, chunkSize, s._1, s._2)))
+          .getOrElse(Files[F](using Files.forAsync[F]).readAll(path, chunkSize, Flags.Read))
       }
 
       override def fromInputStream(is: () => InputStream, chunkSize: Int, length: Option[Long]): streams.BinaryStream =
