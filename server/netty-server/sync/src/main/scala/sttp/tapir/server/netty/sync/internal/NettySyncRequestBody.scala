@@ -3,8 +3,7 @@ package sttp.tapir.server.netty.sync.internal
 import _root_.ox.Chunk
 import _root_.ox.flow.Flow
 import _root_.ox.flow.reactive.FlowReactiveStreams
-import io.netty.buffer.Unpooled
-import io.netty.handler.codec.http.{DefaultHttpContent, HttpContent}
+import io.netty.handler.codec.http.HttpContent
 import io.netty.handler.codec.http.multipart.{HttpPostMultipartRequestDecoder, InterfaceHttpData}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
@@ -41,28 +40,29 @@ private[sync] class NettySyncRequestBody(
       maxBytes: Option[Long]
   ): RawValue[Seq[RawPart]] = {
     val decoder = new HttpPostMultipartRequestDecoder(httpDataFactory, nettyRequest)
+    val tracker = new UnconsumedContentTracker(nettyRequest)
 
     val rawParts =
       try
-        val requestFlow =
-          FlowReactiveStreams.fromPublisher(new CopyingPublisher(nettyRequest)).map(b => new DefaultHttpContent(Unpooled.wrappedBuffer(b)))
+        val requestFlow = FlowReactiveStreams.fromPublisher(tracker)
         (maxBytes match
           case Some(value) =>
             requestFlow.mapStatefulConcat(0): (bytesSoFar, httpContent) =>
               val newBytesSoFar = bytesSoFar + httpContent.content().readableBytes()
               if (newBytesSoFar > value) throw StreamMaxLengthExceededException(value)
-              (newBytesSoFar, decoder.decodeChunk(httpContent))
-          case None => requestFlow.mapConcat(decoder.decodeChunk)
+              (newBytesSoFar, decoder.decodeChunk(tracker.consumed(httpContent)))
+          case None => requestFlow.mapConcat(httpContent => decoder.decodeChunk(tracker.consumed(httpContent)))
         ).mapConcat: httpData =>
           m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType))
         .runToList()
       catch
-        case ChannelClosedException.Error(cause) =>
-          decoder.destroy()
-          throw cause
         case t: Throwable =>
           decoder.destroy()
-          throw t
+          throw (t match
+            case ChannelClosedException.Error(cause) => cause
+            case _                                   => t
+          )
+      finally tracker.releaseUnconsumed()
 
     RawValue.fromParts(rawParts).copy(cleanup = Some(() => decoder.destroy()))
   }
