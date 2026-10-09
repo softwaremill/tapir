@@ -4,6 +4,7 @@ import cats.effect.{IO, Resource}
 import org.scalatest.matchers.should.Matchers._
 import sttp.monad.MonadError
 import sttp.tapir._
+import sttp.tapir.server.interceptor.RequestInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.model.IncompleteRequestBodyException
 import sttp.tapir.tests._
@@ -37,6 +38,7 @@ class ServerIncompleteRequestBodyTests[F[_], OPTIONS, ROUTE](createServerTest: C
       contentType: String,
       sentBody: String
   ): Test = {
+    val processingStarted = new CompletableFuture[Unit]()
     val outcome = new CompletableFuture[Either[String, DecodeResult.Failure]]()
     val declaredLength = 100000L
     val sentBytes = sentBody.getBytes(StandardCharsets.UTF_8)
@@ -47,10 +49,11 @@ class ServerIncompleteRequestBodyTests[F[_], OPTIONS, ROUTE](createServerTest: C
         m.unit("")
       },
       s"connection closed mid-body does not pass the truncated $bodyKind body to the server logic",
-      _.decodeFailureHandler(DecodeFailureHandler[F] { ctx =>
-        val _ = outcome.complete(Right(ctx.failure))
-        DefaultDecodeFailureHandler[F](ctx)
-      })
+      _.prependInterceptor(RequestInterceptor.effect[F](_ => m.eval { val _ = processingStarted.complete(()) }))
+        .decodeFailureHandler(DecodeFailureHandler[F] { ctx =>
+          val _ = outcome.complete(Right(ctx.failure))
+          DefaultDecodeFailureHandler[F](ctx)
+        })
     ) { (_, baseUri) =>
       val port = baseUri.port.get
       val requestHead =
@@ -60,7 +63,9 @@ class ServerIncompleteRequestBodyTests[F[_], OPTIONS, ROUTE](createServerTest: C
       Resource
         .fromAutoCloseable(IO.blocking(new Socket("localhost", port)))
         .use { socket =>
-          send(socket, requestHead) >> send(socket, sentBytes) >> IO.blocking(socket.shutdownOutput())
+          // a server might skip requests whose connection is closed before their processing starts
+          send(socket, requestHead) >> IO.fromCompletableFuture(IO(processingStarted)).timeout(5.seconds) >>
+            send(socket, sentBytes) >> IO.blocking(socket.shutdownOutput())
         } >>
         IO.fromCompletableFuture(IO(outcome)).timeout(5.seconds).map { result =>
           result should matchPattern {
