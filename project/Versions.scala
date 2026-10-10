@@ -38,7 +38,7 @@ object Versions {
   val enumeratum = "1.9.8"
   val zio = "2.1.26"
   val zioHttp = "3.11.6"
-  val zioInteropCats = "23.1.0.13"
+  val zioInteropCats = "23.1.0.14"
   val zioInteropReactiveStreams = "2.0.2"
   val zioJson = "1.0.0"
   val zioOpenTelemetry = "3.1.19"
