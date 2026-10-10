@@ -1528,7 +1528,7 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
 // Play 2.9 Server
 lazy val play29Scala2Deps = Map(
   "com.typesafe.akka" -> ("2.6.21", Seq("akka-actor", "akka-actor-typed", "akka-slf4j", "akka-serialization-jackson", "akka-stream")),
-  "com.typesafe" -> ("0.7.1", Seq("ssl-config-core")),
+  "com.typesafe" -> ("0.7.2", Seq("ssl-config-core")),
   "com.fasterxml.jackson.module" -> ("2.22.3.1", Seq("jackson-module-scala"))
 )
 
