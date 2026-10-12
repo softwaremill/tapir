@@ -304,6 +304,8 @@ object OutComponent {
             headerDefns(targetScala3, jsonSerdeLib, doc, generateValidators, ambiguous, isErrorPosition)(endpointName, many)
 
           val noAmbiguity = noHeaders && !ambiguous
+          val bodyIsStreaming = (!isErrorPosition && tapirCodegenDirectives.contains(forceRespStreaming)) ||
+            (!isErrorPosition && tapirCodegenDirectives.contains(forceStreaming))
 
           val (oneOfs, types, inlineDefns) = many.map { m =>
             val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = contentCanBeEmpty)
@@ -358,8 +360,10 @@ object OutComponent {
                 val (_, nonOptionalType, _) = bodyFmt(m, isErrorPosition)
                 val maybeMap = if (m.content.size > 1 || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
+                val tpesAreBin = someType.contains("BinaryStream") || someType.contains("fs2.Stream")
+                def maybeUnchecked = if (tpesAreBin) " @scala.unchecked" else ""
                 (
-                  s"oneOfVariantValueMatcher($maybeCode$decl$maybeStrict$maybeMap$h){ case ${matchBodyAndHeaders(s"Some(_$someType)")} => true }",
+                  s"oneOfVariantValueMatcher($maybeCode$decl$maybeStrict$maybeMap$h){ case ${matchBodyAndHeaders(s"Some(_$someType$maybeUnchecked)")} => true }",
                   maybeBodyType,
                   inlineDefn1
                 )
@@ -393,8 +397,6 @@ object OutComponent {
             .map { case (k, vs) => k -> vs.map(_._2) }
             .toMap
           val traitName = s"${endpointName.capitalize}Body${if (isErrorPosition) "Err" else "Out"}"
-          val bodyIsStreaming = (!isErrorPosition && tapirCodegenDirectives.contains(forceRespStreaming)) ||
-            (!isErrorPosition && tapirCodegenDirectives.contains(forceStreaming))
           val bodyIsEager = !bodyIsStreaming && (isErrorPosition ||
             (!isErrorPosition && tapirCodegenDirectives.contains(forceRespEager)) ||
             (!isErrorPosition && tapirCodegenDirectives.contains(forceEager)))

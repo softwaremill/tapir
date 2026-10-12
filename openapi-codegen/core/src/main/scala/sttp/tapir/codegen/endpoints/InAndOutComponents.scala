@@ -52,6 +52,11 @@ object InAndOutComponents {
   private[endpoints] def aliases(packageReuse: PackageReuseContext, types: Seq[String], seperateFilesForModels: Boolean): String =
     types.map(PackageReuseContext.enumAliasType(_, packageReuse, seperateFilesForModels)).mkString("\n")
 
+  private def mkWrapHelper(required: Boolean, position: Position)(s: String): String =
+    if (required || position != Position.Response) s else s"$s.map(Option(_))(_.orNull)"
+  private def mkWrapTypeHelper(required: Boolean, position: Position)(s: String): String =
+    if (required || position != Position.Response) s else s"Option[$s]"
+
   private[endpoints] def contentTypeMapper(
       contentType: String,
       schema: OpenapiSchemaType,
@@ -64,6 +69,8 @@ object InAndOutComponents {
       tapirCodegenDirectives: Set[String],
       validators: ValidationDefns
   )(implicit location: Location): MappedContentType = {
+    def wrapHelper: String => String = mkWrapHelper(required, position)
+    def wrapTypeHelper: String => String = mkWrapTypeHelper(required, position)
     def vRef(t: OpenapiSchemaType, r: Boolean) = {
       val maybeValidatorRef = t match {
         case r: OpenapiSchemaRef => Some(r.stripped)
@@ -88,13 +95,14 @@ object InAndOutComponents {
       (tapirCodegenDirectives.contains(forceEager) && position != Err) ||
       (tapirCodegenDirectives.contains(forceReqEager) && position == Request) ||
       (tapirCodegenDirectives.contains(forceRespEager) && position == Response))
+    def mkMapContentType(i: String, t: String) = MappedContentType(wrapHelper(i), wrapTypeHelper(t))
     contentType match {
       case any if streaming =>
-        failoverBinaryCase(endpointName, position, any, schema, false, streamingImplementation)
+        failoverBinaryCase(endpointName, position, any, schema, false, streamingImplementation, required)
       case "text/plain" =>
-        MappedContentType("stringBody", "String")
+        mkMapContentType("stringBody", "String")
       case "text/html" =>
-        MappedContentType("htmlBodyUtf8", "String")
+        mkMapContentType("htmlBodyUtf8", "String")
       case ct if ContentTypes.isXml(ct) && xmlSerdeLib != XmlSerdeLib.NoSupport =>
         val (outT: String, maybeInline: Option[String], maybeAlias: Option[String], maybeTpe: Seq[String]) = schema match {
           case st: OpenapiSchemaSimpleType =>
@@ -115,6 +123,7 @@ object InAndOutComponents {
         MappedContentType(bodyType + v(required), req, maybeInline, maybeTpe)
       case ct if ContentTypes.isJson(ct) && tapirCodegenDirectives.contains(jsonBodyAsString) =>
         val body = if (ContentTypes.isSuffixed(ct)) suffixedBody("sttp.tapir.Codec.string", ct) else "stringJsonBody"
+        // this doesn't use the wrap helpers to preserve what was going on on requests before it was implemented; may be buggy for those cases.
         if (required) MappedContentType(body, "String", None)
         else MappedContentType(s"$body.map(Option(_))(_.orNull)", "Option[String]", None)
       case ct if ContentTypes.isJson(ct) =>
@@ -140,15 +149,15 @@ object InAndOutComponents {
       case "multipart/form-data" =>
         schema match {
           case _: OpenapiSchemaBinary =>
-            MappedContentType("multipartBody", "Seq[Part[Array[Byte]]]")
+            mkMapContentType("multipartBody", "Seq[Part[Array[Byte]]]")
           case schemaRef: OpenapiSchemaRef =>
             val (t, _) = mapSchemaSimpleTypeToType(schemaRef, multipartForm = true)
-            MappedContentType(s"multipartBody[$t]" + v(required), t)
+            MappedContentType(wrapHelper(s"multipartBody[$t]") + v(required), wrapTypeHelper(t))
           case schemaRef: OpenapiSchemaObject if schemaRef.properties.forall(_._2.`type`.isInstanceOf[OpenapiSchemaSimpleType]) =>
             val (inlineClassName, inlineClassDefn) = inlineDefn(endpointName, position, schemaRef)
             MappedContentType(
-              s"multipartBody[$inlineClassName]" + v(required),
-              inlineClassName,
+              wrapHelper(s"multipartBody[$inlineClassName]") + v(required),
+              wrapTypeHelper(inlineClassName),
               inlineClassDefn,
               inlineClassDefn.map(_ => inlineClassName).toSeq
             )
@@ -161,7 +170,8 @@ object InAndOutComponents {
           other,
           schema,
           eager,
-          streamingImplementation
+          streamingImplementation,
+          required
         )
     }
   }
@@ -172,8 +182,11 @@ object InAndOutComponents {
       contentType: String,
       schema: OpenapiSchemaType,
       isEager: Boolean,
-      streamingImplementation: StreamingImplementation
+      streamingImplementation: StreamingImplementation,
+      required: Boolean
   )(implicit location: Location): MappedContentType = {
+    def wrapHelper: String => String = mkWrapHelper(required, position)
+    def wrapTypeHelper: String => String = mkWrapTypeHelper(required, position)
     def codec(baseType: String, contentType: String) = {
       val cf = codecFormat(contentType)
       val schema = if (baseType == "Array[Byte]") "Schema.schemaForByteArray" else "Schema.schemaForString"
@@ -195,7 +208,7 @@ object InAndOutComponents {
       case "application/zip"                   => "CodecFormat.Zip()"
       case o                                   => codecFormat(o).instance
     }
-    if (isEager) MappedContentType(eagerBody, if (contentType.startsWith("text/")) "String" else "Array[Byte]")
+    if (isEager) MappedContentType(wrapHelper(eagerBody), wrapTypeHelper(if (contentType.startsWith("text/")) "String" else "Array[Byte]"))
     else {
       val capability = capabilityImpl(streamingImplementation)
       val tpe = capabilityType(streamingImplementation)
