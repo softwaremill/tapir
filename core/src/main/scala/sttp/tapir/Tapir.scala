@@ -254,6 +254,45 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOf[T](firstVariant: OneOfVariant[? <: T], otherVariants: OneOfVariant[? <: T]*): EndpointOutput.OneOf[T, T] =
     EndpointOutput.OneOf[T, T](firstVariant +: otherVariants.toList, Mapping.id)
 
+  /** An input which is one of several alternative inputs. Each variant is built with the same [[oneOfVariant]] constructors as [[oneOf]],
+    * and every variant's output must also be an input (a body, [[emptyInput]], a header, and so on). Output-only values such as status
+    * codes are rejected.
+    *
+    * When encoding a request, the first variant whose matcher applies is used. This is how an optional body should be described when
+    * `jsonBody[Option[T]]` is not appropriate: an [[emptyInput]] variant matches `None`, and the body variant matches only `Some`, so the
+    * body codec is never asked to encode `None`.
+    *
+    * When decoding a request, a variant that contains a body is used when the request has a content type or a non-zero content length.
+    * Otherwise a body-less variant is used.
+    *
+    * @example
+    *   {{{
+    *   oneOfInput[Option[String]](
+    *     oneOfVariantValueMatcher(emptyInputAs((None: Option[String]))) { case None => true },
+    *     oneOfVariantValueMatcher(stringBody.map(Some(_))(_.get)) { case Some(_) => true }
+    *   )
+    *   }}}
+    */
+  def oneOfInput[T](
+      firstVariant: OneOfVariant[? <: T],
+      otherVariants: OneOfVariant[? <: T]*
+  ): OneOfInput[T, T] = {
+    def toInputVariant(variant: OneOfVariant[?]): OneOfInputVariant[?] = {
+      val input = variant.output match {
+        case in: EndpointInput[?] => in
+        case other                =>
+          throw new IllegalArgumentException(
+            s"oneOfInput variants must be endpoint inputs; '${other.show}' cannot be used as an input"
+          )
+      }
+      OneOfInputVariant(input, variant.appliesTo)
+    }
+    OneOfInput[T, T](
+      (firstVariant +: otherVariants.toList).map(toInputVariant).asInstanceOf[List[OneOfInputVariant[? <: T]]],
+      Mapping.id[T]
+    )
+  }
+
   /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the runtime
     * class of `T`.
     *
@@ -489,6 +528,9 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyIO.map(_ => value)(_ => ())
 
   val emptyInput: EndpointInput[Unit] = emptyIO
+
+  /** An empty input mapped to `value`. Used as the `None` variant of [[oneOfInput]] when a request body may be omitted. */
+  def emptyInputAs[T](value: T): EndpointIO.Empty[T] = emptyIO.map(_ => value)(_ => ())
 
   /** An empty authentication input, to express the fact (for documentation) that authentication is optional, even in the presence of
     * multiple optional authentication inputs (which by default are treated as alternatives).

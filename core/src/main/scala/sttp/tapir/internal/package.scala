@@ -75,6 +75,7 @@ package object internal {
         case EndpointInput.MappedPair(wrapped, _)         => wrapped.traverseInputs(handle)
         case EndpointIO.MappedPair(wrapped, _)            => wrapped.traverseInputs(handle)
         case a: EndpointInput.Auth[?, ?]                  => a.input.traverseInputs(handle)
+        case OneOfInput(variants, _)                      => variants.toVector.flatMap(_.input.traverseInputs(handle))
         case _                                            => Vector.empty
       }
 
@@ -99,6 +100,10 @@ package object internal {
       if (targetInput == input) Vector(input)
       else
         input match {
+          case i @ OneOfInput(variants, _) =>
+            variants.foldLeft(Vector.empty[EndpointInput[?]]) { (acc, variant) =>
+              if (acc.nonEmpty) acc else findIn(i, variant.input)
+            }
           case _: EndpointInput.Basic[?]                 => Vector.empty
           case i @ EndpointInput.Pair(left, right, _, _) => findIn(i, left, right)
           case i @ EndpointIO.Pair(left, right, _, _)    => findIn(i, left, right)
@@ -125,6 +130,7 @@ package object internal {
       case _: EndpointIO.Body[?, ?]               => 6
       case _: EndpointIO.StreamBodyWrapper[?, ?]  => 6
       case _: EndpointIO.OneOfBody[?, ?]          => 6
+      case _: OneOfInput[?, ?]                    => 6
       case _: EndpointIO.Empty[?]                 => 7
     }
 
@@ -245,6 +251,19 @@ package object internal {
     case Nil     => ""
     case List(o) => o
     case l       => s"one of(${l.mkString("|")})"
+  }
+
+  private[tapir] def inputContainsBody(input: EndpointInput[?]): Boolean = input match {
+    case _: EndpointIO.Body[?, ?]              => true
+    case _: EndpointIO.OneOfBody[?, ?]         => true
+    case _: EndpointIO.StreamBodyWrapper[?, ?] => true
+    case EndpointIO.Pair(left, right, _, _)    => inputContainsBody(left) || inputContainsBody(right)
+    case EndpointInput.Pair(left, right, _, _) => inputContainsBody(left) || inputContainsBody(right)
+    case EndpointIO.MappedPair(wrapped, _)     => inputContainsBody(wrapped)
+    case EndpointInput.MappedPair(wrapped, _)  => inputContainsBody(wrapped)
+    case OneOfInput(variants, _)               => variants.exists(v => inputContainsBody(v.input))
+    case a: EndpointInput.Auth[?, ?]           => inputContainsBody(a.input)
+    case _                                     => false
   }
 
   private[tapir] def charset(bodyType: RawBodyType[?]): Option[Charset] = {

@@ -106,6 +106,44 @@ private[openapi] class EndpointToOpenAPIPaths(
             DocsExtensions.fromIterable(info.docsExtensions)
           )
         )
+      case oneOf: OneOfInput[_, _] if inputContent(oneOf).nonEmpty =>
+        val hasBodylessVariant = oneOf.variants.exists(v => !inputContainsBody(v.input))
+        Right(
+          RequestBody(
+            inputDescription(oneOf),
+            inputContent(oneOf),
+            Some(!hasBodylessVariant),
+            Nil
+          )
+        )
     }
+  }
+
+  private def inputContent(input: EndpointInput[_]): ListMap[String, sttp.apispec.openapi.MediaType] = input match {
+    case EndpointIO.Body(_, codec, info) =>
+      codecToMediaType(codec, info.examples, None, Nil)
+    case EndpointIO.OneOfBody(variants, _) =>
+      variants.flatMap(variant => codecToMediaType(variant.codec, variant.info.examples, Some(variant.range.toString), Nil)).toListMap
+    case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _, encodedExamples)) =>
+      codecToMediaType(codec, info.examples, None, encodedExamples)
+    case EndpointIO.Pair(left, right, _, _)     => inputContent(left) ++ inputContent(right)
+    case EndpointInput.Pair(left, right, _, _)  => inputContent(left) ++ inputContent(right)
+    case EndpointIO.MappedPair(wrapped, _)      => inputContent(wrapped)
+    case EndpointInput.MappedPair(wrapped, _)   => inputContent(wrapped)
+    case OneOfInput(variants, _)                => variants.flatMap(v => inputContent(v.input).toList).toListMap
+    case _                                      => ListMap.empty
+  }
+
+  private def inputDescription(input: EndpointInput[_]): Option[String] = input match {
+    case EndpointIO.Body(_, _, info)            => info.description
+    case EndpointIO.OneOfBody(variants, _)      => variants.flatMap(_.info.description).headOption
+    case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, _, info, _, _)) =>
+      info.description
+    case EndpointIO.Pair(left, right, _, _)     => inputDescription(left).orElse(inputDescription(right))
+    case EndpointInput.Pair(left, right, _, _)  => inputDescription(left).orElse(inputDescription(right))
+    case EndpointIO.MappedPair(wrapped, _)      => inputDescription(wrapped)
+    case EndpointInput.MappedPair(wrapped, _)   => inputDescription(wrapped)
+    case OneOfInput(variants, _)                => variants.view.map(v => inputDescription(v.input)).collectFirst { case Some(d) => d }
+    case _                                      => None
   }
 }

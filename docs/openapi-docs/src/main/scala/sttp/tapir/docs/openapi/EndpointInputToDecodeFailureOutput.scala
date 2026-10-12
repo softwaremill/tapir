@@ -2,7 +2,7 @@ package sttp.tapir.docs.openapi
 
 import sttp.model.MediaType
 import sttp.tapir.internal._
-import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointInput, SchemaType}
+import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointInput, OneOfInput, SchemaType}
 
 import scala.annotation.tailrec
 
@@ -22,6 +22,13 @@ private[openapi] object EndpointInputToDecodeFailureOutput {
     case EndpointIO.OneOfBody(variants, _)      => variants.exists(variant => decodingMayFail(variant.codec))
     // there's always a body (if empty - represented as ""), so if it's a plain string body, decoding won't fail
     case i: EndpointIO.Body[_, _] => decodingMayFail(i.codec)
+    case o: OneOfInput[_, _] =>
+      o.variants.exists { variant =>
+        variant.input match {
+          case basic: EndpointInput.Basic[_] => inputMayFailWithBadRequest(basic)
+          case _                             => true
+        }
+      }
     case i: EndpointInput.Atom[_] => decodingMayFail(i.codec) || !i.codec.schema.isOptional
   }
 
@@ -58,6 +65,7 @@ private[openapi] object EndpointInputToDecodeFailureOutput {
       case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
       case a: EndpointInput.Auth[_, _]             => failureSourceMessage(a.input)
       case _: EndpointInput.MappedPair[_, _, _, _] => "Invalid value"
+      case _: OneOfInput[_, _]                     => s"Invalid value for: body"
       case _: EndpointIO.Body[_, _]                => s"Invalid value for: body"
       case _: EndpointIO.StreamBodyWrapper[_, _]   => s"Invalid value for: body"
       case EndpointIO.Header(name, _, _)           => s"Invalid value for: header $name"

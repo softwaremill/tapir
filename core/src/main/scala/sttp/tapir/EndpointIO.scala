@@ -345,6 +345,42 @@ object EndpointInput extends EndpointInputMacros {
   }
 }
 
+/** One alternative input inside [[OneOfInput]].
+  *
+  * When encoding a request, this input is used if `appliesTo` returns true for the value. When decoding a request, the server chooses a
+  * variant from the request shape (for example, whether a body is present), not from `appliesTo`.
+  */
+case class OneOfInputVariant[I] private[tapir] (
+    input: EndpointInput[I],
+    appliesTo: Any => Boolean
+)
+
+/** An input which is one of several alternative inputs. Used for values such as an optional body, where `None` is an empty input and
+  * `Some` is a body that must not be asked to encode `None`.
+  *
+  * All variants must have a common supertype (`I`). When encoding, the first variant whose `appliesTo` returns true is used, so a body
+  * variant is only encoded for values that match it. When decoding, a variant that carries a body is used only when the request has a
+  * body; otherwise a body-less variant is used.
+  */
+case class OneOfInput[I, T](variants: List[OneOfInputVariant[? <: I]], mapping: Mapping[I, T]) extends EndpointInput.Basic[T] {
+  override private[tapir] type ThisType[X] = OneOfInput[I, X]
+  override def map[U](m: Mapping[T, U]): OneOfInput[I, U] = copy[I, U](mapping = mapping.map(m))
+  override def show: String = showOneOf(variants.map(_.input.show))
+  override def showDetail: String = showOneOf(variants.map(_.input.showDetail))
+
+  /** The variant which should encode `highLevel`, and the low-level value to pass into that variant. */
+  private[tapir] def variantForValue(highLevel: Any): (EndpointInput[?], Any) = {
+    val low = mapping.asInstanceOf[Mapping[Any, Any]].encode(highLevel)
+    val variant = variants.find(_.appliesTo(low)).getOrElse {
+      throw new IllegalArgumentException(
+        s"None of the variants defined in the one-of input: $show, is applicable to the value: $low. " +
+          s"Verify that the oneOfInput variants are exhaustive."
+      )
+    }
+    (variant.input, low)
+  }
+}
+
 sealed trait EndpointOutput[T] extends EndpointTransput[T] {
   private[tapir] type ThisType[X] <: EndpointOutput[X]
 
