@@ -85,6 +85,12 @@ class OneOfInputTest extends AnyFlatSpec with Matchers {
     jsonWithCharset.get.asInstanceOf[EndpointIO.Body[String, LinkToExistingImage]].codec.format.mediaType shouldBe MediaType.ApplicationJson
 
     profilePicture.variantForDecode(Some(MediaType.TextPlain), None) shouldBe None
+
+    // no empty variant: a zero-length body with a matching content type is still that body
+    val emptyJson = profilePicture.variantForDecode(Some(MediaType.ApplicationJson), Some("0"))
+    emptyJson.get.asInstanceOf[EndpointIO.Body[String, LinkToExistingImage]].codec.format.mediaType shouldBe MediaType.ApplicationJson
+    val emptyPng = profilePicture.variantForDecode(Some(MediaType.ImagePng), Some("0"))
+    emptyPng.get.asInstanceOf[EndpointIO.Body[Array[Byte], PngImage]].codec.format.mediaType shouldBe MediaType.ImagePng
   }
 
   it should "encode None, Some(json) and Some(png) with different variants" in {
@@ -120,6 +126,12 @@ class OneOfInputTest extends AnyFlatSpec with Matchers {
 
     // a content type that matches neither body is a failure, not the empty variant
     optionalProfilePicture.variantForDecode(Some(MediaType.TextPlain), None) shouldBe None
+    optionalProfilePicture.variantForDecode(Some(MediaType.TextPlain), Some("4")) shouldBe None
+
+    // a zero-length body prefers the empty variant, whatever content type was declared
+    optionalProfilePicture.variantForDecode(Some(MediaType.ApplicationJson), Some("0")).get shouldBe a[EndpointIO.Empty[_]]
+    optionalProfilePicture.variantForDecode(Some(MediaType.ImagePng), Some("0")).get shouldBe a[EndpointIO.Empty[_]]
+    optionalProfilePicture.variantForDecode(Some(MediaType.TextPlain), Some("0")).get shouldBe a[EndpointIO.Empty[_]]
   }
 
   it should "keep using the only body variant when a body is present, whatever its content type" in {
@@ -127,6 +139,7 @@ class OneOfInputTest extends AnyFlatSpec with Matchers {
     body.get shouldBe a[EndpointIO.Body[_, _]]
     optionalString.variantForDecode(None, None).get shouldBe a[EndpointIO.Empty[_]]
     optionalString.variantForDecode(None, Some("0")).get shouldBe a[EndpointIO.Empty[_]]
+    optionalString.variantForDecode(Some(MediaType.TextPlain), Some("0")).get shouldBe a[EndpointIO.Empty[_]]
     optionalString.variantForDecode(None, Some("5")).get shouldBe a[EndpointIO.Body[_, _]]
   }
 }

@@ -360,8 +360,9 @@ case class OneOfInputVariant[I] private[tapir] (
   * different body.
   *
   * All variants must have a common supertype (`I`). When encoding, the first variant whose `appliesTo` returns true is used, so a body
-  * variant is only encoded for values that match it. When decoding, a body-less variant is used when the request has no body. A single body
-  * variant is used whenever a body is present. Several body variants are distinguished by the request's content type.
+  * variant is only encoded for values that match it. When decoding, a body-less variant is used when the request has no body, including when
+  * a content type is paired with a zero content length. A zero-length body with no body-less variant still uses a body variant chosen by
+  * content type. A single body variant is used whenever a non-empty body is present. Several body variants are distinguished by content type.
   */
 case class OneOfInput[I, T](variants: List[OneOfInputVariant[? <: I]], mapping: Mapping[I, T]) extends EndpointInput.Basic[T] {
   override private[tapir] type ThisType[X] = OneOfInput[I, X]
@@ -384,13 +385,15 @@ case class OneOfInput[I, T](variants: List[OneOfInputVariant[? <: I]], mapping: 
   /** The variant which should decode a request with this content type and content length.
     *
     * `None` means no variant applies: the request has a content type that matches none of several body variants, or it has no body and
-    * there is no body-less variant.
+    * there is no body-less variant. A content length of `0` selects a body-less variant when one exists; otherwise a matching content type
+    * still selects a body, so an empty payload can be a valid body.
     */
   private[tapir] def variantForDecode(contentType: Option[MediaType], contentLength: Option[String]): Option[EndpointInput[?]] = {
-    val hasBody = contentType.isDefined || contentLength.exists(v => v.nonEmpty && v != "0")
     val (bodyVariants, emptyVariants) = variants.partition(v => inputContainsBody(v.input))
+    val bodyIsEmpty = contentLength.exists(v => v.isEmpty || v == "0")
     val chosen =
-      if (!hasBody) emptyVariants.headOption.orElse(bodyVariants.headOption)
+      if (bodyIsEmpty && emptyVariants.nonEmpty) emptyVariants.headOption
+      else if (!hasPresentBody(contentType, contentLength)) emptyVariants.headOption.orElse(bodyVariants.headOption)
       else
         chooseBody(bodyVariants, contentType) match {
           case some @ Some(_) => some
@@ -400,6 +403,9 @@ case class OneOfInput[I, T](variants: List[OneOfInputVariant[? <: I]], mapping: 
         }
     chosen.map(_.input)
   }
+
+  private def hasPresentBody(contentType: Option[MediaType], contentLength: Option[String]): Boolean =
+    contentType.isDefined || contentLength.exists(v => v.nonEmpty && v != "0")
 
   private def chooseBody(
       bodyVariants: List[OneOfInputVariant[? <: I]],
