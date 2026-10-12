@@ -53,9 +53,9 @@ object InAndOutComponents {
     types.map(PackageReuseContext.enumAliasType(_, packageReuse, seperateFilesForModels)).mkString("\n")
 
   private def mkWrapHelper(required: Boolean, position: Position)(s: String): String =
-    if (required || position != Position.Response) s else s"$s.map(Option(_))(_.orNull)"
+    if (required || position == Position.Request) s else s"$s.map(Option(_))(_.orNull)"
   private def mkWrapTypeHelper(required: Boolean, position: Position)(s: String): String =
-    if (required || position != Position.Response) s else s"Option[$s]"
+    if (required || position == Position.Request) s else s"Option[$s]"
 
   private[endpoints] def contentTypeMapper(
       contentType: String,
