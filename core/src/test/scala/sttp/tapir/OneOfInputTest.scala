@@ -6,8 +6,8 @@ import sttp.model.MediaType
 
 class OneOfInputTest extends AnyFlatSpec with Matchers {
   private val optionalString = oneOfInput[Option[String]](
-    oneOfVariantValueMatcher(emptyInputAs((None: Option[String]))) { case None => true },
-    oneOfVariantValueMatcher(stringBody.map(Some(_))(_.get)) { case Some(_) => true }
+    oneOfInputVariant(emptyInputAs((None: Option[String]))) { case None => true },
+    oneOfInputVariant(stringBody.map(Some(_))(_.get)) { case Some(_) => true }
   )
 
   // requestBody required, with application/json and image/png alternatives
@@ -25,17 +25,17 @@ class OneOfInputTest extends AnyFlatSpec with Matchers {
       .Body(RawBodyType.ByteArrayBody, Codec.id(ImagePng(), Schema.schemaForByteArray), EndpointIO.Info.empty)
       .map(PngImage(_))(_.bytes)
   private val profilePicture = oneOfInput[ProfilePicture](
-    oneOfVariantValueMatcher(jsonBody) { case _: LinkToExistingImage => true },
-    oneOfVariantValueMatcher(pngBody) { case _: PngImage => true }
+    oneOfInputVariant(jsonBody) { case _: LinkToExistingImage => true },
+    oneOfInputVariant(pngBody) { case _: PngImage => true }
   )
 
   // same alternatives, but the body may be omitted: None / Some(json) / Some(png)
   private val optionalProfilePicture = oneOfInput[Option[ProfilePicture]](
-    oneOfVariantValueMatcher(emptyInputAs((None: Option[ProfilePicture]))) { case None => true },
-    oneOfVariantValueMatcher(jsonBody.map(link => (Some(link): Option[ProfilePicture]))(_.get.asInstanceOf[LinkToExistingImage])) {
+    oneOfInputVariant(emptyInputAs((None: Option[ProfilePicture]))) { case None => true },
+    oneOfInputVariant(jsonBody.map(link => (Some(link): Option[ProfilePicture]))(_.get.asInstanceOf[LinkToExistingImage])) {
       case Some(_: LinkToExistingImage) => true
     },
-    oneOfVariantValueMatcher(pngBody.map(png => (Some(png): Option[ProfilePicture]))(_.get.asInstanceOf[PngImage])) {
+    oneOfInputVariant(pngBody.map(png => (Some(png): Option[ProfilePicture]))(_.get.asInstanceOf[PngImage])) {
       case Some(_: PngImage) => true
     }
   )
@@ -53,10 +53,15 @@ class OneOfInputTest extends AnyFlatSpec with Matchers {
     body.codec.encode(Some("hello")) shouldBe "hello"
   }
 
-  it should "reject an output-only variant" in {
-    assertThrows[IllegalArgumentException] {
+  it should "reject variants that are not a body or an empty input" in {
+    assertDoesNotCompile("""
+      import sttp.tapir._
       oneOfInput[String](oneOfVariant(statusCode(sttp.model.StatusCode.Ok).map(_ => "ok")(_ => ())))
-    }
+    """)
+    assertDoesNotCompile("""
+      import sttp.tapir._
+      oneOfInput[String](oneOfInputVariant(header[String]("X-Token")) { case _ => true })
+    """)
   }
 
   it should "encode a json alternative and a binary alternative with their own codecs" in {

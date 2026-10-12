@@ -46,8 +46,8 @@ object VerifyYamlOneOfInputTest {
     .in("set-profile-picture")
     .in(
       oneOfInput[ProfilePicture](
-        oneOfVariantValueMatcher(jsonBody[LinkToExistingImage]) { case _: LinkToExistingImage => true },
-        oneOfVariantValueMatcher(pngBody) { case _: PngImage => true }
+        oneOfInputVariant(jsonBody[LinkToExistingImage]) { case _: LinkToExistingImage => true },
+        oneOfInputVariant(pngBody) { case _: PngImage => true }
       )
     )
 
@@ -55,11 +55,11 @@ object VerifyYamlOneOfInputTest {
     .in("set-profile-picture")
     .in(
       oneOfInput[Option[ProfilePicture]](
-        oneOfVariantValueMatcher(emptyInputAs((None: Option[ProfilePicture]))) { case None => true },
-        oneOfVariantValueMatcher(
+        oneOfInputVariant(emptyInputAs((None: Option[ProfilePicture]))) { case None => true },
+        oneOfInputVariant(
           jsonBody[LinkToExistingImage].map(link => (Some(link): Option[ProfilePicture]))(_.get.asInstanceOf[LinkToExistingImage])
         ) { case Some(_: LinkToExistingImage) => true },
-        oneOfVariantValueMatcher(pngBody.map(png => (Some(png): Option[ProfilePicture]))(_.get.asInstanceOf[PngImage])) {
+        oneOfInputVariant(pngBody.map(png => (Some(png): Option[ProfilePicture]))(_.get.asInstanceOf[PngImage])) {
           case Some(_: PngImage) => true
         }
       )

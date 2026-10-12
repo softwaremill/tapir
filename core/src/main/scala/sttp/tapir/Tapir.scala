@@ -254,9 +254,8 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOf[T](firstVariant: OneOfVariant[? <: T], otherVariants: OneOfVariant[? <: T]*): EndpointOutput.OneOf[T, T] =
     EndpointOutput.OneOf[T, T](firstVariant +: otherVariants.toList, Mapping.id)
 
-  /** An input which is one of several alternative inputs. Each variant is built with the same [[oneOfVariant]] constructors as [[oneOf]],
-    * and every variant's output must also be an input (a body, [[emptyInput]], a header, and so on). Output-only values such as status
-    * codes are rejected.
+  /** An input which is one of several alternative inputs. Each variant is a [[oneOfInputVariant]]: a body, [[oneOfBody]], stream body, or
+    * [[emptyInput]]. Other inputs, and output-only values such as status codes, are rejected by the compiler.
     *
     * When encoding a request, the first variant whose matcher applies is used. This is how an optional body should be described when
     * `jsonBody[Option[T]]` is not appropriate: an [[emptyInput]] variant matches `None`, and the body variant matches only `Some`, so the
@@ -270,30 +269,32 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * @example
     *   {{{
     *   oneOfInput[Option[String]](
-    *     oneOfVariantValueMatcher(emptyInputAs((None: Option[String]))) { case None => true },
-    *     oneOfVariantValueMatcher(stringBody.map(Some(_))(_.get)) { case Some(_) => true }
+    *     oneOfInputVariant(emptyInputAs((None: Option[String]))) { case None => true },
+    *     oneOfInputVariant(stringBody.map(Some(_))(_.get)) { case Some(_) => true }
     *   )
     *   }}}
     */
   def oneOfInput[T](
-      firstVariant: OneOfVariant[? <: T],
-      otherVariants: OneOfVariant[? <: T]*
-  ): OneOfInput[T, T] = {
-    def toInputVariant(variant: OneOfVariant[?]): OneOfInputVariant[?] = {
-      val input = variant.output match {
-        case in: EndpointInput[?] => in
-        case other                =>
-          throw new IllegalArgumentException(
-            s"oneOfInput variants must be endpoint inputs; '${other.show}' cannot be used as an input"
-          )
-      }
-      OneOfInputVariant(input, variant.appliesTo)
-    }
-    OneOfInput[T, T](
-      (firstVariant +: otherVariants.toList).map(toInputVariant).asInstanceOf[List[OneOfInputVariant[? <: T]]],
-      Mapping.id[T]
-    )
-  }
+      firstVariant: OneOfInputVariant[? <: T],
+      otherVariants: OneOfInputVariant[? <: T]*
+  ): OneOfInput[T, T] =
+    OneOfInput[T, T]((firstVariant +: otherVariants.toList).asInstanceOf[List[OneOfInputVariant[? <: T]]], Mapping.id[T])
+
+  /** A [[oneOfInput]] alternative which uses `input` when `matcher` applies to the value being encoded. */
+  def oneOfInputVariant[R, T](input: EndpointIO.Body[R, T])(matcher: PartialFunction[Any, Boolean]): OneOfInputVariant[T] =
+    OneOfInputVariant(input, matcher.lift.andThen(_.getOrElse(false)))
+
+  /** A [[oneOfInput]] alternative which uses `input` when `matcher` applies to the value being encoded. */
+  def oneOfInputVariant[R, T](input: EndpointIO.OneOfBody[R, T])(matcher: PartialFunction[Any, Boolean]): OneOfInputVariant[T] =
+    OneOfInputVariant(input, matcher.lift.andThen(_.getOrElse(false)))
+
+  /** A [[oneOfInput]] alternative which uses `input` when `matcher` applies to the value being encoded. */
+  def oneOfInputVariant[S, T](input: EndpointIO.StreamBodyWrapper[S, T])(matcher: PartialFunction[Any, Boolean]): OneOfInputVariant[T] =
+    OneOfInputVariant(input, matcher.lift.andThen(_.getOrElse(false)))
+
+  /** A [[oneOfInput]] alternative which uses `input` when `matcher` applies to the value being encoded. */
+  def oneOfInputVariant[T](input: EndpointIO.Empty[T])(matcher: PartialFunction[Any, Boolean]): OneOfInputVariant[T] =
+    OneOfInputVariant(input, matcher.lift.andThen(_.getOrElse(false)))
 
   /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the runtime
     * class of `T`.
