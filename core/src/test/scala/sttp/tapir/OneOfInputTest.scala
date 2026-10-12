@@ -29,6 +29,17 @@ class OneOfInputTest extends AnyFlatSpec with Matchers {
     oneOfVariantValueMatcher(pngBody) { case _: PngImage => true }
   )
 
+  // same alternatives, but the body may be omitted: None / Some(json) / Some(png)
+  private val optionalProfilePicture = oneOfInput[Option[ProfilePicture]](
+    oneOfVariantValueMatcher(emptyInputAs((None: Option[ProfilePicture]))) { case None => true },
+    oneOfVariantValueMatcher(jsonBody.map(link => (Some(link): Option[ProfilePicture]))(_.get.asInstanceOf[LinkToExistingImage])) {
+      case Some(_: LinkToExistingImage) => true
+    },
+    oneOfVariantValueMatcher(pngBody.map(png => (Some(png): Option[ProfilePicture]))(_.get.asInstanceOf[PngImage])) {
+      case Some(_: PngImage) => true
+    }
+  )
+
   "oneOfInput" should "encode None with the empty variant" in {
     val (chosen, low) = optionalString.variantForValue(None)
     chosen shouldBe a[EndpointIO.Empty[_]]
@@ -74,6 +85,41 @@ class OneOfInputTest extends AnyFlatSpec with Matchers {
     jsonWithCharset.get.asInstanceOf[EndpointIO.Body[String, LinkToExistingImage]].codec.format.mediaType shouldBe MediaType.ApplicationJson
 
     profilePicture.variantForDecode(Some(MediaType.TextPlain), None) shouldBe None
+  }
+
+  it should "encode None, Some(json) and Some(png) with different variants" in {
+    val (empty, none) = optionalProfilePicture.variantForValue(None)
+    empty shouldBe a[EndpointIO.Empty[_]]
+    none shouldBe None
+
+    val link = LinkToExistingImage("https://cdn.example/a.png")
+    val (jsonInput, jsonLow) = optionalProfilePicture.variantForValue(Some(link))
+    jsonLow shouldBe Some(link)
+    val json = jsonInput.asInstanceOf[EndpointIO.Body[String, Option[ProfilePicture]]]
+    json.codec.format.mediaType shouldBe MediaType.ApplicationJson
+    json.codec.encode(Some(link)) shouldBe """{"href":"https://cdn.example/a.png"}"""
+
+    val bytes = Array[Byte](1, 2, 3)
+    val pngValue = PngImage(bytes)
+    val (pngInput, pngLow) = optionalProfilePicture.variantForValue(Some(pngValue))
+    pngLow shouldBe Some(pngValue)
+    val png = pngInput.asInstanceOf[EndpointIO.Body[Array[Byte], Option[ProfilePicture]]]
+    png.codec.format.mediaType shouldBe MediaType.ImagePng
+    png.codec.encode(Some(pngValue)).toSeq shouldBe bytes.toSeq
+  }
+
+  it should "decode an optional json-or-png body by content type, and a missing body as empty" in {
+    optionalProfilePicture.variantForDecode(None, None).get shouldBe a[EndpointIO.Empty[_]]
+    optionalProfilePicture.variantForDecode(None, Some("0")).get shouldBe a[EndpointIO.Empty[_]]
+
+    val json = optionalProfilePicture.variantForDecode(Some(MediaType.ApplicationJson), None)
+    json.get.asInstanceOf[EndpointIO.Body[String, Option[ProfilePicture]]].codec.format.mediaType shouldBe MediaType.ApplicationJson
+
+    val png = optionalProfilePicture.variantForDecode(Some(MediaType.ImagePng), None)
+    png.get.asInstanceOf[EndpointIO.Body[Array[Byte], Option[ProfilePicture]]].codec.format.mediaType shouldBe MediaType.ImagePng
+
+    // a content type that matches neither body is a failure, not the empty variant
+    optionalProfilePicture.variantForDecode(Some(MediaType.TextPlain), None) shouldBe None
   }
 
   it should "keep using the only body variant when a body is present, whatever its content type" in {
