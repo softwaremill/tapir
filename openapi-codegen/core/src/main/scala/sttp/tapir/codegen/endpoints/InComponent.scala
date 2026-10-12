@@ -67,7 +67,8 @@ object InComponent {
           preferEager,
           xmlSerdeLib,
           tapirCodegenDirectives,
-          validators
+          validators,
+          false,
         )
 
       val inlineDefn = maybeInlineDefn.map(d => if (isReused) aliases(packageReuse, inlineTypes, seperateFilesForModels) else d)

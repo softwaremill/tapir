@@ -52,10 +52,13 @@ object InAndOutComponents {
   private[endpoints] def aliases(packageReuse: PackageReuseContext, types: Seq[String], seperateFilesForModels: Boolean): String =
     types.map(PackageReuseContext.enumAliasType(_, packageReuse, seperateFilesForModels)).mkString("\n")
 
-  private def mkWrapHelper(required: Boolean, position: Position)(s: String): String =
-    if (required || position == Position.Request) s else s"$s.map(Option(_))(_.orNull)"
-  private def mkWrapTypeHelper(required: Boolean, position: Position)(s: String): String =
-    if (required || position == Position.Request) s else s"Option[$s]"
+  // mapping is only 'safe' when we're generating an outer `oneOfVariantValueMatcher` -- if we're not and this is
+  // defined as nullable, we shouldn't generate the map -- the value must be present and define 'null' in its own
+  // value set(e.g. as empty string or byte array)
+  private def mkWrapHelper(representAsSome: Boolean, position: Position)(s: String): String =
+    if (representAsSome && position != Position.Request) s"$s.map(Option(_))(_.orNull)" else s
+  private def mkWrapTypeHelper(representAsSome: Boolean, position: Position)(s: String): String =
+    if (representAsSome && position != Position.Request) s"Option[$s]" else s
 
   private[endpoints] def contentTypeMapper(
       contentType: String,
@@ -67,10 +70,11 @@ object InAndOutComponents {
       defaultEager: Boolean,
       xmlSerdeLib: XmlSerdeLib,
       tapirCodegenDirectives: Set[String],
-      validators: ValidationDefns
+      validators: ValidationDefns,
+      representAsSome: Boolean
   )(implicit location: Location): MappedContentType = {
-    def wrapHelper: String => String = mkWrapHelper(required, position)
-    def wrapTypeHelper: String => String = mkWrapTypeHelper(required, position)
+    def wrapHelper: String => String = mkWrapHelper(representAsSome, position)
+    def wrapTypeHelper: String => String = mkWrapTypeHelper(representAsSome, position)
     def vRef(t: OpenapiSchemaType, r: Boolean) = {
       val maybeValidatorRef = t match {
         case r: OpenapiSchemaRef => Some(r.stripped)
@@ -98,7 +102,7 @@ object InAndOutComponents {
     def mkMapContentType(i: String, t: String) = MappedContentType(wrapHelper(i), wrapTypeHelper(t))
     contentType match {
       case any if streaming =>
-        failoverBinaryCase(endpointName, position, any, schema, false, streamingImplementation, required)
+        failoverBinaryCase(endpointName, position, any, schema, false, streamingImplementation, representAsSome)
       case "text/plain" =>
         mkMapContentType("stringBody", "String")
       case "text/html" =>
@@ -171,7 +175,7 @@ object InAndOutComponents {
           schema,
           eager,
           streamingImplementation,
-          required
+          representAsSome
         )
     }
   }
@@ -183,10 +187,10 @@ object InAndOutComponents {
       schema: OpenapiSchemaType,
       isEager: Boolean,
       streamingImplementation: StreamingImplementation,
-      required: Boolean
+      representAsSome: Boolean
   )(implicit location: Location): MappedContentType = {
-    def wrapHelper: String => String = mkWrapHelper(required, position)
-    def wrapTypeHelper: String => String = mkWrapTypeHelper(required, position)
+    def wrapHelper: String => String = mkWrapHelper(representAsSome, position)
+    def wrapTypeHelper: String => String = mkWrapTypeHelper(representAsSome, position)
     def codec(baseType: String, contentType: String) = {
       val cf = codecFormat(contentType)
       val schema = if (baseType == "Array[Byte]") "Schema.schemaForByteArray" else "Schema.schemaForString"

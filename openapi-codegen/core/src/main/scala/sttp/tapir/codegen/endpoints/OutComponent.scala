@@ -95,7 +95,8 @@ object OutComponent {
             preferEager,
             xmlSerdeLib,
             tapirCodegenDirectives,
-            validators
+            validators,
+            optional // don't consider 'nullable' for 'representAsSome'
           )
         }
         val inlineDefn =
