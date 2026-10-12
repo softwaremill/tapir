@@ -14,7 +14,7 @@ private[openapi] object EndpointInputToDecodeFailureOutput {
     else None
   }
 
-  private def inputMayFailWithBadRequest(input: EndpointInput.Basic[_]) = input match {
+  private def inputMayFailWithBadRequest(input: EndpointInput.Basic[_]): Boolean = input match {
     case EndpointInput.FixedMethod(_, _, _)     => false
     case EndpointInput.FixedPath(_, _, _)       => false
     case EndpointIO.Empty(_, _)                 => false

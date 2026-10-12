@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec
 
 import sttp.apispec.SecurityRequirement
-import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
+import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput, OneOfInput}
 import sttp.tapir.internal.{IterableToListMap, RichEndpoint, RichEndpointInput}
 
 import scala.collection.immutable.{ListMap, ListSet}
@@ -47,8 +47,18 @@ private[docs] class SecurityRequirementsForEndpoints(securitySchemes: SecuritySc
   }.toListMap
 
   private def authOptional(auths: Seq[EndpointInput.Auth[_, _ <: EndpointInput.AuthType]]): Boolean =
-    auths.flatMap(_.asVectorOfBasicInputs()).forall {
-      case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
-      case EndpointIO.OneOfBody(variants, _) => variants.forall(_.codec.schema.isOptional)
-    }
+    auths.flatMap(_.asVectorOfBasicInputs()).forall(basicInputIsOptional)
+
+  private def basicInputIsOptional(input: EndpointInput.Basic[_]): Boolean = input match {
+    case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
+    case EndpointIO.OneOfBody(variants, _) => variants.forall(_.codec.schema.isOptional)
+    // An empty alternative means the value can be omitted, as with an optional body.
+    case OneOfInput(variants, _) =>
+      variants.exists(_.input.isInstanceOf[EndpointIO.Empty[_]]) || variants.forall { variant =>
+        variant.input match {
+          case basic: EndpointInput.Basic[_] => basicInputIsOptional(basic)
+          case _                             => false
+        }
+      }
+  }
 }

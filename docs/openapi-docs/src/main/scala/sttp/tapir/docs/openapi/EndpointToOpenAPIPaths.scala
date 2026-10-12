@@ -113,7 +113,7 @@ private[openapi] class EndpointToOpenAPIPaths(
             inputDescription(oneOf),
             inputContent(oneOf),
             Some(!hasBodylessVariant),
-            Nil
+            DocsExtensions.fromIterable(Nil)
           )
         )
     }
