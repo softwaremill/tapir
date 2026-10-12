@@ -356,11 +356,12 @@ case class OneOfInputVariant[I] private[tapir] (
 )
 
 /** An input which is one of several alternative inputs. Used for values such as an optional body, where `None` is an empty input and
-  * `Some` is a body that must not be asked to encode `None`.
+  * `Some` is a body that must not be asked to encode `None`, or a required body with several content types, where each alternative is a
+  * different body.
   *
   * All variants must have a common supertype (`I`). When encoding, the first variant whose `appliesTo` returns true is used, so a body
-  * variant is only encoded for values that match it. When decoding, a variant that carries a body is used only when the request has a
-  * body; otherwise a body-less variant is used.
+  * variant is only encoded for values that match it. When decoding, a body-less variant is used when the request has no body. A single body
+  * variant is used whenever a body is present. Several body variants are distinguished by the request's content type.
   */
 case class OneOfInput[I, T](variants: List[OneOfInputVariant[? <: I]], mapping: Mapping[I, T]) extends EndpointInput.Basic[T] {
   override private[tapir] type ThisType[X] = OneOfInput[I, X]
@@ -378,6 +379,51 @@ case class OneOfInput[I, T](variants: List[OneOfInputVariant[? <: I]], mapping: 
       )
     }
     (variant.input, low)
+  }
+
+  /** The variant which should decode a request with this content type and content length.
+    *
+    * `None` means no variant applies: the request has a content type that matches none of several body variants, or it has no body and
+    * there is no body-less variant.
+    */
+  private[tapir] def variantForDecode(contentType: Option[MediaType], contentLength: Option[String]): Option[EndpointInput[?]] = {
+    val hasBody = contentType.isDefined || contentLength.exists(v => v.nonEmpty && v != "0")
+    val (bodyVariants, emptyVariants) = variants.partition(v => inputContainsBody(v.input))
+    val chosen =
+      if (!hasBody) emptyVariants.headOption.orElse(bodyVariants.headOption)
+      else
+        chooseBody(bodyVariants, contentType) match {
+          case some @ Some(_) => some
+          // A content type that matches none of several bodies is not "no body".
+          case None if bodyVariants.size > 1 && contentType.isDefined => None
+          case None                                                    => emptyVariants.headOption
+        }
+    chosen.map(_.input)
+  }
+
+  private def chooseBody(
+      bodyVariants: List[OneOfInputVariant[? <: I]],
+      contentType: Option[MediaType]
+  ): Option[OneOfInputVariant[? <: I]] =
+    bodyVariants match {
+      case Nil           => None
+      case single :: Nil => Some(single)
+      case many          =>
+        contentType match {
+          case Some(ct) => many.find(variant => acceptsContentType(variant.input, ct))
+          case None     => many.headOption
+        }
+    }
+
+  private def acceptsContentType(input: EndpointInput[?], contentType: MediaType): Boolean = input match {
+    case body: EndpointIO.Body[?, ?]               => contentType.matches(ContentTypeRange.exactNoCharset(body.codec.format.mediaType))
+    case body: EndpointIO.StreamBodyWrapper[?, ?]  => contentType.matches(ContentTypeRange.exactNoCharset(body.codec.format.mediaType))
+    case body: EndpointIO.OneOfBody[?, ?]          => body.variants.exists(variant => contentType.matches(variant.range))
+    case EndpointIO.Pair(left, right, _, _)        => acceptsContentType(left, contentType) || acceptsContentType(right, contentType)
+    case EndpointInput.Pair(left, right, _, _)     => acceptsContentType(left, contentType) || acceptsContentType(right, contentType)
+    case EndpointIO.MappedPair(wrapped, _)         => acceptsContentType(wrapped, contentType)
+    case EndpointInput.MappedPair(wrapped, _)      => acceptsContentType(wrapped, contentType)
+    case _                                         => false
   }
 }
 

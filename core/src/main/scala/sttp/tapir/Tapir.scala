@@ -260,10 +260,11 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     *
     * When encoding a request, the first variant whose matcher applies is used. This is how an optional body should be described when
     * `jsonBody[Option[T]]` is not appropriate: an [[emptyInput]] variant matches `None`, and the body variant matches only `Some`, so the
-    * body codec is never asked to encode `None`.
+    * body codec is never asked to encode `None`. The same matchers distinguish several present bodies, for example a JSON body and a PNG
+    * body.
     *
-    * When decoding a request, a variant that contains a body is used when the request has a content type or a non-zero content length.
-    * Otherwise a body-less variant is used.
+    * When decoding a request, a body-less variant is used when the request has no content type and no non-zero content length. One body
+    * variant is used whenever a body is present. Several body variants are chosen by content type.
     *
     * @example
     *   {{{

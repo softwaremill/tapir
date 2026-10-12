@@ -279,17 +279,20 @@ object DecodeBasicInputs {
       values: DecodeBasicInputsResult.Values,
       ctx: DecodeInputsContext
   ): Either[(DecodeBasicInputsResult.Failure, DecodeInputsContext), (DecodeBasicInputsResult.Values, DecodeInputsContext)] = {
-    val hasBody = ctx.request.contentTypeParsed.isDefined || ctx.header(HeaderNames.ContentLength).exists(v => v != "0" && v.nonEmpty)
-    val (bodyVariants, emptyVariants) = oneOf.variants.partition(v => inputContainsBody(v.input))
-    val chosen = if (hasBody) bodyVariants.headOption.orElse(emptyVariants.headOption) else emptyVariants.headOption.orElse(bodyVariants.headOption)
+    val contentType = ctx.request.contentTypeParsed
+    val contentLength = ctx.header(HeaderNames.ContentLength).headOption
     val mapping = oneOf.mapping.asInstanceOf[Mapping[Any, Any]]
 
     def fail(failure: DecodeResult.Failure) = Left((DecodeBasicInputsResult.Failure(oneOf, failure), ctx))
 
-    chosen match {
-      case None => fail(DecodeResult.Missing)
-      case Some(variant) =>
-        variant.input match {
+    oneOf.variantForDecode(contentType, contentLength) match {
+      case None =>
+        contentType match {
+          case Some(ct) => fail(DecodeResult.Mismatch(oneOf.show, ct.toString))
+          case None     => fail(DecodeResult.Missing)
+        }
+      case Some(input) =>
+        input match {
           case body: EndpointIO.Body[?, ?] =>
             Right((values.addBodyInput(body.asInstanceOf[EndpointIO.Body[Any, Any]].map(mapping), index), ctx))
           case body: EndpointIO.OneOfBody[?, ?] =>
