@@ -244,18 +244,18 @@ object TapirGeneratedEndpoints {
   
   
   sealed trait PostJsonStringJsonBodyBodyOut extends Product with java.io.Serializable {
-    def `application/json`: () => Option[String] = () => throw new RuntimeException("Body for content type application/json not provided")
-    def `application/zip`: () => Option[Array[Byte]] = () => throw new RuntimeException("Body for content type application/zip not provided")
+    def `application/json`: () => String = () => throw new RuntimeException("Body for content type application/json not provided")
+    def `application/zip`: () => Array[Byte] = () => throw new RuntimeException("Body for content type application/zip not provided")
   }
   case class PostJsonStringJsonBodyBodyOutFull (
-    override val `application/json`: () => Option[String],
-    override val `application/zip`: () => Option[Array[Byte]],
+    override val `application/json`: () => String,
+    override val `application/zip`: () => Array[Byte],
   ) extends PostJsonStringJsonBodyBodyOut
-  case class PostJsonStringJsonBodyBodyOption_Array_Byte__Out(value: Option[Array[Byte]]) extends PostJsonStringJsonBodyBodyOut{
-    override def `application/zip`: () => Option[Array[Byte]] = () => value
+  case class PostJsonStringJsonBodyBody1Out(value: Array[Byte]) extends PostJsonStringJsonBodyBodyOut{
+    override def `application/zip`: () => Array[Byte] = () => value
   }
-  case class PostJsonStringJsonBodyBodyOption_String_Out(value: Option[String]) extends PostJsonStringJsonBodyBodyOut{
-    override def `application/json`: () => Option[String] = () => value
+  case class PostJsonStringJsonBodyBodyStringOut(value: String) extends PostJsonStringJsonBodyBodyOut{
+    override def `application/json`: () => String = () => value
   }
   
   sealed trait PutHeadersTestsResponseHeader
@@ -577,10 +577,10 @@ object TapirGeneratedEndpoints {
         EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1In(_))(_.value).widenBody[PostJsonStringJsonBodyBodyIn]))
       .out(oneOf[Option[PostJsonStringJsonBodyBodyOut]](
         oneOfVariantValueMatcher(sttp.model.StatusCode(200), oneOfBody[PostJsonStringJsonBodyBodyOut](
-        stringJsonBody.map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_String_Out(_))(_.`application/json`())
-        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBodyOption_String_Out(p.`application/json`())).description("Possibly-invalid json"),
-        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(Option(_))(_.orNull).map(PostJsonStringJsonBodyBodyOption_Array_Byte__Out(_))(_.`application/zip`())
-        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBodyOption_Array_Byte__Out(p.`application/zip`())).description("Possibly-invalid json")).map(Some(_))(_.orNull)){ case Some(_: PostJsonStringJsonBodyBodyOut) => true },
+        stringJsonBody.map(PostJsonStringJsonBodyBodyStringOut(_))(_.`application/json`())
+        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBodyStringOut(p.`application/json`())).description("Possibly-invalid json"),
+        EndpointIO.Body(RawBodyType.ByteArrayBody, Codec.id[Array[Byte], `application/zipCodecFormat`](`application/zipCodecFormat`(), Schema.schemaForByteArray), EndpointIO.Info.empty).map(PostJsonStringJsonBodyBody1Out(_))(_.`application/zip`())
+        .map(_.asInstanceOf[PostJsonStringJsonBodyBodyOut])(p => PostJsonStringJsonBodyBody1Out(p.`application/zip`())).description("Possibly-invalid json")).map(Some(_))(_.orNull)){ case Some(_: PostJsonStringJsonBodyBodyOut) => true },
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(204), emptyOutput.description("No response"))(None)))
       .attribute[TapirCodegenDirectivesExtension](tapirCodegenDirectivesExtensionKey, Vector("json-body-as-string"))
   

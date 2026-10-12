@@ -282,7 +282,7 @@ object OutComponent {
           }
         case many =>
           if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
-          val contentCanBeEmpty = many.exists(_.content.isEmpty)
+          val someContentCanBeEmpty = many.exists(_.content.isEmpty)
           val allBodiesAreEmpty = many.forall(_.content.isEmpty)
           val allResponsesAreEmpty = allBodiesAreEmpty && many.forall(_.getHeaders.isEmpty)
 
@@ -308,7 +308,10 @@ object OutComponent {
             (!isErrorPosition && tapirCodegenDirectives.contains(forceStreaming))
 
           val (oneOfs, types, inlineDefns) = many.map { m =>
-            val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = contentCanBeEmpty)
+            val multipleEncodingsForStatusCode = m.content.size > 1
+            // If there's only one possible content body type, make sure the variant matcher has the right type.
+            val treatAsOptional = someContentCanBeEmpty && !multipleEncodingsForStatusCode
+            val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = treatAsOptional)
             val maybeCode =
               if (addDisambiguationCodes && m.code.equalsIgnoreCase("default")) ""
               else if (m.code.equalsIgnoreCase("default")) s"sttp.model.StatusCode(400), "
@@ -356,9 +359,9 @@ object OutComponent {
                 case s              => s".and($s)"
               }
 
-              if (contentCanBeEmpty) {
+              if (someContentCanBeEmpty) {
                 val (_, nonOptionalType, _) = bodyFmt(m, isErrorPosition)
-                val maybeMap = if (m.content.size > 1 || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
+                val maybeMap = if (multipleEncodingsForStatusCode || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
                 val tpesAreBin = someType.contains("BinaryStream") || someType.contains("fs2.Stream")
                 def maybeUnchecked = if (tpesAreBin) " @scala.unchecked" else ""
@@ -421,7 +424,7 @@ object OutComponent {
             .distinct
           val commmonType = {
             if (allResponsesAreEmpty || allElemTypes.isEmpty) "Unit"
-            else if (contentCanBeEmpty && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
+            else if (someContentCanBeEmpty && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
             else if (allElemTypes.size == 1) allElemTypes.head
             else {
               val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
@@ -430,7 +433,7 @@ object OutComponent {
                 case s if targetScala3              => s.mkString(" & ")
                 case s                              => s.mkString(" with ")
               }
-              if (contentCanBeEmpty) s"Option[$baseType]" else baseType
+              if (someContentCanBeEmpty) s"Option[$baseType]" else baseType
             }
           }
           val oneOfType = if (noAmbiguity) commmonType else if (allBodiesAreEmpty) headerTopType else s"($commmonType, $headerTopType)"
