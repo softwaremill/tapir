@@ -126,6 +126,9 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
         (uri, req)
+      case oneOf: OneOfInput[_, _] =>
+        val (chosen, low) = oneOf.variantForValue(value)
+        setInputParams(chosen, ParamsAsAny(low), uri, req)
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, uri, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, uri, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, uri, req)

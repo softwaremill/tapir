@@ -25,6 +25,7 @@ import sttp.tapir.{
   FileRange,
   InputStreamRange,
   Mapping,
+  OneOfInput,
   RawBodyType,
   StreamBodyIO,
   WebSocketBodyOutput
@@ -122,6 +123,9 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
         req.putHeaders(headers: _*)
       case EndpointIO.FixedHeader(h, _, _)           => req.putHeaders(Header.Raw(CIString(h.name), h.value))
       case EndpointInput.ExtractFromRequest(_, _)    => req // ignoring
+      case oneOf: OneOfInput[_, _] =>
+        val (chosen, low) = oneOf.variantForValue(value)
+        setInputParams(chosen, ParamsAsAny(low), req)
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)

@@ -11,12 +11,13 @@ private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) 
   private val codecToMediaType = new CodecToMediaType(tschemaToASchema)
 
   def filterOutHiddenInputs(inputs: Vector[EndpointInput.Basic[_]]): Vector[EndpointInput.Basic[_]] = inputs.collect {
-    // EndpointInput.Basic is either OneOfBody or Atom
+    // EndpointInput.Basic is an atom, a oneOfBody, or a oneOfInput
     case OneOfBody(variants, mapping) =>
       OneOfBody(
         variants.filterNot(_.codec.schema.hidden),
         mapping
       )
+    case oneOf: OneOfInput[_, _] => oneOf
     case a: EndpointInput.Atom[_] if !a.codec.schema.hidden => a
   }
 

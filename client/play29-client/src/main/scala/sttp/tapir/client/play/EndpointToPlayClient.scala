@@ -20,6 +20,7 @@ import sttp.tapir.{
   FileRange,
   InputStreamRange,
   Mapping,
+  OneOfInput,
   RawBodyType,
   StreamBodyIO,
   WebSocketBodyOutput
@@ -146,6 +147,9 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
         req
+      case oneOf: OneOfInput[_, _] =>
+        val (chosen, low) = oneOf.variantForValue(value)
+        setInputParams(chosen, ParamsAsAny(low), req)
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)

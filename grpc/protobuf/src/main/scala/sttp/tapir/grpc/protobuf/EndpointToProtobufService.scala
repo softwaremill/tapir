@@ -63,6 +63,7 @@ class EndpointToProtobufService {
   private def extractInput(input: EndpointInput[_]): List[MessageReference] = {
     input match {
       case EndpointInput.Pair(left, right, _, _) => extractInput(left) ++ extractInput(right)
+      case OneOfInput(variants, _)      => variants.toList.flatMap(v => extractInput(v.input))
       case op: EndpointIO[_]                     => forIO(op)
       case _                                     => List.empty
     }

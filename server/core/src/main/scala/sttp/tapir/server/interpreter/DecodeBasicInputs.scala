@@ -4,7 +4,7 @@ import sttp.model.headers.Cookie
 import sttp.model.{ContentTypeRange, HeaderNames, MediaType, Method, QueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, oneOfBody}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, Mapping, OneOfInput, StreamBodyIO, oneOfBody}
 
 import scala.annotation.tailrec
 
@@ -256,11 +256,55 @@ object DecodeBasicInputs {
         matchOthers(inputsTail, values.addOneOfBodyInput(input, index), ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, _, _, _, _)), index), inputsTail)) =>
         matchOthers(inputsTail, values.addStreamingBodyInput(input, index), ctx)
+      case Some((IndexedBasicInput(oneOf: OneOfInput[?, ?], index), inputsTail)) =>
+        decodeOneOf(oneOf, index, values, ctx) match {
+          case Left((failure, ctx2))  => (failure, ctx2)
+          case Right((values2, ctx2)) => matchOthers(inputsTail, values2, ctx2)
+        }
       case Some((indexedInput, inputsTail)) =>
         val (result, ctx2) = matchOther(indexedInput.input, ctx)
         result match {
           case DecodeResult.Value(v)         => matchOthers(inputsTail, values.setBasicInputValue(v, indexedInput.index), ctx2)
           case failure: DecodeResult.Failure => (DecodeBasicInputsResult.Failure(indexedInput.input, failure), ctx2)
+        }
+    }
+  }
+
+  /** A body-less variant is decoded immediately. A variant that carries a body is deferred, with this one-of's mapping composed in, so the
+    * value stored for the body is the one-of's high-level value.
+    */
+  private def decodeOneOf(
+      oneOf: OneOfInput[?, ?],
+      index: Int,
+      values: DecodeBasicInputsResult.Values,
+      ctx: DecodeInputsContext
+  ): Either[(DecodeBasicInputsResult.Failure, DecodeInputsContext), (DecodeBasicInputsResult.Values, DecodeInputsContext)] = {
+    val hasBody = ctx.request.contentTypeParsed.isDefined || ctx.header(HeaderNames.ContentLength).exists(v => v != "0" && v.nonEmpty)
+    val (bodyVariants, emptyVariants) = oneOf.variants.partition(v => inputContainsBody(v.input))
+    val chosen = if (hasBody) bodyVariants.headOption.orElse(emptyVariants.headOption) else emptyVariants.headOption.orElse(bodyVariants.headOption)
+    val mapping = oneOf.mapping.asInstanceOf[Mapping[Any, Any]]
+
+    def fail(failure: DecodeResult.Failure) = Left((DecodeBasicInputsResult.Failure(oneOf, failure), ctx))
+
+    chosen match {
+      case None => fail(DecodeResult.Missing)
+      case Some(variant) =>
+        variant.input match {
+          case body: EndpointIO.Body[?, ?] =>
+            Right((values.addBodyInput(body.asInstanceOf[EndpointIO.Body[Any, Any]].map(mapping), index), ctx))
+          case body: EndpointIO.OneOfBody[?, ?] =>
+            Right((values.addOneOfBodyInput(body.asInstanceOf[EndpointIO.OneOfBody[Any, Any]].map(mapping), index), ctx))
+          case body: EndpointIO.StreamBodyWrapper[?, ?] =>
+            Right((values.addStreamingBodyInput(body.asInstanceOf[EndpointIO.StreamBodyWrapper[Any, Any]].map(mapping), index), ctx))
+          case empty: EndpointIO.Empty[?] =>
+            empty.codec.asInstanceOf[Codec[Unit, Any, ?]].decode(()).flatMap(mapping.decode) match {
+              case DecodeResult.Value(v)    => Right((values.setBasicInputValue(v, index), ctx))
+              case failure: DecodeResult.Failure => fail(failure)
+            }
+          case other =>
+            throw new IllegalArgumentException(
+              s"Unsupported oneOfInput variant ${other.show}. Variants must be a body, oneOfBody, stream body, or empty input."
+            )
         }
     }
   }
