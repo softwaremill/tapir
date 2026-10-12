@@ -26,15 +26,15 @@ private[cats] final case class TapirCatsService[F[_]: Async](
     armeriaServerOptions: ArmeriaCatsServerOptions[F]
 ) extends TapirService[Fs2Streams[F], F] {
 
-  private[this] val dispatcher: Dispatcher[F] = armeriaServerOptions.dispatcher
-  private[this] implicit val monad: MonadAsyncError[F] = new CatsMonadAsyncError()
-  private[this] implicit val catsFutureConversion: CatsFutureConversion[F] = {
+  private val dispatcher: Dispatcher[F] = armeriaServerOptions.dispatcher
+  private implicit val monad: MonadAsyncError[F] = new CatsMonadAsyncError()
+  private implicit val catsFutureConversion: CatsFutureConversion[F] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     new CatsFutureConversion(dispatcher)
   }
-  private[this] implicit val bodyListener: BodyListener[F, ArmeriaResponseType] = new ArmeriaBodyListener
+  private implicit val bodyListener: BodyListener[F, ArmeriaResponseType] = new ArmeriaBodyListener
 
-  private[this] val fs2StreamCompatible: StreamCompatible[Fs2Streams[F]] = Fs2StreamCompatible(dispatcher)
+  private val fs2StreamCompatible: StreamCompatible[Fs2Streams[F]] = Fs2StreamCompatible(dispatcher)
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())

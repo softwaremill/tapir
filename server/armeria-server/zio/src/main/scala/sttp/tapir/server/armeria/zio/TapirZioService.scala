@@ -22,14 +22,14 @@ private[zio] final case class TapirZioService[R](
 )(implicit runtime: Runtime[R])
     extends TapirService[ZioStreams, RIO[R, *]] {
 
-  private[this] implicit val monad: RIOMonadAsyncError[R] = new RIOMonadAsyncError()
-  private[this] implicit val rioFutureConversion: RioFutureConversion[R] = {
+  private implicit val monad: RIOMonadAsyncError[R] = new RIOMonadAsyncError()
+  private implicit val rioFutureConversion: RioFutureConversion[R] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     new RioFutureConversion[R]
   }
-  private[this] implicit val bodyListener: ArmeriaBodyListener[RIO[R, *]] = new ArmeriaBodyListener
+  private implicit val bodyListener: ArmeriaBodyListener[RIO[R, *]] = new ArmeriaBodyListener
 
-  private[this] val zioStreamCompatible: StreamCompatible[ZioStreams] = ZioStreamCompatible(runtime)
+  private val zioStreamCompatible: StreamCompatible[ZioStreams] = ZioStreamCompatible(runtime)
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())

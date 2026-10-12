@@ -42,7 +42,7 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
   // frames and release them in `onNext`. Otherwise late frames (e.g. the client's Close in response to ours) would sit
   // unreleased in the netty-reactive-streams publisher's buffer, which only releases its buffer on cancel - and we
   // intentionally don't cancel, as that would close the channel before error/close handling completes.
-  @volatile private var inboundSubscription: Subscription = _
+  @volatile private var inboundSubscription: Subscription = null
 
   private def drainInbound(): Unit =
     if (inboundSubscription != null) inboundSubscription.request(Long.MaxValue)
@@ -126,7 +126,7 @@ class WebSocketPipeProcessor[F[_]: Async, REQ, RESP](
       case Success(p) =>
         p.subscribe(s)
       case _ => // Never happens, we call succecss() explicitly
-    }(ExecutionContexts.sameThread)
+    }(using ExecutionContexts.sameThread)
 
   }
 

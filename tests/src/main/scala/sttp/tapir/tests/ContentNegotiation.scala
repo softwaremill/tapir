@@ -62,7 +62,7 @@ object ContentNegotiation {
           jsonBody[Organization], // first defining the case which should be used when there are no parameters in the `Accept` range
           jsonBody[Organization].copy(
             codec = circeCodec[Organization]
-              .map(identity[Organization] _)(_.copy(name = "unknown"))
+              .map((o: Organization) => o)(_.copy(name = "unknown"))
               .format(JsonCodecFormatOrganizationName())
           )
         )

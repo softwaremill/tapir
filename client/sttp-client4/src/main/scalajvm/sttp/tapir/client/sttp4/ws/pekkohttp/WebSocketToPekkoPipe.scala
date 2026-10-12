@@ -15,7 +15,7 @@ class WebSocketToPekkoPipe[R](implicit ec: ExecutionContext) extends WebSocketTo
 
   override def apply[REQ, RESP](
       s: Any
-  )(ws: WebSocket[Future], o: WebSocketBodyOutput[Any, REQ, RESP, _, PekkoStreams]): Any = {
+  )(ws: WebSocket[Future], o: WebSocketBodyOutput[Any, REQ, RESP, ?, PekkoStreams]): Any = {
 
     val sink = Flow[REQ]
       .map(o.requests.encode)

@@ -21,12 +21,12 @@ trait SttpStubServer {
       extends AbstractRichBackendStub[F, WebSockets, WebSocketBackendStub[F]](stub) {}
 
   implicit class RichWebSocketStreamBackendStub[F[_], S](stub: WebSocketStreamBackendStub[F, S])
-      extends AbstractRichBackendStub[F, WebSockets with S, WebSocketStreamBackendStub[F, S]](stub) {}
+      extends AbstractRichBackendStub[F, WebSockets & S, WebSocketStreamBackendStub[F, S]](stub) {}
 
   //
 
   abstract class AbstractRichBackendStub[F[_], R, STUB <: AbstractBackendStub[F, R] { type Self = STUB }](val stub: STUB) {
-    def whenRequestMatchesEndpoint[E, O](endpoint: Endpoint[_, _, E, O, _]): EndpointWhenRequest[_, _, E, O] =
+    def whenRequestMatchesEndpoint[E, O](endpoint: Endpoint[?, ?, E, O, ?]): EndpointWhenRequest[?, ?, E, O] =
       new EndpointWhenRequest(
         endpoint,
         new stub.WhenRequest(req =>
@@ -37,20 +37,20 @@ trait SttpStubServer {
         )
       )
 
-    def whenSecurityInputMatches[A, I, E, O](endpoint: Endpoint[A, I, E, O, _])(
+    def whenSecurityInputMatches[A, I, E, O](endpoint: Endpoint[A, I, E, O, ?])(
         securityInputMatcher: A => Boolean
     ): EndpointWhenRequest[A, I, E, O] =
       new EndpointWhenRequest(endpoint, whenInputMatches(endpoint.securityInput)(securityInputMatcher))
 
-    def whenInputMatches[A, I, E, O](endpoint: Endpoint[A, I, E, O, _])(inputMatcher: I => Boolean): EndpointWhenRequest[A, I, E, O] =
+    def whenInputMatches[A, I, E, O](endpoint: Endpoint[A, I, E, O, ?])(inputMatcher: I => Boolean): EndpointWhenRequest[A, I, E, O] =
       new EndpointWhenRequest(endpoint, whenInputMatches(endpoint.input)(inputMatcher))
 
-    def whenDecodingInputFailure[E, O](endpoint: Endpoint[_, _, E, O, _]): EndpointWhenRequest[_, _, E, O] =
+    def whenDecodingInputFailure[E, O](endpoint: Endpoint[?, ?, E, O, ?]): EndpointWhenRequest[?, ?, E, O] =
       whenDecodingInputFailureMatches(endpoint) { case _ => true }
 
     def whenDecodingInputFailureMatches[E, O](
-        endpoint: Endpoint[_, _, E, O, _]
-    )(failureMatcher: PartialFunction[DecodeResult.Failure, Boolean]): EndpointWhenRequest[_, _, E, O] =
+        endpoint: Endpoint[?, ?, E, O, ?]
+    )(failureMatcher: PartialFunction[DecodeResult.Failure, Boolean]): EndpointWhenRequest[?, ?, E, O] =
       new EndpointWhenRequest(
         endpoint,
         new stub.WhenRequest(req => {
@@ -74,7 +74,7 @@ trait SttpStubServer {
         }
       )
 
-    class EndpointWhenRequest[A, I, E, O](endpoint: Endpoint[A, I, E, O, _], whenRequest: stub.WhenRequest) {
+    class EndpointWhenRequest[A, I, E, O](endpoint: Endpoint[A, I, E, O, ?], whenRequest: stub.WhenRequest) {
       def thenSuccess(response: O): STUB =
         whenRequest.thenRespond(adjustBody(SttpResponseEncoder(endpoint.output, response, StatusCode.Ok)))
 

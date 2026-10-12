@@ -82,14 +82,11 @@ jobs:
     - name: Compile core & server-core with next Scala 3
       if: matrix.scala-version == '3' && matrix.target-platform == 'JVM' && matrix.java == '21'
       env:
-        SCALA_3_NEXT: "3.8.3"
-      # Scala 3.8+ doesn't support -release below 17
+        SCALA_3_NEXT: "3.10.0"
       run: |
         sbt -v \
           "set LocalProject(\"core\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
           "set LocalProject(\"serverCore\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
-          "set LocalProject(\"core\") / javaOutputVersion := \"17\" ;" \
-          "set LocalProject(\"serverCore\") / javaOutputVersion := \"17\" ;" \
           "set LocalProject(\"coreJS\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
           "set LocalProject(\"serverCoreJS\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
           "core/Test/compile ; serverCore/Test/compile ;" \

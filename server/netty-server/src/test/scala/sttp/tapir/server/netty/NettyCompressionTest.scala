@@ -21,7 +21,7 @@ class NettyCompressionTest extends AnyFunSuite with Matchers with BeforeAndAfter
   private val largeText = "This is a large text that should benefit from compression. " * 1000
 
   override def afterAll(): Unit = {
-    Await.result(nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[_], 10.seconds)
+    Await.result(nettyFutureToScala(eventLoopGroup.shutdownGracefully()): Future[?], 10.seconds)
     super.afterAll()
   }
 

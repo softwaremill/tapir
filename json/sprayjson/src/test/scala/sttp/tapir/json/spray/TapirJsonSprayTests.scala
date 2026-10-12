@@ -102,10 +102,10 @@ class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProt
   }
 
   it should "return a coproduct schema for a JsValue" in {
-    schemaForSprayJsValue.schemaType shouldBe a[SCoproduct[_]]
+    schemaForSprayJsValue.schemaType shouldBe a[SCoproduct[?]]
   }
 
   it should "return a product schema for a JsObject" in {
-    schemaForSprayJsObject.schemaType shouldBe a[SProduct[_]]
+    schemaForSprayJsObject.schemaType shouldBe a[SProduct[?]]
   }
 }

@@ -4,10 +4,10 @@ import sttp.tapir.{EndpointIO, EndpointInput, Mapping}
 
 // ideally the parameters would be polymporphic functions returning EI[I] => EI[I]
 private[docs] class EndpointInputMapper[S](
-    inputMapping: PartialFunction[(EndpointInput.Single[_], S), (EndpointInput.Single[_], S)],
-    ioMapping: PartialFunction[(EndpointIO.Single[_], S), (EndpointIO.Single[_], S)]
+    inputMapping: PartialFunction[(EndpointInput.Single[?], S), (EndpointInput.Single[?], S)],
+    ioMapping: PartialFunction[(EndpointIO.Single[?], S), (EndpointIO.Single[?], S)]
 ) {
-  def mapInput(ei: EndpointInput[_], s: S): (EndpointInput[_], S) =
+  def mapInput(ei: EndpointInput[?], s: S): (EndpointInput[?], S) =
     ei match {
       case single: EndpointInput.Single[_]                 => mapInputSingle(single, s)
       case eio: EndpointIO[_]                              => mapIO(eio, s)
@@ -18,7 +18,7 @@ private[docs] class EndpointInputMapper[S](
         (EndpointInput.Pair(left2, right2, combine, split), s3)
     }
 
-  private def mapInputSingle(ei: EndpointInput.Single[_], s: S): (EndpointInput.Single[_], S) =
+  private def mapInputSingle(ei: EndpointInput.Single[?], s: S): (EndpointInput.Single[?], S) =
     ei match {
       case _ if inputMapping.isDefinedAt((ei, s)) => inputMapping((ei, s))
       case EndpointInput.MappedPair(wrapped, c)   =>
@@ -27,7 +27,7 @@ private[docs] class EndpointInputMapper[S](
       case _ => (ei, s)
     }
 
-  private def mapIO(ei: EndpointIO[_], s: S): (EndpointIO[_], S) =
+  private def mapIO(ei: EndpointIO[?], s: S): (EndpointIO[?], S) =
     ei match {
       case single: EndpointIO.Single[_]                 => mapIOSingle(single, s)
       case EndpointIO.Pair(left, right, combine, split) =>
@@ -37,7 +37,7 @@ private[docs] class EndpointInputMapper[S](
         (EndpointIO.Pair(left2, right2, combine, split), s3)
     }
 
-  private def mapIOSingle(ei: EndpointIO.Single[_], s: S): (EndpointIO.Single[_], S) =
+  private def mapIOSingle(ei: EndpointIO.Single[?], s: S): (EndpointIO.Single[?], S) =
     ei match {
       case _ if ioMapping.isDefinedAt((ei, s)) => ioMapping((ei, s))
       case EndpointIO.MappedPair(wrapped, c)   =>

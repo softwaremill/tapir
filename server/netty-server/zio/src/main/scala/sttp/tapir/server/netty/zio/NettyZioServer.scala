@@ -93,7 +93,7 @@ case class NettyZioServer[R](
         block()
       )
     )
-    (cancelable, () => cancelable.cancel().map(_ => ())(Implicits.global))
+    (cancelable, () => cancelable.cancel().map(_ => ())(using Implicits.global))
   }
 
   private def startUsingSocketOverride[SA <: SocketAddress](socketOverride: Option[SA]): RIO[R, (SA, () => RIO[R, Unit])] = for {
