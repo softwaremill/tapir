@@ -14,7 +14,7 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
     private val stub: SttpBackendStub[F, R]
 ) {
 
-  def whenEndpoint[I, E, O](endpoint: Endpoint[_, I, E, O, _]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
+  def whenEndpoint[I, E, O](endpoint: Endpoint[?, I, E, O, ?]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
 
   def whenServerEndpoint[A, U, I, E, O](serverEndpoint: ServerEndpoint.Full[A, U, I, E, O, R, F]) = new TapirServerEndpointStub(
     serverEndpoint
@@ -29,7 +29,7 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
   def backend(): SttpBackend[F, R] =
     stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, endpoints, interceptors))
 
-  class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
+  class TapirEndpointStub[I, E, O](ep: Endpoint[?, I, E, O, ?]) {
     def thenRespond(response: O): TapirStubInterpreter[F, R, OPTIONS] =
       append(publicEndpoint(logic = _ => _ => (Right(response): Either[E, O]).unit))
 

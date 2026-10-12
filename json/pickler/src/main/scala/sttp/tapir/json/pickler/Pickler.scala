@@ -47,7 +47,7 @@ object Pickler:
     *   The pickler that is used when adding the discriminator as a field to child picklers (if it's not yet added).
     */
   inline def oneOfUsingField[T: ClassTag, V](inline extractorFn: T => V, inline asStringFn: V => String)(
-      mapping: (V, Pickler[_ <: T])*
+      mapping: (V, Pickler[? <: T])*
   )(using m: Mirror.Of[T], c: PicklerConfiguration, discriminatorPickler: Pickler[V]): Pickler[T] =
 
     val paramMapping = mapping
@@ -76,7 +76,7 @@ object Pickler:
               val schema: Schema[T] = Schema.oneOfUsingField[T, V](extractorFn, asStringFn)(
                 mapping.toList.map { case (v, p) =>
                   (v, p.schema)
-                }: _*
+                }*
               )
               lazy val childPicklers: Tuple.Map[m.MirroredElemTypes, Pickler] = summonChildPicklerInstances[T, m.MirroredElemTypes]
               picklerSum(schema, childPicklers, subtypeDiscriminator)
@@ -382,7 +382,7 @@ object Pickler:
       m: Mirror.Of[T],
       config: PicklerConfiguration
   ): Pickler[T] =
-    val childPicklersList = childPicklers.productIterator.toList.asInstanceOf[List[Pickler[_ <: T]]]
+    val childPicklersList = childPicklers.productIterator.toList.asInstanceOf[List[Pickler[? <: T]]]
     val tapirPickle = new TapirPickle[T] {
       override lazy val writer: Writer[T] =
         macroSumW[T](

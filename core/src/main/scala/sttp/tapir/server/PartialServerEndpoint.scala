@@ -54,13 +54,13 @@ case class PartialServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUTPUT,
 
   override private[tapir] def withInput[I2, R2](
       input: EndpointInput[I2]
-  ): PartialServerEndpoint[SECURITY_INPUT, PRINCIPAL, I2, ERROR_OUTPUT, OUTPUT, R with R2, F] =
+  ): PartialServerEndpoint[SECURITY_INPUT, PRINCIPAL, I2, ERROR_OUTPUT, OUTPUT, R & R2, F] =
     copy(endpoint = endpoint.copy(input = input))
   override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]) = copy(endpoint = endpoint.copy(output = output))
   override private[tapir] def withErrorOutputVariant[E2, R2](
       errorOutput: EndpointOutput[E2],
       embedE: ERROR_OUTPUT => E2
-  ): PartialServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, E2, OUTPUT, R with R2, F] =
+  ): PartialServerEndpoint[SECURITY_INPUT, PRINCIPAL, INPUT, E2, OUTPUT, R & R2, F] =
     this.copy(
       endpoint = endpoint.copy(errorOutput = errorOutput),
       securityLogic = implicit m =>

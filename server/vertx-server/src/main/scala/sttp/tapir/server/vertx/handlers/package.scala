@@ -27,8 +27,8 @@ package object handlers {
     rc.next()
   }
 
-  private[vertx] def attachDefaultHandlers[E](e: Endpoint[_, _, E, _, _], route: Route, uploadDirectory: String): Route = {
-    val mbWebsocketType = e.output.traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _]] {
+  private[vertx] def attachDefaultHandlers[E](e: Endpoint[?, ?, E, ?, ?], route: Route, uploadDirectory: String): Route = {
+    val mbWebsocketType = e.output.traverseOutputs[EndpointOutput.WebSocketBodyWrapper[?, ?]] {
       case body: EndpointOutput.WebSocketBodyWrapper[_, _] => Vector(body)
     }
 

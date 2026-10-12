@@ -81,7 +81,7 @@ object EndpointVerifier {
     )
   }
 
-  private def inputPathSegments(input: EndpointInput[_]): Vector[PathComponent] = {
+  private def inputPathSegments(input: EndpointInput[?]): Vector[PathComponent] = {
     input
       .traverseInputs({
         case EndpointInput.FixedPath(x, _, _)   => Vector(FixedPathSegment(UrlencodedData.encode(x)))
@@ -97,7 +97,7 @@ object EndpointVerifier {
       .map { case (endpoint, methods) => DuplicatedMethodDefinitionError(endpoint, methods) }
   }
 
-  private def inputDefinedMethods(input: EndpointInput[_]): Vector[Method] = {
+  private def inputDefinedMethods(input: EndpointInput[?]): Vector[Method] = {
     input.traverseInputs { case EndpointInput.FixedMethod(m, _, _) => Vector(m) }
   }
 

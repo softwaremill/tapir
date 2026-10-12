@@ -30,13 +30,13 @@ private[openapi] class EndpointToOperationResponse(
   private type StatusCodeKey = Option[Either[StatusCode, StatusCodeRange]]
 
   private def outputToResponses(
-      output: EndpointOutput[_],
+      output: EndpointOutput[?],
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
   ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
 
     /** The list of status codes/status code ranges that are defined by the given outputs, or `List(None)` if there are none. */
-    def statusCodeKeysInOutputs(os: Vector[EndpointOutput.Basic[_]]): List[StatusCodeKey] =
+    def statusCodeKeysInOutputs(os: Vector[EndpointOutput.Basic[?]]): List[StatusCodeKey] =
       os.collectFirst {
         case EndpointOutput.FixedStatusCode(statusCode, _, _)                             => List(Some(Left(statusCode)))
         case EndpointOutput.StatusCode(documentedCodes, _, _) if documentedCodes.nonEmpty => documentedCodes.keys.map(Some(_)).toList
@@ -44,9 +44,9 @@ private[openapi] class EndpointToOperationResponse(
 
     val outputs = output.asBasicOutputsList
 
-    val statusCodeKeysAndOutputs: List[(StatusCodeKey, Vector[EndpointOutput.Basic[_]])] =
+    val statusCodeKeysAndOutputs: List[(StatusCodeKey, Vector[EndpointOutput.Basic[?]])] =
       outputs.flatMap(os => statusCodeKeysInOutputs(os).map(_ -> os))
-    val outputsByStatusCodeKey: Map[StatusCodeKey, List[EndpointOutput.Basic[_]]] =
+    val outputsByStatusCodeKey: Map[StatusCodeKey, List[EndpointOutput.Basic[?]]] =
       statusCodeKeysAndOutputs.groupBy(_._1).mapValues(_.flatMap { case (_, output) => output }).toMap
 
     val statusCodeKeys: List[StatusCodeKey] = statusCodeKeysAndOutputs
@@ -74,7 +74,7 @@ private[openapi] class EndpointToOperationResponse(
     }
   }
 
-  private def outputsToResponse(sc: StatusCodeKey, outputs: List[EndpointOutput[_]]): Option[Response] = {
+  private def outputsToResponse(sc: StatusCodeKey, outputs: List[EndpointOutput[?]]): Option[Response] = {
     val bodies = collectBodies(outputs)
     val headers: Vector[(String, ReferenceOr[Header])] = endpointToHeaders.withSourceAtoms(outputs).map { case (atom, (name, header)) =>
       name -> ReusableComponents
@@ -126,7 +126,7 @@ private[openapi] class EndpointToOperationResponse(
         )
     }
 
-  private def collectBodies(outputs: List[EndpointOutput[_]]): List[(Option[String], ListMap[String, MediaType])] = {
+  private def collectBodies(outputs: List[EndpointOutput[?]]): List[(Option[String], ListMap[String, MediaType])] = {
     val forcedContentType = extractFixedContentType(outputs)
     outputs.flatMap(_.traverseOutputs {
       case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType, Nil)))
@@ -135,13 +135,13 @@ private[openapi] class EndpointToOperationResponse(
     })
   }
 
-  private def inputToDefaultErrorResponses(input: EndpointInput[_]): ListMap[ResponsesKey, ReferenceOr[Response]] =
+  private def inputToDefaultErrorResponses(input: EndpointInput[?]): ListMap[ResponsesKey, ReferenceOr[Response]] =
     options
       .defaultDecodeFailureOutput(input)
       .map(output => outputToResponses(output, ResponsesDefaultKey, None))
       .getOrElse(ListMap())
 
-  private def extractFixedContentType(outputs: List[EndpointOutput[_]]): Option[String] = {
+  private def extractFixedContentType(outputs: List[EndpointOutput[?]]): Option[String] = {
     outputs
       .flatMap(_.traverseOutputs { case EndpointIO.FixedHeader(h, _, _) =>
         if (h.is("Content-Type")) Vector(h.value) else Vector.empty

@@ -17,5 +17,5 @@ package object sttp4 {
   private[sttp4] def throwErrorExceptionMsg[A, I, E, O, R](endpoint: Endpoint[A, I, E, O, R], a: A, i: I, e: E): String =
     s"Endpoint ${endpoint.show} returned error: $e, for security inputs: $a, inputs: $i."
 
-  private[sttp4] type RequestStreamBody = (Streams[_], Any)
+  private[sttp4] type RequestStreamBody = (Streams[?], Any)
 }

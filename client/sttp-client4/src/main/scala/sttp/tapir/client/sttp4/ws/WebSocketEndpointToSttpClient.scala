@@ -11,7 +11,7 @@ import sttp.tapir.internal._
 import sttp.ws.WebSocket
 import sttp.tapir.client.sttp4.SttpClientOptions
 
-private[sttp] class WebSocketEndpointToSttpClient[R <: Streams[_] with WebSockets](
+private[sttp] class WebSocketEndpointToSttpClient[R <: Streams[?] & WebSockets](
     wsToPipe: WebSocketToPipe[R],
     clientOptions: SttpClientOptions
 ) extends EndpointToSttpClientBase
@@ -50,16 +50,16 @@ private[sttp] class WebSocketEndpointToSttpClient[R <: Streams[_] with WebSocket
   }
 
   private val clientOutputParams = new ClientOutputParams {
-    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] = {
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[?, ?, ?, ?, ?], body: Any): DecodeResult[Any] = {
       val streams = o.streams.asInstanceOf[wsToPipe.S]
 
       o.codec
-        .asInstanceOf[Codec[Any, _, CodecFormat]]
+        .asInstanceOf[Codec[Any, ?, CodecFormat]]
         .decode(
           wsToPipe
             .apply(streams)(
               body.asInstanceOf[WebSocket[wsToPipe.F]],
-              o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
+              o.asInstanceOf[WebSocketBodyOutput[Any, ?, ?, ?, wsToPipe.S]]
             )
         )
     }

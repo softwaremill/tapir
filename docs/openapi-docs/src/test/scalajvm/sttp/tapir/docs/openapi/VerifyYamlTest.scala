@@ -255,7 +255,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("expected_generic.yml")
 
     val actualYaml = OpenAPIDocsInterpreter()
-      .toOpenAPI(List(endpoint.in("p1" and jsonBody[G[String]]), endpoint.in("p2" and jsonBody[G[Int]])), Info("Fruits", "1.0"))
+      .toOpenAPI(List(endpoint.in("p1" `and` jsonBody[G[String]]), endpoint.in("p2" `and` jsonBody[G[Int]])), Info("Fruits", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
@@ -858,7 +858,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
   test("should add application/json content for json query parameter") {
     val expectedYaml = load("expected_json_query_param.yml")
-    val codec = Codec.listHead(Codec.json[String](DecodeResult.Value(_))(identity))
+    val codec = Codec.listHead(using Codec.json[String](DecodeResult.Value(_))(identity))
     val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         endpoint.post.in(queryAnyFormat[String, CodecFormat.Json]("name", codec).example("alan").default("tom")),

@@ -35,7 +35,7 @@ private[pekkogrpc] class PekkoGrpcToResponseBody(implicit m: Materializer, ec: E
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, PekkoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, PekkoStreams]
   ): PekkoResponseBody = ???
 
   private def rawValueToResponseEntity[CF <: CodecFormat, R](

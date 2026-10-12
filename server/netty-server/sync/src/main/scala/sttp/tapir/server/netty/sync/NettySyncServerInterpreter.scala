@@ -19,7 +19,7 @@ trait NettySyncServerInterpreter:
       inScopeRunner: InScopeRunner
   ): IdRoute =
     implicit val bodyListener: BodyListener[Identity, NettyResponse] = new NettyBodyListener(RunAsync.Id)
-    val serverInterpreter = new ServerInterpreter[OxStreams with WebSockets, Identity, NettyResponse, OxStreams](
+    val serverInterpreter = new ServerInterpreter[OxStreams & WebSockets, Identity, NettyResponse, OxStreams](
       FilterServerEndpoints(ses),
       new NettySyncRequestBody(
         nettyServerOptions.createFile,

@@ -47,7 +47,7 @@ object ProxyHttp4sFs2Server extends IOApp:
       logger.info(s"Proxying: $method $paths $queryParams ($filteredHeaders) -> $proxyUri")
       basicRequest
         .method(method, proxyUri)
-        .headers(filteredHeaders: _*)
+        .headers(filteredHeaders*)
         .streamBody(Fs2Streams[IO])(body)
         .response(asStreamAlwaysUnsafe(Fs2Streams[IO]))
         .send(backend)

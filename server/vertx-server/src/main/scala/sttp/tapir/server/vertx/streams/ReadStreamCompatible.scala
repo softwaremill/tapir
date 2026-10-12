@@ -14,7 +14,7 @@ trait ReadStreamCompatible[S <: Streams[S]] {
   def webSocketPipe[REQ, RESP](
       readStream: ReadStream[WebSocketFrame],
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, S]
   ): ReadStream[WebSocketFrame]
 }
 

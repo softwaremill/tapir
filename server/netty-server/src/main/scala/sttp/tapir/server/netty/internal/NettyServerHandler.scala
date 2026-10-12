@@ -56,25 +56,25 @@ class NettyServerHandler[F[_]](
   //     That means calls to ctx.read(), and ct.write(..), would have to be trampolined otherwise.
   //  2. We get serialization of execution: the EventLoop is a serial execution queue so
   //     we can rest easy knowing that no two events will be executed in parallel.
-  private[this] var eventLoopContext: ExecutionContext = _
+  private var eventLoopContext: ExecutionContext = null
 
   // This is used essentially as a queue, each incoming request attaches callbacks to this
   // and replaces it to ensure that responses are written out in the same order that they came
   // in.
-  private[this] var lastResponseSent: Future[Unit] = Future.unit
+  private var lastResponseSent: Future[Unit] = Future.unit
 
   // We keep track of the cancellation tokens for all the requests in flight. This gives us
   // observability into the number of requests in flight and the ability to cancel them all
   // if the connection gets closed.
-  private[this] val pendingResponses = MutableQueue.empty[() => Future[Unit]]
+  private val pendingResponses = MutableQueue.empty[() => Future[Unit]]
 
   // `IdleStateHandler` re-fires `WRITER_IDLE` every `requestTimeout` until a write completes; only the first firing is answered, as the
   // connection is closed along with the response. A plain var, as it's only touched on the channel's event loop.
-  private[this] var requestTimeoutHandled = false
+  private var requestTimeoutHandled = false
 
   // Present only if a request timeout is set, and the pipeline has the HTTP codec registered under `ServerCodecHandlerName`. If absent, an
   // exceeded request timeout is always reported as 503.
-  private[this] var requestBodyTracker: Option[RequestBodyCompletionTracker] = None
+  private var requestBodyTracker: Option[RequestBodyCompletionTracker] = None
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
   private final val WebSocketAutoPingHandlerName = "wsAutoPingHandler"
@@ -89,7 +89,7 @@ class NettyServerHandler[F[_]](
     initHandler(ctx)
   }
 
-  private[this] def initHandler(ctx: ChannelHandlerContext): Unit = {
+  private def initHandler(ctx: ChannelHandlerContext): Unit = {
     if (eventLoopContext == null) {
       // Initialize our ExecutionContext
       eventLoopContext = ExecutionContext.fromExecutor(ctx.channel.eventLoop)
@@ -240,8 +240,8 @@ class NettyServerHandler[F[_]](
                 case _ => // non-streaming type of request - do nothing - request body is already read in full
               }
             }
-          }(eventLoopContext)
-      }(eventLoopContext)
+          }(using eventLoopContext)
+      }(using eventLoopContext)
     }
 
     if (isShuttingDown.get()) {
@@ -458,7 +458,7 @@ class NettyServerHandler[F[_]](
   }
 
   private implicit class RichHttpMessage(m: HttpMessage) {
-    def setHeadersFrom(response: ServerResponse[_]): Unit = {
+    def setHeadersFrom(response: ServerResponse[?]): Unit = {
       config.serverHeader.foreach(m.headers().set(HttpHeaderNames.SERVER, _))
       response.headers
         .groupBy(_.name)

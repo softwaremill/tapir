@@ -28,12 +28,12 @@ private[sync] class OxProcessor[A, B](
 ) extends Processor[A, B]:
   private val logger = LoggerFactory.getLogger(getClass.getName)
   // Incoming requests are read from this subscription into an Ox Channel[A]
-  @volatile private var requestsSubscription: Subscription = _
+  @volatile private var requestsSubscription: Subscription = scala.compiletime.uninitialized
   // An internal channel for holding incoming requests (`A`), will be wrapped with user's pipeline to produce responses (`B`)
   private val channel = Channel.buffered[A](1)
 
   private val pipelineCancellationTimeout = 5.seconds
-  @volatile private var pipelineForkFuture: Future[CancellableFork[Unit]] = _
+  @volatile private var pipelineForkFuture: Future[CancellableFork[Unit]] = scala.compiletime.uninitialized
 
   override def onError(reason: Throwable): Unit =
     // As per rule 2.13, we need to throw a `java.lang.NullPointerException` if the `Throwable` is `null`

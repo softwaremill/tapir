@@ -13,10 +13,10 @@ import sttp.tapir.{DecodeResult, Endpoint}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-abstract class WebSocketSttpClientPekkoTestsSender extends ClientTests[WebSockets with PekkoStreams] {
+abstract class WebSocketSttpClientPekkoTestsSender extends ClientTests[WebSockets & PekkoStreams] {
   implicit val actorSystem: ActorSystem = ActorSystem("tests")
   val backend: WebSocketBackend[Future] = PekkoHttpBackend.usingActorSystem(actorSystem)
-  def wsToPipe: WebSocketToPipe[WebSockets with PekkoStreams]
+  def wsToPipe: WebSocketToPipe[WebSockets & PekkoStreams]
 
   override protected def afterAll(): Unit = {
     super.afterAll()
@@ -25,15 +25,15 @@ abstract class WebSocketSttpClientPekkoTestsSender extends ClientTests[WebSocket
 
   // only web socket tests
   override def send[A, I, E, O](
-      e: Endpoint[A, I, E, O, WebSockets with PekkoStreams],
+      e: Endpoint[A, I, E, O, WebSockets & PekkoStreams],
       port: Port,
       securityArgs: A,
       args: I,
       scheme: String = "http"
   ): Future[Either[E, O]] = {
-    implicit val wst: WebSocketToPipe[WebSockets with PekkoStreams] = wsToPipe
+    implicit val wst: WebSocketToPipe[WebSockets & PekkoStreams] = wsToPipe
     WebSocketSttpClientInterpreter()
-      .toSecureRequestThrowDecodeFailures[Future, A, I, E, O, WebSockets with PekkoStreams](e, Some(uri"$scheme://localhost:$port"))
+      .toSecureRequestThrowDecodeFailures[Future, A, I, E, O, WebSockets & PekkoStreams](e, Some(uri"$scheme://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)
@@ -41,14 +41,14 @@ abstract class WebSocketSttpClientPekkoTestsSender extends ClientTests[WebSocket
   }
 
   override def safeSend[A, I, E, O](
-      e: Endpoint[A, I, E, O, WebSockets with PekkoStreams],
+      e: Endpoint[A, I, E, O, WebSockets & PekkoStreams],
       port: Port,
       securityArgs: A,
       args: I
   ): Future[DecodeResult[Either[E, O]]] = {
-    implicit val wst: WebSocketToPipe[WebSockets with PekkoStreams] = wsToPipe
+    implicit val wst: WebSocketToPipe[WebSockets & PekkoStreams] = wsToPipe
     WebSocketSttpClientInterpreter()
-      .toSecureRequest[Future, A, I, E, O, WebSockets with PekkoStreams](e, Some(uri"http://localhost:$port"))
+      .toSecureRequest[Future, A, I, E, O, WebSockets & PekkoStreams](e, Some(uri"http://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)

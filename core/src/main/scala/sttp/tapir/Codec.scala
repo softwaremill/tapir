@@ -637,7 +637,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
     }
 
   implicit val cookie: Codec[String, List[Cookie], TextPlain] = Codec.string.mapDecode(decodeCookie)(cs => Cookie.toString(cs))
-  implicit val cookies: Codec[List[String], List[Cookie], TextPlain] = Codec.list(cookie).map(_.flatten)(List(_))
+  implicit val cookies: Codec[List[String], List[Cookie], TextPlain] = Codec.list(using cookie).map(_.flatten)(List(_))
 
   private[tapir] def decodeCookieWithMeta(cookie: String): DecodeResult[CookieWithMeta] =
     CookieWithMeta.parse(cookie) match {
@@ -648,7 +648,7 @@ object Codec extends CodecExtensions with CodecExtensions2 with FormCodecMacros 
   // These are marked as lazy as they involve scala-java-time constructs, which massively inflate the bundle size for scala.js applications, even if
   // they are unused within the program. By marking them lazy, it allows them to be *tree shaken* and removed by the optimiser.
   implicit lazy val cookieWithMeta: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
-  implicit lazy val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMeta)
+  implicit lazy val cookiesWithMeta: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(using cookieWithMeta)
 
   // raw tuples
 
@@ -686,7 +686,7 @@ trait LowPriorityCodec { this: Codec.type =>
         case Left(a)  => c1.encode(a)
         case Right(b) => c2.encode(b)
       }
-      .schema(Schema.schemaForEither(c1.schema, c2.schema))
+      .schema(Schema.schemaForEither(using c1.schema, c2.schema))
   }
 
   /** Create a codec which during decoding, first tries to decode values on the left using `c1`. If this fails for any reason, decoding is
@@ -708,7 +708,7 @@ trait LowPriorityCodec { this: Codec.type =>
         case Left(a)  => c1.encode(a)
         case Right(b) => c2.encode(b)
       }
-      .schema(Schema.schemaForEither(c1.schema, c2.schema))
+      .schema(Schema.schemaForEither(using c1.schema, c2.schema))
   }
 }
 
@@ -753,7 +753,7 @@ object MultipartCodec extends MultipartCodecMacros {
       .multipart(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, arrayBytePartListCodec)))
       // we know that all parts will end up as byte arrays; also, removing/restoring the by-name grouping of parts
       .map(_.values.toSeq.flatMap(_.asInstanceOf[List[Part[Array[Byte]]]]))(l =>
-        ListMap(l.groupBy(_.name).toList.map { case (name, parts) => name -> parts.toList }: _*)
+        ListMap(l.groupBy(_.name).toList.map { case (name, parts) => name -> parts.toList }*)
       )
 }
 

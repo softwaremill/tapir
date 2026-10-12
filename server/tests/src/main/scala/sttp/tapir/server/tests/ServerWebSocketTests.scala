@@ -25,7 +25,7 @@ import scala.concurrent.duration._
 import java.util.concurrent.atomic.AtomicReference
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], OPTIONS, ROUTE](
-    createServerTest: CreateServerTest[F, S with WebSockets, OPTIONS, ROUTE],
+    createServerTest: CreateServerTest[F, S & WebSockets, OPTIONS, ROUTE],
     val streams: S,
     autoPing: Boolean,
     handlePong: Boolean,

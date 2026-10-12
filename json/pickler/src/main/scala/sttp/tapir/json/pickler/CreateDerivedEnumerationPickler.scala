@@ -40,13 +40,13 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
       override lazy val reader: Reader[T] = {
         val readersForPossibleValues: Seq[TaggedReader[T]] =
           childReadWriters.map { case (enumValue, reader, _) =>
-            TaggedReader.Leaf[T](encode(enumValue.asInstanceOf[T]).toString, reader.asInstanceOf[LeafWrapper[_]].r.asInstanceOf[Reader[T]])
+            TaggedReader.Leaf[T](encode(enumValue.asInstanceOf[T]).toString, reader.asInstanceOf[LeafWrapper[?]].r.asInstanceOf[Reader[T]])
           }
-        new TaggedReader.Node[T](readersForPossibleValues: _*)
+        new TaggedReader.Node[T](readersForPossibleValues*)
       }
 
       override lazy val writer: Writer[T] =
-        new TaggedWriter.Node[T](childReadWriters.map(_._3.asInstanceOf[TaggedWriter[T]]): _*) {
+        new TaggedWriter.Node[T](childReadWriters.map(_._3.asInstanceOf[TaggedWriter[T]])*) {
           override def findWriterWithKey(v: Any): (String, String, ObjectWriter[T]) =
             val (tagKey, tagValue, writer) = super.findWriterWithKey(v)
             // Here our custom encoding transforms the value of a singleton object
@@ -57,7 +57,7 @@ class CreateDerivedEnumerationPickler[T: ClassTag](
     new Pickler[T](tapirPickle, schema)
   }
 
-  private inline def buildEnumerationReadWriters[T: ClassTag, Cases <: Tuple]: List[(Any, Types#Reader[_], Types#Writer[_])] =
+  private inline def buildEnumerationReadWriters[T: ClassTag, Cases <: Tuple]: List[(Any, Types#Reader[?], Types#Writer[?])] =
     inline erasedValue[Cases] match {
       case _: (enumerationCase *: enumerationCasesTail) =>
         val (reader, writer) = readWriterForEnumerationCase[enumerationCase]
