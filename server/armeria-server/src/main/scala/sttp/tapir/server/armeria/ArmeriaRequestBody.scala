@@ -15,7 +15,7 @@ import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.{ExecutionContext, Future}
-import java.nio.charset.StandardCharsets
+import java.nio.charset.{Charset, StandardCharsets}
 
 private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     serverOptions: ArmeriaServerOptions[F],
@@ -33,6 +33,8 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       )
       .asInstanceOf[streams.BinaryStream]
   }
+
+  override def stringBodyCharset(serverRequest: ServerRequest, default: Charset): Charset = StandardCharsets.UTF_8
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val ctx = armeriaCtx(serverRequest)

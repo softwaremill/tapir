@@ -5,10 +5,17 @@ import sttp.model.Part
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
+import java.nio.charset.Charset
+
 trait RequestBody[F[_], S] {
   val streams: Streams[S]
   def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]]
   def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream
+
+  /** The charset which [[toRaw]] uses to decode a [[RawBodyType.StringBody]] whose codec specifies `default`; backends which don't decode
+    * with the codec's charset ignore `default`.
+    */
+  def stringBodyCharset(serverRequest: ServerRequest, default: Charset): Charset = default
 }
 
 /** @param value

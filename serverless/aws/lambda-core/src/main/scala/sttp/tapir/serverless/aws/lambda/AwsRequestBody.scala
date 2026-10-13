@@ -10,6 +10,7 @@ import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.util.Base64
 
 private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, NoStreams] {
@@ -32,6 +33,10 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
       case _: RawBodyType.MultipartBody     => throw new UnsupportedOperationException
     }).asInstanceOf[RawValue[R]].unit
   }
+
+  // A non-base64 body is already a String, which toRaw returns as is; asByteArray encodes it with the default charset
+  override def stringBodyCharset(serverRequest: ServerRequest, default: Charset): Charset =
+    if (awsRequest(serverRequest).isBase64Encoded) default else Charset.defaultCharset()
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException

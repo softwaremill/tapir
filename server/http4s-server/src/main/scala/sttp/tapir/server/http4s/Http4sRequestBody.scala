@@ -14,6 +14,8 @@ import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 
+import java.nio.charset.{Charset => NioCharset}
+
 private[http4s] class Http4sRequestBody[F[_]: Async](
     serverOptions: Http4sServerOptions[F]
 ) extends RequestBody[F, Fs2Streams[F]] {
@@ -25,6 +27,9 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
     val stream = http4sRequest(serverRequest).body
     maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
   }
+
+  override def stringBodyCharset(serverRequest: ServerRequest, default: NioCharset): NioCharset =
+    http4sRequest(serverRequest).charset.map(_.nioCharset).getOrElse(default)
 
   private def http4sRequest(serverRequest: ServerRequest): Request[F] = serverRequest.underlying.asInstanceOf[Request[F]]
 

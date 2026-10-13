@@ -32,6 +32,9 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
     toRaw(request, bodyType, charset, () => request.body, None, maxBytes)
   }
 
+  override def stringBodyCharset(serverRequest: ServerRequest, default: Charset): Charset =
+    playRequest(serverRequest).charset.map(Charset.forName).getOrElse(default)
+
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     val stream = playRequest(serverRequest).body
     maxBytes.map(AkkaStreams.limitBytes(stream, _)).getOrElse(stream)

@@ -28,6 +28,7 @@ import sttp.tapir.tests.data.{FruitAmount, FruitError}
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import sttp.tapir.tests.Files.in_file_out_file
 
 class ServerBasicTests[F[_], OPTIONS, ROUTE](
@@ -105,6 +106,40 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(in_string_out_string, "with get method")((b: String) => pureResult(b.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe Symbol("left"))
+    },
+    testServer(
+      "a secondary body doesn't change how the primary string body is decoded",
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.post
+            .in("plain")
+            .in(stringBody(StandardCharsets.ISO_8859_1))
+            .out(stringBody)
+            .serverLogic((b: String) => pureResult(b.asRight[Unit])),
+          endpoint.post
+            .in("with-secondary")
+            .securityIn(stringBody(StandardCharsets.ISO_8859_1).asSecondary)
+            .in(stringBody(StandardCharsets.ISO_8859_1))
+            .out(stringBody)
+            .serverSecurityLogic((_: String) => pureResult(().asRight[Unit]))
+            .serverLogic(_ => (b: String) => pureResult(b.asRight[Unit]))
+        )
+      )
+    ) { (backend, baseUri) =>
+      def send(path: String, body: Array[Byte], contentType: String) = basicStringRequest
+        .post(uri"$baseUri/$path")
+        .body(body)
+        .contentType(contentType)
+        .send(backend)
+        .map(_.body)
+
+      def sameOnBoth(body: Array[Byte], contentType: String) = for {
+        plain <- send("plain", body, contentType)
+        withSecondary <- send("with-secondary", body, contentType)
+      } yield withSecondary shouldBe plain
+
+      sameOnBoth("café".getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
+        sameOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain")
     },
     testServer(in_header_before_path, "Header input before path capture input") { case (str: String, i: Int) =>
       pureResult((i, str).asRight[Unit])
