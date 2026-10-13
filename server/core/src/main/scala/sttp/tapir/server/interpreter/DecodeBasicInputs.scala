@@ -4,7 +4,20 @@ import sttp.model.headers.Cookie
 import sttp.model.{ContentTypeRange, HeaderNames, MediaType, Method, QueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, Mapping, OneOfInput, StreamBodyIO, oneOfBody}
+import sttp.tapir.{
+  AttributeKey,
+  Codec,
+  CodecFormat,
+  DecodeResult,
+  EndpointIO,
+  EndpointInput,
+  Mapping,
+  OneOfInput,
+  RawBodyType,
+  Schema,
+  StreamBodyIO,
+  oneOfBody
+}
 
 import scala.annotation.tailrec
 
@@ -65,6 +78,15 @@ case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String
   def queryParameter(name: String): Seq[String] = queryParameters.getMulti(name).getOrElse(Nil)
   val queryParameters: QueryParams = request.queryParameters
 }
+/** When a [[OneOfInput]] has a body-less variant, an actually empty raw body decodes to [[fallback]] instead of the body codec. A
+  * non-empty body with [[nonEmptyFailure]] set is that failure (unmatched content type) rather than a codec error.
+  */
+private[interpreter] object OneOfInputEmptyBody {
+  val fallback: AttributeKey[Any] = new AttributeKey[Any]("sttp.tapir.server.OneOfInput.emptyBodyFallback")
+  val nonEmptyFailure: AttributeKey[DecodeBasicInputsResult.Failure] =
+    new AttributeKey[DecodeBasicInputsResult.Failure]("sttp.tapir.server.OneOfInput.nonEmptyBodyFailure")
+}
+
 object DecodeInputsContext {
   def apply(request: ServerRequest): DecodeInputsContext = DecodeInputsContext(request, request.pathSegments, None)
 }
@@ -288,20 +310,32 @@ object DecodeBasicInputs {
     oneOf.variantForDecode(contentType, contentLength) match {
       case None =>
         contentType match {
-          case Some(ct) => fail(DecodeResult.Mismatch(oneOf.show, ct.toString))
-          case None     => fail(DecodeResult.Missing)
+          case Some(ct) if contentLengthKnownPresent(contentLength) =>
+            fail(DecodeResult.Mismatch(oneOf.show, ct.toString))
+          case Some(ct) =>
+            // Content length was omitted (HTTP/2). Read the body: an empty payload is the body-less variant, a non-empty one is a mismatch.
+            decodeEmptyVariant(oneOf) match {
+              case Some(DecodeResult.Value(fallback)) =>
+                val probe = emptyOrMismatchBody(oneOf, ct, fallback)
+                Right((values.addBodyInput(probe, index), ctx))
+              case Some(failure: DecodeResult.Failure) => fail(failure)
+              case None                                => fail(DecodeResult.Mismatch(oneOf.show, ct.toString))
+            }
+          case None => fail(DecodeResult.Missing)
         }
       case Some(input) =>
         input match {
           case body: EndpointIO.Body[?, ?] =>
-            Right((values.addBodyInput(body.asInstanceOf[EndpointIO.Body[Any, Any]].map(mapping), index), ctx))
+            val mapped = withEmptyBodyFallback(body.asInstanceOf[EndpointIO.Body[Any, Any]].map(mapping), oneOf)
+            Right((values.addBodyInput(mapped, index), ctx))
           case body: EndpointIO.OneOfBody[?, ?] =>
-            Right((values.addOneOfBodyInput(body.asInstanceOf[EndpointIO.OneOfBody[Any, Any]].map(mapping), index), ctx))
+            val mapped = withEmptyBodyFallback(body.asInstanceOf[EndpointIO.OneOfBody[Any, Any]].map(mapping), oneOf)
+            Right((values.addOneOfBodyInput(mapped, index), ctx))
           case body: EndpointIO.StreamBodyWrapper[?, ?] =>
             Right((values.addStreamingBodyInput(body.asInstanceOf[EndpointIO.StreamBodyWrapper[Any, Any]].map(mapping), index), ctx))
           case empty: EndpointIO.Empty[?] =>
             empty.codec.asInstanceOf[Codec[Unit, Any, ?]].decode(()).flatMap(mapping.decode) match {
-              case DecodeResult.Value(v)    => Right((values.setBasicInputValue(v, index), ctx))
+              case DecodeResult.Value(v)         => Right((values.setBasicInputValue(v, index), ctx))
               case failure: DecodeResult.Failure => fail(failure)
             }
           case other =>
@@ -310,6 +344,57 @@ object DecodeBasicInputs {
             )
         }
     }
+  }
+
+  /** A content length that is present and not zero. An omitted length is not "present": HTTP/2 often leaves it out. */
+  private def contentLengthKnownPresent(contentLength: Option[String]): Boolean =
+    contentLength.exists(v => v.nonEmpty && v != "0")
+
+  private def decodeEmptyVariant(oneOf: OneOfInput[?, ?]): Option[DecodeResult[Any]] = {
+    val mapping = oneOf.mapping.asInstanceOf[Mapping[Any, Any]]
+    oneOf.variants.find(v => !inputContainsBody(v.input)).map { variant =>
+      variant.input match {
+        case empty: EndpointIO.Empty[?] =>
+          empty.codec.asInstanceOf[Codec[Unit, Any, ?]].decode(()).flatMap(mapping.decode)
+        case other =>
+          DecodeResult.Error(
+            "",
+            new IllegalArgumentException(s"Unsupported oneOfInput variant ${other.show}. A body-less variant must be an empty input.")
+          )
+      }
+    }
+  }
+
+  private def withEmptyBodyFallback(body: EndpointIO.Body[Any, Any], oneOf: OneOfInput[?, ?]): EndpointIO.Body[Any, Any] =
+    decodeEmptyVariant(oneOf) match {
+      case Some(DecodeResult.Value(fallback)) => body.attribute(OneOfInputEmptyBody.fallback, fallback)
+      case _                                  => body
+    }
+
+  private def withEmptyBodyFallback(body: EndpointIO.OneOfBody[Any, Any], oneOf: OneOfInput[?, ?]): EndpointIO.OneOfBody[Any, Any] =
+    decodeEmptyVariant(oneOf) match {
+      case Some(DecodeResult.Value(fallback)) =>
+        body.copy(variants = body.variants.map { variant =>
+          variant.body match {
+            case Left(inner) => variant.copy(body = Left(inner.attribute(OneOfInputEmptyBody.fallback, fallback)))
+            case Right(_)   => variant
+          }
+        })
+      case _ => body
+    }
+
+  /** Reads the raw bytes so an omitted content length can still tell an empty body from a real, unmatched one. */
+  private def emptyOrMismatchBody(oneOf: OneOfInput[?, ?], contentType: MediaType, fallback: Any): EndpointIO.Body[Array[Byte], Any] = {
+    val failure = DecodeBasicInputsResult.Failure(oneOf, DecodeResult.Mismatch(oneOf.show, contentType.toString))
+    val codec = Codec
+      .id[Array[Byte], CodecFormat.OctetStream](CodecFormat.OctetStream(), Schema.schemaForByteArray)
+      .mapDecode[Any](bytes =>
+        if (bytes.isEmpty) DecodeResult.Value(fallback) else DecodeResult.Mismatch(oneOf.show, contentType.toString)
+      )(_ => Array.emptyByteArray)
+    EndpointIO
+      .Body(RawBodyType.ByteArrayBody, codec, EndpointIO.Info.empty[Any])
+      .attribute(OneOfInputEmptyBody.fallback, fallback)
+      .attribute(OneOfInputEmptyBody.nonEmptyFailure, failure)
   }
 
   private def matchOther(input: EndpointInput.Basic[?], ctx: DecodeInputsContext): (DecodeResult[?], DecodeInputsContext) = {

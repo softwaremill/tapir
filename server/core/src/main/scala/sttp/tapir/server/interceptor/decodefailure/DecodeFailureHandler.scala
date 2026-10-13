@@ -128,6 +128,7 @@ object DefaultDecodeFailureHandler {
       case (_, DecodeResult.Error(_, _: StreamMaxLengthExceededException)) => respondPayloadTooLarge
       case (_: EndpointIO.Body[?, ?], _)                                   => respondBadRequest
       case (_: EndpointIO.OneOfBody[?, ?], _: DecodeResult.Mismatch)       => respondUnsupportedMediaType
+      case (_: OneOfInput[?, ?], _: DecodeResult.Mismatch)                 => respondUnsupportedMediaType
       case (_: EndpointIO.StreamBodyWrapper[?, ?], _)                      => respondBadRequest
       // we assume that the only decode failure that might happen during path segment decoding is an error
       // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from

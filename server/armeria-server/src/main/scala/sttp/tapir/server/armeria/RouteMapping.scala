@@ -50,7 +50,16 @@ private[armeria] object RouteMapping {
         case RawBodyType.MultipartBody(_, _) => true
         case _                               => false
       }
-    case _ => false
+    // OneOfInput is itself a basic input, so a stream, file, or multipart variant would otherwise stay UNARY.
+    case OneOfInput(variants, _) => variants.exists(variant => isStreamingInput(variant.input))
+    case _                       => false
+  }
+
+  private def isStreamingInput(input: EndpointInput[_]): Boolean = input match {
+    case EndpointIO.OneOfBody(variants, _) =>
+      variants.exists(_.body.fold(isStreamingInput, isStreamingInput))
+    case basic: EndpointTransput.Basic[_]  => isStreaming(basic)
+    case _                                 => false
   }
 
   private def toPathPatterns(inputs: Seq[EndpointInput.Basic[_]], hasNoTrailingSlash: Boolean): List[String] = {

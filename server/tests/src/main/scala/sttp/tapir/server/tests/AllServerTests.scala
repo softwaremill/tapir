@@ -26,6 +26,7 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
     staticContent: Boolean = true,
     validation: Boolean = true,
     oneOfBody: Boolean = true,
+    oneOfInput: Boolean = true,
     cors: Boolean = true,
     options: Boolean = true,
     maxContentLength: Boolean = true
@@ -51,6 +52,7 @@ class AllServerTests[F[_], OPTIONS, ROUTE](
       (if (staticContent) new ServerFilesTests(serverInterpreter, backend).tests() else Nil) ++
       (if (validation) new ServerValidationTests(createServerTest).tests() else Nil) ++
       (if (oneOfBody) new ServerOneOfBodyTests(createServerTest).tests() else Nil) ++
+      (if (oneOfInput) new ServerOneOfInputTests(createServerTest).tests() else Nil) ++
       (if (cors) new ServerCORSTests(createServerTest).tests() else Nil) ++
       (if (options) new ServerOptionsTests(createServerTest, serverInterpreter).tests() else Nil)
 }

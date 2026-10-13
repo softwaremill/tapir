@@ -262,9 +262,10 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
     * body codec is never asked to encode `None`. The same matchers distinguish several present bodies, for example a JSON body and a PNG
     * body.
     *
-    * When decoding a request, a body-less variant is used when the request has no body. A content length of zero counts as no body even if a
-    * content type is set, but only when a body-less variant exists; otherwise a matching content type still selects a body. One body variant
-    * is used whenever a non-empty body is present. Several body variants are chosen by content type.
+    * When decoding a request, a body-less variant is used when the request has no body. A content length of zero, or a body that turns out to
+    * be empty (including when the content length is omitted, as with HTTP/2), counts as no body even if a content type is set, but only when
+    * a body-less variant exists; otherwise a matching content type still selects a body. One body variant is used whenever a non-empty body
+    * is present. Several body variants are chosen by content type.
     *
     * @example
     *   {{{
