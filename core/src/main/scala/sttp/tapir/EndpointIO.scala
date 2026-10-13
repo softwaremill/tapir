@@ -498,6 +498,7 @@ object EndpointIO {
       attribute(SecondaryBody.Attribute, SecondaryBody())
     }
 
+    /** Whether this body is marked with [[asSecondary]]. */
     // keys are equal by name, so a foreign key with the same name must not mark the body secondary
     def isSecondary: Boolean = info.attribute(SecondaryBody.Attribute).contains(SecondaryBody())
 
@@ -517,8 +518,8 @@ object EndpointIO {
     /** Evidence that a raw body type can be re-read from buffered bytes, and is therefore usable as a secondary body. */
     @implicitNotFound(
       "Cannot use a body with raw type ${R} as a secondary body. Only bodies which can be re-read from buffered bytes " +
-        "are supported: string, byte array, byte buffer, input stream. File, multipart and streaming bodies cannot be " +
-        "read twice."
+        "are supported: string, byte array, byte buffer, input stream, input stream range. File, multipart and streaming " +
+        "bodies cannot be read twice."
     )
     sealed trait ReplayableRawBody[R]
 

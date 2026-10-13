@@ -2,7 +2,7 @@ package sttp.tapir.internal
 
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
-/** Errors make an endpoint unserveable; warnings describe one that works, but whose published contract probably isn't what was intended. */
+/** Errors make an endpoint unservable; warnings describe one that works, but whose published contract probably isn't what was intended. */
 private[tapir] case class EndpointBodyProblems(errors: List[String], warnings: List[String]) {
   def ++(other: EndpointBodyProblems): EndpointBodyProblems =
     EndpointBodyProblems(errors ++ other.errors, warnings ++ other.warnings)
@@ -57,8 +57,8 @@ private[tapir] object EndpointBodyVerifier {
     val secondaryInsideOneOfBody: List[String] =
       inputs.collect {
         case ob: EndpointIO.OneOfBody[?, ?] if asAtoms(ob).exists { case b: EndpointIO.Body[?, ?] => b.isSecondary; case _ => false } =>
-          s"Endpoint $shown marks a oneOfBody variant as secondary. Only a body input used on its own can be " +
-            s"secondary; a oneOfBody is always part of the API contract."
+          s"Endpoint $shown marks a `oneOfBody` variant as secondary. Only a body input used on its own can be " +
+            s"secondary; a `oneOfBody` is always part of the API contract."
       }.toList
 
     val secondaryOutputs: List[String] =
@@ -78,18 +78,18 @@ private[tapir] object EndpointBodyVerifier {
     val tooManyPrimaries: List[String] =
       if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
         List(
-          s"Endpoint $shown declares a request body in both securityIn and in. Only one may be part of the API " +
-            s"contract. If both should decode the same request body, mark the securityIn one with .asSecondary." +
+          s"Endpoint $shown declares a request body in both `securityIn` and `in`. Only one may be part of the API " +
+            s"contract. If both should decode the same request body, mark the `securityIn` one with `.asSecondary`." +
             hiddenSchemaHint
         )
       else if (securityPrimaryBodies.size > 1)
         List(
-          s"Endpoint $shown declares more than one request body in securityIn. Only one request body may be part " +
+          s"Endpoint $shown declares more than one request body in `securityIn`. Only one request body may be part " +
             s"of the API contract.$hiddenSchemaHint"
         )
       else if (inPrimaryBodies.size > 1)
         List(
-          s"Endpoint $shown declares more than one request body in in. Only one request body may be part of the " +
+          s"Endpoint $shown declares more than one request body in `in`. Only one request body may be part of the " +
             s"API contract.$hiddenSchemaHint"
         )
       else Nil
@@ -110,7 +110,7 @@ private[tapir] object EndpointBodyVerifier {
         List(
           s"Endpoint $shown reads a secondary request body, but no request body is part of the API contract: it " +
             s"will be absent from the documentation and clients will not send it. Either declare the body in `in` " +
-            s"as well, or drop asSecondary and use the body input directly."
+            s"as well, or drop `.asSecondary` and use the body input directly."
         )
       else Nil
 

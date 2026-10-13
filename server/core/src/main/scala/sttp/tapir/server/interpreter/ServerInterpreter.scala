@@ -111,7 +111,7 @@ class ServerInterpreter[R, F[_], B, S](
     val rawValues = ConcurrentHashMap.newKeySet[RawValue[?]]()
     val addRawValue: RawValue[?] => Unit = rawValues.add(_): Unit
 
-    // if the endpoint reads the body more than once, buffer it so that the backend's request is consumed only once
+    // a secondary body is usually read in addition to the primary one, but the backend's request body can be consumed only once
     val endpointRequestBody: RequestBody[F, S] =
       if (securityBasicInputs.hasSecondaryBody || regularBasicInputs.hasSecondaryBody) new CachingRequestBody(requestBody)
       else requestBody

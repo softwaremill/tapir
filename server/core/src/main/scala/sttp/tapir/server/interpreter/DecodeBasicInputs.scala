@@ -10,8 +10,7 @@ import scala.annotation.tailrec
 
 sealed trait DecodeBasicInputsResult {
 
-  /** Whether any body input in this result is a secondary body, i.e. one which requires the request body to be readable more than once.
-    */
+  /** Whether any body input in this result is a secondary body, see [[sttp.tapir.EndpointIO.Body.asSecondary]]. */
   def hasSecondaryBody: Boolean
 }
 object DecodeBasicInputsResult {

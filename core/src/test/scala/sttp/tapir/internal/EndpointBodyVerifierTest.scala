@@ -47,7 +47,7 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     val problems = EndpointBodyVerifier.verifyOne(e)
 
     problems.errors should have size 1
-    problems.errors.head should include("declares a request body in both securityIn and in")
+    problems.errors.head should include("declares a request body in both `securityIn` and `in`")
     problems.errors.head should include("asSecondary")
   }
 
@@ -112,8 +112,8 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     val problems = EndpointBodyVerifier.verifyOne(e)
 
     problems.errors should have size 2
-    problems.errors.head should include("marks a oneOfBody variant as secondary")
-    problems.errors(1) should include("declares a request body in both securityIn and in")
+    problems.errors.head should include("marks a `oneOfBody` variant as secondary")
+    problems.errors(1) should include("declares a request body in both `securityIn` and `in`")
   }
 
   it should "warn about a secondary body with no primary body" in {
@@ -125,7 +125,7 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.warnings.head should include("no request body is part of the API contract")
   }
 
-  it should "warn about a secondary body with no primary body whatever the method" in {
+  it should "warn about a secondary body with no primary body, even on a GET endpoint" in {
     val e = endpoint.get.in("ping").securityIn(stringBody.asSecondary)
     EndpointBodyVerifier.verifyOne(e).warnings.head should include("no request body is part of the API contract")
   }
