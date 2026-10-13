@@ -20,6 +20,7 @@ import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
+import java.nio.charset.StandardCharsets.US_ASCII
 
 class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]])(implicit
     ec: ExecutionContext
@@ -106,6 +107,21 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         } yield List(status)
       }.map { statusLines =>
         statusLines shouldBe List("HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
+    Test("respond to requests with Expect: 100-continue") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        val requestHead =
+          s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: ${completeBody.length}\r\nExpect: 100-continue\r\n\r\n"
+            .getBytes(US_ASCII)
+        for {
+          _ <- send(socket, requestHead)
+          continue <- readStatusLine(socket)
+          _ <- send(socket, completeBody)
+          response <- readStatusLine(socket)
+        } yield List(continue, response)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 100 Continue", "HTTP/1.1 200 OK")
       }.unsafeToFuture()
     },
     Test("respond with status 408 for an incomplete request following a complete one on the same connection") {
