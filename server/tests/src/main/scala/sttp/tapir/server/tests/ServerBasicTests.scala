@@ -1009,6 +1009,25 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           .recover { case _: SttpClientException => Succeeded }
       },
       testPayloadTooLarge(in_byte_buffer_out_byte_buffer, maxLength),
+      testServerLogic(
+        endpoint.post
+          .in("api" / "echo")
+          .securityIn(stringBody.asSecondary)
+          .in(stringBody)
+          .out(stringBody)
+          .maxRequestBodyLength(maxLength.toLong)
+          .serverSecurityLogic((_: String) => pureResult(().asRight[Unit]))
+          .serverLogic(_ => (body: String) => pureResult(body.asRight[Unit])),
+        "checks payload limit and returns 413 on exceeded max content length (request, secondary body)"
+      ) { (backend, baseUri) =>
+        basicRequest
+          .post(uri"$baseUri/api/echo")
+          .body(List.fill(maxLength + 1)('x').mkString)
+          .send(backend)
+          .map(_.code shouldBe StatusCode.PayloadTooLarge)
+          // see the note in testPayloadTooLarge: a connection reset is also a valid rejection
+          .recover { case _: SttpClientException => Succeeded }
+      },
       testPayloadWithinLimit(in_string_out_string, maxLength),
       testServer(
         in_input_stream_out_input_stream.maxRequestBodyLength(maxLength.toLong),

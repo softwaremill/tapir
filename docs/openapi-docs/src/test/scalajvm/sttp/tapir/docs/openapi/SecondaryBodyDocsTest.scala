@@ -41,6 +41,14 @@ class SecondaryBodyDocsTest extends AnyFlatSpec with Matchers {
     yaml should include("Invalid value for: body")
   }
 
+  it should "not document the schema of a secondary request body" in {
+    val e = endpoint.post.in("fruit").securityIn(jsonBody[FruitAmount].asSecondary).in(stringBody)
+
+    val openAPI = OpenAPIDocsInterpreter().toOpenAPI(e, "Test", "1.0")
+
+    openAPI.components shouldBe None
+  }
+
   it should "document neither the body nor its schema when an output body is secondary" in {
     val e = endpoint.get.in("fruit").out(jsonBody[FruitAmount].asSecondary)
 

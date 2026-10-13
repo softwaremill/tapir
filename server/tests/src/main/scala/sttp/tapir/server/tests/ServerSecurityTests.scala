@@ -172,6 +172,56 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
         .body("payload")
         .send(backend)
         .map(_.body shouldBe "denied")
+    },
+    testServerLogic(
+      endpoint.post
+        .in("secondary-invalid")
+        .securityIn(plainBody[Int].asSecondary)
+        .in(stringBody)
+        .out(stringBody)
+        .serverSecurityLogic((_: Int) => pureResult(().asRight[Unit]))
+        .serverLogic(_ => (body: String) => pureResult(body.asRight[Unit])),
+      "secondary body which fails to decode returns 400"
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/secondary-invalid")
+        .body("not a number")
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.BadRequest
+          r.body shouldBe "Invalid value for: body"
+        }
+    },
+    testServerLogic(
+      endpoint.post
+        .in("secondary-in-in")
+        .in(stringBody)
+        .in(byteArrayBody.asSecondary)
+        .out(stringBody)
+        .serverLogic { case (body: String, raw: Array[Byte]) => pureResult(s"$body|${raw.length}".asRight[Unit]) },
+      "secondary body next to the primary one in `in`"
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/secondary-in-in")
+        .body("payload")
+        .send(backend)
+        .map(_.body shouldBe "payload|7")
+    },
+    testServerLogic(
+      endpoint.post
+        .in("secondary-with-primary-in-security")
+        .securityIn(stringBody)
+        .in(byteArrayBody.asSecondary)
+        .out(stringBody)
+        .serverSecurityLogic((body: String) => pureResult(body.asRight[Unit]))
+        .serverLogic(body => (raw: Array[Byte]) => pureResult(s"$body|${raw.length}".asRight[Unit])),
+      "secondary body in `in`, with the primary one in `securityIn`"
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/secondary-with-primary-in-security")
+        .body("payload")
+        .send(backend)
+        .map(_.body shouldBe "payload|7")
     }
   ) ++
     correctAuthTests ++
