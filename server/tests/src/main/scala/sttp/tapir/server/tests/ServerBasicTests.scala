@@ -132,7 +132,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .body(body)
         .contentType(contentType)
         .send(backend)
-        .map(_.body)
+        .map(r => (r.code, r.body))
 
       def sameOnBoth(body: Array[Byte], contentType: String) = for {
         plain <- send("plain", body, contentType)
