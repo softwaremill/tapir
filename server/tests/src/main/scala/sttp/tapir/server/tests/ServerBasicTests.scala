@@ -147,16 +147,17 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     Test("reject an endpoint with two ordinary request bodies when routes are built") {
       val invalid = endpoint.post
         .in("invalid")
-        .in(stringBody)
+        .securityIn(stringBody)
         .in(byteArrayBody)
-        .serverLogic((_: (String, Array[Byte])) => pureResult(().asRight[Unit]))
+        .serverSecurityLogic((_: String) => pureResult(().asRight[Unit]))
+        .serverLogic(_ => (_: Array[Byte]) => pureResult(().asRight[Unit]))
 
-      // some interpreters build the route lazily, e.g. when the server starts
-      IO.defer(server(route(List(invalid))).use(_ => IO.unit))
+      // some interpreters build the route lazily, e.g. when the server starts, and may wrap the exception
+      IO.defer(server(route(invalid)).use(_ => IO.unit))
         .attempt
         .map { result =>
           val causes = Iterator.iterate(result.left.toOption.orNull)(_.getCause).takeWhile(_ != null).toList
-          causes.exists(_.isInstanceOf[IllegalArgumentException]) shouldBe true
+          causes.collectFirst { case e: IllegalArgumentException => e.getMessage }.getOrElse("") should include("asSecondary")
         }
         .unsafeToFuture()
     },
