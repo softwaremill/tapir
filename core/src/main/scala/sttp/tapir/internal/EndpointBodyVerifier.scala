@@ -5,8 +5,8 @@ import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 /** Errors make an endpoint unservable; warnings describe one that works, but whose published contract probably isn't what was intended. */
 private[tapir] case class EndpointBodyProblems(errors: List[String], warnings: List[String])
 
-/** Verifies that endpoint descriptions are structurally serveable. Errors are thrown by server interpreters when routes are constructed;
-  * both errors and warnings are reported by `EndpointVerifier`.
+/** Finds request body definitions which can't be served (errors), or which can but probably aren't what was intended (warnings). Errors are
+  * thrown by server interpreters when routes are constructed; both are reported by `EndpointVerifier`.
   */
 private[tapir] object EndpointBodyVerifier {
   def verifyOrThrow(endpoints: List[AnyEndpoint]): Unit = {

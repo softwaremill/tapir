@@ -415,8 +415,8 @@ Example 1:
 ```scala mdoc:silent
 import sttp.tapir.testing.EndpointVerifier
 
-val ep7 = endpoint.post.in("ingest").securityIn(stringBody.asSecondary)
-val result4 = EndpointVerifier(List(ep7))
+val ep3 = endpoint.post.in("ingest").securityIn(stringBody.asSecondary)
+val result4 = EndpointVerifier(List(ep3))
 ```
 
 Results in:
@@ -430,7 +430,7 @@ To keep only the problems which prevent serving:
 ```scala mdoc:compile-only
 import sttp.tapir.testing.InvalidBodyDefinitionError
 
-EndpointVerifier(List(ep7)).filter {
+EndpointVerifier(List(ep3)).filter {
   case b: InvalidBodyDefinitionError => b.rejectedByServers
   case _                             => true
 }
