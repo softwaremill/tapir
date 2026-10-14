@@ -10,7 +10,12 @@ import scala.util.Try
 
 trait CompileCheckTestBase extends AnyFlatSpec with Matchers with Checkers {
   val isScala3: Boolean = true
-  private def engine = dotty.tools.repl.ScriptEngine()
+  private def engine = {
+    // the script engine uses java.class.path; when the tests are run by sbt 2 (in a forked worker), it doesn't contain
+    // the test classpath, which is then passed using a system property
+    Option(System.getProperty("tapir.codegen.test.classpath")).foreach(System.setProperty("java.class.path", _))
+    dotty.tools.repl.ScriptEngine()
+  }
   def compile(code: String): Try[Unit] = util.Try(engine.eval(code)).map(_ => ())
 
   def compileWithoutHeader(code: String): Try[Unit] = {

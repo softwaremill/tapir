@@ -9,12 +9,18 @@ import sttp.client3.pekkohttp.PekkoHttpBackend
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 abstract class SttpClientPekkoTests[R >: WebSockets with PekkoStreams] extends ClientTests[R] {
   implicit val actorSystem: ActorSystem = ActorSystem("tests")
   val backend: SttpBackend[Future, PekkoStreams with WebSockets] = PekkoHttpBackend.usingActorSystem(actorSystem)
   def wsToPipe: WebSocketToPipe[R]
+
+  override protected def afterAll(): Unit = {
+    super.afterAll()
+    Await.result(actorSystem.terminate(), 10.seconds)
+  }
 
   override def send[A, I, E, O](
       e: Endpoint[A, I, E, O, R],

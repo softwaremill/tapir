@@ -16,7 +16,7 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % tapirVersion,
   "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % "0.11.10",
   "com.softwaremill.sttp.client3" %% "http4s-backend" % "3.11.0",
-  "io.circe" %% "circe-generic" % "0.14.16",
+  "io.circe" %% "circe-generic" % "0.14.17",
   "com.beachape" %% "enumeratum" % "1.9.8",
   "com.beachape" %% "enumeratum-circe" % "1.9.8",
   "org.scalatest" %% "scalatest" % "3.2.20" % Test,

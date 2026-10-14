@@ -14,7 +14,7 @@ import sttp.capabilities.WebSockets
 import scala.annotation.nowarn
 
 @nowarn
-class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
+class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup, interruptServerLogicWhenRequestCancelled: Boolean = true)
     extends TestServerInterpreter[Identity, OxStreams with WebSockets, NettySyncServerOptions, IdRoute] {
   override def route(es: List[ServerEndpoint[OxStreams with WebSockets, Identity]], interceptors: Interceptors): IdRoute = {
     val serverOptions: NettySyncServerOptions = interceptors(NettySyncServerOptions.customiseInterceptors).options
@@ -35,8 +35,7 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     val config =
       NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
-    val options = NettySyncServerOptions.default
-    useInScope(NettySyncServer(options, customizedConfig).addRoute(route).start())(_.stop())
+    useInScope(NettySyncServer(serverOptions, customizedConfig).addRoute(route).start())(_.stop())
 
   def scopedServerWithInterceptorsStop(
       endpoint: ServerEndpoint[OxStreams with WebSockets, Identity],
@@ -48,5 +47,8 @@ class NettySyncTestServerInterpreter(eventLoopGroup: NioEventLoopGroup)
     val customizedConfig = gracefulShutdownTimeout.map(config.withGracefulShutdownTimeout).getOrElse(config)
     val options = interceptors(NettySyncServerOptions.customiseInterceptors).options
     val route = NettySyncServerInterpreter(options).toRoute(List(endpoint), inScopeRunner())
-    useInScope(NettySyncServer(customizedConfig).addRoute(route).start())(_.stop())
+    useInScope(NettySyncServer(serverOptions, customizedConfig).addRoute(route).start())(_.stop())
+
+  private def serverOptions: NettySyncServerOptions =
+    NettySyncServerOptions.default.copy(interruptServerLogicWhenRequestCancelled = interruptServerLogicWhenRequestCancelled)
 }

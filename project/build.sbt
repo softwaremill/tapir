@@ -1,2 +1,2 @@
 // needed for GenerateMimeDb
-libraryDependencies += "io.circe" %% "circe-parser" % "0.14.16"
+libraryDependencies += "io.circe" %% "circe-parser" % "0.14.17"

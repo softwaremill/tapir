@@ -4,11 +4,12 @@ import cats.implicits.toTraverseOps
 import cats.syntax.either._
 import OpenapiSchemaType.{
   OpenapiSchemaAllOf,
-  OpenapiSchemaField,
+  OpenapiAnnotatedSchema,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
   OpenapiSchemaRefDecoder,
-  OpenapiSchemaString
+  OpenapiSchemaString,
+  AccessRestrictions
 }
 import io.circe.Json
 import sttp.tapir.codegen.util.NameHelpers.strippedToCamelCase
@@ -49,50 +50,53 @@ object OpenapiModels {
   ) {
     def resolveAllOfSchemas: OpenapiDocument = {
       val resolvedComponents = components.map { cs =>
-        val schemas = cs.schemas
-        val resolvedSchemas = schemas.map {
-          case (n, OpenapiSchemaAllOf(s)) =>
-            if (s.size == 1) n -> s.head
-            else {
-              val resolved = s.map {
-                case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
-                case ref: OpenapiSchemaRef    =>
-                  schemas(ref.stripped) match {
-                    case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
-                    case other                    =>
-                      throw new NotImplementedError(
-                        s"Only object type refs are supported for allOf schemas. For $n found ${other.getClass.getName} under ${ref.stripped}"
-                      )
-                  }
-                case _ =>
-                  throw new NotImplementedError(
-                    s"Only objects and object refs are currently supported in allOf schemas.For $n found ${s.map(_.getClass.getSimpleName)}"
-                  )
-              }
-              val merged = resolved.foldLeft((Set.empty[String], mutable.LinkedHashMap.empty[String, OpenapiSchemaField])) {
-                case ((_, accProp), next) if accProp.isEmpty  => next
-                case ((accReq, accProp), (nextReq, nextProp)) =>
-                  val dupDecls = accProp.keySet.intersect(nextProp.keySet)
-                  dupDecls.foreach { fieldName =>
-                    val lhs = accProp(fieldName)
-                    val rhs = nextProp(fieldName)
-                    if (lhs.default.zip(rhs.default).exists { case (a, b) => a != b })
-                      throw new IllegalStateException(s"Defaults for allOf do not match (${lhs.default.get} != ${rhs.default.get})")
-                    (lhs.`type`, rhs.`type`) match {
-                      case (l, r) if l != r =>
-                        throw new IllegalStateException(
-                          s"Non-matching conflicting fields found on allOf declaration. For $n.$fieldName found both $l and $r"
+        val schemas = cs.annotatedSchemas
+        val resolvedSchemas = schemas.map { case (n, f) =>
+          val mergedType = f.`type` match {
+            case OpenapiSchemaAllOf(s) =>
+              if (s.size == 1) f.copy(`type` = s.head)
+              else {
+                val resolved = s.map {
+                  case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
+                  case ref: OpenapiSchemaRef    =>
+                    schemas(ref.stripped).`type` match {
+                      case obj: OpenapiSchemaObject => (obj.required.toSet, obj.properties)
+                      case other                    =>
+                        throw new NotImplementedError(
+                          s"Only object type refs are supported for allOf schemas. For $n found ${other.getClass.getName} under ${ref.stripped}"
                         )
-                      case (_, _) =>
                     }
-                  }
-                  (accReq ++ nextReq, accProp ++ nextProp)
+                  case _ =>
+                    throw new NotImplementedError(
+                      s"Only objects and object refs are currently supported in allOf schemas.For $n found ${s.map(_.getClass.getSimpleName)}"
+                    )
+                }
+                val merged = resolved.foldLeft((Set.empty[String], mutable.LinkedHashMap.empty[String, OpenapiAnnotatedSchema])) {
+                  case ((_, accProp), next) if accProp.isEmpty  => next
+                  case ((accReq, accProp), (nextReq, nextProp)) =>
+                    val dupDecls = accProp.keySet.intersect(nextProp.keySet)
+                    dupDecls.foreach { fieldName =>
+                      val lhs = accProp(fieldName)
+                      val rhs = nextProp(fieldName)
+                      if (lhs.default.zip(rhs.default).exists { case (a, b) => a != b })
+                        throw new IllegalStateException(s"Defaults for allOf do not match (${lhs.default.get} != ${rhs.default.get})")
+                      (lhs.`type`, rhs.`type`) match {
+                        case (l, r) if l != r =>
+                          throw new IllegalStateException(
+                            s"Non-matching conflicting fields found on allOf declaration. For $n.$fieldName found both $l and $r"
+                          )
+                        case (_, _) =>
+                      }
+                    }
+                    (accReq ++ nextReq, accProp ++ nextProp)
+                }
+                f.copy(`type` = OpenapiSchemaObject(merged._2, merged._1.toSeq.sorted, nullable = s.forall(_.nullable)))
               }
-              n -> OpenapiSchemaObject(merged._2, merged._1.toSeq.sorted, nullable = s.forall(_.nullable))
-            }
-          case x => x
+            case _ => f
+          }
+          n -> mergedType
         }
-        cs.copy(schemas = resolvedSchemas)
+        cs.copy(annotatedSchemas = resolvedSchemas)
       }
       this.copy(components = resolvedComponents)
     }
@@ -162,7 +166,7 @@ object OpenapiModels {
       in: String,
       required: Option[Boolean],
       description: Option[String],
-      schema: OpenapiSchemaType,
+      schema: OpenapiAnnotatedSchema,
       explode: Option[Boolean] = None
   ) {
     // default is true for query params, but headers must always be 'simple' style -- see https://swagger.io/docs/specification/serialization/
@@ -250,7 +254,13 @@ object OpenapiModels {
       }
       Some(
         "Content-Type" -> OpenapiHeaderDef(
-          OpenapiParameter("Content-Type", "header", Some(true), None, OpenapiSchemaString(false, Some(validatingRegex), None, None))
+          OpenapiParameter(
+            "Content-Type",
+            "header",
+            Some(true),
+            None,
+            OpenapiAnnotatedSchema(OpenapiSchemaString(false, Some(validatingRegex), None, None), None)
+          )
         )
       )
     }
@@ -383,6 +393,8 @@ object OpenapiModels {
     OpenapiRequestBodyDefnDecoder.or(OpenapiSchemaRefDecoder.map(OpenapiRequestRef(_)))
 
   implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
+
+  import OpenapiSchemaType.OpenapiAnnotatedSchemaDecoder
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
   implicit def ResolvableDecoder[T: Decoder]: Decoder[Resolvable[T]] = { (c: HCursor) =>
     c.as[T].map(Resolved(_)).orElse(c.as[OpenapiSchemaRef].map(r => Ref(r.name)))

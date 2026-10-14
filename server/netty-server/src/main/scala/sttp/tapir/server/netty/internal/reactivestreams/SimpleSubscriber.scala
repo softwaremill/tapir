@@ -55,7 +55,8 @@ private[netty] class SimpleSubscriber(contentLength: Option[Long]) extends Promi
   }
 
   override def onComplete(): Unit = {
-    if (buffers.nonEmpty) {
+    // checking the promise rather than the buffers, so that an empty body (e.g. a chunked request without chunks) completes as well
+    if (!resultPromise.isCompleted) {
       val mergedArray = new Array[Byte](totalLength)
       var currentIndex = 0
       buffers.foreach { buf =>
