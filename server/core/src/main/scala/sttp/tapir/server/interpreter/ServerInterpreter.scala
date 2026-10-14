@@ -191,7 +191,7 @@ class ServerInterpreter[R, F[_], B, S](
       endpointInfo: EndpointInfo,
       addRawValue: RawValue[?] => Unit,
       bodyReader: RequestBody[F, S]
-  ): F[DecodeBasicInputsResult] = {
+  ): F[DecodeBasicInputsResult] =
     result match {
       case values: DecodeBasicInputsResult.Values =>
         val maxBodyLength = endpointInfo.attribute(AttributeKey[MaxContentLength]).map(_.value)
@@ -215,7 +215,6 @@ class ServerInterpreter[R, F[_], B, S](
           }
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
-  }
 
   private def decodeSecondaryBodies(
       request: ServerRequest,
