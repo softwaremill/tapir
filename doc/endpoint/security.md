@@ -62,6 +62,11 @@ documentation, and ignored by client interpreters. The unmarked body - `jsonBody
 documented, and the one clients actually send. Clients still need a value for the secondary body, since it's part of
 the input type.
 
+A signature verified over the raw bytes (e.g. `byteArrayBody.asSecondary`) doesn't cover how the ordinary body is
+decoded: some server backends decode string bodies (including JSON) using the charset from the request's
+`Content-Type` header, which the client controls. If that matters, add the header to `securityIn` (e.g.
+`header[Option[String]](HeaderNames.ContentType)`) and check it in the security logic as well.
+
 Only bodies which can be re-read from buffered bytes can be secondary: string, byte array, byte buffer, input stream
 and input stream range bodies. File and multipart bodies aren't accepted. The restriction is enforced at compile
 time.
@@ -70,8 +75,8 @@ The restriction also applies from the other side: an endpoint whose *ordinary* b
 file, multipart, or streaming body can't be combined with a secondary body in `securityIn` either. Unlike the
 compile-time check above, this is a runtime check: it's rejected with an `IllegalArgumentException` when routes are
 constructed. An ordinary input stream or input stream range body is accepted, but isn't streamed: with a secondary
-body, the whole request body is buffered in memory. On backends which support it,
-[`maxRequestBodyLength`](#limiting-request-body-length) bounds its size.
+body, the whole request body is buffered in memory before the security logic runs - including for requests which it
+then rejects. On backends which support it, [`maxRequestBodyLength`](#limiting-request-body-length) bounds its size.
 
 ```{warning}
 Declaring two *ordinary* request bodies - one in `securityIn`, one in `in`, neither marked with
