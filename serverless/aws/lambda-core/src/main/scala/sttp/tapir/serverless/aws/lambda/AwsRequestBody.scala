@@ -34,7 +34,7 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
     }).asInstanceOf[RawValue[R]].unit
   }
 
-  // A non-base64 body is already a String, which toRaw returns as is; asByteArray re-encodes it with the platform charset
+  // A non-base64 body is already a String, which toRaw returns as is; `bytes` is that String re-encoded with the platform charset
   override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String = {
     val request = awsRequest(serverRequest)
     if (request.isBase64Encoded) new String(bytes, defaultCharset) else request.body.getOrElse("")

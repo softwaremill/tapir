@@ -26,7 +26,7 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     extends RequestBody[F, S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 
-  // Vert.x has already buffered the body; decoding it as toRaw does keeps the two identical (e.g. for US-ASCII, unlike new String)
+  // Ignores `bytes`: Vert.x has already buffered the body, and its decoding differs from new String for e.g. US-ASCII
   override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
     bodyAsString(routingContext(serverRequest), defaultCharset)
 

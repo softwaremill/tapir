@@ -34,6 +34,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       .asInstanceOf[streams.BinaryStream]
   }
 
+  // toRaw decodes with contentUtf8(), ignoring the codec's charset
   override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
     new String(bytes, StandardCharsets.UTF_8)
 
