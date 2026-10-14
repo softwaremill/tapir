@@ -109,10 +109,8 @@ private[sttp4] trait EndpointToSttpClientBase {
         val uri2 = uri.addParams(mqp.toSeq: _*)
         (uri2, req, streamBody)
       case EndpointIO.Empty(_, _)                        => (uri, req, streamBody)
-      case b @ EndpointIO.Body(_, _, _) if b.isSecondary =>
-        // decoded server-side only; not part of the request the client sends
-        (uri, req, streamBody)
-      case EndpointIO.Body(bodyType, codec, _) =>
+      case b @ EndpointIO.Body(_, _, _) if b.isSecondary => (uri, req, streamBody)
+      case EndpointIO.Body(bodyType, codec, _)           =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2, streamBody)
       case ob: EndpointIO.OneOfBody[_, _] =>

@@ -116,9 +116,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
         val mqp = codec.encode(value)
         req.addQueryStringParameters(mqp.toSeq: _*)
       case EndpointIO.Empty(_, _)                        => req
-      case b @ EndpointIO.Body(_, _, _) if b.isSecondary =>
-        req // decoded server-side only; not part of the request the client sends
-      case EndpointIO.Body(bodyType, codec, _) =>
+      case b @ EndpointIO.Body(_, _, _) if b.isSecondary => req
+      case EndpointIO.Body(bodyType, codec, _)           =>
         val req2 = setBody(value, bodyType, codec, req)
         req2
       case ob: EndpointIO.OneOfBody[_, _] =>
