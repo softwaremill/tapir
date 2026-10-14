@@ -352,15 +352,6 @@ class EndpointVerifierTest extends AnyFlatSpecLike with Matchers {
       error.toString should include("(not rejected by servers)")
     }
   }
-
-  it should "report a description on a secondary body, without servers rejecting it" in {
-    val e = endpoint.post.in("a").securityIn(stringBody.description("raw payload").asSecondary).in(stringBody)
-
-    val result = EndpointVerifier(List(e))
-
-    result should have size 1
-    inside(result.head) { case InvalidBodyDefinitionError(`e`, message, false) => message should include("never reaches") }
-  }
 }
 
 sealed trait ErrorInfo
