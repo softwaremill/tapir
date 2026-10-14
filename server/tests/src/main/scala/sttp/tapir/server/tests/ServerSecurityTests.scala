@@ -169,7 +169,7 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
         .errorOut(stringBody)
         .serverSecurityLogic((_: String) => pureResult("denied".asLeft[Unit]))
         .serverLogic(_ => (body: String) => pureResult(body.asRight[String])),
-      "secondary body short-circuits on security failure"
+      "security failure short-circuits an endpoint with a secondary body"
     ) { (backend, baseUri) =>
       basicStringRequest
         .post(uri"$baseUri/secondary-denied")

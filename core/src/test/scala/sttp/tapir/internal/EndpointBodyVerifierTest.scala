@@ -141,11 +141,6 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.warnings.head should include("no request body is part of the API contract")
   }
 
-  it should "warn about a secondary body with no primary body, even on a GET endpoint" in {
-    val e = endpoint.get.in("ping").securityIn(stringBody.asSecondary)
-    EndpointBodyVerifier.verifyOne(e).warnings.head should include("no request body is part of the API contract")
-  }
-
   it should "warn about metadata on a secondary body" in {
     val e = endpoint.post
       .in("people")

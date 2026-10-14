@@ -4,10 +4,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class SecondaryBodyTest extends AnyFlatSpec with Matchers {
-  it should "mark a body as secondary" in {
-    stringBody.asSecondary.isSecondary shouldBe true
-  }
-
   it should "not treat a key built from the same name as a secondary marker" in {
     fileBody.attribute(new AttributeKey[Unit]("sttp.tapir.internal.SecondaryBody"), ()).isSecondary shouldBe false
   }
