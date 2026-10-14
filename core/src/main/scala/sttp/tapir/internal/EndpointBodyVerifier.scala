@@ -16,8 +16,8 @@ private[tapir] object EndpointBodyVerifier {
 
   def verifyOne(endpoint: AnyEndpoint): EndpointBodyProblems = {
     val securityInputs = endpoint.securityInput.asVectorOfBasicInputs()
-    val ordinaryInputs = endpoint.input.asVectorOfBasicInputs()
-    val inputs = securityInputs ++ ordinaryInputs
+    val inInputs = endpoint.input.asVectorOfBasicInputs()
+    val inputs = securityInputs ++ inInputs
 
     val secondary = inputs.collect { case b: EndpointIO.Body[?, ?] if b.isSecondary => b }
     def primaryBodiesOf(basics: Vector[EndpointInput.Basic[?]]): Vector[EndpointInput.Basic[?]] = basics.collect {
@@ -26,7 +26,7 @@ private[tapir] object EndpointBodyVerifier {
       case b: EndpointIO.StreamBodyWrapper[?, ?]      => b
     }
     val securityPrimaryBodies = primaryBodiesOf(securityInputs)
-    val inPrimaryBodies = primaryBodiesOf(ordinaryInputs)
+    val inPrimaryBodies = primaryBodiesOf(inInputs)
     val primaryBodies = securityPrimaryBodies ++ inPrimaryBodies
     def asAtoms(body: EndpointInput.Basic[?]): Vector[EndpointInput.Basic[?]] = body match {
       case ob: EndpointIO.OneOfBody[?, ?] => ob.variants.map(_.bodyAsAtom).toVector
