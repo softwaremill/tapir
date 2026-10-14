@@ -406,7 +406,7 @@ endpoints can't be served. They're reported here as an `InvalidBodyDefinitionErr
 and an exception describing the same problem is thrown when routes are constructed.
 
 Endpoints which can be served, but whose contract probably isn't what was intended - for example an `asSecondary`
-body with no body declared in `in`, which clients will never send and which won't appear in the documentation - are
+body with no ordinary body alongside it, which clients will never send and which won't appear in the documentation - are
 reported with `rejectedByServers = false`. They aren't reported anywhere else, so verifying endpoints in a test is the
 only way to see them.
 

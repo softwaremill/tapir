@@ -65,7 +65,7 @@ the input type.
 A signature verified over the raw bytes (e.g. `byteArrayBody.asSecondary`) doesn't cover how the ordinary body is
 decoded: some server backends decode string bodies (including JSON) using the charset from the request's
 `Content-Type` header, which the client controls. If that matters, add the header to `securityIn` (e.g.
-`header[Option[String]](HeaderNames.ContentType)`) and check it in the security logic as well.
+`header[Option[String]](sttp.model.HeaderNames.ContentType)`) and check it in the security logic as well.
 
 Only bodies which can be re-read from buffered bytes can be secondary: string, byte array, byte buffer, input stream
 and input stream range bodies. File and multipart bodies aren't accepted. The restriction is enforced at compile
