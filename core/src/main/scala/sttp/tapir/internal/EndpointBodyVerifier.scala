@@ -34,7 +34,7 @@ private[tapir] object EndpointBodyVerifier {
     }
     val primaryBodyAtoms: Vector[EndpointInput.Basic[?]] = primaryBodies.flatMap(asAtoms)
     val streamingPrimary = primaryBodyAtoms.exists(_.isInstanceOf[EndpointIO.StreamBodyWrapper[?, ?]])
-    val nonReplayablePrimary = primaryBodyAtoms.exists {
+    val fileOrMultipartPrimary = primaryBodyAtoms.exists {
       case b: EndpointIO.Body[?, ?] => !isReplayable(b.bodyType)
       case _                        => false
     }
@@ -82,7 +82,7 @@ private[tapir] object EndpointBodyVerifier {
         )
       else Nil
 
-    val nonReplayablePrimaryKinds = List(streamingPrimary -> "streaming", nonReplayablePrimary -> "file or multipart").collect {
+    val nonReplayablePrimaryKinds = List(streamingPrimary -> "streaming", fileOrMultipartPrimary -> "file or multipart").collect {
       case (true, kind) => kind
     }
     val nonReplayablePrimaryWithSecondary =

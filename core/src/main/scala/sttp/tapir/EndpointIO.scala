@@ -499,8 +499,9 @@ object EndpointIO {
     }
 
     /** Whether this body is marked with [[asSecondary]]. */
-    // keys are equal by name, so a foreign key with the same name must not mark the body secondary
-    def isSecondary: Boolean = info.attribute(SecondaryBody.Attribute).contains(SecondaryBody())
+    def isSecondary: Boolean =
+      // attribute keys are equal by type name, so an unrelated key with the same name mustn't mark the body as secondary
+      info.attribute(SecondaryBody.Attribute).contains(SecondaryBody())
 
     override def show: String = {
       val charset = bodyType.asInstanceOf[RawBodyType[?]] match {
