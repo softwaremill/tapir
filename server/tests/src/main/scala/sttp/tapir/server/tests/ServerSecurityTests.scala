@@ -148,13 +148,17 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
         .out(stringBody)
         .serverSecurityLogic((raw: String) => pureResult(s"security:$raw".asRight[Unit]))
         .serverLogic(principal => body => pureResult(s"$principal|logic:$body".asRight[Unit])),
-      "secondary body is decoded for both security and main logic"
+      "secondary body is decoded for both security and main logic, separately for each request"
     ) { (backend, baseUri) =>
-      basicStringRequest
-        .post(uri"$baseUri/secondary")
-        .body("payload")
-        .send(backend)
-        .map(_.body shouldBe "security:payload|logic:payload")
+      def send(body: String) = basicStringRequest.post(uri"$baseUri/secondary").body(body).send(backend).map(_.body)
+
+      for {
+        first <- send("first")
+        second <- send("second")
+      } yield {
+        first shouldBe "security:first|logic:first"
+        second shouldBe "security:second|logic:second"
+      }
     },
     testServerLogic(
       endpoint.post
