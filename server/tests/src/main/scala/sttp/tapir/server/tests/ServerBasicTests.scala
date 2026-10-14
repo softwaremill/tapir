@@ -140,7 +140,8 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
 
       sameOnBoth("café".getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
         sameOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain") >>
-        sameOnBoth((0xfeff.toChar +: "café").getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8")
+        sameOnBoth((0xfeff.toChar +: "café").getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
+        sameOnBoth(Array(0xff.toByte), "text/plain; charset=US-ASCII")
     },
     testServer(in_header_before_path, "Header input before path capture input") { case (str: String, i: Int) =>
       pureResult((i, str).asRight[Unit])
