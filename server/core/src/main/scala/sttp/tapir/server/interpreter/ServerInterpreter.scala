@@ -192,9 +192,9 @@ class ServerInterpreter[R, F[_], B, S](
       addRawValue: RawValue[?] => Unit,
       bodyReader: RequestBody[F, S]
   ): F[DecodeBasicInputsResult] = {
-    val maxBodyLength = endpointInfo.attribute(AttributeKey[MaxContentLength]).map(_.value)
     result match {
       case values: DecodeBasicInputsResult.Values =>
+        val maxBodyLength = endpointInfo.attribute(AttributeKey[MaxContentLength]).map(_.value)
         val primaryDecoded: F[DecodeBasicInputsResult] = values.bodyInputWithIndex match {
           case Some((Left(oneOfBodyInput), index)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
