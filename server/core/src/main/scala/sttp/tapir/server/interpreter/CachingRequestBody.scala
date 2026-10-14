@@ -24,8 +24,7 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        val charset = delegate.stringBodyCharset(serverRequest, defaultCharset)
-        bytes(serverRequest, maxBytes).map(bs => RawValue(new String(bs, charset)))
+        bytes(serverRequest, maxBytes).map(bs => RawValue(delegate.decodeStringBody(serverRequest, bs, defaultCharset)))
       case RawBodyType.ByteArrayBody =>
         // identity codec: without the clone, a caller mutating the array would corrupt the cache
         bytes(serverRequest, maxBytes).map(bs => RawValue(bs.clone()))
@@ -44,8 +43,8 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     delegate.toStream(serverRequest, maxBytes).asInstanceOf[streams.BinaryStream]
 
-  override def stringBodyCharset(serverRequest: ServerRequest, default: Charset): Charset =
-    delegate.stringBodyCharset(serverRequest, default)
+  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+    delegate.decodeStringBody(serverRequest, bytes, defaultCharset)
 
   // only the first call's maxBytes applies; both phases derive it from the same EndpointInfo, so they agree
   private def bytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =

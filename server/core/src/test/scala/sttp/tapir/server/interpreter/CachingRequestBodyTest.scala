@@ -3,7 +3,6 @@ package sttp.tapir.server.interpreter
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
-import sttp.model.{Header, HeaderNames}
 import sttp.monad.{IdentityMonad, MonadError}
 import sttp.shared.Identity
 import sttp.tapir._
@@ -17,8 +16,11 @@ import java.nio.charset.{Charset, StandardCharsets}
 class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
   private implicit val idMonad: MonadError[Identity] = IdentityMonad
 
-  private class CountingRequestBody(content: String, charset: Charset = StandardCharsets.UTF_8, stringCharset: Option[Charset] = None)
-      extends RequestBody[Identity, NoStreams] {
+  private class CountingRequestBody(
+      content: String,
+      charset: Charset = StandardCharsets.UTF_8,
+      decodeString: (Array[Byte], Charset) => String = new String(_, _)
+  ) extends RequestBody[Identity, NoStreams] {
     var reads = 0
     var lastMaxBytes: Option[Long] = None
     override val streams: Streams[NoStreams] = NoStreams
@@ -32,17 +34,11 @@ class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
     }
     override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
       throw new IllegalStateException("should not be called")
-    override def stringBodyCharset(serverRequest: ServerRequest, default: Charset): Charset = stringCharset.getOrElse(default)
+    override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+      decodeString(bytes, defaultCharset)
   }
 
   private val request = createTestRequest(List("test"))
-
-  private def requestWithContentType(contentType: String): ServerRequest =
-    request.withOverride(
-      protocolOverride = None,
-      connectionInfoOverride = None,
-      headersOverride = Some(List(Header(HeaderNames.ContentType, contentType)))
-    )
 
   it should "read the delegate only once for two string reads" in {
     val delegate = new CountingRequestBody("hello")
@@ -54,20 +50,16 @@ class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
     delegate.reads shouldBe 1
   }
 
-  it should "decode a string with the charset the delegate would use" in {
-    val delegate = new CountingRequestBody("café", StandardCharsets.ISO_8859_1, stringCharset = Some(StandardCharsets.ISO_8859_1))
+  it should "decode a string the way the delegate would" in {
+    val delegate =
+      new CountingRequestBody(
+        "café",
+        StandardCharsets.ISO_8859_1,
+        decodeString = (bytes, _) => new String(bytes, StandardCharsets.ISO_8859_1)
+      )
     val caching = new CachingRequestBody[Identity, NoStreams](delegate)
 
     caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), None).value shouldBe "café"
-  }
-
-  it should "ignore the request's charset when the delegate uses the codec's" in {
-    val delegate = new CountingRequestBody("café")
-    val caching = new CachingRequestBody[Identity, NoStreams](delegate)
-
-    caching
-      .toRaw(requestWithContentType("text/plain; charset=ISO-8859-1"), RawBodyType.StringBody(StandardCharsets.UTF_8), None)
-      .value shouldBe "café"
   }
 
   it should "serve different bytes-like representations from one read" in {

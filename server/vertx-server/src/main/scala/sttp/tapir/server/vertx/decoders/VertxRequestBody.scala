@@ -1,6 +1,7 @@
 package sttp.tapir.server.vertx.decoders
 
 import io.vertx.core.Future
+import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.{FileUpload, RoutingContext}
 import sttp.capabilities.Streams
 import sttp.model.{MediaType, Part}
@@ -25,6 +26,10 @@ class VertxRequestBody[F[_], S <: Streams[S]](
 )(implicit val readStreamCompatible: ReadStreamCompatible[S])
     extends RequestBody[F, S] {
   override val streams: Streams[S] = readStreamCompatible.streams
+
+  // Decodes through a Buffer as toRaw does, which for some charsets (e.g. US-ASCII) differs from new String
+  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+    Buffer.buffer(bytes).toString(defaultCharset.toString)
 
   // We can ignore maxBytes here, because vertx native body limit check is attached to endpoints by methods in sttp.tapir.server.vertx.handlers
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {

@@ -139,7 +139,8 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       } yield withSecondary shouldBe plain
 
       sameOnBoth("café".getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
-        sameOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain")
+        sameOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain") >>
+        sameOnBoth((0xfeff.toChar +: "café").getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8")
     },
     testServer(in_header_before_path, "Header input before path capture input") { case (str: String, i: Int) =>
       pureResult((i, str).asRight[Unit])

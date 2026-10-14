@@ -12,10 +12,12 @@ trait RequestBody[F[_], S] {
   def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]]
   def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream
 
-  /** The charset which [[toRaw]] uses to decode a [[RawBodyType.StringBody]] whose codec specifies `default`; backends which don't decode
-    * with the codec's charset ignore `default`.
+  /** Decodes `bytes`, the whole request body, into the value which [[toRaw]] returns for a [[RawBodyType.StringBody]] whose codec specifies
+    * `defaultCharset`. Backends which don't decode with the codec's charset, or which transform the text (e.g. strip a byte order mark),
+    * override this to match.
     */
-  def stringBodyCharset(serverRequest: ServerRequest, default: Charset): Charset = default
+  def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+    new String(bytes, defaultCharset)
 }
 
 /** @param value
