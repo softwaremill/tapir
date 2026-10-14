@@ -1,7 +1,6 @@
 package sttp.tapir.server.vertx.decoders
 
 import io.vertx.core.Future
-import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.{FileUpload, RoutingContext}
 import sttp.capabilities.Streams
 import sttp.model.{MediaType, Part}
@@ -27,16 +26,16 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     extends RequestBody[F, S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 
-  // Decodes through a Buffer as toRaw does, which for some charsets (e.g. US-ASCII) differs from new String
+  // Vert.x has already buffered the body; decoding it as toRaw does keeps the two identical (e.g. for US-ASCII, unlike new String)
   override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
-    Buffer.buffer(bytes).toString(defaultCharset.toString)
+    bodyAsString(routingContext(serverRequest), defaultCharset)
 
   // We can ignore maxBytes here, because vertx native body limit check is attached to endpoints by methods in sttp.tapir.server.vertx.handlers
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val rc = routingContext(serverRequest)
     fromVFuture(bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        Future.succeededFuture(RawValue(Option(rc.body().asString(defaultCharset.toString)).getOrElse("")))
+        Future.succeededFuture(RawValue(bodyAsString(rc, defaultCharset)))
       case RawBodyType.ByteArrayBody =>
         Future.succeededFuture(RawValue(Option(rc.body().buffer()).fold(Array.emptyByteArray)(_.getBytes)))
       case RawBodyType.ByteBufferBody =>
@@ -139,6 +138,8 @@ class VertxRequestBody[F[_], S <: Streams[S]](
   private def readFileBytes(fu: FileUpload) = Files.readAllBytes(Paths.get(fu.uploadedFileName()))
 
   private def routingContext(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[RoutingContext]
+
+  private def bodyAsString(rc: RoutingContext, charset: Charset): String = Option(rc.body().asString(charset.toString)).getOrElse("")
 
   private def newTempFilePath(): String = {
     s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"

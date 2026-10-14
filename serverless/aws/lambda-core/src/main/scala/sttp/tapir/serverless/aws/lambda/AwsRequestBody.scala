@@ -17,12 +17,14 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
-    val decoded = decodedBody(serverRequest)
+    val request = awsRequest(serverRequest)
+    val decoded =
+      if (request.isBase64Encoded) Left(Base64.getDecoder.decode(request.body.getOrElse(""))) else Right(request.body.getOrElse(""))
 
     def asByteArray: Array[Byte] = decoded.fold(identity[Array[Byte]], _.getBytes())
 
     RawValue(bodyType match {
-      case RawBodyType.StringBody(charset)  => asString(decoded, charset)
+      case RawBodyType.StringBody(charset)  => decoded.fold(new String(_, charset), identity[String])
       case RawBodyType.ByteArrayBody        => asByteArray
       case RawBodyType.ByteBufferBody       => ByteBuffer.wrap(asByteArray)
       case RawBodyType.InputStreamBody      => new ByteArrayInputStream(asByteArray)
@@ -32,20 +34,14 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
     }).asInstanceOf[RawValue[R]].unit
   }
 
-  // Ignores `bytes`: asByteArray re-encodes a non-base64 body with the platform charset, while toRaw returns the event's String as is
-  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
-    asString(decodedBody(serverRequest), defaultCharset)
+  // A non-base64 body is already a String, which toRaw returns as is; asByteArray re-encodes it with the platform charset
+  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String = {
+    val request = awsRequest(serverRequest)
+    if (request.isBase64Encoded) new String(bytes, defaultCharset) else request.body.getOrElse("")
+  }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException
 
   private def awsRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[AwsRequest]
-
-  private def decodedBody(serverRequest: ServerRequest): Either[Array[Byte], String] = {
-    val request = awsRequest(serverRequest)
-    if (request.isBase64Encoded) Left(Base64.getDecoder.decode(request.body.getOrElse(""))) else Right(request.body.getOrElse(""))
-  }
-
-  private def asString(decoded: Either[Array[Byte], String], charset: Charset): String =
-    decoded.fold(new String(_, charset), identity[String])
 }
