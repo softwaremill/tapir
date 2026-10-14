@@ -2,7 +2,6 @@ package sttp.tapir.internal
 
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
-/** Errors make an endpoint unservable; warnings describe one that works, but whose published contract probably isn't what was intended. */
 private[tapir] case class EndpointBodyProblems(errors: List[String], warnings: List[String])
 
 /** Finds request body definitions which can't be served (errors), or which can but probably aren't what was intended (warnings). Errors are
