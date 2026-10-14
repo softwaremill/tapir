@@ -3,28 +3,16 @@ package sttp.tapir.internal
 import sttp.tapir.{AnyEndpoint, EndpointIO, EndpointInput}
 
 /** Errors make an endpoint unservable; warnings describe one that works, but whose published contract probably isn't what was intended. */
-private[tapir] case class EndpointBodyProblems(errors: List[String], warnings: List[String]) {
-  def ++(other: EndpointBodyProblems): EndpointBodyProblems =
-    EndpointBodyProblems(errors ++ other.errors, warnings ++ other.warnings)
-}
-
-private[tapir] object EndpointBodyProblems {
-  val Empty: EndpointBodyProblems = EndpointBodyProblems(Nil, Nil)
-}
+private[tapir] case class EndpointBodyProblems(errors: List[String], warnings: List[String])
 
 /** Verifies that endpoint descriptions are structurally serveable. Errors are thrown by server interpreters when routes are constructed;
   * both errors and warnings are reported by `EndpointVerifier`.
   */
 private[tapir] object EndpointBodyVerifier {
-  def verify(endpoints: List[AnyEndpoint]): EndpointBodyProblems =
-    endpoints.map(verifyOne).foldLeft(EndpointBodyProblems.Empty)(_ ++ _)
-
-  def verifyOrThrow(endpoints: List[AnyEndpoint]): Unit = throwOnErrors(verify(endpoints))
-
-  def verifyOrThrow(endpoint: AnyEndpoint): Unit = throwOnErrors(verifyOne(endpoint))
-
-  private def throwOnErrors(problems: EndpointBodyProblems): Unit =
-    if (problems.errors.nonEmpty) throw new IllegalArgumentException(problems.errors.mkString("\n"))
+  def verifyOrThrow(endpoints: List[AnyEndpoint]): Unit = {
+    val errors = endpoints.flatMap(verifyOne(_).errors)
+    if (errors.nonEmpty) throw new IllegalArgumentException(errors.mkString("\n"))
+  }
 
   def verifyOne(endpoint: AnyEndpoint): EndpointBodyProblems = {
     val securityInputs = endpoint.securityInput.asVectorOfBasicInputs()

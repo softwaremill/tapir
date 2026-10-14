@@ -26,7 +26,7 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter with VertxErr
   def route[R2](e: ZServerEndpoint[R2, ZioStreams with WebSockets])(implicit
       runtime: Runtime[R & R2]
   ): Router => Route = { router =>
-    EndpointBodyVerifier.verifyOrThrow(e.endpoint)
+    EndpointBodyVerifier.verifyOrThrow(List(e.endpoint))
 
     val routeDef = extractRouteDefinition(e.endpoint)
     optionsRouteIfCORSDefined(e.widen)(router, routeDef, vertxZioServerOptions)

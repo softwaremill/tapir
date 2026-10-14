@@ -157,9 +157,16 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.warnings.head should include("never reaches the documentation")
   }
 
-  it should "aggregate problems across endpoints" in {
-    val bad = endpoint.post.in("a").securityIn(stringBody).in(stringBody)
+  it should "throw with the errors of every invalid endpoint" in {
+    val bad1 = endpoint.post.in("a").securityIn(stringBody).in(stringBody)
     val good = endpoint.post.in("b").in(stringBody)
-    EndpointBodyVerifier.verify(List(bad, good)).errors should have size 1
+    val bad2 = endpoint.post.in("c").in(stringBody).in(byteArrayBody)
+
+    val thrown = the[IllegalArgumentException] thrownBy EndpointBodyVerifier.verifyOrThrow(List(bad1, good, bad2))
+
+    val errors = thrown.getMessage.split("\n").toList
+    errors should have size 2
+    errors.head should include("POST /a")
+    errors(1) should include("POST /c")
   }
 }
