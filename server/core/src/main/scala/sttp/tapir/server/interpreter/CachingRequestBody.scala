@@ -9,6 +9,7 @@ import sttp.tapir.{InputStreamRange, RawBodyType}
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import scala.util.Try
 
 /** Reads a bytes-like request body from `delegate` at most once, buffering the bytes so that subsequent reads - e.g. a secondary body
   * decoded during the security phase, followed by the endpoint's own body - are served from memory.
@@ -24,8 +25,9 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        // eval rather than map: a decoding failure must fail F, not escape it (e.g. as a ZIO defect, bypassing error handling)
-        bytes(serverRequest, maxBytes).flatMap(bs => m.eval(RawValue(delegate.decodeStringBody(serverRequest, bs, defaultCharset))))
+        // fromTry rather than map: a decoding failure must fail F, not escape it (e.g. as a ZIO defect, bypassing error handling);
+        // and rather than eval, which on Future schedules another task
+        bytes(serverRequest, maxBytes).flatMap(bs => m.fromTry(Try(RawValue(delegate.decodeStringBody(serverRequest, bs, defaultCharset)))))
       case RawBodyType.ByteArrayBody =>
         // identity codec: without the clone, a caller mutating the array would corrupt the cache
         bytes(serverRequest, maxBytes).map(bs => RawValue(bs.clone()))
