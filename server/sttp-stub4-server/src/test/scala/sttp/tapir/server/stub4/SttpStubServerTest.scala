@@ -142,7 +142,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .thenSuccess(42)
 
     val response =
-      SttpClientInterpreter().toSecureRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(10).apply(10).send(backend)
+      SttpClientInterpreter().toSecureRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(1).apply(10).send(backend)
     response.body shouldBe Right(42)
   }
 

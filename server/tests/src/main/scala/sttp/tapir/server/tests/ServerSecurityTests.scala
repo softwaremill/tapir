@@ -164,16 +164,16 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
       endpoint.post
         .in("secondary-denied")
         .securityIn(stringBody.asSecondary)
-        .in(stringBody)
+        .in(plainBody[Int])
         .out(stringBody)
         .errorOut(stringBody)
         .serverSecurityLogic((_: String) => pureResult("denied".asLeft[Unit]))
-        .serverLogic(_ => (body: String) => pureResult(body.asRight[String])),
+        .serverLogic(_ => (body: Int) => pureResult(body.toString.asRight[String])),
       "security failure short-circuits an endpoint with a secondary body"
     ) { (backend, baseUri) =>
       basicStringRequest
         .post(uri"$baseUri/secondary-denied")
-        .body("payload")
+        .body("not a number")
         .send(backend)
         .map(_.body shouldBe "denied")
     },
@@ -199,10 +199,10 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
     testServerLogic(
       endpoint.post
         .in("secondary-in-in")
-        .in(stringBody)
         .in(byteArrayBody.asSecondary)
+        .in(stringBody)
         .out(stringBody)
-        .serverLogic { case (body: String, raw: Array[Byte]) => pureResult(s"$body|${raw.length}".asRight[Unit]) },
+        .serverLogic { case (raw: Array[Byte], body: String) => pureResult(s"$body|${raw.length}".asRight[Unit]) },
       "secondary body next to the primary one in `in`"
     ) { (backend, baseUri) =>
       basicStringRequest
