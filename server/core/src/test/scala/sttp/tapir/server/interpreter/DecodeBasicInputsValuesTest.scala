@@ -18,7 +18,7 @@ class DecodeBasicInputsValuesTest extends AnyFlatSpec with Matchers {
     result.secondaryBodyInputsWithIndex.map(_._2) shouldBe Vector(0, 2)
   }
 
-  it should "still reject two primary bodies in one pass" in {
+  it should "reject two primary bodies in one pass" in {
     an[IllegalStateException] should be thrownBy {
       emptyValues(2).addBodyInput(stringBody, 0).addBodyInput(stringBody, 1)
     }

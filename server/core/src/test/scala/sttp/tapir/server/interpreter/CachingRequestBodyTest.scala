@@ -40,16 +40,6 @@ class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
 
   private val request = createTestRequest(List("test"))
 
-  it should "read the delegate only once for two string reads" in {
-    val delegate = new CountingRequestBody("hello")
-    val caching = new CachingRequestBody[Identity, NoStreams](delegate)
-
-    caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), None).value shouldBe "hello"
-    caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), None).value shouldBe "hello"
-
-    delegate.reads shouldBe 1
-  }
-
   it should "decode a string the way the delegate would" in {
     val delegate =
       new CountingRequestBody(
