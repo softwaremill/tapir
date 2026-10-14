@@ -1,6 +1,7 @@
 package sttp.tapir.server.tests
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import enumeratum._
 import io.circe.generic.auto._
@@ -142,6 +143,22 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         sameOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain") >>
         sameOnBoth((0xfeff.toChar +: "café").getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
         sameOnBoth(Array(0xff.toByte), "text/plain; charset=US-ASCII")
+    },
+    Test("reject an endpoint with two ordinary request bodies when routes are built") {
+      val invalid = endpoint.post
+        .in("invalid")
+        .in(stringBody)
+        .in(byteArrayBody)
+        .serverLogic((_: (String, Array[Byte])) => pureResult(().asRight[Unit]))
+
+      // some interpreters build the route lazily, e.g. when the server starts
+      IO.defer(server(route(List(invalid))).use(_ => IO.unit))
+        .attempt
+        .map { result =>
+          val causes = Iterator.iterate(result.left.toOption.orNull)(_.getCause).takeWhile(_ != null).toList
+          causes.exists(_.isInstanceOf[IllegalArgumentException]) shouldBe true
+        }
+        .unsafeToFuture()
     },
     testServer(in_header_before_path, "Header input before path capture input") { case (str: String, i: Int) =>
       pureResult((i, str).asRight[Unit])
