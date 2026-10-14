@@ -110,7 +110,7 @@ private[tapir] object EndpointBodyVerifier {
 
     EndpointBodyProblems(
       errors = secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyPrimaries ++ nonReplayablePrimaryWithSecondary,
-      warnings = (secondaryWithoutPrimary ++ uselessMetadata).toList
+      warnings = secondaryWithoutPrimary ++ uselessMetadata
     )
   }
 }
