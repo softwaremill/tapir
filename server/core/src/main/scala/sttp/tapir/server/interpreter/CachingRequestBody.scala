@@ -24,7 +24,8 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        bytes(serverRequest, maxBytes).map(bs => RawValue(delegate.decodeStringBody(serverRequest, bs, defaultCharset)))
+        // eval rather than map: a decoding failure must fail F, not escape it (e.g. as a ZIO defect, bypassing error handling)
+        bytes(serverRequest, maxBytes).flatMap(bs => m.eval(RawValue(delegate.decodeStringBody(serverRequest, bs, defaultCharset))))
       case RawBodyType.ByteArrayBody =>
         // identity codec: without the clone, a caller mutating the array would corrupt the cache
         bytes(serverRequest, maxBytes).map(bs => RawValue(bs.clone()))
