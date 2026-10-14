@@ -71,12 +71,13 @@ Only bodies which can be re-read from buffered bytes can be secondary: string, b
 and input stream range bodies. File and multipart bodies aren't accepted. The restriction is enforced at compile
 time.
 
-The restriction also applies from the other side: an endpoint whose *ordinary* body (the one declared in `in`) is a
-file, multipart, or streaming body can't be combined with a secondary body in `securityIn` either. Unlike the
+The restriction also applies from the other side: an endpoint whose *ordinary* body (the one not marked with
+`asSecondary`) is a file, multipart, or streaming body can't also have a secondary body. Unlike the
 compile-time check above, this is a runtime check: it's rejected with an `IllegalArgumentException` when routes are
 constructed. An ordinary input stream or input stream range body is accepted, but isn't streamed: with a secondary
-body, the whole request body is buffered in memory before the security logic runs - including for requests which it
-then rejects. On backends which support it, [`maxRequestBodyLength`](#limiting-request-body-length) bounds its size.
+body, the whole request body is buffered in memory. If either body is in `securityIn`, that happens before the security
+logic runs - including for requests which it then rejects. On backends which support it,
+[`maxRequestBodyLength`](#limiting-request-body-length) bounds its size.
 
 ```{warning}
 Declaring two *ordinary* request bodies - one in `securityIn`, one in `in`, neither marked with
