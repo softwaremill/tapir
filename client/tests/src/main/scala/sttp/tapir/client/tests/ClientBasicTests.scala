@@ -36,7 +36,6 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       Right("orange/grapefruit 10 None")
     )
     testClient(in_string_out_string, (), "delicious", Right("delicious"))
-    testClient(in_string_secondary_string_out_string, (), ("sent", "ignored"), Right("sent"))
     testClient(in_security_string_secondary_string_out_string, "sent", "ignored", Right("sent"))
     testClient(in_json_out_json, (), FruitAmount("orange", 11), Right(FruitAmount("orange", 11)))
     testClient(in_byte_array_out_byte_array, (), "banana kiwi".getBytes(), Right("banana kiwi".getBytes()))

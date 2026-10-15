@@ -8,32 +8,21 @@ import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, oneOfB
 
 import scala.annotation.tailrec
 
-sealed trait DecodeBasicInputsResult {
-
-  /** Whether any body input in this result is a secondary body, see [[sttp.tapir.EndpointIO.Body.asSecondary]]. */
-  def hasSecondaryBody: Boolean
-}
+sealed trait DecodeBasicInputsResult
 object DecodeBasicInputsResult {
 
   /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint. */
   case class Values(
       basicInputsValues: Vector[Any],
-      bodyInputWithIndex: Option[(Either[EndpointIO.OneOfBody[?, ?], EndpointIO.StreamBodyWrapper[?, ?]], Int)],
-      secondaryBodyInputsWithIndex: Vector[(EndpointIO.Body[?, ?], Int)] = Vector.empty
+      bodyInputWithIndex: Option[(Either[EndpointIO.OneOfBody[?, ?], EndpointIO.StreamBodyWrapper[?, ?]], Int)]
   ) extends DecodeBasicInputsResult {
-    override def hasSecondaryBody: Boolean = secondaryBodyInputsWithIndex.nonEmpty
-
-    // the body verifier rejects these before serving; only decoding that bypasses it (a hand-built ServerInterpreter,
-    // SttpStubServer's matchers) gets here
     private def verifyNoBody(input: EndpointInput[?]): Unit = if (bodyInputWithIndex.isDefined) {
       throw new IllegalStateException(s"Double body definition: $input")
     }
-    def addBodyInput[O](input: EndpointIO.Body[?, O], bodyIndex: Int): Values =
-      if (input.isSecondary) copy(secondaryBodyInputsWithIndex = secondaryBodyInputsWithIndex :+ ((input, bodyIndex)))
-      else {
-        verifyNoBody(input)
-        copy(bodyInputWithIndex = Some((Left(oneOfBody(ContentTypeRange.AnyRange -> input)), bodyIndex)))
-      }
+    def addBodyInput[O](input: EndpointIO.Body[?, O], bodyIndex: Int): Values = {
+      verifyNoBody(input)
+      copy(bodyInputWithIndex = Some((Left(oneOfBody(ContentTypeRange.AnyRange -> input)), bodyIndex)))
+    }
     def addOneOfBodyInput(input: EndpointIO.OneOfBody[?, ?], bodyIndex: Int): Values = {
       verifyNoBody(input)
       copy(bodyInputWithIndex = Some((Left(input), bodyIndex)))
@@ -51,9 +40,7 @@ object DecodeBasicInputsResult {
 
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }
-  case class Failure(input: EndpointInput.Basic[?], failure: DecodeResult.Failure) extends DecodeBasicInputsResult {
-    override def hasSecondaryBody: Boolean = false
-  }
+  case class Failure(input: EndpointInput.Basic[?], failure: DecodeResult.Failure) extends DecodeBasicInputsResult
 
   def higherPriorityFailure(l: DecodeBasicInputsResult, r: DecodeBasicInputsResult): Option[Failure] = (l, r) match {
     case (f1: Failure, _: Values)   => Some(f1)

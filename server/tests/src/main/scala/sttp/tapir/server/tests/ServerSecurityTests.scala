@@ -198,21 +198,6 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
     },
     testServerLogic(
       endpoint.post
-        .in("secondary-in-in")
-        .in(byteArrayBody.asSecondary)
-        .in(stringBody)
-        .out(stringBody)
-        .serverLogic { case (raw: Array[Byte], body: String) => pureResult(s"$body|${raw.length}".asRight[Unit]) },
-      "secondary body next to the primary one in `in`"
-    ) { (backend, baseUri) =>
-      basicStringRequest
-        .post(uri"$baseUri/secondary-in-in")
-        .body("payload")
-        .send(backend)
-        .map(_.body shouldBe "payload|7")
-    },
-    testServerLogic(
-      endpoint.post
         .in("secondary-with-primary-in-security")
         .securityIn(stringBody)
         .in(byteArrayBody.asSecondary)

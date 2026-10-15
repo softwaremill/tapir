@@ -19,13 +19,19 @@ private[tapir] object EndpointBodyVerifier {
     val inputs = securityInputs ++ inInputs
 
     val secondary = inputs.collect { case b: EndpointIO.Body[?, ?] if b.isSecondary => b }
-    def primaryBodiesOf(basics: Vector[EndpointInput.Basic[?]]): Vector[EndpointInput.Basic[?]] = basics.collect {
-      case b: EndpointIO.Body[?, ?] if !b.isSecondary => b
-      case b: EndpointIO.OneOfBody[?, ?]              => b
-      case b: EndpointIO.StreamBodyWrapper[?, ?]      => b
+    def bodiesOf(basics: Vector[EndpointInput.Basic[?]]): Vector[EndpointInput.Basic[?]] = basics.collect {
+      case b: EndpointIO.Body[?, ?]              => b
+      case b: EndpointIO.OneOfBody[?, ?]         => b
+      case b: EndpointIO.StreamBodyWrapper[?, ?] => b
     }
-    val securityPrimaryBodies = primaryBodiesOf(securityInputs)
-    val inPrimaryBodies = primaryBodiesOf(inInputs)
+    def isPrimary(body: EndpointInput.Basic[?]): Boolean = body match {
+      case b: EndpointIO.Body[?, ?] => !b.isSecondary
+      case _                        => true
+    }
+    val securityBodies = bodiesOf(securityInputs)
+    val inBodies = bodiesOf(inInputs)
+    val securityPrimaryBodies = securityBodies.filter(isPrimary)
+    val inPrimaryBodies = inBodies.filter(isPrimary)
     val primaryBodies = securityPrimaryBodies ++ inPrimaryBodies
     def asAtoms(body: EndpointInput.Basic[?]): Vector[EndpointInput.Basic[?]] = body match {
       case ob: EndpointIO.OneOfBody[?, ?] => ob.variants.map(_.bodyAsAtom).toVector
@@ -62,22 +68,22 @@ private[tapir] object EndpointBodyVerifier {
         " A hidden schema doesn't make a body secondary."
       else ""
 
-    val tooManyPrimaries: List[String] =
+    val tooManyBodies: List[String] =
       if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
         List(
           s"Endpoint $shown declares a request body in both `securityIn` and `in`. Only one may be part of the API " +
             s"contract. If both should decode the same request body, mark the `securityIn` one with `.asSecondary`." +
             hiddenSchemaHint
         )
-      else if (securityPrimaryBodies.size > 1)
+      else if (securityBodies.size > 1)
         List(
-          s"Endpoint $shown declares more than one request body in `securityIn`. Only one request body may be part " +
-            s"of the API contract.$hiddenSchemaHint"
+          s"Endpoint $shown declares more than one request body in `securityIn`. Each of `securityIn` and `in` may " +
+            s"declare at most one body, secondary or not.$hiddenSchemaHint"
         )
-      else if (inPrimaryBodies.size > 1)
+      else if (inBodies.size > 1)
         List(
-          s"Endpoint $shown declares more than one request body in `in`. Only one request body may be part of the " +
-            s"API contract.$hiddenSchemaHint"
+          s"Endpoint $shown declares more than one request body in `in`. Each of `securityIn` and `in` may declare at " +
+            s"most one body, secondary or not.$hiddenSchemaHint"
         )
       else Nil
 
@@ -108,7 +114,7 @@ private[tapir] object EndpointBodyVerifier {
       }
 
     EndpointBodyProblems(
-      errors = secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyPrimaries ++ nonReplayablePrimaryWithSecondary,
+      errors = secondaryInsideOneOfBody ++ secondaryOutputs ++ tooManyBodies ++ nonReplayablePrimaryWithSecondary,
       warnings = secondaryWithoutPrimary ++ uselessMetadata
     )
   }

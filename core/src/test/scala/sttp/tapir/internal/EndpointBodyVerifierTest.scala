@@ -67,6 +67,14 @@ class EndpointBodyVerifierTest extends AnyFlatSpec with Matchers {
     problems.errors.head should include("declares more than one request body in `in`")
   }
 
+  it should "reject a secondary body next to a primary body in the same input" in {
+    val e = endpoint.post.in("people").in(stringBody).in(byteArrayBody.asSecondary)
+    val problems = EndpointBodyVerifier.verifyOne(e)
+
+    problems.errors should have size 1
+    problems.errors.head should include("declares more than one request body in `in`")
+  }
+
   it should "reject a streaming primary body combined with a secondary body" in {
     val e = endpoint.post
       .in("people")

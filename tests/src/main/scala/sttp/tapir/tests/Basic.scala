@@ -31,9 +31,6 @@ object Basic {
 
   val in_string_out_string: PublicEndpoint[String, Unit, String, Any] = endpoint.post.in("api" / "echo").in(stringBody).out(stringBody)
 
-  val in_string_secondary_string_out_string: PublicEndpoint[(String, String), Unit, String, Any] =
-    endpoint.post.in("api" / "echo").in(stringBody).in(stringBody.asSecondary).out(stringBody)
-
   val in_security_string_secondary_string_out_string: Endpoint[String, String, Unit, String, Any] =
     endpoint.post.in("api" / "echo").securityIn(stringBody).in(stringBody.asSecondary).out(stringBody)
 

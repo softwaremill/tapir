@@ -117,9 +117,9 @@ class ServerInterpreter[R, F[_], B, S](
     val rawValues = ConcurrentHashMap.newKeySet[RawValue[?]]()
     val addRawValue: RawValue[?] => Unit = rawValues.add(_): Unit
 
-    // a secondary body is usually read in addition to the primary one, but the backend's request body can be consumed only once
+    // a secondary body is usually read in addition to the other one, but the backend's request body can be consumed only once
     val endpointRequestBody: RequestBody[F, S] =
-      if (securityBasicInputs.hasSecondaryBody || regularBasicInputs.hasSecondaryBody) new CachingRequestBody(requestBody)
+      if (hasSecondaryBody(securityBasicInputs) || hasSecondaryBody(regularBasicInputs)) new CachingRequestBody(requestBody)
       else requestBody
 
     (for {
@@ -185,6 +185,19 @@ class ServerInterpreter[R, F[_], B, S](
     }
   }
 
+  private def hasSecondaryBody(result: DecodeBasicInputsResult): Boolean = result match {
+    case values: DecodeBasicInputsResult.Values =>
+      values.bodyInputWithIndex.exists {
+        case (Left(oneOfBodyInput), _) =>
+          oneOfBodyInput.variants.exists(_.body match {
+            case Left(body) => body.isSecondary
+            case Right(_)   => false
+          })
+        case _ => false
+      }
+    case _ => false
+  }
+
   private def decodeBody(
       request: ServerRequest,
       result: DecodeBasicInputsResult,
@@ -195,10 +208,10 @@ class ServerInterpreter[R, F[_], B, S](
     result match {
       case values: DecodeBasicInputsResult.Values =>
         val maxBodyLength = endpointInfo.attribute(AttributeKey[MaxContentLength]).map(_.value)
-        val primaryDecoded: F[DecodeBasicInputsResult] = values.bodyInputWithIndex match {
-          case Some((Left(oneOfBodyInput), index)) =>
+        values.bodyInputWithIndex match {
+          case Some((Left(oneOfBodyInput), _)) =>
             oneOfBodyInput.chooseBodyToDecode(request.contentTypeParsed) match {
-              case Some(Left(body)) => decodeBody(request, values, body, index, maxBodyLength, addRawValue, bodyReader)
+              case Some(Left(body)) => decodeBody(request, values, body, maxBodyLength, addRawValue, bodyReader)
               case Some(Right(body: EndpointIO.StreamBodyWrapper[Any, Any])) => decodeStreamingBody(request, values, body, maxBodyLength)
               case None                                                      => unsupportedInputMediaTypeResponse(request, oneOfBodyInput)
             }
@@ -206,29 +219,7 @@ class ServerInterpreter[R, F[_], B, S](
             decodeStreamingBody(request, values, bodyInput, maxBodyLength)
           case None => (values: DecodeBasicInputsResult).unit
         }
-
-        if (!values.hasSecondaryBody) primaryDecoded
-        else
-          primaryDecoded.flatMap {
-            case v: DecodeBasicInputsResult.Values => decodeSecondaryBodies(request, v, maxBodyLength, addRawValue, bodyReader)
-            case failure                           => failure.unit
-          }
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
-    }
-
-  private def decodeSecondaryBodies(
-      request: ServerRequest,
-      values: DecodeBasicInputsResult.Values,
-      maxBodyLength: Option[Long],
-      addRawValue: RawValue[?] => Unit,
-      bodyReader: RequestBody[F, S]
-  ): F[DecodeBasicInputsResult] =
-    values.secondaryBodyInputsWithIndex.foldLeft((values: DecodeBasicInputsResult).unit) { case (acc, (bodyInput, index)) =>
-      acc.flatMap {
-        case v: DecodeBasicInputsResult.Values =>
-          decodeBody(request, v, bodyInput.asInstanceOf[EndpointIO.Body[Any, Any]], index, maxBodyLength, addRawValue, bodyReader)
-        case failure => failure.unit
-      }
     }
 
   private def decodeStreamingBody(
@@ -247,7 +238,6 @@ class ServerInterpreter[R, F[_], B, S](
       request: ServerRequest,
       values: DecodeBasicInputsResult.Values,
       bodyInput: EndpointIO.Body[RAW, T],
-      index: Int,
       maxBodyLength: Option[Long],
       addRawValue: RawValue[?] => Unit,
       bodyReader: RequestBody[F, S]
@@ -257,7 +247,7 @@ class ServerInterpreter[R, F[_], B, S](
       .flatMap { v =>
         addRawValue(v)
         bodyInput.codec.decode(v.value) match {
-          case DecodeResult.Value(bodyV)     => (values.setBasicInputValue(bodyV, index): DecodeBasicInputsResult).unit
+          case DecodeResult.Value(bodyV)     => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
           case failure: DecodeResult.Failure => (DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult).unit
         }
       }
