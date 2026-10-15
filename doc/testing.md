@@ -400,15 +400,11 @@ result3.toString
 
 ### Invalid request body definitions
 
-Only one request body may be part of an endpoint's API contract, and a body which can't be re-read can't be combined
-with one marked using [`asSecondary`](endpoint/security.md#using-the-request-body-in-security-logic). Such
-endpoints can't be served. They're reported here as an `InvalidBodyDefinitionError` with `rejectedByServers = true`,
-and an exception describing the same problem is thrown when routes are constructed.
-
-Endpoints which can be served, but whose contract probably isn't what was intended - for example an `asSecondary`
-body with no ordinary body alongside it, which clients will never send and which won't appear in the documentation - are
-reported with `rejectedByServers = false`. They aren't reported anywhere else, so verifying endpoints in a test is the
-only way to see them.
+Request bodies which [can't be served](endpoint/security.md#using-the-request-body-in-security-logic) are reported as an
+`InvalidBodyDefinitionError` with `rejectedByServers = true`; servers also throw for them when routes are constructed.
+Endpoints which can be served, but whose contract probably isn't what was intended - for example an `asSecondary` body
+with no ordinary body alongside it, which clients never send and the documentation leaves out - are reported with
+`rejectedByServers = false`, and only here.
 
 Example 1:
 

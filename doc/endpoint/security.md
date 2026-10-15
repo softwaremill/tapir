@@ -56,41 +56,26 @@ val secureEndpoint = endpoint.post
   .in(jsonBody[Person])
 ```
 
-A secondary body is still decoded on the server, using its own codec, but it isn't part of the endpoint's API
-contract: there's only one request body on the wire, so the secondary declaration is excluded from the generated
-documentation, and ignored by client interpreters. The unmarked body - `jsonBody[Person]` above - is the one that's
-documented, and the one clients actually send. Clients still need a value for the secondary body, since it's part of
-the input type. Each of `securityIn` and `in` may declare at most one body, so the two declarations are always in
-different ones.
+A secondary body is decoded on the server from a buffered copy of the request body, using its own codec. It isn't part
+of the API contract: it's excluded from the generated documentation and ignored by client interpreters, which still need
+a value for it, as it's part of the input type. Each of `securityIn` and `in` may declare at most one body, secondary or
+not.
+
+Only string, byte array, byte buffer, input stream and input stream range bodies can be secondary; this is checked at
+compile time. The other body can't be a file, multipart or streaming body. Such endpoints, and ones declaring two bodies
+with neither marked as secondary, are rejected with an `IllegalArgumentException` when routes are constructed. With a
+secondary body the whole request body is buffered in memory, before the security logic runs if either body is in
+`securityIn`. On backends which support it, [`maxRequestBodyLength`](#limiting-request-body-length) bounds its size.
 
 A signature verified over the raw bytes (e.g. `byteArrayBody.asSecondary`) doesn't cover how the ordinary body is
-decoded: some server backends decode string bodies (including JSON) using the charset from the request's
-`Content-Type` header, which the client controls. If that matters, add the header to `securityIn` (e.g.
-`header[Option[String]](sttp.model.HeaderNames.ContentType)`) and check it in the security logic as well.
+decoded: some backends decode string bodies (including JSON) using the charset from the request's `Content-Type` header.
+If that matters, add the header to `securityIn` (e.g. `header[Option[String]](sttp.model.HeaderNames.ContentType)`) and
+check it in the security logic as well.
 
-Only bodies which can be re-read from buffered bytes can be secondary: string, byte array, byte buffer, input stream
-and input stream range bodies. File and multipart bodies aren't accepted. The restriction is enforced at compile
-time.
+An endpoint which reads the body only in `serverSecurityLogic`, with no body in `in`, needs no `asSecondary`.
 
-The restriction also applies from the other side: an endpoint whose *ordinary* body (the one not marked with
-`asSecondary`) is a file, multipart, or streaming body can't also have a secondary body. Unlike the
-compile-time check above, this is a runtime check: it's rejected with an `IllegalArgumentException` when routes are
-constructed. An ordinary input stream or input stream range body is accepted, but isn't streamed: with a secondary
-body, the whole request body is buffered in memory. If either body is in `securityIn`, that happens before the security
-logic runs - including for requests which it then rejects. On backends which support it,
-[`maxRequestBodyLength`](#limiting-request-body-length) bounds its size.
-
-```{warning}
-Declaring two *ordinary* request bodies - one in `securityIn`, one in `in`, neither marked with
-`asSecondary` - is rejected the same way, since only one request body may be part of the API contract.
-```
-
-Note that a *single* body input needs no marking: an endpoint which reads the body only in `serverSecurityLogic`,
-with no body declared in `in`, reads the request exactly once. It works without `asSecondary`, and stays
-fully documented and visible to clients.
-
-Both kinds of problem, along with endpoints which can be served but whose contract probably isn't what was intended,
-are also reported by [`EndpointVerifier`](../testing.md#invalid-request-body-definitions).
+Rejected endpoints, and ones which can be served but whose contract probably isn't what was intended, are also reported
+by [`EndpointVerifier`](../testing.md#invalid-request-body-definitions).
 
 ## Authentication challenges
 

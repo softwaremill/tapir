@@ -76,13 +76,10 @@ case class DuplicatedNameError(name: String) extends EndpointVerificationError {
 }
 
 /** Endpoint `e` declares its request body in a way which can't be served, or which won't be described correctly in the generated
-  * documentation. For example, declaring an ordinary request body in both `securityIn` and `in`, or combining a body which can't be re-read
-  * (streaming, file, multipart) with one marked with `asSecondary`.
+  * documentation.
   *
-  * When `rejectedByServers` is true, the endpoint can't be served, and an exception describing the same problem is thrown when routes are
-  * constructed. Otherwise the endpoint can be served, but its contract probably isn't what was intended - e.g. a body marked with
-  * `asSecondary` and no other body, which is left out of the documentation and never sent by clients. Such endpoints are reported only by
-  * `EndpointVerifier`.
+  * @param rejectedByServers
+  *   whether servers also reject the endpoint, by throwing when routes are constructed
   */
 case class InvalidBodyDefinitionError(e: AnyEndpoint, message: String, rejectedByServers: Boolean) extends EndpointVerificationError {
   override def toString: String = if (rejectedByServers) message else s"$message (not rejected by servers)"
