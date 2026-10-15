@@ -10,7 +10,7 @@ import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 import java.util.Base64
 
 private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, NoStreams] {
@@ -21,7 +21,7 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
     val decoded =
       if (request.isBase64Encoded) Left(Base64.getDecoder.decode(request.body.getOrElse(""))) else Right(request.body.getOrElse(""))
 
-    def asByteArray: Array[Byte] = decoded.fold(identity[Array[Byte]], _.getBytes())
+    def asByteArray: Array[Byte] = decoded.fold(identity[Array[Byte]], _.getBytes(StandardCharsets.UTF_8))
 
     RawValue(bodyType match {
       case RawBodyType.StringBody(charset)  => decoded.fold(new String(_, charset), identity[String])
@@ -34,11 +34,9 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
     }).asInstanceOf[RawValue[R]].unit
   }
 
-  // A non-base64 body is already a String, which toRaw returns as is; `bytes` is that String re-encoded with the platform charset
-  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String = {
-    val request = awsRequest(serverRequest)
-    if (request.isBase64Encoded) new String(bytes, defaultCharset) else request.body.getOrElse("")
-  }
+  // a non-base64 body is a String, which asByteArray encodes as UTF-8
+  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+    new String(bytes, if (awsRequest(serverRequest).isBase64Encoded) defaultCharset else StandardCharsets.UTF_8)
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException
