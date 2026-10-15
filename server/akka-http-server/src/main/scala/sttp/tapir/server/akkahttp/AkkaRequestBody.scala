@@ -28,10 +28,13 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
     requestEntity(request, maxBytes).dataBytes
   }
 
-  // Mirrors the String unmarshaller, which decodes with the entity's charset, falling back to UTF-8 rather than the codec's
   override def decodeStringBody(request: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+    decodeString(bytes, requestEntity(request, None).contentType)
+
+  // As the String unmarshaller: the entity's charset, falling back to UTF-8 rather than the codec's
+  private def decodeString(bytes: Array[Byte], contentType: ContentType): String =
     if (bytes.isEmpty) ""
-    else new String(bytes, requestEntity(request, None).contentType.charsetOption.map(_.nioCharset).getOrElse(StandardCharsets.UTF_8))
+    else new String(bytes, contentType.charsetOption.map(_.nioCharset).getOrElse(StandardCharsets.UTF_8))
 
   private def requestEntity(request: ServerRequest, maxBytes: Option[Long]): RequestEntity = {
     val entity = request.underlying.asInstanceOf[RequestContext].request.entity
@@ -44,7 +47,8 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
       bodyType: RawBodyType[R]
   ): Future[RawValue[R]] = {
     bodyType match {
-      case RawBodyType.StringBody(_)   => implicitly[FromEntityUnmarshaller[String]].apply(body).map(RawValue(_))
+      case RawBodyType.StringBody(_) =>
+        implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(bs => RawValue(decodeString(bs, body.contentType)))
       case RawBodyType.ByteArrayBody   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(RawValue(_))
       case RawBodyType.ByteBufferBody  => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(b => RawValue(b.asByteBuffer))
       case RawBodyType.InputStreamBody =>

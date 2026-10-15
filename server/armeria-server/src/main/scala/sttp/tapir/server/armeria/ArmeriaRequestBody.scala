@@ -34,7 +34,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       .asInstanceOf[streams.BinaryStream]
   }
 
-  // toRaw decodes with contentUtf8(), ignoring the codec's charset
+  // UTF-8 regardless of the codec's charset, keeping string decoding compatible with earlier releases
   override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
     new String(bytes, StandardCharsets.UTF_8)
 
@@ -43,8 +43,11 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     val request = ctx.request()
 
     futureConversion.from(bodyType match {
-      case RawBodyType.StringBody(_) =>
-        request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.contentUtf8())).toScala
+      case RawBodyType.StringBody(defaultCharset) =>
+        request
+          .aggregate()
+          .thenApply[RawValue[R]](agg => RawValue(decodeStringBody(serverRequest, agg.content().array(), defaultCharset)))
+          .toScala
       case RawBodyType.ByteArrayBody =>
         request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().array())).toScala
       case RawBodyType.ByteBufferBody =>
