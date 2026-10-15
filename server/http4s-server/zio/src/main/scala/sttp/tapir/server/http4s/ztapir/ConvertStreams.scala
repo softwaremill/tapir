@@ -6,7 +6,19 @@ import sttp.tapir.CodecFormat.OctetStream
 import sttp.tapir.EndpointOutput.OneOfVariant
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.ztapir.ZServerEndpoint
-import sttp.tapir.{Codec, Endpoint, EndpointIO, EndpointInput, EndpointOutput, Mapping, Schema, StreamBodyIO, WebSocketBodyOutput}
+import sttp.tapir.{
+  Codec,
+  Endpoint,
+  EndpointIO,
+  EndpointInput,
+  EndpointOutput,
+  Mapping,
+  OneOfInput,
+  OneOfInputVariant,
+  Schema,
+  StreamBodyIO,
+  WebSocketBodyOutput
+}
 import zio.stream.interop.fs2z._
 import zio.{RIO, Task}
 
@@ -43,6 +55,13 @@ object ConvertStreams {
         EndpointIO.MappedPair(forInput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointInput.Auth(wrapped, challenge, authType, info) =>
         EndpointInput.Auth(forInput(wrapped).asInstanceOf[EndpointInput.Single[_]], challenge, authType, info)
+      case oneOf: OneOfInput[_, _] =>
+        OneOfInput[Any, Any](
+          oneOf.variants.map { variant =>
+            OneOfInputVariant(forInput(variant.input).asInstanceOf[EndpointInput[Any]], variant.appliesTo)
+          }.asInstanceOf[List[OneOfInputVariant[_ <: Any]]],
+          oneOf.mapping.asInstanceOf[Mapping[Any, Any]]
+        )
       case EndpointIO.OneOfBody(variants, mapping) =>
         EndpointIO.OneOfBody(
           variants.map {

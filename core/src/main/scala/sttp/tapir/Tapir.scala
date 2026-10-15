@@ -254,6 +254,49 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def oneOf[T](firstVariant: OneOfVariant[? <: T], otherVariants: OneOfVariant[? <: T]*): EndpointOutput.OneOf[T, T] =
     EndpointOutput.OneOf[T, T](firstVariant +: otherVariants.toList, Mapping.id)
 
+  /** An input which is one of several alternative inputs. Each variant is a [[oneOfInputVariant]]: a body, [[oneOfBody]], stream body, or
+    * [[emptyInput]]. Other inputs, and output-only values such as status codes, are rejected by the compiler.
+    *
+    * When encoding a request, the first variant whose matcher applies is used. This is how an optional body should be described when
+    * `jsonBody[Option[T]]` is not appropriate: an [[emptyInput]] variant matches `None`, and the body variant matches only `Some`, so the
+    * body codec is never asked to encode `None`. The same matchers distinguish several present bodies, for example a JSON body and a PNG
+    * body.
+    *
+    * When decoding a request, a body-less variant is used when the request has no body. A content length of zero, or a body that turns out to
+    * be empty (including when the content length is omitted, as with HTTP/2), counts as no body even if a content type is set, but only when
+    * a body-less variant exists; otherwise a matching content type still selects a body. One body variant is used whenever a non-empty body
+    * is present. Several body variants are chosen by content type.
+    *
+    * @example
+    *   {{{
+    *   oneOfInput[Option[String]](
+    *     oneOfInputVariant(emptyInputAs((None: Option[String]))) { case None => true },
+    *     oneOfInputVariant(stringBody.map(Some(_))(_.get)) { case Some(_) => true }
+    *   )
+    *   }}}
+    */
+  def oneOfInput[T](
+      firstVariant: OneOfInputVariant[? <: T],
+      otherVariants: OneOfInputVariant[? <: T]*
+  ): OneOfInput[T, T] =
+    OneOfInput[T, T]((firstVariant +: otherVariants.toList).asInstanceOf[List[OneOfInputVariant[? <: T]]], Mapping.id[T])
+
+  /** A [[oneOfInput]] alternative which uses `input` when `matcher` applies to the value being encoded. */
+  def oneOfInputVariant[R, T](input: EndpointIO.Body[R, T])(matcher: PartialFunction[Any, Boolean]): OneOfInputVariant[T] =
+    OneOfInputVariant(input, matcher.lift.andThen(_.getOrElse(false)))
+
+  /** A [[oneOfInput]] alternative which uses `input` when `matcher` applies to the value being encoded. */
+  def oneOfInputVariant[R, T](input: EndpointIO.OneOfBody[R, T])(matcher: PartialFunction[Any, Boolean]): OneOfInputVariant[T] =
+    OneOfInputVariant(input, matcher.lift.andThen(_.getOrElse(false)))
+
+  /** A [[oneOfInput]] alternative which uses `input` when `matcher` applies to the value being encoded. */
+  def oneOfInputVariant[S, T](input: EndpointIO.StreamBodyWrapper[S, T])(matcher: PartialFunction[Any, Boolean]): OneOfInputVariant[T] =
+    OneOfInputVariant(input, matcher.lift.andThen(_.getOrElse(false)))
+
+  /** A [[oneOfInput]] alternative which uses `input` when `matcher` applies to the value being encoded. */
+  def oneOfInputVariant[T](input: EndpointIO.Empty[T])(matcher: PartialFunction[Any, Boolean]): OneOfInputVariant[T] =
+    OneOfInputVariant(input, matcher.lift.andThen(_.getOrElse(false)))
+
   /** Create a one-of-variant which uses `output` if the class of the provided value (when interpreting as a server) matches the runtime
     * class of `T`.
     *
@@ -489,6 +532,9 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticCon
   def emptyOutputAs[T](value: T): EndpointOutput.Atom[T] = emptyIO.map(_ => value)(_ => ())
 
   val emptyInput: EndpointInput[Unit] = emptyIO
+
+  /** An empty input mapped to `value`. Used as the `None` variant of [[oneOfInput]] when a request body may be omitted. */
+  def emptyInputAs[T](value: T): EndpointIO.Empty[T] = emptyIO.map(_ => value)(_ => ())
 
   /** An empty authentication input, to express the fact (for documentation) that authentication is optional, even in the presence of
     * multiple optional authentication inputs (which by default are treated as alternatives).

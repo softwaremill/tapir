@@ -51,6 +51,7 @@ class SchemasForEndpoints(
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
       case EndpointInput.MappedPair(wrapped, _)   => forInput(wrapped)
       case EndpointInput.Pair(left, right, _, _)  => forInput(left) ++ forInput(right)
+      case OneOfInput(variants, _)                => variants.toList.flatMap(v => forInput(v.input))
       case op: EndpointIO[_]                      => forIO(op)
     }
   }

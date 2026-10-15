@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info:
+  title: test
+  version: '1.0'
+paths:
+  /set-profile-picture:
+    put:
+      operationId: putSet-profile-picture
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkToExistingImage'
+          image/png:
+            schema:
+              type: string
+              format: binary
+        required: false
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    LinkToExistingImage:
+      title: LinkToExistingImage
+      type: object
+      required:
+        - href
+      properties:
+        href:
+          type: string

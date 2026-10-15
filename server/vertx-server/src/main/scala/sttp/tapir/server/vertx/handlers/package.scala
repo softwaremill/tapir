@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx
 import io.vertx.core.Handler
 import io.vertx.ext.web.{Route, RoutingContext}
 import io.vertx.ext.web.handler.BodyHandler
-import sttp.tapir.{Endpoint, EndpointIO, EndpointOutput}
+import sttp.tapir.{Endpoint, EndpointIO, EndpointInput, EndpointOutput, OneOfInput}
 import sttp.tapir.RawBodyType.MultipartBody
 import sttp.tapir.internal._
 import sttp.tapir.server.model.MaxContentLength
@@ -36,6 +36,7 @@ package object handlers {
       case body: EndpointIO.Body[_, _]              => Vector(body.bodyType)
       case EndpointIO.OneOfBody(variants, _)        => variants.flatMap(_.body.fold(body => Some(body.bodyType), _.bodyType)).toVector
       case body: EndpointIO.StreamBodyWrapper[_, _] => Vector(body)
+      case OneOfInput(variants, _)                  => variants.flatMap(variant => bodyTypesOf(variant.input))
       case _                                        => Vector.empty
     }
 
@@ -54,5 +55,13 @@ package object handlers {
     }
 
     route
+  }
+
+  // asVectorOfBasicInputs treats OneOfInput as a single basic input, so bodies nested in its variants have to be collected separately.
+  private def bodyTypesOf(input: EndpointInput[_]): Vector[Any] = input match {
+    case body: EndpointIO.Body[_, _]              => Vector(body.bodyType)
+    case EndpointIO.OneOfBody(variants, _)        => variants.flatMap(_.body.fold(body => Some(body.bodyType), _.bodyType)).toVector
+    case body: EndpointIO.StreamBodyWrapper[_, _] => Vector(body)
+    case _                                        => Vector.empty
   }
 }

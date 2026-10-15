@@ -345,6 +345,94 @@ object EndpointInput extends EndpointInputMacros {
   }
 }
 
+/** One alternative input inside [[OneOfInput]].
+  *
+  * When encoding a request, this input is used if `appliesTo` returns true for the value. When decoding a request, the server chooses a
+  * variant from the request shape (for example, whether a body is present), not from `appliesTo`.
+  */
+case class OneOfInputVariant[I] private[tapir] (
+    input: EndpointInput[I],
+    appliesTo: Any => Boolean
+)
+
+/** An input which is one of several alternative inputs. Used for values such as an optional body, where `None` is an empty input and
+  * `Some` is a body that must not be asked to encode `None`, or a required body with several content types, where each alternative is a
+  * different body.
+  *
+  * All variants must have a common supertype (`I`). When encoding, the first variant whose `appliesTo` returns true is used, so a body
+  * variant is only encoded for values that match it. When decoding, a body-less variant is used when the request has no body, including when
+  * a content type is paired with a zero content length. A zero-length body with no body-less variant still uses a body variant chosen by
+  * content type. A single body variant is used whenever a non-empty body is present. Several body variants are distinguished by content type.
+  */
+case class OneOfInput[I, T](variants: List[OneOfInputVariant[? <: I]], mapping: Mapping[I, T]) extends EndpointInput.Basic[T] {
+  override private[tapir] type ThisType[X] = OneOfInput[I, X]
+  override def map[U](m: Mapping[T, U]): OneOfInput[I, U] = copy[I, U](mapping = mapping.map(m))
+  override def show: String = showOneOf(variants.map(_.input.show))
+  override def showDetail: String = showOneOf(variants.map(_.input.showDetail))
+
+  /** The variant which should encode `highLevel`, and the low-level value to pass into that variant. */
+  private[tapir] def variantForValue(highLevel: Any): (EndpointInput[?], Any) = {
+    val low = mapping.asInstanceOf[Mapping[Any, Any]].encode(highLevel)
+    val variant = variants.find(_.appliesTo(low)).getOrElse {
+      throw new IllegalArgumentException(
+        s"None of the variants defined in the one-of input: $show, is applicable to the value: $low. " +
+          s"Verify that the oneOfInput variants are exhaustive."
+      )
+    }
+    (variant.input, low)
+  }
+
+  /** The variant which should decode a request with this content type and content length.
+    *
+    * `None` means no variant applies: the request has a content type that matches none of several body variants, or it has no body and
+    * there is no body-less variant. A content length of `0` selects a body-less variant when one exists; otherwise a matching content type
+    * still selects a body, so an empty payload can be a valid body.
+    */
+  private[tapir] def variantForDecode(contentType: Option[MediaType], contentLength: Option[String]): Option[EndpointInput[?]] = {
+    val (bodyVariants, emptyVariants) = variants.partition(v => inputContainsBody(v.input))
+    val bodyIsEmpty = contentLength.exists(v => v.isEmpty || v == "0")
+    val chosen =
+      if (bodyIsEmpty && emptyVariants.nonEmpty) emptyVariants.headOption
+      else if (!hasPresentBody(contentType, contentLength)) emptyVariants.headOption.orElse(bodyVariants.headOption)
+      else
+        chooseBody(bodyVariants, contentType) match {
+          case some @ Some(_) => some
+          // A content type that matches none of several bodies is not "no body".
+          case None if bodyVariants.size > 1 && contentType.isDefined => None
+          case None                                                    => emptyVariants.headOption
+        }
+    chosen.map(_.input)
+  }
+
+  private def hasPresentBody(contentType: Option[MediaType], contentLength: Option[String]): Boolean =
+    contentType.isDefined || contentLength.exists(v => v.nonEmpty && v != "0")
+
+  private def chooseBody(
+      bodyVariants: List[OneOfInputVariant[? <: I]],
+      contentType: Option[MediaType]
+  ): Option[OneOfInputVariant[? <: I]] =
+    bodyVariants match {
+      case Nil           => None
+      case single :: Nil => Some(single)
+      case many          =>
+        contentType match {
+          case Some(ct) => many.find(variant => acceptsContentType(variant.input, ct))
+          case None     => many.headOption
+        }
+    }
+
+  private def acceptsContentType(input: EndpointInput[?], contentType: MediaType): Boolean = input match {
+    case body: EndpointIO.Body[?, ?]               => contentType.matches(ContentTypeRange.exactNoCharset(body.codec.format.mediaType))
+    case body: EndpointIO.StreamBodyWrapper[?, ?]  => contentType.matches(ContentTypeRange.exactNoCharset(body.codec.format.mediaType))
+    case body: EndpointIO.OneOfBody[?, ?]          => body.variants.exists(variant => contentType.matches(variant.range))
+    case EndpointIO.Pair(left, right, _, _)        => acceptsContentType(left, contentType) || acceptsContentType(right, contentType)
+    case EndpointInput.Pair(left, right, _, _)     => acceptsContentType(left, contentType) || acceptsContentType(right, contentType)
+    case EndpointIO.MappedPair(wrapped, _)         => acceptsContentType(wrapped, contentType)
+    case EndpointInput.MappedPair(wrapped, _)      => acceptsContentType(wrapped, contentType)
+    case _                                         => false
+  }
+}
+
 sealed trait EndpointOutput[T] extends EndpointTransput[T] {
   private[tapir] type ThisType[X] <: EndpointOutput[X]
 

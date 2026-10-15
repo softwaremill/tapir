@@ -128,6 +128,7 @@ object DefaultDecodeFailureHandler {
       case (_, DecodeResult.Error(_, _: StreamMaxLengthExceededException)) => respondPayloadTooLarge
       case (_: EndpointIO.Body[?, ?], _)                                   => respondBadRequest
       case (_: EndpointIO.OneOfBody[?, ?], _: DecodeResult.Mismatch)       => respondUnsupportedMediaType
+      case (_: OneOfInput[?, ?], _: DecodeResult.Mismatch)                 => respondUnsupportedMediaType
       case (_: EndpointIO.StreamBodyWrapper[?, ?], _)                      => respondBadRequest
       // we assume that the only decode failure that might happen during path segment decoding is an error
       // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
@@ -183,6 +184,7 @@ object DefaultDecodeFailureHandler {
       case EndpointIO.MappedPair(input, _)       => unapply(input)
       case EndpointInput.Pair(left, right, _, _) => unapply(left).orElse(unapply(right))
       case EndpointIO.Pair(left, right, _, _)    => unapply(left).orElse(unapply(right))
+      case OneOfInput(variants, _)               => variants.view.map(v => unapply(v.input)).collectFirst { case Some(a) => a }
       case _                                     => None
     }
   }
@@ -204,6 +206,7 @@ object DefaultDecodeFailureHandler {
         case _: EndpointInput.ExtractFromRequest[?]  => "Invalid value"
         case a: EndpointInput.Auth[?, ?]             => failureSourceMessage(a.input)
         case _: EndpointInput.MappedPair[?, ?, ?, ?] => "Invalid value"
+        case _: OneOfInput[?, ?]                     => s"Invalid value for: body"
         case _: EndpointIO.Body[?, ?]                => s"Invalid value for: body"
         case _: EndpointIO.StreamBodyWrapper[?, ?]   => s"Invalid value for: body"
         case EndpointIO.Header(name, _, _)           => s"Invalid value for: header $name"

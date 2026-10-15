@@ -18,6 +18,7 @@ import sttp.tapir.server.{model, _}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, TapirFile}
 import sttp.tapir.EndpointInfo
 import sttp.tapir.AttributeKey
+import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConverters.asScalaSetConverter
 
@@ -225,9 +226,16 @@ class ServerInterpreter[R, F[_], B, S](
       .toRaw(request, bodyInput.bodyType, maxBodyLength)
       .flatMap { v =>
         addRawValue(v)
-        bodyInput.codec.decode(v.value) match {
-          case DecodeResult.Value(bodyV)     => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
-          case failure: DecodeResult.Failure => (DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult).unit
+        (bodyInput.attribute(OneOfInputEmptyBody.fallback), bodyInput.attribute(OneOfInputEmptyBody.nonEmptyFailure)) match {
+          case (Some(fallback), _) if rawBodyIsEmpty(v.value) =>
+            (values.setBodyInputValue(fallback): DecodeBasicInputsResult).unit
+          case (_, Some(failure)) =>
+            (failure: DecodeBasicInputsResult).unit
+          case _ =>
+            bodyInput.codec.decode(v.value) match {
+              case DecodeResult.Value(bodyV)     => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
+              case failure: DecodeResult.Failure => (DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult).unit
+            }
         }
       }
       // if the exception is "known" - might be the result of a malformed body - treating as a decode failure
@@ -236,6 +244,14 @@ class ServerInterpreter[R, F[_], B, S](
         case e @ (StreamMaxLengthExceededException(_) | InvalidMultipartBodyException(_, _) | IncompleteRequestBodyException(_, _)) =>
           (DecodeBasicInputsResult.Failure(bodyInput, DecodeResult.Error("", e)): DecodeBasicInputsResult).unit
       }
+  }
+
+  private def rawBodyIsEmpty(value: Any): Boolean = value match {
+    case null            => true
+    case s: String       => s.isEmpty
+    case a: Array[Byte]  => a.isEmpty
+    case b: ByteBuffer   => b.remaining() == 0
+    case _               => false
   }
 
   private def unsupportedInputMediaTypeResponse(

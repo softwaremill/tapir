@@ -142,6 +142,9 @@ private[sttp4] trait EndpointToSttpClientBase {
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
         (uri, req, streamBody)
+      case oneOf: OneOfInput[_, _] =>
+        val (chosen, low) = oneOf.variantForValue(value)
+        setInputParams(chosen, ParamsAsAny(low), uri, req, streamBody)
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, uri, req, streamBody)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, uri, req, streamBody)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, uri, req, streamBody)
