@@ -26,6 +26,7 @@ import sttp.shared.Identity
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.interpreter.PrepareServerEndpoints
 
 class TapirSyncStubInterpreter[OPTIONS](
     endpoints: List[ServerEndpoint[Any, Identity]],
@@ -41,7 +42,7 @@ class TapirSyncStubInterpreter[OPTIONS](
   override protected def thisAsStubType: StubType = this
 
   /** Returns a [[SyncBackend]] which handles sent requests using Tapir's [[ServerInterpreter]]. */
-  override def backend(): SyncBackend = stub.whenAnyRequest.thenRespondF(handleRequest(_))
+  override def backend(): SyncBackend = stub.whenAnyRequest.thenRespondF(requestHandler())
 }
 
 object TapirSyncStubInterpreter {
@@ -81,7 +82,7 @@ class TapirStubInterpreter[F[_], OPTIONS](
   override protected def thisAsStubType: StubType = this
 
   /** Returns a [[Backend]] which handles sent requests using Tapir's [[ServerInterpreter]]. */
-  override def backend(): Backend[F] = stub.whenAnyRequest.thenRespondF(handleRequest(_))
+  override def backend(): Backend[F] = stub.whenAnyRequest.thenRespondF(requestHandler())
 }
 
 object TapirStubInterpreter {
@@ -111,7 +112,7 @@ class TapirStreamStubInterpreter[F[_], S, OPTIONS](
   override protected def thisAsStubType: StubType = this
 
   /** Returns a [[StreamBackend]] which handles sent requests using Tapir's [[ServerInterpreter]]. */
-  override def backend(): StreamBackend[F, S] = stub.whenAnyRequest.thenRespondF(handleRequest(_))
+  override def backend(): StreamBackend[F, S] = stub.whenAnyRequest.thenRespondF(requestHandler())
 }
 
 object TapirStreamStubInterpreter {
@@ -141,7 +142,7 @@ class TapirWebSocketStubInterpreter[F[_], OPTIONS](
   override protected def thisAsStubType: StubType = this
 
   /** Returns a [[WebSocketBackend]] which handles sent requests using Tapir's [[ServerInterpreter]]. */
-  override def backend(): WebSocketBackend[F] = stub.whenAnyRequest.thenRespondF(handleRequest(_))
+  override def backend(): WebSocketBackend[F] = stub.whenAnyRequest.thenRespondF(requestHandler())
 }
 
 object TapirWebSocketStubInterpreter {
@@ -171,7 +172,7 @@ class TapirWebSocketStreamStubInterpreter[F[_], S, OPTIONS](
   override protected def thisAsStubType: StubType = this
 
   /** Returns a [[WebSocketStreamBackend]] which handles sent requests using Tapir's [[ServerInterpreter]]. */
-  override def backend(): WebSocketStreamBackend[F, S] = stub.whenAnyRequest.thenRespondF(handleRequest(_))
+  override def backend(): WebSocketStreamBackend[F, S] = stub.whenAnyRequest.thenRespondF(requestHandler())
 }
 
 object TapirWebSocketStreamStubInterpreter {
@@ -224,8 +225,11 @@ abstract class AbstractTapirStubInterpreter[F[_], R, OPTIONS](
 
   //   )
 
-  protected def handleRequest(req: GenericRequest[_, _]): F[Response[StubBody]] =
-    StubServerInterpreter(req, endpoints, interceptors)
+  /** Verifies the endpoints, throwing if any can't be served. */
+  protected def requestHandler(): GenericRequest[_, _] => F[Response[StubBody]] = {
+    val filterServerEndpoints = PrepareServerEndpoints(endpoints)
+    req => StubServerInterpreter(req, filterServerEndpoints, interceptors)
+  }
 
   class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
     def thenRespond(response: O): StubType =

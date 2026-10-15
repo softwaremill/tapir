@@ -25,7 +25,7 @@ private[openapi] class EndpointToOpenAPIPaths(
   def pathItem(e: AnyEndpoint): (String, PathItem) = {
     import Method._
 
-    val inputs = endpointToParameters.filterOutHiddenInputs(e.asVectorOfBasicInputs(includeAuth = false))
+    val inputs = endpointToParameters.filterOutUndocumentedInputs(e.asVectorOfBasicInputs(includeAuth = false))
     val pathComponents = namedPathComponents(inputs)
     val method = e.method.getOrElse(Method.GET)
 

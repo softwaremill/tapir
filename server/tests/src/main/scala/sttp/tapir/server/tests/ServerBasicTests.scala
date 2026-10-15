@@ -1,6 +1,7 @@
 package sttp.tapir.server.tests
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import enumeratum._
 import io.circe.generic.auto._
@@ -28,6 +29,7 @@ import sttp.tapir.tests.data.{FruitAmount, FruitError}
 
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import sttp.tapir.tests.Files.in_file_out_file
 
 class ServerBasicTests[F[_], OPTIONS, ROUTE](
@@ -105,6 +107,59 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     },
     testServer(in_string_out_string, "with get method")((b: String) => pureResult(b.asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe Symbol("left"))
+    },
+    testServer(
+      "a secondary body doesn't change how the primary string body is decoded",
+      route(
+        List[ServerEndpoint[Any, F]](
+          endpoint.post
+            .in("plain")
+            .in(stringBody(StandardCharsets.ISO_8859_1))
+            .out(stringBody)
+            .serverLogic((b: String) => pureResult(b.asRight[Unit])),
+          endpoint.post
+            .in("with-secondary")
+            .securityIn(stringBody(StandardCharsets.ISO_8859_1).asSecondary)
+            .in(stringBody(StandardCharsets.ISO_8859_1))
+            .out(stringBody)
+            .serverSecurityLogic((_: String) => pureResult(().asRight[Unit]))
+            .serverLogic(_ => (b: String) => pureResult(b.asRight[Unit]))
+        )
+      )
+    ) { (backend, baseUri) =>
+      def send(path: String, body: Array[Byte], contentType: String) = basicStringRequest
+        .post(uri"$baseUri/$path")
+        .body(body)
+        .contentType(contentType)
+        .send(backend)
+        .map(r => (r.code, r.body))
+
+      def sameOnBoth(body: Array[Byte], contentType: String) = for {
+        plain <- send("plain", body, contentType)
+        withSecondary <- send("with-secondary", body, contentType)
+      } yield withSecondary shouldBe plain
+
+      sameOnBoth("café".getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
+        sameOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain") >>
+        sameOnBoth((0xfeff.toChar +: "café").getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
+        sameOnBoth(Array(0xff.toByte), "text/plain; charset=US-ASCII")
+    },
+    Test("reject an endpoint with two ordinary request bodies when routes are built") {
+      val invalid = endpoint.post
+        .in("invalid")
+        .securityIn(stringBody)
+        .in(byteArrayBody)
+        .serverSecurityLogic((_: String) => pureResult(().asRight[Unit]))
+        .serverLogic(_ => (_: Array[Byte]) => pureResult(().asRight[Unit]))
+
+      // some interpreters build the route lazily, e.g. when the server starts, and may wrap the exception
+      IO.defer(server(route(invalid)).use(_ => IO.unit))
+        .attempt
+        .map { result =>
+          val causes = Iterator.iterate(result.left.toOption.orNull)(_.getCause).takeWhile(_ != null).toList
+          causes.collectFirst { case e: IllegalArgumentException => e.getMessage }.getOrElse("") should include("asSecondary")
+        }
+        .unsafeToFuture()
     },
     testServer(in_header_before_path, "Header input before path capture input") { case (str: String, i: Int) =>
       pureResult((i, str).asRight[Unit])
@@ -974,6 +1029,25 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           .recover { case _: SttpClientException => Succeeded }
       },
       testPayloadTooLarge(in_byte_buffer_out_byte_buffer, maxLength),
+      testServerLogic(
+        endpoint.post
+          .in("api" / "echo")
+          .securityIn(stringBody.asSecondary)
+          .in(stringBody)
+          .out(stringBody)
+          .maxRequestBodyLength(maxLength.toLong)
+          .serverSecurityLogic((_: String) => pureResult(().asRight[Unit]))
+          .serverLogic(_ => (body: String) => pureResult(body.asRight[Unit])),
+        "checks payload limit and returns 413 on exceeded max content length (request, secondary body)"
+      ) { (backend, baseUri) =>
+        basicRequest
+          .post(uri"$baseUri/api/echo")
+          .body(List.fill(maxLength + 1)('x').mkString)
+          .send(backend)
+          .map(_.code shouldBe StatusCode.PayloadTooLarge)
+          // see the note in testPayloadTooLarge: a connection reset is also a valid rejection
+          .recover { case _: SttpClientException => Succeeded }
+      },
       testPayloadWithinLimit(in_string_out_string, maxLength),
       testServer(
         in_input_stream_out_input_stream.maxRequestBodyLength(maxLength.toLong),

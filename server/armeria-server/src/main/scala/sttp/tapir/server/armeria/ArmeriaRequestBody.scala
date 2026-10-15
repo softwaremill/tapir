@@ -15,7 +15,7 @@ import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.{ExecutionContext, Future}
-import java.nio.charset.StandardCharsets
+import java.nio.charset.{Charset, StandardCharsets}
 
 private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     serverOptions: ArmeriaServerOptions[F],
@@ -34,13 +34,20 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       .asInstanceOf[streams.BinaryStream]
   }
 
+  // UTF-8 regardless of the codec's charset, keeping string decoding compatible with earlier releases
+  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+    new String(bytes, StandardCharsets.UTF_8)
+
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val ctx = armeriaCtx(serverRequest)
     val request = ctx.request()
 
     futureConversion.from(bodyType match {
-      case RawBodyType.StringBody(_) =>
-        request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.contentUtf8())).toScala
+      case RawBodyType.StringBody(defaultCharset) =>
+        request
+          .aggregate()
+          .thenApply[RawValue[R]](agg => RawValue(decodeStringBody(serverRequest, agg.content().array(), defaultCharset)))
+          .toScala
       case RawBodyType.ByteArrayBody =>
         request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().array())).toScala
       case RawBodyType.ByteBufferBody =>

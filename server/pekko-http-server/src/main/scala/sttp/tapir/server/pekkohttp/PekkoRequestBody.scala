@@ -1,6 +1,6 @@
 package sttp.tapir.server.pekkohttp
 
-import org.apache.pekko.http.scaladsl.model.{EntityStreamSizeException, HttpEntity, Multipart, ParsingException, RequestEntity}
+import org.apache.pekko.http.scaladsl.model.{ContentType, EntityStreamSizeException, HttpEntity, Multipart, ParsingException, RequestEntity}
 import org.apache.pekko.http.scaladsl.server.RequestContext
 import org.apache.pekko.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import org.apache.pekko.stream.scaladsl.{FileIO, Sink, _}
@@ -13,6 +13,7 @@ import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
 
+import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.{ExecutionContext, Future}
 
 private[pekkohttp] class PekkoRequestBody(serverOptions: PekkoHttpServerOptions)(implicit
@@ -27,6 +28,14 @@ private[pekkohttp] class PekkoRequestBody(serverOptions: PekkoHttpServerOptions)
     requestEntity(request, maxBytes).dataBytes
   }
 
+  override def decodeStringBody(request: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+    decodeString(bytes, requestEntity(request, None).contentType)
+
+  // As the String unmarshaller: the entity's charset, falling back to UTF-8 rather than the codec's
+  private def decodeString(bytes: Array[Byte], contentType: ContentType): String =
+    if (bytes.isEmpty) ""
+    else new String(bytes, contentType.charsetOption.map(_.nioCharset).getOrElse(StandardCharsets.UTF_8))
+
   private def requestEntity(request: ServerRequest, maxBytes: Option[Long]): RequestEntity = {
     val entity = request.underlying.asInstanceOf[RequestContext].request.entity
     maxBytes.map(entity.withSizeLimit).getOrElse(entity)
@@ -38,7 +47,8 @@ private[pekkohttp] class PekkoRequestBody(serverOptions: PekkoHttpServerOptions)
       bodyType: RawBodyType[R]
   ): Future[RawValue[R]] = {
     bodyType match {
-      case RawBodyType.StringBody(_)   => implicitly[FromEntityUnmarshaller[String]].apply(body).map(RawValue(_))
+      case RawBodyType.StringBody(_) =>
+        implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(bs => RawValue(decodeString(bs, body.contentType)))
       case RawBodyType.ByteArrayBody   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(RawValue(_))
       case RawBodyType.ByteBufferBody  => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(b => RawValue(b.asByteBuffer))
       case RawBodyType.InputStreamBody =>

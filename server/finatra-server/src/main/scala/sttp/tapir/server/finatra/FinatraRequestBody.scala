@@ -22,8 +22,11 @@ class FinatraRequestBody(serverOptions: FinatraServerOptions) extends RequestBod
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] = {
     val request = finatraRequest(serverRequest)
-    toRaw(request, bodyType, request.content, request.charset.map(Charset.forName))
+    toRaw(request, bodyType, request.content, requestCharset(serverRequest))
   }
+
+  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+    new String(bytes, requestCharset(serverRequest).getOrElse(defaultCharset))
 
   private def toRaw[R](request: Request, bodyType: RawBodyType[R], body: Buf, charset: Option[Charset]): Future[RawValue[R]] = {
     def asByteArray: Array[Byte] = {
@@ -118,4 +121,6 @@ class FinatraRequestBody(serverOptions: FinatraServerOptions) extends RequestBod
     throw new UnsupportedOperationException()
 
   private def finatraRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request]
+
+  private def requestCharset(serverRequest: ServerRequest): Option[Charset] = finatraRequest(serverRequest).charset.map(Charset.forName)
 }

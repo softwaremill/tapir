@@ -26,12 +26,16 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     extends RequestBody[F, S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 
+  // Ignores `bytes`: Vert.x has already buffered the body, and its decoding differs from new String for e.g. US-ASCII
+  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
+    bodyAsString(routingContext(serverRequest), defaultCharset)
+
   // We can ignore maxBytes here, because vertx native body limit check is attached to endpoints by methods in sttp.tapir.server.vertx.handlers
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val rc = routingContext(serverRequest)
     fromVFuture(bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        Future.succeededFuture(RawValue(Option(rc.body().asString(defaultCharset.toString)).getOrElse("")))
+        Future.succeededFuture(RawValue(bodyAsString(rc, defaultCharset)))
       case RawBodyType.ByteArrayBody =>
         Future.succeededFuture(RawValue(Option(rc.body().buffer()).fold(Array.emptyByteArray)(_.getBytes)))
       case RawBodyType.ByteBufferBody =>
@@ -134,6 +138,8 @@ class VertxRequestBody[F[_], S <: Streams[S]](
   private def readFileBytes(fu: FileUpload) = Files.readAllBytes(Paths.get(fu.uploadedFileName()))
 
   private def routingContext(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[RoutingContext]
+
+  private def bodyAsString(rc: RoutingContext, charset: Charset): String = Option(rc.body().asString(charset.toString)).getOrElse("")
 
   private def newTempFilePath(): String = {
     s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"

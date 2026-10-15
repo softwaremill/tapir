@@ -2,7 +2,7 @@ package sttp.tapir.server.http4s
 
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
-import fs2.Chunk
+import fs2.{Chunk, Fallible, Pipe, RaiseThrowable}
 import fs2.io.file.Files
 import fs2.text.decodeWithCharset
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
@@ -13,6 +13,8 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
+
+import java.nio.charset.{Charset => NioCharset}
 
 private[http4s] class Http4sRequestBody[F[_]: Async](
     serverOptions: Http4sServerOptions[F]
@@ -26,7 +28,18 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
     maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
   }
 
+  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: NioCharset): String =
+    fs2.Stream
+      .chunk(Chunk.array(bytes))
+      .through(stringDecoder[Fallible](http4sRequest(serverRequest).charset, defaultCharset))
+      .compile
+      .string
+      .valueOr(throw _)
+
   private def http4sRequest(serverRequest: ServerRequest): Request[F] = serverRequest.underlying.asInstanceOf[Request[F]]
+
+  private def stringDecoder[G[_]: RaiseThrowable](charset: Option[Charset], defaultCharset: NioCharset): Pipe[G, Byte, String] =
+    decodeWithCharset[G](charset.map(_.nioCharset).getOrElse(defaultCharset))
 
   private def toRawFromStream[R](
       serverRequest: ServerRequest,
@@ -40,7 +53,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
 
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        body.through(decodeWithCharset(charset.map(_.nioCharset).getOrElse(defaultCharset))).compile.string.map(RawValue(_))
+        body.through(stringDecoder[F](charset, defaultCharset)).compile.string.map(RawValue(_))
       case RawBodyType.ByteArrayBody   => asByteArray.map(RawValue(_))
       case RawBodyType.ByteBufferBody  => asChunk.map(c => RawValue(c.toByteBuffer))
       case RawBodyType.InputStreamBody =>
