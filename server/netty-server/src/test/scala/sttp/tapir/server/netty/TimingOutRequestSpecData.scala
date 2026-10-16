@@ -36,7 +36,7 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
   def readStatusLine(socket: Socket): IO[String] = IO.blocking {
     val in = new BufferedReader(new InputStreamReader(socket.getInputStream, US_ASCII))
     val statusLine = in.readLine()
-    val headers = Iterator.continually(in.readLine()).takeWhile(_.nonEmpty).toList
+    val headers = Iterator.continually(in.readLine()).takeWhile(line => line != null && line.nonEmpty).toList
 
     if (headers.exists(_.toLowerCase.contains("chunked"))) {
       var chunkSize = in.readLine()
