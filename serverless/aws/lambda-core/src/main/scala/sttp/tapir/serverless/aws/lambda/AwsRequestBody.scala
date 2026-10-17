@@ -35,8 +35,8 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
   }
 
   // a non-base64 body is a String, which asByteArray encodes as UTF-8
-  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
-    new String(bytes, if (awsRequest(serverRequest).isBase64Encoded) defaultCharset else StandardCharsets.UTF_8)
+  override def stringBodyCharset(serverRequest: ServerRequest): Option[Charset] =
+    if (awsRequest(serverRequest).isBase64Encoded) None else Some(StandardCharsets.UTF_8)
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     throw new UnsupportedOperationException

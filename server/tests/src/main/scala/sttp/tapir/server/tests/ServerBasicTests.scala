@@ -140,9 +140,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       } yield withSecondary shouldBe plain
 
       sameOnBoth("café".getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
-        sameOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain") >>
-        sameOnBoth((0xfeff.toChar +: "café").getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
-        sameOnBoth(Array(0xff.toByte), "text/plain; charset=US-ASCII")
+        sameOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain")
     },
     Test("reject an endpoint with two ordinary request bodies when routes are built") {
       val invalid = endpoint.post

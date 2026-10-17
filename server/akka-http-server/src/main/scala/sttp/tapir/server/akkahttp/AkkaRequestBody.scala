@@ -13,7 +13,7 @@ import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.{FileRange, RawBodyType, RawPart, InputStreamRange}
 
-import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContext, Future}
 
 private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(implicit
@@ -28,13 +28,9 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
     requestEntity(request, maxBytes).dataBytes
   }
 
-  override def decodeStringBody(request: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
-    decodeString(bytes, requestEntity(request, None).contentType)
+  override def stringBodyCharset(request: ServerRequest): Option[Charset] = entityCharset(requestEntity(request, None))
 
-  // As the String unmarshaller: the entity's charset, falling back to UTF-8 rather than the codec's
-  private def decodeString(bytes: Array[Byte], contentType: ContentType): String =
-    if (bytes.isEmpty) ""
-    else new String(bytes, contentType.charsetOption.map(_.nioCharset).getOrElse(StandardCharsets.UTF_8))
+  private def entityCharset(entity: HttpEntity): Option[Charset] = entity.contentType.charsetOption.map(_.nioCharset)
 
   private def requestEntity(request: ServerRequest, maxBytes: Option[Long]): RequestEntity = {
     val entity = request.underlying.asInstanceOf[RequestContext].request.entity
@@ -47,8 +43,10 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
       bodyType: RawBodyType[R]
   ): Future[RawValue[R]] = {
     bodyType match {
-      case RawBodyType.StringBody(_) =>
-        implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(bs => RawValue(decodeString(bs, body.contentType)))
+      case RawBodyType.StringBody(defaultCharset) =>
+        implicitly[FromEntityUnmarshaller[Array[Byte]]]
+          .apply(body)
+          .map(bs => RawValue(new String(bs, entityCharset(body).getOrElse(defaultCharset))))
       case RawBodyType.ByteArrayBody   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(RawValue(_))
       case RawBodyType.ByteBufferBody  => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(b => RawValue(b.asByteBuffer))
       case RawBodyType.InputStreamBody =>

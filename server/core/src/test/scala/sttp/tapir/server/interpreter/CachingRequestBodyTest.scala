@@ -19,7 +19,7 @@ class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
   private class CountingRequestBody(
       content: String,
       charset: Charset = StandardCharsets.UTF_8,
-      decodeString: (Array[Byte], Charset) => String = new String(_, _)
+      requestCharset: Option[Charset] = None
   ) extends RequestBody[Identity, NoStreams] {
     var reads = 0
     var lastMaxBytes: Option[Long] = None
@@ -34,19 +34,13 @@ class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
     }
     override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
       throw new IllegalStateException("should not be called")
-    override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
-      decodeString(bytes, defaultCharset)
+    override def stringBodyCharset(serverRequest: ServerRequest): Option[Charset] = requestCharset
   }
 
   private val request = createTestRequest(List("test"))
 
-  it should "decode a string the way the delegate would" in {
-    val delegate =
-      new CountingRequestBody(
-        "café",
-        StandardCharsets.ISO_8859_1,
-        decodeString = (bytes, _) => new String(bytes, StandardCharsets.ISO_8859_1)
-      )
+  it should "decode a string using the delegate's charset" in {
+    val delegate = new CountingRequestBody("café", StandardCharsets.ISO_8859_1, requestCharset = Some(StandardCharsets.ISO_8859_1))
     val caching = new CachingRequestBody[Identity, NoStreams](delegate)
 
     caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), None).value shouldBe "café"

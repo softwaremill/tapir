@@ -25,8 +25,10 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] =
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        // a decoding failure must fail F, not escape it (e.g. as a ZIO defect, bypassing error handling)
-        bytes(serverRequest, maxBytes).flatMap(bs => m.fromTry(Try(RawValue(delegate.decodeStringBody(serverRequest, bs, defaultCharset)))))
+        // the charset may come from an invalid header; that failure must fail F, not escape it (e.g. as a ZIO defect)
+        bytes(serverRequest, maxBytes).flatMap(bs =>
+          m.fromTry(Try(RawValue(new String(bs, delegate.stringBodyCharset(serverRequest).getOrElse(defaultCharset)))))
+        )
       case RawBodyType.ByteArrayBody =>
         // identity codec: without the clone, a caller mutating the array would corrupt the cache
         bytes(serverRequest, maxBytes).map(bs => RawValue(bs.clone()))
@@ -45,8 +47,7 @@ private[tapir] class CachingRequestBody[F[_], S](delegate: RequestBody[F, S])(im
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     delegate.toStream(serverRequest, maxBytes).asInstanceOf[streams.BinaryStream]
 
-  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
-    delegate.decodeStringBody(serverRequest, bytes, defaultCharset)
+  override def stringBodyCharset(serverRequest: ServerRequest): Option[Charset] = delegate.stringBodyCharset(serverRequest)
 
   // only the first call's maxBytes applies; both phases derive it from the same EndpointInfo, so they agree
   private def bytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =

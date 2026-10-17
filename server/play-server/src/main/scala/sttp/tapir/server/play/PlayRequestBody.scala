@@ -28,11 +28,10 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] = {
     import mat.executionContext
     val request = playRequest(serverRequest)
-    toRaw(request, bodyType, requestCharset(serverRequest), () => request.body, None, maxBytes)
+    toRaw(request, bodyType, stringBodyCharset(serverRequest), () => request.body, None, maxBytes)
   }
 
-  override def decodeStringBody(serverRequest: ServerRequest, bytes: Array[Byte], defaultCharset: Charset): String =
-    new String(bytes, requestCharset(serverRequest).getOrElse(defaultCharset))
+  override def stringBodyCharset(serverRequest: ServerRequest): Option[Charset] = playRequest(serverRequest).charset.map(Charset.forName)
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     val stream = playRequest(serverRequest).body
@@ -151,8 +150,6 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
   }
 
   private def playRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request[Source[ByteString, Any]]]
-
-  private def requestCharset(serverRequest: ServerRequest): Option[Charset] = playRequest(serverRequest).charset.map(Charset.forName)
 }
 
 class PlayBodyParserException(val result: Result) extends Exception
