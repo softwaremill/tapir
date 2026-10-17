@@ -72,7 +72,7 @@ private[tapir] object EndpointBodyVerifier {
       if (securityPrimaryBodies.nonEmpty && inPrimaryBodies.nonEmpty)
         List(
           s"Endpoint $shown declares a request body in both `securityIn` and `in`. Only one may be part of the API " +
-            s"contract. If both should decode the same request body, mark the `securityIn` one with `.asSecondary`." +
+            s"contract. If both should decode the same request body, mark one of them with `.asSecondary`." +
             hiddenSchemaHint
         )
       else if (securityBodies.size > 1)
@@ -102,7 +102,7 @@ private[tapir] object EndpointBodyVerifier {
       if (secondary.nonEmpty && primaryBodies.isEmpty)
         List(
           s"Endpoint $shown reads a secondary request body, but no request body is part of the API contract: it " +
-            s"will be absent from the documentation and clients will not send it. Either declare the body in `in` " +
+            s"will be absent from the documentation and clients will not send it. Either declare an ordinary body " +
             s"as well, or drop `.asSecondary` and use the body input directly."
         )
       else Nil
