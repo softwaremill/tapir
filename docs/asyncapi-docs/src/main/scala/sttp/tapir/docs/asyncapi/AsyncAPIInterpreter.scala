@@ -21,7 +21,7 @@ trait AsyncAPIInterpreter {
       e: Endpoint[A, I, E, O, R],
       info: Info,
       servers: Iterable[(String, Server)],
-      docsExtensions: List[DocsExtension[_]]
+      docsExtensions: List[DocsExtension[?]]
   ): AsyncAPI = EndpointToAsyncAPIDocs.toAsyncAPI(info, servers, Seq(e), asyncAPIDocsOptions, docsExtensions)
 
   def toAsyncAPI[R, F[_]](se: ServerEndpoint[R, F], title: String, version: String): AsyncAPI =
@@ -45,7 +45,7 @@ trait AsyncAPIInterpreter {
       se: ServerEndpoint[R, F],
       info: Info,
       servers: Iterable[(String, Server)],
-      docsExtensions: List[DocsExtension[_]]
+      docsExtensions: List[DocsExtension[?]]
   ): AsyncAPI = EndpointToAsyncAPIDocs.toAsyncAPI(info, servers, Seq(se.endpoint), asyncAPIDocsOptions, docsExtensions)
 
   def toAsyncAPI(es: Iterable[AnyEndpoint], title: String, version: String): AsyncAPI =
@@ -60,31 +60,31 @@ trait AsyncAPIInterpreter {
       es: Iterable[AnyEndpoint],
       info: Info,
       servers: Iterable[(String, Server)],
-      docsExtensions: List[DocsExtension[_]]
+      docsExtensions: List[DocsExtension[?]]
   ): AsyncAPI = EndpointToAsyncAPIDocs.toAsyncAPI(info, servers, es, asyncAPIDocsOptions, docsExtensions)
 
-  def serverEndpointsToAsyncAPI[F[_]](ses: Iterable[ServerEndpoint[_, F]], title: String, version: String): AsyncAPI =
+  def serverEndpointsToAsyncAPI[F[_]](ses: Iterable[ServerEndpoint[?, F]], title: String, version: String): AsyncAPI =
     serverEndpointsToAsyncAPI(ses, Info(title, version), Nil)
   def serverEndpointsToAsyncAPI[F[_]](
-      ses: Iterable[ServerEndpoint[_, F]],
+      ses: Iterable[ServerEndpoint[?, F]],
       title: String,
       version: String,
       servers: Iterable[(String, Server)]
   ): AsyncAPI =
     serverEndpointsToAsyncAPI(ses, Info(title, version), servers)
-  def serverEndpointsToAsyncAPI[F[_]](ses: Iterable[ServerEndpoint[_, F]], info: Info): AsyncAPI =
+  def serverEndpointsToAsyncAPI[F[_]](ses: Iterable[ServerEndpoint[?, F]], info: Info): AsyncAPI =
     serverEndpointsToAsyncAPI(ses, info, Nil)
   def serverEndpointsToAsyncAPI[F[_]](
-      ses: Iterable[ServerEndpoint[_, F]],
+      ses: Iterable[ServerEndpoint[?, F]],
       info: Info,
       servers: Iterable[(String, Server)]
   ): AsyncAPI =
     EndpointToAsyncAPIDocs.toAsyncAPI(info, servers, ses.map(_.endpoint), asyncAPIDocsOptions, List.empty)
   def serverEndpointsToAsyncAPI[F[_]](
-      ses: Iterable[ServerEndpoint[_, F]],
+      ses: Iterable[ServerEndpoint[?, F]],
       info: Info,
       servers: Iterable[(String, Server)],
-      docsExtensions: List[DocsExtension[_]]
+      docsExtensions: List[DocsExtension[?]]
   ): AsyncAPI = EndpointToAsyncAPIDocs.toAsyncAPI(info, servers, ses.map(_.endpoint), asyncAPIDocsOptions, docsExtensions)
 }
 

@@ -14,12 +14,12 @@ import scala.collection.immutable.ListMap
 
 private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     tschemaToASchema: TSchemaToASchema,
-    codecToMessageKey: Map[Codec[_, _, _ <: CodecFormat], MessageKey],
+    codecToMessageKey: Map[Codec[?, ?, ? <: CodecFormat], MessageKey],
     options: AsyncAPIDocsOptions
 ) {
   def apply(
       e: AnyEndpoint,
-      ws: WebSocketBodyWrapper[_, _]
+      ws: WebSocketBodyWrapper[?, ?]
   ): (String, ChannelItem) = {
     val inputs = e.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
@@ -46,9 +46,9 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 
   private def addMetaDataFromInfo(
       name: String,
-      codec: Codec[_, _, _ <: CodecFormat],
-      info: EndpointIO.Info[_]
-  ): ((String, Codec[_, _, _ <: CodecFormat]), ASchema) = {
+      codec: Codec[?, ?, ? <: CodecFormat],
+      info: EndpointIO.Info[?]
+  ): ((String, Codec[?, ?, ? <: CodecFormat]), ASchema) = {
     val schemaRef = tschemaToASchema(codec)
     schemaRef match {
       case schema if schema.$ref.isEmpty =>
@@ -61,7 +61,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     }
   }
 
-  private def parameters(inputs: Vector[EndpointInput.Basic[_]]): ListMap[String, ReferenceOr[Parameter]] = {
+  private def parameters(inputs: Vector[EndpointInput.Basic[?]]): ListMap[String, ReferenceOr[Parameter]] = {
     inputs.collect { case EndpointInput.PathCapture(Some(name), codec, info) =>
       name -> Right(Parameter(info.description, Some(tschemaToASchema(codec)), None, DocsExtensions.fromIterable(info.docsExtensions)))
     }.toListMap
@@ -70,8 +70,8 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
   private def endpointToOperation(
       id: String,
       e: AnyEndpoint,
-      codec: Codec[_, _, _ <: CodecFormat],
-      operationInfo: EndpointIO.Info[_]
+      codec: Codec[?, ?, ? <: CodecFormat],
+      operationInfo: EndpointIO.Info[?]
   ): Operation = {
     Operation(
       Some(id),
@@ -86,7 +86,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     )
   }
 
-  private def objectSchemaFromFields(fields: Vector[((String, Codec[_, _, _ <: CodecFormat]), ASchema)]): Option[ASchema] = {
+  private def objectSchemaFromFields(fields: Vector[((String, Codec[?, ?, ? <: CodecFormat]), ASchema)]): Option[ASchema] = {
     if (fields.isEmpty) None
     else
       Some {

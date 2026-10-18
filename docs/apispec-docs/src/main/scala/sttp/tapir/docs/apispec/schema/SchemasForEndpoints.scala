@@ -12,7 +12,7 @@ class SchemasForEndpoints(
     schemaName: SName => String,
     markOptionsAsNullable: Boolean,
     failOnDuplicateSchemaName: Boolean,
-    additionalOutputs: List[EndpointOutput[_]]
+    additionalOutputs: List[EndpointOutput[?]]
 ) {
 
   /** @return
@@ -38,7 +38,7 @@ class SchemasForEndpoints(
     (schemaIds.values.toListMap, tschemaToASchema)
   }
 
-  private def forInput(input: EndpointInput[_]): List[KeyedSchema] = {
+  private def forInput(input: EndpointInput[?]): List[KeyedSchema] = {
     input match {
       case EndpointInput.FixedMethod(_, _, _)     => List.empty
       case EndpointInput.FixedPath(_, _, _)       => List.empty
@@ -55,7 +55,7 @@ class SchemasForEndpoints(
     }
   }
 
-  private def forOutput(output: EndpointOutput[_]): List[KeyedSchema] = {
+  private def forOutput(output: EndpointOutput[?]): List[KeyedSchema] = {
     output match {
       case EndpointOutput.OneOf(variants, _)            => variants.flatMap(variant => forOutput(variant.output)).toList
       case EndpointOutput.StatusCode(_, _, _)           => List.empty
@@ -69,7 +69,7 @@ class SchemasForEndpoints(
     }
   }
 
-  private def forIO(io: EndpointIO[_]): List[KeyedSchema] = {
+  private def forIO(io: EndpointIO[?]): List[KeyedSchema] = {
     io match {
       case EndpointIO.Pair(left, right, _, _)                            => forIO(left) ++ forIO(right)
       case EndpointIO.Header(_, codec, _)                                => ToKeyedSchemas(codec)

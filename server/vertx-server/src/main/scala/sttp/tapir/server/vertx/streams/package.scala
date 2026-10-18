@@ -24,7 +24,7 @@ package object streams {
     override def webSocketPipe[REQ, RESP](
         readStream: ReadStream[WebSocketFrame],
         pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, VertxStreams]
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, VertxStreams]
     ): ReadStream[WebSocketFrame] = {
       val stream0 = optionallyConcatenateFrames(readStream, o.concatenateFragmentedFrames)
       val stream1 = optionallyIgnorePong(stream0, o.ignorePong)

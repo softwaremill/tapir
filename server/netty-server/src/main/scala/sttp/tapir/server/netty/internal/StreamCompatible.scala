@@ -31,7 +31,7 @@ private[netty] trait StreamCompatible[S <: Streams[S]] {
 
   def asWsProcessor[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S],
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, S],
       ctx: ChannelHandlerContext
   ): Processor[WebSocketFrame, WebSocketFrame]
 }

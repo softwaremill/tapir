@@ -136,6 +136,7 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
 
   it should "validate either" in {
     val schema = Schema.schemaForEither(
+      using
       Schema.schemaForInt.validate(Validator.min(1)),
       Schema.schemaForString.validate(Validator.minLength(1))
     )
@@ -151,6 +152,7 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
     case class EitherWrapper[L, R](e: Either[L, R])
     val schema = Schema
       .schemaForEither(
+        using
         Schema.schemaForInt.validate(Validator.min(1)),
         Schema.schemaForString.validate(Validator.minLength(1))
       )

@@ -1,6 +1,6 @@
 package sttp.tapir.server.pekkohttp
 
-import org.apache.pekko.http.scaladsl.model.{AttributeKeys, Uri => PekkoUri}
+import org.apache.pekko.http.scaladsl.model.{AttributeKeys, RemoteAddress, Uri => PekkoUri}
 import org.apache.pekko.http.scaladsl.server.RequestContext
 import sttp.model.Uri.{Authority, FragmentSegment, HostSegment, PathSegments, QuerySegment}
 import sttp.model.{Header, HeaderNames, Method, QueryParams, Uri}
@@ -13,8 +13,11 @@ import scala.collection.immutable.Seq
 
 private[pekkohttp] case class PekkoServerRequest(ctx: RequestContext, attributes: AttributeMap = AttributeMap.Empty) extends ServerRequest {
   override def protocol: String = ctx.request.protocol.value
-  private lazy val remote = ctx.request
-    .attribute(AttributeKeys.remoteAddress)
+  // reading the attributes map directly, as `HttpRequest.attribute` requires an implicit `JavaMapping`, which is
+  // private to pekko-http (and won't be found by Scala 3.10+)
+  private lazy val remote = ctx.request.attributes
+    .get(AttributeKeys.remoteAddress)
+    .collect { case ra: RemoteAddress => ra }
     .flatMap(_.toIP)
 
   override def connectionInfo: ConnectionInfo = {

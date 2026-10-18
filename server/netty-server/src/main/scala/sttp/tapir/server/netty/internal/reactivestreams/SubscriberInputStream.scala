@@ -21,13 +21,13 @@ private[netty] class SubscriberInputStream(maxBufferedChunks: Int = 1) extends I
   import SubscriberInputStream._
 
   // volatile because used in both InputStream & Subscriber methods
-  @volatile private[this] var closed = false
+  @volatile private var closed = false
 
   // Calls on the subscription must be synchronized in order to satisfy the Reactive Streams spec
   // (https://github.com/reactive-streams/reactive-streams-jvm?tab=readme-ov-file#2-subscriber-code - rule 7)
   // because they are called both from InputStream & Subscriber methods.
-  private[this] var subscription: Subscription = _
-  private[this] val lock = new ReentrantLock
+  private var subscription: Subscription = null
+  private val lock = new ReentrantLock
 
   private def locked[T](code: => T): T =
     try {
@@ -37,7 +37,7 @@ private[netty] class SubscriberInputStream(maxBufferedChunks: Int = 1) extends I
       lock.unlock()
     }
 
-  private[this] var currentItem: Item = _
+  private var currentItem: Item = null
   // the queue serves as a buffer to allow for possible parallelism between the subscriber and the publisher
   private val queue = new LinkedBlockingQueue[Item](maxBufferedChunks + 1) // +1 to have a spot for End/Error
 

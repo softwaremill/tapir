@@ -101,7 +101,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
 
     val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
-        List(endpoint.in("p1" and jsonBody[GenericEntity[String]]), endpoint.in("p2" and jsonBody[GenericEntity[Int]])),
+        List(endpoint.in("p1" `and` jsonBody[GenericEntity[String]]), endpoint.in("p2" `and` jsonBody[GenericEntity[Int]])),
         Info("Fruits", "1.0")
       )
       .toYaml
