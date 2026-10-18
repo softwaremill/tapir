@@ -1116,7 +1116,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(503), emptyOutput.description("NiFi instance is not ready for serving request, or temporarily overloaded. Retrying the same request later may be successful"))(()),
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(oneOf[Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream]](
-        oneOfVariantValueMatcher(sttp.model.StatusCode(202), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], CodecFormat.OctetStream()).description("").toEndpointIO.map(Some(_))(_.orNull)){ case Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream) => true },
+        oneOfVariantValueMatcher(sttp.model.StatusCode(202), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], CodecFormat.OctetStream()).description("").toEndpointIO.map(Some(_))(_.orNull)){ case Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream @scala.unchecked) => true },
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(200), emptyOutput.description("There is no flow file to return."))(None)))
       .tags(List("DataTransfer"))
 
@@ -2162,7 +2162,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(oneOf[(Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], DownloadFlowFileContentResponseHeader)](
         oneOfVariantValueMatcher(sttp.model.StatusCode(206), emptyOutputAs(None).description("Partial Content with range of bytes requested").and(emptyOutputAs(DownloadFlowFileContentResponseHeader206))){ case (None, DownloadFlowFileContentResponseHeader206) => true},
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull).and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])")).map(DownloadFlowFileContentResponseHeader200(_))(_.`Content-Type`))){ case (Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream), (_: DownloadFlowFileContentResponseHeader200)) => true }))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull).and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])")).map(DownloadFlowFileContentResponseHeader200(_))(_.`Content-Type`))){ case (Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream @scala.unchecked), (_: DownloadFlowFileContentResponseHeader200)) => true }))
       .tags(List("FlowFileQueues"))
 
   type CreateFlowFileListingEndpoint = Endpoint[Unit, String, Unit, ListingRequestEntity, Any]
@@ -3841,7 +3841,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(oneOf[(Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], GetInputContentResponseHeader)](
         oneOfVariantValueMatcher(sttp.model.StatusCode(206), emptyOutputAs(None).description("Partial Content with range of bytes requested").and(emptyOutputAs(GetInputContentResponseHeader206))){ case (None, GetInputContentResponseHeader206) => true},
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull).and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])")).map(GetInputContentResponseHeader200(_))(_.`Content-Type`))){ case (Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream), (_: GetInputContentResponseHeader200)) => true }))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull).and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])")).map(GetInputContentResponseHeader200(_))(_.`Content-Type`))){ case (Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream @scala.unchecked), (_: GetInputContentResponseHeader200)) => true }))
       .tags(List("ProvenanceEvents"))
 
   type GetOutputContentEndpoint = Endpoint[Unit, (LongParameterInt, Option[String], Option[String]), Unit, (Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], GetOutputContentResponseHeader), sttp.capabilities.pekko.PekkoStreams]
@@ -3861,7 +3861,7 @@ object TapirGeneratedEndpoints {
         oneOfVariantSingletonMatcher(sttp.model.StatusCode(401), emptyOutput.description("Client could not be authenticated."))(())))
       .out(oneOf[(Option[sttp.capabilities.pekko.PekkoStreams.BinaryStream], GetOutputContentResponseHeader)](
         oneOfVariantValueMatcher(sttp.model.StatusCode(206), emptyOutputAs(None).description("Partial Content with range of bytes requested").and(emptyOutputAs(GetOutputContentResponseHeader206))){ case (None, GetOutputContentResponseHeader206) => true},
-        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull).and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])")).map(GetOutputContentResponseHeader200(_))(_.`Content-Type`))){ case (Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream), (_: GetOutputContentResponseHeader200)) => true }))
+        oneOfVariantValueMatcher(sttp.model.StatusCode(200), streamBody(sttp.capabilities.pekko.PekkoStreams)(Schema.binary[StreamingOutput], `*/*CodecFormat`()).description("").toEndpointIO.map(Some(_))(_.orNull).and(header[String]("Content-Type").validate(Validator.pattern("([^*]+|[*])/([^*]+|[*])")).map(GetOutputContentResponseHeader200(_))(_.`Content-Type`))){ case (Some(_: sttp.capabilities.pekko.PekkoStreams.BinaryStream @scala.unchecked), (_: GetOutputContentResponseHeader200)) => true }))
       .tags(List("ProvenanceEvents"))
 
   type SubmitLineageRequestEndpoint = Endpoint[Unit, LineageEntity, Unit, LineageEntity, Any]
