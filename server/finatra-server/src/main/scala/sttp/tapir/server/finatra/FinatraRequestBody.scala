@@ -22,10 +22,8 @@ class FinatraRequestBody(serverOptions: FinatraServerOptions) extends RequestBod
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] = {
     val request = finatraRequest(serverRequest)
-    toRaw(request, bodyType, request.content, stringBodyCharset(serverRequest))
+    toRaw(request, bodyType, request.content, RequestBody.requestCharset(serverRequest))
   }
-
-  override def stringBodyCharset(serverRequest: ServerRequest): Option[Charset] = finatraRequest(serverRequest).charset.map(Charset.forName)
 
   private def toRaw[R](request: Request, bodyType: RawBodyType[R], body: Buf, charset: Option[Charset]): Future[RawValue[R]] = {
     def asByteArray: Array[Byte] = {

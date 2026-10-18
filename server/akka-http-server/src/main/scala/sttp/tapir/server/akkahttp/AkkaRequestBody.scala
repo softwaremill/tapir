@@ -22,15 +22,11 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
 ) extends RequestBody[Future, AkkaStreams] {
   override val streams: AkkaStreams = AkkaStreams
   override def toRaw[R](request: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] =
-    toRawFromEntity(request, requestEntity(request, maxBytes), bodyType)
+    toRawFromEntity(request, requestEntity(request, maxBytes), bodyType, RequestBody.requestCharset(request))
 
   override def toStream(request: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     requestEntity(request, maxBytes).dataBytes
   }
-
-  override def stringBodyCharset(request: ServerRequest): Option[Charset] = entityCharset(requestEntity(request, None))
-
-  private def entityCharset(entity: HttpEntity): Option[Charset] = entity.contentType.charsetOption.map(_.nioCharset)
 
   private def requestEntity(request: ServerRequest, maxBytes: Option[Long]): RequestEntity = {
     val entity = request.underlying.asInstanceOf[RequestContext].request.entity
@@ -40,13 +36,14 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
   private def toRawFromEntity[R](
       request: ServerRequest,
       body: HttpEntity,
-      bodyType: RawBodyType[R]
+      bodyType: RawBodyType[R],
+      charset: Option[Charset]
   ): Future[RawValue[R]] = {
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
         implicitly[FromEntityUnmarshaller[Array[Byte]]]
           .apply(body)
-          .map(bs => RawValue(new String(bs, entityCharset(body).getOrElse(defaultCharset))))
+          .map(bs => RawValue(new String(bs, charset.getOrElse(defaultCharset))))
       case RawBodyType.ByteArrayBody   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(RawValue(_))
       case RawBodyType.ByteBufferBody  => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(b => RawValue(b.asByteBuffer))
       case RawBodyType.InputStreamBody =>
@@ -86,7 +83,7 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
   }
 
   private def toRawPart[R](request: ServerRequest, part: Multipart.FormData.BodyPart, bodyType: RawBodyType[R]): Future[Part[R]] = {
-    toRawFromEntity(request, part.entity, bodyType)
+    toRawFromEntity(request, part.entity, bodyType, part.entity.contentType.charsetOption.map(_.nioCharset))
       .map(r =>
         Part(
           part.name,

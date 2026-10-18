@@ -4,7 +4,6 @@ import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import fs2.Chunk
 import fs2.io.file.Files
-import fs2.text.decodeWithCharset
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.{EntityDecoder, Headers, Media, Request, multipart}
 import sttp.capabilities.fs2.Fs2Streams
@@ -21,10 +20,8 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
 ) extends RequestBody[F, Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
-    toRawFromStream(serverRequest, toStream(serverRequest, maxBytes), bodyType, stringBodyCharset(serverRequest), maxBytes)
+    toRawFromStream(serverRequest, toStream(serverRequest, maxBytes), bodyType, RequestBody.requestCharset(serverRequest), maxBytes)
   }
-
-  override def stringBodyCharset(serverRequest: ServerRequest): Option[Charset] = http4sRequest(serverRequest).charset.map(_.nioCharset)
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     val stream = http4sRequest(serverRequest).body
@@ -45,7 +42,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
 
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        body.through(decodeWithCharset(charset.getOrElse(defaultCharset))).compile.string.map(RawValue(_))
+        asByteArray.map(bs => RawValue(new String(bs, charset.getOrElse(defaultCharset))))
       case RawBodyType.ByteArrayBody   => asByteArray.map(RawValue(_))
       case RawBodyType.ByteBufferBody  => asChunk.map(c => RawValue(c.toByteBuffer))
       case RawBodyType.InputStreamBody =>

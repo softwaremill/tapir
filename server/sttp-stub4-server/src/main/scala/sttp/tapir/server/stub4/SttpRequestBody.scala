@@ -30,7 +30,8 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     body(serverRequest) match {
       case Left(bytes) =>
         bodyType match {
-          case RawBodyType.StringBody(charset)  => ME.unit(RawValue(new String(bytes, charset)))
+          case RawBodyType.StringBody(charset) =>
+            ME.unit(RawValue(new String(bytes, RequestBody.requestCharset(serverRequest).getOrElse(charset))))
           case RawBodyType.ByteArrayBody        => ME.unit(RawValue(bytes))
           case RawBodyType.ByteBufferBody       => ME.unit(RawValue(ByteBuffer.wrap(bytes)))
           case RawBodyType.InputStreamBody      => ME.unit(RawValue(new ByteArrayInputStream(bytes)))

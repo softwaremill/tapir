@@ -66,7 +66,8 @@ object TestUtil {
   def createTestRequest(
       path: List[String],
       queryParams: Seq[(String, String)] = Nil,
-      _method: Method = Method.GET
+      _method: Method = Method.GET,
+      _headers: immutable.Seq[Header] = Nil
   ): ServerRequest = {
     val queryString = if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
     val pathString = if (path.nonEmpty) s"/${path.mkString("/")}" else ""
@@ -79,7 +80,7 @@ object TestUtil {
       override def queryParameters: QueryParams = QueryParams.fromSeq(queryParams)
       override def method: Method = _method
       override def uri: Uri = uri"http://example.com$pathString$queryString"
-      override def headers: immutable.Seq[Header] = Nil
+      override def headers: immutable.Seq[Header] = _headers
       override def attribute[T](k: AttributeKey[T]): Option[T] = None
       override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
       override def withUnderlying(underlying: Any): ServerRequest = this

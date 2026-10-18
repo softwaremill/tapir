@@ -3,6 +3,7 @@ package sttp.tapir.server.interpreter
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.model.{Header, MediaType}
 import sttp.monad.{IdentityMonad, MonadError}
 import sttp.shared.Identity
 import sttp.tapir._
@@ -16,11 +17,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
   private implicit val idMonad: MonadError[Identity] = IdentityMonad
 
-  private class CountingRequestBody(
-      content: String,
-      charset: Charset = StandardCharsets.UTF_8,
-      requestCharset: Option[Charset] = None
-  ) extends RequestBody[Identity, NoStreams] {
+  private class CountingRequestBody(content: String, charset: Charset = StandardCharsets.UTF_8) extends RequestBody[Identity, NoStreams] {
     var reads = 0
     var lastMaxBytes: Option[Long] = None
     override val streams: Streams[NoStreams] = NoStreams
@@ -34,16 +31,16 @@ class CachingRequestBodyTest extends AnyFlatSpec with Matchers {
     }
     override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
       throw new IllegalStateException("should not be called")
-    override def stringBodyCharset(serverRequest: ServerRequest): Option[Charset] = requestCharset
   }
 
   private val request = createTestRequest(List("test"))
 
-  it should "decode a string using the delegate's charset" in {
-    val delegate = new CountingRequestBody("café", StandardCharsets.ISO_8859_1, requestCharset = Some(StandardCharsets.ISO_8859_1))
+  it should "decode a string using the request's charset" in {
+    val delegate = new CountingRequestBody("café", StandardCharsets.ISO_8859_1)
     val caching = new CachingRequestBody[Identity, NoStreams](delegate)
+    val isoRequest = createTestRequest(List("test"), _headers = List(Header.contentType(MediaType.TextPlain.charset("ISO-8859-1"))))
 
-    caching.toRaw(request, RawBodyType.StringBody(StandardCharsets.UTF_8), None).value shouldBe "café"
+    caching.toRaw(isoRequest, RawBodyType.StringBody(StandardCharsets.UTF_8), None).value shouldBe "café"
   }
 
   it should "serve different bytes-like representations from one read" in {

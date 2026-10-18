@@ -109,7 +109,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       basicRequest.get(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe Symbol("left"))
     },
     testServer(
-      "a secondary body doesn't change how the primary string body is decoded",
+      "decode a string body with the request's charset, else the codec's, with or without a secondary body",
       route(
         List[ServerEndpoint[Any, F]](
           endpoint.post
@@ -134,13 +134,16 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
         .send(backend)
         .map(r => (r.code, r.body))
 
-      def sameOnBoth(body: Array[Byte], contentType: String) = for {
+      def decodedOnBoth(body: Array[Byte], contentType: String) = for {
         plain <- send("plain", body, contentType)
         withSecondary <- send("with-secondary", body, contentType)
-      } yield withSecondary shouldBe plain
+      } yield {
+        plain shouldBe ((StatusCode.Ok, "café"))
+        withSecondary shouldBe plain
+      }
 
-      sameOnBoth("café".getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
-        sameOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain")
+      decodedOnBoth("café".getBytes(StandardCharsets.UTF_8), "text/plain; charset=UTF-8") >>
+        decodedOnBoth("café".getBytes(StandardCharsets.ISO_8859_1), "text/plain")
     },
     Test("reject an endpoint with two ordinary request bodies when routes are built") {
       val invalid = endpoint.post

@@ -15,7 +15,6 @@ import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.{ExecutionContext, Future}
-import java.nio.charset.Charset
 
 private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     serverOptions: ArmeriaServerOptions[F],
@@ -34,9 +33,6 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
       .asInstanceOf[streams.BinaryStream]
   }
 
-  override def stringBodyCharset(serverRequest: ServerRequest): Option[Charset] =
-    Option(armeriaCtx(serverRequest).request().contentType()).flatMap(ct => Option(ct.charset()))
-
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val ctx = armeriaCtx(serverRequest)
     val request = ctx.request()
@@ -46,7 +42,7 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
         request
           .aggregate()
           .thenApply[RawValue[R]](agg =>
-            RawValue(new String(agg.content().array(), stringBodyCharset(serverRequest).getOrElse(defaultCharset)))
+            RawValue(new String(agg.content().array(), RequestBody.requestCharset(serverRequest).getOrElse(defaultCharset)))
           )
           .toScala
       case RawBodyType.ByteArrayBody =>
