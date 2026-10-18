@@ -34,7 +34,7 @@ class ServerCancellationTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServ
         },
       "Client cancelling request triggers cancellation on the server"
     ) { (backend, baseUri) =>
-      val resp: IO[_] = basicRequest.get(uri"$baseUri").readTimeout(300.millis).send(backend)
+      val resp: IO[?] = basicRequest.get(uri"$baseUri").readTimeout(300.millis).send(backend)
 
       resp
         .map(result => fail(s"Expected cancellation, but received a result: $result"))

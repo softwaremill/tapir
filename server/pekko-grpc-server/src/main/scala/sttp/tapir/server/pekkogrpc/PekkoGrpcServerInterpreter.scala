@@ -9,8 +9,8 @@ import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import scala.concurrent.{ExecutionContext, Future}
 
 trait PekkoGrpcServerInterpreter extends PekkoHttpServerInterpreter {
-  override def toRoute(ses: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]): Route =
-    toRoute(new PekkoGrpcRequestBody(pekkoHttpServerOptions)(_, _), new PekkoGrpcToResponseBody()(_, _))(ses)
+  override def toRoute(ses: List[ServerEndpoint[PekkoStreams & WebSockets, Future]]): Route =
+    toRoute(new PekkoGrpcRequestBody(pekkoHttpServerOptions)(using _, _), new PekkoGrpcToResponseBody()(using _, _))(ses)
 
 }
 

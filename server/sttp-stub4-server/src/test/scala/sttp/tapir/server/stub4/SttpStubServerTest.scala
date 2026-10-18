@@ -61,7 +61,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
   it should "combine tapir endpoint with sttp stub - multiple inputs" in {
     // given
     val endpoint = sttp.tapir.endpoint
-      .in("api" / path[String]("id") and query[Int]("amount"))
+      .in("api" / path[String]("id") `and` query[Int]("amount"))
       .post
       .out(jsonBody[ResponseWrapper])
 

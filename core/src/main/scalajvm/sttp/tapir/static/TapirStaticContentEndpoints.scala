@@ -206,7 +206,7 @@ trait TapirStaticContentEndpoints {
     */
   @deprecated("Use sttp.tapir.files.staticFileGetServerEndpoint", since = "1.3.0")
   def fileGetServerEndpoint[F[_]](prefix: EndpointInput[Unit])(systemPath: String): ServerEndpoint[Any, F] =
-    ServerEndpoint.public(removePath(filesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get(systemPath)(m))
+    ServerEndpoint.public(removePath(filesGetEndpoint(prefix)), (m: MonadError[F]) => Files.get[F](systemPath)(m))
 
   /** A server endpoint, which exposes resources available from the given `classLoader`, using the given `prefix`. Typically, the prefix is
     * a path, but it can also contain other inputs. For example:

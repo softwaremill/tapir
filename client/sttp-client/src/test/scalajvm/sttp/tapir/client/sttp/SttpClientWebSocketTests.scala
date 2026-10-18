@@ -12,14 +12,14 @@ import sttp.tapir.client.tests.ClientWebSocketTests
 import sttp.tapir.client.sttp.ws.fs2._
 import scala.concurrent.Future
 
-class SttpClientWebSocketTests extends SttpClientTests[WebSockets with Fs2Streams[IO]] with ClientWebSocketTests[Fs2Streams[IO]] {
+class SttpClientWebSocketTests extends SttpClientTests[WebSockets & Fs2Streams[IO]] with ClientWebSocketTests[Fs2Streams[IO]] {
   private implicit val ioRT: IORuntime = cats.effect.unsafe.implicits.global
 
   override val streams: Fs2Streams[IO] = Fs2Streams[IO]
-  override def wsToPipe: WebSocketToPipe[WebSockets with Fs2Streams[IO]] = implicitly
+  override def wsToPipe: WebSocketToPipe[WebSockets & Fs2Streams[IO]] = implicitly
 
   override def sendAndReceiveLimited[A, B](p: Pipe[IO, A, B], receiveCount: Port, as: List[A]): Future[List[B]] = {
-    Stream(as: _*).through(p).take(receiveCount).compile.toList.unsafeToFuture()
+    Stream(as*).through(p).take(receiveCount).compile.toList.unsafeToFuture()
   }
 
   webSocketTests()
@@ -30,7 +30,7 @@ class SttpClientWebSocketTests extends SttpClientTests[WebSockets with Fs2Stream
       .resource[IO]()
       .use { asyncHttpClientBackend =>
         def sendAsResponse[A, I, E, O](
-            e: Endpoint[A, I, E, O, WebSockets with Fs2Streams[IO]],
+            e: Endpoint[A, I, E, O, WebSockets & Fs2Streams[IO]],
             port: Port,
             securityArgs: A,
             args: I,

@@ -57,13 +57,13 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
   private val endpoints = {
     def putSecretInQuery(uri: Uri): Identity[Uri] = uri.addQuerySegment(QuerySegment.KeyValue("token", "supersecret"))
     List(
-      ("basic", basic, (r: Request[_]) => r.header("Authorization", "Basic dXNlcjpzZWNyZXQ=")),
-      ("bearer", bearer, (r: Request[_]) => r.header("Authorization", "Bearer kajsdhf[")),
-      ("lower case bearer", bearer, (r: Request[_]) => r.header("Authorization", "bearer kajsdhf[")),
-      ("apiKey in query param", apiKeyInQuery, (r: Request[_]) => r.copy(uri = putSecretInQuery(r.uri))),
-      ("apiKey in header", apiKeyInHeader, (r: Request[_]) => r.header("x-api-key", "secret api key")),
-      ("old token in header", apiKeyAlternative, (r: Request[_]) => r.header("token-old", "secret token")),
-      ("new token in header", apiKeyAlternative, (r: Request[_]) => r.header("token-new", "secret token"))
+      ("basic", basic, (r: Request[?]) => r.header("Authorization", "Basic dXNlcjpzZWNyZXQ=")),
+      ("bearer", bearer, (r: Request[?]) => r.header("Authorization", "Bearer kajsdhf[")),
+      ("lower case bearer", bearer, (r: Request[?]) => r.header("Authorization", "bearer kajsdhf[")),
+      ("apiKey in query param", apiKeyInQuery, (r: Request[?]) => r.copy(uri = putSecretInQuery(r.uri))),
+      ("apiKey in header", apiKeyInHeader, (r: Request[?]) => r.header("x-api-key", "secret api key")),
+      ("old token in header", apiKeyAlternative, (r: Request[?]) => r.header("token-old", "secret token")),
+      ("new token in header", apiKeyAlternative, (r: Request[?]) => r.header("token-new", "secret token"))
     )
   }
 

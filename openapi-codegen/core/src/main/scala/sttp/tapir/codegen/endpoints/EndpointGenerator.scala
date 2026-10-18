@@ -118,7 +118,7 @@ class EndpointGenerator {
             addDisambiguationCodes
           )
         )
-        .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_ merge _)
+        .foldLeft(GeneratedEndpoints(Nil, Set.empty, false, EndpointDetails.empty))(_.merge(_))
     val statusCodeDisambig = details.statusCodeDisambig.distinct
     val inlineDefnsWithStatusCodeDisambig =
       if (statusCodeDisambig.isEmpty) details.inlineDefns

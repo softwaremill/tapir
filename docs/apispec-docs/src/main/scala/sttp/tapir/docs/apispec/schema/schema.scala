@@ -17,7 +17,7 @@ package object schema {
   SName:     The name of the class + type parameters associated with a schema.
    */
 
-  private[docs] type KeyedSchema = (SchemaKey, TSchema[_])
+  private[docs] type KeyedSchema = (SchemaKey, TSchema[?])
   private[docs] type SchemaId = String
 
   private[docs] val defaultDuplicateSchemaNameError: List[String] => String = baseNames =>

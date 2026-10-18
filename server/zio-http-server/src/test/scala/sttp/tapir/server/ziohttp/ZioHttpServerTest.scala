@@ -61,7 +61,7 @@ class ZioHttpServerTest extends TestSuite {
     implicit val r: Runtime[Any] = Runtime.default
     // creating the netty dependencies once, to speed up tests
     Resource
-      .scoped[IO, Any, ZEnvironment[ServerEventLoopGroups with ChannelFactory[ServerChannel]]]({
+      .scoped[IO, Any, ZEnvironment[ServerEventLoopGroups & ChannelFactory[ServerChannel]]]({
         val eventConfig = ZLayer.succeed(
           NettyConfig.default.bossGroup(
             NettyConfig.BossGroup(
@@ -221,7 +221,7 @@ class ZioHttpServerTest extends TestSuite {
                 )
             val inputStrings = List("Hello,how,are,you", "I,am,good,thanks")
             val input: ZStream[Any, Nothing, Byte] =
-              ZStream(inputStrings: _*)
+              ZStream(inputStrings*)
                 .via(ZPipeline.intersperse(java.lang.System.lineSeparator()))
                 .mapConcat(_.getBytes(StandardCharsets.UTF_8))
 
@@ -264,7 +264,7 @@ class ZioHttpServerTest extends TestSuite {
                 .zServerLogic(stream => ZIO.succeed(stream))
 
             val testString = "Hello, world!" * 100
-            val input: ZStream[Any, Nothing, Byte] = ZStream(testString.getBytes(): _*)
+            val input: ZStream[Any, Nothing, Byte] = ZStream(testString.getBytes()*)
 
             val makeRequest = basicRequest
               .post(uri"/hello")

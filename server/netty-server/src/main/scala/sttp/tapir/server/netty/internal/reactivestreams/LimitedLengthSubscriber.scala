@@ -8,7 +8,7 @@ import scala.collection.JavaConverters._
 
 // based on org.asynchttpclient.request.body.generator.ReactiveStreamsBodyGenerator.SimpleSubscriber
 private[netty] class LimitedLengthSubscriber[R](maxBytes: Long, delegate: Subscriber[HttpContent]) extends Subscriber[HttpContent] {
-  private var subscription: Subscription = _
+  private var subscription: Subscription = null
   private var bytesReadSoFar = 0L
 
   override def onSubscribe(s: Subscription): Unit = {

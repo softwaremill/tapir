@@ -7,10 +7,10 @@ import sttp.tapir.docs.apispec.schema.TSchemaToASchema.{tDefaultToADefault, tExa
 
 private[schema] class ToSchemaReference(
     keyToId: Map[SchemaKey, SchemaId],
-    keyToSchema: Map[SchemaKey, TSchema[_]],
+    keyToSchema: Map[SchemaKey, TSchema[?]],
     refRoot: String = "#/components/schemas/"
 ) {
-  def map(schema: TSchema[_], name: TSchema.SName): ASchema = {
+  def map(schema: TSchema[?], name: TSchema.SName): ASchema = {
     val key = SchemaKey(schema, name)
     val maybeId = keyToId.get(key)
     var result = map(key.name, maybeId)

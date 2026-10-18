@@ -30,7 +30,7 @@ class VertxServerTest extends TestSuite {
     .map(backend => new ForceHttp1BackendWrapper(backend))
     .flatMap { backend =>
       vertxResource.map { implicit vertx =>
-        implicit val m: FutureMonad = new FutureMonad()(ExecutionContext.global)
+        implicit val m: FutureMonad = new FutureMonad()(using ExecutionContext.global)
 
         val interpreter = new VertxTestServerInterpreter(vertx)
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
@@ -81,7 +81,7 @@ class VertxServerTest extends TestSuite {
 }
 
 class EmptyReadStream[B]() extends ReadStream[B] {
-  private var endHandler: Handler[Void] = _
+  private var endHandler: Handler[Void] = null
   def endHandler(handler: Handler[Void]): ReadStream[B] = {
     endHandler = handler
     this

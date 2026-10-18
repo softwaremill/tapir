@@ -37,7 +37,7 @@ private[pekkohttp] class PekkoToResponseBody(implicit m: Materializer, ec: Execu
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, PekkoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, PekkoStreams]
   ): PekkoResponseBody = Left(PekkoWebSockets.pipeToBody(pipe, o))
 
   private def rawValueToResponseEntity[CF <: CodecFormat, R](
@@ -68,7 +68,7 @@ private[pekkohttp] class PekkoToResponseBody(implicit m: Materializer, ec: Execu
           .getOrElse(HttpEntity.fromPath(ct, tapirFile.file.toPath))
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
-        val body = Multipart.FormData(parts: _*)
+        val body = Multipart.FormData(parts*)
         body.toEntity
     }
   }

@@ -20,7 +20,7 @@ Let's use the name `enumeration` in Tapir codebase to represent these "true" enu
 
 ## JDK version
 
-The build (sbt 2) requires JDK 17 or newer, and the CI job uses JDK 17 for most of the modules. To ensure that Tapir can be used in a wide range of projects, most modules are compiled with `-release 11`, so that they run on JDK 11+. There are exceptions (like `netty-server-sync` and `nima-server`) which require JDK version >= 21. This requirement is adressed by the build matrix in `.github/workflows/ci.yml`, which runs separate builds on JDK 21, and sets a `ONLY_LOOM` env variable, used by build.sbt to recognise that it should limit the scope of an aggregated task to these projects only.
+The build (sbt 2) requires JDK 17 or newer, and the CI job uses JDK 17 for most of the modules. To ensure that Tapir can be used in a wide range of projects, most Scala 2 modules are compiled with `-release 11`, so that they run on JDK 11+; Scala 3 modules are compiled with `-release 17` (required by Scala 3.9), so they run on JDK 17+. There are exceptions (like `netty-server-sync` and `nima-server`) which require JDK version >= 21. This requirement is adressed by the build matrix in `.github/workflows/ci.yml`, which runs separate builds on JDK 21, and sets a `ONLY_LOOM` env variable, used by build.sbt to recognise that it should limit the scope of an aggregated task to these projects only.
 For local development, feel free to use any JDK >= 17. You can be on JDK 21, then with missing `ONLY_LOOM` variable you can still run sbt tasks on projects excluded from aggegate build, for example:
 ```scala
 nimaServer/Test/test

@@ -156,7 +156,7 @@ object NettyConfig {
     ()
   }
 
-  case class EventLoopConfig(initEventLoopGroup: () => EventLoopGroup, serverChannel: Class[_ <: ServerChannel])
+  case class EventLoopConfig(initEventLoopGroup: () => EventLoopGroup, serverChannel: Class[? <: ServerChannel])
 
   object EventLoopConfig {
     val nio: EventLoopConfig = EventLoopConfig(() => new NioEventLoopGroup(), classOf[NioServerSocketChannel])

@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets
 
 package object apispec {
   private[docs] type SchemeName = String
-  private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_, _], (SchemeName, SecurityScheme)]
+  private[docs] type SecuritySchemes = Map[EndpointInput.Auth[?, ?], (SchemeName, SecurityScheme)]
 
   private[docs] def uniqueString(base: String, isUnique: String => Boolean): String = {
     var i = 0
@@ -27,9 +27,9 @@ package object apispec {
   }
 
   private[docs] def exampleValue(v: String): ExampleValue = ExampleSingleValue(v)
-  private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
+  private[docs] def exampleValue[T](codec: Codec[?, T, ?], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
 
-  private[docs] def exampleValue(schema: Schema[_], raw: Any): Option[ExampleValue] = {
+  private[docs] def exampleValue(schema: Schema[?], raw: Any): Option[ExampleValue] = {
     // #3581: if there's a delimiter and the encoded value is a string, the codec will have produced a final
     // representation (with the delimiter applied), but in the docs we want to show the split values
     val rawDelimited = schema.attribute(Schema.Delimiter.Attribute) match {
@@ -53,7 +53,7 @@ package object apispec {
   private[docs] def nameAllPathCapturesInEndpoint(e: AnyEndpoint): AnyEndpoint =
     e.copy(securityInput = namePathCapturesInInput(e.securityInput), input = namePathCapturesInInput(e.input))
 
-  private def namePathCapturesInInput(i: EndpointInput[_]): EndpointInput[_] =
+  private def namePathCapturesInInput(i: EndpointInput[?]): EndpointInput[?] =
     new EndpointInputMapper[Int](
       { case (EndpointInput.PathCapture(None, codec, info), i) =>
         (EndpointInput.PathCapture(Some(s"p$i"), codec, info), i + 1)
@@ -61,7 +61,7 @@ package object apispec {
       PartialFunction.empty
     ).mapInput(i, 1)._1
 
-  private[docs] def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
+  private[docs] def namedPathComponents(inputs: Vector[EndpointInput.Basic[?]]): Vector[String] = {
     inputs
       .collect {
         case p: EndpointInput.PathCapture[_] if !p.codec.schema.hidden => Left(p.name)

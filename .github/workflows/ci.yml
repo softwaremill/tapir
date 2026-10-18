@@ -38,7 +38,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v7
-    - uses: sbt/setup-sbt@6158cb0903b8ceeae04f830055f3155e1b6a5ad7 # v1, specifically v1.5.11
+    - uses: sbt/setup-sbt@ecad189dd245444b9ae0a0cd5922fd938b88906f # v1, specifically v1.5.12
     - name: Set up JDK 
       uses: actions/setup-java@v6.0.1
       with:
@@ -82,14 +82,11 @@ jobs:
     - name: Compile core & server-core with next Scala 3
       if: matrix.scala-version == '3' && matrix.target-platform == 'JVM' && matrix.java == '21'
       env:
-        SCALA_3_NEXT: "3.8.3"
-      # Scala 3.8+ doesn't support -release below 17
+        SCALA_3_NEXT: "3.10.0"
       run: |
         sbt -v \
           "set LocalProject(\"core\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
           "set LocalProject(\"serverCore\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
-          "set LocalProject(\"core\") / javaOutputVersion := \"17\" ;" \
-          "set LocalProject(\"serverCore\") / javaOutputVersion := \"17\" ;" \
           "set LocalProject(\"coreJS\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
           "set LocalProject(\"serverCoreJS\") / scalaVersion := \"$SCALA_3_NEXT\" ;" \
           "core/Test/compile ; serverCore/Test/compile ;" \
@@ -200,7 +197,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - uses: sbt/setup-sbt@6158cb0903b8ceeae04f830055f3155e1b6a5ad7 # v1, specifically v1.5.11
+      - uses: sbt/setup-sbt@ecad189dd245444b9ae0a0cd5922fd938b88906f # v1, specifically v1.5.12
       - name: Set up JDK
         uses: actions/setup-java@v6.0.1
         with:
