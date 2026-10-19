@@ -18,10 +18,10 @@ class WebSocketSttpClientFs2Tests extends WebSocketSttpClientFs2TestsSender with
   private implicit val ioRT: IORuntime = cats.effect.unsafe.implicits.global
 
   override val streams: Fs2Streams[IO] = Fs2Streams[IO]
-  override def wsToPipe: WebSocketToPipe[WebSockets with Fs2Streams[IO]] = implicitly
+  override def wsToPipe: WebSocketToPipe[WebSockets & Fs2Streams[IO]] = implicitly
 
   override def sendAndReceiveLimited[A, B](p: Pipe[IO, A, B], receiveCount: Port, as: List[A]): Future[List[B]] = {
-    Stream(as: _*).through(p).take(receiveCount.longValue).compile.toList.unsafeToFuture()
+    Stream(as*).through(p).take(receiveCount.longValue).compile.toList.unsafeToFuture()
   }
 
   webSocketTests()

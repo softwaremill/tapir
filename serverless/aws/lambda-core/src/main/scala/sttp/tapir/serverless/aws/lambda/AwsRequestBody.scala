@@ -10,6 +10,7 @@ import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, NoStreams] {
@@ -17,13 +18,12 @@ private[lambda] class AwsRequestBody[F[_]: MonadError]() extends RequestBody[F, 
 
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
     val request = awsRequest(serverRequest)
-    val decoded =
-      if (request.isBase64Encoded) Left(Base64.getDecoder.decode(request.body.getOrElse(""))) else Right(request.body.getOrElse(""))
-
-    def asByteArray: Array[Byte] = decoded.fold(identity[Array[Byte]], _.getBytes())
+    val body = request.body.getOrElse("")
+    // a non-base64 body is text, which the Lambda event carries as UTF-8
+    def asByteArray: Array[Byte] = if (request.isBase64Encoded) Base64.getDecoder.decode(body) else body.getBytes(StandardCharsets.UTF_8)
 
     RawValue(bodyType match {
-      case RawBodyType.StringBody(charset)  => decoded.fold(new String(_, charset), identity[String])
+      case RawBodyType.StringBody(charset)  => new String(asByteArray, RequestBody.requestCharset(serverRequest).getOrElse(charset))
       case RawBodyType.ByteArrayBody        => asByteArray
       case RawBodyType.ByteBufferBody       => ByteBuffer.wrap(asByteArray)
       case RawBodyType.InputStreamBody      => new ByteArrayInputStream(asByteArray)

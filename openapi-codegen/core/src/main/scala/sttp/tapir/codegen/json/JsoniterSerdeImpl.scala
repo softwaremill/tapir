@@ -11,7 +11,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaDateTime,
   OpenapiSchemaDuration,
   OpenapiSchemaEnum,
-  OpenapiSchemaField,
+  OpenapiAnnotatedSchema,
   OpenapiSchemaMap,
   OpenapiSchemaNumericType,
   OpenapiSchemaObject,
@@ -173,7 +173,7 @@ object JsoniterSerdeImpl {
            |""".stripMargin
 
     val serdesDefn = (docSchemas.map { case (n, t) => (n, t, false) } ++ pathSchemas)
-      .flatMap { (getSerdeString _).tupled }
+      .flatMap { case (n, t, isJson) => getSerdeString(n, t, isJson) }
       // an inline enum can be reached by multiple paths (or also be emitted at top level); duplicate decls won't compile
       .distinct
       .sorted
@@ -212,7 +212,7 @@ object JsoniterSerdeImpl {
   // them as part of the parent); only inline enums require an explicitly emitted codec, so we gather just their names.
   // Naming mirrors ClassDefinitionGenerator (via the shared addName) so codec types match the classes.
   private def collectInlineEnumNames(objName: String, obj: OpenapiSchemaObject): Seq[String] =
-    obj.properties.toSeq.flatMap { case (key, OpenapiSchemaField(tpe, _, _)) => inlineEnumNamesForType(objName, key, tpe) }
+    obj.properties.toSeq.flatMap { case (key, OpenapiAnnotatedSchema(tpe, _, _)) => inlineEnumNamesForType(objName, key, tpe) }
 
   private def inlineEnumNamesForType(parentName: String, key: String, schemaType: OpenapiSchemaType): Seq[String] =
     schemaType match {

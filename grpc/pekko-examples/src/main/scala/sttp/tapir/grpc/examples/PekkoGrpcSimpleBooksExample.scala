@@ -82,7 +82,7 @@ class ExampleGrpcServer(system: ActorSystem) extends Logging {
 
 object SimpleBookExampleProtoGenerator extends App {
   ProtoSchemaGenerator.renderToFile(
-    path = "grpc/examples/src/main/protobuf/simple_books_example.proto",
+    path = "grpc/pekko-examples/src/main/protobuf/simple_books_example.proto",
     packageName = "sttp.tapir.grpc.examples.grpc_simple_books_example.gen",
     endpoints = Endpoints.endpoints
   )
@@ -92,8 +92,8 @@ object SimpleBookExampleClient extends App with Logging {
 
   import scala.concurrent.duration._
 
-  implicit val sys = ActorSystem("HelloWorldClient")
-  implicit val ec = sys.dispatcher
+  implicit val sys: ActorSystem = ActorSystem("HelloWorldClient")
+  implicit val ec: ExecutionContext = sys.dispatcher
 
   val client = GenLibraryClient(GrpcClientSettings.connectToServiceAt("localhost", 8080).withTls(false))
   val result = Await.result(client.addBook(GenAddBookMsg("TEST_BOOK", "TEST")), 10.second)

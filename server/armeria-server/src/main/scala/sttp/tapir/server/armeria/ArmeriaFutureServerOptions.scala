@@ -30,7 +30,7 @@ object ArmeriaFutureServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors: CustomiseInterceptors[Future, ArmeriaFutureServerOptions] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[Future, ArmeriaFutureServerOptions](
       createOptions = (ci: CustomiseInterceptors[Future, ArmeriaFutureServerOptions]) =>
         ArmeriaFutureServerOptions(
           defaultCreateFile,

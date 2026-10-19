@@ -40,6 +40,11 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
     val interpreter = new NettySyncTestServerInterpreter(eventLoopGroup)
     val createServerTest = new NettySyncCreateServerTest(backend, interpreter)
+    // with interruption (the default), request processing is cancelled before a truncated body could be decoded
+    val nonInterruptingCreateServerTest = new NettySyncCreateServerTest(
+      backend,
+      new NettySyncTestServerInterpreter(eventLoopGroup, interruptServerLogicWhenRequestCancelled = false)
+    )
     val sleeper: Sleeper[Identity] = (duration: FiniteDuration) => Thread.sleep(duration.toMillis)
 
     val tests =
@@ -52,6 +57,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           override def emptyPipe[A, B]: OxStreams.Pipe[A, B] = _ => Flow.empty
         }.tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
+        new ServerIncompleteRequestBodyTests(nonInterruptingCreateServerTest).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
         additionalTests(createServerTest)
 

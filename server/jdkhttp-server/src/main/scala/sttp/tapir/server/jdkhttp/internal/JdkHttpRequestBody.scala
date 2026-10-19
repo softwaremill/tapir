@@ -15,6 +15,7 @@ import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart, TapirFile}
 
 import java.io._
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.nio.file.{Files, StandardCopyOption}
 
 private[jdkhttp] class JdkHttpRequestBody(
@@ -26,25 +27,26 @@ private[jdkhttp] class JdkHttpRequestBody(
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): RawValue[RAW] = {
     val request = jdkHttpRequest(serverRequest)
-    toRaw(serverRequest, bodyType, request.getRequestBody, maxBytes)
+    toRaw(serverRequest, bodyType, request.getRequestBody, RequestBody.requestCharset(serverRequest), maxBytes)
   }
 
   private def toRaw[RAW](
       serverRequest: ServerRequest,
       bodyType: RawBodyType[RAW],
       body: InputStream,
+      charset: Option[Charset],
       maxBytes: Option[Long]
   ): RawValue[RAW] = {
     def asInputStream: InputStream = maxBytes.map(limit => new FailingLimitedInputStream(body, limit)).getOrElse(body)
     def asByteArray: Array[Byte] = asInputStream.readAllBytes()
 
     bodyType match {
-      case RawBodyType.InputStreamRangeBody => RawValue(InputStreamRange(() => asInputStream))
-      case RawBodyType.StringBody(charset)  => RawValue(new String(asByteArray, charset))
-      case RawBodyType.ByteArrayBody        => RawValue(asByteArray)
-      case RawBodyType.ByteBufferBody       => RawValue(ByteBuffer.wrap(asByteArray))
-      case RawBodyType.InputStreamBody      => RawValue(asInputStream)
-      case RawBodyType.FileBody             =>
+      case RawBodyType.InputStreamRangeBody       => RawValue(InputStreamRange(() => asInputStream))
+      case RawBodyType.StringBody(defaultCharset) => RawValue(new String(asByteArray, charset.getOrElse(defaultCharset)))
+      case RawBodyType.ByteArrayBody              => RawValue(asByteArray)
+      case RawBodyType.ByteBufferBody             => RawValue(ByteBuffer.wrap(asByteArray))
+      case RawBodyType.InputStreamBody            => RawValue(asInputStream)
+      case RawBodyType.FileBody                   =>
         val file = createFile(serverRequest)
         try {
           Files.copy(asInputStream, file.toPath, StandardCopyOption.REPLACE_EXISTING)
@@ -83,7 +85,7 @@ private[jdkhttp] class JdkHttpRequestBody(
         parsedPart.getName.flatMap(name =>
           m.partType(name)
             .map(partType => {
-              val bodyRawValue = toRaw(request, partType, parsedPart.getBody, maxBytes = None)
+              val bodyRawValue = toRaw(request, partType, parsedPart.getBody, charset = None, maxBytes = None)
               Part(
                 name,
                 bodyRawValue.value,

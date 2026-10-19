@@ -176,7 +176,7 @@ trait TapirStaticContentEndpoints {
   ): ServerEndpoint[Any, F] =
     ServerEndpoint.public(
       removePath(addHeaders(staticFilesGetEndpoint(prefix), extraHeaders)),
-      (m: MonadError[F]) => Files.get(systemPath)(m)
+      (m: MonadError[F]) => Files.get[F](systemPath)(m)
     )
 
   /** A server endpoint, used to verify if sever supports range requests for file under particular path Additionally it verify file

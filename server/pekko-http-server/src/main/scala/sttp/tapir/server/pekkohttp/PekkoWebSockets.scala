@@ -14,7 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 private[pekkohttp] object PekkoWebSockets {
   def pipeToBody[REQ, RESP](
       pipe: Flow[REQ, RESP, Any],
-      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, _, PekkoStreams]
+      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, ?, PekkoStreams]
   )(implicit ec: ExecutionContext, mat: Materializer): Flow[Message, Message, Any] = {
     Flow[Message]
       .mapAsync(1)(messageToFrame(_))
@@ -35,7 +35,7 @@ private[pekkohttp] object PekkoWebSockets {
 
   private def messageToFrame(
       m: Message
-  )(implicit ec: ExecutionContext, mat: Materializer): Future[WebSocketFrame.Data[_]] =
+  )(implicit ec: ExecutionContext, mat: Materializer): Future[WebSocketFrame.Data[?]] =
     m match {
       case msg: TextMessage =>
         msg.textStream.runFold("")(_ + _).map(t => WebSocketFrame.text(t))

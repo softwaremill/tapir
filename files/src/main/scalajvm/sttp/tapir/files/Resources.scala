@@ -91,7 +91,7 @@ object Resources {
     if (!options.fileFilter(nameComponents))
       (_, _) => LeftUrlNotFound
     else
-      Function.untupled((resolveRec _).tupled.andThen(_.map(Right(_)).getOrElse(LeftUrlNotFound)))
+      Function.untupled((resolveRec(_: List[String], _: Option[List[String]])).tupled.andThen(_.map(Right(_)).getOrElse(LeftUrlNotFound)))
   }
 
   private def isDirectory(classLoader: ClassLoader, name: String, nameResource: URL): Boolean = {

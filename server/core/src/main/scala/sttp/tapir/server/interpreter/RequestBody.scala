@@ -5,10 +5,22 @@ import sttp.model.Part
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{FileRange, RawBodyType, RawPart}
 
+import java.nio.charset.Charset
+import scala.util.Try
+
 trait RequestBody[F[_], S] {
   val streams: Streams[S]
   def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]]
   def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream
+}
+
+object RequestBody {
+
+  /** The charset from the request's `Content-Type` header, if it's given and supported. [[RequestBody.toRaw]] should decode a whole request
+    * body as a [[RawBodyType.StringBody]] using this charset, or else the body type's one.
+    */
+  def requestCharset(serverRequest: ServerRequest): Option[Charset] =
+    serverRequest.contentTypeParsed.flatMap(_.charset).flatMap(c => Try(Charset.forName(c)).toOption)
 }
 
 /** @param value

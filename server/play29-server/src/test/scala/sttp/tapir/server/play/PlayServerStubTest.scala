@@ -20,7 +20,7 @@ class PlayCreateServerStubTest extends CreateServerStubTest[Future, PlayServerOp
     import actorSystem.dispatcher
     PlayServerOptions.customiseInterceptors()
   }
-  override def stub: BackendStub[Future] = BackendStub(new FutureMonad()(ExecutionContext.global))
+  override def stub: BackendStub[Future] = BackendStub(new FutureMonad()(using ExecutionContext.global))
   override def asFuture[A]: Future[A] => Future[A] = identity
 
   override def cleanUp(): Unit = Await.ready(actorSystem.terminate(), 10.seconds)

@@ -1,10 +1,10 @@
 // {cat=Hello, World!; effects=Future; server=Netty; client=sttp4; JSON=Pickler; docs=Swagger UI}: A demo of Tapir's capabilities
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.11.22
-//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.13.31
-//> using dep com.softwaremill.sttp.tapir::tapir-json-pickler:1.13.31
+//> using dep com.softwaremill.sttp.tapir::tapir-netty-server:1.13.33
+//> using dep com.softwaremill.sttp.tapir::tapir-json-pickler:1.13.33
 //> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.11.22
-//> using dep com.softwaremill.sttp.tapir::tapir-sttp-client4:1.13.31
+//> using dep com.softwaremill.sttp.tapir::tapir-sttp-client4:1.13.33
 //> using dep org.apache.pekko::pekko-http:1.0.1
 //> using dep org.apache.pekko::pekko-stream:1.0.3
 //> using dep ch.qos.logback:logback-classic:1.5.6
@@ -179,5 +179,5 @@ import scala.concurrent.duration.Duration
 
   logger.info(s"Try out the API by opening the Swagger UI: http://$declaredHost:$declaredPort/docs")
   logger.info("Press ENTER to stop the server...")
-  val _ = scala.io.StdIn.readLine
+  val _ = scala.io.StdIn.readLine()
   Await.result(serverBinding.stop(), Duration.Inf)

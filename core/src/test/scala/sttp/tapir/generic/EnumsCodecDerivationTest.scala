@@ -3,7 +3,7 @@ package sttp.tapir.generic
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.Schema.annotations.description
+import sttp.tapir.Schema.annotations.{customise, description}
 import sttp.tapir.{Codec, DecodeResult, SchemaType, ValidationError}
 
 class EnumsCodecDerivationTest extends AnyFlatSpec with Matchers {
@@ -13,6 +13,7 @@ class EnumsCodecDerivationTest extends AnyFlatSpec with Matchers {
     val codec = Codec.derivedEnumeration[String, Letters].defaultStringBased
 
     codec.schema.description shouldBe Some("it's a small alphabet")
+    codec.schema.format shouldBe Some("letters")
 
     codec.encode(Letters.A) shouldBe "A"
     codec.encode(Letters.Phi) shouldBe "Phi"
@@ -30,6 +31,7 @@ class EnumsCodecDerivationTest extends AnyFlatSpec with Matchers {
     val codec = Codec.derivedEnumerationValueCustomise[String, Countries.Country].defaultStringBased
 
     codec.schema.description shouldBe Some("country")
+    codec.schema.format shouldBe Some("country")
 
     codec.encode(Countries.PL) shouldBe "PL"
     codec.encode(Countries.NL) shouldBe "NL"
@@ -91,6 +93,7 @@ class EnumsCodecDerivationTest extends AnyFlatSpec with Matchers {
 
 object EnumsCodecDerivationTest {
   @description("country")
+  @customise(_.format("country"))
   object Countries extends Enumeration {
     type Country = Value
     val PL = Value("PL")
@@ -98,6 +101,7 @@ object EnumsCodecDerivationTest {
   }
 
   @description("it's a small alphabet")
+  @customise(_.format("letters"))
   sealed trait Letters
 
   object Letters {

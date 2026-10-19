@@ -185,7 +185,7 @@ object SchemaGenerator {
     val withDirectChildren = layers.map { layer =>
       layer.map { case (k, v) => (k, v, getDirectChildren(v)) }
     }
-    val initialSet: mutable.Set[Seq[(String, OpenapiSchemaType, Set[String])]] = mutable.Set(withDirectChildren: _*)
+    val initialSet: mutable.Set[Seq[(String, OpenapiSchemaType, Set[String])]] = mutable.Set(withDirectChildren*)
     val acquired = mutable.Set.empty[String]
     val res = mutable.ArrayBuffer.empty[Seq[(String, OpenapiSchemaType, Set[String])]]
     while (initialSet.nonEmpty) {
@@ -206,7 +206,7 @@ object SchemaGenerator {
   }
   // finds all mutually-recursive references, grouping mutually-recursive schemas into a single 'layer' seq
   private def constructRings(allSchemas: Map[String, OpenapiSchemaType]): Seq[Seq[(String, OpenapiSchemaType)]] = {
-    val initialSet: mutable.Set[(String, OpenapiSchemaType)] = mutable.Set(allSchemas.toSeq: _*)
+    val initialSet: mutable.Set[(String, OpenapiSchemaType)] = mutable.Set(allSchemas.toSeq*)
     val res = mutable.ArrayBuffer.empty[Seq[(String, OpenapiSchemaType)]]
     while (initialSet.nonEmpty) {
       val nextRing = mutable.ArrayBuffer.empty[(String, OpenapiSchemaType)]
@@ -284,15 +284,16 @@ object SchemaGenerator {
 
   private def schemaForObject(name: String, recursionParams: (Boolean, Seq[String]), schema: OpenapiSchemaObject): String = {
     val subs = schema.properties.collect {
-      case (k, OpenapiSchemaField(`type`: OpenapiSchemaObject, _, _)) => schemaForObject(s"$name${k.capitalize}", recursionParams, `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
+      case (k, OpenapiAnnotatedSchema(`type`: OpenapiSchemaObject, _, _)) =>
+        schemaForObject(s"$name${k.capitalize}", recursionParams, `type`)
+      case (k, OpenapiAnnotatedSchema(OpenapiSchemaArray(`type`: OpenapiSchemaObject, _, _, _), _, _)) =>
         schemaForObject(s"$name${k.capitalize}Item", recursionParams, `type`)
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
+      case (k, OpenapiAnnotatedSchema(OpenapiSchemaMap(`type`: OpenapiSchemaObject, _, _), _, _)) =>
         schemaForObject(s"$name${k.capitalize}Item", recursionParams, `type`)
-      case (k, OpenapiSchemaField(_: OpenapiSchemaEnum, _, _))                              => schemaForEnum(s"$name${k.capitalize}")
-      case (k, OpenapiSchemaField(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _, _), _, _)) =>
+      case (k, OpenapiAnnotatedSchema(_: OpenapiSchemaEnum, _, _))                              => schemaForEnum(s"$name${k.capitalize}")
+      case (k, OpenapiAnnotatedSchema(OpenapiSchemaArray(_: OpenapiSchemaEnum, _, _, _), _, _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
-      case (k, OpenapiSchemaField(OpenapiSchemaMap(_: OpenapiSchemaEnum, _, _), _, _)) =>
+      case (k, OpenapiAnnotatedSchema(OpenapiSchemaMap(_: OpenapiSchemaEnum, _, _), _, _)) =>
         schemaForEnum(s"$name${k.capitalize}Item")
     } match {
       case s if s.isEmpty => ""

@@ -29,12 +29,12 @@ object ArmeriaCatsServerOptions {
   def customiseInterceptors[F[_]](
       dispatcher: Dispatcher[F]
   )(implicit F: Async[F]): CustomiseInterceptors[F, ArmeriaCatsServerOptions[F]] = {
-    CustomiseInterceptors(
+    CustomiseInterceptors[F, ArmeriaCatsServerOptions[F]](
       createOptions = (ci: CustomiseInterceptors[F, ArmeriaCatsServerOptions[F]]) => {
         ArmeriaCatsServerOptions[F](
           dispatcher,
-          () => defaultCreateFile()(F),
-          file => defaultDeleteFile(file)(F),
+          () => defaultCreateFile()(using F),
+          file => defaultDeleteFile(file)(using F),
           ci.interceptors
         )
       }

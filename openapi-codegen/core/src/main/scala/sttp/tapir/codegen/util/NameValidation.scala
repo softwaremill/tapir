@@ -66,7 +66,7 @@ object NameValidation {
     // schemas: they can be inline objects or dangling `$ref`s. Their `$ref` targets are spliced raw as type
     // identifiers (mapSchemaSimpleTypeToType) and their property names reach the same raw sinks, so validate them too.
     val pathSchemas: Seq[OpenapiSchemaType] = doc.paths.flatMap(_.methods).flatMap { m =>
-      m.resolvedParameters.map(_.schema) ++
+      m.resolvedParameters.map(_.schema.`type`) ++
         m.requestBody.collect { case b: OpenapiRequestBodyDefn => b.content.map(_.schema) }.toSeq.flatten ++
         m.responses.collect { case r: OpenapiResponseDef => r.content.map(_.schema) }.flatten
     }

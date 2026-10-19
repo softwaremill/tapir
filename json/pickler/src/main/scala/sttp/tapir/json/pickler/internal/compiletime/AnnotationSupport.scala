@@ -30,7 +30,7 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
 
   /** Same as [[allParamAnnotations]], but keeping the annotation types so that callers can look one up. */
   protected def allParamAnnotationsTyped[A: Type](param: Parameter, memberName: String): List[Expr_??] =
-    withInheritanceAppliedTyped(param.annotations, inheritedMemberAnnotations[A](memberName))
+    withInheritanceAppliedTyped(declared(param.annotations), inheritedMemberAnnotations[A](memberName))
 
   /** The literal argument of a field's `@encodedName`, if the field has one.
     *
@@ -65,10 +65,10 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
     */
   protected def allTypeAnnotations[A: Type]: List[UntypedExpr] =
     withInheritanceApplied(
-      Type[A].annotations,
+      declared(Type[A].annotations),
       baseClassesOf[A].flatMap { base =>
         import base.Underlying as Base
-        Type[Base].annotations
+        declared(Type[Base].annotations)
       }
     )
 
@@ -76,8 +76,11 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
   private def inheritedMemberAnnotations[A: Type](memberName: String): List[Expr_??] =
     baseClassesOf[A].flatMap { base =>
       import base.Underlying as Base
-      Type[Base].unsortedMethods.filter(_.name == memberName).flatMap(_.annotations)
+      Type[Base].unsortedMethods.filter(_.name == memberName).flatMap(m => declared(m.annotations))
     }
+
+  // the compiler lists annotations in reverse declaration order
+  private def declared(annotations: List[Expr_??]): List[Expr_??] = annotations.reverse
 
   /** Base classes of `A`, excluding `A` itself and the universal/`scala.*` ancestors that carry nothing useful. */
   private def baseClassesOf[A: Type]: List[??] =

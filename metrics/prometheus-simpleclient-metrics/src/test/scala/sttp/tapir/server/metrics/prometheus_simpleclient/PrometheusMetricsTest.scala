@@ -114,7 +114,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
         StringToResponseBody,
         List(metrics.metricsInterceptor()),
         _ => ()
-      )(implicitly, waitBodyListener(sleepBody)).apply(PersonsApi.request("Jacob"))
+      )(using implicitly, waitBodyListener(sleepBody)).apply(PersonsApi.request("Jacob"))
 
     // when
     interpret(101, 1001)

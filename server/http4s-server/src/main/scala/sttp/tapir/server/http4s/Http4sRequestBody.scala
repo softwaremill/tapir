@@ -4,22 +4,25 @@ import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import fs2.Chunk
 import fs2.io.file.Files
-import fs2.text.decodeWithCharset
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
-import org.http4s.{Charset, EntityDecoder, Headers, Media, Request, multipart}
+import org.http4s.{EntityDecoder, Headers, Media, Request, multipart}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.server.model.InvalidMultipartBodyException
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart}
+
+import java.nio.charset.Charset
 
 private[http4s] class Http4sRequestBody[F[_]: Async](
     serverOptions: Http4sServerOptions[F]
 ) extends RequestBody[F, Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): F[RawValue[R]] = {
-    toRawFromStream(serverRequest, toStream(serverRequest, maxBytes), bodyType, http4sRequest(serverRequest).charset, maxBytes)
+    toRawFromStream(serverRequest, toStream(serverRequest, maxBytes), bodyType, RequestBody.requestCharset(serverRequest), maxBytes)
   }
+
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
     val stream = http4sRequest(serverRequest).body
     maxBytes.map(Fs2Streams.limitBytes(stream, _)).getOrElse(stream)
@@ -39,7 +42,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
 
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        body.through(decodeWithCharset(charset.map(_.nioCharset).getOrElse(defaultCharset))).compile.string.map(RawValue(_))
+        asByteArray.map(bs => RawValue(new String(bs, charset.getOrElse(defaultCharset))))
       case RawBodyType.ByteArrayBody   => asByteArray.map(RawValue(_))
       case RawBodyType.ByteBufferBody  => asChunk.map(c => RawValue(c.toByteBuffer))
       case RawBodyType.InputStreamBody =>
@@ -64,7 +67,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
           .decode(limitedMedia(http4sRequest(serverRequest), maxBytes), strict = false)
           .value
           .flatMap {
-            case Left(failure) => Sync[F].raiseError(failure)
+            case Left(failure) => Sync[F].raiseError(InvalidMultipartBodyException(failure))
             case Right(mp)     =>
               val rawPartsF: Vector[F[RawPart]] = mp.parts
                 .flatMap(part => part.name.flatMap(name => m.partType(name)).map((part, _)).toList)
@@ -96,7 +99,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async](
     var otherDispositionParams = dispositionParams.map { case (k, v) => k.toString -> v } - Part.NameDispositionParam
     part.filename.foreach(f => otherDispositionParams += Part.FileNameDispositionParam -> f)
 
-    val charset = part.headers.get[`Content-Type`].flatMap(_.charset)
+    val charset = part.headers.get[`Content-Type`].flatMap(_.charset).map(_.nioCharset)
     toRawFromStream(serverRequest, part.body, partType, charset, maxBytes = None)
       .map(r =>
         Part(

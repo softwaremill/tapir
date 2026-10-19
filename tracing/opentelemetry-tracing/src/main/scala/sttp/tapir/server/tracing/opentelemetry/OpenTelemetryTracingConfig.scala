@@ -40,19 +40,18 @@ case class OpenTelemetryTracingConfig(
     spanName: ServerRequest => String,
     requestAttributes: ServerRequest => Attributes,
     spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes),
-    responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes,
+    responseAttributes: (ServerRequest, ServerResponse[?]) => Attributes,
     errorAttributes: Either[StatusCode, Throwable] => Attributes
 )
 
 object OpenTelemetryTracingConfig {
   def apply(
       openTelemetry: OpenTelemetry,
-      spanName: ServerRequest => String = Defaults.spanName _,
-      requestAttributes: ServerRequest => Attributes = Defaults.requestAttributes _,
-      spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes) =
-        Defaults.spanNameFromEndpointAndAttributes _,
-      responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes = Defaults.responseAttributes _,
-      errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes _
+      spanName: ServerRequest => String = Defaults.spanName,
+      requestAttributes: ServerRequest => Attributes = Defaults.requestAttributes,
+      spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes) = Defaults.spanNameFromEndpointAndAttributes,
+      responseAttributes: (ServerRequest, ServerResponse[?]) => Attributes = Defaults.responseAttributes,
+      errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes
   ): OpenTelemetryTracingConfig = usingTracer(
     openTelemetry.tracerBuilder(Defaults.instrumentationScopeName).setInstrumentationVersion(Defaults.instrumentationScopeVersion).build(),
     openTelemetry.getPropagators(),
@@ -66,12 +65,11 @@ object OpenTelemetryTracingConfig {
   def usingTracer(
       tracer: Tracer,
       propagators: ContextPropagators,
-      spanName: ServerRequest => String = Defaults.spanName _,
-      requestAttributes: ServerRequest => Attributes = Defaults.requestAttributes _,
-      spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes) =
-        Defaults.spanNameFromEndpointAndAttributes _,
-      responseAttributes: (ServerRequest, ServerResponse[_]) => Attributes = Defaults.responseAttributes _,
-      errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes _
+      spanName: ServerRequest => String = Defaults.spanName,
+      requestAttributes: ServerRequest => Attributes = Defaults.requestAttributes,
+      spanNameFromEndpointAndAttributes: (ServerRequest, AnyEndpoint) => (String, Attributes) = Defaults.spanNameFromEndpointAndAttributes,
+      responseAttributes: (ServerRequest, ServerResponse[?]) => Attributes = Defaults.responseAttributes,
+      errorAttributes: Either[StatusCode, Throwable] => Attributes = Defaults.errorAttributes
   ): OpenTelemetryTracingConfig =
     new OpenTelemetryTracingConfig(
       tracer,
@@ -123,7 +121,7 @@ object OpenTelemetryTracingConfig {
       builder
     }
 
-    def responseAttributes(request: ServerRequest, response: ServerResponse[_]): Attributes =
+    def responseAttributes(request: ServerRequest, response: ServerResponse[?]): Attributes =
       Attributes.builder
         .put(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, response.code.code.toLong: java.lang.Long)
         .build()

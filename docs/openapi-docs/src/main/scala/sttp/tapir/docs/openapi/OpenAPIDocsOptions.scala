@@ -9,7 +9,7 @@ import sttp.tapir.{AnyEndpoint, EndpointInput, EndpointOutput, statusCode, strin
 case class OpenAPIDocsOptions(
     operationIdGenerator: (AnyEndpoint, Vector[String], Method) => String,
     schemaName: SName => String = defaultSchemaName,
-    defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]] = OpenAPIDocsOptions.defaultDecodeFailureOutput,
+    defaultDecodeFailureOutput: EndpointInput[?] => Option[EndpointOutput[?]] = OpenAPIDocsOptions.defaultDecodeFailureOutput,
     markOptionsAsNullable: Boolean = false,
     failOnDuplicateOperationId: Boolean = false,
     failOnDuplicateSchemaName: Boolean = false
@@ -27,7 +27,7 @@ object OpenAPIDocsOptions {
     (method.method.toLowerCase +: components.map(_.toLowerCase.capitalize)).mkString
   }
 
-  val defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]] = input =>
+  val defaultDecodeFailureOutput: EndpointInput[?] => Option[EndpointOutput[?]] = input =>
     defaultBadRequestDescription(input).map { description =>
       statusCode(StatusCode.BadRequest).and(stringBody.description(description))
     }

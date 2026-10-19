@@ -11,7 +11,7 @@ given picklerToCodec[T](using p: Pickler[T]): JsonCodec[T] = p.toCodec
 def jsonBody[T: Pickler]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(summon[Pickler[T]].toCodec)
 
 def jsonBodyWithRaw[T: Pickler]: EndpointIO.Body[String, (String, T)] = stringBodyUtf8AnyFormat(
-  Codec.tupledWithRaw(summon[Pickler[T]].toCodec)
+  Codec.tupledWithRaw(using summon[Pickler[T]].toCodec)
 )
 
 def jsonQuery[T: Pickler](name: String): EndpointInput.Query[T] =

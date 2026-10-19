@@ -21,7 +21,7 @@ use.
 Hence, we'll start with the same basic endpoint description. We'll be editing the `cats-effect.scala` file:
 
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.31
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.32
 
 import sttp.tapir.*
 
@@ -56,8 +56,8 @@ parameter explicitly, using `.serverLogic[IO]` in our case:
 
 {emphasize-lines="2, 4, 12-14"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.31
-//> using dep com.softwaremill.sttp.tapir::tapir-cats:1.13.31
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.32
+//> using dep com.softwaremill.sttp.tapir::tapir-cats:1.13.32
 
 import cats.effect.IO
 import sttp.tapir.*
@@ -102,8 +102,8 @@ The conversion process is an almost-one-liner (if it wasn't for line length limi
 
 {emphasize-lines="2, 5, 7, 18-19"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.31
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.31
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.32
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.32
 
 import cats.effect.IO
 import org.http4s.HttpRoutes
@@ -130,13 +130,13 @@ standard code to start a server and handle requests until the application is int
 
 {emphasize-lines="3, 5, 7, 8, 12, 24-30"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.31
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.31
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.32
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.32
+//> using dep org.http4s::http4s-ember-server:0.23.37
 
 import cats.effect.{ExitCode, IO, IOApp}
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
@@ -154,12 +154,11 @@ object HelloWorldTapir extends IOApp:
     .toRoutes(helloWorldEndpoint)
 
   override def run(args: List[String]): IO[ExitCode] =
-    BlazeServerBuilder[IO]
-      .bindHttp(8080, "localhost")
+    EmberServerBuilder
+      .default[IO]
       .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
-      .resource
-      .use(_ => IO.never)
-      .as(ExitCode.Success)
+      .build
+      .useForever
 ```
 
 First of all, you might notice that instead of the `@main` method, we are extending the `IOApp` trait. This is needed,
@@ -169,8 +168,7 @@ the `IOApp` will handle evaluating the `IO` description and actually running the
 
 Secondly, with http4s we need to use a specific server implementation (http4s itself is only an API to define endpoints - 
 kind of a middle-man between Tapir and low-level networking code). We can choose from `blaze` and `ember` servers, here 
-we're using the `blaze` one, which is reflected in the additional dependency and the server configuration constructor: 
-`BlazeServerBuilder`.
+we're using the `ember` one, which is reflected in the additional dependency and the server configuration constructor: `EmberServerBuilder`.
 
 Finally, we've got the `run` method implementation, which attaches our interpreted route to the root context `/` and
 exposes the server on `localhost:8080`.
@@ -192,15 +190,15 @@ the second step that we need to perform:
 
 {emphasize-lines="3, 7, 13, 27-32, 37"}
 ```scala
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.31
-//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.31
-//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.31
-//> using dep org.http4s::http4s-blaze-server:0.23.16
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.32
+//> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.32
+//> using dep com.softwaremill.sttp.tapir::tapir-swagger-ui-bundle:1.13.32
+//> using dep org.http4s::http4s-ember-server:0.23.37
 
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.syntax.all.*
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
 import sttp.tapir.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
@@ -226,16 +224,16 @@ object HelloWorldTapir extends IOApp:
   val allRoutes: HttpRoutes[IO] = helloWorldRoutes <+> swaggerRoutes
 
   override def run(args: List[String]): IO[ExitCode] =
-    BlazeServerBuilder[IO]
-      .bindHttp(8080, "localhost")
+    EmberServerBuilder
+      .default[IO]
       .withHttpApp(Router("/" -> allRoutes).orNotFound)
-      .resource
+      .build
       .useForever
 ```
 
 Hence, we first generate endpoint descriptions, which correspond to exposing the Swagger UI (containing the generated
 OpenAPI yaml for our `/hello/world` endpoint), which use `IO` to express their server logic. Then, we interpret those
-endpoints as `HttpRoutes[IO]`, which we can expose using http4's blaze server.
+endpoints as `HttpRoutes[IO]`, which we can expose using http4's ember server.
 
 ## Other concepts covered so far
 
