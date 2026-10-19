@@ -961,7 +961,7 @@ lazy val picklerJson: ProjectMatrix = (projectMatrix in file("json/pickler"))
       "com.lihaoyi" %% "ujson" % Versions.upickle % Test
     )
     // NB: Hearth requires -language:implicitConversions (to unwrap `Type.Lazy[A]` into `Type[A]` at use sites);
-    // tapir's commonSettings already enables it, so setting it here again only produces a redundancy warning.
+    // sbt-tpolecat already enables it, so setting it here again only produces a redundancy warning.
     // Uncomment to debug the cross-quotes compiler plugin's rewriting:
     // scalacOptions += "-P:hearth.cross-quotes:logging=true",
   )
