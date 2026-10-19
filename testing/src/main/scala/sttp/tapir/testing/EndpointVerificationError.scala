@@ -74,3 +74,13 @@ case class UnexpectedBodyError(e: AnyEndpoint, statusCode: StatusCode) extends E
 case class DuplicatedNameError(name: String) extends EndpointVerificationError {
   override def toString: String = s"Duplicate endpoints names found: $name"
 }
+
+/** Endpoint `e` declares its request body in a way which can't be served, or which won't be described correctly in the generated
+  * documentation.
+  *
+  * @param rejectedByServers
+  *   whether servers also reject the endpoint, by throwing when routes are constructed
+  */
+case class InvalidBodyDefinitionError(e: AnyEndpoint, message: String, rejectedByServers: Boolean) extends EndpointVerificationError {
+  override def toString: String = if (rejectedByServers) message else s"$message (not rejected by servers)"
+}

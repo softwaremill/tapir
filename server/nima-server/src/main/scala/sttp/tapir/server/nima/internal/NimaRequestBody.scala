@@ -19,7 +19,8 @@ private[nima] class NimaRequestBody(createFile: ServerRequest => TapirFile) exte
     def asByteArray = asInputStream.readAllBytes()
 
     bodyType match {
-      case RawBodyType.StringBody(charset)  => RawValue(new String(asByteArray, charset))
+      case RawBodyType.StringBody(charset) =>
+        RawValue(new String(asByteArray, RequestBody.requestCharset(serverRequest).getOrElse(charset)))
       case RawBodyType.ByteArrayBody        => RawValue(asByteArray)
       case RawBodyType.ByteBufferBody       => RawValue(ByteBuffer.wrap(asByteArray))
       case RawBodyType.InputStreamBody      => RawValue(asInputStream)

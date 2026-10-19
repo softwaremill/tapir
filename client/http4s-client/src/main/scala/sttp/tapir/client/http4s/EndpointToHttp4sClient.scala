@@ -100,9 +100,10 @@ private[http4s] class EndpointToHttp4sClient(clientOptions: Http4sClientOptions)
           currentUri.withQueryParam(key, values)
         }
         req.withUri(uri)
-      case EndpointIO.Empty(_, _)              => req
-      case EndpointIO.Body(bodyType, codec, _) => setBody(value, bodyType, codec, req)
-      case ob: EndpointIO.OneOfBody[_, _]      =>
+      case EndpointIO.Empty(_, _)                        => req
+      case b @ EndpointIO.Body(_, _, _) if b.isSecondary => req
+      case EndpointIO.Body(bodyType, codec, _)           => setBody(value, bodyType, codec, req)
+      case ob: EndpointIO.OneOfBody[_, _]                =>
         ob.headVariantBodyWithAppliedMapping match {
           case Some(Left(body))                                                                 => setInputParams(body, params, req)
           case Some(Right(EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, codec, _, _, _)))) =>

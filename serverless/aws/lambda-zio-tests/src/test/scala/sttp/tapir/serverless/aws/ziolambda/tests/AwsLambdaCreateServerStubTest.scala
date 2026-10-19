@@ -18,6 +18,7 @@ import sttp.tapir.serverless.aws.ziolambda.tests.AwsLambdaCreateServerStubTest.{
 import sttp.tapir.tests._
 import sttp.tapir.ztapir.RIOMonadError
 
+import java.util.Base64
 import scala.concurrent.duration._
 
 class AwsLambdaCreateServerStubTest extends CreateServerTest[Task, Any, AwsServerOptions[Task], Route[Task]] {
@@ -105,15 +106,15 @@ object AwsLambdaCreateServerStubTest {
           "Internet Explorer"
         )
       ),
-      Some(request.body match {
-        case NoBody                => ""
-        case StringBody(b, _, _)   => new String(b)
-        case ByteArrayBody(b, _)   => new String(b)
-        case ByteBufferBody(b, _)  => new String(b.array())
-        case InputStreamBody(b, _) => new String(b.readAllBytes())
-        case _                     => throw new UnsupportedOperationException
-      }),
-      isBase64Encoded = false
+      Some(Base64.getEncoder.encodeToString(request.body match {
+        case NoBody                     => Array.emptyByteArray
+        case StringBody(b, encoding, _) => b.getBytes(encoding)
+        case ByteArrayBody(b, _)        => b
+        case ByteBufferBody(b, _)       => b.array()
+        case InputStreamBody(b, _)      => b.readAllBytes()
+        case _                          => throw new UnsupportedOperationException
+      })),
+      isBase64Encoded = true
     )
   }
 

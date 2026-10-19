@@ -15,7 +15,6 @@ import java.io.ByteArrayInputStream
 import scala.collection.JavaConverters._
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.{ExecutionContext, Future}
-import java.nio.charset.StandardCharsets
 
 private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     serverOptions: ArmeriaServerOptions[F],
@@ -39,8 +38,13 @@ private[armeria] final class ArmeriaRequestBody[F[_], S <: Streams[S]](
     val request = ctx.request()
 
     futureConversion.from(bodyType match {
-      case RawBodyType.StringBody(_) =>
-        request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.contentUtf8())).toScala
+      case RawBodyType.StringBody(defaultCharset) =>
+        request
+          .aggregate()
+          .thenApply[RawValue[R]](agg =>
+            RawValue(new String(agg.content().array(), RequestBody.requestCharset(serverRequest).getOrElse(defaultCharset)))
+          )
+          .toScala
       case RawBodyType.ByteArrayBody =>
         request.aggregate().thenApply[RawValue[R]](agg => RawValue(agg.content().array())).toScala
       case RawBodyType.ByteBufferBody =>
