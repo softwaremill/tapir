@@ -12,7 +12,7 @@ object LambdaSamTemplate extends App {
   val samOptions: AwsSamOptions = AwsSamOptions(
     "Tests",
     source = CodeSource(
-      "java11",
+      "java17",
       jarPath,
       "sttp.tapir.serverless.aws.ziolambda.tests.ZioLambdaHandlerImpl::handleRequest"
     ),
