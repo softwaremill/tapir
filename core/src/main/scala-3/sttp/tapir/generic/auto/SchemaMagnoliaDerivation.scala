@@ -113,8 +113,8 @@ trait SchemaMagnoliaDerivation {
       private def mergeAnnotations[T](primary: Seq[Any], inherited: Seq[Any]): Seq[Any] =
         primary.reverse ++ inherited.distinct.filter {
           // skip inherited annotation from definition if defined in implementation
-          case a if primary.exists(_.getClass.equals(a.getClass)) => false
-          case _                                                  => true
+          case a if primary.exists(_.getClass == a.getClass) => false
+          case _                                             => true
         }
 
       /** To avoid recursive loops, we keep track of the fully qualified names of types for which derivation is in progress using a mutable
