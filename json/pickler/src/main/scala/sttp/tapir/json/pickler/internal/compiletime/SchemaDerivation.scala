@@ -336,7 +336,11 @@ trait SchemaDerivation {
     encodedFieldName[A](param, fieldName, sctx.env.config) match {
       case Left(error)                                                                => failSchema(error)
       case Right(_) if !param.hasDefault && hasDefaultAnnotation[A](param, fieldName) =>
-        failSchema(PicklerDerivationError.DefaultWithoutScalaDefault(Type[A].plainPrint, fieldName))
+        failSchema(
+          PicklerDerivationError.InvalidAnnotation(
+            s"@default on field '$fieldName' of ${Type[A].plainPrint} requires a Scala default value"
+          )
+        )
       case Right(encoded) =>
         val encodedName = Expr(encoded)
         deriveSchemaFor[Field](using sctx.nest[Field]).map { fieldSchema =>

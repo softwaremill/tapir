@@ -56,7 +56,7 @@ class PicklerCustomizationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "reject @default on a field without a Scala default, which decoding could not honour" in {
-    typeCheckErrors("Pickler.derived[ClassWithDefault]").map(_.message).mkString should include("add a Scala default")
+    typeCheckErrors("Pickler.derived[ClassWithDefault]").map(_.message).mkString should include("requires a Scala default value")
   }
 
   it should "document a Scala default parameter in the schema, as it may be missing when decoding" in {
