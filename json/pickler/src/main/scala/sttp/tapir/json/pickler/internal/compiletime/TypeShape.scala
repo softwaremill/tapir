@@ -127,7 +127,7 @@ trait TypeShape { this: MacroCommons & StdExtensions =>
             case Left(_)   =>
               Enum.parse[A].toEither match {
                 case Right(e) =>
-                  val leaves = leavesOf(e)
+                  val leaves = leavesOf[A]
                   if (leaves.nonEmpty && allSingletons(leaves)) Shape.Enumeration(e, leaves) else Shape.Coproduct(e, leaves)
                 case Left(_) => Shape.Opaque()
               }
@@ -144,8 +144,25 @@ trait TypeShape { this: MacroCommons & StdExtensions =>
   /** The **leaves** of a sealed hierarchy: an intermediate sealed trait contributes its own children, not itself, so `Pet -> Rodent ->
     * Hamster` yields `Hamster` as a direct subtype. Falls back to the direct children when the hierarchy cannot be enumerated exhaustively.
     */
-  def leavesOf[A](e: Enum[A]): List[(String, ??<:[A])] =
-    e.exhaustiveChildren.map(_.toList).getOrElse(e.directChildren.toList)
+  def leavesOf[A: Type]: List[(String, ??<:[A])] = {
+    val root = UntypedType.fromTyped[A]
+    // Hearth's `exhaustiveChildren` is keyed by simple name, collapsing e.g. `A.Same` and `B.Same`; this is the same walk over the
+    // list form.
+    def leaves(tpe: UntypedType): Option[List[(String, UntypedType)]] =
+      tpe.directChildrenList.flatMap(_.foldLeft(Option(List.empty[(String, UntypedType)])) {
+        case (None, _)                                                     => None
+        case (Some(acc), child @ (_, sub)) if sub.isObject || sub.isVal    => Some(acc :+ child)
+        case (Some(acc), (_, sub)) if sub.isSealed && !sub.isJavaEnumValue => leaves(sub).map(acc ++ _)
+        case (_, (_, sub)) if !root.isEnumeration && sub.isAbstract        => None
+        case (Some(acc), child)                                            => Some(acc :+ child)
+      })
+    // A leaf reachable through two intermediate traits is listed once.
+    def distinct(all: List[(String, UntypedType)]) = all.foldLeft(List.empty[(String, UntypedType)]) { (acc, child) =>
+      if (acc.exists(_._2 =:= child._2)) acc else acc :+ child
+    }
+    val exhaustive = leaves(root).map(all => if (root.isEnumeration) all else all.filter(_._2 <:< root)).map(distinct).filter(_.nonEmpty)
+    exhaustive.getOrElse(root.directChildrenList.getOrElse(Nil)).map { case (name, sub) => name -> sub.asTyped[A].as_??<:[A] }
+  }
 
   def isSingleton[A: Type]: Boolean = SingletonValue.parse[A].toEither.isRight
 

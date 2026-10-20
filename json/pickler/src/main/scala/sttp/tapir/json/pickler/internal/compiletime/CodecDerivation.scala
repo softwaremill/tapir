@@ -343,8 +343,8 @@ trait CodecDerivation {
     // Enumeration values are the cases' simple names, not discriminator values (`NameSupport.enumerationValue`);
     // `SchemaDerivation.deriveStringEnumSchema` documents the same literals.
     val values: Either[PicklerDerivationError, List[String]] =
-      if (asEnumeration) Right(leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; enumerationValue[Leaf] })
-      else discriminatorValues(leaves, env)
+      (if (asEnumeration) Right(leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; enumerationValue[Leaf] })
+       else discriminatorValues(leaves, env)).flatMap(distinctLeafValues[A](leaves, _))
     val jsoniterNames = leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; jsoniterLeafName[Leaf] }
 
     if (leaves.isEmpty) fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))

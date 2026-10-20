@@ -5,7 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import sttp.tapir.DecodeResult.Value
-import sttp.tapir.SchemaType.{SOption, SProduct}
+import sttp.tapir.SchemaType.{SCoproduct, SOption, SProduct}
 
 import scala.compiletime.testing.typeCheckErrors
 
@@ -105,6 +105,22 @@ class PicklerEdgeCasesTest extends AnyFlatSpec with Matchers {
     typeCheckErrors("Pickler.derived[(Int, String)]").map(_.message).mkString should include("tuples have no JSON schema")
   }
 
+  behavior of "leaves with the same simple name"
+
+  it should "be kept apart when their discriminator values differ" in {
+    given PicklerConfiguration = PicklerConfiguration.default.withFullDiscriminatorValues
+    val pickler = Pickler.derived[Dup]
+    pickler.schema.schemaType.asInstanceOf[SCoproduct[Dup]].subtypes should have size 2
+    pickler.schema.applyValidation(Ns2.Same("x")) shouldBe Nil
+    val codec = pickler.toCodec
+    codec.decode(codec.encode(Ns1.Same(1))) shouldBe Value(Ns1.Same(1))
+    codec.decode(codec.encode(Ns2.Same("x"))) shouldBe Value(Ns2.Same("x"))
+  }
+
+  it should "be rejected when their discriminator values clash" in {
+    typeCheckErrors("Pickler.derived[Dup]").map(_.message).mkString should include("several subtypes are written as 'Same'")
+  }
+
   behavior of "decode failures"
 
   it should "report malformed JSON as a DecodeResult.Error carrying a JsonDecodeException with jsoniter's message" in {
@@ -153,4 +169,8 @@ object EdgeFixtures {
   case class WithChar(c: Char)
   case class WithOptOpt(o: Option[Option[Int]])
   case class WithTuple(t: (Int, String))
+
+  sealed trait Dup
+  object Ns1 { case class Same(a: Int) extends Dup }
+  object Ns2 { case class Same(b: String) extends Dup }
 }

@@ -1,8 +1,8 @@
 package sttp.tapir.json.pickler.internal.compiletime
 
 import hearth.MacroCommons
+import hearth.fp.data.NonEmptyList
 import hearth.fp.effect.*
-import hearth.fp.instances.*
 import hearth.fp.syntax.*
 import hearth.std.*
 import sttp.tapir.Schema
@@ -38,7 +38,6 @@ trait SchemaDerivation {
     lazy val SchemaAnyPair: Type[(Schema[Any], String)] = Type.of[(Schema[Any], String)]
     lazy val SchemaAnyPairs: Type[List[(Schema[Any], String)]] = Type.of[List[(Schema[Any], String)]]
     lazy val IntT: Type[Int] = Type.of[Int]
-    def IndexFnOf[A: Type]: Type[A => Int] = Type.of[A => Int]
   }
 
   // -----------------------------------------------------------------------------------------------------------------
@@ -342,68 +341,64 @@ trait SchemaDerivation {
     val annotations = typeAnnotationsExpr[A]
     val discriminatorField = Expr(sctx.env.config.discriminator)
 
-    leaves
-      .foldLeft(MIO.pure(List.empty[Expr[(Schema[Any], String)]])) { case (acc, (_, leaf)) =>
-        acc.flatMap { pairs =>
-          import leaf.Underlying as Leaf
-          discriminatorValue[Leaf](sctx.env) match {
-            case Left(error)  => failSchema(error)
-            case Right(value) =>
+    discriminatorValues(leaves, sctx.env).flatMap(distinctLeafValues[A](leaves, _)) match {
+      case Left(error)   => failSchema(error)
+      case Right(values) =>
+        leaves
+          .zip(values)
+          .foldLeft(MIO.pure(List.empty[Expr[(Schema[Any], String)]])) { case (acc, ((_, leaf), value)) =>
+            acc.flatMap { pairs =>
+              import leaf.Underlying as Leaf
               val valueExpr = Expr(value)
               deriveSchemaFor[Leaf](using sctx.nest[Leaf]).map { leafSchema =>
                 pairs :+ Expr.quote((Expr.splice(leafSchema).asInstanceOf[Schema[Any]], Expr.splice(valueExpr)))
               }
+            }
           }
-        }
-      }
-      .flatMap { pairs =>
-        val subtypesWithValues = pairs.foldRight(Expr.quote(Nil: List[(Schema[Any], String)])) { (pair, tail) =>
-          Expr.quote(Expr.splice(pair) :: Expr.splice(tail))
-        }
-        subtypeIndexExpr[A](leaves).flatMap { subtypeIndex =>
-          setCachedAndGet[A](
-            sctx.cache,
-            Expr.quote {
-              SchemaUtils.enrichSchema[A](
-                SchemaUtils.coproductSchema[A](
-                  Expr.splice(name),
-                  Expr.splice(subtypesWithValues),
-                  Expr.splice(discriminatorField),
-                  Expr.splice(subtypeIndex)
-                ),
-                Expr.splice(annotations)
+          .flatMap { pairs =>
+            val subtypesWithValues = pairs.foldRight(Expr.quote(Nil: List[(Schema[Any], String)])) { (pair, tail) =>
+              Expr.quote(Expr.splice(pair) :: Expr.splice(tail))
+            }
+            subtypeIndexExpr[A](leaves).flatMap { subtypeIndex =>
+              setCachedAndGet[A](
+                sctx.cache,
+                Expr.quote {
+                  SchemaUtils.enrichSchema[A](
+                    SchemaUtils.coproductSchema[A](
+                      Expr.splice(name),
+                      Expr.splice(subtypesWithValues),
+                      Expr.splice(discriminatorField),
+                      Expr.splice(subtypeIndex)
+                    ),
+                    Expr.splice(annotations)
+                  )
+                }
               )
             }
-          )
-        }
-      }
+          }
+    }
   }
 
   /** `(value: A) => value match { case _: Leaf0 => 0; case _: Leaf1 => 1; ... }`, the dispatch behind `SCoproduct.subtypeSchema` (and hence
-    * `Schema.applyValidation`). A type-test match, generated with Hearth's `Enum.matchOn`, is the only dispatch that handles parameterless
-    * Scala 3 enum cases (all one runtime class) and nested classes alike. `matchOn` sees one level of the hierarchy at a time, so
-    * intermediate sealed traits are descended recursively until a leaf is reached.
+    * `Schema.applyValidation`). A type-test match is the only dispatch that handles parameterless Scala 3 enum cases (all one runtime
+    * class, so matched by value) and nested classes alike. The cases are built over the leaves directly rather than with `Enum.matchOn`,
+    * which keys children by simple name and would drop one of two same-named leaves.
     */
   private def subtypeIndexExpr[A: Type](leaves: List[(String, ??<:[A])]): MIO[Expr[A => Int]] = {
     implicit val IntT: Type[Int] = STypes.IntT
-    implicit val FnT: Type[A => Int] = STypes.IndexFnOf[A]
-    val keys = leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; typeKey[Leaf] }
 
-    def indexOf[B: Type](value: Expr[B]): MIO[Expr[Int]] =
-      keys.indexOf(typeKey[B]) match {
-        case -1 =>
-          Enum.parse[B].toEither match {
-            case Right(e) =>
-              e.matchOn[MIO, Int](value) { matched =>
-                import matched.{Underlying as Child, value as child}
-                indexOf[Child](child)
-              }.map(_.getOrElse(Expr(-1)))
-            case Left(_) => MIO.pure(Expr(-1))
-          }
-        case index => MIO.pure(Expr(index))
-      }
+    def leafCase[Leaf: Type](index: Int): MatchCase[Expr[Int]] = {
+      val matched =
+        if (Type.isVal[Leaf] && !Type.isObject[Leaf]) Expr.singletonOf[Leaf].fold(MatchCase.typeMatch[Leaf]())(MatchCase.eqValue[Leaf](_))
+        else MatchCase.typeMatch[Leaf]()
+      matched.map(_ => Expr(index))
+    }
 
-    LambdaBuilder.of1[A]("value").traverse(indexOf[A](_)).map(_.build[Int])
+    val cases = leaves.zipWithIndex.map { case ((_, leaf), index) => import leaf.Underlying as Leaf; leafCase[Leaf](index) }
+    LambdaBuilder
+      .of1[A]("value")
+      .traverse(value => MIO.pure(NonEmptyList.fromList(cases).fold(Expr(-1))(value.matchOn[Int](_))))
+      .map(_.build[Int])
   }
 
   /** An all-singleton hierarchy (`Shape.Enumeration`): `SString` plus a `Validator.enumeration` of the singleton values — the schema

@@ -80,6 +80,18 @@ trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
       for { tail <- acc; value <- discriminatorValue[Leaf](env) } yield value :: tail
     }
 
+  /** `values` (one per leaf, in order), provided no two leaves share one. */
+  protected def distinctLeafValues[A: Type](
+      leaves: List[(String, ??<:[A])],
+      values: List[String]
+  ): Either[PicklerDerivationError, List[String]] =
+    values.find(v => values.count(_ == v) > 1) match {
+      case None        => Right(values)
+      case Some(value) =>
+        val clashing = leaves.zip(values).collect { case ((_, leaf), `value`) => leaf.Underlying.plainPrint }
+        Left(PicklerDerivationError.DuplicateLeafValue(Type[A].plainPrint, value, clashing))
+    }
+
   /** The bare string an enumeration case `A` is written as. */
   protected def enumerationValue[A: Type]: String = enumCaseName[A](typeEncodedName[A])
 }

@@ -132,6 +132,13 @@ object PicklerDerivationError {
          |the schema would document an object). Use a case class instead.""".stripMargin
   }
 
+  /** Two leaves written as the same discriminator (or enumeration) value could not be told apart when decoding. */
+  final case class DuplicateLeafValue(typeName: String, value: String, leaves: List[String]) extends PicklerDerivationError {
+    def message: String =
+      s"""Cannot derive Pickler for $typeName: several subtypes are written as '$value': ${leaves.mkString(", ")}.
+         |Rename one with @encodedName, or configure distinct discriminator values (e.g. withFullDiscriminatorValues).""".stripMargin
+  }
+
   final case class InvalidAnnotation(detail: String) extends PicklerDerivationError {
     def message: String = s"Cannot derive Pickler: $detail"
   }
