@@ -19,9 +19,12 @@ import scala.collection.mutable
   *
   * ==Exclusions==
   * `DerivationEnv.implicitLookupExclusions` lists the types never looked up: the root (a `given p: Pickler[A] = Pickler.derived[A]` would
-  * otherwise find itself) and the leaves of derived sealed hierarchies.
+  * otherwise find itself) and, for `oneOfUsingField`, the mapped leaves.
+  *
+  * A type with a sealed parent is never looked up either: a user pickler for it writes the discriminator value of its own configuration,
+  * which the parent's codec may not read.
   */
-trait ImplicitPicklerSupport { this: MacroCommons & PlatformSupport =>
+trait ImplicitPicklerSupport { this: MacroCommons & PlatformSupport & TypeShape =>
 
   private val memo = mutable.Map.empty[String, Option[Expr_??]]
 
@@ -29,7 +32,7 @@ trait ImplicitPicklerSupport { this: MacroCommons & PlatformSupport =>
 
   protected def userPickler[A: Type](env: DerivationEnv): MIO[Option[Expr[Pickler[A]]]] = {
     val key = typeKey[A]
-    if (env.implicitLookupExclusions.contains(key)) MIO.pure(None)
+    if (env.implicitLookupExclusions.contains(key) || hasSealedParent[A]) MIO.pure(None)
     else
       memo.get(key) match {
         case Some(cached) => MIO.pure(cached.map(_.value.asInstanceOf[Expr[Pickler[A]]]))

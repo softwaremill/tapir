@@ -280,12 +280,18 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     // it would write its own discriminator value, which the parent cannot read
     given Pickler[StatusBadRequest] = Pickler.derived[StatusBadRequest](using PicklerConfiguration.default.withFullDiscriminatorValues)
     roundTrip(Pickler.derived[StatusResponse], StatusResponse(StatusBadRequest(1)), """{"status":{"$type":"StatusBadRequest","bF":1}}""")
-    // also when the subtype is met on its own before the hierarchy
-    roundTrip(
-      Pickler.derived[LeafAndParent],
-      LeafAndParent(StatusBadRequest(1), StatusBadRequest(2)),
-      """{"leaf":{"$type":"StatusBadRequest","bF":1},"status":{"$type":"StatusBadRequest","bF":2}}"""
-    )
+    // also when the parent is not part of the derivation
+    roundTrip(Pickler.derived[LeafOnly], LeafOnly(StatusBadRequest(1)), """{"leaf":{"$type":"StatusBadRequest","bF":1}}""")
+  }
+
+  it should "mention the ignored Pickler when a subtype of a sealed hierarchy cannot be derived" in {
+    scala.compiletime.testing
+      .typeCheckErrors("""
+      given Pickler[NonCaseLeaf] = ???
+      Pickler.derived[NonCaseLeafHolder]
+    """)
+      .map(_.message)
+      .mkString should include("a Pickler for a subtype of a sealed hierarchy is not used")
   }
 
   it should "still derive structurally when only generic.auto is in scope (the re-entrancy guard)" in {
@@ -570,7 +576,11 @@ object CodecFixtures {
     def code = 500
   }
   case class StatusResponse(status: Status)
-  case class LeafAndParent(leaf: StatusBadRequest, status: Status)
+  case class LeafOnly(leaf: StatusBadRequest)
+
+  sealed trait WithNonCaseLeaf
+  final class NonCaseLeaf(val y: Int) extends WithNonCaseLeaf
+  case class NonCaseLeafHolder(leaf: NonCaseLeaf)
 
   sealed trait SealedVariant
   case object VariantA extends SealedVariant

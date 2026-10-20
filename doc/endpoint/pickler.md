@@ -71,7 +71,7 @@ val personPickler: Pickler[Person] = Pickler.derived
 
 Such an override has to be a `given`/`implicit val` (an already-typed value). An `inline given` or `inline def` whose body is itself `Pickler.derived[X]` is **not** picked up for nested types: it expands to a nested derivation, which the macro refuses in order not to derive every field type twice (or forever, for recursive types). A type alias and the type it aliases are treated as the same type, so a `given Pickler[UUID]` also applies to a field typed `Id` where `type Id = UUID`.
 
-A `given Pickler` for a subtype of a sealed hierarchy that is derived (e.g. from `derives Pickler` on a case class extending a sealed trait) is not used anywhere in that derivation: the subtype is derived with the hierarchy's configuration, so that its discriminator value is one the parent can read.
+Picklers for subtypes of a sealed hierarchy are not used for nested types; provide one for the parent instead.
 
 ## Automatic derivation
 

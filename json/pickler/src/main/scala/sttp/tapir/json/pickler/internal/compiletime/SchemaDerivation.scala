@@ -202,7 +202,15 @@ trait SchemaDerivation {
     Expr.summonImplicit[Schema[A]].toOption match {
       case Some(expr) => MIO.pure(expr)
       case None       =>
-        failSchema(PicklerDerivationError.UnsupportedType(Type[A].plainPrint, List(s"no implicit Schema[${Type[A].plainPrint}] in scope")))
+        val ignoredPickler =
+          if (hasSealedParent[A]) List("a Pickler for a subtype of a sealed hierarchy is not used; provide one for the parent instead")
+          else Nil
+        failSchema(
+          PicklerDerivationError.UnsupportedType(
+            Type[A].plainPrint,
+            s"no implicit Schema[${Type[A].plainPrint}] in scope" :: ignoredPickler
+          )
+        )
     }
   }
 

@@ -65,7 +65,7 @@ trait PicklerMacrosImpl
     runDerivation[A, Pickler[A]]("Pickler.derived", "Pickler") { (cache, runSafe) =>
       val (schemaExpr, codecExpr) = runSafe {
         for {
-          env <- environment[A](configExpr)
+          env <- environment(configExpr, root = typeKey[A])
           schema <- deriveSchemaRecursively[A](cache, env)
           codec <- deriveCodec[A](env)
         } yield (schema, codec)
@@ -80,7 +80,7 @@ trait PicklerMacrosImpl
     runDerivation[A, Schema[A]]("Pickler.schemaFor", "Schema") { (cache, runSafe) =>
       runSafe {
         for {
-          env <- environment[A](configExpr)
+          env <- environment(configExpr, root = typeKey[A])
           schema <- deriveSchemaRecursively[A](cache, env)
         } yield schema
       }
@@ -104,7 +104,7 @@ trait PicklerMacrosImpl
       val (valuesExpr, schemaExpr, codecExpr) = runSafe {
         for {
           children <- enumerationCases[A](macroName)
-          env <- environment[A](configExpr)
+          env <- environment(configExpr, root = typeKey[A])
           schema <- deriveSchemaRecursively[A](cache, env)
           codec <- deriveCodec[A](env)
         } yield (singletonValuesExpr[A](children), schema, codec)
@@ -191,7 +191,7 @@ trait PicklerMacrosImpl
           _ <- Log.info(s"Discriminator values from oneOfUsingField: ${overrides.mkString("{", ", ", "}")}")
           // The leaves' schemas and codecs must be derived here, with the overridden tags; a `given Pickler[Leaf]` in
           // scope would otherwise be picked up and write the configuration-derived tag instead.
-          env <- environment[A](configExpr, leafNameOverrides = overrides, alsoExclude = overrides.keySet)
+          env <- environment(configExpr, root = typeKey[A], leafNameOverrides = overrides, alsoExclude = overrides.keySet)
           schema <- deriveSchemaRecursively[A](cache, env)
           codec <- deriveCodec[A](env)
         } yield (schema, codec)
@@ -283,48 +283,16 @@ trait PicklerMacrosImpl
       )
   }
 
-  /** The [[DerivationEnv]] for one expansion: the folded configuration, plus the root, the leaves of every sealed hierarchy derived here
-    * (see [[hierarchyLeaves]]) and anything else the caller names excluded from user-pickler lookup.
+  /** The [[DerivationEnv]] for one expansion: the folded configuration, plus the root (and anything else the caller names) excluded from
+    * user-pickler lookup.
     */
-  private def environment[A: Type](
+  private def environment(
       configExpr: Expr[PicklerConfiguration],
+      root: String,
       leafNameOverrides: Map[String, String] = Map.empty,
       alsoExclude: Set[String] = Set.empty
   ): MIO[DerivationEnv] =
-    for {
-      config <- foldConfiguration(configExpr)
-      env = DerivationEnv(config, leafNameOverrides, alsoExclude + typeKey[A])
-      leaves <- hierarchyLeaves[A](env)
-    } yield env.copy(implicitLookupExclusions = env.implicitLookupExclusions ++ leaves)
-
-  /** The leaves (by `typeKey`) of the sealed hierarchies reachable from `A` that are derived structurally. A user `Pickler` for such a leaf
-    * must not be used anywhere in the expansion: its codec writes the discriminator value of its own configuration, which the hierarchy's
-    * codec and schema do not know, and the hierarchy's codec delegates to whatever codec the block holds for the leaf.
-    *
-    * Computed up front, because a leaf can be met on its own (as a field type) before the hierarchy it belongs to.
-    */
-  private def hierarchyLeaves[A: Type](env: DerivationEnv): MIO[Set[String]] = {
-    // `seen`: types whose children were visited; a type stopped at by a user pickler is not in it, so that it is still
-    // visited if it later turns out to be a leaf.
-    def visit[B: Type](isLeaf: Boolean, seen: Set[String], leaves: Set[String]): MIO[(Set[String], Set[String])] = {
-      val key = typeKey[B]
-      if (seen.contains(key)) MIO.pure((seen, leaves))
-      else
-        (if (isLeaf || leaves.contains(key)) MIO.pure(None) else userPickler[B](env)).flatMap {
-          case Some(_) => MIO.pure((seen, leaves))
-          case None    =>
-            val shape = classify[B]
-            val children = childrenOf(shape)
-            val childrenAreLeaves = shape.isInstanceOf[Shape.Coproduct[?]]
-            val newLeaves = if (childrenAreLeaves) children.map { c => import c.Underlying as C; typeKey[C] } else Nil
-            children.foldLeft(MIO.pure((seen + key, leaves ++ newLeaves))) { (acc, child) =>
-              import child.Underlying as Child
-              acc.flatMap { case (s, l) => visit[Child](childrenAreLeaves, s, l) }
-            }
-        }
-    }
-    visit[A](isLeaf = false, Set.empty, Set.empty).map(_._2)
-  }
+    foldConfiguration(configExpr).map(config => DerivationEnv(config, leafNameOverrides, alsoExclude + root))
 
   // ---------------------------------------------------------------------------------------------------------------
   // Configuration
