@@ -87,6 +87,12 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
       """{"fieldA":"fieldA value2","fieldB":null,"fieldC":true}"""
   }
 
+  it should "keep transientNone when other configuration options are set after it" in {
+    given PicklerConfiguration = PicklerConfiguration.default.withTransientNone(false).withSnakeCaseMemberNames.withDiscriminator("t")
+    Pickler.derived[FlatClassWithOption].toCodec.encode(FlatClassWithOption("a", None, true)) shouldBe
+      """{"field_a":"a","field_b":null,"field_c":true}"""
+  }
+
   it should "encode empty collections as [] and read a missing collection as empty" in {
     val flat = Pickler.derived[FlatClassWithList].toCodec
     val nested = Pickler.derived[NestedClassWithList].toCodec
