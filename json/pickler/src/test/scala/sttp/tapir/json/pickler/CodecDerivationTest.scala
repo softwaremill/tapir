@@ -194,10 +194,12 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     roundTrip(Pickler.derived[StatusResponse], StatusResponse(StatusInternalError), """{"status":{"$type":"status_internal_error"}}""")
   }
 
-  it should "encode a leaf on its own with its discriminator" in {
+  it should "encode a leaf on its own with its discriminator, and document it" in {
     // `alwaysEmitDiscriminator`: a member of a sealed hierarchy carries its tag whenever it is written, not only
     // through the parent, so that the two encodings agree.
     roundTrip(Pickler.derived[StatusBadRequest], StatusBadRequest(7), """{"$type":"StatusBadRequest","bF":7}""")
+    Pickler.derived[StatusBadRequest].schema.schemaType.asInstanceOf[SProduct[StatusBadRequest]].fields.map(_.name.encodedName) shouldBe
+      List("bF", "$type")
     Pickler.derived[StatusBadRequest].toCodec.decode("""{"bF":7}""") shouldBe Value(StatusBadRequest(7))
   }
 

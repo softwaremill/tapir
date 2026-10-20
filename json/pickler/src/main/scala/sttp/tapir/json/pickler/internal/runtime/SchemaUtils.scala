@@ -87,17 +87,7 @@ object SchemaUtils {
       subtypeIndex: T => Int
   ): Schema[T] = {
     val withDiscriminator: List[(Schema[Any], String)] = subtypesWithValues.map { case (child, value) =>
-      val enriched = child.schemaType match {
-        case p: SProduct[Any @unchecked] if !p.fields.exists(_.name.encodedName == discriminatorField) =>
-          val field = SProductField[Any, String](
-            FieldName(discriminatorField, discriminatorField),
-            Schema(SString[String]()).encodedDiscriminatorValue(value),
-            _ => Some(value)
-          )
-          child.copy(schemaType = p.copy(fields = p.fields :+ field))
-        case _ => child
-      }
-      enriched -> value
+      withDiscriminatorField(child, discriminatorField, value) -> value
     }
 
     val mapping: Map[String, SRef[?]] = withDiscriminator.flatMap { case (child, value) =>
@@ -113,6 +103,21 @@ object SchemaUtils {
       Some(name)
     )
   }
+
+  /** Append the discriminator field to a product schema, unless it already has one. Also used for a leaf of a sealed hierarchy on its own,
+    * since its codec writes the discriminator too.
+    */
+  def withDiscriminatorField[T](schema: Schema[T], discriminatorField: String, value: String): Schema[T] =
+    schema.schemaType match {
+      case p: SProduct[T @unchecked] if !p.fields.exists(_.name.encodedName == discriminatorField) =>
+        val field = SProductField[T, String](
+          FieldName(discriminatorField, discriminatorField),
+          Schema(SString[String]()).encodedDiscriminatorValue(value),
+          _ => Some(value)
+        )
+        schema.copy(schemaType = p.copy(fields = p.fields :+ field))
+      case _ => schema
+    }
 
   /** Reference to a schema being derived further up the stack — how recursion terminates. */
   def refSchema[T](name: SName): Schema[T] = Schema[T](SRef[T](name))

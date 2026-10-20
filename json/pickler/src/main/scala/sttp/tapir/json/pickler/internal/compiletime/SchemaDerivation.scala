@@ -271,32 +271,46 @@ trait SchemaDerivation {
     )
   }
 
+  /** A case class with a sealed parent also documents the discriminator field: its codec writes it (see `CodecDerivation`), also when used
+    * on its own.
+    */
   private def deriveCaseClassSchema[A: SchemaCtx](params: List[(String, Parameter)]): MIO[Expr[Schema[A]]] = {
     implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
     implicit val SNameT: Type[SName] = STypes.SNameT
     implicit val FieldT: Type[SProductField[A]] = STypes.ProductFieldOf[A]
+    implicit val StringT: Type[String] = STypes.StringT
 
     val name = sNameExpr[A]
     val annotations = typeAnnotationsExpr[A]
+    val discriminatorField = Expr(sctx.env.config.discriminator)
+    val discriminator: Either[PicklerDerivationError, Option[Expr[String]]] =
+      if (hasSealedParent[A]) discriminatorValue[A](sctx.env).map(v => Some(Expr(v))) else Right(None)
 
-    params
-      .foldLeft(MIO.pure(List.empty[Expr[SProductField[A]]])) { case (acc, (fieldName, param)) =>
-        acc.flatMap(fields => deriveFieldExpr[A](fieldName, param).map(fields :+ _))
-      }
-      .flatMap { fields =>
-        val fieldsList = fields.foldRight(Expr.quote(SchemaUtils.emptyFieldList[A])) { (field, tail) =>
-          Expr.quote(Expr.splice(field) :: Expr.splice(tail))
-        }
-        setCachedAndGet[A](
-          sctx.cache,
-          Expr.quote {
-            SchemaUtils.enrichSchema[A](
-              SchemaUtils.productSchema[A](Expr.splice(name), Expr.splice(fieldsList)),
-              Expr.splice(annotations)
+    discriminator
+      .fold(failSchema, MIO.pure)
+      .flatMap(discriminator =>
+        params
+          .foldLeft(MIO.pure(List.empty[Expr[SProductField[A]]])) { case (acc, (fieldName, param)) =>
+            acc.flatMap(fields => deriveFieldExpr[A](fieldName, param).map(fields :+ _))
+          }
+          .flatMap { fields =>
+            val fieldsList = fields.foldRight(Expr.quote(SchemaUtils.emptyFieldList[A])) { (field, tail) =>
+              Expr.quote(Expr.splice(field) :: Expr.splice(tail))
+            }
+            val product = Expr.quote {
+              SchemaUtils.enrichSchema[A](
+                SchemaUtils.productSchema[A](Expr.splice(name), Expr.splice(fieldsList)),
+                Expr.splice(annotations)
+              )
+            }
+            setCachedAndGet[A](
+              sctx.cache,
+              discriminator.fold(product) { value =>
+                Expr.quote(SchemaUtils.withDiscriminatorField[A](Expr.splice(product), Expr.splice(discriminatorField), Expr.splice(value)))
+              }
             )
           }
-        )
-      }
+      )
   }
 
   private def deriveFieldExpr[A: SchemaCtx](fieldName: String, param: Parameter): MIO[Expr[SProductField[A]]] = {

@@ -38,6 +38,7 @@ import sttp.tapir.json.pickler.internal.runtime.{CodecCombinators, LeafCodecs}
   *   - `alwaysEmitDiscriminator(true)` on case classes: a leaf written on its own carries its discriminator, so that a member of a sealed
   *     hierarchy is encoded the same way whether it is written through the parent or through its own pickler. It is also what makes
   *     per-leaf codecs composable into the hierarchy codec: jsoniter delegates to the leaf's implicit and the leaf writes the tag itself.
+  *     The leaf's schema documents the tag to match (`SchemaDerivation.deriveCaseClassSchema`).
   *   - `discriminatorFieldName(None)` on a hierarchy whose leaves are all singletons: such hierarchies are encoded as bare strings.
   *
   * ==`Either`==

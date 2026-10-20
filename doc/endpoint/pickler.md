@@ -135,7 +135,7 @@ inline given customConfiguration: PicklerConfiguration =
 
 The discriminator will be added as a field to all coproduct child codecs and schemas, if it's not yet present. The schema of the added field will always be a `Schema.string`. Finally, the mapping between the discriminator field values and the child schemas will be generated using `Configuration.toDiscriminatorValue(childSchemaName)`.
 
-Note that a case class which is a member of a sealed hierarchy carries its discriminator even when it is encoded on its own (through its own pickler), so that the two encodings agree.
+Note that a case class which is a member of a sealed hierarchy carries its discriminator even when it is encoded on its own (through its own pickler), so that the two encodings agree. Its schema documents the discriminator field as well.
 
 Finally, if the discriminator is a field that's defined on the base trait (and hence in each implementation), the discriminator values can be specified explicitly using the `Pickler.oneOfUsingField` macro, for example (this will also generate the appropriate mappings):
 

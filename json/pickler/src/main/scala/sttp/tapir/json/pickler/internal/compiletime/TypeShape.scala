@@ -164,6 +164,12 @@ trait TypeShape { this: MacroCommons & StdExtensions =>
     exhaustive.getOrElse(root.directChildrenList.getOrElse(Nil)).map { case (name, sub) => name -> sub.asTyped[A].as_??<:[A] }
   }
 
+  /** Whether `A` extends a sealed trait or class: jsoniter's condition for writing the discriminator of `A` on its own. */
+  def hasSealedParent[A: Type]: Boolean = Type[A].baseClasses.exists { base =>
+    import base.Underlying as Base
+    !(Base =:= Type[A]) && UntypedType.fromTyped[Base].isSealed
+  }
+
   def isSingleton[A: Type]: Boolean = SingletonValue.parse[A].toEither.isRight
 
   def allSingletons[A](leaves: List[(String, ??<:[A])]): Boolean = leaves.forall { case (_, leaf) =>
