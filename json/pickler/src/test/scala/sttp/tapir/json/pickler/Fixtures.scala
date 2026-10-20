@@ -1,7 +1,6 @@
 package sttp.tapir.json.pickler
 
 import sttp.tapir.Schema.annotations.default
-import sttp.tapir.Schema.annotations.description
 import java.util.UUID
 import sttp.tapir.Schema.annotations.encodedName
 
@@ -40,13 +39,6 @@ object Fixtures:
 
   case class TopClass2(fieldA: String, fieldB: AnnotatedInnerClass)
   case class AnnotatedInnerClass(@encodedName("encoded_field-a") fieldA: String, fieldB: String)
-  case class ClassWithDefault2(@default("field-a-default-2") fieldA: String, @default(ErrorTimeout) fieldB: ErrorCode)
-  case class ClassWithDefault3(
-      fieldA: ErrorCode,
-      @description("desc1") @default(InnerCaseClass("def-field", 65)) fieldB: InnerCaseClass,
-      fieldC: InnerCaseClass
-  )
-  case class InnerCaseClass(fieldInner: String, @default(4) fieldInnerInt: Int)
   case class FlatClassWithOption(fieldA: String, fieldB: Option[Int], fieldC: Boolean)
   case class NestedClassWithOption(innerField: Option[FlatClassWithOption])
 

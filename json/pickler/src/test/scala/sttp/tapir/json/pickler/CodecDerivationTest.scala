@@ -3,7 +3,7 @@ package sttp.tapir.json.pickler
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
-import sttp.tapir.Schema.annotations.{default, encodedName}
+import sttp.tapir.Schema.annotations.encodedName
 import sttp.tapir.SchemaType.{SCoproduct, SProduct, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
 
@@ -128,15 +128,6 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     codec.encode(ClassWithScalaDefault("field-a-user-value", "msg104")) shouldBe """{"fieldA":"field-a-user-value","fieldB":"msg104"}"""
     codec.encode(ClassWithScalaDefault("field-a-default", "text b")) shouldBe """{"fieldA":"field-a-default","fieldB":"text b"}"""
     codec.decode("""{"fieldB":"msg205"}""") shouldBe Value(ClassWithScalaDefault("field-a-default", "msg205"))
-  }
-
-  it should "NOT fill a missing field from tapir's @default annotation (documented limitation)" in {
-    // jsoniter has no hook for anything but Scala default parameters, so a missing field with only a tapir @default
-    // is a required-field error. The annotation is still reflected in the schema.
-    val pickler = Pickler.derived[ClassWithDefault]
-    pickler.toCodec.decode("""{"fieldB":"x"}""") shouldBe a[DecodeResult.Error]
-    pickler.schema.schemaType.asInstanceOf[SProduct[ClassWithDefault]].fields.head.schema.default.map(_._1) shouldBe
-      Some("field-a-default")
   }
 
   it should "report an unknown field as skipped rather than failing" in {
@@ -560,7 +551,6 @@ object CodecFixtures {
   case class UserName(name: String) extends AnyVal
   case class ClassWithValues(id: UserId, name: UserName, age: Int)
   case class ClassWithScalaDefault(fieldA: String = "field-a-default", fieldB: String)
-  case class ClassWithDefault(@default("field-a-default") fieldA: String, fieldB: String)
 
   sealed trait ErrorCode
   case object ErrorNotFound extends ErrorCode

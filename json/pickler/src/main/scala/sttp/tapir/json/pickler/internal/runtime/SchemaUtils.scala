@@ -42,6 +42,7 @@ object SchemaUtils {
   // -- Products ---------------------------------------------------------------------------------------------------
 
   /** Build one product field. `encodedName` is the JSON name the macro computed (`@encodedName`, or the configured transformation).
+    * `scalaDefault` is the value of the parameter's Scala default, which the codec fills in for a missing field.
     *
     * `index` is the position of the parameter in the primary constructor, which for a case class is also its `Product` element index.
     * `SProductField` compares by name and schema only, so the accessor does not affect the test assertions — but it does drive
@@ -53,11 +54,12 @@ object SchemaUtils {
       encodedName: String,
       fieldSchema: Schema[Any],
       index: Int,
+      scalaDefault: Option[Any],
       annotations: List[Any]
   ): SProductField[T] =
     SProductField[T, Any](
       FieldName(scalaName, encodedName),
-      enrichSchema(fieldSchema, annotations),
+      enrichSchema(scalaDefault.fold(fieldSchema)(fieldSchema.default(_)), annotations),
       t => Some(t.asInstanceOf[Product].productElement(index))
     )
 

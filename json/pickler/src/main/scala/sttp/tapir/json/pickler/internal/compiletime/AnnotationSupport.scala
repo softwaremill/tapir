@@ -58,6 +58,12 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
     }
   }
 
+  /** Whether a field has tapir's `@default`, declared or inherited. */
+  protected def hasDefaultAnnotation[A: Type](param: Parameter, memberName: String): Boolean = {
+    val DefaultCtor = Type.Ctor1.of[Schema.annotations.default]
+    allParamAnnotationsTyped[A](param, memberName).exists(annotation => DefaultCtor.unapply(annotation.Underlying).isDefined)
+  }
+
   /** Annotations on a type, including those inherited from its base classes.
     *
     * Note that `@encodedName` is deliberately *not* consumed from this list when building an `SName` — see `SchemaDerivation.sNameExpr`. A

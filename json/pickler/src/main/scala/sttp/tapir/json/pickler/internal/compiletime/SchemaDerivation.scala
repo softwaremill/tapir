@@ -32,6 +32,7 @@ trait SchemaDerivation {
     lazy val SNameT: Type[SName] = Type.of[SName]
     lazy val StringT: Type[String] = Type.of[String]
     lazy val AnyT: Type[Any] = Type.of[Any]
+    lazy val OptionAnyT: Type[Option[Any]] = Type.of[Option[Any]]
     lazy val ListAnyT: Type[List[Any]] = Type.of[List[Any]]
     lazy val ListStringT: Type[List[String]] = Type.of[List[String]]
     def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
@@ -317,13 +318,17 @@ trait SchemaDerivation {
     import param.tpe.Underlying as Field
     implicit val AnyT: Type[Any] = STypes.AnyT
     implicit val FieldT: Type[SProductField[A]] = STypes.ProductFieldOf[A]
+    implicit val OptionAnyT: Type[Option[Any]] = STypes.OptionAnyT
 
     val scalaName = Expr(fieldName)
     val index = Expr(param.index)
     val annotations = collectAnnotationsExpr(allParamAnnotations[A](param, fieldName))
+    val scalaDefault = scalaDefaultExpr(param).fold(Expr.quote(Option.empty[Any]))(d => Expr.quote(Some(Expr.splice(d))))
 
     encodedFieldName[A](param, fieldName, sctx.env.config) match {
-      case Left(error)    => failSchema(error)
+      case Left(error)                                                                => failSchema(error)
+      case Right(_) if !param.hasDefault && hasDefaultAnnotation[A](param, fieldName) =>
+        failSchema(PicklerDerivationError.DefaultWithoutScalaDefault(Type[A].plainPrint, fieldName))
       case Right(encoded) =>
         val encodedName = Expr(encoded)
         deriveSchemaFor[Field](using sctx.nest[Field]).map { fieldSchema =>
@@ -333,11 +338,23 @@ trait SchemaDerivation {
               Expr.splice(encodedName),
               Expr.splice(fieldSchema).asInstanceOf[Schema[Any]],
               Expr.splice(index),
+              Expr.splice(scalaDefault),
               Expr.splice(annotations)
             )
           }
         }
     }
+  }
+
+  /** A call to the Scala default of a constructor parameter, if it has one. */
+  private def scalaDefaultExpr(param: Parameter): Option[Expr[Any]] = {
+    implicit val AnyT: Type[Any] = STypes.AnyT
+    def call(method: Method): Option[UntypedExpr] = method match {
+      case result: Method.Result[?]   => result.build().toOption.map(_.asUntyped)
+      case values: Method.ApplyValues => call(values(Map.empty))
+      case _                          => None
+    }
+    param.defaultValue.flatMap(call).map(_.asTyped[Any])
   }
 
   /** A sealed hierarchy with at least one non-singleton leaf: a discriminated coproduct over the **leaves** (`Shape.Coproduct`), each leaf

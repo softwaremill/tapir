@@ -558,7 +558,7 @@ case class I(
     @encodedExample(1234)
     @format("int32")
     @validate[Int](Validator.max(100))
-    int: Int,
+    int: Int = 1234,
     noDesc: Long,
     @description("another optional boolean flag")
     @encodedName("alternativeBooleanName")

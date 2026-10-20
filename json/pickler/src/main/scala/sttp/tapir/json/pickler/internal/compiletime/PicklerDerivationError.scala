@@ -139,6 +139,15 @@ object PicklerDerivationError {
          |Rename one with @encodedName, or configure distinct discriminator values (e.g. withFullDiscriminatorValues).""".stripMargin
   }
 
+  /** The codec fills a missing field only from a Scala default, so a `@default` alone would document a field as optional that decoding
+    * requires.
+    */
+  final case class DefaultWithoutScalaDefault(typeName: String, field: String) extends PicklerDerivationError {
+    def message: String =
+      s"""Cannot derive Pickler for $typeName: field '$field' has a @default annotation but no Scala default value.
+         |A missing field is filled only from a Scala default when decoding: add a Scala default (`$field: ... = ...`).""".stripMargin
+  }
+
   final case class InvalidAnnotation(detail: String) extends PicklerDerivationError {
     def message: String = s"Cannot derive Pickler: $detail"
   }
