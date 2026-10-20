@@ -46,8 +46,8 @@ object PicklerDerivationError {
   final case class ConfigurationNotStatic(configExpr: String, reason: String) extends PicklerDerivationError {
     def message: String =
       s"""The PicklerConfiguration must be known at compile time, but `$configExpr` could not be evaluated: $reason
-         |Define it as an `inline given`, built from `PicklerConfiguration.default` and its `with*` methods (or compile with
-         |`-Yretain-trees`). Functions passed to `withToEncodedName` must be lambdas using only `String` methods, e.g. `_.toUpperCase`.""".stripMargin
+         |Define it as an `inline given`, built from `PicklerConfiguration.default` and its `with*` methods.
+         |Functions passed to `withToEncodedName` must use only `java.lang.String` methods, e.g. `_.toUpperCase`.""".stripMargin
   }
 
   /** A function from the `PicklerConfiguration` (`toEncodedName`, `toDiscriminatorValue`) was evaluated at compile time but threw. The
