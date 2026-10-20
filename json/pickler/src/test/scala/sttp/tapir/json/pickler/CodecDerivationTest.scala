@@ -499,6 +499,27 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
       .map(_.message)
       .mkString should include("`toEncodedName` could not be evaluated at compile time")
   }
+
+  it should "use a configuration defined as an inline given in an object compiled in the same run" in {
+    import ConfigFixtures.inlineSnakeCase
+    Pickler.derived[TopClass].toCodec.encode(TopClass("a", InnerClass(1))) shouldBe """{"field_a":"a","field_b":{"field_a11":1}}"""
+  }
+
+  it should "point at inline given when a configuration in an object compiled in the same run cannot be evaluated" in {
+    scala.compiletime.testing
+      .typeCheckErrors("""
+      import ConfigFixtures.nonInlineSnakeCase
+      Pickler.derived[FlatClass]
+    """)
+      .map(_.message)
+      .mkString should include("Define it as an `inline given`")
+  }
+}
+
+object ConfigFixtures {
+  inline given inlineSnakeCase: PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
+  // Its definition's tree is not kept by the compiler, so derivations in this compilation run cannot evaluate it.
+  given nonInlineSnakeCase: PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
 }
 
 object CodecFixtures {

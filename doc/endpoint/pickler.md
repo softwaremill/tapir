@@ -98,13 +98,13 @@ It is possible to configure schema and codec derivation by providing an implicit
 ```scala mdoc:compile-only
 import sttp.tapir.json.pickler.PicklerConfiguration
 
-given customConfiguration: PicklerConfiguration = 
+inline given customConfiguration: PicklerConfiguration = 
   PicklerConfiguration
     .default
     .withSnakeCaseMemberNames
 ```
 
-The configuration is read at **compile time**: field names and discriminator values are computed once, during derivation, and the same literals are placed in both the schema and the generated codec. The configuration must therefore be a `given` (or `implicit val`) whose right-hand side is built from `PicklerConfiguration.default` and its `with*` methods, defined in the same compilation unit as the derivation, or in an already compiled module. A function passed to `withToEncodedName` (or a custom `toDiscriminatorValue`) must itself be evaluable at compile time: keep it to `java.lang.String` method calls such as `_.toUpperCase` or `n => n.toLowerCase.concat("_")`; string `+` and `StringOps` extensions (`.reverse`, `.capitalize`) are not supported. The derivation reports a clear error when it cannot evaluate the configuration or a function in it. This applies equally to `Pickler.schemaFor[T]`, which derives only the schema.
+The configuration is read at **compile time**: field names and discriminator values are computed once, during derivation, and the same literals are placed in both the schema and the generated codec. Define it as an `inline given`, built from `PicklerConfiguration.default` and its `with*` methods, as above. A non-inline `given` (or `implicit val`) only works if it's local to a method, comes from an already compiled library, or the code is compiled with `-Yretain-trees`; otherwise, the compiler doesn't keep its definition, and derivation fails. A function passed to `withToEncodedName` (or a custom `toDiscriminatorValue`) is also evaluated at compile time: write it as a lambda calling only `java.lang.String` methods, such as `_.toUpperCase` or `n => n.toLowerCase.concat("_")`. String `+`, `StringOps` extensions (`.reverse`, `.capitalize`) and methods defined in the code being compiled are not supported. This applies equally to `Pickler.schemaFor[T]`, which derives only the schema.
 
 ## Enums / sealed traits / coproducts
 
@@ -114,7 +114,7 @@ Pickler derivation for coproduct types (enums with parameters / sealed hierarchi
 import sttp.tapir.json.pickler.PicklerConfiguration
 
 // encodes a case object as { "$type": "MyType" }
-given PicklerConfiguration = PicklerConfiguration.default
+inline given PicklerConfiguration = PicklerConfiguration.default
 ```
 
 This behavior can be overridden either by changing the discriminator field name, or by using custom logic to get field value from base trait.
@@ -126,7 +126,7 @@ A discriminator field can be specified for coproducts by providing it in the con
 import sttp.tapir.json.pickler.PicklerConfiguration
 
 // encodes a case object as { "who_am_i": "full.pkg.path.MyType" }
-given customConfiguration: PicklerConfiguration =
+inline given customConfiguration: PicklerConfiguration =
   PicklerConfiguration
     .default
     .withDiscriminator("who_am_i")
