@@ -33,8 +33,8 @@ trait TypeShape { this: MacroCommons & StdExtensions =>
   sealed trait Shape[A]
   object Shape {
 
-    /** `String` or `Array[Byte]`: tapir has a built-in `Schema` and jsoniter a built-in codec, but the structural extractors would take
-      * both apart as collections.
+    /** `String`: tapir has a built-in `Schema` and jsoniter a built-in codec, but the structural extractors would take it apart as a
+      * collection.
       */
     final case class BuiltInScalar[A]() extends Shape[A]
 
@@ -95,7 +95,7 @@ trait TypeShape { this: MacroCommons & StdExtensions =>
     implicit val JBigIntegerT: Type[java.math.BigInteger] = ShapeTypes.JBigIntegerT
     val EitherCtor = ShapeTypes.EitherCtor
 
-    if (Type[A] <:< Type[String] || Type[A].plainPrint == "scala.Array[scala.Byte]") Shape.BuiltInScalar()
+    if (Type[A] <:< Type[String]) Shape.BuiltInScalar()
     else if (Type[A] =:= Type[Char]) Shape.CharScalar()
     else if (Type[A] =:= Type[java.math.BigDecimal]) Shape.JavaBigDecimal()
     else if (Type[A] =:= Type[java.math.BigInteger]) Shape.JavaBigInteger()
