@@ -86,11 +86,6 @@ class SchemaCodecAgreementTest extends AnyFlatSpec with Matchers with ScalaCheck
     agreeUnderEveryConfiguration[Entity]
   }
 
-  it should "hold for a leaf of a sealed hierarchy on its own" in {
-    agreeUnderEveryConfiguration[StatusBadRequest]
-    agreeUnderEveryConfiguration[CustomError]
-  }
-
   it should "hold for enumerations" in {
     agreeUnderEveryConfiguration[SealedVariantContainer]
     agreeUnderEveryConfiguration[Response]

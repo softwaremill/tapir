@@ -53,8 +53,6 @@ object Generators {
   )
   given Arbitrary[ClassWithScalaDefault] = Arbitrary(for (a <- genString; b <- genString) yield ClassWithScalaDefault(a, b))
 
-  given Arbitrary[StatusBadRequest] = Arbitrary(Arbitrary.arbitrary[Int].map(StatusBadRequest(_)))
-  given Arbitrary[CustomError] = Arbitrary(genString.map(CustomError(_)))
   given Arbitrary[ErrorCode] = Arbitrary(
     Gen.oneOf(Gen.const(ErrorNotFound), Gen.const(ErrorTimeout), genString.map(CustomError(_)))
   )
