@@ -19,7 +19,7 @@ import scala.collection.mutable
   *
   * ==Exclusions==
   * `DerivationEnv.implicitLookupExclusions` lists the types never looked up: the root (a `given p: Pickler[A] = Pickler.derived[A]` would
-  * otherwise find itself) and, for `oneOfUsingField`, the mapped leaves.
+  * otherwise find itself) and the leaves of derived sealed hierarchies.
   */
 trait ImplicitPicklerSupport { this: MacroCommons & PlatformSupport =>
 

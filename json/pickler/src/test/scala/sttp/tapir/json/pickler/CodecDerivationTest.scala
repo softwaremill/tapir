@@ -285,6 +285,18 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     valueSchema.schemaType.asInstanceOf[SProduct[SimpleTestResult]].fields.map(_.name.encodedName) shouldBe List("MSG")
   }
 
+  it should "ignore a given Pickler for a subtype of a sealed hierarchy being derived" in {
+    // it would write its own discriminator value, which the parent cannot read
+    given Pickler[StatusBadRequest] = Pickler.derived[StatusBadRequest](using PicklerConfiguration.default.withFullDiscriminatorValues)
+    roundTrip(Pickler.derived[StatusResponse], StatusResponse(StatusBadRequest(1)), """{"status":{"$type":"StatusBadRequest","bF":1}}""")
+    // also when the subtype is met on its own before the hierarchy
+    roundTrip(
+      Pickler.derived[LeafAndParent],
+      LeafAndParent(StatusBadRequest(1), StatusBadRequest(2)),
+      """{"leaf":{"$type":"StatusBadRequest","bF":1},"status":{"$type":"StatusBadRequest","bF":2}}"""
+    )
+  }
+
   it should "still derive structurally when only generic.auto is in scope (the re-entrancy guard)" in {
     // With `auto.*` imported, `summon[Pickler[InnerClass]]` inside the macro has a candidate: our own macro. It must
     // abort quietly so that the search fails and the type is derived structurally -- not loop, not error.
@@ -568,6 +580,7 @@ object CodecFixtures {
     def code = 500
   }
   case class StatusResponse(status: Status)
+  case class LeafAndParent(leaf: StatusBadRequest, status: Status)
 
   sealed trait SealedVariant
   case object VariantA extends SealedVariant

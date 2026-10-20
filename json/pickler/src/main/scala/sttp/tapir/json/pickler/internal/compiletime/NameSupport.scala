@@ -11,8 +11,8 @@ import sttp.tapir.json.pickler.PicklerConfiguration
   * @param leafNameOverrides
   *   discriminator values that replace the configuration-derived ones for specific leaves (by `plainPrint`) — set by `oneOfUsingField`
   * @param implicitLookupExclusions
-  *   types (by `plainPrint`) for which no user `Pickler` is looked up: the root (a `given p = Pickler.derived[A]` would find itself) and,
-  *   for `oneOfUsingField`, the mapped leaves (whose codecs must be derived here, with the overridden tags)
+  *   types (by `plainPrint`) for which no user `Pickler` is looked up: the root (a `given p = Pickler.derived[A]` would find itself) and
+  *   the leaves of derived sealed hierarchies (whose codecs must be derived here, with the hierarchy's tags)
   */
 final case class DerivationEnv(
     config: PicklerConfiguration,
