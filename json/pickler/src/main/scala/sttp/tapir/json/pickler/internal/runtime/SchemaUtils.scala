@@ -128,7 +128,13 @@ object SchemaUtils {
 
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def collectionSchema[E](elementSchema: Schema[E]): Schema[Any] =
-    Schema[Any](SArray[Any, E](elementSchema)(_.asInstanceOf[Iterable[E]]), isOptional = true)
+    Schema[Any](
+      SArray[Any, E](elementSchema) {
+        case a: Array[?] => a.toIndexedSeq.asInstanceOf[Iterable[E]]
+        case i           => i.asInstanceOf[Iterable[E]]
+      },
+      isOptional = true
+    )
 
   /** Mirrors what `Schema.schemaForMap` generates, but with our own derived value schema.
     *
