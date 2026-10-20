@@ -380,42 +380,41 @@ trait SchemaDerivation {
     val annotations = typeAnnotationsExpr[A]
     val discriminatorField = Expr(sctx.env.config.discriminator)
 
-    discriminatorValues(leaves, sctx.env).flatMap(distinctLeafValues[A](leaves, _)) match {
-      case Left(error)   => failSchema(error)
-      case Right(values) =>
-        leaves
-          .zip(values)
-          .foldLeft(MIO.pure(List.empty[Expr[(Schema[Any], String)]])) { case (acc, ((_, leaf), value)) =>
-            acc.flatMap { pairs =>
-              import leaf.Underlying as Leaf
+    leaves
+      .foldLeft(MIO.pure(List.empty[Expr[(Schema[Any], String)]])) { case (acc, (_, leaf)) =>
+        acc.flatMap { pairs =>
+          import leaf.Underlying as Leaf
+          discriminatorValue[Leaf](sctx.env) match {
+            case Left(error)  => failSchema(error)
+            case Right(value) =>
               val valueExpr = Expr(value)
               deriveSchemaFor[Leaf](using sctx.nest[Leaf]).map { leafSchema =>
                 pairs :+ Expr.quote((Expr.splice(leafSchema).asInstanceOf[Schema[Any]], Expr.splice(valueExpr)))
               }
-            }
           }
-          .flatMap { pairs =>
-            val subtypesWithValues = pairs.foldRight(Expr.quote(Nil: List[(Schema[Any], String)])) { (pair, tail) =>
-              Expr.quote(Expr.splice(pair) :: Expr.splice(tail))
-            }
-            subtypeIndexExpr[A](leaves).flatMap { subtypeIndex =>
-              setCachedAndGet[A](
-                sctx.cache,
-                Expr.quote {
-                  SchemaUtils.enrichSchema[A](
-                    SchemaUtils.coproductSchema[A](
-                      Expr.splice(name),
-                      Expr.splice(subtypesWithValues),
-                      Expr.splice(discriminatorField),
-                      Expr.splice(subtypeIndex)
-                    ),
-                    Expr.splice(annotations)
-                  )
-                }
+        }
+      }
+      .flatMap { pairs =>
+        val subtypesWithValues = pairs.foldRight(Expr.quote(Nil: List[(Schema[Any], String)])) { (pair, tail) =>
+          Expr.quote(Expr.splice(pair) :: Expr.splice(tail))
+        }
+        subtypeIndexExpr[A](leaves).flatMap { subtypeIndex =>
+          setCachedAndGet[A](
+            sctx.cache,
+            Expr.quote {
+              SchemaUtils.enrichSchema[A](
+                SchemaUtils.coproductSchema[A](
+                  Expr.splice(name),
+                  Expr.splice(subtypesWithValues),
+                  Expr.splice(discriminatorField),
+                  Expr.splice(subtypeIndex)
+                ),
+                Expr.splice(annotations)
               )
             }
-          }
-    }
+          )
+        }
+      }
   }
 
   /** `(value: A) => value match { case _: Leaf0 => 0; case _: Leaf1 => 1; ... }`, the dispatch behind `SCoproduct.subtypeSchema` (and hence
