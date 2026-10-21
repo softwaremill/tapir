@@ -247,9 +247,6 @@ class NettyServerHandler[F[_]](
     if (isShuttingDown.get()) {
       logger.info("Rejecting request, server is shutting down")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
-    } else if (HttpUtil.is100ContinueExpected(request)) {
-      ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
-      ()
     } else {
       request match {
         case full: FullHttpRequest =>
