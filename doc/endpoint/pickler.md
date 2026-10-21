@@ -303,7 +303,7 @@ Note that a bare `given JsonValueCodec[X]` for a case class or sealed hierarchy 
 
 * Value classes (case classes extending `AnyVal`) are serialised as the wrapped value, and documented as such.
 * Tuples are not supported: a tuple would be documented as an object and written as an array. Use a case class.
-* A debugging log of the derivation can be enabled by importing `sttp.tapir.json.pickler.debug.logDerivationForPickler`, or with the scalac option `-Xmacro-settings:tapirPickler.logDerivation=true`. The derivation timeout (5 seconds by default) can be raised with `-Xmacro-settings:tapirPickler.timeout=<seconds>` (or a duration such as `30s`) for very large type graphs.
+* A debugging log of the derivation can be enabled by importing `sttp.tapir.json.pickler.debug.logDerivationForPickler`, or with the scalac option `-Xmacro-settings:tapirPickler.logDerivation=true`. The derivation timeout (60 seconds by default) can be changed with `-Xmacro-settings:tapirPickler.timeout=<value>`, where the value is a number of seconds or a duration such as `30s` or `2 minutes`.
 * `jsoniter-scala-macros` is a compile-time dependency of every project using this module: the generated code calls `JsonCodecMaker.make`, so it has to be on the compile classpath. It is pulled in transitively.
 
 ## Migrating from the µPickle-based pickler
