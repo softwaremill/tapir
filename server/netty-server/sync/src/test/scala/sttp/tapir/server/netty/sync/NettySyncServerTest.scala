@@ -58,6 +58,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         }.tests() ++
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new ServerIncompleteRequestBodyTests(nonInterruptingCreateServerTest).tests() ++
+        new ServerExpectContinueTests(createServerTest).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
         additionalTests(createServerTest)
 

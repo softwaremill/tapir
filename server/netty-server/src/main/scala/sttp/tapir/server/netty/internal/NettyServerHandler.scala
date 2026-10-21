@@ -248,6 +248,8 @@ class NettyServerHandler[F[_]](
       logger.info("Rejecting request, server is shutting down")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
+      // `Expect: 100-continue` is handled by HttpStreamsServerHandler: it sends `100 Continue` when the body is first requested, and
+      // closes the connection if a response is sent without reading the body (#5503)
       request match {
         case full: FullHttpRequest =>
           val req = full.retain()
