@@ -7,6 +7,7 @@ import sttp.monad.syntax._
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{CustomiseInterceptors, Interceptor}
+import sttp.tapir.server.interpreter.PrepareServerEndpoints
 
 class TapirStubInterpreter[F[_], R, OPTIONS](
     private val endpoints: List[ServerEndpoint[R, F]],
@@ -14,7 +15,7 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
     private val stub: SttpBackendStub[F, R]
 ) {
 
-  def whenEndpoint[I, E, O](endpoint: Endpoint[_, I, E, O, _]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
+  def whenEndpoint[I, E, O](endpoint: Endpoint[?, I, E, O, ?]): TapirEndpointStub[I, E, O] = new TapirEndpointStub(endpoint)
 
   def whenServerEndpoint[A, U, I, E, O](serverEndpoint: ServerEndpoint.Full[A, U, I, E, O, R, F]) = new TapirServerEndpointStub(
     serverEndpoint
@@ -26,10 +27,12 @@ class TapirStubInterpreter[F[_], R, OPTIONS](
     serverEndpoints.foldLeft(this) { case (stub, sep) => stub.append(sep) }
 
   /** Returns `SttpBackend` which handles sent requests using a `ServerInterpreter`. */
-  def backend(): SttpBackend[F, R] =
-    stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, endpoints, interceptors))
+  def backend(): SttpBackend[F, R] = {
+    val filterServerEndpoints = PrepareServerEndpoints(endpoints)
+    stub.whenAnyRequest.thenRespondF(req => StubServerInterpreter(req, filterServerEndpoints, interceptors))
+  }
 
-  class TapirEndpointStub[I, E, O](ep: Endpoint[_, I, E, O, _]) {
+  class TapirEndpointStub[I, E, O](ep: Endpoint[?, I, E, O, ?]) {
     def thenRespond(response: O): TapirStubInterpreter[F, R, OPTIONS] =
       append(publicEndpoint(logic = _ => _ => (Right(response): Either[E, O]).unit))
 

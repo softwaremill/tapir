@@ -14,12 +14,10 @@ import scala.util.{Failure, Success, Try}
   */
 object PicklerUtils {
 
-  private val readerConfig = ReaderConfig.withAppendHexDumpToParseException(false)
-
   /** Mirrors `sttp.tapir.json.jsoniter.TapirJsonJsoniter.jsoniterCodec`, kept here so that this module does not have to depend on
     * `tapir-jsoniter-scala`.
     */
-  def toTapirCodec[A](codec: JsonValueCodec[A], schema: Schema[A]): JsonCodec[A] = {
+  def toTapirCodec[A](codec: JsonValueCodec[A], schema: Schema[A], readerConfig: ReaderConfig): JsonCodec[A] = {
     given JsonValueCodec[A] = codec
     given Schema[A] = schema
     Codec.json[A] { s =>

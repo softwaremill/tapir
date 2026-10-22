@@ -6,6 +6,6 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.client.sttp4.WebSocketToPipe
 
 trait TapirSttpClientFs2WebSockets {
-  implicit def webSocketsSupportedForFs2Streams[F[_]: Concurrent]: WebSocketToPipe[Fs2Streams[F] with WebSockets] =
-    new WebSocketToFs2Pipe[F, Fs2Streams[F] with WebSockets]
+  implicit def webSocketsSupportedForFs2Streams[F[_]: Concurrent]: WebSocketToPipe[Fs2Streams[F] & WebSockets] =
+    new WebSocketToFs2Pipe[F, Fs2Streams[F] & WebSockets]
 }

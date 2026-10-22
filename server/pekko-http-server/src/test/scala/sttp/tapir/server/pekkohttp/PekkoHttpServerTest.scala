@@ -42,14 +42,14 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     actorSystemResource.map { implicit actorSystem =>
-      implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
+      implicit val m: FutureMonad = new FutureMonad()(using actorSystem.dispatcher)
 
-      val interpreter = new PekkoHttpTestServerInterpreter()(actorSystem)
+      val interpreter = new PekkoHttpTestServerInterpreter()(using actorSystem)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
-          val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
+          val e = endpoint.get.in("test" `and` "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
           val route = Directives.pathPrefix("api")(PekkoHttpServerInterpreter().toRoute(e))
           interpreter
             .server(route)
@@ -224,7 +224,9 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
       def drainPekko(stream: PekkoStreams.BinaryStream): Future[Unit] =
         stream.runWith(Sink.ignore).map(_ => ())
 
-      new AllServerTests(createServerTest, interpreter, backend).tests() ++
+      new AllServerTests(createServerTest, interpreter, backend, staticContent = false).tests() ++
+        // pekko-http 1.4.0 drops Content-Length from HEAD responses: https://github.com/apache/pekko-http/issues/1236
+        new ServerFilesTests(interpreter, backend, supportContentLengthInHeadRequests = false).tests() ++
         new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
         new ServerWebSocketTests(
           createServerTest,

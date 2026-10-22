@@ -15,9 +15,9 @@ import scala.util.{Success, Try}
 private[stub] object StubServerInterpreter {
   def apply[F[_]: MonadError, R, T](
       req: Request[T, R],
-      endpoints: List[ServerEndpoint[R, F]],
+      serverEndpoints: ServerRequest => List[ServerEndpoint[R, F]],
       interceptors: List[Interceptor[F]]
-  ): F[Response[_]] = {
+  ): F[Response[?]] = {
 
     implicit val bodyListener: BodyListener[F, Any] = new BodyListener[F, Any] {
       override def onComplete(body: Any)(cb: Try[Unit] => F[Unit]): F[Any] = cb(Success(())).map(_ => body)
@@ -25,7 +25,7 @@ private[stub] object StubServerInterpreter {
 
     val interpreter =
       new ServerInterpreter[R, F, Any, AnyStreams](
-        FilterServerEndpoints(endpoints),
+        serverEndpoints,
         new SttpRequestBody[F],
         SttpResponseEncoder.toResponseBody,
         interceptors,

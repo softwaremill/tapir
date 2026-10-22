@@ -3,7 +3,7 @@ package sttp.tapir.json.pickler
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
-import sttp.tapir.Schema.annotations.{default, encodedName}
+import sttp.tapir.Schema.annotations.encodedName
 import sttp.tapir.SchemaType.{SCoproduct, SProduct, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
 
@@ -79,12 +79,22 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     flat.encode(FlatClassWithOption("fieldA value", None, true)) shouldBe """{"fieldA":"fieldA value","fieldC":true}"""
     flat.decode("""{"fieldA":"x","fieldC":false}""") shouldBe Value(FlatClassWithOption("x", None, false))
     flat.decode("""{"fieldA":"x","fieldB":null,"fieldC":false}""") shouldBe Value(FlatClassWithOption("x", None, false))
+    {
+      import sttp.tapir.generic.auto.*
+      Pickler.derived[NestedClassWithOption].schema shouldBe Schema.derived[NestedClassWithOption]
+    }
   }
 
   it should "encode None as null when transientNone is off" in {
     given PicklerConfiguration = PicklerConfiguration.default.withTransientNone(false)
     Pickler.derived[FlatClassWithOption].toCodec.encode(FlatClassWithOption("fieldA value2", None, true)) shouldBe
       """{"fieldA":"fieldA value2","fieldB":null,"fieldC":true}"""
+  }
+
+  it should "keep transientNone when other configuration options are set after it" in {
+    given PicklerConfiguration = PicklerConfiguration.default.withTransientNone(false).withSnakeCaseMemberNames.withDiscriminator("t")
+    Pickler.derived[FlatClassWithOption].toCodec.encode(FlatClassWithOption("a", None, true)) shouldBe
+      """{"field_a":"a","field_b":null,"field_c":true}"""
   }
 
   it should "encode empty collections as [] and read a missing collection as empty" in {
@@ -94,6 +104,16 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     nested.encode(NestedClassWithList(List(FlatClassWithList("a2", Nil), FlatClassWithList("a3", List(8, 9))))) shouldBe
       """{"innerField":[{"fieldA":"a2","fieldB":[]},{"fieldA":"a3","fieldB":[8,9]}]}"""
     flat.decode("""{"fieldA":"a"}""") shouldBe Value(FlatClassWithList("a", Nil))
+  }
+
+  it should "encode Array fields" in {
+    val pickler = Pickler.derived[NestedClassWithArray]
+    pickler.toCodec.encode(NestedClassWithArray(Array(FlatClassWithArray("a2", Array()), FlatClassWithArray("a3", Array(-10))))) shouldBe
+      """{"innerField":[{"fieldA":"a2","fieldB":[]},{"fieldA":"a3","fieldB":[-10]}]}"""
+    {
+      import sttp.tapir.generic.auto.*
+      pickler.schema shouldBe Schema.derived[NestedClassWithArray]
+    }
   }
 
   it should "encode and decode a Map with String keys" in {
@@ -124,13 +144,10 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     codec.decode("""{"fieldB":"msg205"}""") shouldBe Value(ClassWithScalaDefault("field-a-default", "msg205"))
   }
 
-  it should "NOT fill a missing field from tapir's @default annotation (documented limitation)" in {
-    // jsoniter has no hook for anything but Scala default parameters, so a missing field with only a tapir @default
-    // is a required-field error. The annotation is still reflected in the schema.
-    val pickler = Pickler.derived[ClassWithDefault]
-    pickler.toCodec.decode("""{"fieldB":"x"}""") shouldBe a[DecodeResult.Error]
-    pickler.schema.schemaType.asInstanceOf[SProduct[ClassWithDefault]].fields.head.schema.default.map(_._1) shouldBe
-      Some("field-a-default")
+  it should "work with `derives`" in {
+    summon[Pickler[Book]].toCodec.encode(Book("John", "Hello")) shouldBe """{"author":"John","title":"Hello"}"""
+    summon[Pickler[BookShelf]].toCodec.encode(BookShelf(List(Book("Alice", "Goodbye")))) shouldBe
+      """{"books":[{"author":"Alice","title":"Goodbye"}]}"""
   }
 
   it should "report an unknown field as skipped rather than failing" in {
@@ -150,7 +167,8 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "apply the member-name transformation to leaf fields too" in {
-    given PicklerConfiguration = PicklerConfiguration.default.withToEncodedName(_.toUpperCase())
+    // a named argument, which the configuration folding has to see through
+    given PicklerConfiguration = PicklerConfiguration.default.withToEncodedName(toEncodedName = _.toUpperCase())
     val codec = Pickler.derived[MyCaseClass].toCodec
     codec.encode(MyCaseClass(ErrorTimeout, "msg18")) shouldBe """{"FIELDA":{"$type":"ErrorTimeout"},"FIELDB":"msg18"}"""
     codec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18")) shouldBe
@@ -159,13 +177,12 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
 
   it should "apply a custom discriminator name" in {
     given PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("kind")
-    val codec = Pickler.derived[MyCaseClass].toCodec
     roundTrip(
       Pickler.derived[MyCaseClass],
       MyCaseClass(CustomError("customErrMsg2"), "msg19"),
       """{"fieldA":{"kind":"CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}"""
     )
-    codec.encode(MyCaseClass(ErrorNotFound, "")) shouldBe """{"fieldA":{"kind":"ErrorNotFound"},"fieldB":""}"""
+    roundTrip(Pickler.derived[MyCaseClass], MyCaseClass(ErrorNotFound, ""), """{"fieldA":{"kind":"ErrorNotFound"},"fieldB":""}""")
   }
 
   it should "accept the discriminator anywhere in the object" in {
@@ -188,10 +205,12 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     roundTrip(Pickler.derived[StatusResponse], StatusResponse(StatusInternalError), """{"status":{"$type":"status_internal_error"}}""")
   }
 
-  it should "encode a leaf on its own with its discriminator" in {
+  it should "encode a leaf on its own with its discriminator, and document it" in {
     // `alwaysEmitDiscriminator`: a member of a sealed hierarchy carries its tag whenever it is written, not only
     // through the parent, so that the two encodings agree.
     roundTrip(Pickler.derived[StatusBadRequest], StatusBadRequest(7), """{"$type":"StatusBadRequest","bF":7}""")
+    Pickler.derived[StatusBadRequest].schema.schemaType.asInstanceOf[SProduct[StatusBadRequest]].fields.map(_.name.encodedName) shouldBe
+      List("bF", "$type")
     Pickler.derived[StatusBadRequest].toCodec.decode("""{"bF":7}""") shouldBe Value(StatusBadRequest(7))
   }
 
@@ -203,7 +222,7 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     roundTrip(Pickler.derived[Response], Response(ColorEnum.Pink, "pink!!"), """{"color":"Pink","description":"pink!!"}""")
     roundTrip(Pickler.derived[RichColorResponse], RichColorResponse(RichColorEnum.Cyan), """{"color":"Cyan"}""")
     // no alphabetical reordering of cases
-    Pickler.derived[NotAlphabetical].toCodec.encode(NotAlphabetical.Xyz) shouldBe "\"Xyz\""
+    roundTrip(Pickler.derived[NotAlphabetical], NotAlphabetical.Xyz, "\"Xyz\"")
   }
 
   it should "encode a Scala 3 enum with case-class cases as discriminated objects" in {
@@ -275,6 +294,31 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
       .asInstanceOf[sttp.tapir.SchemaType.SOpenProduct[?, SimpleTestResult]]
       .valueSchema
     valueSchema.schemaType.asInstanceOf[SProduct[SimpleTestResult]].fields.map(_.name.encodedName) shouldBe List("MSG")
+  }
+
+  it should "derive structurally even when a Schema for the class is in scope" in {
+    // A bare Schema is not an override (a Pickler is); a bare JsonValueCodec for a nested class is refused (below).
+    given givenSchemaForCc: Schema[FlatClass] = Schema.string[FlatClass]
+    Pickler.derived[FlatClass].toCodec.encode(FlatClass(1, "a")) shouldBe """{"fieldA":1,"fieldB":"a"}"""
+    Pickler.derived[FlatClass].schema.schemaType shouldBe a[SProduct[?]]
+  }
+
+  it should "ignore a given Pickler for a subtype of a sealed hierarchy being derived" in {
+    // it would write its own discriminator value, which the parent cannot read
+    given Pickler[StatusBadRequest] = Pickler.derived[StatusBadRequest](using PicklerConfiguration.default.withFullDiscriminatorValues)
+    roundTrip(Pickler.derived[StatusResponse], StatusResponse(StatusBadRequest(1)), """{"status":{"$type":"StatusBadRequest","bF":1}}""")
+    // also when the parent is not part of the derivation
+    roundTrip(Pickler.derived[LeafOnly], LeafOnly(StatusBadRequest(1)), """{"leaf":{"$type":"StatusBadRequest","bF":1}}""")
+  }
+
+  it should "mention the ignored Pickler when a subtype of a sealed hierarchy cannot be derived" in {
+    scala.compiletime.testing
+      .typeCheckErrors("""
+      given Pickler[NonCaseLeaf] = ???
+      Pickler.derived[NonCaseLeafHolder]
+    """)
+      .map(_.message)
+      .mkString should include("a Pickler for a subtype of a sealed hierarchy is not used")
   }
 
   it should "still derive structurally when only generic.auto is in scope (the re-entrancy guard)" in {
@@ -499,6 +543,27 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
       .map(_.message)
       .mkString should include("`toEncodedName` could not be evaluated at compile time")
   }
+
+  it should "use a configuration defined as an inline given in an object compiled in the same run" in {
+    import ConfigFixtures.inlineSnakeCase
+    Pickler.derived[TopClass].toCodec.encode(TopClass("a", InnerClass(1))) shouldBe """{"field_a":"a","field_b":{"field_a11":1}}"""
+  }
+
+  it should "point at inline given when a configuration in an object compiled in the same run cannot be evaluated" in {
+    scala.compiletime.testing
+      .typeCheckErrors("""
+      import ConfigFixtures.nonInlineSnakeCase
+      Pickler.derived[FlatClass]
+    """)
+      .map(_.message)
+      .mkString should include("Define it as an `inline given`")
+  }
+}
+
+object ConfigFixtures {
+  inline given inlineSnakeCase: PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
+  // Its definition's tree is not kept by the compiler, so derivations in this compilation run cannot evaluate it.
+  given nonInlineSnakeCase: PicklerConfiguration = PicklerConfiguration.default.withSnakeCaseMemberNames
 }
 
 object CodecFixtures {
@@ -513,13 +578,16 @@ object CodecFixtures {
   case class NestedClassWithOption(innerField: Option[FlatClassWithOption])
   case class FlatClassWithList(fieldA: String, fieldB: List[Int])
   case class NestedClassWithList(innerField: List[FlatClassWithList])
+  case class FlatClassWithArray(fieldA: String, fieldB: Array[Int])
+  case class NestedClassWithArray(innerField: Array[FlatClassWithArray])
+  case class Book(author: String, title: String) derives Pickler
+  case class BookShelf(books: List[Book]) derives Pickler
   case class SimpleTestResult(msg: String)
   case class ClassWithMap(field: Map[String, SimpleTestResult])
   case class UserId(value: UUID) extends AnyVal
   case class UserName(name: String) extends AnyVal
   case class ClassWithValues(id: UserId, name: UserName, age: Int)
   case class ClassWithScalaDefault(fieldA: String = "field-a-default", fieldB: String)
-  case class ClassWithDefault(@default("field-a-default") fieldA: String, fieldB: String)
 
   sealed trait ErrorCode
   case object ErrorNotFound extends ErrorCode
@@ -539,6 +607,11 @@ object CodecFixtures {
     def code = 500
   }
   case class StatusResponse(status: Status)
+  case class LeafOnly(leaf: StatusBadRequest)
+
+  sealed trait WithNonCaseLeaf
+  final class NonCaseLeaf(val y: Int) extends WithNonCaseLeaf
+  case class NonCaseLeafHolder(leaf: NonCaseLeaf)
 
   sealed trait SealedVariant
   case object VariantA extends SealedVariant

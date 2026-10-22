@@ -25,7 +25,7 @@ private[tapir] object EnumerationMacros:
 
     def flatChildren(s: Symbol): List[Option[Symbol]] = s.children.toList.flatMap { c =>
       if (c.isClassDef) {
-        if (!(c.flags is Flags.Sealed))
+        if (!c.flags.is(Flags.Sealed))
           if (failOnError)
             report.errorAndAbort("All children must be objects or enum cases, or sealed parent of such.")
           else

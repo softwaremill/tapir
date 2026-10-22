@@ -36,13 +36,13 @@ private[netty] class NettyToStreamsResponseBody[S <: Streams[S]](streamCompatibl
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, ?, S]
   ): NettyResponse = (ctx: ChannelHandlerContext) => {
     ReactiveWebSocketProcessorNettyResponseContent(
       ctx.newPromise(),
       streamCompatible.asWsProcessor(
         pipe.asInstanceOf[streamCompatible.streams.Pipe[REQ, RESP]],
-        o.asInstanceOf[WebSocketBodyOutput[streamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, _, S]],
+        o.asInstanceOf[WebSocketBodyOutput[streamCompatible.streams.Pipe[REQ, RESP], REQ, RESP, ?, S]],
         ctx
       ),
       ignorePong = o.ignorePong,

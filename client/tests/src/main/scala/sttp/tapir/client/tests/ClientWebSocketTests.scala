@@ -9,7 +9,7 @@ import sttp.tapir.tests.data.Fruit
 import sttp.ws.WebSocketFrame
 import scala.concurrent.Future
 
-trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
+trait ClientWebSocketTests[S] { this: ClientTests[S & WebSockets] =>
   val streams: Streams[S]
 
   def sendAndReceiveLimited[A, B](p: streams.Pipe[A, B], receiveCount: Int, as: List[A]): Future[List[B]]

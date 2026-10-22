@@ -46,7 +46,7 @@ object NettyFutureServerOptions {
 
   /** Customise the interceptors that are being used when exposing endpoints as a server. */
   def customiseInterceptors: CustomiseInterceptors[Future, NettyFutureServerOptions] = {
-    CustomiseInterceptors(
+    CustomiseInterceptors[Future, NettyFutureServerOptions](
       createOptions = (ci: CustomiseInterceptors[Future, NettyFutureServerOptions]) => default(ci.interceptors)
     ).serverLog(defaultServerLog).rejectHandler(DefaultRejectHandler.orNotFound[Future])
   }

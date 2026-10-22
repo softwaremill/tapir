@@ -31,7 +31,9 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     val rc = routingContext(serverRequest)
     fromVFuture(bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
-        Future.succeededFuture(RawValue(Option(rc.body().asString(defaultCharset.toString)).getOrElse("")))
+        Future.succeededFuture(
+          RawValue(Option(rc.body().asString(RequestBody.requestCharset(serverRequest).getOrElse(defaultCharset).name())).getOrElse(""))
+        )
       case RawBodyType.ByteArrayBody =>
         Future.succeededFuture(RawValue(Option(rc.body().buffer()).fold(Array.emptyByteArray)(_.getBytes)))
       case RawBodyType.ByteBufferBody =>

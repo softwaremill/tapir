@@ -4,7 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.annotations.{encodedName, validate}
 import sttp.tapir.SchemaType.SCoproduct
-import sttp.tapir.{FieldName, Schema, ValidationError, Validator}
+import sttp.tapir.{DecodeResult, FieldName, Schema, ValidationError, Validator}
 
 /** `Schema.applyValidation` on derived coproducts, which is what `Codec.json` runs on every decoded body.
   *
@@ -65,6 +65,12 @@ class SchemaValidationTest extends AnyFlatSpec with Matchers {
     val schema = Pickler.derived[Owner].schema
     schema.applyValidation(Owner(Dog("ab"))) shouldBe List(tooShort.copy(path = List(FieldName("pet"), FieldName("name"))))
   }
+
+  behavior of "collection validation"
+
+  it should "validate the elements of an array field" in {
+    Pickler.derived[DogPack].toCodec.decode("""{"dogs":[{"name":"ab"}]}""") shouldBe a[DecodeResult.InvalidValue]
+  }
 }
 
 object ValidationFixtures {
@@ -74,6 +80,7 @@ object ValidationFixtures {
   @encodedName("Goldfish")
   case class Fish(@validate(Validator.minLength(3)) name: String) extends Pet { def legs = 0 }
   case class Owner(pet: Pet)
+  case class DogPack(dogs: Array[Dog])
 
   sealed trait Animal
   sealed trait Rodent extends Animal

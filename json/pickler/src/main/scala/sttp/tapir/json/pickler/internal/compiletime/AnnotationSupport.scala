@@ -4,13 +4,12 @@ import hearth.MacroCommons
 import hearth.std.*
 import sttp.tapir.Schema
 
-/** Cross-platform access to the annotations the tapir `Schema` derivation cares about.
+/** Access to the annotations the tapir `Schema` derivation cares about.
   *
-  * Hearth's `Type#annotations` / `Parameter#annotations` already abstract over the Scala 2 and Scala 3 reflection APIs, so nothing here is
-  * platform-specific. They are lowered to [[UntypedExpr]] so that the caller can re-type them as `Any` and splice them into a `List[Any]`
-  * that the runtime helpers fold over — which keeps annotation *matching* out of the macro entirely.
+  * They are lowered to [[UntypedExpr]] so that the caller can re-type them as `Any` and splice them into a `List[Any]` that the runtime
+  * helpers fold over — which keeps annotation *matching* out of the macro entirely.
   */
-trait AnnotationSupport { this: MacroCommons & StdExtensions =>
+private[pickler] trait AnnotationSupport { this: MacroCommons & StdExtensions =>
 
   /** Annotations on a constructor parameter, including those inherited from a member of the same name declared on a base class or trait.
     *
@@ -30,7 +29,7 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
 
   /** Same as [[allParamAnnotations]], but keeping the annotation types so that callers can look one up. */
   protected def allParamAnnotationsTyped[A: Type](param: Parameter, memberName: String): List[Expr_??] =
-    withInheritanceAppliedTyped(param.annotations, inheritedMemberAnnotations[A](memberName))
+    withInheritanceAppliedTyped(declared(param.annotations), inheritedMemberAnnotations[A](memberName))
 
   /** The literal argument of a field's `@encodedName`, if the field has one.
     *
@@ -58,6 +57,12 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
     }
   }
 
+  /** Whether a field has tapir's `@default`, declared or inherited. */
+  protected def hasDefaultAnnotation[A: Type](param: Parameter, memberName: String): Boolean = {
+    val DefaultCtor = Type.Ctor1.of[Schema.annotations.default]
+    allParamAnnotationsTyped[A](param, memberName).exists(annotation => DefaultCtor.unapply(annotation.Underlying).isDefined)
+  }
+
   /** Annotations on a type, including those inherited from its base classes.
     *
     * Note that `@encodedName` is deliberately *not* consumed from this list when building an `SName` — see `SchemaDerivation.sNameExpr`. A
@@ -65,10 +70,10 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
     */
   protected def allTypeAnnotations[A: Type]: List[UntypedExpr] =
     withInheritanceApplied(
-      Type[A].annotations,
+      declared(Type[A].annotations),
       baseClassesOf[A].flatMap { base =>
         import base.Underlying as Base
-        Type[Base].annotations
+        declared(Type[Base].annotations)
       }
     )
 
@@ -76,8 +81,11 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
   private def inheritedMemberAnnotations[A: Type](memberName: String): List[Expr_??] =
     baseClassesOf[A].flatMap { base =>
       import base.Underlying as Base
-      Type[Base].unsortedMethods.filter(_.name == memberName).flatMap(_.annotations)
+      Type[Base].unsortedMethods.filter(_.name == memberName).flatMap(m => declared(m.annotations))
     }
+
+  // the compiler lists annotations in reverse declaration order
+  private def declared(annotations: List[Expr_??]): List[Expr_??] = annotations.reverse
 
   /** Base classes of `A`, excluding `A` itself and the universal/`scala.*` ancestors that carry nothing useful. */
   private def baseClassesOf[A: Type]: List[??] =
@@ -110,9 +118,9 @@ trait AnnotationSupport { this: MacroCommons & StdExtensions =>
       case _                          => None
     }
 
-  /** The type-level `@encodedName` of `A`, when it is a string literal. Both derivation halves read it through this. */
+  /** The first declared type-level `@encodedName` of `A`, when it is a string literal. Both derivation halves read it through this. */
   protected def typeEncodedName[A: Type]: Option[String] = {
     implicit val EncodedNameT: Type[Schema.annotations.encodedName] = Type.of[Schema.annotations.encodedName]
-    Type[A].annotationsOfType[Schema.annotations.encodedName].headOption.flatMap(literalStringArg(_))
+    Type[A].annotationsOfType[Schema.annotations.encodedName].lastOption.flatMap(literalStringArg(_))
   }
 }

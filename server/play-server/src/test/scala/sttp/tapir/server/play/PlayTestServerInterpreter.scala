@@ -20,10 +20,10 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class PlayTestServerInterpreter(implicit actorSystem: ActorSystem)
-    extends TestServerInterpreter[Future, PekkoStreams with WebSockets, PlayServerOptions, Routes] {
+    extends TestServerInterpreter[Future, PekkoStreams & WebSockets, PlayServerOptions, Routes] {
   import actorSystem.dispatcher
 
-  override def route(es: List[ServerEndpoint[PekkoStreams with WebSockets, Future]], interceptors: Interceptors): Routes = {
+  override def route(es: List[ServerEndpoint[PekkoStreams & WebSockets, Future]], interceptors: Interceptors): Routes = {
     val serverOptions: PlayServerOptions = interceptors(PlayServerOptions.customiseInterceptors()).options
       // increase the default maxMemoryBuffer to 10M so that tests pass
       .copy(playBodyParsers = PlayBodyParsers(conf = ParserConfiguration(maxMemoryBuffer = 1024000)))

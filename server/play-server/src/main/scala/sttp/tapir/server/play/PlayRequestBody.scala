@@ -28,8 +28,7 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
   override def toRaw[R](serverRequest: ServerRequest, bodyType: RawBodyType[R], maxBytes: Option[Long]): Future[RawValue[R]] = {
     import mat.executionContext
     val request = playRequest(serverRequest)
-    val charset = request.charset.map(Charset.forName)
-    toRaw(request, bodyType, charset, () => request.body, None, maxBytes)
+    toRaw(request, bodyType, RequestBody.requestCharset(serverRequest), () => request.body, None, maxBytes)
   }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {

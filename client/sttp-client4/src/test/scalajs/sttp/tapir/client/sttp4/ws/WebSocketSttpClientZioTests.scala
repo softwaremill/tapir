@@ -10,7 +10,7 @@ import concurrent.Future
 
 class WebSocketSttpClientZioTests extends WebSocketSttpClientZioTestsSender with ClientWebSocketTests[ZioStreams] {
   override val streams: ZioStreams = ZioStreams
-  override def wsToPipe: WebSocketToPipe[WebSockets with ZioStreams] = implicitly
+  override def wsToPipe: WebSocketToPipe[WebSockets & ZioStreams] = implicitly
 
   override def sendAndReceiveLimited[A, B](
       p: Stream[Throwable, A] => Stream[Throwable, B],
@@ -18,7 +18,7 @@ class WebSocketSttpClientZioTests extends WebSocketSttpClientZioTestsSender with
       as: List[A]
   ): Future[List[B]] = {
     unsafeToFuture(
-      ZStream(as: _*).viaFunction(p).take(receiveCount.longValue).runCollect.map(_.toList)
+      ZStream(as*).viaFunction(p).take(receiveCount.longValue).runCollect.map(_.toList)
     ).future
   }
 

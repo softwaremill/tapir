@@ -81,6 +81,13 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
     )
   }
 
+  it should "hoist derived schemas rather than inlining them at every occurrence" in {
+    case class Simple(fieldA: Int)
+    case class Nested(first: Simple, second: Simple)
+    val fieldSchemas = Pickler.schemaFor[Nested].schemaType.asInstanceOf[SProduct[Nested]].fields.map(_.schema)
+    fieldSchemas.head should be theSameInstanceAs fieldSchemas(1)
+  }
+
   it should "find schema for case classes with collections" in {
     implicitlySchema[C].name shouldBe Some(SName("sttp.tapir.json.pickler.C"))
     implicitlySchema[C].schemaType shouldBe SProduct[C](
@@ -262,6 +269,12 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
       ),
       Some(SName("sttp.tapir.json.pickler.L"))
     )
+  }
+
+  it should "apply multiple customise annotations in declaration order" in {
+    val schema = implicitlySchema[MultiCustomised]
+    schema.format shouldBe Some("c1-c2")
+    schema.schemaType.asInstanceOf[SProduct[MultiCustomised]].fields.head.schema.format shouldBe Some("f1-f2")
   }
 
   it should "customise the schema using the given function" in {
@@ -552,7 +565,7 @@ case class I(
     @encodedExample(1234)
     @format("int32")
     @validate[Int](Validator.max(100))
-    int: Int,
+    int: Int = 1234,
     noDesc: Long,
     @description("another optional boolean flag")
     @encodedName("alternativeBooleanName")
@@ -581,6 +594,14 @@ case class M(field: Int)
 object M {
   val testAttributeKey: AttributeKey[String] = AttributeKey[String]
 }
+
+@customise(_.format("c1"))
+@customise(s => s.format(s.format.getOrElse("") + "-c2"))
+case class MultiCustomised(
+    @customise(_.format("f1"))
+    @customise(s => s.format(s.format.getOrElse("") + "-f2"))
+    field: Int
+)
 
 sealed trait Node
 case class Edge(id: Long, source: Node) extends Node

@@ -24,7 +24,8 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     body(serverRequest) match {
       case Left(bytes) =>
         bodyType match {
-          case RawBodyType.StringBody(charset)  => ME.unit(RawValue(new String(bytes, charset)))
+          case RawBodyType.StringBody(charset) =>
+            ME.unit(RawValue(new String(bytes, RequestBody.requestCharset(serverRequest).getOrElse(charset))))
           case RawBodyType.ByteArrayBody        => ME.unit(RawValue(bytes))
           case RawBodyType.ByteBufferBody       => ME.unit(RawValue(ByteBuffer.wrap(bytes)))
           case RawBodyType.InputStreamBody      => ME.unit(RawValue(new ByteArrayInputStream(bytes)))
@@ -45,9 +46,9 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
       case _             => throw new IllegalArgumentException("Raw body provided while endpoint accepts stream body")
     }
 
-  private def sttpRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request[_, _]]
+  private def sttpRequest(serverRequest: ServerRequest) = serverRequest.underlying.asInstanceOf[Request[?, ?]]
 
-  private def body(serverRequest: ServerRequest): Either[Array[Byte], Seq[Part[client3.RequestBody[_]]]] = sttpRequest(
+  private def body(serverRequest: ServerRequest): Either[Array[Byte], Seq[Part[client3.RequestBody[?]]]] = sttpRequest(
     serverRequest
   ).body match {
     case NoBody                     => Left(Array.emptyByteArray)
@@ -78,7 +79,7 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     os.toByteArray
   }
 
-  private def extractMultipartParts(parts: Seq[Part[client3.RequestBody[_]]], bodyType: RawBodyType.MultipartBody): List[Part[Any]] = {
+  private def extractMultipartParts(parts: Seq[Part[client3.RequestBody[?]]], bodyType: RawBodyType.MultipartBody): List[Part[Any]] = {
     parts.flatMap { part =>
       bodyType.partType(part.name).flatMap { partType =>
         val body = extractPartBody(part, partType)
@@ -96,7 +97,7 @@ class SttpRequestBody[F[_]](implicit ME: MonadError[F]) extends RequestBody[F, A
     }.toList
   }
 
-  private def extractPartBody[B](part: Part[client3.RequestBody[_]], bodyType: RawBodyType[B]): Any = {
+  private def extractPartBody[B](part: Part[client3.RequestBody[?]], bodyType: RawBodyType[B]): Any = {
     part.body match {
       case ByteArrayBody(b, _) =>
         bodyType match {

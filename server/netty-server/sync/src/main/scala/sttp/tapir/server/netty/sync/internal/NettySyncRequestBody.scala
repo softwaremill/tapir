@@ -3,11 +3,11 @@ package sttp.tapir.server.netty.sync.internal
 import _root_.ox.Chunk
 import _root_.ox.flow.Flow
 import _root_.ox.flow.reactive.FlowReactiveStreams
-import io.netty.buffer.ByteBufUtil
 import io.netty.handler.codec.http.HttpContent
 import io.netty.handler.codec.http.multipart.{HttpPostMultipartRequestDecoder, InterfaceHttpData}
 import org.playframework.netty.http.StreamedHttpRequest
 import org.reactivestreams.Publisher
+import ox.channels.ChannelClosedException
 import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.monad.{IdentityMonad, MonadError}
 import sttp.shared.Identity
@@ -15,7 +15,7 @@ import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.RawValue
 import sttp.tapir.server.netty.internal.NettyRequestBody
-import sttp.tapir.server.netty.internal.reactivestreams.{FileWriterSubscriber, SimpleSubscriber}
+import sttp.tapir.server.netty.internal.reactivestreams.{CopyingPublisher, FileWriterSubscriber, SimpleSubscriber}
 import sttp.tapir.server.netty.sync.*
 
 import java.nio.file.Files
@@ -40,24 +40,29 @@ private[sync] class NettySyncRequestBody(
       maxBytes: Option[Long]
   ): RawValue[Seq[RawPart]] = {
     val decoder = new HttpPostMultipartRequestDecoder(httpDataFactory, nettyRequest)
+    val tracker = new UnconsumedContentTracker(nettyRequest)
 
     val rawParts =
       try
-        val requestFlow = FlowReactiveStreams.fromPublisher(nettyRequest)
+        val requestFlow = FlowReactiveStreams.fromPublisher(tracker)
         (maxBytes match
           case Some(value) =>
             requestFlow.mapStatefulConcat(0): (bytesSoFar, httpContent) =>
               val newBytesSoFar = bytesSoFar + httpContent.content().readableBytes()
               if (newBytesSoFar > value) throw StreamMaxLengthExceededException(value)
-              (newBytesSoFar, decoder.decodeChunk(httpContent))
-          case None => requestFlow.mapConcat(decoder.decodeChunk)
+              (newBytesSoFar, decoder.decodeChunk(tracker.consumed(httpContent)))
+          case None => requestFlow.mapConcat(httpContent => decoder.decodeChunk(tracker.consumed(httpContent)))
         ).mapConcat: httpData =>
           m.partType(httpData.getName).map(partType => toRawPart(serverRequest, httpData, partType))
         .runToList()
       catch
         case t: Throwable =>
           decoder.destroy()
-          throw t
+          throw (t match
+            case ChannelClosedException.Error(cause) => cause
+            case _                                   => t
+          )
+      finally tracker.releaseUnconsumed()
 
     RawValue.fromParts(rawParts).copy(cleanup = Some(() => decoder.destroy()))
   }
@@ -77,13 +82,7 @@ private[sync] class NettySyncRequestBody(
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): Flow[Chunk[Byte]] =
     serverRequest.underlying match
       case r: StreamedHttpRequest =>
-        val rawChunkFlow = FlowReactiveStreams
-          .fromPublisher(r)
-          .map: httpContent =>
-            val byteBuf = httpContent.content()
-            val chunk = Chunk.fromArray(ByteBufUtil.getBytes(byteBuf))
-            byteBuf.release()
-            chunk
+        val rawChunkFlow = FlowReactiveStreams.fromPublisher(new CopyingPublisher(r)).map(Chunk.fromArray)
 
         maxBytes match
           case Some(max) =>

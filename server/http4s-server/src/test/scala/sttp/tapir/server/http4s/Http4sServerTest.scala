@@ -4,7 +4,6 @@ import cats.effect._
 import cats.effect.unsafe.implicits.global
 import cats.syntax.all._
 import fs2.Pipe
-import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.ContextMiddleware
 import org.http4s.server.websocket.WebSocketBuilder2
@@ -24,11 +23,10 @@ import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
-class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with OptionValues {
+class Http4sServerTest[R >: Fs2Streams[IO] & WebSockets] extends TestSuite with OptionValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
@@ -39,15 +37,11 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
 
-    def assert_get_apiTestRouter_respondsWithExpectedContent[T](routes: HttpRoutes[IO], expectedContext: T): IO[Assertion] =
-      BlazeServerBuilder[IO]
-        .withExecutionContext(ExecutionContext.global)
-        .bindHttp(0, "localhost")
-        .withHttpApp(Router("/api" -> routes).orNotFound)
-        .resource
-        .use { server =>
-          val port = server.address.getPort
-          basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContext))
+    def assert_get_apiTestRouter_respondsWithExpectedContent[T](routes: HttpRoutes[IO], expectedContent: T): IO[Assertion] =
+      interpreter
+        .server(_ => Router("/api" -> routes))
+        .use { port =>
+          basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right(expectedContent))
         }
 
     def additionalTests(): List[Test] = List(
@@ -109,7 +103,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         endpoint.out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.OctetStream())),
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
-        IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8.encode).interruptAfter(10.seconds)))
+        IO(Right(fs2.Stream.awakeEvery[IO](1.second).take(10).map(_.toString()).through(fs2.text.utf8.encode)))
       ) { (backend, baseUri) =>
         basicRequest
           .get(baseUri)
@@ -143,7 +137,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       Test("should work with a router and context web socket routes in a context") {
         val expectedContext: String = "[PREFIX]" // the context we expect http4s to provide to the endpoint
 
-        val e: Endpoint[Unit, String, Unit, Pipe[IO, String, String], Context[String] with WebSockets with Fs2Streams[IO]] =
+        val e: Endpoint[Unit, String, Unit, Pipe[IO, String, String], Context[String] & WebSockets & Fs2Streams[IO]] =
           endpoint.get
             .in("test" / "ws")
             .contextIn[String]()
@@ -157,11 +151,8 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         // middleware to add the context to each request (so here string constant)
         val middleware: ContextMiddleware[IO, String] = ContextMiddleware.const(expectedContext)
 
-        BlazeServerBuilder[IO]
-          .withExecutionContext(ExecutionContext.global)
-          .bindHttp(0, "localhost")
-          .withHttpWebSocketApp(wsb => middleware(routesWithContext(wsb)).orNotFound)
-          .resource
+        interpreter
+          .buildServer(wsb => middleware(routesWithContext(wsb)).orNotFound)
           .use { server =>
             val port = server.address.getPort
             basicRequest

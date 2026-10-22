@@ -16,29 +16,25 @@ final case class PicklerConfiguration(genericDerivationConfig: Configuration, tr
 
   def discriminator: String = genericDerivationConfig.discriminator.getOrElse(PicklerConfiguration.DefaultTagKey)
 
-  def withSnakeCaseMemberNames: PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withSnakeCaseMemberNames)
-  def withScreamingSnakeCaseMemberNames: PicklerConfiguration = PicklerConfiguration(
-    genericDerivationConfig.withScreamingSnakeCaseMemberNames
-  )
-  def withKebabCaseMemberNames: PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withKebabCaseMemberNames)
-  def withDiscriminator(d: String): PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withDiscriminator(d))
-  def withToEncodedName(toEncodedName: String => String) = PicklerConfiguration(genericDerivationConfig.copy(toEncodedName = toEncodedName))
-  def withSnakeCaseDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(
-    genericDerivationConfig.withSnakeCaseDiscriminatorValues
-  )
-  def withScreamingSnakeCaseDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(
-    genericDerivationConfig.withScreamingSnakeCaseDiscriminatorValues
-  )
-  def withKebabCaseDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(
-    genericDerivationConfig.withKebabCaseDiscriminatorValues
-  )
-  def withFullDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(genericDerivationConfig.withFullDiscriminatorValues)
-  def withFullSnakeCaseDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(
-    genericDerivationConfig.withFullSnakeCaseDiscriminatorValues
-  )
-  def withFullKebabCaseDiscriminatorValues: PicklerConfiguration = PicklerConfiguration(
-    genericDerivationConfig.withFullKebabCaseDiscriminatorValues
-  )
+  def withSnakeCaseMemberNames: PicklerConfiguration = copy(genericDerivationConfig = genericDerivationConfig.withSnakeCaseMemberNames)
+  def withScreamingSnakeCaseMemberNames: PicklerConfiguration =
+    copy(genericDerivationConfig = genericDerivationConfig.withScreamingSnakeCaseMemberNames)
+  def withKebabCaseMemberNames: PicklerConfiguration = copy(genericDerivationConfig = genericDerivationConfig.withKebabCaseMemberNames)
+  def withDiscriminator(d: String): PicklerConfiguration = copy(genericDerivationConfig = genericDerivationConfig.withDiscriminator(d))
+  def withToEncodedName(toEncodedName: String => String) =
+    copy(genericDerivationConfig = genericDerivationConfig.copy(toEncodedName = toEncodedName))
+  def withSnakeCaseDiscriminatorValues: PicklerConfiguration =
+    copy(genericDerivationConfig = genericDerivationConfig.withSnakeCaseDiscriminatorValues)
+  def withScreamingSnakeCaseDiscriminatorValues: PicklerConfiguration =
+    copy(genericDerivationConfig = genericDerivationConfig.withScreamingSnakeCaseDiscriminatorValues)
+  def withKebabCaseDiscriminatorValues: PicklerConfiguration =
+    copy(genericDerivationConfig = genericDerivationConfig.withKebabCaseDiscriminatorValues)
+  def withFullDiscriminatorValues: PicklerConfiguration =
+    copy(genericDerivationConfig = genericDerivationConfig.withFullDiscriminatorValues)
+  def withFullSnakeCaseDiscriminatorValues: PicklerConfiguration =
+    copy(genericDerivationConfig = genericDerivationConfig.withFullSnakeCaseDiscriminatorValues)
+  def withFullKebabCaseDiscriminatorValues: PicklerConfiguration =
+    copy(genericDerivationConfig = genericDerivationConfig.withFullKebabCaseDiscriminatorValues)
   def withTransientNone(transientNone: Boolean): PicklerConfiguration = copy(transientNone = transientNone)
 }
 

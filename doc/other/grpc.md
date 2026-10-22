@@ -15,7 +15,7 @@ from these endpoints' definitions.
   grpc endpoints.
 * `pekkoGrpcServer` - a module that provides `PekkoGrpcServerInterpreter` implementation. It can be used as an
   alternative to `akkaGrpcServer`.
-* `grpcExamples` - contains example use cases
+* `pekkoGrpcExamples` - contains example use cases
 
 ## Defining endpoints
 
@@ -50,7 +50,7 @@ package name, pass endpoints definitions, and finally invoke the `renderToFile` 
 
 ```
 ProtoSchemaGenerator.renderToFile(
-    path = "grpc/examples/src/main/protobuf/main.proto",
+    path = "grpc/pekko-examples/src/main/protobuf/main.proto",
     packageName = "sttp.tapir.grpc.examples.gen",
     endpoints = Endpoints.endpoints
 )
@@ -65,8 +65,8 @@ It's possible to connect the generated server code to tapir endpoints definition
 on auto-generated code. We strongly recommend using the new dedicated server interpreter `AkkaGrpcServerInterpreter`.
 It's built on top of `AkkaHttpServerInterpreter` and provides support for encoding and decoding HTTP2 binary messages.
 
-[Here](https://github.com/softwaremill/tapir/blob/master/grpc/examples/src/main/scala/sttp/tapir/grpc/examples/GrpcSimpleBooksExample.scala)
-you can find a simple example.
+[Here](https://github.com/softwaremill/tapir/blob/master/grpc/pekko-examples/src/main/scala/sttp/tapir/grpc/examples/PekkoGrpcSimpleBooksExample.scala)
+you can find a simple example, using `PekkoGrpcServerInterpreter`.
 
 It's worth mentioning that by adjusting slightly encoders/decoders it's possible to expose gRPC endpoints with 
 `AkkaHttpServerInterpreter` as simple HTTP endpoints. This approach is not recommended, because it does not support

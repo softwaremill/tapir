@@ -15,7 +15,7 @@ import sttp.tapir.codegen.openapi.models.GenerationDirectives.{
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiResponseContent, OpenapiResponseDef}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaOneOf, OpenapiSchemaRef, OpenapiSchemaSimpleType}
 import sttp.tapir.codegen.util.ErrUtils.bail
-import sttp.tapir.codegen.util.{JavaEscape, Location, NameHelpers}
+import sttp.tapir.codegen.util.{ContentTypes, JavaEscape, Location, NameHelpers}
 import sttp.tapir.codegen.util.NameHelpers.indent
 import sttp.tapir.codegen.validation.ValidationDefns
 import sttp.tapir.codegen.xml.XmlSerdeLib.XmlSerdeLib
@@ -95,7 +95,8 @@ object OutComponent {
             preferEager,
             xmlSerdeLib,
             tapirCodegenDirectives,
-            validators
+            validators,
+            optional // don't consider 'nullable' for 'representAsSome'
           )
         }
         val inlineDefn =
@@ -111,7 +112,7 @@ object OutComponent {
           (s"$decl$d", Some(tpe), maybeInlineDefn)
         case seq =>
           // We cannot mix eager and streaming types when using oneOfBody
-          val preferEager = seq.exists(c => eagerTypes.contains(c.contentType))
+          val preferEager = seq.exists(c => ContentTypes.isEager(c.contentType))
           val (decls, tpes, maybeInlineDefns) = seq.map(wrapContent(_, preferEager)).unzip3
           val distinctTypes = tpes.distinct
           // If the types are distinct, we need to produce wrappers with a common parent for oneOfBody to work. If they're
@@ -282,7 +283,7 @@ object OutComponent {
           }
         case many =>
           if (many.map(_.code).distinct.size != many.size) bail("Cannot construct schema for multiple responses with same status code")
-          val contentCanBeEmpty = many.exists(_.content.isEmpty)
+          val someContentCanBeEmpty = many.exists(_.content.isEmpty)
           val allBodiesAreEmpty = many.forall(_.content.isEmpty)
           val allResponsesAreEmpty = allBodiesAreEmpty && many.forall(_.getHeaders.isEmpty)
 
@@ -304,9 +305,14 @@ object OutComponent {
             headerDefns(targetScala3, jsonSerdeLib, doc, generateValidators, ambiguous, isErrorPosition)(endpointName, many)
 
           val noAmbiguity = noHeaders && !ambiguous
+          val bodyIsStreaming = (!isErrorPosition && tapirCodegenDirectives.contains(forceRespStreaming)) ||
+            (!isErrorPosition && tapirCodegenDirectives.contains(forceStreaming))
 
           val (oneOfs, types, inlineDefns) = many.map { m =>
-            val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = contentCanBeEmpty)
+            val multipleEncodingsForStatusCode = m.content.size > 1
+            // If there's only one possible content body type, make sure the variant matcher has the right type.
+            val treatAsOptional = someContentCanBeEmpty && !multipleEncodingsForStatusCode
+            val (decl, maybeBodyType, inlineDefn1) = bodyFmt(m, isErrorPosition, optional = treatAsOptional)
             val maybeCode =
               if (addDisambiguationCodes && m.code.equalsIgnoreCase("default")) ""
               else if (m.code.equalsIgnoreCase("default")) s"sttp.model.StatusCode(400), "
@@ -354,12 +360,14 @@ object OutComponent {
                 case s              => s".and($s)"
               }
 
-              if (contentCanBeEmpty) {
+              if (someContentCanBeEmpty) {
                 val (_, nonOptionalType, _) = bodyFmt(m, isErrorPosition)
-                val maybeMap = if (m.content.size > 1 || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
+                val maybeMap = if (multipleEncodingsForStatusCode || tpeIsBin) ".map(Some(_))(_.orNull)" else ""
                 val someType = nonOptionalType.map(": " + _.replaceAll("^Option\\[(.+)]$", "$1")).getOrElse("")
+                val tpesAreBin = someType.contains("BinaryStream") || someType.contains("fs2.Stream")
+                def maybeUnchecked = if (tpesAreBin) " @scala.unchecked" else ""
                 (
-                  s"oneOfVariantValueMatcher($maybeCode$decl$maybeStrict$maybeMap$h){ case ${matchBodyAndHeaders(s"Some(_$someType)")} => true }",
+                  s"oneOfVariantValueMatcher($maybeCode$decl$maybeStrict$maybeMap$h){ case ${matchBodyAndHeaders(s"Some(_$someType$maybeUnchecked)")} => true }",
                   maybeBodyType,
                   inlineDefn1
                 )
@@ -393,16 +401,13 @@ object OutComponent {
             .map { case (k, vs) => k -> vs.map(_._2) }
             .toMap
           val traitName = s"${endpointName.capitalize}Body${if (isErrorPosition) "Err" else "Out"}"
-          val mappable = Set("application/json", "application/xml", "multipart/form-data")
-          val bodyIsStreaming = (!isErrorPosition && tapirCodegenDirectives.contains(forceRespStreaming)) ||
-            (!isErrorPosition && tapirCodegenDirectives.contains(forceStreaming))
           val bodyIsEager = !bodyIsStreaming && (isErrorPosition ||
             (!isErrorPosition && tapirCodegenDirectives.contains(forceRespEager)) ||
             (!isErrorPosition && tapirCodegenDirectives.contains(forceEager)))
           val allElemTypes = many
             .flatMap(y =>
               y.content.map(x =>
-                (x.contentType, x.schema, y.content.size > 1 && y.content.map(_.contentType).exists(!mappable.contains(_)))
+                (x.contentType, x.schema, y.content.size > 1 && y.content.map(_.contentType).exists(!ContentTypes.isClassMappable(_)))
               )
             )
             .map {
@@ -410,17 +415,17 @@ object OutComponent {
               case (_, _, true)                                            => traitName
               case (ct, _, _) if ct.startsWith("text/") && isErrorPosition => "String"
               case ("text/plain" | "text/html", _, _)                      => "String"
-              case ("application/json", _, _) if tapirCodegenDirectives.contains(jsonBodyAsString) => "String"
-              case (ct, r: OpenapiSchemaRef, _) if mappable.contains(ct)                           => r.stripped
-              case (ct, x: OpenapiSchemaSimpleType, _) if mappable.contains(ct)                    => mapSchemaSimpleTypeToType(x)._1
-              case (ct, x, _) if mappable.contains(ct) => bail(s"Unexpected oneOf elem type $x with content type $ct")
-              case (_, _, _) if bodyIsEager            => "Array[Byte]"
-              case (_, _, _)                           => capabilityType(streamingImplementation)
+              case (ct, _, _) if ContentTypes.isJson(ct) && tapirCodegenDirectives.contains(jsonBodyAsString) => "String"
+              case (ct, r: OpenapiSchemaRef, _) if ContentTypes.isClassMappable(ct)                           => r.stripped
+              case (ct, x: OpenapiSchemaSimpleType, _) if ContentTypes.isClassMappable(ct) => mapSchemaSimpleTypeToType(x)._1
+              case (ct, x, _) if ContentTypes.isClassMappable(ct) => bail(s"Unexpected oneOf elem type $x with content type $ct")
+              case (_, _, _) if bodyIsEager                       => "Array[Byte]"
+              case (_, _, _)                                      => capabilityType(streamingImplementation)
             }
             .distinct
           val commmonType = {
             if (allResponsesAreEmpty || allElemTypes.isEmpty) "Unit"
-            else if (contentCanBeEmpty && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
+            else if (someContentCanBeEmpty && allElemTypes.size == 1) s"Option[${allElemTypes.head}]"
             else if (allElemTypes.size == 1) allElemTypes.head
             else {
               val baseType = allElemTypes.map { s => parentMap.getOrElse(s, Nil).toSet }.reduce(_ intersect _) match {
@@ -429,7 +434,7 @@ object OutComponent {
                 case s if targetScala3              => s.mkString(" & ")
                 case s                              => s.mkString(" with ")
               }
-              if (contentCanBeEmpty) s"Option[$baseType]" else baseType
+              if (someContentCanBeEmpty) s"Option[$baseType]" else baseType
             }
           }
           val oneOfType = if (noAmbiguity) commmonType else if (allBodiesAreEmpty) headerTopType else s"($commmonType, $headerTopType)"

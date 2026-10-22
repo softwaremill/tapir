@@ -105,6 +105,7 @@ class SchemaCodecAgreementTest extends AnyFlatSpec with Matchers with ScalaCheck
     agree(Pickler.derived[Option[Status]])
     agree(Pickler.derived[Map[String, Tree]])
     agree(Pickler.derived[Either[List[Int], Status]])
+    agree(Pickler.derived[Array[Byte]])
   }
 
   it should "hold for a user pickler for a nested type" in {

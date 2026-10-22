@@ -45,6 +45,9 @@ case class EndpointMetric[F[_]](
   def onDecodeFailure(f: () => F[Unit]): EndpointMetric[F] = this.copy(onDecodeFailure = Some(f))
 }
 
+/** Used by the Prometheus, Datadog and ZIO metrics. Ignored by `OpenTelemetryMetrics` and `Otel4sMetrics`, which follow the OpenTelemetry
+  * semantic conventions.
+  */
 case class ResponsePhaseLabel(name: String, headersValue: String, bodyValue: String)
 
 case class MetricLabels(

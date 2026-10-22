@@ -33,9 +33,9 @@ object OpenApiMerger {
   }
 
   private def mergeComponents(left: OpenapiComponent, right: OpenapiComponent): OpenapiComponent = {
-    val mergedSchemas = left.schemas ++ right.schemas.filterNot { case (k, _) => left.schemas.contains(k) }
-    val conflictingSchemas = left.schemas.keySet.intersect(right.schemas.keySet).filter { k =>
-      left.schemas(k) != right.schemas(k)
+    val mergedSchemas = left.annotatedSchemas ++ right.annotatedSchemas.filterNot { case (k, _) => left.annotatedSchemas.contains(k) }
+    val conflictingSchemas = left.annotatedSchemas.keySet.intersect(right.annotatedSchemas.keySet).filter { k =>
+      left.annotatedSchemas(k) != right.annotatedSchemas(k)
     }
     if (conflictingSchemas.nonEmpty)
       throw new IllegalArgumentException(

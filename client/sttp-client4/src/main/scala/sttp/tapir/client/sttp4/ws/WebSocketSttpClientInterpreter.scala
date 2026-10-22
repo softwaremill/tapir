@@ -19,7 +19,7 @@ trait WebSocketSttpClientInterpreter {
     * parameters: path, query, headers and body. The request is sent using the given backend, and the result of decoding the response (error
     * or success value) is returned.
     */
-  def toClient[F[_], I, E, O, R <: Streams[_] with WebSockets](
+  def toClient[F[_], I, E, O, R <: Streams[?] & WebSockets](
       e: PublicEndpoint[I, E, O, R],
       baseUri: Option[Uri],
       backend: WebSocketBackend[F]
@@ -35,7 +35,7 @@ trait WebSocketSttpClientInterpreter {
     * parameters: path, query, headers and body. The request is sent using the given backend, and the result (error or success value) is
     * returned. If decoding the result fails, a failed effect is returned instead.
     */
-  def toClientThrowDecodeFailures[F[_], I, E, O, R <: Streams[_] with WebSockets](
+  def toClientThrowDecodeFailures[F[_], I, E, O, R <: Streams[?] & WebSockets](
       e: PublicEndpoint[I, E, O, R],
       baseUri: Option[Uri],
       backend: WebSocketBackend[F]
@@ -51,7 +51,7 @@ trait WebSocketSttpClientInterpreter {
     * parameters: path, query, headers and body. The request is sent using the given backend, and the result (success value) is returned. If
     * decoding the result fails, or if the response corresponds to an error value, a failed effect is returned instead.
     */
-  def toClientThrowErrors[F[_], I, E, O, R <: Streams[_] with WebSockets](
+  def toClientThrowErrors[F[_], I, E, O, R <: Streams[?] & WebSockets](
       e: PublicEndpoint[I, E, O, R],
       baseUri: Option[Uri],
       backend: WebSocketBackend[F]
@@ -68,7 +68,7 @@ trait WebSocketSttpClientInterpreter {
     * backend. The response will then contain the decoded error or success values (note that this can be the body enriched with data from
     * headers/status code).
     */
-  def toRequest[F[_], I, E, O, R <: Streams[_] with WebSockets](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(implicit
+  def toRequest[F[_], I, E, O, R <: Streams[?] & WebSockets](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
   ): I => WebSocketRequest[F, DecodeResult[Either[E, O]]] = {
     new WebSocketEndpointToSttpClient(wsToPipe, sttpClientOptions).toSttpRequest(e, baseUri).apply(())
@@ -82,7 +82,7 @@ trait WebSocketSttpClientInterpreter {
     * backend. The response will then contain the decoded error or success values (note that this can be the body enriched with data from
     * headers/status code), or will be a failed effect, when response parsing fails.
     */
-  def toRequestThrowDecodeFailures[F[_], I, E, O, R <: Streams[_] with WebSockets](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(
+  def toRequestThrowDecodeFailures[F[_], I, E, O, R <: Streams[?] & WebSockets](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(
       implicit wsToPipe: WebSocketToPipe[R]
   ): I => WebSocketRequest[F, Either[E, O]] =
     i =>
@@ -103,7 +103,7 @@ trait WebSocketSttpClientInterpreter {
     * @throws IllegalArgumentException
     *   when response parsing fails
     */
-  def toRequestThrowErrors[F[_], I, E, O, R <: Streams[_] with WebSockets](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(implicit
+  def toRequestThrowErrors[F[_], I, E, O, R <: Streams[?] & WebSockets](e: PublicEndpoint[I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
   ): I => WebSocketRequest[F, O] =
     i =>
@@ -127,7 +127,7 @@ trait WebSocketSttpClientInterpreter {
     * appropriate request parameters: path, query, headers and body. The request is sent using the given backend, and the result of decoding
     * the response (error or success value) is returned.
     */
-  def toSecureClient[F[_], A, I, E, O, R <: Streams[_] with WebSockets](
+  def toSecureClient[F[_], A, I, E, O, R <: Streams[?] & WebSockets](
       e: Endpoint[A, I, E, O, R],
       baseUri: Option[Uri],
       backend: WebSocketBackend[F]
@@ -145,7 +145,7 @@ trait WebSocketSttpClientInterpreter {
     * appropriate request parameters: path, query, headers and body. The request is sent using the given backend, and the result (error or
     * success value) is returned. If decoding the result fails, a failed effect is returned instead.
     */
-  def toSecureClientThrowDecodeFailures[F[_], A, I, E, O, R <: Streams[_] with WebSockets](
+  def toSecureClientThrowDecodeFailures[F[_], A, I, E, O, R <: Streams[?] & WebSockets](
       e: Endpoint[A, I, E, O, R],
       baseUri: Option[Uri],
       backend: WebSocketBackend[F]
@@ -164,7 +164,7 @@ trait WebSocketSttpClientInterpreter {
     * value) is returned. If decoding the result fails, or if the response corresponds to an error value, a failed effect is returned
     * instead.
     */
-  def toSecureClientThrowErrors[F[_], A, I, E, O, R <: Streams[_] with WebSockets](
+  def toSecureClientThrowErrors[F[_], A, I, E, O, R <: Streams[?] & WebSockets](
       e: Endpoint[A, I, E, O, R],
       baseUri: Option[Uri],
       backend: WebSocketBackend[F]
@@ -183,7 +183,7 @@ trait WebSocketSttpClientInterpreter {
     * sent using any sttp backend. The response will then contain the decoded error or success values (note that this can be the body
     * enriched with data from headers/status code).
     */
-  def toSecureRequest[F[_], A, I, E, O, R <: Streams[_] with WebSockets](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri])(implicit
+  def toSecureRequest[F[_], A, I, E, O, R <: Streams[?] & WebSockets](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri])(implicit
       wsToPipe: WebSocketToPipe[R]
   ): A => I => WebSocketRequest[F, DecodeResult[Either[E, O]]] =
     new WebSocketEndpointToSttpClient(wsToPipe, sttpClientOptions).toSttpRequest(e, baseUri)
@@ -196,7 +196,7 @@ trait WebSocketSttpClientInterpreter {
     * sent using any sttp backend. The response will then contain the decoded error or success values (note that this can be the body
     * enriched with data from headers/status code), or will be a failed effect, when response parsing fails.
     */
-  def toSecureRequestThrowDecodeFailures[F[_], A, I, E, O, R <: Streams[_] with WebSockets](
+  def toSecureRequestThrowDecodeFailures[F[_], A, I, E, O, R <: Streams[?] & WebSockets](
       e: Endpoint[A, I, E, O, R],
       baseUri: Option[Uri]
   )(implicit
@@ -221,8 +221,8 @@ trait WebSocketSttpClientInterpreter {
     * @throws IllegalArgumentException
     *   when response parsing fails
     */
-  def toSecureRequestThrowErrors[F[_], A, I, E, O, R <: Streams[_] with WebSockets](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri])(
-      implicit wsToPipe: WebSocketToPipe[R]
+  def toSecureRequestThrowErrors[F[_], A, I, E, O, R <: Streams[?] & WebSockets](e: Endpoint[A, I, E, O, R], baseUri: Option[Uri])(implicit
+      wsToPipe: WebSocketToPipe[R]
   ): A => I => WebSocketRequest[F, O] =
     a =>
       i =>

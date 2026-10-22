@@ -18,7 +18,7 @@ class ZEndpointTest extends AnyFlatSpec with Matchers {
     val serverEndpoint2: ZServerEndpoint[Service2, Any] =
       endpoint.serverLogic(_ => ZIO.right(()): ZIO[Service2, Nothing, Either[Unit, Unit]])
 
-    type Env = Service1 with Service2
+    type Env = Service1 & Service2
     val routes: HttpRoutes[RIO[Env, *]] =
       ZHttp4sServerInterpreter().from(List(serverEndpoint1.widen[Env], serverEndpoint2.widen[Env])).toRoutes
   }

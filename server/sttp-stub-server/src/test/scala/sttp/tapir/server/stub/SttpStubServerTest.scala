@@ -63,7 +63,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
   it should "combine tapir endpoint with sttp stub - multiple inputs" in {
     // given
     val endpoint = sttp.tapir.endpoint
-      .in("api" / path[String]("id") and query[Int]("amount"))
+      .in("api" / path[String]("id") `and` query[Int]("amount"))
       .post
       .out(jsonBody[ResponseWrapper])
 
@@ -137,6 +137,20 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
     val response2 = SttpClientInterpreter().toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(1).send(backend)
     response2.body shouldBe Left(())
     response2.code shouldBe StatusCode.InternalServerError
+  }
+
+  it should "match on a secondary body input" in {
+    // given
+    val endpoint = sttp.tapir.endpoint.post.securityIn(plainBody[Int].asSecondary).in(plainBody[Int]).out(plainBody[Int])
+
+    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
+      .apply(idMonad)
+      .whenSecurityInputMatches(endpoint) { body => body > 2 }
+      .thenSuccess(42)
+
+    val response =
+      SttpClientInterpreter().toSecureRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(1).apply(10).send(backend)
+    response.body shouldBe Right(42)
   }
 
   it should "apply the mapping of a one-of body input when encoding the request and decoding it in the stub" in {
