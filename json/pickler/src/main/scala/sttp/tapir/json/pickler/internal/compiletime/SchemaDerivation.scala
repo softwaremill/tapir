@@ -99,68 +99,38 @@ trait SchemaDerivation {
     }
 
   // -----------------------------------------------------------------------------------------------------------------
-  // Rule pipeline
+  // Pipeline
   // -----------------------------------------------------------------------------------------------------------------
 
-  abstract class SchemaRule(val name: String) extends Rule {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]]
-  }
-
+  /** Tried in order: the cached schema, an `SRef` for a type currently being derived, the schema of a user-supplied `Pickler[A]`, and
+    * finally structural derivation.
+    *
+    * A user-supplied `Pickler[A]` beats everything structural: it is the override mechanism, and the codec chain honours the same instance,
+    * so schema and JSON stay in step. Safe to summon early only because of the re-entrancy guard described in `ImplicitPicklerSupport`.
+    */
   def deriveSchemaFor[A: SchemaCtx]: MIO[Expr[Schema[A]]] =
     Log.namedScope(s"deriveSchema[${Type[A].prettyPrint}]") {
-      Rules(
-        UseCachedRule,
-        UseSelfRefWhenRecursiveRule,
-        // A user-supplied `Pickler[A]` beats everything structural: it is the override mechanism, and the codec chain
-        // honours the same instance, so schema and JSON stay in step. Safe to summon early only because of the
-        // re-entrancy guard described in `ImplicitPicklerSupport`.
-        UseUserPicklerRule,
-        StructuralRule
-      )(_[A]).flatMap {
-        case Right(result) => MIO.pure(result)
-        case Left(reasons) =>
-          val explanation = reasons.toListMap.view.map { case (rule, why) =>
-            if (why.isEmpty) s"  - ${rule.name}: not applicable"
-            else s"  - ${rule.name}: ${why.mkString("; ")}"
-          }.toList
-          failSchema(PicklerDerivationError.UnsupportedType(Type[A].plainPrint, explanation))
+      implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
+      sctx.cache.get0Ary[Schema[A]](sctx.cacheKey).flatMap {
+        case Some(cached) => MIO.pure(cached)
+        case None         =>
+          sctx.inProgress.get.flatMap { inProgress =>
+            if (inProgress.contains(sctx.cacheKey)) {
+              implicit val SNameT: Type[SName] = STypes.SNameT
+              val sName = sNameExpr[A]
+              MIO.pure(Expr.quote(SchemaUtils.refSchema[A](Expr.splice(sName))))
+            } else
+              userPickler[A](sctx.env).flatMap {
+                case Some(pickler) => setCachedAndGet[A](sctx.cache, Expr.quote(Expr.splice(pickler).schema))
+                case None          => deriveStructuralSchema[A]
+              }
+          }
       }
     }
 
   private def failSchema[T](error: PicklerDerivationError): MIO[T] = Log.error(error.message) >> MIO.fail(error)
 
-  private object UseCachedRule extends SchemaRule("use cached schema") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
-      implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
-      sctx.cache.get0Ary[Schema[A]](sctx.cacheKey).map {
-        case Some(cached) => Rule.matched(cached)
-        case None         => Rule.yielded(s"${Type[A].plainPrint} is not cached")
-      }
-    }
-  }
-
-  private object UseSelfRefWhenRecursiveRule extends SchemaRule("emit SRef for a recursive type") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      sctx.inProgress.get.map { inProgress =>
-        if (inProgress.contains(sctx.cacheKey)) {
-          implicit val SNameT: Type[SName] = STypes.SNameT
-          val sName = sNameExpr[A]
-          Rule.matched(Expr.quote(SchemaUtils.refSchema[A](Expr.splice(sName))))
-        } else Rule.yielded(s"${Type[A].plainPrint} is not currently being derived")
-      }
-  }
-
-  private object UseUserPicklerRule extends SchemaRule("use the schema of a user-supplied Pickler") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      userPickler[A](sctx.env).flatMap {
-        case Some(pickler) =>
-          implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
-          setCachedAndGet[A](sctx.cache, Expr.quote(Expr.splice(pickler).schema)).map(Rule.matched)
-        case None => MIO.pure(Rule.yielded(s"no user-supplied Pickler[${Type[A].plainPrint}] in scope"))
-      }
-  }
-
-  /** The structural rule: dispatch on the [[Shape]] shared with `CodecDerivation`, so that both halves take a type apart identically.
+  /** Dispatch on the [[Shape]] shared with `CodecDerivation`, so that both halves take a type apart identically.
     *
     * Only the shapes that are not structural (`BuiltInScalar`, the Java numbers, `Opaque`) reach the implicit search for a `Schema[A]`.
     * That is where primitives, `String`, `java.time` types and any user-provided schema for a non-structural type are resolved —
@@ -173,28 +143,26 @@ trait SchemaDerivation {
     * The cost is that a user-supplied `given Schema[MyCaseClass]` does not override structural derivation: overriding is done by supplying
     * a `Pickler`, not a `Schema`, so that the codec follows suit.
     */
-  private object StructuralRule extends SchemaRule("derive from the type's shape") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
-      val shape = classify[A]
-      Log.info(s"${Type[A].prettyPrint} classified as ${shape.getClass.getSimpleName}") >> (shape match {
-        case Shape.BuiltInScalar() | Shape.JavaBigDecimal() | Shape.JavaBigInteger() | Shape.Opaque() => useImplicitSchema[A]
-        // tapir core declares no `Schema[Char]`, but jsoniter writes a `Char` as a one-character string. Supplying the
-        // matching `SString` here is what keeps the schema and the codec in agreement.
-        case Shape.CharScalar()           => MIO.pure(Expr.quote(SchemaUtils.stringLikeSchema[A]))
-        case Shape.ValueClass(inner)      => deriveValueClassSchema[A](inner)
-        case Shape.OptionOf(element)      => deriveOptionSchema[A](element)
-        case Shape.NestedOption(inner, _) => deriveOptionSchema[A](inner)
-        case Shape.EitherOf(left, right)  => deriveEitherSchema[A](left, right)
-        case Shape.StringMap(value)       => deriveMapSchema[A](value)
-        case Shape.NonStringMap(key, _)   => failSchema(PicklerDerivationError.NonStringMapKey(key.Underlying.plainPrint))
-        case Shape.Collection(element)    => deriveCollectionSchema[A](element)
-        case Shape.Tuple()                => failSchema(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
-        case Shape.Singleton()            => guardingRecursion[A, Expr[Schema[A]]](deriveSingletonSchema[A])
-        case Shape.Product(_, params)     => guardingRecursion[A, Expr[Schema[A]]](deriveCaseClassSchema[A](params))
-        case Shape.Enumeration(_, leaves) => guardingRecursion[A, Expr[Schema[A]]](deriveStringEnumSchema[A](leaves))
-        case Shape.Coproduct(_, leaves)   => guardingRecursion[A, Expr[Schema[A]]](deriveCoproductSchema[A](leaves))
-      }).map(Rule.matched)
-    }
+  private def deriveStructuralSchema[A: SchemaCtx]: MIO[Expr[Schema[A]]] = {
+    val shape = classify[A]
+    Log.info(s"${Type[A].prettyPrint} classified as ${shape.getClass.getSimpleName}") >> (shape match {
+      case Shape.BuiltInScalar() | Shape.JavaBigDecimal() | Shape.JavaBigInteger() | Shape.Opaque() => useImplicitSchema[A]
+      // tapir core declares no `Schema[Char]`, but jsoniter writes a `Char` as a one-character string. Supplying the
+      // matching `SString` here is what keeps the schema and the codec in agreement.
+      case Shape.CharScalar()           => MIO.pure(Expr.quote(SchemaUtils.stringLikeSchema[A]))
+      case Shape.ValueClass(inner)      => deriveValueClassSchema[A](inner)
+      case Shape.OptionOf(element)      => deriveOptionSchema[A](element)
+      case Shape.NestedOption(inner, _) => deriveOptionSchema[A](inner)
+      case Shape.EitherOf(left, right)  => deriveEitherSchema[A](left, right)
+      case Shape.StringMap(value)       => deriveMapSchema[A](value)
+      case Shape.NonStringMap(key, _)   => failSchema(PicklerDerivationError.NonStringMapKey(key.Underlying.plainPrint))
+      case Shape.Collection(element)    => deriveCollectionSchema[A](element)
+      case Shape.Tuple()                => failSchema(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
+      case Shape.Singleton()            => guardingRecursion[A, Expr[Schema[A]]](deriveSingletonSchema[A])
+      case Shape.Product(_, params)     => guardingRecursion[A, Expr[Schema[A]]](deriveCaseClassSchema[A](params))
+      case Shape.Enumeration(_, leaves) => guardingRecursion[A, Expr[Schema[A]]](deriveStringEnumSchema[A](leaves))
+      case Shape.Coproduct(_, leaves)   => guardingRecursion[A, Expr[Schema[A]]](deriveCoproductSchema[A](leaves))
+    })
   }
 
   private def useImplicitSchema[A: SchemaCtx]: MIO[Expr[Schema[A]]] = {
