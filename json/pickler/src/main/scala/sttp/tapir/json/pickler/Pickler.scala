@@ -28,7 +28,7 @@ trait Pickler[A] {
     *
     * Decoding uses the jsoniter-scala `ReaderConfig` given in scope, if any.
     */
-  final def toCodec(using readerConfig: ReaderConfig = internal.runtime.PicklerUtils.defaultReaderConfig): JsonCodec[A] =
+  final def toCodec(using readerConfig: ReaderConfig = Pickler.defaultReaderConfig): JsonCodec[A] =
     internal.runtime.PicklerUtils.toTapirCodec(codec, schema, readerConfig)
 
   /** A pickler for `Option[A]`: the schema is marked optional, `None` is written as `null`. */
@@ -44,6 +44,11 @@ trait Pickler[A] {
 }
 
 object Pickler extends PicklerCompanionCompat {
+
+  /** Used for decoding unless a `given ReaderConfig` is in scope. A custom config should extend this one, so that decode errors (which can
+    * be returned to clients) don't include a hex dump of the input.
+    */
+  val defaultReaderConfig: ReaderConfig = ReaderConfig.withAppendHexDumpToParseException(false)
 
   /** A pickler over an existing schema and jsoniter-scala codec, for types whose JSON representation is hand-written (or comes from
     * elsewhere) rather than derived. Put the result in a `given` and both derivation halves honour it wherever the type is nested. Keeping

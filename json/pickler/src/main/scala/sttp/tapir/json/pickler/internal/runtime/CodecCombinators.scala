@@ -1,6 +1,7 @@
 package sttp.tapir.json.pickler.internal.runtime
 
 import com.github.plokhotnyuk.jsoniter_scala.core.{readFromArrayReentrant, JsonReader, JsonValueCodec, JsonWriter}
+import sttp.tapir.json.pickler.Pickler
 
 import scala.collection.Factory
 import scala.reflect.ClassTag
@@ -112,10 +113,10 @@ object CodecCombinators {
       def nullValue: Either[A, B] = null
       def decodeValue(in: JsonReader, default: Either[A, B]): Either[A, B] = {
         val raw = in.readRawValAsBytes()
-        try Right(readFromArrayReentrant(raw, PicklerUtils.defaultReaderConfig)(right))
+        try Right(readFromArrayReentrant(raw, Pickler.defaultReaderConfig)(right))
         catch {
           case NonFatal(rightFailure) =>
-            try Left(readFromArrayReentrant(raw, PicklerUtils.defaultReaderConfig)(left))
+            try Left(readFromArrayReentrant(raw, Pickler.defaultReaderConfig)(left))
             catch { case NonFatal(_) => throw rightFailure }
         }
       }

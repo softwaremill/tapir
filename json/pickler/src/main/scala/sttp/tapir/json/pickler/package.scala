@@ -3,7 +3,7 @@ package sttp.tapir.json.pickler
 import com.github.plokhotnyuk.jsoniter_scala.core.ReaderConfig
 import sttp.tapir.*
 import sttp.tapir.Codec.JsonCodec
-import sttp.tapir.json.pickler.internal.runtime.PicklerUtils.defaultReaderConfig
+import sttp.tapir.json.pickler.Pickler.defaultReaderConfig
 
 /** The bridge that makes a [[Pickler]] usable wherever tapir wants a JSON codec: with it in scope, `jsonBody[T]` from `sttp.tapir` resolves
   * for any `T` that has a `Pickler`.
