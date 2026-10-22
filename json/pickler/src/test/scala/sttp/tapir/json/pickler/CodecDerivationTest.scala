@@ -102,6 +102,16 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     flat.decode("""{"fieldA":"a"}""") shouldBe Value(FlatClassWithList("a", Nil))
   }
 
+  it should "encode Array fields" in {
+    val pickler = Pickler.derived[NestedClassWithArray]
+    pickler.toCodec.encode(NestedClassWithArray(Array(FlatClassWithArray("a2", Array()), FlatClassWithArray("a3", Array(-10))))) shouldBe
+      """{"innerField":[{"fieldA":"a2","fieldB":[]},{"fieldA":"a3","fieldB":[-10]}]}"""
+    {
+      import sttp.tapir.generic.auto.*
+      pickler.schema shouldBe Schema.derived[NestedClassWithArray]
+    }
+  }
+
   it should "encode and decode a Map with String keys" in {
     // insertion order is preserved by an immutable Map with <= 4 entries
     roundTrip(
@@ -130,6 +140,12 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     codec.decode("""{"fieldB":"msg205"}""") shouldBe Value(ClassWithScalaDefault("field-a-default", "msg205"))
   }
 
+  it should "work with `derives`" in {
+    summon[Pickler[Book]].toCodec.encode(Book("John", "Hello")) shouldBe """{"author":"John","title":"Hello"}"""
+    summon[Pickler[BookShelf]].toCodec.encode(BookShelf(List(Book("Alice", "Goodbye")))) shouldBe
+      """{"books":[{"author":"Alice","title":"Goodbye"}]}"""
+  }
+
   it should "report an unknown field as skipped rather than failing" in {
     Pickler.derived[FlatClass].toCodec.decode("""{"fieldA":1,"fieldB":"x","extra":true}""") shouldBe Value(FlatClass(1, "x"))
   }
@@ -147,7 +163,8 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
   }
 
   it should "apply the member-name transformation to leaf fields too" in {
-    given PicklerConfiguration = PicklerConfiguration.default.withToEncodedName(_.toUpperCase())
+    // a named argument, which the configuration folding has to see through
+    given PicklerConfiguration = PicklerConfiguration.default.withToEncodedName(toEncodedName = _.toUpperCase())
     val codec = Pickler.derived[MyCaseClass].toCodec
     codec.encode(MyCaseClass(ErrorTimeout, "msg18")) shouldBe """{"FIELDA":{"$type":"ErrorTimeout"},"FIELDB":"msg18"}"""
     codec.encode(MyCaseClass(CustomError("customErrMsg"), "msg18")) shouldBe
@@ -156,13 +173,12 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
 
   it should "apply a custom discriminator name" in {
     given PicklerConfiguration = PicklerConfiguration.default.withDiscriminator("kind")
-    val codec = Pickler.derived[MyCaseClass].toCodec
     roundTrip(
       Pickler.derived[MyCaseClass],
       MyCaseClass(CustomError("customErrMsg2"), "msg19"),
       """{"fieldA":{"kind":"CustomError","msg":"customErrMsg2"},"fieldB":"msg19"}"""
     )
-    codec.encode(MyCaseClass(ErrorNotFound, "")) shouldBe """{"fieldA":{"kind":"ErrorNotFound"},"fieldB":""}"""
+    roundTrip(Pickler.derived[MyCaseClass], MyCaseClass(ErrorNotFound, ""), """{"fieldA":{"kind":"ErrorNotFound"},"fieldB":""}""")
   }
 
   it should "accept the discriminator anywhere in the object" in {
@@ -202,7 +218,7 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     roundTrip(Pickler.derived[Response], Response(ColorEnum.Pink, "pink!!"), """{"color":"Pink","description":"pink!!"}""")
     roundTrip(Pickler.derived[RichColorResponse], RichColorResponse(RichColorEnum.Cyan), """{"color":"Cyan"}""")
     // no alphabetical reordering of cases
-    Pickler.derived[NotAlphabetical].toCodec.encode(NotAlphabetical.Xyz) shouldBe "\"Xyz\""
+    roundTrip(Pickler.derived[NotAlphabetical], NotAlphabetical.Xyz, "\"Xyz\"")
   }
 
   it should "encode a Scala 3 enum with case-class cases as discriminated objects" in {
@@ -274,6 +290,13 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
       .asInstanceOf[sttp.tapir.SchemaType.SOpenProduct[?, SimpleTestResult]]
       .valueSchema
     valueSchema.schemaType.asInstanceOf[SProduct[SimpleTestResult]].fields.map(_.name.encodedName) shouldBe List("MSG")
+  }
+
+  it should "derive structurally even when a Schema for the class is in scope" in {
+    // A bare Schema is not an override (a Pickler is); a bare JsonValueCodec for a nested class is refused (below).
+    given givenSchemaForCc: Schema[FlatClass] = Schema.string[FlatClass]
+    Pickler.derived[FlatClass].toCodec.encode(FlatClass(1, "a")) shouldBe """{"fieldA":1,"fieldB":"a"}"""
+    Pickler.derived[FlatClass].schema.schemaType shouldBe a[SProduct[?]]
   }
 
   it should "ignore a given Pickler for a subtype of a sealed hierarchy being derived" in {
@@ -551,6 +574,10 @@ object CodecFixtures {
   case class NestedClassWithOption(innerField: Option[FlatClassWithOption])
   case class FlatClassWithList(fieldA: String, fieldB: List[Int])
   case class NestedClassWithList(innerField: List[FlatClassWithList])
+  case class FlatClassWithArray(fieldA: String, fieldB: Array[Int])
+  case class NestedClassWithArray(innerField: Array[FlatClassWithArray])
+  case class Book(author: String, title: String) derives Pickler
+  case class BookShelf(books: List[Book]) derives Pickler
   case class SimpleTestResult(msg: String)
   case class ClassWithMap(field: Map[String, SimpleTestResult])
   case class UserId(value: UUID) extends AnyVal

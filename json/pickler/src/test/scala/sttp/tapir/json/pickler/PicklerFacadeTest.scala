@@ -2,7 +2,7 @@ package sttp.tapir.json.pickler
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import com.github.plokhotnyuk.jsoniter_scala.core.ReaderConfig
+import com.github.plokhotnyuk.jsoniter_scala.core.{JsonReader, JsonValueCodec, JsonWriter, ReaderConfig}
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.SchemaType.{SCoproduct, SOpenProduct, SProduct, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
@@ -21,6 +21,24 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
     val codec = pickler.toCodec
     codec.encode(value) shouldBe expectedJson
     val _ = codec.decode(expectedJson) shouldBe Value(value)
+  }
+
+  behavior of "fromSchemaAndCodec"
+
+  it should "build from an existing Schema and JsonValueCodec" in {
+    val codec: JsonValueCodec[FlatClass] = new JsonValueCodec[FlatClass] {
+      def nullValue: FlatClass = null
+      def decodeValue(in: JsonReader, default: FlatClass): FlatClass = {
+        val s = in.readString(null)
+        val Array(a, b) = s.split('|')
+        FlatClass(a.toInt, b)
+      }
+      def encodeValue(x: FlatClass, out: JsonWriter): Unit = out.writeVal(s"${x.fieldA}|${x.fieldB}")
+    }
+    val pickler = Pickler.fromSchemaAndCodec(Schema.string[FlatClass], codec)
+
+    roundTrip(pickler, FlatClass(654, "field_b_value"), "\"654|field_b_value\"")
+    pickler.schema.schemaType shouldBe SString()
   }
 
   behavior of "derivedEnumeration"

@@ -11,9 +11,6 @@ object Fixtures:
   enum ColorEnum:
     case Green, Pink
 
-  case class Book(author: String, title: String) derives Pickler
-  case class BookShelf(books: List[Book]) derives Pickler
-
   case class Response(color: ColorEnum, description: String)
 
   enum RichColorEnum(val code: Int):
@@ -44,12 +41,9 @@ object Fixtures:
 
   case class FlatClassWithList(fieldA: String, fieldB: List[Int])
   case class NestedClassWithList(innerField: List[FlatClassWithList])
-  case class FlatClassWithArray(fieldA: String, fieldB: Array[Int])
-  case class NestedClassWithArray(innerField: Array[FlatClassWithArray])
   case class SimpleTestResult(msg: String)
   case class ClassWithEither(fieldA: String, fieldB: Either[String, SimpleTestResult])
   case class ClassWithMap(field: Map[String, SimpleTestResult])
-  case class ClassWithMapCustomKey(field: Map[UUID, SimpleTestResult])
   case class UserId(value: UUID) extends AnyVal
   case class UserName(name: String) extends AnyVal
   case class ClassWithValues(id: UserId, name: UserName, age: Int)
@@ -85,7 +79,3 @@ object Fixtures:
   sealed trait NotAllSealedVariant
   case object NotAllSealedVariantA extends NotAllSealedVariant
   case class NotAllSealedVariantB(innerField: Int) extends NotAllSealedVariant
-
-  enum NotAlphabetical:
-    case Xyz
-    case Fgh
