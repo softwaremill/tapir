@@ -31,8 +31,8 @@ object DerivationTimeout {
   val Default: FiniteDuration = 60.seconds
 
   def parse(value: String): Option[FiniteDuration] =
-    value.trim.toLongOption
-      .map(_.seconds)
-      .orElse(Try(Duration(value)).toOption.collect { case d: FiniteDuration => d })
-      .filter(_ > Duration.Zero)
+    Try(Duration(value.trim.toDouble, SECONDS))
+      .orElse(Try(Duration(value)))
+      .toOption
+      .collect { case d: FiniteDuration if d > Duration.Zero => d }
 }
