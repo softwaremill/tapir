@@ -117,10 +117,10 @@ trait PicklerMacrosImpl
   private def enumerationCases[A: Type](macroName: String): MIO[List[(String, ??<:[A])]] =
     classify[A] match {
       case Shape.Enumeration(_, leaves)                 => MIO.pure(leaves)
-      case Shape.Coproduct(_, leaves) if leaves.isEmpty => fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))
+      case Shape.Coproduct(_, leaves) if leaves.isEmpty => fail(PicklerDerivationError.noChildrenInSealedTrait(Type[A].plainPrint))
       case Shape.Coproduct(_, leaves)                   =>
-        fail(PicklerDerivationError.NotAnEnumeration(Type[A].plainPrint, nonSingletonLeaves(leaves)))
-      case _ => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
+        fail(PicklerDerivationError.notAnEnumeration(Type[A].plainPrint, nonSingletonLeaves(leaves)))
+      case _ => fail(PicklerDerivationError.notASealedHierarchy(Type[A].plainPrint, macroName))
     }
 
   /** `Pickler.oneOfUsingField[A, V](extractor, asString)(v1 -> pickler1, ...)`.
@@ -159,8 +159,8 @@ trait PicklerMacrosImpl
           leaves <- classify[A] match {
             case Shape.Coproduct(_, leaves) => MIO.pure(leaves)
             // An all-singleton hierarchy is a bare string: there is no object to put a discriminator in.
-            case Shape.Enumeration(_, _) => fail(PicklerDerivationError.EnumerationInOneOfUsingField(Type[A].plainPrint))
-            case _                       => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
+            case Shape.Enumeration(_, _) => fail(PicklerDerivationError.enumerationInOneOfUsingField(Type[A].plainPrint))
+            case _                       => fail(PicklerDerivationError.notASealedHierarchy(Type[A].plainPrint, macroName))
           }
           entries <- parseOneOfMapping[A, V](mapping)
           overrides <- entries.foldLeft(MIO.pure(Map.empty[String, String])) { case (acc, (key, child)) =>
@@ -174,19 +174,19 @@ trait PicklerMacrosImpl
                 .flatMap(reasons => constantInterpolation(applied).toRight(reasons))
                 .fold(
                   reasons =>
-                    fail(PicklerDerivationError.OneOfMappingNotStatic(s"${applied.plainPrint}: ${reasons.toVector.mkString("; ")}")),
+                    fail(PicklerDerivationError.oneOfMappingNotStatic(s"${applied.plainPrint}: ${reasons.toVector.mkString("; ")}")),
                   value =>
                     if (m.contains(leaf))
-                      fail(PicklerDerivationError.AmbiguousOneOfMapping(Type[A].plainPrint, s"$leaf is mapped more than once"))
+                      fail(PicklerDerivationError.ambiguousOneOfMapping(Type[A].plainPrint, s"$leaf is mapped more than once"))
                     else if (m.values.exists(_ == value))
-                      fail(PicklerDerivationError.AmbiguousOneOfMapping(Type[A].plainPrint, s"several cases map to '$value'"))
+                      fail(PicklerDerivationError.ambiguousOneOfMapping(Type[A].plainPrint, s"several cases map to '$value'"))
                     else MIO.pure(m + (leaf -> value))
                 )
             }
           }
           _ <- {
             val unmapped = leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; typeKey[Leaf] }.filterNot(overrides.contains)
-            if (unmapped.isEmpty) MIO.pure(()) else fail(PicklerDerivationError.IncompleteOneOfMapping(Type[A].plainPrint, unmapped))
+            if (unmapped.isEmpty) MIO.pure(()) else fail(PicklerDerivationError.incompleteOneOfMapping(Type[A].plainPrint, unmapped))
           }
           _ <- Log.info(s"Discriminator values from oneOfUsingField: ${overrides.mkString("{", ", ", "}")}")
           // The leaves' schemas and codecs must be derived here, with the overridden tags; a `given Pickler[Leaf]` in
@@ -200,7 +200,7 @@ trait PicklerMacrosImpl
     }
   }
 
-  private def fail[T](error: PicklerDerivationError): MIO[T] = Log.error(error.message) >> MIO.fail(error)
+  private def fail[T](error: PicklerDerivationError): MIO[T] = Log.error(error.getMessage) >> MIO.fail(error)
 
   /** `(key, leaf type)` for every `key -> pickler` / `(key, pickler)` element of the mapping.
     *
@@ -237,7 +237,7 @@ trait PicklerMacrosImpl
     val elements: List[Expr[(V, Pickler[? <: A])]] = mapping.toList
     val parsed = elements.map(element => entry(DestructuredExpr.parseUntyped(element.asUntyped)))
     parsed.collectFirst { case Left(reason) => reason } match {
-      case Some(reason) => fail(PicklerDerivationError.OneOfMappingNotStatic(reason))
+      case Some(reason) => fail(PicklerDerivationError.oneOfMappingNotStatic(reason))
       case None         => MIO.pure(parsed.collect { case Right(e) => e })
     }
   }
@@ -322,7 +322,7 @@ trait PicklerMacrosImpl
 
     attempt(configExpr, 0) match {
       case Right(value) => Log.info(s"Configuration folded at compile time: $value") >> MIO.pure(value)
-      case Left(reason) => fail(PicklerDerivationError.ConfigurationNotStatic(configExpr.plainPrint, reason))
+      case Left(reason) => fail(PicklerDerivationError.configurationNotStatic(configExpr.plainPrint, reason))
     }
   }
 

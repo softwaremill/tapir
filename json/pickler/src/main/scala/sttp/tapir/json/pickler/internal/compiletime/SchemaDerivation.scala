@@ -128,7 +128,7 @@ trait SchemaDerivation {
       }
     }
 
-  private def failSchema[T](error: PicklerDerivationError): MIO[T] = Log.error(error.message) >> MIO.fail(error)
+  private def failSchema[T](error: PicklerDerivationError): MIO[T] = Log.error(error.getMessage) >> MIO.fail(error)
 
   /** Dispatch on the [[Shape]] shared with `CodecDerivation`, so that both halves take a type apart identically.
     *
@@ -155,9 +155,9 @@ trait SchemaDerivation {
       case Shape.NestedOption(inner, _) => deriveOptionSchema[A](inner)
       case Shape.EitherOf(left, right)  => deriveEitherSchema[A](left, right)
       case Shape.StringMap(value)       => deriveMapSchema[A](value)
-      case Shape.NonStringMap(key, _)   => failSchema(PicklerDerivationError.NonStringMapKey(key.Underlying.plainPrint))
+      case Shape.NonStringMap(key, _)   => failSchema(PicklerDerivationError.nonStringMapKey(key.Underlying.plainPrint))
       case Shape.Collection(element)    => deriveCollectionSchema[A](element)
-      case Shape.Tuple()                => failSchema(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
+      case Shape.Tuple()                => failSchema(PicklerDerivationError.tupleNotSupported(Type[A].plainPrint))
       case Shape.Singleton()            => guardingRecursion[A, Expr[Schema[A]]](deriveSingletonSchema[A])
       case Shape.Product(_, params)     => guardingRecursion[A, Expr[Schema[A]]](deriveCaseClassSchema[A](params))
       case Shape.Enumeration(_, leaves) => guardingRecursion[A, Expr[Schema[A]]](deriveStringEnumSchema[A](leaves))
@@ -174,7 +174,7 @@ trait SchemaDerivation {
           if (hasSealedParent[A]) List("a Pickler for a subtype of a sealed hierarchy is not used; provide one for the parent instead")
           else Nil
         failSchema(
-          PicklerDerivationError.UnsupportedType(
+          PicklerDerivationError.unsupportedType(
             Type[A].plainPrint,
             s"no implicit Schema[${Type[A].plainPrint}] in scope" :: ignoredPickler
           )
@@ -305,7 +305,7 @@ trait SchemaDerivation {
       case Left(error)                                                                => failSchema(error)
       case Right(_) if !param.hasDefault && hasDefaultAnnotation[A](param, fieldName) =>
         failSchema(
-          PicklerDerivationError.InvalidAnnotation(
+          PicklerDerivationError.invalidAnnotation(
             s"@default on field '$fieldName' of ${Type[A].plainPrint} requires a Scala default value"
           )
         )

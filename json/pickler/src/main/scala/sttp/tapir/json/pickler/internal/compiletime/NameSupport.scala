@@ -38,7 +38,7 @@ trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
     literalEncodedFieldName[A](param, scalaName) match {
       case Right(Some(explicit)) => Right(explicit)
       case Right(None)           => evaluating("toEncodedName", scalaName)(config.toEncodedName(scalaName))
-      case Left(detail)          => Left(PicklerDerivationError.InvalidAnnotation(detail))
+      case Left(detail)          => Left(PicklerDerivationError.invalidAnnotation(detail))
     }
 
   /** The configuration's functions are the user's code, evaluated by Hearth's interpreter; a body it cannot handle surfaces as an exception
@@ -46,7 +46,7 @@ trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
     */
   private def evaluating(function: String, input: String)(compute: => String): Either[PicklerDerivationError, String] =
     try Right(compute)
-    catch { case scala.util.control.NonFatal(e) => Left(PicklerDerivationError.ConfigurationFunctionFailed(function, input, e)) }
+    catch { case scala.util.control.NonFatal(e) => Left(PicklerDerivationError.configurationFunctionFailed(function, input, e)) }
 
   /** The `SName` of `A`: its type-level `@encodedName`, which replaces the name wholesale (type arguments included), or core's fully
     * qualified name plus the flattened, fully qualified type arguments.
@@ -89,7 +89,7 @@ trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
       case None        => Right(values)
       case Some(value) =>
         val clashing = leaves.zip(values).collect { case ((_, leaf), `value`) => leaf.Underlying.plainPrint }
-        Left(PicklerDerivationError.DuplicateLeafValue(Type[A].plainPrint, value, clashing))
+        Left(PicklerDerivationError.duplicateLeafValue(Type[A].plainPrint, value, clashing))
     }
 
   /** The bare string an enumeration case `A` is written as. */
