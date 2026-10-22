@@ -9,7 +9,7 @@ import sttp.tapir.Schema
   * They are lowered to [[UntypedExpr]] so that the caller can re-type them as `Any` and splice them into a `List[Any]` that the runtime
   * helpers fold over — which keeps annotation *matching* out of the macro entirely.
   */
-trait AnnotationSupport { this: MacroCommons & StdExtensions =>
+private[pickler] trait AnnotationSupport { this: MacroCommons & StdExtensions =>
 
   /** Annotations on a constructor parameter, including those inherited from a member of the same name declared on a base class or trait.
     *

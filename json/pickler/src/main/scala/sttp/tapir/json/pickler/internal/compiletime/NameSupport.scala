@@ -14,7 +14,7 @@ import sttp.tapir.json.pickler.PicklerConfiguration
   *   types (by `plainPrint`) for which no user `Pickler` is looked up: the root (a `given p = Pickler.derived[A]` would find itself) and,
   *   for `oneOfUsingField`, the mapped leaves (whose codecs must be derived here, with the overridden tags)
   */
-final case class DerivationEnv(
+final private[pickler] case class DerivationEnv(
     config: PicklerConfiguration,
     leafNameOverrides: Map[String, String] = Map.empty,
     implicitLookupExclusions: Set[String] = Set.empty
@@ -27,7 +27,7 @@ final case class DerivationEnv(
   * literals anyway), the schema half into the `Schema` constructors. There is therefore no second evaluation of the user's name
   * transformations at runtime, and no way for the two halves to disagree about a name.
   */
-trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
+private[pickler] trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
 
   /** The JSON name of a field: its `@encodedName` if present, otherwise `config.toEncodedName(scalaName)`. */
   protected def encodedFieldName[A: Type](

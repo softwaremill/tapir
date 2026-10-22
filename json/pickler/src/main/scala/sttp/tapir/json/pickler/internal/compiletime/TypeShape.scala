@@ -17,7 +17,7 @@ import hearth.std.*
   *   - `Map` before `Collection`, since a `Map` is an `Iterable` of pairs;
   *   - singletons before case classes (a `case object` parses as both), tuples before case classes (likewise).
   */
-trait TypeShape { this: MacroCommons & StdExtensions =>
+private[pickler] trait TypeShape { this: MacroCommons & StdExtensions =>
 
   /** Centralised `Type.of` instances — see the note on `PicklerMacros.PTypes` for why these are not `implicit val`s at their use sites.
     */

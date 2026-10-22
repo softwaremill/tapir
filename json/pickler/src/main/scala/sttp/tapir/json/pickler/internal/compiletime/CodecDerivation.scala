@@ -50,7 +50,7 @@ import sttp.tapir.json.pickler.internal.runtime.{CodecCombinators, LeafCodecs}
   * tapir's `@default` annotation does not drive decoding: jsoniter fills a missing field only from a Scala default parameter and has no
   * hook for anything else. Scala default parameters *are* honoured; the schema half documents them, and rejects a `@default` without one.
   */
-trait CodecDerivation {
+private[pickler] trait CodecDerivation {
   this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & NameSupport & PlatformSupport & ImplicitPicklerSupport =>
 
   private[compiletime] object CTypes {

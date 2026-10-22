@@ -6,7 +6,7 @@ import scala.util.Try
 /** Reads the derivation timeout from `-Xmacro-settings:<namespace>.timeout=...`, given in seconds or as a `Duration` string (`30s`,
   * `2 minutes`). An invalid value fails the compilation.
   */
-trait DerivationTimeout { this: hearth.MacroCommons =>
+private[pickler] trait DerivationTimeout { this: hearth.MacroCommons =>
 
   protected def derivationSettingsNamespace: String
 
@@ -25,7 +25,7 @@ trait DerivationTimeout { this: hearth.MacroCommons =>
     }
 }
 
-object DerivationTimeout {
+private[pickler] object DerivationTimeout {
 
   /** Hearth's own default (2s) fails large but legitimate derivations on a busy machine; runaway recursion is caught separately. */
   val Default: FiniteDuration = 60.seconds

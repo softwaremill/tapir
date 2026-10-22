@@ -3,9 +3,9 @@ package sttp.tapir.json.pickler.internal.compiletime
 import scala.util.control.NoStackTrace
 
 /** A derivation failure; its message becomes the compile error. */
-final class PicklerDerivationError(message: String) extends Exception(message) with NoStackTrace
+final private[pickler] class PicklerDerivationError(message: String) extends Exception(message) with NoStackTrace
 
-object PicklerDerivationError {
+private[pickler] object PicklerDerivationError {
 
   def unsupportedType(typeName: String, reasons: List[String]): PicklerDerivationError = PicklerDerivationError(
     s"Cannot derive Pickler for $typeName: no implicit Schema was found and the type is not an Option, collection, Map, " +

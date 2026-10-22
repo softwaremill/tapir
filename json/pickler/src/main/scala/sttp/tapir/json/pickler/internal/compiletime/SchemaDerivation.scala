@@ -20,7 +20,7 @@ import sttp.tapir.json.pickler.internal.runtime.SchemaUtils
   * folded `PicklerConfiguration` and spliced as a literal — the same literal the codec half hands to `JsonCodecMaker`. The structure of the
   * schema is built by [[SchemaUtils]] at runtime, so that the macro reifies as little as possible.
   */
-trait SchemaDerivation {
+private[pickler] trait SchemaDerivation {
   this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & NameSupport & ImplicitPicklerSupport & PlatformSupport =>
 
   /** Centralised `Type.of` instances — see the note on `PicklerMacros.PTypes` for why these are not `implicit val`s at their use sites.

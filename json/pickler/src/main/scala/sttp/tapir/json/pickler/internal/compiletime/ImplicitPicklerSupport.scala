@@ -24,7 +24,7 @@ import scala.collection.mutable
   * A type with a sealed parent is never looked up either: a user pickler for it writes the discriminator value of its own configuration,
   * which the parent's codec may not read.
   */
-trait ImplicitPicklerSupport { this: MacroCommons & PlatformSupport & TypeShape =>
+private[pickler] trait ImplicitPicklerSupport { this: MacroCommons & PlatformSupport & TypeShape =>
 
   private val memo = mutable.Map.empty[String, Option[Expr_??]]
 
