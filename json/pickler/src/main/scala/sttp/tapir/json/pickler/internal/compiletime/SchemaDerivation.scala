@@ -23,7 +23,7 @@ import sttp.tapir.json.pickler.internal.runtime.SchemaUtils
 trait SchemaDerivation {
   this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & NameSupport & ImplicitPicklerSupport & PlatformSupport =>
 
-  /** Centralised `Type.of` instances — see the note on `PicklerMacrosImpl.PTypes` for why these are not `implicit val`s at their use sites.
+  /** Centralised `Type.of` instances — see the note on `PicklerMacros.PTypes` for why these are not `implicit val`s at their use sites.
     */
   private[compiletime] object STypes {
     def SchemaOf[A: Type]: Type[Schema[A]] = Type.of[Schema[A]]

@@ -11,7 +11,7 @@ import sttp.tapir.json.pickler.{Pickler, PicklerConfiguration}
 object auto {
 
   /** `config` is an `inline` parameter on purpose: the derivation must evaluate the configuration at compile time (see
-    * `PicklerMacrosImpl.foldConfiguration`), which needs the *reference to the given*, not a proxy `val` holding it.
+    * `PicklerMacros.foldConfiguration`), which needs the *reference to the given*, not a proxy `val` holding it.
     */
   inline implicit def picklerForType[T](implicit inline config: PicklerConfiguration): Pickler[T] = Pickler.derived[T]
 }

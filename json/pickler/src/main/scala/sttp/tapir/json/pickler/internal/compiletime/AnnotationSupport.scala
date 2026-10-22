@@ -4,11 +4,10 @@ import hearth.MacroCommons
 import hearth.std.*
 import sttp.tapir.Schema
 
-/** Cross-platform access to the annotations the tapir `Schema` derivation cares about.
+/** Access to the annotations the tapir `Schema` derivation cares about.
   *
-  * Hearth's `Type#annotations` / `Parameter#annotations` already abstract over the Scala 2 and Scala 3 reflection APIs, so nothing here is
-  * platform-specific. They are lowered to [[UntypedExpr]] so that the caller can re-type them as `Any` and splice them into a `List[Any]`
-  * that the runtime helpers fold over — which keeps annotation *matching* out of the macro entirely.
+  * They are lowered to [[UntypedExpr]] so that the caller can re-type them as `Any` and splice them into a `List[Any]` that the runtime
+  * helpers fold over — which keeps annotation *matching* out of the macro entirely.
   */
 trait AnnotationSupport { this: MacroCommons & StdExtensions =>
 

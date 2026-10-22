@@ -19,7 +19,7 @@ import hearth.std.*
   */
 trait TypeShape { this: MacroCommons & StdExtensions =>
 
-  /** Centralised `Type.of` instances — see the note on `PicklerMacrosImpl.PTypes` for why these are not `implicit val`s at their use sites.
+  /** Centralised `Type.of` instances — see the note on `PicklerMacros.PTypes` for why these are not `implicit val`s at their use sites.
     */
   private object ShapeTypes {
     lazy val StringT: Type[String] = Type.of[String]
