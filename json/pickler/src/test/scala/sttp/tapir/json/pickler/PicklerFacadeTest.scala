@@ -2,9 +2,10 @@ package sttp.tapir.json.pickler
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import com.github.plokhotnyuk.jsoniter_scala.core.ReaderConfig
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.SchemaType.{SCoproduct, SOpenProduct, SProduct, SString}
-import sttp.tapir.{Schema, Validator}
+import sttp.tapir.{DecodeResult, Schema, Validator}
 
 import java.util.UUID
 import scala.compiletime.testing.typeCheckErrors
@@ -235,6 +236,18 @@ class PicklerFacadeTest extends AnyFlatSpec with Matchers {
       ClassWithEither("a", Right(SimpleTestResult("r"))),
       """{"fieldA":"a","fieldB":{"MSG":"r"}}"""
     )
+  }
+
+  behavior of "ReaderConfig"
+
+  it should "decode using the ReaderConfig given in scope" in {
+    val body = "1 trailing"
+    jsonBody[Int](using Pickler.derived[Int]).codec.decode(body) shouldBe a[DecodeResult.Error]
+
+    {
+      given ReaderConfig = ReaderConfig.withCheckForEndOfInput(false)
+      jsonBody[Int](using Pickler.derived[Int]).codec.decode(body) shouldBe Value(1)
+    }
   }
 }
 

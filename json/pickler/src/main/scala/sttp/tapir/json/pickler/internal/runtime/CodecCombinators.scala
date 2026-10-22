@@ -112,10 +112,10 @@ object CodecCombinators {
       def nullValue: Either[A, B] = null
       def decodeValue(in: JsonReader, default: Either[A, B]): Either[A, B] = {
         val raw = in.readRawValAsBytes()
-        try Right(readFromArrayReentrant(raw)(right))
+        try Right(readFromArrayReentrant(raw, PicklerUtils.defaultReaderConfig)(right))
         catch {
           case NonFatal(rightFailure) =>
-            try Left(readFromArrayReentrant(raw)(left))
+            try Left(readFromArrayReentrant(raw, PicklerUtils.defaultReaderConfig)(left))
             catch { case NonFatal(_) => throw rightFailure }
         }
       }

@@ -304,6 +304,8 @@ Note that a bare `given JsonValueCodec[X]` for a case class or sealed hierarchy 
 * Value classes (case classes extending `AnyVal`) are serialised as the wrapped value, and documented as such.
 * Tuples are not supported: a tuple would be documented as an object and written as an array. Use a case class.
 * A debugging log of the derivation can be enabled by importing `sttp.tapir.json.pickler.debug.logDerivationForPickler`, or with the scalac option `-Xmacro-settings:tapirPickler.logDerivation=true`. The derivation timeout (60 seconds by default) can be changed with `-Xmacro-settings:tapirPickler.timeout=<value>`, where the value is a number of seconds or a duration such as `30s` or `2 minutes`.
+* Decoding uses a jsoniter-scala `ReaderConfig`; to change it, put a `given ReaderConfig` in scope where `jsonBody`, `jsonQuery` or `toCodec` is called, e.g. `given ReaderConfig = ReaderConfig.withMaxCharBufSize(16 * 1024 * 1024)`.
+* Derived codecs reject JSON objects decoded as a `Map` and arrays decoded as a `Set` with more than 1024 entries (jsoniter-scala's protection against hash-collision attacks); to accept more, provide a `given Pickler` for that collection built with `Pickler.fromSchemaAndCodec` and a codec made with a higher `mapMaxInsertNumber` / `setMaxInsertNumber`.
 * `jsoniter-scala-macros` is a compile-time dependency of every project using this module: the generated code calls `JsonCodecMaker.make`, so it has to be on the compile classpath. It is pulled in transitively.
 
 ## Migrating from the µPickle-based pickler
@@ -319,3 +321,4 @@ Up to and including tapir 1.13.x the pickler module was built on µPickle. The c
 * `oneOfUsingField` must map every case of the hierarchy, and derives the cases itself: the picklers passed in the mapping only identify the cases.
 * Schema names of classes defined inside a method no longer contain a `<local ...>` segment, matching tapir core's `Schema.derived`.
 * Recursive types (directly, through collections/`Option`, or through a sealed hierarchy) are supported.
+* Maps and sets with more than 1024 entries are rejected when decoding (µPickle had no limit); use `Pickler.fromSchemaAndCodec` with a custom codec to raise it, see [Other notes](#other-notes).

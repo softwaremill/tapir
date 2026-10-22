@@ -1,6 +1,6 @@
 package sttp.tapir.json.pickler
 
-import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
+import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, ReaderConfig}
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.Schema
 
@@ -25,8 +25,11 @@ trait Pickler[A] {
   def codec: JsonValueCodec[A]
 
   /** Converts this pickler into a tapir JSON [[JsonCodec]], combining the derived schema with the derived jsoniter-scala codec.
+    *
+    * Decoding uses the jsoniter-scala `ReaderConfig` given in scope, if any.
     */
-  final def toCodec: JsonCodec[A] = internal.runtime.PicklerUtils.toTapirCodec(codec, schema)
+  final def toCodec(using readerConfig: ReaderConfig = internal.runtime.PicklerUtils.defaultReaderConfig): JsonCodec[A] =
+    internal.runtime.PicklerUtils.toTapirCodec(codec, schema, readerConfig)
 
   /** A pickler for `Option[A]`: the schema is marked optional, `None` is written as `null`. */
   final def asOption: Pickler[Option[A]] =
