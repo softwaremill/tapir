@@ -16,8 +16,8 @@ final class CreateDerivedEnumerationPickler[T] private[pickler] (
     defaultCodec: JsonValueCodec[T]
 ) {
 
-  /** Each case is rendered as its simple name (or its type-level `@encodedName`) — the same as [[Pickler.derived]] does for an
-    * enumeration, so this is only ever needed for symmetry with [[customStringBased]].
+  /** Each case is rendered as its simple name (or its type-level `@encodedName`) — the same as [[Pickler.derived]] does for an enumeration,
+    * so this is only ever needed for symmetry with [[customStringBased]].
     */
   def defaultStringBased: Pickler[T] = PicklerFactories.instance(defaultSchema, defaultCodec)
 
