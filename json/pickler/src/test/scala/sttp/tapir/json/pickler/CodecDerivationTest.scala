@@ -79,6 +79,10 @@ class CodecDerivationTest extends AnyFlatSpec with Matchers {
     flat.encode(FlatClassWithOption("fieldA value", None, true)) shouldBe """{"fieldA":"fieldA value","fieldC":true}"""
     flat.decode("""{"fieldA":"x","fieldC":false}""") shouldBe Value(FlatClassWithOption("x", None, false))
     flat.decode("""{"fieldA":"x","fieldB":null,"fieldC":false}""") shouldBe Value(FlatClassWithOption("x", None, false))
+    {
+      import sttp.tapir.generic.auto.*
+      Pickler.derived[NestedClassWithOption].schema shouldBe Schema.derived[NestedClassWithOption]
+    }
   }
 
   it should "encode None as null when transientNone is off" in {
