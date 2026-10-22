@@ -30,7 +30,7 @@ trait PicklerMacrosImpl
     with ImplicitPicklerSupport
     with SchemaDerivation
     with CodecDerivation {
-  this: MacroCommons & StdExtensions & LoadStandardExtensionsOnce & PlatformSupport =>
+  this: MacroCommons & StdExtensions & PlatformSupport =>
 
   override protected def derivationSettingsNamespace: String = "tapirPickler"
 
@@ -268,7 +268,8 @@ trait PicklerMacrosImpl
       .namedScope(s"Deriving $what for ${Type[A].prettyPrint} at: ${Environment.currentPosition.prettyPrint}") {
         MIO.scoped { runSafe =>
           val cache = ValDefsCache.mlocal
-          runSafe(ensureStandardExtensionsLoaded())
+          // Registers the providers behind `IsCollection`, `IsMap`, `IsOption` etc.; without them those extractors never match.
+          val _ = runSafe(Environment.loadStandardExtensions().toMIO(allowFailures = false))
           // The schema is derived before the codec, sequentially: the two share Hearth-internal MLocal state, and
           // parallelising them has previously produced silently wrong codegen for parameterised Scala 3 enums in a
           // comparable derivation.

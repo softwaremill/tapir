@@ -15,7 +15,6 @@ import scala.quoted.*
   */
 final private[pickler] class PicklerMacros(q: Quotes)
     extends MacroCommonsScala3(using q),
-      LoadStandardExtensionsOnce,
       PicklerMacrosImpl,
       PlatformSupportScala3
 
