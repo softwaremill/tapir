@@ -17,15 +17,15 @@ class NettyFs2ExpectContinueTest[OPTIONS, ROUTE](createServerTest: CreateServerT
 
   implicit val m: MonadError[IO] = new CatsMonadError[IO]()
 
-  // #5503: the body is only requested (triggering 100 Continue) when the stream is pulled in the server logic, not during decoding
+  // #5503: the request body is only pulled while the response body is written, i.e. after the response headers
   def tests(): List[Test] = List(
     testServerLogic(
       endpoint.put
         .in("expect-continue-stream")
         .in(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
-        .out(stringBody)
-        .serverLogicSuccess[IO](_.through(fs2.text.utf8.decode).compile.string),
-      "body streamed in the server logic is sent after 100 Continue"
+        .out(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
+        .serverLogicSuccess[IO](body => IO.pure(body)),
+      "request body echoed as a stream is sent after 100 Continue"
     ) { (_, baseUri) =>
       val port = baseUri.port.get
       val body = "abcd"

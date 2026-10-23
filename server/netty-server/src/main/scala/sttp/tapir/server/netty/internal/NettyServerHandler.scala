@@ -7,7 +7,12 @@ import io.netty.handler.codec.http._
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import io.netty.handler.timeout.{IdleState, IdleStateEvent, IdleStateHandler}
-import org.playframework.netty.http.{DefaultStreamedHttpResponse, DefaultWebSocketHttpResponse, StreamedHttpRequest}
+import org.playframework.netty.http.{
+  DefaultStreamedHttpResponse,
+  DefaultWebSocketHttpResponse,
+  HttpStreamsServerHandler,
+  StreamedHttpRequest
+}
 import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import sttp.model.StatusCode
@@ -249,7 +254,7 @@ class NettyServerHandler[F[_]](
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
       // `Expect: 100-continue` is handled by HttpStreamsServerHandler: it sends `100 Continue` when the body is first requested, and
-      // closes the connection if a response is sent without reading the body (#5503)
+      // closes the connection if a response is sent without reading the body (#5503); see also `sendContinueIfBodyNotRequested`
       request match {
         case full: FullHttpRequest =>
           val req = full.retain()
@@ -310,8 +315,8 @@ class NettyServerHandler[F[_]](
             logger.error("Error when streaming HTTP response", future.cause())
           }
         })
+        sendContinueIfBodyNotRequested(ctx, req)
         ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
-
       },
       wsHandler = (responseContent) => {
         if (isWsHandshake(req))
@@ -338,6 +343,20 @@ class NettyServerHandler[F[_]](
         ctx.writeAndFlush(res).closeIfNeeded(req)
       }
     )
+
+  /** A streamed response might read the request body only after the response headers are written - e.g. when echoing the request body. By
+    * then, `HttpStreamsServerHandler` no longer sends `100 Continue`, so the client might never send the body (#5503).
+    */
+  private def sendContinueIfBodyNotRequested(ctx: ChannelHandlerContext, req: HttpRequest): Unit = req match {
+    case r: TapirStreamedHttpRequest if !r.wasRequested && HttpUtil.is100ContinueExpected(r) =>
+      // writing past HttpStreamsServerHandler, which would otherwise count this as the response; it still closes the connection after the
+      // response, as from its perspective, the body wasn't requested before the response was sent
+      val streamsHandlerCtx = ctx.pipeline().context(classOf[HttpStreamsServerHandler])
+      if (streamsHandlerCtx != null) {
+        val _ = streamsHandlerCtx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
+      }
+    case _ => ()
+  }
 
   private def handleResponseWhenChannelClosed(
       ctx: ChannelHandlerContext,

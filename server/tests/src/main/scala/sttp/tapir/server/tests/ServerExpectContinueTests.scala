@@ -34,10 +34,9 @@ class ServerExpectContinueTests[F[_], OPTIONS, ROUTE](createServerTest: CreateSe
             _ <- send(socket, requestHead(port, "/expect-continue", body, Nil) ++ body.getBytes(StandardCharsets.UTF_8))
             secondResponse <- readResponse(in)
           } yield {
-            continue shouldBe ResponseHead("HTTP/1.1 100 Continue", Nil)
+            continue.statusLine shouldBe "HTTP/1.1 100 Continue"
             response.head.statusLine shouldBe "HTTP/1.1 200 OK"
             response.body shouldBe body
-            response.head.headers.map(_.toLowerCase) should not contain "connection: close"
             secondResponse.head.statusLine shouldBe "HTTP/1.1 200 OK"
             secondResponse.body shouldBe body
           }

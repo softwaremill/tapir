@@ -11,10 +11,11 @@ import java.nio.charset.StandardCharsets
   */
 object RawHttpClient {
   case class ResponseHead(statusLine: String, headers: List[String]) {
-    def contentLength: Int =
-      headers
-        .collectFirst { case h if h.toLowerCase.startsWith("content-length:") => h.substring("content-length:".length).trim.toInt }
-        .getOrElse(0)
+    def contentLength: Int = header("content-length").map(_.toInt).getOrElse(0)
+    def chunked: Boolean = header("transfer-encoding").exists(_.equalsIgnoreCase("chunked"))
+
+    private def header(name: String): Option[String] =
+      headers.collectFirst { case h if h.toLowerCase.startsWith(s"$name:") => h.substring(name.length + 1).trim }
   }
   case class Response(head: ResponseHead, body: String)
 
@@ -42,9 +43,14 @@ object RawHttpClient {
       socket.getOutputStream.flush()
     }
 
-  /** Reads a response with a `Content-Length` body (or no body). */
+  /** Reads a response with a `Content-Length` or chunked body (or no body). */
   def readResponse(in: InputStream): IO[Response] =
-    readResponseHead(in).flatMap(head => IO.blocking(Response(head, readBody(in, head.contentLength))))
+    readResponseHead(in).flatMap { head =>
+      IO.blocking {
+        val body = if (head.chunked) readChunkedBody(in) else readBytes(in, head.contentLength)
+        Response(head, new String(body, StandardCharsets.UTF_8))
+      }
+    }
 
   def readResponseHead(in: InputStream): IO[ResponseHead] = IO.blocking {
     val statusLine = readLine(in)
@@ -52,15 +58,27 @@ object RawHttpClient {
     ResponseHead(statusLine, headers)
   }
 
-  private def readBody(in: InputStream, contentLength: Int): String = {
-    val bytes = new Array[Byte](contentLength)
+  private def readBytes(in: InputStream, count: Int): Array[Byte] = {
+    val bytes = new Array[Byte](count)
     var read = 0
-    while (read < contentLength) {
-      val n = in.read(bytes, read, contentLength - read)
-      if (n == -1) throw new IllegalStateException(s"Connection closed after $read of $contentLength body bytes")
+    while (read < count) {
+      val n = in.read(bytes, read, count - read)
+      if (n == -1) throw new IllegalStateException(s"Connection closed after $read of $count body bytes")
       read += n
     }
-    new String(bytes, StandardCharsets.UTF_8)
+    bytes
+  }
+
+  private def readChunkedBody(in: InputStream): Array[Byte] = {
+    val body = new ByteArrayOutputStream()
+    var chunkSize = Integer.parseInt(readLine(in).trim, 16)
+    while (chunkSize > 0) {
+      body.write(readBytes(in, chunkSize))
+      val _ = readLine(in) // the CRLF ending the chunk
+      chunkSize = Integer.parseInt(readLine(in).trim, 16)
+    }
+    Iterator.continually(readLine(in)).takeWhile(_.nonEmpty).foreach(_ => ()) // trailers
+    body.toByteArray
   }
 
   // reading byte-by-byte, so that no bytes of the following body or response are buffered and lost
