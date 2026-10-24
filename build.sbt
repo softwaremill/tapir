@@ -12,7 +12,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.21"
 val scala2_13 = "2.13.18"
-val scala3 = "3.9.0"
+val scala3 = "3.10.0"
 val scala3Sbt = "3.8.4" // scala-steward:off the Scala version of sbt 2.0.x, which loads the openapi-codegen plugin
 
 val scala2Versions = List(scala2_12, scala2_13)
