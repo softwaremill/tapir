@@ -2,7 +2,7 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.33
 //> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.13.33
-//> using dep com.softwaremill.sttp.client4::zio:4.0.0-RC3
+//> using dep com.softwaremill.sttp.client4::zio:4.0.27
 
 package sttp.tapir.examples.security
 
