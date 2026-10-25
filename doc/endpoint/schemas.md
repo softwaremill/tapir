@@ -341,17 +341,17 @@ which represent fields, and the correctness of this specification is not checked
 
 Non-standard collections can be unwrapped in the modification path by providing an implicit value of `ModifyFunctor`.
 
-### Using value classes/tagged types
+### Using opaque types/value classes
 
 An alternative to customising schemas for case class fields of primitive type (e.g. `Int`s), is creating a unique type.
 As schema lookup is type-driven, if a schema for a such type is provided as an implicit value, it will be used 
 during automatic or semi-automatic schema derivation. Such schemas can have custom meta-data, including description,
 validation, etc.
 
-To introduce unique types for primitive values, which don't have a runtime overhead, you can use value classes or 
-[type tagging](https://github.com/softwaremill/scala-common#tagging).
+To introduce unique types for primitive values, which don't have a runtime overhead, you can use opaque types (Scala 3)
+or value classes.
 
-For example, to support an integer wrapped in a value type in a json body, we need to provide Circe encoders and
+For example, to support an integer wrapped in an opaque type in a json body, we need to provide Circe encoders and
 decoders (if that's the json library that we are using), schema information with validator:
 
 ```scala mdoc:silent:reset-object
@@ -361,12 +361,18 @@ import sttp.tapir.json.circe.*
 import io.circe.{Encoder, Decoder}
 import io.circe.generic.semiauto.*
 
-case class Amount(v: Int) extends AnyVal
-case class FruitAmount(fruit: String, amount: Amount)
+object types:
+  opaque type Amount = Int
+  object Amount:
+    def apply(v: Int): Amount = v
 
-given Schema[Amount] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
-given Encoder[Amount] = Encoder.encodeInt.contramap(_.v)
-given Decoder[Amount] = Decoder.decodeInt.map(Amount.apply)
+    given Schema[Amount] = Schema.schemaForInt.validate(Validator.min(1))
+    given Encoder[Amount] = Encoder.encodeInt
+    given Decoder[Amount] = Decoder.decodeInt
+
+import types.*
+
+case class FruitAmount(fruit: String, amount: Amount)
 
 given Decoder[FruitAmount] = deriveDecoder[FruitAmount]
 given Encoder[FruitAmount] = deriveEncoder[FruitAmount]

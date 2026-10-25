@@ -32,7 +32,7 @@ class ServerCORSTests[F[_], OPTIONS, ROUTE](createServerTest: CreateServerTest[F
           response.code shouldBe StatusCode.NoContent
           response.headers should contain allOf (
             Header.accessControlAllowOrigin("*"),
-            Header.accessControlAllowMethods(CORSConfig.default.allowedMethods.asInstanceOf[AllowedMethods.Some].methods.toList: _*),
+            Header.accessControlAllowMethods(CORSConfig.default.allowedMethods.asInstanceOf[AllowedMethods.Some].methods.toList*),
             Header.accessControlAllowHeaders("X-Foo"),
             Header.vary(HeaderNames.AccessControlRequestMethod, HeaderNames.AccessControlRequestHeaders)
           )

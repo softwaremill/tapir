@@ -10,7 +10,7 @@ import sttp.tapir.model.ServerRequest
 private[netty] trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends NettyMonadRequestBody[F, S] {
 
   val streamCompatible: StreamCompatible[S]
-  override val streams = streamCompatible.streams
+  override val streams: S = streamCompatible.streams
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
     (serverRequest.underlying match {

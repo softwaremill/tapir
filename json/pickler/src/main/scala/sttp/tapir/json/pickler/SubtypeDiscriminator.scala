@@ -15,7 +15,7 @@ private[pickler] trait CustomSubtypeDiscriminator[T] extends SubtypeDiscriminato
   def extractor: T => V
   def asString: V => String
   def write(t: T): String = asString(extractor(t))
-  def mapping: Seq[(V, Pickler[_ <: T])]
+  def mapping: Seq[(V, Pickler[? <: T])]
 
   // to integrate with uPickle where at some point all we have is Any
   def writeUnsafe(t: Any): String = asString(extractor(t.asInstanceOf[T]))

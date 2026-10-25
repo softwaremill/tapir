@@ -18,7 +18,7 @@ object AwsFutureServerInterpreter {
 
   def apply()(implicit ec: ExecutionContext): AwsFutureServerInterpreter = {
     new AwsFutureServerInterpreter {
-      override def awsServerOptions: AwsServerOptions[Future] = AwsFutureServerOptions.default(ec)
+      override def awsServerOptions: AwsServerOptions[Future] = AwsFutureServerOptions.default(using ec)
     }
   }
 }

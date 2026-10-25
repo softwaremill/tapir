@@ -14,10 +14,10 @@ import scala.concurrent.{Await, Future, Promise}
 class FileWriterSubscriber(path: Path) extends PromisingSubscriber[Unit, HttpContent] {
   import FileWriterSubscriber._
 
-  private var subscription: Subscription = _
+  private var subscription: Subscription = null
 
   /** JDK interface to write asynchronously to a file */
-  private var fileChannel: AsynchronousFileChannel = _
+  private var fileChannel: AsynchronousFileChannel = null
 
   /** Current position in the file */
   @volatile private var position: Long = 0

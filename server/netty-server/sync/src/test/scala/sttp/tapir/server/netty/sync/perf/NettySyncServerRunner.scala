@@ -64,7 +64,7 @@ object NettySyncServerRunner {
         propagateDoneLeft = true
       )
 
-  val wsEndpoint: Endpoint[Unit, Unit, Unit, OxStreams.Pipe[Long, Long], OxStreams with WebSockets] = wsBaseEndpoint
+  val wsEndpoint: Endpoint[Unit, Unit, Unit, OxStreams.Pipe[Long, Long], OxStreams & WebSockets] = wsBaseEndpoint
     .out(
       webSocketBody[Long, CodecFormat.TextPlain, Long, CodecFormat.TextPlain](OxStreams)
         .concatenateFragmentedFrames(false)

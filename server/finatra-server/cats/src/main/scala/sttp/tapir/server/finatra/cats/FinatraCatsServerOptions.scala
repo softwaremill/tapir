@@ -29,7 +29,7 @@ object FinatraCatsServerOptions extends Logging {
       noLog = fromFuture(finatraServerLog.noLog)
     )
 
-    CustomiseInterceptors(
+    CustomiseInterceptors[F, FinatraCatsServerOptions[F]](
       createOptions = (ci: CustomiseInterceptors[F, FinatraCatsServerOptions[F]]) =>
         FinatraCatsServerOptions[F](
           dispatcher,

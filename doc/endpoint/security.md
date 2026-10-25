@@ -35,6 +35,48 @@ the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../docs/opena
 supported, as well as optional variants: `authorizationCodeFlow[Optional]`, `clientCredentialsFlow[Optional]`, 
 `implicitFlow[Optional]`.
 
+## Using the request body in security logic
+
+Security logic sometimes needs the request body itself - for example, to verify a signature computed over the raw
+payload. The request body can normally be read only once, so an endpoint which needs it in both
+`serverSecurityLogic` and the main logic must mark one of the two declarations with `asSecondary`:
+
+```scala mdoc:compile-only
+import sttp.tapir.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import io.circe.generic.auto.*
+
+case class Person(name: String, age: Int)
+
+val secureEndpoint = endpoint.post
+  .securityIn(auth.bearer[String]())
+  .securityIn(stringBody.asSecondary)
+  .in("people")
+  .in(jsonBody[Person])
+```
+
+A secondary body is decoded on the server from a buffered copy of the request body, using its own codec. It isn't part
+of the API contract: it's excluded from the generated documentation and ignored by client interpreters, which still need
+a value for it, as it's part of the input type. Each of `securityIn` and `in` may declare at most one body, secondary or
+not.
+
+Only string, byte array, byte buffer, input stream and input stream range bodies can be secondary; this is checked at
+compile time. The other body can't be a file, multipart or streaming body. Such endpoints, and ones declaring two bodies
+with neither marked as secondary, are rejected with an `IllegalArgumentException` when routes are constructed. With a
+secondary body the whole request body is buffered in memory, before the security logic runs if either body is in
+`securityIn`. On backends which support it, [`maxRequestBodyLength`](#limiting-request-body-length) bounds its size.
+
+A signature verified over the raw bytes (e.g. `byteArrayBody.asSecondary`) doesn't cover how the ordinary body is
+decoded: some backends decode string bodies (including JSON) using the charset from the request's `Content-Type` header.
+If that matters, add the header to `securityIn` (e.g. `header[Option[String]](sttp.model.HeaderNames.ContentType)`) and
+check it in the security logic as well.
+
+An endpoint which reads the body only in `serverSecurityLogic`, with no body in `in`, needs no `asSecondary`.
+
+Rejected endpoints, and ones which can be served but whose contract probably isn't what was intended, are also reported
+by [`EndpointVerifier`](../testing.md#invalid-request-body-definitions).
+
 ## Authentication challenges
 
 For each `auth` scheme, one can define `WWW-Authenticate` headers that should be returned by the server in case input is 

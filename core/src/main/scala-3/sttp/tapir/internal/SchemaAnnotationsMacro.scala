@@ -12,13 +12,13 @@ private[tapir] object SchemaAnnotationsMacro {
     val EnumerationValue = TypeTree.of[scala.Enumeration#Value].tpe
     val DescriptionAnn = TypeTree.of[sttp.tapir.Schema.annotations.description].tpe
     val EncodedExampleAnn = TypeTree.of[sttp.tapir.Schema.annotations.encodedExample].tpe
-    val DefaultAnn = TypeTree.of[sttp.tapir.Schema.annotations.default[_]].tpe
+    val DefaultAnn = TypeTree.of[sttp.tapir.Schema.annotations.default[?]].tpe
     val FormatAnn = TypeTree.of[sttp.tapir.Schema.annotations.format].tpe
     val DeprecatedAnn = TypeTree.of[sttp.tapir.Schema.annotations.deprecated].tpe
     val HiddenAnn = TypeTree.of[sttp.tapir.Schema.annotations.hidden].tpe
     val EncodedNameAnn = TypeTree.of[sttp.tapir.Schema.annotations.encodedName].tpe
-    val ValidateAnn = TypeTree.of[sttp.tapir.Schema.annotations.validate[_]].tpe
-    val ValidateEachAnn = TypeTree.of[sttp.tapir.Schema.annotations.validateEach[_]].tpe
+    val ValidateAnn = TypeTree.of[sttp.tapir.Schema.annotations.validate[?]].tpe
+    val ValidateEachAnn = TypeTree.of[sttp.tapir.Schema.annotations.validateEach[?]].tpe
     val CustomiseAnn = TypeTree.of[sttp.tapir.Schema.annotations.customise].tpe
 
     val tpe = TypeRepr.of[T]

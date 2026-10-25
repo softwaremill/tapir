@@ -15,7 +15,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.cors.CORSInterceptor
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.model.ServerResponse
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,16 +32,16 @@ trait PlayServerInterpreter {
     Accumulator.source[ByteString].map(Right.apply)
   }
 
-  def toRoutes(e: ServerEndpoint[PekkoStreams with WebSockets, Future]): Routes = {
+  def toRoutes(e: ServerEndpoint[PekkoStreams & WebSockets, Future]): Routes = {
     toRoutes(List(e))
   }
 
   def toRoutes(
-      serverEndpoints: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]
+      serverEndpoints: List[ServerEndpoint[PekkoStreams & WebSockets, Future]]
   ): Routes = {
     implicit val monad: FutureMonad = new FutureMonad()
 
-    val filterServerEndpoints = FilterServerEndpoints(serverEndpoints)
+    val filterServerEndpoints = PrepareServerEndpoints(serverEndpoints)
     val singleEndpoint = serverEndpoints.size == 1
 
     implicit val bodyListener: BodyListener[Future, PlayResponseBody] = new PlayBodyListener

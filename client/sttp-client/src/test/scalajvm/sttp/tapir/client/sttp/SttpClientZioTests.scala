@@ -10,7 +10,7 @@ import zio.Runtime.default
 import zio.{CancelableFuture, Task, Unsafe}
 import concurrent.Future
 
-abstract class SttpClientZioTests[R >: WebSockets with ZioStreams] extends ClientTests[R] {
+abstract class SttpClientZioTests[R >: WebSockets & ZioStreams] extends ClientTests[R] {
   private val runtime: default.UnsafeAPI = zio.Runtime.default.unsafe
   val backend: SttpBackend[Task, R] = unsafeRun(HttpClientZioBackend())
   def wsToPipe: WebSocketToPipe[R]

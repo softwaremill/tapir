@@ -20,7 +20,7 @@ package object internal {
   }
 
   implicit class RichHttpMessage(private val m: HttpMessage) extends AnyVal {
-    def setHeadersFrom(response: ServerResponse[_], serverHeader: Option[String]): Unit = {
+    def setHeadersFrom(response: ServerResponse[?], serverHeader: Option[String]): Unit = {
       serverHeader.foreach(m.headers().set(HttpHeaderNames.SERVER, _))
       response.headers
         .groupBy(_.name)

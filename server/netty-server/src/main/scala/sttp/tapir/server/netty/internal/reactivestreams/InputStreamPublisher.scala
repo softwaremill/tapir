@@ -19,13 +19,13 @@ class InputStreamPublisher[F[_]](
 )(implicit
     monad: MonadError[F]
 ) extends Publisher[HttpContent] {
-  override def subscribe(subscriber: Subscriber[_ >: HttpContent]): Unit = {
+  override def subscribe(subscriber: Subscriber[? >: HttpContent]): Unit = {
     if (subscriber == null) throw new NullPointerException("Subscriber cannot be null")
     val subscription = new InputStreamSubscription(subscriber, range, chunkSize)
     subscriber.onSubscribe(subscription)
   }
 
-  private class InputStreamSubscription(subscriber: Subscriber[_ >: HttpContent], range: InputStreamRange, chunkSize: Int)
+  private class InputStreamSubscription(subscriber: Subscriber[? >: HttpContent], range: InputStreamRange, chunkSize: Int)
       extends Subscription {
     private lazy val stream: InputStream = range.inputStreamFromRangeStart()
     private val demand = new AtomicLong(0L)

@@ -7,14 +7,14 @@ import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointInput, SchemaType}
 import scala.annotation.tailrec
 
 private[openapi] object EndpointInputToDecodeFailureOutput {
-  def defaultBadRequestDescription(input: EndpointInput[_]): Option[String] = {
+  def defaultBadRequestDescription(input: EndpointInput[?]): Option[String] = {
     val fallibleBasicInputs = input.asVectorOfBasicInputs(includeAuth = false).filter(inputMayFailWithBadRequest)
 
     if (fallibleBasicInputs.nonEmpty) Some(badRequestDescription(fallibleBasicInputs))
     else None
   }
 
-  private def inputMayFailWithBadRequest(input: EndpointInput.Basic[_]) = input match {
+  private def inputMayFailWithBadRequest(input: EndpointInput.Basic[?]) = input match {
     case EndpointInput.FixedMethod(_, _, _)     => false
     case EndpointInput.FixedPath(_, _, _)       => false
     case EndpointIO.Empty(_, _)                 => false
@@ -25,13 +25,13 @@ private[openapi] object EndpointInputToDecodeFailureOutput {
     case i: EndpointInput.Atom[_] => decodingMayFail(i.codec) || !i.codec.schema.isOptional
   }
 
-  private def decodingMayFail[CF <: CodecFormat](codec: Codec[_, _, CF]): Boolean =
+  private def decodingMayFail[CF <: CodecFormat](codec: Codec[?, ?, CF]): Boolean =
     codec.format.mediaType != MediaType.TextPlain ||
       codec.schema.hasValidation ||
       codec.schema.format.nonEmpty ||
       decodingMayFail(codec.schema.schemaType)
 
-  private def decodingMayFail(st: SchemaType[_]): Boolean = st match {
+  private def decodingMayFail(st: SchemaType[?]): Boolean = st match {
     case SchemaType.SString()        => false
     case SchemaType.SBinary()        => false
     case SchemaType.SOption(element) => decodingMayFail(element.schemaType)
@@ -39,14 +39,14 @@ private[openapi] object EndpointInputToDecodeFailureOutput {
     case _                           => true
   }
 
-  private def badRequestDescription(fallibleBasicInputs: Vector[EndpointInput.Basic[_]]) =
+  private def badRequestDescription(fallibleBasicInputs: Vector[EndpointInput.Basic[?]]) =
     fallibleBasicInputs.map(failureSourceMessage).distinct.mkString(", ")
 
   /** Describes the source of the failure: in which part of the request did the failure occur. Currently the same as
     * `DefaultDecodeFailureHandler.FailureMessages.failureSourceMessage`
     */
   @tailrec
-  def failureSourceMessage(input: EndpointInput[_]): String =
+  def failureSourceMessage(input: EndpointInput[?]): String =
     input match {
       case EndpointInput.FixedMethod(_, _, _)      => s"Invalid value for: method"
       case EndpointInput.FixedPath(_, _, _)        => s"Invalid value for: path segment"

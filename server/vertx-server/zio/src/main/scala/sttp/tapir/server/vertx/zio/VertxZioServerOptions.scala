@@ -25,7 +25,7 @@ object VertxZioServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[R]] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[R]](
       createOptions = (ci: CustomiseInterceptors[RIO[R, *], VertxZioServerOptions[R]]) =>
         VertxZioServerOptions(
           VertxServerOptions.uploadDirectory(),

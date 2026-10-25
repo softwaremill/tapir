@@ -233,7 +233,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
   private def testEndpointWithCustomMetrics(endpoint: ServerEndpoint[Any, IO], requests: ServerRequest*)(
       isFailure: Boolean
   ): IO[Assertion] = {
-    val labels = MetricLabelsTyped[Attribute[_]](
+    val labels = MetricLabelsTyped[Attribute[?]](
       forRequest = List(
         { _ => Attribute.apply("custom.request.key", "value") }
       ),
@@ -299,7 +299,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
       .containsPoints(
         PointExpectation
           .numeric(expectedCount.toLong)
-          .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
+          .attributesSubset((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure))*)
       )
 
   private val activeRequestsExpectation: MetricExpectation.Numeric[Long] =
@@ -327,7 +327,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
       .containsPoints(
         PointExpectation.histogram
           .count(expectedCount.toLong)
-          .attributesExact((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure)): _*)
+          .attributesExact((baseResponseAttributes(expectedStatusCode) ++ failureAttributes(isFailure))*)
       )
 
   private def customGaugeExpectation(isFailure: Boolean): MetricExpectation.Numeric[Long] = {
@@ -354,11 +354,11 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
       .containsPoints(
         PointExpectation
           .numeric(value)
-          .attributesExact(attrs: _*)
+          .attributesExact(attrs*)
       )
   }
 
-  private def baseResponseAttributes(statusCode: Long): List[Attribute[_]] =
+  private def baseResponseAttributes(statusCode: Long): List[Attribute[?]] =
     List(
       HttpAttributes.HttpRequestMethod("GET"),
       HttpAttributes.HttpResponseStatusCode(statusCode),
@@ -366,7 +366,7 @@ class Otel4sMetricsTest extends AsyncFlatSpec with Matchers {
       UrlAttributes.UrlScheme("http")
     )
 
-  private def failureAttributes(isFailure: Boolean): List[Attribute[_]] =
+  private def failureAttributes(isFailure: Boolean): List[Attribute[?]] =
     if (isFailure) List(ErrorAttributes.ErrorType("java.lang.RuntimeException")) else Nil
 
   private def assertMetrics(metrics: List[io.opentelemetry.sdk.metrics.data.MetricData], expectations: List[MetricExpectation]): Assertion =

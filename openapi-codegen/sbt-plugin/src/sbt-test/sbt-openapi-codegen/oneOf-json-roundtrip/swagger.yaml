@@ -339,6 +339,22 @@ paths:
               description: a description
               schema:
                 type: string
+    post:
+      description: test headers with optional strict bin response body
+      x-tapir-codegen-directives:
+        - force-resp-body-eager
+      responses:
+        "200":
+          $ref: '#/components/responses/BinResponseWithHeader'
+        "204":
+          description: Nothing to do
+    put:
+      description: test headers with optional strict text response body
+      responses:
+        "200":
+          $ref: '#/components/responses/TextResponseWithHeader'
+        "204":
+          description: Nothing to do
 
   '/pattern/{restricted}/object':
     parameters:
@@ -789,7 +805,7 @@ paths:
 
   '/wrapped-one-of':
     post:
-      security: []
+      security: [ ]
       requestBody:
         content:
           application/json:
@@ -824,6 +840,32 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/NotNullableThingy'
+    BinResponseWithHeader:
+      description: Strict bin response with a header
+      headers:
+        Content-Disposition:
+          description: ""
+          required: true
+          schema:
+            type: string
+      content:
+        application/pdf:
+          schema:
+            type: string
+            format: binary
+    TextResponseWithHeader:
+      description: Strict text response with a header
+      headers:
+        Content-Disposition:
+          description: ""
+          required: true
+          schema:
+            type: string
+      content:
+        text/plain:
+          schema:
+            type: string
+            format: binary
   requestBodies:
     optionalityTest:
       required: false

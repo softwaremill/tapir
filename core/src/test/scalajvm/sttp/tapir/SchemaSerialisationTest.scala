@@ -74,7 +74,7 @@ class SchemaSerialisationTest extends AnyFlatSpec with Matchers {
   // needed so that tests pass also when run from sbt
   // see https://stackoverflow.com/questions/60750717/spark-java-lang-classcastexception-cannot-assign-instance-of-scala-collection
   class ObjectInputStreamWithCustomClassLoader(input: InputStream) extends ObjectInputStream(input) {
-    override def resolveClass(desc: java.io.ObjectStreamClass): Class[_] = {
+    override def resolveClass(desc: java.io.ObjectStreamClass): Class[?] = {
       try { Class.forName(desc.getName, false, getClass.getClassLoader) }
       catch { case _: ClassNotFoundException => super.resolveClass(desc) }
     }

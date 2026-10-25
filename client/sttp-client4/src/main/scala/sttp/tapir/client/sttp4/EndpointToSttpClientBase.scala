@@ -12,7 +12,7 @@ import java.nio.ByteBuffer
 import scala.annotation.tailrec
 
 private[sttp4] trait EndpointToSttpClientBase {
-  protected type PartialAnyRequest = PartialRequest[_]
+  protected type PartialAnyRequest = PartialRequest[?]
 
   protected def isSuccess(meta: ResponseMetadata): Boolean = meta.isSuccess
 
@@ -65,7 +65,7 @@ private[sttp4] trait EndpointToSttpClientBase {
     }
   }
 
-  final protected def outToResponseAs(out: EndpointOutput[_], clientOptions: SttpClientOptions): ResponseAs[Any] =
+  final protected def outToResponseAs(out: EndpointOutput[?], clientOptions: SttpClientOptions): ResponseAs[Any] =
     out.bodyType
       .map {
         case RawBodyType.StringBody(charset)  => asStringAlways(charset.name())
@@ -106,10 +106,11 @@ private[sttp4] trait EndpointToSttpClientBase {
         (uri, req2, streamBody)
       case EndpointInput.QueryParams(codec, _) =>
         val mqp = codec.encode(value)
-        val uri2 = uri.addParams(mqp.toSeq: _*)
+        val uri2 = uri.addParams(mqp.toSeq*)
         (uri2, req, streamBody)
-      case EndpointIO.Empty(_, _)              => (uri, req, streamBody)
-      case EndpointIO.Body(bodyType, codec, _) =>
+      case EndpointIO.Empty(_, _)                        => (uri, req, streamBody)
+      case b @ EndpointIO.Body(_, _, _) if b.isSecondary => (uri, req, streamBody)
+      case EndpointIO.Body(bodyType, codec, _)           =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2, streamBody)
       case ob: EndpointIO.OneOfBody[_, _] =>
@@ -151,8 +152,8 @@ private[sttp4] trait EndpointToSttpClientBase {
   }
 
   private def handleInputPair(
-      left: EndpointInput[_],
-      right: EndpointInput[_],
+      left: EndpointInput[?],
+      right: EndpointInput[?],
       params: Params,
       split: SplitParams,
       uri: Uri,
@@ -165,7 +166,7 @@ private[sttp4] trait EndpointToSttpClientBase {
   }
 
   private def handleMapped[II, T](
-      tuple: EndpointInput[_],
+      tuple: EndpointInput[?],
       codec: Mapping[T, II],
       params: Params,
       uri: Uri,
