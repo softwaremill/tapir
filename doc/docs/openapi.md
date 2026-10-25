@@ -232,6 +232,10 @@ Options can be customised by providing an instance of `OpenAPIDocsOptions` to th
   de-duplications might result in different names depending on the order of endpoints. This might result in false 
   positive changes in the OpenApi document.
 
+## Output variants
+
+See [one-of variants](../endpoint/oneof.md#openapi-documentation) for how `oneOf` output variants map to responses.
+
 ## Inlined and referenced schemas
 
 All named schemas (that is, schemas which have the `Schema.name` property defined) will be referenced at point of

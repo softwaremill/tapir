@@ -31,6 +31,9 @@ object Basic {
 
   val in_string_out_string: PublicEndpoint[String, Unit, String, Any] = endpoint.post.in("api" / "echo").in(stringBody).out(stringBody)
 
+  val in_security_string_secondary_string_out_string: Endpoint[String, String, Unit, String, Any] =
+    endpoint.post.in("api" / "echo").securityIn(stringBody).in(stringBody.asSecondary).out(stringBody)
+
   val in_path: PublicEndpoint[String, Unit, Unit, Any] = endpoint.get.in("api").in(path[String])
 
   val in_fixed_header_out_string: PublicEndpoint[Unit, Unit, String, Any] =

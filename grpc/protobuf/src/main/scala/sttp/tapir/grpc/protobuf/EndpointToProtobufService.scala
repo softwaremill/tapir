@@ -79,9 +79,10 @@ class EndpointToProtobufService {
 
   private def forIO(io: EndpointIO[_]): List[MessageReference] = {
     io match {
-      case EndpointIO.Body(_, codec, _)      => List(fromCodec(codec))
-      case EndpointIO.MappedPair(wrapped, _) => forIO(wrapped)
-      case _                                 => List.empty
+      case b @ EndpointIO.Body(_, _, _) if b.isSecondary => List.empty
+      case EndpointIO.Body(_, codec, _)                  => List(fromCodec(codec))
+      case EndpointIO.MappedPair(wrapped, _)             => forIO(wrapped)
+      case _                                             => List.empty
     }
   }
 

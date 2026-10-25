@@ -51,7 +51,7 @@ private[openapi] class ReusableComponentsForEndpoints(
     es.toVector.flatMap { e =>
       endpointToParameters
         .withSourceAtoms(
-          endpointToParameters.filterOutHiddenInputs(e.asVectorOfBasicInputs(includeAuth = false)),
+          endpointToParameters.filterOutUndocumentedInputs(e.asVectorOfBasicInputs(includeAuth = false)),
           include = ReusableComponents.markerOf(_).isDefined
         )
         .flatMap { case (atom, parameter) => ReusableComponents.markerOf(atom).map(m => parameter -> m.name) }

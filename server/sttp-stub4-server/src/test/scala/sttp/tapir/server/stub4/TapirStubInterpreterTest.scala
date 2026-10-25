@@ -36,6 +36,14 @@ class TapirStubInterpreterTest extends AnyFlatSpec with Matchers {
 
   behavior of "TapirStubInterpreter"
 
+  it should "reject an endpoint with two request bodies when the backend is created" in {
+    val stub = TapirSyncStubInterpreter(options)
+      .whenEndpoint(endpoint.post.in(stringBody).in(stringBody))
+      .thenRespond(())
+
+    an[IllegalArgumentException] should be thrownBy stub.backend()
+  }
+
   it should "stub endpoint logic with success response" in {
     // given
     val server = TapirSyncStubInterpreter(options)

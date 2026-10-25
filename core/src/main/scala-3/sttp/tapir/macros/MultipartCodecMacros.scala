@@ -65,7 +65,7 @@ private[tapir] object MultipartCodecMacros {
         val partCodec = field.tpe.asType match
           case '[f] => summonPartCodec[f](field)
 
-        '{ ${ fieldTransformedName(field) } -> $partCodec }
+        '{ (${ fieldTransformedName(field) }, $partCodec) }
       }
 
       '{ ListMap(${ Varargs(partCodecPairs) }*) }
@@ -76,7 +76,7 @@ private[tapir] object MultipartCodecMacros {
         val fieldValue = field.tpe.asType match
           case '[f] =>
             tTerm.select(field.symbol).asExprOf[f]
-        '{ ${ fieldTransformedName(field) } -> $fieldValue }
+        '{ (${ fieldTransformedName(field) }, $fieldValue) }
       }
 
       '{ ListMap(${ Varargs(fieldsEncode) }*) }.asTerm
