@@ -5,7 +5,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-asyncapi-docs:1.14.0
 //> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.14.0
 //> using dep com.softwaremill.sttp.apispec::asyncapi-circe-yaml:0.10.0
-//> using dep com.softwaremill.sttp.client4::pekko-http-backend:4.0.0-RC3
+//> using dep com.softwaremill.sttp.client4::pekko-http-backend:4.0.27
 
 package sttp.tapir.examples.websocket
 

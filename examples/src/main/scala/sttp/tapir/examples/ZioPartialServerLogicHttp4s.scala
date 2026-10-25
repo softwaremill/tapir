@@ -5,7 +5,7 @@
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server-zio:1.14.0
 //> using dep com.softwaremill.sttp.tapir::tapir-zio:1.14.0
 //> using dep org.http4s::http4s-ember-server:0.23.37
-//> using dep com.softwaremill.sttp.client4::zio:4.0.0-RC3
+//> using dep com.softwaremill.sttp.client4::zio:4.0.27
 
 package sttp.tapir.examples
 

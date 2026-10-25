@@ -1051,8 +1051,8 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "prometheus-metrics-core" % "1.9.0",
-      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.9.0",
+      "io.prometheus" % "prometheus-metrics-core" % "1.10.0",
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % "1.10.0",
       scalaTest.value % Test
     )
   )
@@ -1536,7 +1536,7 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
 lazy val play29Scala2Deps = Map(
   "com.typesafe.akka" -> ("2.6.21", Seq("akka-actor", "akka-actor-typed", "akka-slf4j", "akka-serialization-jackson", "akka-stream")),
   "com.typesafe" -> ("0.7.2", Seq("ssl-config-core")),
-  "com.fasterxml.jackson.module" -> ("2.22.3.1", Seq("jackson-module-scala"))
+  "com.fasterxml.jackson.module" -> ("2.22.4", Seq("jackson-module-scala"))
 )
 
 lazy val play29Server: ProjectMatrix = (projectMatrix in file("server/play29-server"))
@@ -2204,7 +2204,7 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.16" % Test,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.41.5" % Provided
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.41.7" % Provided
     )
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
