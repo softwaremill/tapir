@@ -12,7 +12,7 @@ import sttp.monad.syntax._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.model.InvalidMultipartBodyException
-import sttp.tapir.server.netty.internal.reactivestreams.SubscriberInputStream
+import sttp.tapir.server.netty.internal.reactivestreams.{SubscriberInputStream, TapirStreamedHttpRequest}
 import sttp.tapir.{FileRange, InputStreamRange, RawBodyType, RawPart, TapirFile}
 
 import java.io.{ByteArrayInputStream, InputStream}
@@ -99,6 +99,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     case RawBodyType.InputStreamBody =>
       monad.eval(RawValue(readAsStream(serverRequest, maxBytes)))
     case RawBodyType.InputStreamRangeBody =>
+      markBodyStreamed(serverRequest) // the stream is created on first use
       monad.unit(RawValue(InputStreamRange(() => readAsStream(serverRequest, maxBytes))))
     case RawBodyType.FileBody =>
       for {
@@ -111,6 +112,14 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
         case r if r.getClass().getSimpleName() == "EmptyHttpRequest" => monad.error(InvalidMultipartBodyException("Empty multipart body"))
         case _ => monad.error(new UnsupportedOperationException("Expected a streamed request for multipart body"))
       }
+  }
+
+  /** Should be called when the request body is given to the server logic as a stream, which might be read only after the response headers
+    * are written.
+    */
+  protected def markBodyStreamed(serverRequest: ServerRequest): Unit = serverRequest.underlying match {
+    case r: TapirStreamedHttpRequest => r.markBodyStreamed()
+    case _                           => ()
   }
 
   private def readAllBytes(serverRequest: ServerRequest, maxBytes: Option[Long]): F[Array[Byte]] =

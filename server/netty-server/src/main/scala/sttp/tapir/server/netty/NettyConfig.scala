@@ -8,7 +8,6 @@ import io.netty.channel.{ChannelHandler, ChannelPipeline, EventLoopGroup, Server
 import io.netty.handler.codec.http.{HttpContentCompressor, HttpServerCodec}
 import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
-import org.playframework.netty.http.HttpStreamsServerHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
 import sttp.tapir.server.netty.internal._
 
@@ -150,7 +149,7 @@ object NettyConfig {
     if (cfg.compressionConfig.enabled) {
       pipeline.addLast(new HttpContentCompressor())
     }
-    pipeline.addLast(new HttpStreamsServerHandler())
+    pipeline.addLast(new TapirHttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()

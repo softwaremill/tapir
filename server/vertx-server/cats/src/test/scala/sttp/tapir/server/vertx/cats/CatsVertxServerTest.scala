@@ -56,6 +56,7 @@ class CatsVertxServerTest extends TestSuite {
             partContentTypeHeaderSupport = false, // README: doesn't seem supported but I may be wrong
             partOtherHeaderSupport = false
           ).tests() ++
+          // no 100 Continue for a streamed body
           new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(Fs2Streams.apply[IO])(drainFs2) ++
           new ServerWebSocketTests(
             createServerTest,

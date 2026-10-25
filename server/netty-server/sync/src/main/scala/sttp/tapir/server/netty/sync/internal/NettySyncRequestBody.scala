@@ -82,6 +82,7 @@ private[sync] class NettySyncRequestBody(
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): Flow[Chunk[Byte]] =
     serverRequest.underlying match
       case r: StreamedHttpRequest =>
+        markBodyStreamed(serverRequest)
         val rawChunkFlow = FlowReactiveStreams.fromPublisher(new CopyingPublisher(r)).map(Chunk.fromArray)
 
         maxBytes match

@@ -28,7 +28,7 @@ import sttp.tapir.server.netty.NettyResponseContent.{
 }
 import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, TapirStreamedHttpRequest}
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
-import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route, TapirHttpStreamsServerHandler}
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -128,7 +128,7 @@ class NettyServerHandler[F[_]](
 
   private def handleRequestTimeout(ctx: ChannelHandlerContext): Unit = {
     val timeoutDescription = config.requestTimeout.map(_.toString).getOrElse("(not set)")
-    if (requestBodyTracker.forall(_.bodyFullyReceived)) {
+    if (requestBodyTracker.forall(t => t.bodyFullyReceived || t.continueAwaited)) {
       logger.error(s"Closing connection with 503: no response produced within the request timeout of $timeoutDescription")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
@@ -315,8 +315,9 @@ class NettyServerHandler[F[_]](
             logger.error("Error when streaming HTTP response", future.cause())
           }
         })
-        sendContinueIfBodyNotRequested(ctx, req)
+        continueIfBodyStreamed(ctx, req)
         ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
+
       },
       wsHandler = (responseContent) => {
         if (isWsHandshake(req))
@@ -344,15 +345,19 @@ class NettyServerHandler[F[_]](
       }
     )
 
-  /** Needed as a streamed response might read the request body only after the response headers are written (e.g. an echo). By then,
-    * `HttpStreamsServerHandler` no longer sends `100 Continue`, and the client would never send the body (#5503).
+  /** A streamed request body might be read only after the response headers are written (e.g. an echo). `HttpStreamsServerHandler` doesn't
+    * send `100 Continue` then, and the client would never send the body (#5503).
     */
-  private def sendContinueIfBodyNotRequested(ctx: ChannelHandlerContext, req: HttpRequest): Unit = req match {
-    case r: TapirStreamedHttpRequest if !r.wasRequested && HttpUtil.is100ContinueExpected(r) =>
-      // written past HttpStreamsServerHandler, so that it isn't taken as the response; the connection is still closed after the response
+  private def continueIfBodyStreamed(ctx: ChannelHandlerContext, req: HttpRequest): Unit = req match {
+    case r: TapirStreamedHttpRequest if r.isBodyStreamed =>
       val streamsHandlerCtx = ctx.pipeline().context(classOf[HttpStreamsServerHandler])
-      if (streamsHandlerCtx != null) {
-        val _ = streamsHandlerCtx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
+      if (streamsHandlerCtx != null) streamsHandlerCtx.handler() match {
+        case h: TapirHttpStreamsServerHandler       => h.continueIfExpected(streamsHandlerCtx, r.request)
+        case _ if HttpUtil.is100ContinueExpected(r) =>
+          // A custom pipeline with the library's handler. The 100 might then be sent twice, or in the middle of a pipelined preceding
+          // response, corrupting it; the connection is closed after the response.
+          val _ = streamsHandlerCtx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
+        case _ => ()
       }
     case _ => ()
   }

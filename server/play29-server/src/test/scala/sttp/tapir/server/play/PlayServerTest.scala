@@ -112,6 +112,7 @@ class PlayServerTest extends TestSuite {
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, options = false, metrics = false)
           .tests() ++
+        // for a streamed body, sends the response before reading it, without 100 Continue
         new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(AkkaStreams)(drainAkka) ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(

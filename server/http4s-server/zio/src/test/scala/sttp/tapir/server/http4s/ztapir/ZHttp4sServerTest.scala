@@ -53,6 +53,7 @@ class ZHttp4sServerTest extends TestSuite with OptionValues {
     def drainZStream(zStream: ZioStreams.BinaryStream): Task[Unit] =
       zStream.run(ZSink.drain)
 
+    // Ember never sends 100 Continue
     new AllServerTests(createServerTest, interpreter, backend, expectContinue = false).tests() ++
       new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(ZioStreams)(drainZStream) ++
       new ServerWebSocketTests(

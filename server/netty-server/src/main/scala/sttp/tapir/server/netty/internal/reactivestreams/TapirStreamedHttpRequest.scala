@@ -3,39 +3,32 @@ package sttp.tapir.server.netty.internal.reactivestreams
 import io.netty.handler.codec.DecoderResult
 import io.netty.handler.codec.http.{HttpContent, HttpHeaders, HttpMethod, HttpRequest, HttpUtil, HttpVersion}
 import org.playframework.netty.http.StreamedHttpRequest
-import org.reactivestreams.{Subscriber, Subscription}
+import org.reactivestreams.Subscriber
 
 /** A delegating [[StreamedHttpRequest]], which additionally:
   *   - tracks if the request body was ever subscribed to, so that an unused body can be discarded (#4539)
-  *   - tracks if any of the request body was ever requested, to know if `HttpStreamsServerHandler` sent `100 Continue` (#5503)
+  *   - tracks if the request body was given to the server logic as a stream, which might be read only after the response headers are
+  *     written (#5503)
   *   - fails the body stream if it ends before the declared `Content-Length` is received (#4169)
+  *
+  * @param request
+  *   The request as created by `HttpStreamsServerHandler`.
   */
-private[netty] class TapirStreamedHttpRequest(request: StreamedHttpRequest) extends StreamedHttpRequest {
+private[netty] class TapirStreamedHttpRequest(val request: StreamedHttpRequest) extends StreamedHttpRequest {
 
   @volatile private var subscribed: Boolean = false
   def wasSubscribed: Boolean = subscribed
 
-  @volatile private var requested: Boolean = false
-  def wasRequested: Boolean = requested
+  @volatile private var bodyStreamed: Boolean = false
+  def markBodyStreamed(): Unit = bodyStreamed = true
+  def isBodyStreamed: Boolean = bodyStreamed
 
   //
 
   override def subscribe(s: Subscriber[? >: HttpContent]): Unit = {
     subscribed = true
     val contentLength = HttpUtil.getContentLength(request, -1L)
-    val checking = if (contentLength >= 0) new ContentLengthCheckingSubscriber(contentLength, s) else s
-    request.subscribe(new Subscriber[HttpContent] {
-      override def onSubscribe(subscription: Subscription): Unit = checking.onSubscribe(new Subscription {
-        override def request(n: Long): Unit = {
-          requested = true
-          subscription.request(n)
-        }
-        override def cancel(): Unit = subscription.cancel()
-      })
-      override def onNext(content: HttpContent): Unit = checking.onNext(content)
-      override def onError(t: Throwable): Unit = checking.onError(t)
-      override def onComplete(): Unit = checking.onComplete()
-    })
+    request.subscribe(if (contentLength >= 0) new ContentLengthCheckingSubscriber(contentLength, s) else s)
   }
 
   //

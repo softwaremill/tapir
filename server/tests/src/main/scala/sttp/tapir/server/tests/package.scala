@@ -75,13 +75,8 @@ package object tests {
   }
 
   private def readRawBytes(in: InputStream, n: Int): Array[Byte] = {
-    val bytes = new Array[Byte](n)
-    var read = 0
-    while (read < n) {
-      val r = in.read(bytes, read, n - read)
-      if (r == -1) throw new IllegalStateException(s"Connection closed, after reading $read of $n bytes")
-      read += r
-    }
+    val bytes = in.readNBytes(n)
+    if (bytes.length < n) throw new IllegalStateException(s"Connection closed, after reading ${bytes.length} of $n bytes")
     bytes
   }
 }

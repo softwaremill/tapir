@@ -547,20 +547,20 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     testServer(in_string_out_string, "with Expect: 100-continue, keeping the connection open")((b: String) => pureResult(b.asRight[Unit])) {
       (_, baseUri) =>
         val port = baseUri.port.get
-        def requestHead(extraHeaders: String) =
-          s"POST /api/echo HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n$extraHeaders\r\n"
-            .getBytes(StandardCharsets.UTF_8)
         val body = "Sweet".getBytes(StandardCharsets.UTF_8)
+        def requestHead(extraHeaders: String) =
+          s"POST /api/echo HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: ${body.length}\r\n$extraHeaders\r\n"
+            .getBytes(StandardCharsets.UTF_8)
 
         rawSocket(port).use { socket =>
           for {
             _ <- sendRaw(socket, requestHead("Expect: 100-continue\r\n"))
             continue <- readRawResponse(socket)
             _ <- sendRaw(socket, body)
-            response <- readRawResponse(socket)
+            firstResponse <- readRawResponse(socket)
             _ <- sendRaw(socket, requestHead("") ++ body)
-            second <- readRawResponse(socket)
-          } yield List(continue, response, second) shouldBe List((100, ""), (200, "Sweet"), (200, "Sweet"))
+            secondResponse <- readRawResponse(socket)
+          } yield List(continue, firstResponse, secondResponse) shouldBe List((100, ""), (200, "Sweet"), (200, "Sweet"))
         }
     }
   )

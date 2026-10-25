@@ -17,6 +17,7 @@ private[netty] trait NettyStreamingRequestBody[F[_], S <: Streams[S]] extends Ne
       case r: FullHttpRequest if r.content() == Unpooled.EMPTY_BUFFER => // means EmptyHttpRequest, but that class is not public
         streamCompatible.emptyStream
       case publisher: StreamedHttpRequest =>
+        markBodyStreamed(serverRequest)
         streamCompatible.fromPublisher(publisher, maxBytes)
       case other =>
         streamCompatible.failedStream(new UnsupportedOperationException(s"Unexpected Netty request of type: ${other.getClass.getName}"))

@@ -120,6 +120,7 @@ class PlayServerTest extends TestSuite {
           options = false,
           metrics = false
         ).tests() ++
+        // for a streamed body, sends the response before reading it, without 100 Continue
         new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(PekkoStreams)(drainPekko) ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(

@@ -13,6 +13,7 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.client4._
 
+import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
@@ -76,8 +77,12 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
   private def expectContinueTests(createServerTest: CreateServerTest[Future, Any, NettyFutureServerOptions, FutureRoute]): List[Test] =
     List(
       createServerTest.testServerLogic(
-        endpoint.post.in("expect").out(stringBody).serverLogicSuccess[Future](_ => Future.successful("ok")),
-        "respond without 100 Continue and close the connection, if the request body is not read"
+        // a streamed response, as that's when a 100 might be sent for a body that is read later
+        endpoint.post
+          .in("expect")
+          .out(inputStreamBody)
+          .serverLogicSuccess[Future](_ => Future.successful(new ByteArrayInputStream("ok".getBytes(StandardCharsets.UTF_8)))),
+        "respond with a streamed body, without 100 Continue, and close the connection, if the request body is not read"
       ) { (_, baseUri) =>
         val port = baseUri.port.get
         val requestHead = s"POST /expect HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
@@ -85,8 +90,8 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
           for {
             _ <- sendRaw(socket, requestHead.getBytes(StandardCharsets.UTF_8))
             response <- readRawResponse(socket)
-            afterResponse <- IO.blocking(socket.getInputStream.read())
-          } yield (response, afterResponse) shouldBe (((200, "ok"), -1))
+            connectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
+          } yield (response, connectionClosed) shouldBe (((200, "ok"), true))
         }
       }
     )

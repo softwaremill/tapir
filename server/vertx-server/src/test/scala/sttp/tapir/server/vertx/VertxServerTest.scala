@@ -64,8 +64,9 @@ class VertxServerTest extends TestSuite {
             createServerTest,
             partContentTypeHeaderSupport = true,
             partOtherHeaderSupport = false
-          ).tests() ++ new ServerStreamingTests(createServerTest, expectContinueSupported = false)
-            .tests(VertxStreams)(drainVertx[Buffer]) ++
+          ).tests() ++
+          // no 100 Continue for a streamed body
+          new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(VertxStreams)(drainVertx[Buffer]) ++
           (new ServerWebSocketTests(
             createServerTest,
             VertxStreams,
