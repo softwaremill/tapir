@@ -5,7 +5,7 @@ import sttp.capabilities.WebSockets
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, ServerInterpreter}
 import sttp.tapir.server.netty.internal.{NettyBodyListener, RunAsync}
 import sttp.tapir.server.netty.{NettyResponse, NettyServerRequest, Route}
 
@@ -19,8 +19,8 @@ trait NettySyncServerInterpreter:
       inScopeRunner: InScopeRunner
   ): IdRoute =
     implicit val bodyListener: BodyListener[Identity, NettyResponse] = new NettyBodyListener(RunAsync.Id)
-    val serverInterpreter = new ServerInterpreter[OxStreams with WebSockets, Identity, NettyResponse, OxStreams](
-      FilterServerEndpoints(ses),
+    val serverInterpreter = new ServerInterpreter[OxStreams & WebSockets, Identity, NettyResponse, OxStreams](
+      PrepareServerEndpoints(ses),
       new NettySyncRequestBody(
         nettyServerOptions.createFile,
         nettyServerOptions.deleteFile,

@@ -17,7 +17,7 @@ trait AwsSamInterpreter {
       awsSamOptions
     )
 
-  def serverEndpointsToSamTemplate[F[_]](ses: Iterable[ServerEndpoint[_, F]]): SamTemplate =
+  def serverEndpointsToSamTemplate[F[_]](ses: Iterable[ServerEndpoint[?, F]]): SamTemplate =
     EndpointsToSamTemplate(ses.map(_.endpoint).toList, awsSamOptions)
 }
 

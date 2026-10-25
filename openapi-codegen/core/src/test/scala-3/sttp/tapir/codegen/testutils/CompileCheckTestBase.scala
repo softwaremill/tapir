@@ -41,6 +41,6 @@ trait CompileCheckTestBase extends AnyFlatSpec with Matchers with Checkers {
     }
   }
   extension (code: String) {
-    def shouldCompile()(implicit pos: source.Position): Unit = checkShouldCompile(code)(pos)
+    def shouldCompile()(implicit pos: source.Position): Unit = checkShouldCompile(code)(using pos)
   }
 }

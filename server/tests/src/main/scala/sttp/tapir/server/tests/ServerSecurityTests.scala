@@ -57,13 +57,13 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
   private val endpoints = {
     def putSecretInQuery(uri: Uri): Identity[Uri] = uri.addQuerySegment(QuerySegment.KeyValue("token", "supersecret"))
     List(
-      ("basic", basic, (r: Request[_]) => r.header("Authorization", "Basic dXNlcjpzZWNyZXQ=")),
-      ("bearer", bearer, (r: Request[_]) => r.header("Authorization", "Bearer kajsdhf[")),
-      ("lower case bearer", bearer, (r: Request[_]) => r.header("Authorization", "bearer kajsdhf[")),
-      ("apiKey in query param", apiKeyInQuery, (r: Request[_]) => r.copy(uri = putSecretInQuery(r.uri))),
-      ("apiKey in header", apiKeyInHeader, (r: Request[_]) => r.header("x-api-key", "secret api key")),
-      ("old token in header", apiKeyAlternative, (r: Request[_]) => r.header("token-old", "secret token")),
-      ("new token in header", apiKeyAlternative, (r: Request[_]) => r.header("token-new", "secret token"))
+      ("basic", basic, (r: Request[?]) => r.header("Authorization", "Basic dXNlcjpzZWNyZXQ=")),
+      ("bearer", bearer, (r: Request[?]) => r.header("Authorization", "Bearer kajsdhf[")),
+      ("lower case bearer", bearer, (r: Request[?]) => r.header("Authorization", "bearer kajsdhf[")),
+      ("apiKey in query param", apiKeyInQuery, (r: Request[?]) => r.copy(uri = putSecretInQuery(r.uri))),
+      ("apiKey in header", apiKeyInHeader, (r: Request[?]) => r.header("x-api-key", "secret api key")),
+      ("old token in header", apiKeyAlternative, (r: Request[?]) => r.header("token-old", "secret token")),
+      ("new token in header", apiKeyAlternative, (r: Request[?]) => r.header("token-new", "secret token"))
     )
   }
 
@@ -139,6 +139,78 @@ class ServerSecurityTests[F[_], S, OPTIONS, ROUTE](createServerTest: CreateServe
         bearer.code.code shouldBe 200
         without.code.code shouldBe 200
       }
+    },
+    testServerLogic(
+      endpoint.post
+        .in("secondary")
+        .securityIn(stringBody.asSecondary)
+        .in(stringBody)
+        .out(stringBody)
+        .serverSecurityLogic((raw: String) => pureResult(s"security:$raw".asRight[Unit]))
+        .serverLogic(principal => body => pureResult(s"$principal|logic:$body".asRight[Unit])),
+      "secondary body is decoded for both security and main logic, separately for each request"
+    ) { (backend, baseUri) =>
+      def send(body: String) = basicStringRequest.post(uri"$baseUri/secondary").body(body).send(backend).map(_.body)
+
+      for {
+        first <- send("first")
+        second <- send("second")
+      } yield {
+        first shouldBe "security:first|logic:first"
+        second shouldBe "security:second|logic:second"
+      }
+    },
+    testServerLogic(
+      endpoint.post
+        .in("secondary-denied")
+        .securityIn(stringBody.asSecondary)
+        .in(plainBody[Int])
+        .out(stringBody)
+        .errorOut(stringBody)
+        .serverSecurityLogic((_: String) => pureResult("denied".asLeft[Unit]))
+        .serverLogic(_ => (body: Int) => pureResult(body.toString.asRight[String])),
+      "security failure short-circuits an endpoint with a secondary body"
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/secondary-denied")
+        .body("not a number")
+        .send(backend)
+        .map(_.body shouldBe "denied")
+    },
+    testServerLogic(
+      endpoint.post
+        .in("secondary-invalid")
+        .securityIn(plainBody[Int].asSecondary)
+        .in(stringBody)
+        .out(stringBody)
+        .serverSecurityLogic((_: Int) => pureResult(().asRight[Unit]))
+        .serverLogic(_ => (body: String) => pureResult(body.asRight[Unit])),
+      "secondary body which fails to decode returns 400"
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/secondary-invalid")
+        .body("not a number")
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.BadRequest
+          r.body shouldBe "Invalid value for: body"
+        }
+    },
+    testServerLogic(
+      endpoint.post
+        .in("secondary-with-primary-in-security")
+        .securityIn(stringBody)
+        .in(byteArrayBody.asSecondary)
+        .out(stringBody)
+        .serverSecurityLogic((body: String) => pureResult(body.asRight[Unit]))
+        .serverLogic(body => (raw: Array[Byte]) => pureResult(s"$body|${raw.length}".asRight[Unit])),
+      "secondary body in `in`, with the primary one in `securityIn`"
+    ) { (backend, baseUri) =>
+      basicStringRequest
+        .post(uri"$baseUri/secondary-with-primary-in-security")
+        .body("payload")
+        .send(backend)
+        .map(_.body shouldBe "payload|7")
     }
   ) ++
     correctAuthTests ++

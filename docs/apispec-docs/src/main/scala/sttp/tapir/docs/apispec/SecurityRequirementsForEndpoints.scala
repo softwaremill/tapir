@@ -7,7 +7,7 @@ import sttp.tapir.internal.{IterableToListMap, RichEndpoint, RichEndpointInput}
 import scala.collection.immutable.{ListMap, ListSet}
 
 private[docs] class SecurityRequirementsForEndpoints(securitySchemes: SecuritySchemes) {
-  def apply(es: Iterable[AnyEndpoint]): List[SecurityRequirement] = ListSet(es.toList.flatMap(apply): _*).toList
+  def apply(es: Iterable[AnyEndpoint]): List[SecurityRequirement] = ListSet(es.toList.flatMap(apply)*).toList
 
   def apply(e: AnyEndpoint): List[SecurityRequirement] = {
     val auths = e.auths
@@ -40,13 +40,13 @@ private[docs] class SecurityRequirementsForEndpoints(securitySchemes: SecuritySc
     }
   }
 
-  private def securityRequirement(auths: Seq[EndpointInput.Auth[_, _ <: EndpointInput.AuthType]]): SecurityRequirement = auths.flatMap {
+  private def securityRequirement(auths: Seq[EndpointInput.Auth[?, ? <: EndpointInput.AuthType]]): SecurityRequirement = auths.flatMap {
     case auth @ EndpointInput.Auth(_, _, info: EndpointInput.AuthType.ScopedOAuth2, _) =>
       securitySchemes.get(auth).map(_._1).map((_, info.requiredScopes.toVector))
     case auth => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
   }.toListMap
 
-  private def authOptional(auths: Seq[EndpointInput.Auth[_, _ <: EndpointInput.AuthType]]): Boolean =
+  private def authOptional(auths: Seq[EndpointInput.Auth[?, ? <: EndpointInput.AuthType]]): Boolean =
     auths.flatMap(_.asVectorOfBasicInputs()).forall {
       case i: EndpointInput.Atom[_]          => i.codec.schema.isOptional
       case EndpointIO.OneOfBody(variants, _) => variants.forall(_.codec.schema.isOptional)

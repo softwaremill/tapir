@@ -14,8 +14,8 @@ import zio.{RIO, Task}
 object ConvertStreams {
 
   def apply[R, C](
-      se: ZServerEndpoint[R, ZioStreams with C]
-  ): ServerEndpoint[Fs2Streams[RIO[R, *]] with C, RIO[R, *]] =
+      se: ZServerEndpoint[R, ZioStreams & C]
+  ): ServerEndpoint[Fs2Streams[RIO[R, *]] & C, RIO[R, *]] =
     ServerEndpoint(
       Endpoint(
         forInput(se.securityInput).asInstanceOf[EndpointInput[se.SECURITY_INPUT]],
@@ -29,27 +29,27 @@ object ConvertStreams {
     )
 
   // the occasional casts are needed as we know that we return the same input as originally, but the compiler doesn't
-  private def forInput(input: EndpointInput[_]): EndpointInput[_] = {
+  private def forInput(input: EndpointInput[?]): EndpointInput[?] = {
     input match {
       // streaming inputs
       case EndpointIO.StreamBodyWrapper(wrapped) => EndpointIO.StreamBodyWrapper(apply(wrapped))
       // traversing wrapped inputs
       case EndpointInput.Pair(left, right, combine, split) => EndpointInput.Pair(forInput(left), forInput(right), combine, split)
       case EndpointIO.Pair(left, right, combine, split)    =>
-        EndpointIO.Pair(forInput(left).asInstanceOf[EndpointIO[_]], forInput(right).asInstanceOf[EndpointIO[_]], combine, split)
+        EndpointIO.Pair(forInput(left).asInstanceOf[EndpointIO[?]], forInput(right).asInstanceOf[EndpointIO[?]], combine, split)
       case EndpointInput.MappedPair(wrapped, mapping) =>
-        EndpointInput.MappedPair(forInput(wrapped).asInstanceOf[EndpointInput.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
+        EndpointInput.MappedPair(forInput(wrapped).asInstanceOf[EndpointInput.Pair[?, ?, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointIO.MappedPair(wrapped, mapping) =>
-        EndpointIO.MappedPair(forInput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
+        EndpointIO.MappedPair(forInput(wrapped).asInstanceOf[EndpointIO.Pair[?, ?, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointInput.Auth(wrapped, challenge, authType, info) =>
-        EndpointInput.Auth(forInput(wrapped).asInstanceOf[EndpointInput.Single[_]], challenge, authType, info)
+        EndpointInput.Auth(forInput(wrapped).asInstanceOf[EndpointInput.Single[?]], challenge, authType, info)
       case EndpointIO.OneOfBody(variants, mapping) =>
         EndpointIO.OneOfBody(
           variants.map {
             case EndpointIO.OneOfBodyVariant(range, Left(body)) =>
-              EndpointIO.OneOfBodyVariant(range, Left(forInput(body).asInstanceOf[EndpointIO.Body[_, Any]]))
+              EndpointIO.OneOfBodyVariant(range, Left(forInput(body).asInstanceOf[EndpointIO.Body[?, Any]]))
             case EndpointIO.OneOfBodyVariant(range, Right(body)) =>
-              EndpointIO.OneOfBodyVariant(range, Right(forInput(body).asInstanceOf[EndpointIO.StreamBodyWrapper[_, Any]]))
+              EndpointIO.OneOfBodyVariant(range, Right(forInput(body).asInstanceOf[EndpointIO.StreamBodyWrapper[?, Any]]))
           },
           mapping.asInstanceOf[Mapping[Any, Any]]
         )
@@ -58,7 +58,7 @@ object ConvertStreams {
     }
   }
 
-  private def forOutput(output: EndpointOutput[_]): EndpointOutput[_] = {
+  private def forOutput(output: EndpointOutput[?]): EndpointOutput[?] = {
     output match {
       // streaming & ws outputs
       case EndpointIO.StreamBodyWrapper(wrapped)        => EndpointIO.StreamBodyWrapper(apply(wrapped))
@@ -66,11 +66,11 @@ object ConvertStreams {
       // traversing wrapped outputs
       case EndpointOutput.Pair(left, right, combine, split) => EndpointOutput.Pair(forOutput(left), forOutput(right), combine, split)
       case EndpointIO.Pair(left, right, combine, split)     =>
-        EndpointIO.Pair(forOutput(left).asInstanceOf[EndpointIO[_]], forOutput(right).asInstanceOf[EndpointIO[_]], combine, split)
+        EndpointIO.Pair(forOutput(left).asInstanceOf[EndpointIO[?]], forOutput(right).asInstanceOf[EndpointIO[?]], combine, split)
       case EndpointOutput.MappedPair(wrapped, mapping) =>
-        EndpointOutput.MappedPair(forOutput(wrapped).asInstanceOf[EndpointOutput.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
+        EndpointOutput.MappedPair(forOutput(wrapped).asInstanceOf[EndpointOutput.Pair[?, ?, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointIO.MappedPair(wrapped, mapping) =>
-        EndpointIO.MappedPair(forOutput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
+        EndpointIO.MappedPair(forOutput(wrapped).asInstanceOf[EndpointIO.Pair[?, ?, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointOutput.OneOf(mappings, mapping) =>
         EndpointOutput.OneOf[Any, Any](
           mappings.map(m => OneOfVariant(forOutput(m.output), m.appliesTo)),
@@ -80,9 +80,9 @@ object ConvertStreams {
         EndpointIO.OneOfBody(
           variants.map {
             case EndpointIO.OneOfBodyVariant(range, Left(body)) =>
-              EndpointIO.OneOfBodyVariant(range, Left(forOutput(body).asInstanceOf[EndpointIO.Body[_, Any]]))
+              EndpointIO.OneOfBodyVariant(range, Left(forOutput(body).asInstanceOf[EndpointIO.Body[?, Any]]))
             case EndpointIO.OneOfBodyVariant(range, Right(body)) =>
-              EndpointIO.OneOfBodyVariant(range, Right(forOutput(body).asInstanceOf[EndpointIO.StreamBodyWrapper[_, Any]]))
+              EndpointIO.OneOfBodyVariant(range, Right(forOutput(body).asInstanceOf[EndpointIO.StreamBodyWrapper[?, Any]]))
           },
           mapping.asInstanceOf[Mapping[Any, Any]]
         )

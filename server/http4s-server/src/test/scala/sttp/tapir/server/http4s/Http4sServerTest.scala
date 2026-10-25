@@ -26,7 +26,7 @@ import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
-class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with OptionValues {
+class Http4sServerTest[R >: Fs2Streams[IO] & WebSockets] extends TestSuite with OptionValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
@@ -137,7 +137,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       Test("should work with a router and context web socket routes in a context") {
         val expectedContext: String = "[PREFIX]" // the context we expect http4s to provide to the endpoint
 
-        val e: Endpoint[Unit, String, Unit, Pipe[IO, String, String], Context[String] with WebSockets with Fs2Streams[IO]] =
+        val e: Endpoint[Unit, String, Unit, Pipe[IO, String, String], Context[String] & WebSockets & Fs2Streams[IO]] =
           endpoint.get
             .in("test" / "ws")
             .contextIn[String]()

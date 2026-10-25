@@ -145,7 +145,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
       val intersectionConstraint = new Constraint.IntersectionConstraint[N, Predicates]
       val validatorsForPredicates: List[ValidatorForPredicate[N, Any]] = summonValidators[N, mirror.ElementTypes]
 
-      override def validator: Validator[N] = Validator.all(validatorsForPredicates.map(_.validator): _*)
+      override def validator: Validator[N] = Validator.all(validatorsForPredicates.map(_.validator)*)
 
       override def makeErrors(value: N, errorMessage: String): List[ValidationError[?]] =
         if (!intersectionConstraint.test(value))
@@ -191,7 +191,7 @@ trait TapirCodecIron extends DescriptionWitness with LowPriorityValidatorForPred
               strictEqualsValues.length
             )
 
-        override def validator: Validator[N] = Validator.any(validatorsForPredicates.map(_.validator): _*)
+        override def validator: Validator[N] = Validator.any(validatorsForPredicates.map(_.validator)*)
 
         override def makeErrors(value: N, errorMessage: String): List[ValidationError[?]] =
           if (!unionConstraint.test(value))

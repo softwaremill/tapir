@@ -35,7 +35,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
 
       val sProduct = schema.schemaType.asInstanceOf[SProduct[T]]
 
-      override def write0[R](out: Visitor[_, R], v: T): R = {
+      override def write0[R](out: Visitor[?, R], v: T): R = {
         if (v == null) out.visitNull(-1)
         else {
           val ctx = out.visitObject(length(v), true, -1)
@@ -53,7 +53,7 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
         }
       }
 
-      def writeToObject[R](ctx: _root_.upickle.core.ObjVisitor[_, R], v: T): Unit =
+      def writeToObject[R](ctx: _root_.upickle.core.ObjVisitor[?, R], v: T): Unit =
         macros.writeSnippets[R, T](
           sProduct,
           outerThis,
@@ -88,9 +88,9 @@ private[pickler] trait Writers extends WritersVersionSpecific with UpickleHelper
       Configuration
   ) =
     implicit val currentlyDeriving: _root_.upickle.core.CurrentlyDeriving[T] = new _root_.upickle.core.CurrentlyDeriving()
-    val writers: List[TaggedWriter[_ <: T]] = childPicklers.map(_.innerUpickle.writer.asInstanceOf[TaggedWriter[_ <: T]])
+    val writers: List[TaggedWriter[? <: T]] = childPicklers.map(_.innerUpickle.writer.asInstanceOf[TaggedWriter[? <: T]])
 
-    new TaggedWriter.Node[T](writers: _*) {
+    new TaggedWriter.Node[T](writers*) {
       override def findWriterWithKey(v: Any): (String, String, ObjectWriter[T]) = {
         subtypeDiscriminator match {
           case discriminator: CustomSubtypeDiscriminator[T] =>

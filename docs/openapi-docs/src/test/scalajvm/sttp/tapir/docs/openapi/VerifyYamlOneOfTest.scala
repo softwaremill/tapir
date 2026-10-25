@@ -80,7 +80,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("oneOf/expected_the_same_status_codes.yml")
 
     implicit val unauthorizedTextPlainCodec: Codec[String, Unauthorized, CodecFormat.TextPlain] =
-      Codec.string.map(Unauthorized.apply _)(_.realm)
+      Codec.string.map((realm: String) => Unauthorized(realm))(_.realm)
 
     val e = endpoint.out(
       sttp.tapir.oneOf(

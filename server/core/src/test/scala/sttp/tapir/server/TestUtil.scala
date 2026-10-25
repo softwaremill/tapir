@@ -66,7 +66,8 @@ object TestUtil {
   def createTestRequest(
       path: List[String],
       queryParams: Seq[(String, String)] = Nil,
-      _method: Method = Method.GET
+      _method: Method = Method.GET,
+      _headers: immutable.Seq[Header] = Nil
   ): ServerRequest = {
     val queryString = if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
     val pathString = if (path.nonEmpty) s"/${path.mkString("/")}" else ""
@@ -79,7 +80,7 @@ object TestUtil {
       override def queryParameters: QueryParams = QueryParams.fromSeq(queryParams)
       override def method: Method = _method
       override def uri: Uri = uri"http://example.com$pathString$queryString"
-      override def headers: immutable.Seq[Header] = Nil
+      override def headers: immutable.Seq[Header] = _headers
       override def attribute[T](k: AttributeKey[T]): Option[T] = None
       override def attribute[T](k: AttributeKey[T], v: T): ServerRequest = this
       override def withUnderlying(underlying: Any): ServerRequest = this
@@ -99,7 +100,7 @@ object TestUtil {
             ctx: DecodeSuccessContext[Identity, A, U, I]
         )(implicit monad: MonadError[Identity], bodyListener: BodyListener[Identity, B]): Identity[ServerResponse[B]] = {
           addCallTrail(s"$prefix success")
-          endpointHandler.onDecodeSuccess(ctx)(monad, bodyListener)
+          endpointHandler.onDecodeSuccess(ctx)(using monad, bodyListener)
         }
 
         override def onSecurityFailure[A](ctx: SecurityFailureContext[Identity, A])(implicit
@@ -107,14 +108,14 @@ object TestUtil {
             bodyListener: BodyListener[Identity, B]
         ): Identity[ServerResponse[B]] = {
           addCallTrail(s"$prefix security failure")
-          endpointHandler.onSecurityFailure(ctx)(monad, bodyListener)
+          endpointHandler.onSecurityFailure(ctx)(using monad, bodyListener)
         }
 
         override def onDecodeFailure(
             ctx: DecodeFailureContext
         )(implicit monad: MonadError[Identity], bodyListener: BodyListener[Identity, B]): Identity[Option[ServerResponse[B]]] = {
           addCallTrail(s"$prefix failure")
-          endpointHandler.onDecodeFailure(ctx)(monad, bodyListener)
+          endpointHandler.onDecodeFailure(ctx)(using monad, bodyListener)
         }
       }
   }

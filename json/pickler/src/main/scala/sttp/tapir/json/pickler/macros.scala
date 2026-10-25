@@ -15,10 +15,10 @@ private[pickler] object macros:
 
   private[pickler] inline def writeSnippets[R, T](
       inline sProduct: SProduct[T],
-      inline thisOuter: upickle.core.Types with upickle.implicits.MacrosCommon,
+      inline thisOuter: upickle.core.Types & upickle.implicits.MacrosCommon,
       inline self: upickle.implicits.CaseClassReadWriters#CaseClassWriter[T],
       inline v: T,
-      inline ctx: _root_.upickle.core.ObjVisitor[_, R],
+      inline ctx: _root_.upickle.core.ObjVisitor[?, R],
       childWriters: List[Any],
       childDefaults: List[Option[Any]],
       transientNone: Boolean
@@ -27,17 +27,17 @@ private[pickler] object macros:
 
   private[pickler] def writeSnippetsImpl[R, T](
       sProduct: Expr[SProduct[T]],
-      thisOuter: Expr[upickle.core.Types with upickle.implicits.MacrosCommon],
+      thisOuter: Expr[upickle.core.Types & upickle.implicits.MacrosCommon],
       self: Expr[upickle.implicits.CaseClassReadWriters#CaseClassWriter[T]],
       v: Expr[T],
-      ctx: Expr[_root_.upickle.core.ObjVisitor[_, R]],
+      ctx: Expr[_root_.upickle.core.ObjVisitor[?, R]],
       childWriters: Expr[List[?]],
       childDefaults: Expr[List[Option[?]]],
       transientNone: Expr[Boolean]
   )(using Quotes, Type[T], Type[R]): Expr[Unit] =
 
     import quotes.reflect.*
-    val optionSymbol = TypeRepr.of[Option[_]].typeSymbol
+    val optionSymbol = TypeRepr.of[Option[?]].typeSymbol
     Expr.block(
       for (((rawLabel, label), i) <- uMacros.fieldLabelsImpl0[T].zipWithIndex) yield {
         val memberTypeRepr = TypeRepr.of[T].memberType(rawLabel)
@@ -76,7 +76,7 @@ private[pickler] object macros:
   ) = {
     import quotes.reflect.*
 
-    val optionSymbol = TypeRepr.of[Option[_]].typeSymbol
+    val optionSymbol = TypeRepr.of[Option[?]].typeSymbol
     val defaults = uMacros.getDefaultParamsImpl0[T]
     val members = TypeRepr.of[T].typeSymbol.caseFields
     val statements = uMacros

@@ -30,7 +30,7 @@ object ZioHttpServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
   def customiseInterceptors[R]: CustomiseInterceptors[RIO[R, *], ZioHttpServerOptions[R]] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[RIO[R, *], ZioHttpServerOptions[R]](
       createOptions = (ci: CustomiseInterceptors[RIO[R, *], ZioHttpServerOptions[R]]) =>
         ZioHttpServerOptions(
           defaultCreateFile,

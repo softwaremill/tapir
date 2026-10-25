@@ -10,7 +10,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.armeria._
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{FilterServerEndpoints, ServerInterpreter}
+import sttp.tapir.server.interpreter.{PrepareServerEndpoints, ServerInterpreter}
 
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,21 +22,22 @@ private[zio] final case class TapirZioService[R](
 )(implicit runtime: Runtime[R])
     extends TapirService[ZioStreams, RIO[R, *]] {
 
-  private[this] implicit val monad: RIOMonadAsyncError[R] = new RIOMonadAsyncError()
-  private[this] implicit val rioFutureConversion: RioFutureConversion[R] = {
+  private implicit val monad: RIOMonadAsyncError[R] = new RIOMonadAsyncError()
+  private implicit val rioFutureConversion: RioFutureConversion[R] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     new RioFutureConversion[R]
   }
-  private[this] implicit val bodyListener: ArmeriaBodyListener[RIO[R, *]] = new ArmeriaBodyListener
+  private implicit val bodyListener: ArmeriaBodyListener[RIO[R, *]] = new ArmeriaBodyListener
 
-  private[this] val zioStreamCompatible: StreamCompatible[ZioStreams] = ZioStreamCompatible(runtime)
+  private val zioStreamCompatible: StreamCompatible[ZioStreams] = ZioStreamCompatible(runtime)
+  private val filterServerEndpoints = PrepareServerEndpoints(serverEndpoints)
 
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
     implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(ctx.eventLoop())
 
     val interpreter: ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams] =
       new ServerInterpreter[ZioStreams, RIO[R, *], ArmeriaResponseType, ZioStreams](
-        FilterServerEndpoints(serverEndpoints),
+        filterServerEndpoints,
         new ArmeriaRequestBody(armeriaServerOptions, zioStreamCompatible),
         new ArmeriaToResponseBody(zioStreamCompatible),
         RejectInterceptor.disableWhenSingleEndpoint(armeriaServerOptions.interceptors, serverEndpoints),
