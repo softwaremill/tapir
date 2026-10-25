@@ -10,10 +10,10 @@ import sttp.tapir.{EndpointIO, EndpointOutput}
 private[openapi] class EndpointToHeaders(tschemaToASchema: TSchemaToASchema) {
 
   def withSourceAtoms(
-      outputs: List[EndpointOutput[_]],
-      include: EndpointIO.Atom[_] => Boolean = _ => true
-  ): Vector[(EndpointIO.Atom[_], (String, Header))] =
-    outputs.toVector.flatMap(_.traverseOutputs[(EndpointIO.Atom[_], (String, Header))] {
+      outputs: List[EndpointOutput[?]],
+      include: EndpointIO.Atom[?] => Boolean = _ => true
+  ): Vector[(EndpointIO.Atom[?], (String, Header))] =
+    outputs.toVector.flatMap(_.traverseOutputs[(EndpointIO.Atom[?], (String, Header))] {
       case h: EndpointIO.Header[_] if include(h)      => Vector(h -> (h.name -> headerToHeader(h)))
       case f: EndpointIO.FixedHeader[_] if include(f) => Vector(f -> (f.h.name -> fixedHeaderToHeader(f)))
     })
@@ -26,7 +26,7 @@ private[openapi] class EndpointToHeaders(tschemaToASchema: TSchemaToASchema) {
       example = header.info.example.flatMap(exampleValue(header.codec, _))
     )
 
-  private def fixedHeaderToHeader(header: EndpointIO.FixedHeader[_]): Header =
+  private def fixedHeaderToHeader(header: EndpointIO.FixedHeader[?]): Header =
     Header(
       description = header.info.description,
       required = Some(true),

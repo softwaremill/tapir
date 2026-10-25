@@ -28,7 +28,7 @@ object VertxCatsServerOptions {
   def customiseInterceptors[F[_]: Async](
       dispatcher: Dispatcher[F]
   ): CustomiseInterceptors[F, VertxCatsServerOptions[F]] =
-    CustomiseInterceptors(
+    CustomiseInterceptors[F, VertxCatsServerOptions[F]](
       createOptions = (ci: CustomiseInterceptors[F, VertxCatsServerOptions[F]]) =>
         VertxCatsServerOptions(
           dispatcher,

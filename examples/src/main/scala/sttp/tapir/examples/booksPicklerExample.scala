@@ -179,5 +179,5 @@ import scala.concurrent.duration.Duration
 
   logger.info(s"Try out the API by opening the Swagger UI: http://$declaredHost:$declaredPort/docs")
   logger.info("Press ENTER to stop the server...")
-  val _ = scala.io.StdIn.readLine
+  val _ = scala.io.StdIn.readLine()
   Await.result(serverBinding.stop(), Duration.Inf)

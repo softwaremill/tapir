@@ -1,7 +1,7 @@
 // {cat=Error handling; effects=cats-effect; server=Netty; JSON=circe}: Error reporting provided by Iron type refinements
 
 // scala 3.6.+ is required for tapir-iron:1.13.33
-//> using scala 3.6.4
+//> using scala 3.9.0
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.33
 //> using dep com.softwaremill.sttp.tapir::tapir-netty-server-cats:1.13.33

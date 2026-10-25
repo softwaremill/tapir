@@ -57,7 +57,7 @@ private[sttp] class StreamEndpointToSttpClient[S <: Streams[S]: StreamsNotWebSoc
     }
   }
 
-  private def bodyIsStream[I](tr: EndpointTransput[I]): Option[Streams[_]] = {
+  private def bodyIsStream[I](tr: EndpointTransput[I]): Option[Streams[?]] = {
     tr match {
       case out: EndpointOutput[_] =>
         out.traverseOutputs {
@@ -74,7 +74,7 @@ private[sttp] class StreamEndpointToSttpClient[S <: Streams[S]: StreamsNotWebSoc
   }
 
   private val clientOutputParams = new ClientOutputParams {
-    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[?, ?, ?, ?, ?], body: Any): DecodeResult[Any] =
       throw new RuntimeException("StreamingEndpointToSttpClient should not be used when dealing with WebSockets")
   }
 }

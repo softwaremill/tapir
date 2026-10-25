@@ -398,6 +398,40 @@ Results in:
 result3.toString
 ```
 
+### Invalid request body definitions
+
+Request bodies which [can't be served](endpoint/security.md#using-the-request-body-in-security-logic) are reported as an
+`InvalidBodyDefinitionError` with `rejectedByServers = true`; servers also throw for them when routes are constructed.
+Endpoints which can be served, but whose contract probably isn't what was intended - for example an `asSecondary` body
+with no ordinary body alongside it, which clients never send and the documentation leaves out - are reported with
+`rejectedByServers = false`, and only here.
+
+Example 1:
+
+```scala mdoc:silent
+import sttp.tapir.testing.EndpointVerifier
+
+val ep3 = endpoint.post.in("ingest").securityIn(stringBody.asSecondary)
+val result4 = EndpointVerifier(List(ep3))
+```
+
+Results in:
+
+```scala mdoc
+result4.toString
+```
+
+To keep only the problems which prevent serving:
+
+```scala mdoc:compile-only
+import sttp.tapir.testing.InvalidBodyDefinitionError
+
+EndpointVerifier(List(ep3)).filter {
+  case b: InvalidBodyDefinitionError => b.rejectedByServers
+  case _                             => true
+}
+```
+
 ## OpenAPI schema compatibility
 
 The `OpenAPIVerifier` provides utilities for verifying that client and server endpoints are consistent with an OpenAPI specification. This ensures that endpoints defined in your code correspond to those documented in the OpenAPI schema, and vice versa.

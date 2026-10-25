@@ -18,24 +18,26 @@ import zio.stream.ZStream
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 
 class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends RequestBody[RIO[R, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
 
   override def toRaw[RAW](serverRequest: ServerRequest, bodyType: RawBodyType[RAW], maxBytes: Option[Long]): Task[RawValue[RAW]] =
-    toRaw(serverRequest, zStream(serverRequest), bodyType, maxBytes)
+    toRaw(serverRequest, zStream(serverRequest), bodyType, RequestBody.requestCharset(serverRequest), maxBytes)
 
   private def toRaw[RAW](
       serverRequest: ServerRequest,
       stream: ZStream[Any, Throwable, Byte],
       bodyType: RawBodyType[RAW],
+      charset: Option[Charset],
       maxBytes: Option[Long]
   ): Task[RawValue[RAW]] = {
     val limitedStream = limitedZStream(stream, maxBytes)
     val asByteArray = limitedStream.runCollect.map(_.toArray)
 
     bodyType match {
-      case RawBodyType.StringBody(defaultCharset) => asByteArray.map(new String(_, defaultCharset)).map(RawValue(_))
+      case RawBodyType.StringBody(defaultCharset) => asByteArray.map(new String(_, charset.getOrElse(defaultCharset))).map(RawValue(_))
       case RawBodyType.ByteArrayBody              => asByteArray.map(RawValue(_))
       case RawBodyType.ByteBufferBody             => asByteArray.map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
       case RawBodyType.InputStreamBody            => asByteArray.map(new ByteArrayInputStream(_)).map(RawValue(_))
@@ -80,7 +82,7 @@ class ZioHttpRequestBody[R](serverOptions: ZioHttpServerOptions[R]) extends Requ
       case StreamingBinary(_, _, _, _, s) => s
       case _                              => ZStream.fromIterableZIO(field.asChunk)
     }
-    toRaw(serverRequest, fieldsStream, bodyType, None)
+    toRaw(serverRequest, fieldsStream, bodyType, charset = None, maxBytes = None)
       .map(raw =>
         Part(
           field.name,

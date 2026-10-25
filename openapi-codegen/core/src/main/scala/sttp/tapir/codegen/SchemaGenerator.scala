@@ -185,7 +185,7 @@ object SchemaGenerator {
     val withDirectChildren = layers.map { layer =>
       layer.map { case (k, v) => (k, v, getDirectChildren(v)) }
     }
-    val initialSet: mutable.Set[Seq[(String, OpenapiSchemaType, Set[String])]] = mutable.Set(withDirectChildren: _*)
+    val initialSet: mutable.Set[Seq[(String, OpenapiSchemaType, Set[String])]] = mutable.Set(withDirectChildren*)
     val acquired = mutable.Set.empty[String]
     val res = mutable.ArrayBuffer.empty[Seq[(String, OpenapiSchemaType, Set[String])]]
     while (initialSet.nonEmpty) {
@@ -206,7 +206,7 @@ object SchemaGenerator {
   }
   // finds all mutually-recursive references, grouping mutually-recursive schemas into a single 'layer' seq
   private def constructRings(allSchemas: Map[String, OpenapiSchemaType]): Seq[Seq[(String, OpenapiSchemaType)]] = {
-    val initialSet: mutable.Set[(String, OpenapiSchemaType)] = mutable.Set(allSchemas.toSeq: _*)
+    val initialSet: mutable.Set[(String, OpenapiSchemaType)] = mutable.Set(allSchemas.toSeq*)
     val res = mutable.ArrayBuffer.empty[Seq[(String, OpenapiSchemaType)]]
     while (initialSet.nonEmpty) {
       val nextRing = mutable.ArrayBuffer.empty[(String, OpenapiSchemaType)]

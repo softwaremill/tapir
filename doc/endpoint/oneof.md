@@ -6,9 +6,7 @@ There are two kind of one-of inputs/outputs:
 * `oneOfBody` input/output where the body-only variants represent the same content, but with different content types
 
 ```{note}
-`oneOf` and `oneOfBody` outputs are not related to `oneOf:` schemas when 
-[generating](../docs/openapi.md) OpenAPI documentation.
-
+`oneOf` and `oneOfBody` outputs don't generate `oneOf:` schemas in [OpenAPI documentation](../docs/openapi.md).
 Such schemas are generated for coproducts - e.g. `sealed trait` families - given an appropriate codec. See the
 documentation on [coproducts](schemas.md#sealed-traits--coproducts) for details.
 ```
@@ -31,9 +29,10 @@ When encoding such an output to a response, the first matching output is chosen,
 
 When decoding from a response, the first output which decodes successfully is chosen.
 
-The outputs might vary in status codes, headers (e.g. different content types), and body implementations. However, for 
-bodies, only replayable ones can be used, and they need to have the same raw representation (e.g. all byte-array-base, 
-or all file-based).
+The outputs might vary in status codes, headers (e.g. different content types), and body implementations. However, 
+client interpreters read the response body once, using the raw representation of the first variant's body. Hence, all 
+bodies need the same raw representation (e.g. all string-based, or all byte-array-based). Server interpreters don't 
+have this restriction.
 
 Note that exhaustiveness of the variants (that all subtypes of `T` are covered) is not checked.
 
@@ -63,6 +62,15 @@ val baseEndpoint = endpoint.errorOut(
   )
 )
 ```
+
+### OpenAPI documentation
+
+In [OpenAPI documentation](../docs/openapi.md), each status code used by the variants becomes a separate response. 
+Variants without a status code become the `default` response (error outputs) or the `200` response (regular outputs). 
+Each content type becomes a separate media type.
+
+Schemas of variants with the same status code and content type are combined using `anyOf`, not `oneOf`: there's no 
+discriminator, so a value might match more than one schema.
 
 ### One-of-variant and type erasure
 

@@ -22,7 +22,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
-import sttp.tapir.server.interpreter.{BodyListener, FilterServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
+import sttp.tapir.server.interpreter.{BodyListener, PrepareServerEndpoints, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.pekkohttp.PekkoModel.parseHeadersOrThrowWithoutContentHeaders
 
@@ -34,16 +34,16 @@ trait PekkoHttpServerInterpreter {
 
   def pekkoHttpServerOptions: PekkoHttpServerOptions = PekkoHttpServerOptions.default
 
-  def toRoute(se: ServerEndpoint[PekkoStreams with WebSockets, Future]): Route = toRoute(List(se))
+  def toRoute(se: ServerEndpoint[PekkoStreams & WebSockets, Future]): Route = toRoute(List(se))
 
-  def toRoute(ses: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]): Route =
-    toRoute(new PekkoRequestBody(pekkoHttpServerOptions)(_, _), new PekkoToResponseBody()(_, _))(ses)
+  def toRoute(ses: List[ServerEndpoint[PekkoStreams & WebSockets, Future]]): Route =
+    toRoute(new PekkoRequestBody(pekkoHttpServerOptions)(using _, _), new PekkoToResponseBody()(using _, _))(ses)
 
   protected def toRoute(
       requestBody: (Materializer, ExecutionContext) => RequestBody[Future, PekkoStreams],
       toResponseBody: (Materializer, ExecutionContext) => ToResponseBody[PekkoResponseBody, PekkoStreams]
-  )(ses: List[ServerEndpoint[PekkoStreams with WebSockets, Future]]): Route = {
-    val filterServerEndpoints = FilterServerEndpoints(ses)
+  )(ses: List[ServerEndpoint[PekkoStreams & WebSockets, Future]]): Route = {
+    val filterServerEndpoints = PrepareServerEndpoints(ses)
     val interceptors = RejectInterceptor.disableWhenSingleEndpoint(
       pekkoHttpServerOptions.appendInterceptor(PekkoStreamSizeExceptionInterceptor).interceptors,
       ses

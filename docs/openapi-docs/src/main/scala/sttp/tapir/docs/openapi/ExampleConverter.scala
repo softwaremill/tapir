@@ -16,10 +16,10 @@ private[openapi] object ExampleConverter {
     )
   }
 
-  def convertExamples[T](o: Codec[_, T, _], examples: List[EndpointIO.Example[T]]): Examples =
+  def convertExamples[T](o: Codec[?, T, ?], examples: List[EndpointIO.Example[T]]): Examples =
     convertExamples(examples)(exampleValue(o, _))
 
-  def convertExamples(s: TSchema[_], examples: List[EndpointIO.Example[_]]): Examples =
+  def convertExamples(s: TSchema[?], examples: List[EndpointIO.Example[?]]): Examples =
     convertExamples[Any](examples)(exampleValue(s, _))
 
   private def convertExamples[T](examples: List[EndpointIO.Example[T]])(exampleValue: T => Option[ExampleValue]): Examples = {

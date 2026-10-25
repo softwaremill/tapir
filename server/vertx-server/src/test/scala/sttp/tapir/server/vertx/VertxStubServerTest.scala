@@ -10,7 +10,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object VertxFutureCreateServerStubTest extends CreateServerStubTest[Future, VertxFutureServerOptions] {
   override def customiseInterceptors: CustomiseInterceptors[Future, VertxFutureServerOptions] =
     VertxFutureServerOptions.customiseInterceptors
-  override def stub: BackendStub[Future] = BackendStub(new FutureMonad()(ExecutionContext.global))
+  override def stub: BackendStub[Future] = BackendStub(new FutureMonad()(using ExecutionContext.global))
   override def asFuture[A]: Future[A] => Future[A] = identity
 }
 

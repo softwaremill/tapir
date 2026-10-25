@@ -17,10 +17,10 @@ import io.netty.channel.ServerChannel
 class ZioHttpTestServerInterpreter(
     groups: ServerEventLoopGroups,
     factory: ChannelFactory[ServerChannel]
-) extends TestServerInterpreter[Task, ZioStreams with WebSockets, ZioHttpServerOptions[Any], Routes[Any, Response]] {
+) extends TestServerInterpreter[Task, ZioStreams & WebSockets, ZioHttpServerOptions[Any], Routes[Any, Response]] {
 
   override def route(
-      es: List[ServerEndpoint[ZioStreams with WebSockets, Task]],
+      es: List[ServerEndpoint[ZioStreams & WebSockets, Task]],
       interceptors: Interceptors
   ): Routes[Any, Response] = {
     val serverOptions: ZioHttpServerOptions[Any] = interceptors(ZioHttpServerOptions.customiseInterceptors).options

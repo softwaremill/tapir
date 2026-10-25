@@ -2,7 +2,7 @@
 
 //> using dep com.softwaremill.sttp.tapir::tapir-core:1.13.33
 //> using dep com.softwaremill.sttp.tapir::tapir-http4s-server:1.13.33
-//> using dep com.softwaremill.sttp.client4::fs2:4.0.0-RC3
+//> using dep com.softwaremill.sttp.client4::fs2:4.0.27
 //> using dep org.http4s::http4s-ember-server:0.23.37
 
 package sttp.tapir.examples.streaming
@@ -47,7 +47,7 @@ object ProxyHttp4sFs2Server extends IOApp:
       logger.info(s"Proxying: $method $paths $queryParams ($filteredHeaders) -> $proxyUri")
       basicRequest
         .method(method, proxyUri)
-        .headers(filteredHeaders: _*)
+        .headers(filteredHeaders*)
         .streamBody(Fs2Streams[IO])(body)
         .response(asStreamAlwaysUnsafe(Fs2Streams[IO]))
         .send(backend)

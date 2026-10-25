@@ -12,23 +12,23 @@ import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 import concurrent.Future
 
-abstract class WebSocketSttpClientFs2TestsSender extends ClientTests[WebSockets with Fs2Streams[IO]] {
+abstract class WebSocketSttpClientFs2TestsSender extends ClientTests[WebSockets & Fs2Streams[IO]] {
   private implicit val ioRT: IORuntime = cats.effect.unsafe.implicits.global
 
   val (dispatcher, closeDispatcher) = Dispatcher.parallel[IO](false).allocated.unsafeRunSync()
   val backend: WebSocketBackend[IO] = HttpClientFs2Backend[IO](dispatcher).unsafeRunSync()
-  def wsToPipe: WebSocketToPipe[WebSockets with Fs2Streams[IO]]
+  def wsToPipe: WebSocketToPipe[WebSockets & Fs2Streams[IO]]
 
   override def send[A, I, E, O](
-      e: Endpoint[A, I, E, O, WebSockets with Fs2Streams[IO]],
+      e: Endpoint[A, I, E, O, WebSockets & Fs2Streams[IO]],
       port: Port,
       securityArgs: A,
       args: I,
       scheme: String = "http"
   ): Future[Either[E, O]] = {
-    implicit val wst: WebSocketToPipe[WebSockets with Fs2Streams[IO]] = wsToPipe
+    implicit val wst: WebSocketToPipe[WebSockets & Fs2Streams[IO]] = wsToPipe
     WebSocketSttpClientInterpreter()
-      .toSecureRequestThrowDecodeFailures[IO, A, I, E, O, WebSockets with Fs2Streams[IO]](e, Some(uri"$scheme://localhost:$port"))
+      .toSecureRequestThrowDecodeFailures[IO, A, I, E, O, WebSockets & Fs2Streams[IO]](e, Some(uri"$scheme://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)
@@ -37,14 +37,14 @@ abstract class WebSocketSttpClientFs2TestsSender extends ClientTests[WebSockets 
   }
 
   override def safeSend[A, I, E, O](
-      e: Endpoint[A, I, E, O, WebSockets with Fs2Streams[IO]],
+      e: Endpoint[A, I, E, O, WebSockets & Fs2Streams[IO]],
       port: Port,
       securityArgs: A,
       args: I
   ): Future[DecodeResult[Either[E, O]]] = {
-    implicit val wst: WebSocketToPipe[WebSockets with Fs2Streams[IO]] = wsToPipe
+    implicit val wst: WebSocketToPipe[WebSockets & Fs2Streams[IO]] = wsToPipe
     WebSocketSttpClientInterpreter()
-      .toSecureRequest[IO, A, I, E, O, WebSockets with Fs2Streams[IO]](e, Some(uri"http://localhost:$port"))
+      .toSecureRequest[IO, A, I, E, O, WebSockets & Fs2Streams[IO]](e, Some(uri"http://localhost:$port"))
       .apply(securityArgs)
       .apply(args)
       .send(backend)

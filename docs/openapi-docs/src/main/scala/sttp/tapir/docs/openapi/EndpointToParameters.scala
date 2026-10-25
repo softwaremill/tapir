@@ -10,20 +10,25 @@ private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) 
   // stateless, and derived from the same TSchemaToASchema as every other caller's instance
   private val codecToMediaType = new CodecToMediaType(tschemaToASchema)
 
-  def filterOutHiddenInputs(inputs: Vector[EndpointInput.Basic[_]]): Vector[EndpointInput.Basic[_]] = inputs.collect {
+  def filterOutUndocumentedInputs(inputs: Vector[EndpointInput.Basic[?]]): Vector[EndpointInput.Basic[?]] = inputs.collect {
     // EndpointInput.Basic is either OneOfBody or Atom
     case OneOfBody(variants, mapping) =>
       OneOfBody(
-        variants.filterNot(_.codec.schema.hidden),
+        variants.filterNot(v => isUndocumented(v.bodyAsAtom)),
         mapping
       )
-    case a: EndpointInput.Atom[_] if !a.codec.schema.hidden => a
+    case a: EndpointInput.Atom[_] if !isUndocumented(a) => a
+  }
+
+  private def isUndocumented(a: EndpointInput.Atom[_]): Boolean = a match {
+    case b: EndpointIO.Body[_, _] => b.isSecondary || b.codec.schema.hidden
+    case _                        => a.codec.schema.hidden
   }
 
   def withSourceAtoms(
-      inputs: Vector[EndpointInput.Basic[_]],
-      include: EndpointInput.Atom[_] => Boolean = _ => true
-  ): Vector[(EndpointInput.Atom[_], Parameter)] = {
+      inputs: Vector[EndpointInput.Basic[?]],
+      include: EndpointInput.Atom[?] => Boolean = _ => true
+  ): Vector[(EndpointInput.Atom[?], Parameter)] = {
     inputs.collect {
       case q: EndpointInput.Query[_] if include(q)       => (q, enrich(q, queryToParameter(q)))
       case p: EndpointInput.PathCapture[_] if include(p) => (p, enrich(p, pathCaptureToParameter(p)))
@@ -35,7 +40,7 @@ private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) 
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) =
     EndpointInputToParameterConverter.from(header, tschemaToASchema(header.codec))
-  private def fixedHeaderToParameter(header: EndpointIO.FixedHeader[_]) =
+  private def fixedHeaderToParameter(header: EndpointIO.FixedHeader[?]) =
     EndpointInputToParameterConverter.from(header, ASchema(ASchemaType.String))
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) =
     EndpointInputToParameterConverter.from(cookie, tschemaToASchema(cookie.codec))
@@ -49,9 +54,9 @@ private[openapi] class EndpointToParameters(tschemaToASchema: TSchemaToASchema) 
     case _ => EndpointInputToParameterConverter.from(query, codecToMediaType(query.codec, query.info.examples, None, Nil))
   }
 
-  private def enrich(e: EndpointInput.Atom[_], p: Parameter): Parameter = addExplode(e, p)
+  private def enrich(e: EndpointInput.Atom[?], p: Parameter): Parameter = addExplode(e, p)
 
-  private def addExplode(e: EndpointInput.Atom[_], p: Parameter): Parameter =
+  private def addExplode(e: EndpointInput.Atom[?], p: Parameter): Parameter =
     (e, e.codec.schema.attribute(Schema.Explode.Attribute)) match {
       // see https://swagger.io/specification/#parameter-object for defaults
       case ((_: EndpointInput.Query[_]), Some(Schema.Explode(false)))      => p.explode(false)

@@ -51,7 +51,7 @@ private[docs] object SecuritySchemesForEndpoints {
     case None => OAuthFlows(authorizationCode = Some(OAuthFlow(a.authorizationUrl, a.tokenUrl, a.refreshUrl, a.scopes)))
   }
 
-  private def authToSecurityScheme(a: EndpointInput.Auth[_, _ <: EndpointInput.AuthType], apiKeyAuthTypeName: String): SecurityScheme = {
+  private def authToSecurityScheme(a: EndpointInput.Auth[?, ? <: EndpointInput.AuthType], apiKeyAuthTypeName: String): SecurityScheme = {
     val extensions = DocsExtensions.fromIterable(a.docsExtensions)
     a.authType match {
       case EndpointInput.AuthType.ApiKey() =>
@@ -87,7 +87,7 @@ private[docs] object SecuritySchemesForEndpoints {
     }
   }
 
-  private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_]]) =
+  private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[?]]) =
     input match {
       case Vector(EndpointIO.Header(name, _, _))      => (name, "header")
       case Vector(EndpointInput.Query(name, _, _, _)) => (name, "query")

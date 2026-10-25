@@ -26,13 +26,13 @@ case class PartialServerEndpointSync[SECURITY_INPUT, PRINCIPAL, INPUT, ERROR_OUT
 
   override private[tapir] def withInput[I2, R2](
       input: EndpointInput[I2]
-  ): PartialServerEndpointSync[SECURITY_INPUT, PRINCIPAL, I2, ERROR_OUTPUT, OUTPUT, R with R2] =
+  ): PartialServerEndpointSync[SECURITY_INPUT, PRINCIPAL, I2, ERROR_OUTPUT, OUTPUT, R & R2] =
     copy(endpoint = endpoint.copy(input = input))
   override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]) = copy(endpoint = endpoint.copy(output = output))
   override private[tapir] def withErrorOutputVariant[E2, R2](
       errorOutput: EndpointOutput[E2],
       embedE: ERROR_OUTPUT => E2
-  ): PartialServerEndpointSync[SECURITY_INPUT, PRINCIPAL, INPUT, E2, OUTPUT, R with R2] =
+  ): PartialServerEndpointSync[SECURITY_INPUT, PRINCIPAL, INPUT, E2, OUTPUT, R & R2] =
     this.copy(
       endpoint = endpoint.copy(errorOutput = errorOutput),
       securityLogic = a =>

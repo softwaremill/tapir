@@ -15,7 +15,7 @@ trait OpenAPIDocsInterpreter {
   def toOpenAPI[A, I, E, O, R](e: Endpoint[A, I, E, O, R], info: Info): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, Seq(e), openAPIDocsOptions, List.empty)
 
-  def toOpenAPI[A, I, E, O, R](e: Endpoint[A, I, E, O, R], info: Info, docsExtensions: List[DocsExtension[_]]): OpenAPI =
+  def toOpenAPI[A, I, E, O, R](e: Endpoint[A, I, E, O, R], info: Info, docsExtensions: List[DocsExtension[?]]): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, Seq(e), openAPIDocsOptions, docsExtensions)
 
   def toOpenAPI[R, F[_]](se: ServerEndpoint[R, F], title: String, version: String): OpenAPI =
@@ -27,7 +27,7 @@ trait OpenAPIDocsInterpreter {
   def toOpenAPI[R, F[_]](
       se: ServerEndpoint[R, F],
       info: Info,
-      docsExtensions: List[DocsExtension[_]]
+      docsExtensions: List[DocsExtension[?]]
   ): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, Seq(se.endpoint), openAPIDocsOptions, docsExtensions)
 
@@ -37,19 +37,19 @@ trait OpenAPIDocsInterpreter {
   def toOpenAPI(es: Iterable[AnyEndpoint], info: Info): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, es, openAPIDocsOptions, List.empty)
 
-  def toOpenAPI(es: Iterable[AnyEndpoint], info: Info, docsExtensions: List[DocsExtension[_]]): OpenAPI =
+  def toOpenAPI(es: Iterable[AnyEndpoint], info: Info, docsExtensions: List[DocsExtension[?]]): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, es, openAPIDocsOptions, docsExtensions)
 
-  def serverEndpointsToOpenAPI[F[_]](ses: Iterable[ServerEndpoint[_, F]], title: String, version: String): OpenAPI =
+  def serverEndpointsToOpenAPI[F[_]](ses: Iterable[ServerEndpoint[?, F]], title: String, version: String): OpenAPI =
     serverEndpointsToOpenAPI(ses, Info(title, version))
 
-  def serverEndpointsToOpenAPI[F[_]](ses: Iterable[ServerEndpoint[_, F]], info: Info): OpenAPI =
+  def serverEndpointsToOpenAPI[F[_]](ses: Iterable[ServerEndpoint[?, F]], info: Info): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, ses.map(_.endpoint), openAPIDocsOptions, List.empty)
 
   def serverEndpointsToOpenAPI[F[_]](
-      ses: Iterable[ServerEndpoint[_, F]],
+      ses: Iterable[ServerEndpoint[?, F]],
       info: Info,
-      docsExtensions: List[DocsExtension[_]]
+      docsExtensions: List[DocsExtension[?]]
   ): OpenAPI =
     EndpointToOpenAPIDocs.toOpenAPI(info, ses.map(_.endpoint), openAPIDocsOptions, docsExtensions)
 }

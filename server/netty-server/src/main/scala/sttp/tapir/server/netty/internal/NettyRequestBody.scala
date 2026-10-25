@@ -88,8 +88,10 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
       bodyType: RawBodyType[RAW],
       maxBytes: Option[Long]
   ): F[RawValue[RAW]] = bodyType match {
-    case RawBodyType.StringBody(charset) =>
-      readAllBytes(serverRequest, maxBytes).map(bs => RawValue(new String(bs, charset)))
+    case RawBodyType.StringBody(defaultCharset) =>
+      readAllBytes(serverRequest, maxBytes).map(bs =>
+        RawValue(new String(bs, RequestBody.requestCharset(serverRequest).getOrElse(defaultCharset)))
+      )
     case RawBodyType.ByteArrayBody =>
       readAllBytes(serverRequest, maxBytes).map(RawValue(_))
     case RawBodyType.ByteBufferBody =>

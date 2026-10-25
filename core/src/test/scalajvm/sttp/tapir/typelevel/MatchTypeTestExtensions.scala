@@ -4,7 +4,7 @@ trait MatchTypeTestExtensions {
   val t: Byte = 0xf.toByte
   val s: Short = 1
 
-  val matcherAndTypes: Seq[(MatchType[_], Any)] = Seq(
+  val matcherAndTypes: Seq[(MatchType[?], Any)] = Seq(
     implicitly[MatchType[String]] -> "string",
     implicitly[MatchType[Boolean]] -> true,
     implicitly[MatchType[Char]] -> 'c',
