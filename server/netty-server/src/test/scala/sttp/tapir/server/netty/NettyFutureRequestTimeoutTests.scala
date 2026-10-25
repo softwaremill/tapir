@@ -30,8 +30,8 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
     interval = org.scalatest.time.Span(150, org.scalatest.time.Millis)
   )
 
-  private val rawSocketServer = new RawSocketTestServer(eventLoopGroup)
-  import rawSocketServer._
+  private val timingOutRequest = new TimingOutRequestSpecData(eventLoopGroup)
+  import timingOutRequest._
 
   def tests(): List[Test] = List(
     Test("properly update metrics when a request times out") {

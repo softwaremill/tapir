@@ -12,8 +12,7 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
-/** Runs servers which are tested by sending raw HTTP bytes over a socket, giving control over when each part of a request is sent. */
-class RawSocketTestServer(eventLoopGroup: EventLoopGroup)(implicit ec: ExecutionContext) {
+class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: ExecutionContext) {
 
   val completeBody: Array[Byte] = "test".getBytes(US_ASCII)
   val slowBody: Array[Byte] = "slow".getBytes(US_ASCII)
@@ -22,8 +21,8 @@ class RawSocketTestServer(eventLoopGroup: EventLoopGroup)(implicit ec: Execution
   private val socketReadTimeout = shortRequestTimeout * 20
   private val slowBodyString = new String(slowBody, US_ASCII)
 
-  def requestHead(port: Int, contentLength: Int, method: String = "PUT", extraHeaders: String = ""): Array[Byte] =
-    s"$method / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: $contentLength\r\n$extraHeaders\r\n"
+  def requestHead(port: Int, contentLength: Int): Array[Byte] =
+    s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: $contentLength\r\n\r\n"
       .getBytes(US_ASCII)
 
   def incompleteRequestHead(port: Int): Array[Byte] = requestHead(port, contentLength = 10000)
@@ -34,27 +33,10 @@ class RawSocketTestServer(eventLoopGroup: EventLoopGroup)(implicit ec: Execution
       socket.getOutputStream.flush()
     }
 
-  /** Reads the status line and the `Content-Length`-delimited body of a response. */
-  def readStatusLineAndBody(socket: Socket): IO[(String, String)] = IO.blocking {
-    val in = new BufferedReader(new InputStreamReader(socket.getInputStream, US_ASCII))
-    val statusLine = in.readLine()
-    val headers = Iterator.continually(in.readLine()).takeWhile(line => line != null && line.nonEmpty).toList
-    val contentLength =
-      headers.collectFirst { case h if h.toLowerCase.startsWith("content-length:") => h.substring("content-length:".length).trim.toInt }
-    val body = new Array[Char](contentLength.getOrElse(0))
-    var read = 0
-    while (read < body.length) {
-      val n = in.read(body, read, body.length - read)
-      if (n == -1) throw new IllegalStateException(s"Connection closed after $read of ${body.length} body characters")
-      read += n
-    }
-    (statusLine, new String(body))
-  }
-
   def readStatusLine(socket: Socket): IO[String] = IO.blocking {
     val in = new BufferedReader(new InputStreamReader(socket.getInputStream, US_ASCII))
     val statusLine = in.readLine()
-    val headers = Iterator.continually(in.readLine()).takeWhile(line => line != null && line.nonEmpty).toList
+    val headers = Iterator.continually(in.readLine()).takeWhile(_.nonEmpty).toList
 
     if (headers.exists(_.toLowerCase.contains("chunked"))) {
       var chunkSize = in.readLine()
@@ -70,15 +52,7 @@ class RawSocketTestServer(eventLoopGroup: EventLoopGroup)(implicit ec: Execution
   /** Runs `interact` against a server with a short request timeout. A request with `slowBody` is only answered after `interact` completes,
     * so the request timeout is guaranteed to fire first, regardless of how long the JVM is stalled for.
     */
-  def statusLinesFromShortTimeoutServer(interact: (Socket, Int) => IO[List[String]]): IO[List[String]] =
-    statusLinesFromServer(_.requestTimeout(shortRequestTimeout))(interact)
-
-  def statusLinesFromDefaultServer(interact: (Socket, Int) => IO[List[String]]): IO[List[String]] =
-    statusLinesFromServer(identity)(interact)
-
-  private def statusLinesFromServer(
-      configure: NettyConfig => NettyConfig
-  )(interact: (Socket, Int) => IO[List[String]]): IO[List[String]] = {
+  def statusLinesFromShortTimeoutServer(interact: (Socket, Int) => IO[List[String]]): IO[List[String]] = {
     val interactionDone = new CountDownLatch(1)
     val e = endpoint.put
       .in(stringBody)
@@ -93,8 +67,9 @@ class RawSocketTestServer(eventLoopGroup: EventLoopGroup)(implicit ec: Execution
       .randomPort
       .withDontShutdownEventLoopGroupOnClose
       .noGracefulShutdown
+      .requestTimeout(shortRequestTimeout)
 
-    val bind = IO.fromFuture(IO.delay(NettyFutureServer(configure(serverConfig)).addEndpoints(List(e)).start()))
+    val bind = IO.fromFuture(IO.delay(NettyFutureServer(serverConfig).addEndpoints(List(e)).start()))
 
     Resource
       .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))

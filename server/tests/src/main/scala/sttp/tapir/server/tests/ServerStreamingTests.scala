@@ -16,9 +16,12 @@ import cats.effect.IO
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.HttpVersion
 
+import java.nio.charset.StandardCharsets
+
 class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](
     createServerTest: CreateServerTest[F, S, OPTIONS, ROUTE],
-    maxLengthSupported: Boolean = true
+    maxLengthSupported: Boolean = true,
+    expectContinueSupported: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
@@ -140,8 +143,28 @@ class ServerStreamingTests[F[_], S, OPTIONS, ROUTE](
       }
     )
 
-    if (maxLengthSupported)
-      baseTests ++ maxContentLengthTests
-    else baseTests
+    val expectContinueTests = List(
+      // separate from the non-streaming case, as here the request body is read only while the response body is written, i.e. after the
+      // response headers
+      testServer(in_stream_out_stream(streams), "with Expect: 100-continue")((s: streams.BinaryStream) => pureResult(s.asRight[Unit])) {
+        (_, baseUri) =>
+          val port = baseUri.port.get
+          val requestHead =
+            s"POST /api/echo HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: ${penPineapple.length}\r\nExpect: 100-continue\r\n\r\n"
+
+          rawSocket(port).use { socket =>
+            for {
+              _ <- sendRaw(socket, requestHead.getBytes(StandardCharsets.UTF_8))
+              continue <- readRawResponse(socket)
+              _ <- sendRaw(socket, penPineapple.getBytes(StandardCharsets.UTF_8))
+              response <- readRawResponse(socket)
+            } yield List(continue, response) shouldBe List((100, ""), (200, penPineapple))
+          }
+      }
+    )
+
+    baseTests ++
+      (if (maxLengthSupported) maxContentLengthTests else Nil) ++
+      (if (expectContinueSupported) expectContinueTests else Nil)
   }
 }

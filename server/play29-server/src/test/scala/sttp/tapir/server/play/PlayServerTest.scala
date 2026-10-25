@@ -112,7 +112,7 @@ class PlayServerTest extends TestSuite {
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new AllServerTests(createServerTest, interpreter, backend, basic = false, multipart = false, options = false, metrics = false)
           .tests() ++
-        new ServerStreamingTests(createServerTest).tests(AkkaStreams)(drainAkka) ++
+        new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(AkkaStreams)(drainAkka) ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(
           createServerTest,

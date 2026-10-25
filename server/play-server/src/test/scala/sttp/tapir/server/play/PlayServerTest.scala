@@ -120,7 +120,7 @@ class PlayServerTest extends TestSuite {
           options = false,
           metrics = false
         ).tests() ++
-        new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
+        new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(PekkoStreams)(drainPekko) ++
         new PlayServerWithContextTest(backend).tests() ++
         new ServerWebSocketTests(
           createServerTest,

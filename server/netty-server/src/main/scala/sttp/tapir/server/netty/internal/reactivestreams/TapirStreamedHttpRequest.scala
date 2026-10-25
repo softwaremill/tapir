@@ -7,7 +7,7 @@ import org.reactivestreams.{Subscriber, Subscription}
 
 /** A delegating [[StreamedHttpRequest]], which additionally:
   *   - tracks if the request body was ever subscribed to, so that an unused body can be discarded (#4539)
-  *   - tracks if any of the request body was ever requested, which is when `HttpStreamsServerHandler` sends `100 Continue` (#5503)
+  *   - tracks if any of the request body was ever requested, to know if `HttpStreamsServerHandler` sent `100 Continue` (#5503)
   *   - fails the body stream if it ends before the declared `Content-Length` is received (#4169)
   */
 private[netty] class TapirStreamedHttpRequest(request: StreamedHttpRequest) extends StreamedHttpRequest {

@@ -253,8 +253,8 @@ class NettyServerHandler[F[_]](
       logger.info("Rejecting request, server is shutting down")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
-      // `Expect: 100-continue` is handled by HttpStreamsServerHandler: it sends `100 Continue` when the body is first requested, and
-      // closes the connection if a response is sent without reading the body (#5503); see also `sendContinueIfBodyNotRequested`
+      // `100 Continue` is left to HttpStreamsServerHandler, so that it's sent only if the body is read, and clients don't upload bodies
+      // that are then discarded (#5503)
       request match {
         case full: FullHttpRequest =>
           val req = full.retain()
@@ -344,13 +344,12 @@ class NettyServerHandler[F[_]](
       }
     )
 
-  /** A streamed response might read the request body only after the response headers are written - e.g. when echoing the request body. By
-    * then, `HttpStreamsServerHandler` no longer sends `100 Continue`, so the client might never send the body (#5503).
+  /** Needed as a streamed response might read the request body only after the response headers are written (e.g. an echo). By then,
+    * `HttpStreamsServerHandler` no longer sends `100 Continue`, and the client would never send the body (#5503).
     */
   private def sendContinueIfBodyNotRequested(ctx: ChannelHandlerContext, req: HttpRequest): Unit = req match {
     case r: TapirStreamedHttpRequest if !r.wasRequested && HttpUtil.is100ContinueExpected(r) =>
-      // writing past HttpStreamsServerHandler, which would otherwise count this as the response; it still closes the connection after the
-      // response, as from its perspective, the body wasn't requested before the response was sent
+      // written past HttpStreamsServerHandler, so that it isn't taken as the response; the connection is still closed after the response
       val streamsHandlerCtx = ctx.pipeline().context(classOf[HttpStreamsServerHandler])
       if (streamsHandlerCtx != null) {
         val _ = streamsHandlerCtx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))

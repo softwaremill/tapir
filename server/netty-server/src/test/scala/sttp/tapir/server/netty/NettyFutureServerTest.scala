@@ -2,7 +2,6 @@ package sttp.tapir.server.netty
 
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
-import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
@@ -14,6 +13,7 @@ import sttp.tapir.server.tests._
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.client4._
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 
@@ -34,7 +34,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
               new ServerIncompleteRequestBodyTests(createServerTest).tests() ++
               new NettyFutureRequestTimeoutTests(eventLoopGroup, backend).tests() ++
               additionalTests(backend) ++
-              expectContinueTests(eventLoopGroup)
+              expectContinueTests(createServerTest)
 
           (tests, eventLoopGroup)
         }) { case (_, eventLoopGroup) =>
@@ -72,37 +72,22 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
     }
   )
 
-  private def expectContinueTests(eventLoopGroup: EventLoopGroup): List[Test] = {
-    import cats.effect.unsafe.implicits.global
-    val rawSocketServer = new RawSocketTestServer(eventLoopGroup)
-    import rawSocketServer._
-
+  // Netty-specific, as other servers might instead read and discard the body; the same for all Netty interpreters, so tested once
+  private def expectContinueTests(createServerTest: CreateServerTest[Future, Any, NettyFutureServerOptions, FutureRoute]): List[Test] =
     List(
-      Test("respond to requests with Expect: 100-continue, keeping the connection open") {
-        statusLinesFromDefaultServer { (socket, port) =>
+      createServerTest.testServerLogic(
+        endpoint.post.in("expect").out(stringBody).serverLogicSuccess[Future](_ => Future.successful("ok")),
+        "respond without 100 Continue and close the connection, if the request body is not read"
+      ) { (_, baseUri) =>
+        val port = baseUri.port.get
+        val requestHead = s"POST /expect HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
+        rawSocket(port).use { socket =>
           for {
-            _ <- send(socket, requestHead(port, completeBody.length, extraHeaders = "Expect: 100-continue\r\n"))
-            continue <- readStatusLine(socket)
-            _ <- send(socket, completeBody)
-            response <- readStatusLineAndBody(socket)
-            _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
-            second <- readStatusLine(socket)
-          } yield List(continue, response._1, response._2, second)
-        }.map { statusLines =>
-          statusLines shouldBe List("HTTP/1.1 100 Continue", "HTTP/1.1 200 OK", "test", "HTTP/1.1 200 OK")
-        }.unsafeToFuture()
-      },
-      Test("respond without 100 Continue and close the connection, if the request body is not read") {
-        statusLinesFromDefaultServer { (socket, port) =>
-          for {
-            _ <- send(socket, requestHead(port, completeBody.length, method = "POST", extraHeaders = "Expect: 100-continue\r\n"))
-            response <- readStatusLine(socket)
+            _ <- sendRaw(socket, requestHead.getBytes(StandardCharsets.UTF_8))
+            response <- readRawResponse(socket)
             afterResponse <- IO.blocking(socket.getInputStream.read())
-          } yield List(response, afterResponse.toString)
-        }.map { statusLines =>
-          statusLines shouldBe List("HTTP/1.1 405 Method Not Allowed", "-1")
-        }.unsafeToFuture()
+          } yield (response, afterResponse) shouldBe (((200, "ok"), -1))
+        }
       }
     )
-  }
 }
