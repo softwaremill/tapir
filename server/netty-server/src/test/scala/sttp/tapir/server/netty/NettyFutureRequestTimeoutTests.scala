@@ -20,7 +20,6 @@ import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
-import java.nio.charset.StandardCharsets.US_ASCII
 
 class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]])(implicit
     ec: ExecutionContext
@@ -109,19 +108,29 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         statusLines shouldBe List("HTTP/1.1 408 Request Timeout")
       }.unsafeToFuture()
     },
-    Test("respond to requests with Expect: 100-continue") {
+    Test("respond to requests with Expect: 100-continue, keeping the connection open") {
       statusLinesFromShortTimeoutServer { (socket, port) =>
-        val requestHead =
-          s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: ${completeBody.length}\r\nExpect: 100-continue\r\n\r\n"
-            .getBytes(US_ASCII)
         for {
-          _ <- send(socket, requestHead)
+          _ <- send(socket, requestHead(port, completeBody.length, extraHeaders = "Expect: 100-continue\r\n"))
           continue <- readStatusLine(socket)
           _ <- send(socket, completeBody)
-          response <- readStatusLine(socket)
-        } yield List(continue, response)
+          response <- readStatusLineAndBody(socket)
+          _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
+          second <- readStatusLine(socket)
+        } yield List(continue, response._1, response._2, second)
       }.map { statusLines =>
-        statusLines shouldBe List("HTTP/1.1 100 Continue", "HTTP/1.1 200 OK")
+        statusLines shouldBe List("HTTP/1.1 100 Continue", "HTTP/1.1 200 OK", "test", "HTTP/1.1 200 OK")
+      }.unsafeToFuture()
+    },
+    Test("respond without 100 Continue and close the connection, if the request body is not read") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        for {
+          _ <- send(socket, requestHead(port, completeBody.length, method = "POST", extraHeaders = "Expect: 100-continue\r\n"))
+          response <- readStatusLine(socket)
+          afterResponse <- IO.blocking(socket.getInputStream.read())
+        } yield List(response, afterResponse.toString)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 405 Method Not Allowed", "-1")
       }.unsafeToFuture()
     },
     Test("respond with status 408 for an incomplete request following a complete one on the same connection") {

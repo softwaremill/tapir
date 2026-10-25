@@ -21,8 +21,8 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
   private val socketReadTimeout = shortRequestTimeout * 20
   private val slowBodyString = new String(slowBody, US_ASCII)
 
-  def requestHead(port: Int, contentLength: Int): Array[Byte] =
-    s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: $contentLength\r\n\r\n"
+  def requestHead(port: Int, contentLength: Int, method: String = "PUT", extraHeaders: String = ""): Array[Byte] =
+    s"$method / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: $contentLength\r\n$extraHeaders\r\n"
       .getBytes(US_ASCII)
 
   def incompleteRequestHead(port: Int): Array[Byte] = requestHead(port, contentLength = 10000)
@@ -32,6 +32,23 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
       socket.getOutputStream.write(bytes)
       socket.getOutputStream.flush()
     }
+
+  /** Reads the status line and the `Content-Length`-delimited body of a response. */
+  def readStatusLineAndBody(socket: Socket): IO[(String, String)] = IO.blocking {
+    val in = new BufferedReader(new InputStreamReader(socket.getInputStream, US_ASCII))
+    val statusLine = in.readLine()
+    val headers = Iterator.continually(in.readLine()).takeWhile(line => line != null && line.nonEmpty).toList
+    val contentLength =
+      headers.collectFirst { case h if h.toLowerCase.startsWith("content-length:") => h.substring("content-length:".length).trim.toInt }
+    val body = new Array[Char](contentLength.getOrElse(0))
+    var read = 0
+    while (read < body.length) {
+      val n = in.read(body, read, body.length - read)
+      if (n == -1) throw new IllegalStateException(s"Connection closed after $read of ${body.length} body characters")
+      read += n
+    }
+    (statusLine, new String(body))
+  }
 
   def readStatusLine(socket: Socket): IO[String] = IO.blocking {
     val in = new BufferedReader(new InputStreamReader(socket.getInputStream, US_ASCII))

@@ -43,7 +43,6 @@ class NettyZioServerTest extends TestSuite with EitherValues {
             ).tests() ++
               new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
               new ServerCancellationTests(createServerTest)(using monadError, asyncInstance).tests() ++
-              new ServerExpectContinueTests(createServerTest).tests() ++
               new ServerGracefulShutdownTests(createServerTest, zioSleeper).tests()
 
           IO.pure((tests, eventLoopGroup))
