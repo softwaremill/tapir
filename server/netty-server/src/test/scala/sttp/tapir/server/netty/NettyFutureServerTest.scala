@@ -2,6 +2,7 @@ package sttp.tapir.server.netty
 
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
+import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
@@ -32,7 +33,8 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
               new ServerGracefulShutdownTests(createServerTest, Sleeper.futureSleeper).tests() ++
               new ServerIncompleteRequestBodyTests(createServerTest).tests() ++
               new NettyFutureRequestTimeoutTests(eventLoopGroup, backend).tests() ++
-              additionalTests(backend)
+              additionalTests(backend) ++
+              expectContinueTests(eventLoopGroup)
 
           (tests, eventLoopGroup)
         }) { case (_, eventLoopGroup) =>
@@ -69,4 +71,38 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
         .unsafeToFuture()
     }
   )
+
+  private def expectContinueTests(eventLoopGroup: EventLoopGroup): List[Test] = {
+    import cats.effect.unsafe.implicits.global
+    val rawSocketServer = new RawSocketTestServer(eventLoopGroup)
+    import rawSocketServer._
+
+    List(
+      Test("respond to requests with Expect: 100-continue, keeping the connection open") {
+        statusLinesFromDefaultServer { (socket, port) =>
+          for {
+            _ <- send(socket, requestHead(port, completeBody.length, extraHeaders = "Expect: 100-continue\r\n"))
+            continue <- readStatusLine(socket)
+            _ <- send(socket, completeBody)
+            response <- readStatusLineAndBody(socket)
+            _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
+            second <- readStatusLine(socket)
+          } yield List(continue, response._1, response._2, second)
+        }.map { statusLines =>
+          statusLines shouldBe List("HTTP/1.1 100 Continue", "HTTP/1.1 200 OK", "test", "HTTP/1.1 200 OK")
+        }.unsafeToFuture()
+      },
+      Test("respond without 100 Continue and close the connection, if the request body is not read") {
+        statusLinesFromDefaultServer { (socket, port) =>
+          for {
+            _ <- send(socket, requestHead(port, completeBody.length, method = "POST", extraHeaders = "Expect: 100-continue\r\n"))
+            response <- readStatusLine(socket)
+            afterResponse <- IO.blocking(socket.getInputStream.read())
+          } yield List(response, afterResponse.toString)
+        }.map { statusLines =>
+          statusLines shouldBe List("HTTP/1.1 405 Method Not Allowed", "-1")
+        }.unsafeToFuture()
+      }
+    )
+  }
 }

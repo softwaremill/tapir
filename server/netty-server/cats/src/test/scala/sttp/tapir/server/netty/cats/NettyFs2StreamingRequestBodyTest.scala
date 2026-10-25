@@ -15,7 +15,7 @@ import java.net.Socket
 import java.nio.charset.StandardCharsets
 import scala.concurrent.duration._
 
-class NettyFs2StreamingInterruptedTest[OPTIONS, ROUTE](createServerTest: CreateServerTest[IO, Fs2Streams[IO], OPTIONS, ROUTE]) {
+class NettyFs2StreamingRequestBodyTest[OPTIONS, ROUTE](createServerTest: CreateServerTest[IO, Fs2Streams[IO], OPTIONS, ROUTE]) {
   import createServerTest._
 
   implicit val m: MonadError[IO] = new CatsMonadError[IO]()

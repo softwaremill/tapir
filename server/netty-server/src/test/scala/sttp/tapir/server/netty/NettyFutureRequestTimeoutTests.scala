@@ -30,8 +30,8 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
     interval = org.scalatest.time.Span(150, org.scalatest.time.Millis)
   )
 
-  private val timingOutRequest = new TimingOutRequestSpecData(eventLoopGroup)
-  import timingOutRequest._
+  private val rawSocketServer = new RawSocketTestServer(eventLoopGroup)
+  import rawSocketServer._
 
   def tests(): List[Test] = List(
     Test("properly update metrics when a request times out") {
@@ -106,31 +106,6 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         } yield List(status)
       }.map { statusLines =>
         statusLines shouldBe List("HTTP/1.1 408 Request Timeout")
-      }.unsafeToFuture()
-    },
-    Test("respond to requests with Expect: 100-continue, keeping the connection open") {
-      statusLinesFromShortTimeoutServer { (socket, port) =>
-        for {
-          _ <- send(socket, requestHead(port, completeBody.length, extraHeaders = "Expect: 100-continue\r\n"))
-          continue <- readStatusLine(socket)
-          _ <- send(socket, completeBody)
-          response <- readStatusLineAndBody(socket)
-          _ <- send(socket, requestHead(port, completeBody.length) ++ completeBody)
-          second <- readStatusLine(socket)
-        } yield List(continue, response._1, response._2, second)
-      }.map { statusLines =>
-        statusLines shouldBe List("HTTP/1.1 100 Continue", "HTTP/1.1 200 OK", "test", "HTTP/1.1 200 OK")
-      }.unsafeToFuture()
-    },
-    Test("respond without 100 Continue and close the connection, if the request body is not read") {
-      statusLinesFromShortTimeoutServer { (socket, port) =>
-        for {
-          _ <- send(socket, requestHead(port, completeBody.length, method = "POST", extraHeaders = "Expect: 100-continue\r\n"))
-          response <- readStatusLine(socket)
-          afterResponse <- IO.blocking(socket.getInputStream.read())
-        } yield List(response, afterResponse.toString)
-      }.map { statusLines =>
-        statusLines shouldBe List("HTTP/1.1 405 Method Not Allowed", "-1")
       }.unsafeToFuture()
     },
     Test("respond with status 408 for an incomplete request following a complete one on the same connection") {

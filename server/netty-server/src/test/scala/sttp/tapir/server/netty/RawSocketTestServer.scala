@@ -12,7 +12,8 @@ import java.util.concurrent.{CountDownLatch, TimeUnit}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
-class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: ExecutionContext) {
+/** Runs servers which are tested by sending raw HTTP bytes over a socket, giving control over when each part of a request is sent. */
+class RawSocketTestServer(eventLoopGroup: EventLoopGroup)(implicit ec: ExecutionContext) {
 
   val completeBody: Array[Byte] = "test".getBytes(US_ASCII)
   val slowBody: Array[Byte] = "slow".getBytes(US_ASCII)
@@ -69,7 +70,15 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
   /** Runs `interact` against a server with a short request timeout. A request with `slowBody` is only answered after `interact` completes,
     * so the request timeout is guaranteed to fire first, regardless of how long the JVM is stalled for.
     */
-  def statusLinesFromShortTimeoutServer(interact: (Socket, Int) => IO[List[String]]): IO[List[String]] = {
+  def statusLinesFromShortTimeoutServer(interact: (Socket, Int) => IO[List[String]]): IO[List[String]] =
+    statusLinesFromServer(_.requestTimeout(shortRequestTimeout))(interact)
+
+  def statusLinesFromDefaultServer(interact: (Socket, Int) => IO[List[String]]): IO[List[String]] =
+    statusLinesFromServer(identity)(interact)
+
+  private def statusLinesFromServer(
+      configure: NettyConfig => NettyConfig
+  )(interact: (Socket, Int) => IO[List[String]]): IO[List[String]] = {
     val interactionDone = new CountDownLatch(1)
     val e = endpoint.put
       .in(stringBody)
@@ -84,9 +93,8 @@ class TimingOutRequestSpecData(eventLoopGroup: EventLoopGroup)(implicit ec: Exec
       .randomPort
       .withDontShutdownEventLoopGroupOnClose
       .noGracefulShutdown
-      .requestTimeout(shortRequestTimeout)
 
-    val bind = IO.fromFuture(IO.delay(NettyFutureServer(serverConfig).addEndpoints(List(e)).start()))
+    val bind = IO.fromFuture(IO.delay(NettyFutureServer(configure(serverConfig)).addEndpoints(List(e)).start()))
 
     Resource
       .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
