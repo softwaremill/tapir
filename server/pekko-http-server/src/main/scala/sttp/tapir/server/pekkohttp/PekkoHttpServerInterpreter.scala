@@ -63,10 +63,14 @@ trait PekkoHttpServerInterpreter {
         )
 
         extractRequestContext { ctx =>
-          val serverRequest = PekkoServerRequest(ctx)
+          val expectContinue = PekkoExpectContinue(ctx.request)
+          val serverRequest = expectContinue.foldLeft(PekkoServerRequest(ctx))(_.attribute(PekkoExpectContinue.Key, _))
           onSuccess(interpreter(serverRequest)) {
             case RequestResult.Failure(_)            => reject
-            case RequestResult.Response(response, _) => serverResponseToPekko(response, serverRequest.method)
+            case RequestResult.Response(response, _) =>
+              onSuccess(expectContinue.fold(Future.successful(()))(_.beforeResponse(response.body))) {
+                serverResponseToPekko(response, serverRequest.method)
+              }
           }
         }
       }

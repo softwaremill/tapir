@@ -118,3 +118,7 @@ ZioHttpInterpreter(ZioHttpServerOptions.customiseInterceptors[Any].exceptionHand
 
 The interpreter can be configured by providing an `ZioHttpServerOptions` value, see
 [server options](options.md) for details.
+
+`Expect: 100-continue` is handled by zio-http. With request streaming enabled (`enableRequestStreaming`, or
+`hybridRequestStreaming` for large bodies), set `Server.Config.acceptContinue(true)`, as otherwise clients which wait for
+`100 Continue` before sending the body hang.

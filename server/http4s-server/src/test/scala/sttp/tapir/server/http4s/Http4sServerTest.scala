@@ -175,7 +175,8 @@ class Http4sServerTest[R >: Fs2Streams[IO] & WebSockets] extends TestSuite with 
     def drainFs2(stream: Fs2Streams[IO]#BinaryStream): IO[Unit] =
       stream.compile.drain.void
 
-    // Ember never sends 100 Continue
+    // Ember never sends 100 Continue, and gives the app no way to send it
+    // https://github.com/http4s/http4s/issues/6411
     new AllServerTests(createServerTest, interpreter, backend, expectContinue = false).tests() ++
       new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(Fs2Streams[IO])(drainFs2) ++
       new ServerWebSocketTests(

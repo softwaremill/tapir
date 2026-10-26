@@ -25,7 +25,8 @@ private[akkahttp] class AkkaRequestBody(serverOptions: AkkaHttpServerOptions)(im
     toRawFromEntity(request, requestEntity(request, maxBytes), bodyType, RequestBody.requestCharset(request))
 
   override def toStream(request: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
-    requestEntity(request, maxBytes).dataBytes
+    val body = requestEntity(request, maxBytes).dataBytes
+    request.attribute(AkkaExpectContinue.Key).fold[streams.BinaryStream](body)(_.bodyGivenToServerLogic(body))
   }
 
   private def requestEntity(request: ServerRequest, maxBytes: Option[Long]): RequestEntity = {

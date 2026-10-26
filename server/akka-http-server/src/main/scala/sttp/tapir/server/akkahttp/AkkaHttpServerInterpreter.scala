@@ -63,10 +63,14 @@ trait AkkaHttpServerInterpreter {
         )
 
         extractRequestContext { ctx =>
-          val serverRequest = AkkaServerRequest(ctx)
+          val expectContinue = AkkaExpectContinue(ctx.request)
+          val serverRequest = expectContinue.foldLeft(AkkaServerRequest(ctx))(_.attribute(AkkaExpectContinue.Key, _))
           onSuccess(interpreter(serverRequest)) {
             case RequestResult.Failure(_)            => reject
-            case RequestResult.Response(response, _) => serverResponseToAkka(response, serverRequest.method)
+            case RequestResult.Response(response, _) =>
+              onSuccess(expectContinue.fold(Future.successful(()))(_.beforeResponse(response.body))) {
+                serverResponseToAkka(response, serverRequest.method)
+              }
           }
         }
       }

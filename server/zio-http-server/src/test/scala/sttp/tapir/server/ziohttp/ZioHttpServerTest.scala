@@ -340,8 +340,7 @@ class ZioHttpServerTest extends TestSuite {
           multipleValueHeaderSupport = false,
           supportsMultipleSetCookieHeaders = false,
           invulnerableToUnsanitizedHeaders = false,
-          maxContentLength = true,
-          expectContinueSupported = false // zio-http never sends 100 Continue
+          maxContentLength = true
         ).tests() ++
           new AllServerTests(
             createServerTest,
@@ -353,8 +352,7 @@ class ZioHttpServerTest extends TestSuite {
             metrics = false
           ).tests() ++
           new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
-          // zio-http never sends 100 Continue
-          new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(ZioStreams)(drainZStream) ++
+          new ServerStreamingTests(createServerTest).tests(ZioStreams)(drainZStream) ++
           new ZioHttpCompositionTest(createServerTest).tests() ++
           new ServerWebSocketTests(
             createServerTest,

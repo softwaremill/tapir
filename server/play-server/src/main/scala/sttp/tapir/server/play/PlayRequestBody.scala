@@ -32,8 +32,9 @@ private[play] class PlayRequestBody(serverOptions: PlayServerOptions)(implicit
   }
 
   override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
-    val stream = playRequest(serverRequest).body
-    maxBytes.map(PekkoStreams.limitBytes(stream, _)).getOrElse(stream)
+    val body = playRequest(serverRequest).body
+    val stream = maxBytes.map(PekkoStreams.limitBytes(body, _)).getOrElse(body)
+    serverRequest.attribute(PlayExpectContinue.Key).fold[streams.BinaryStream](stream)(_.bodyGivenToServerLogic(stream))
   }
 
   private def toRaw[R](

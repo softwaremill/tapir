@@ -46,6 +46,7 @@ class ZioHttpTestServerInterpreter(
             Server.Config.default
               .port(0)
               .enableRequestStreaming
+              .acceptContinue(true)
               .gracefulShutdownTimeout(gracefulShutdownTimeout.map(Duration.fromScala).getOrElse(50.millis))
           )
         )

@@ -98,9 +98,14 @@ trait PlayServerInterpreter {
           header: RequestHeader,
           request: Request[AkkaStreams.BinaryStream]
       ): Future[Either[Result, Flow[Message, Message, Any]]] = {
-        val serverRequest = PlayServerRequest(header, request)
+        val expectContinue = PlayExpectContinue(header)
+        val serverRequest = expectContinue.foldLeft(PlayServerRequest(header, request))(_.attribute(PlayExpectContinue.Key, _))
 
         interpreter(serverRequest)
+          .flatMap {
+            case r @ RequestResult.Response(response, _) => expectContinue.fold(Future.unit)(_.beforeResponse(response.body)).map(_ => r)
+            case r                                       => Future.successful(r)
+          }
           .map {
             case RequestResult.Failure(_) =>
               throw new RuntimeException(

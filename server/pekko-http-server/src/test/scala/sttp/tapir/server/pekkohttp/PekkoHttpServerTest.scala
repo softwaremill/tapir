@@ -28,6 +28,7 @@ import sttp.tapir.tests.{Test, TestSuite}
 
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
+import java.nio.charset.StandardCharsets
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Random
@@ -219,6 +220,24 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
                 }
             }
             .unsafeToFuture()
+        },
+        createServerTest.testServerLogic(
+          endpoint.post
+            .in("expect")
+            .in(streamBinaryBody(PekkoStreams)(CodecFormat.OctetStream()))
+            .out(stringBody)
+            .serverLogicSuccess[Future](_ => Future.successful("ok")),
+          "with Expect: 100-continue, respond with a strict body without 100 Continue, if the request body is not read"
+        ) { (_, baseUri) =>
+          val port = baseUri.port.get
+          val requestHead = s"POST /expect HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
+          rawSocket(port).use { socket =>
+            for {
+              _ <- sendRaw(socket, requestHead.getBytes(StandardCharsets.UTF_8))
+              response <- readRawResponse(socket)
+              connectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
+            } yield (response, connectionClosed) shouldBe (((200, "ok"), true))
+          }
         }
       )
       def drainPekko(stream: PekkoStreams.BinaryStream): Future[Unit] =
@@ -227,8 +246,7 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false).tests() ++
         // pekko-http 1.4.0 drops Content-Length from HEAD responses: https://github.com/apache/pekko-http/issues/1236
         new ServerFilesTests(interpreter, backend, supportContentLengthInHeadRequests = false).tests() ++
-        // for a streamed body, sends the response before reading it, without 100 Continue
-        new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(PekkoStreams)(drainPekko) ++
+        new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
         new ServerWebSocketTests(
           createServerTest,
           PekkoStreams,

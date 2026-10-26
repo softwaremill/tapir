@@ -1,6 +1,7 @@
 package sttp.tapir.server.vertx.decoders
 
 import io.vertx.core.Future
+import io.vertx.core.http.{HttpHeaders, HttpServerRequest, HttpVersion}
 import io.vertx.ext.web.{FileUpload, RoutingContext}
 import sttp.capabilities.Streams
 import sttp.model.{MediaType, Part}
@@ -101,10 +102,25 @@ class VertxRequestBody[F[_], S <: Streams[S]](
     })
   }
 
-  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream =
+  override def toStream(serverRequest: ServerRequest, maxBytes: Option[Long]): streams.BinaryStream = {
+    val request = routingContext(serverRequest).request
+    writeContinueIfExpected(request)
     readStreamCompatible
-      .fromReadStream(routingContext(serverRequest).request, maxBytes)
+      .fromReadStream(request, maxBytes)
       .asInstanceOf[streams.BinaryStream]
+  }
+
+  // For non-streamed bodies, the 100 is sent by Vert.x's BodyHandler, which isn't used for streamed bodies. Without it, the client
+  // never sends the body.
+  private def writeContinueIfExpected(request: HttpServerRequest): Unit =
+    if (
+      request.version() != HttpVersion.HTTP_1_0 &&
+      !request.isEnded &&
+      !request.response().headWritten() &&
+      HttpHeaders.CONTINUE.toString.equalsIgnoreCase(request.getHeader(HttpHeaders.EXPECT))
+    ) {
+      val _ = request.response().writeContinue()
+    }
 
   private def extractStringPart[B](part: String, bodyType: RawBodyType[B]): Option[Any] = {
     bodyType match {
