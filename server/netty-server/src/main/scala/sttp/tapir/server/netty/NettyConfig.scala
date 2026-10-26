@@ -32,8 +32,8 @@ import scala.concurrent.duration._
   * @param requestTimeout
   *   The maximum duration between receiving the request headers and producing a response; it therefore also bounds how long the client has
   *   to send the body. If exceeded, an empty response with `Connection: close` is sent and the connection is closed: `503` if the request
-  *   was fully received, `408` if the body was still incomplete. Ignored in Web Sockets (after a handshake is established). Make sure it's
-  *   lower than `idleTimeout`.
+  *   was fully received or the client awaits `100 Continue`, `408` if the client stalled sending the body. Ignored in Web Sockets (after a
+  *   handshake is established). Make sure it's lower than `idleTimeout`.
   *
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.

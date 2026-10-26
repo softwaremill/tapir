@@ -55,8 +55,12 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
             ) {
               override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
               override def emptyPipe[A, B]: fs2.Pipe[IO, A, B] = _ => fs2.Stream.empty
-            }.tests() :+
-            pipelinedExpectContinueTest(createServerTest, interpreter)
+            }.tests() ++
+            List(
+              pipelinedExpectContinueTest(createServerTest, interpreter),
+              pipelinedNoExpectContinueTest(createServerTest, interpreter),
+              noExpectContinueForFullResponseTest(createServerTest, interpreter)
+            )
 
           IO.pure((tests, eventLoopGroup))
         } { case (_, eventLoopGroup) =>
@@ -106,6 +110,70 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
           _ <- sendRaw(socket, secondBody.getBytes(StandardCharsets.UTF_8))
           secondResponse <- readRawResponse(socket)
         } yield List(firstResponse, continue, secondResponse) shouldBe List((200, "ab"), (100, ""), (200, secondBody))
+      }
+    }
+  }
+
+  private def pipelinedNoExpectContinueTest(
+      createServerTest: CreateServerTest[IO, Any, NettyCatsServerOptions[IO], Route[IO]],
+      interpreter: NettyCatsTestServerInterpreter
+  ): Test = {
+    val secondLogicStarted = Deferred.unsafe[IO, Unit]
+
+    // the body is not read, as otherwise the library sends a 100 for the newest request
+    val first = endpoint.post
+      .in("first")
+      .in(streamBinaryBody(Fs2Streams[IO])(CodecFormat.TextPlain()))
+      .out(header(HeaderNames.ContentLength, "2")) // a known length, so that the connection is kept open after the response
+      .out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.TextPlain()))
+      // writing the response once the second request is handled, as only then a 100 might be sent for it
+      .serverLogicSuccess[IO](_ => secondLogicStarted.get.timeout(5.seconds).as(fs2.Stream.emits("ab".getBytes(StandardCharsets.UTF_8))))
+    val second = endpoint.post
+      .in("second")
+      .out(streamBinaryBody(Fs2Streams[IO])(CodecFormat.TextPlain()))
+      .serverLogicSuccess[IO](_ => secondLogicStarted.complete(()).as(fs2.Stream.emits("ok".getBytes(StandardCharsets.UTF_8))))
+
+    createServerTest.testServer(
+      "don't send 100 Continue for a pipelined request because a preceding one might read its body after the response headers",
+      interpreter.route(List(first, second))
+    ) { (_, baseUri) =>
+      val port = baseUri.port.get
+      val firstRequest = s"POST /first HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 5\r\n\r\nSweet"
+      val secondRequestHead = s"POST /second HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
+
+      rawSocket(port).use { socket =>
+        for {
+          _ <- sendRaw(socket, (firstRequest + secondRequestHead).getBytes(StandardCharsets.UTF_8))
+          firstResponse <- readRawResponse(socket)
+          secondResponse <- readRawResponse(socket)
+          connectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
+        } yield (firstResponse, secondResponse, connectionClosed) shouldBe (((200, "ab"), (200, "ok"), true))
+      }
+    }
+  }
+
+  private def noExpectContinueForFullResponseTest(
+      createServerTest: CreateServerTest[IO, Any, NettyCatsServerOptions[IO], Route[IO]],
+      interpreter: NettyCatsTestServerInterpreter
+  ): Test = {
+    val e = endpoint.post
+      .in("expect")
+      .in(streamBinaryBody(Fs2Streams[IO])(CodecFormat.TextPlain()))
+      .out(stringBody)
+      .serverLogicSuccess[IO](_ => IO.pure("ok"))
+
+    createServerTest.testServer(
+      "respond without 100 Continue, and close the connection, if a streamed request body is not read before a complete response",
+      interpreter.route(List(e))
+    ) { (_, baseUri) =>
+      val port = baseUri.port.get
+      val requestHead = s"POST /expect HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
+      rawSocket(port).use { socket =>
+        for {
+          _ <- sendRaw(socket, requestHead.getBytes(StandardCharsets.UTF_8))
+          response <- readRawResponse(socket)
+          connectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
+        } yield (response, connectionClosed) shouldBe (((200, "ok"), true))
       }
     }
   }

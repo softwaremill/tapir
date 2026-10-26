@@ -135,6 +135,18 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 503 Service Unavailable")
       }.unsafeToFuture()
     },
+    Test("respond with status 408 when the body isn't sent after 100 Continue") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        val head = s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
+        for {
+          _ <- send(socket, head.getBytes(StandardCharsets.UTF_8))
+          continue <- readStatusLine(socket)
+          status <- readStatusLine(socket)
+        } yield List(continue, status)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 100 Continue", "HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
     Test("respond with status 503, not 408, when the server is slow to read the body of a request awaiting 100 Continue") {
       val timeoutResponseReceived = new CountDownLatch(1)
       // the security logic runs before the body is read, and hence before 100 Continue is sent

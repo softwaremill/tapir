@@ -19,7 +19,7 @@ private[netty] class TapirStreamedHttpRequest(request: StreamedHttpRequest) exte
   @volatile private var subscribed: Boolean = false
   def wasSubscribed: Boolean = subscribed
 
-  // set when decoding the inputs, read on the channel's event loop
+  // written by the thread decoding the inputs, read on the channel's event loop
   @volatile private var bodyReadLazily: Boolean = false
   def markBodyReadLazily(): Unit = bodyReadLazily = true
   def isBodyReadLazily: Boolean = bodyReadLazily

@@ -256,7 +256,7 @@ class NettyServerHandler[F[_]](
           runRoute(req, () => req.release())
         case req: TapirStreamedHttpRequest => runRoute(req)
         case req: StreamedHttpRequest      =>
-          // from a custom pipeline with the library's handler: tracking the request body subscription status to discard of it safely, if it's
+          // from a custom pipeline with the library's handler: tracking the request body subscription status to discard it safely, if it's
           // never used; validating the body's length
           runRoute(new TapirStreamedHttpRequest(req))
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
