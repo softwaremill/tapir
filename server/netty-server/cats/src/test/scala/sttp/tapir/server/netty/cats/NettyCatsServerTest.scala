@@ -120,7 +120,7 @@ class NettyCatsServerTest extends TestSuite with EitherValues {
   ): Test = {
     val secondLogicStarted = Deferred.unsafe[IO, Unit]
 
-    // the body is not read, as otherwise the library sends a 100 for the newest request
+    // the body is not read, as otherwise `HttpStreamsServerHandler` sends a 100 for the newest request
     val first = endpoint.post
       .in("first")
       .in(streamBinaryBody(Fs2Streams[IO])(CodecFormat.TextPlain()))

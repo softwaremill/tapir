@@ -248,16 +248,16 @@ class NettyServerHandler[F[_]](
       logger.info("Rejecting request, server is shutting down")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
-      // `100 Continue` is left to HttpStreamsServerHandler, so that it's sent only if the body is, or might be, read, and clients don't upload bodies
-      // that are then discarded (#5503, see TapirHttpStreamsServerHandler)
+      // `100 Continue` is left to HttpStreamsServerHandler, so that it's sent only if the body is, or might be, read, and clients don't
+      // upload bodies that are then discarded (#5503, see TapirHttpStreamsServerHandler)
       request match {
         case full: FullHttpRequest =>
           val req = full.retain()
           runRoute(req, () => req.release())
         case req: TapirStreamedHttpRequest => runRoute(req)
         case req: StreamedHttpRequest      =>
-          // from a custom pipeline with the library's handler: tracking the request body subscription status to discard it safely, if it's
-          // never used; validating the body's length
+          // from a custom pipeline with the plain `HttpStreamsServerHandler`: tracking the request body subscription status to discard it
+          // safely, if it's never used; validating the body's length
           runRoute(new TapirStreamedHttpRequest(req))
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
       }
