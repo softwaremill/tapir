@@ -13,7 +13,12 @@ class AwsLambdaStubHttpTest extends TestSuite {
   override def tests: Resource[IO, List[Test]] = Resource.eval(
     IO.pure {
       val createTestServer = new AwsLambdaCreateServerStubTest
-      new ServerBasicTests(createTestServer, AwsLambdaStubHttpTest.testServerInterpreter, maxContentLength = false)(catsMonadIO).tests() ++
+      new ServerBasicTests(
+        createTestServer,
+        AwsLambdaStubHttpTest.testServerInterpreter,
+        maxContentLength = false,
+        expectContinueSupported = false // needs a real server, while requests here are passed to the route by a stub
+      )(catsMonadIO).tests() ++
         new ServerMetricsTest(createTestServer, AwsLambdaStubHttpTest.testServerInterpreter, supportsMetricsDecodeFailureCallbacks = false)
           .tests()
     }
