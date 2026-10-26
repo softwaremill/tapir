@@ -19,7 +19,8 @@ private[netty] class TapirStreamedHttpRequest(request: StreamedHttpRequest) exte
   @volatile private var subscribed: Boolean = false
   def wasSubscribed: Boolean = subscribed
 
-  // written by the thread decoding the inputs, read on the channel's event loop
+  // Per request, not a channel attribute: with pipelining, a channel's requests are handled concurrently, and each needs its own flag.
+  // Written by the thread decoding the inputs, read on the channel's event loop.
   @volatile private var bodyReadLazily: Boolean = false
   def markBodyReadLazily(): Unit = bodyReadLazily = true
   def isBodyReadLazily: Boolean = bodyReadLazily
