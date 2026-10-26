@@ -14,13 +14,15 @@ final class TapirHttpStreamsServerHandler extends HttpStreamsServerHandler {
 
   // How `100 Continue` is sent (#5503):
   // - the superclass, netty-reactive-streams' `HttpStreamsServerHandler`, sends it when the request body is first requested, so that
-  //   clients don't upload bodies which are never read. If a response is written while the client still awaits a 100, the connection is
-  //   closed after the response.
+  //   clients don't upload bodies which are never read. If response headers are written while the client still awaits a 100, no 100 is
+  //   sent afterwards, and the connection is closed after the response.
   // - request bodies read while decoding the inputs (bytes, strings, files, input streams) are requested before any response is written,
   //   so the superclass alone is enough
   // - request bodies read lazily (streams, `InputStreamRange`) might be read only after the response headers are written, e.g. when
   //   echoed. Such requests are marked when the body is given to the server logic (`NettyRequestBody.markBodyReadLazily`), and if the
-  //   request awaiting a 100 is marked, the body is requested here, before writing response headers.
+  //   request awaiting a 100 is marked, the body is requested here, before writing response headers. This works around the superclass
+  //   giving up on the 100 once the headers are written. If a marked body is then never read, the 100 was unneeded, and the uploaded body
+  //   is discarded; without it, requests which do read the body would hang.
 
   // The request awaiting a 100. The superclass keeps only a flag for the newest request, so without this, a marked request could trigger a
   // 100 for a later, pipelined one, which might never read its body. Only used on the channel's event loop.
