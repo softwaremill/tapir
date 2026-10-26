@@ -245,7 +245,8 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
 
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false).tests() ++
         new ServerFilesTests(interpreter, backend, supportContentLengthInHeadRequests = false).tests() ++
-        new ServerStreamingTests(createServerTest).tests(AkkaStreams)(drainAkka) ++
+        // for a streamed body, sends the response before reading it, without 100 Continue
+        new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(AkkaStreams)(drainAkka) ++
         new ServerWebSocketTests(
           createServerTest,
           AkkaStreams,

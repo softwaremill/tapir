@@ -8,7 +8,6 @@ import io.netty.channel.{ChannelHandler, ChannelPipeline, EventLoopGroup, Server
 import io.netty.handler.codec.http.{HttpContentCompressor, HttpServerCodec}
 import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
-import org.playframework.netty.http.HttpStreamsServerHandler
 import sttp.tapir.server.netty.NettyConfig.EventLoopConfig
 import sttp.tapir.server.netty.internal._
 
@@ -27,13 +26,14 @@ import scala.concurrent.duration._
   *
   * @param initPipeline
   *   The function to create the Netty pipeline, using the configuration instance, the pipeline created so far, and the handler which
-  *   contains tapir's server processing logic.
+  *   contains tapir's server processing logic. A custom pipeline should use [[TapirHttpStreamsServerHandler]], as in
+  *   [[NettyConfig.defaultInitPipeline]], for `Expect: 100-continue` requests with lazily read bodies (streams) to work.
   *
   * @param requestTimeout
   *   The maximum duration between receiving the request headers and producing a response; it therefore also bounds how long the client has
   *   to send the body. If exceeded, an empty response with `Connection: close` is sent and the connection is closed: `503` if the request
-  *   was fully received, `408` if the body was still incomplete. Ignored in Web Sockets (after a handshake is established). Make sure it's
-  *   lower than `idleTimeout`.
+  *   was fully received or the client awaits `100 Continue`, `408` if the client stalled sending the body. Ignored in Web Sockets (after a
+  *   handshake is established). Make sure it's lower than `idleTimeout`.
   *
   * @param connectionTimeout
   *   Specifies the maximum duration within which a connection between a client and a server must be established.
@@ -150,7 +150,7 @@ object NettyConfig {
     if (cfg.compressionConfig.enabled) {
       pipeline.addLast(new HttpContentCompressor())
     }
-    pipeline.addLast(new HttpStreamsServerHandler())
+    pipeline.addLast(new TapirHttpStreamsServerHandler())
     pipeline.addLast(handler)
     if (cfg.addLoggingHandler) pipeline.addLast(new LoggingHandler())
     ()

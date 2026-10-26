@@ -7,12 +7,23 @@ import org.reactivestreams.Subscriber
 
 /** A delegating [[StreamedHttpRequest]], which additionally:
   *   - tracks if the request body was ever subscribed to, so that an unused body can be discarded (#4539)
+  *   - tracks if the request body is read lazily, so that `100 Continue` can be sent before the response headers (#5503, see
+  *     `TapirHttpStreamsServerHandler`)
   *   - fails the body stream if it ends before the declared `Content-Length` is received (#4169)
+  *
+  * @param request
+  *   The request as created by `HttpStreamsServerHandler`.
   */
 private[netty] class TapirStreamedHttpRequest(request: StreamedHttpRequest) extends StreamedHttpRequest {
 
   @volatile private var subscribed: Boolean = false
   def wasSubscribed: Boolean = subscribed
+
+  // Per request, not a channel attribute: with pipelining, a channel's requests are handled concurrently, and each needs its own flag.
+  // Written by the thread decoding the inputs, read on the channel's event loop.
+  @volatile private var bodyReadLazily: Boolean = false
+  def markBodyReadLazily(): Unit = bodyReadLazily = true
+  def isBodyReadLazily: Boolean = bodyReadLazily
 
   //
 

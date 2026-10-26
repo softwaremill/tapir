@@ -21,12 +21,14 @@ import sttp.tapir.server.tests.*
 import sttp.tapir.tests.*
 
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import ox.flow.Flow
 import scala.annotation.nowarn
-import sttp.tapir.server.netty.NettySyncRequestTimeoutTests
+import sttp.tapir.server.netty.{NettyConfig, NettySyncRequestTimeoutTests}
 import sttp.model.sse.ServerSentEvent
+import java.nio.charset.StandardCharsets
 import java.util.UUID
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import scala.util.Random
 import sttp.tapir.server.netty.OxServerSentEvents.parseBytesToSSE
 
@@ -59,7 +61,8 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         new ServerMultipartTests(createServerTest, partOtherHeaderSupport = false).tests() ++
         new ServerIncompleteRequestBodyTests(nonInterruptingCreateServerTest).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
-        additionalTests(createServerTest)
+        additionalTests(createServerTest) ++
+        expectContinueTests(createServerTest, eventLoopGroup)
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -120,6 +123,128 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           .map(_.body.length shouldBe 10 * 1024 * 1024)
       }
     )
+
+  /** Netty-only: RFC 9110 doesn't specify when exactly a 100 is sent with pipelining, or for a body that might be read later, and servers
+    * differ. These test `TapirHttpStreamsServerHandler`, which is the same for all Netty interpreters, so they're run once, here, as they
+    * need streamed bodies.
+    */
+  def expectContinueTests(
+      createServerTest: CreateServerTest[Identity, OxStreams & WebSockets, NettySyncServerOptions, IdRoute],
+      eventLoopGroup: NioEventLoopGroup
+  ): List[Test] = {
+    // not using `interpreter.route`, which creates the route in a scope which is already closed when streaming responses
+    def testServer(name: String, es: List[ServerEndpoint[OxStreams & WebSockets, Identity]])(runTest: Int => IO[Assertion]): Test =
+      Test(name) {
+        supervised {
+          val config =
+            NettyConfig.default.eventLoopGroup(eventLoopGroup).randomPort.withDontShutdownEventLoopGroupOnClose.noGracefulShutdown
+          val binding = useInScope(NettySyncServer(config).addEndpoints(es).start())(_.stop())
+          Future.successful(runTest(binding.port).unsafeRunSync())
+        }
+      }
+    def chunk(s: String): Chunk[Byte] = Chunk.fromArray(s.getBytes(StandardCharsets.UTF_8))
+    def await(latch: CountDownLatch): Unit = { val _ = latch.await(5, TimeUnit.SECONDS) }
+    val textStream = streamBinaryBody(OxStreams)(CodecFormat.TextPlain())
+
+    List(
+      {
+        val secondLogicStarted = new CountDownLatch(1)
+        val firstResponseRelease = new CountDownLatch(1)
+
+        // a known length, so that the connection is kept open after the response
+        val first = endpoint.get
+          .in("first")
+          .out(header(HeaderNames.ContentLength, "2"))
+          .out(textStream)
+          .handleSuccess(_ =>
+            Flow.usingEmit { emit =>
+              emit(chunk("a"))
+              await(firstResponseRelease)
+              emit(chunk("b"))
+            }
+          )
+        val echo = endpoint.post
+          .in("echo")
+          .in(textStream)
+          .out(textStream)
+          .handleSuccess { body =>
+            secondLogicStarted.countDown()
+            body
+          }
+
+        testServer("send 100 Continue for a pipelined request only after the preceding response", List(first, echo)) { port =>
+          val firstRequest = s"GET /first HTTP/1.1\r\nHost: localhost:$port\r\n\r\n"
+          val secondBody = "Sweet"
+          val secondRequestHead =
+            s"POST /echo HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: ${secondBody.length}\r\nExpect: 100-continue\r\n\r\n"
+
+          rawSocket(port).use { socket =>
+            for {
+              _ <- sendRaw(socket, (firstRequest + secondRequestHead).getBytes(StandardCharsets.UTF_8))
+              // giving the server time to handle the second request, while the first response is still being written
+              _ <- IO.blocking(await(secondLogicStarted)) >> IO.sleep(500.millis) >> IO(firstResponseRelease.countDown())
+              firstResponse <- readRawResponse(socket)
+              continue <- readRawResponse(socket)
+              _ <- sendRaw(socket, secondBody.getBytes(StandardCharsets.UTF_8))
+              secondResponse <- readRawResponse(socket)
+            } yield List(firstResponse, continue, secondResponse) shouldBe List((200, "ab"), (100, ""), (200, secondBody))
+          }
+        }
+      }, {
+        val secondLogicStarted = new CountDownLatch(1)
+
+        // the body is not read, as otherwise `HttpStreamsServerHandler` sends a 100 for the newest request
+        val first = endpoint.post
+          .in("first")
+          .in(textStream)
+          .out(header(HeaderNames.ContentLength, "2")) // a known length, so that the connection is kept open after the response
+          .out(textStream)
+          // writing the response once the second request is handled, as only then a 100 might be sent for it
+          .handleSuccess { _ =>
+            await(secondLogicStarted)
+            Flow.fromValues(chunk("ab"))
+          }
+        val second = endpoint.post
+          .in("second")
+          .out(textStream)
+          .handleSuccess { _ =>
+            secondLogicStarted.countDown()
+            Flow.fromValues(chunk("ok"))
+          }
+
+        testServer(
+          "don't send 100 Continue for a pipelined request because a preceding one might read its body after the response headers",
+          List(first, second)
+        ) { port =>
+          val firstRequest = s"POST /first HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 5\r\n\r\nSweet"
+          val secondRequestHead = s"POST /second HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
+
+          rawSocket(port).use { socket =>
+            for {
+              _ <- sendRaw(socket, (firstRequest + secondRequestHead).getBytes(StandardCharsets.UTF_8))
+              firstResponse <- readRawResponse(socket)
+              secondResponse <- readRawResponse(socket)
+              connectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
+            } yield (firstResponse, secondResponse, connectionClosed) shouldBe (((200, "ab"), (200, "ok"), true))
+          }
+        }
+      },
+      createServerTest.testServerLogic(
+        endpoint.post.in("expect").in(textStream).out(stringBody).handleSuccess(_ => "ok"),
+        "respond without 100 Continue, and close the connection, if a streamed request body is not read before a complete response"
+      ) { (_, baseUri) =>
+        val port = baseUri.port.get
+        val requestHead = s"POST /expect HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
+        rawSocket(port).use { socket =>
+          for {
+            _ <- sendRaw(socket, requestHead.getBytes(StandardCharsets.UTF_8))
+            response <- readRawResponse(socket)
+            connectionClosed <- IO.blocking(socket.getInputStream.read() == -1)
+          } yield (response, connectionClosed) shouldBe (((200, "ok"), true))
+        }
+      }
+    )
+  }
 }
 
 class NettySyncCreateServerTest(

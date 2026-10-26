@@ -20,6 +20,9 @@ import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import cats.effect.unsafe.implicits.global
 import sttp.model.StatusCode
+import sttp.tapir.server.tests.{rawSocket, readRawResponse, sendRaw}
+
+import java.nio.charset.StandardCharsets
 
 class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: WebSocketStreamBackend[IO, Fs2Streams[IO]])(implicit
     ec: ExecutionContext
@@ -131,6 +134,48 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
       }.map { statusLines =>
         statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 503 Service Unavailable")
       }.unsafeToFuture()
+    },
+    // Netty-only, as the request timeout is: a missing body is the client's fault (408) only once it was sent a 100
+    Test("respond with status 408 when the body isn't sent after 100 Continue") {
+      statusLinesFromShortTimeoutServer { (socket, port) =>
+        val head = s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
+        for {
+          _ <- send(socket, head.getBytes(StandardCharsets.UTF_8))
+          continue <- readStatusLine(socket)
+          status <- readStatusLine(socket)
+        } yield List(continue, status)
+      }.map { statusLines =>
+        statusLines shouldBe List("HTTP/1.1 100 Continue", "HTTP/1.1 408 Request Timeout")
+      }.unsafeToFuture()
+    },
+    Test("respond with status 503, not 408, when the server is slow to read the body of a request awaiting 100 Continue") {
+      val timeoutResponseReceived = new CountDownLatch(1)
+      // the security logic runs before the body is read, and hence before 100 Continue is sent
+      val e = endpoint.put
+        .serverSecurityLogicSuccess[Unit, Future](_ => Future(awaitLatch(timeoutResponseReceived)))
+        .in(stringBody)
+        .out(stringBody)
+        .serverLogicSuccess(_ => body => Future.successful(body))
+
+      val config = NettyConfig.default
+        .eventLoopGroup(eventLoopGroup)
+        .randomPort
+        .withDontShutdownEventLoopGroupOnClose
+        .noGracefulShutdown
+        .requestTimeout(1.second)
+      val bind = IO.fromFuture(IO.delay(NettyFutureServer(config).addEndpoints(List(e)).start()))
+
+      Resource
+        .make(bind)(server => IO.fromFuture(IO.delay(server.stop())))
+        .map(_.port)
+        .use { port =>
+          val requestHead = s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
+          rawSocket(port)
+            .use(socket => sendRaw(socket, requestHead.getBytes(StandardCharsets.UTF_8)) >> readRawResponse(socket))
+            .guarantee(IO(timeoutResponseReceived.countDown()))
+        }
+        .map { case (status, _) => status shouldBe StatusCode.ServiceUnavailable.code }
+        .unsafeToFuture()
     }
   )
 }

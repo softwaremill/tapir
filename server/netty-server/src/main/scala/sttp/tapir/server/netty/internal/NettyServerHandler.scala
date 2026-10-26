@@ -123,7 +123,7 @@ class NettyServerHandler[F[_]](
 
   private def handleRequestTimeout(ctx: ChannelHandlerContext): Unit = {
     val timeoutDescription = config.requestTimeout.map(_.toString).getOrElse("(not set)")
-    if (requestBodyTracker.forall(_.bodyFullyReceived)) {
+    if (requestBodyTracker.forall(t => t.bodyFullyReceived || t.continueAwaited)) {
       logger.error(s"Closing connection with 503: no response produced within the request timeout of $timeoutDescription")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
@@ -247,16 +247,17 @@ class NettyServerHandler[F[_]](
     if (isShuttingDown.get()) {
       logger.info("Rejecting request, server is shutting down")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
-    } else if (HttpUtil.is100ContinueExpected(request)) {
-      ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
-      ()
     } else {
+      // `100 Continue` is left to HttpStreamsServerHandler, so that it's sent only if the body is, or might be, read, and clients don't
+      // upload bodies that are then discarded (#5503, see TapirHttpStreamsServerHandler)
       request match {
         case full: FullHttpRequest =>
           val req = full.retain()
           runRoute(req, () => req.release())
-        case req: StreamedHttpRequest =>
-          // tracking the request body subscription status to discard of it safely, if it's never used; validating the body's length
+        case req: TapirStreamedHttpRequest => runRoute(req)
+        case req: StreamedHttpRequest      =>
+          // from a custom pipeline with the plain `HttpStreamsServerHandler`: tracking the request body subscription status to discard it
+          // safely, if it's never used; validating the body's length
           runRoute(new TapirStreamedHttpRequest(req))
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
       }

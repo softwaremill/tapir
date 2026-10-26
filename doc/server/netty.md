@@ -110,7 +110,9 @@ customise the server socket, such as:
   closed
 * server header
 * maximum number of connections
-* custom netty pipeline & low-level logging handlers
+* custom netty pipeline & low-level logging handlers; a custom pipeline should
+  use `TapirHttpStreamsServerHandler` instead of `HttpStreamsServerHandler`, as
+  otherwise `Expect: 100-continue` requests with streamed bodies might hang
 
 For example, to change the request timeout:
 
@@ -127,7 +129,8 @@ Spans from receiving the request headers to starting to write a response, so it
 also bounds how long the client has to send the body: keep it higher than your
 longest upload, and lower than `idleTimeout`. When exceeded, an empty response
 with `Connection: close` is sent and the connection is closed - `503` if the
-request had been received in full, `408` if the body was still incomplete.
+request had been received in full or the client awaits `100 Continue`, `408` if
+the client stalled sending the body.
 Ignored for Web Sockets, once the handshake has been established.
 
 ## Web sockets

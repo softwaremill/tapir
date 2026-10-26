@@ -40,7 +40,8 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
     supportsUrlEncodedPathSegments: Boolean = true,
     supportsMultipleSetCookieHeaders: Boolean = true,
     invulnerableToUnsanitizedHeaders: Boolean = true,
-    maxContentLength: Boolean = true
+    maxContentLength: Boolean = true,
+    expectContinueSupported: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
@@ -56,6 +57,7 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
       serverSecurityLogicTests() ++
       (if (inputStreamSupport) inputStreamTests() else Nil) ++
       (if (maxContentLength) maxContentLengthTests else Nil) ++
+      (if (expectContinueSupported) expectContinueTests() else Nil) ++
       exceptionTests()
 
   def basicTests(): List[Test] = List(
@@ -538,6 +540,28 @@ class ServerBasicTests[F[_], OPTIONS, ROUTE](
           }
           .map(_ => succeed)
       }
+    }
+  )
+
+  def expectContinueTests(): List[Test] = List(
+    testServer(in_string_out_string, "with Expect: 100-continue, keeping the connection open")((b: String) => pureResult(b.asRight[Unit])) {
+      (_, baseUri) =>
+        val port = baseUri.port.get
+        val body = "Sweet".getBytes(StandardCharsets.UTF_8)
+        def requestHead(extraHeaders: String) =
+          s"POST /api/echo HTTP/1.1\r\nHost: localhost:$port\r\nContent-Type: text/plain\r\nContent-Length: ${body.length}\r\n$extraHeaders\r\n"
+            .getBytes(StandardCharsets.UTF_8)
+
+        rawSocket(port).use { socket =>
+          for {
+            _ <- sendRaw(socket, requestHead("Expect: 100-continue\r\n"))
+            continue <- readRawResponse(socket)
+            _ <- sendRaw(socket, body)
+            firstResponse <- readRawResponse(socket)
+            _ <- sendRaw(socket, requestHead("") ++ body)
+            secondResponse <- readRawResponse(socket)
+          } yield List(continue, firstResponse, secondResponse) shouldBe List((100, ""), (200, "Sweet"), (200, "Sweet"))
+        }
     }
   )
 

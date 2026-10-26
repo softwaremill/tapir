@@ -227,7 +227,8 @@ class PekkoHttpServerTest extends TestSuite with EitherValues {
       new AllServerTests(createServerTest, interpreter, backend, staticContent = false).tests() ++
         // pekko-http 1.4.0 drops Content-Length from HEAD responses: https://github.com/apache/pekko-http/issues/1236
         new ServerFilesTests(interpreter, backend, supportContentLengthInHeadRequests = false).tests() ++
-        new ServerStreamingTests(createServerTest).tests(PekkoStreams)(drainPekko) ++
+        // for a streamed body, sends the response before reading it, without 100 Continue
+        new ServerStreamingTests(createServerTest, expectContinueSupported = false).tests(PekkoStreams)(drainPekko) ++
         new ServerWebSocketTests(
           createServerTest,
           PekkoStreams,
