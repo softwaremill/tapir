@@ -73,7 +73,8 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
     }
   )
 
-  // Netty-specific, as other servers might instead read and discard the body; the same for all Netty interpreters, so tested once
+  // Netty-only: if the body isn't read, RFC 9110 lets a server either skip the 100 (as Netty does), or send it and discard the body. The
+  // code is the same for all Netty interpreters, so it's tested once.
   private def expectContinueTests(createServerTest: CreateServerTest[Future, Any, NettyFutureServerOptions, FutureRoute]): List[Test] =
     List(
       createServerTest.testServerLogic(

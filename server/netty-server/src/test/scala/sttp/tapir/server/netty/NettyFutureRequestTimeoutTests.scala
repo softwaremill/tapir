@@ -135,6 +135,7 @@ class NettyFutureRequestTimeoutTests(eventLoopGroup: EventLoopGroup, backend: We
         statusLines shouldBe List("HTTP/1.1 200 OK", "HTTP/1.1 503 Service Unavailable")
       }.unsafeToFuture()
     },
+    // Netty-only, as the request timeout is: a missing body is the client's fault (408) only once it was sent a 100
     Test("respond with status 408 when the body isn't sent after 100 Continue") {
       statusLinesFromShortTimeoutServer { (socket, port) =>
         val head = s"PUT / HTTP/1.1\r\nHost: localhost:$port\r\nContent-Length: 4\r\nExpect: 100-continue\r\n\r\n"
