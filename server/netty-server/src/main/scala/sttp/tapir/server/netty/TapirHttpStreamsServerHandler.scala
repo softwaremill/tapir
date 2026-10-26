@@ -47,8 +47,8 @@ final class TapirHttpStreamsServerHandler extends HttpStreamsServerHandler {
       case _: FullHttpResponse => ()
       case _: HttpResponse     =>
         if (requestAwaitingContinue != null && requestAwaitingContinue.isBodyReadLazily) {
-          // the body might be read only after these headers, so requesting it now (with pipelining, the superclass delays the 100 until
-          // the preceding responses are written)
+          // the body might be read only after these headers, so doing what the superclass does on the first demand for the body:
+          // sending the 100 (with pipelining, once the preceding responses are written)
           bodyRequested(ctx)
           requestAwaitingContinue = null
         }
