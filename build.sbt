@@ -1709,7 +1709,9 @@ lazy val awsLambdaZio: ProjectMatrix = (projectMatrix in file("serverless/aws/la
   .dependsOn(serverCore, awsLambdaCore, zio, zioHttpServer, circeJson, tests % "test")
 
 def matrixTargetDirectory(platform: String) = Def.setting {
-  (ThisBuild / baseDirectory).value / projectMatrixBaseDirectory.value.getPath / "target" / s"$platform-${scalaBinaryVersion.value}"
+  // projectMatrixBaseDirectory is relative in sbt 2.0, absolute in sbt 2.1
+  (ThisBuild / baseDirectory).value.toPath.resolve(projectMatrixBaseDirectory.value.toPath).toFile / "target" /
+    s"$platform-${scalaBinaryVersion.value}"
 }
 
 // in sbt 2, the fat jars would be written to target/out/jvm/scala-<version>/<module>; keeping the sbt 1 location, which is
