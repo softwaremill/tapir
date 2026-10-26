@@ -7,12 +7,7 @@ import io.netty.handler.codec.http._
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory
 import io.netty.handler.stream.{ChunkedFile, ChunkedStream}
 import io.netty.handler.timeout.{IdleState, IdleStateEvent, IdleStateHandler}
-import org.playframework.netty.http.{
-  DefaultStreamedHttpResponse,
-  DefaultWebSocketHttpResponse,
-  HttpStreamsServerHandler,
-  StreamedHttpRequest
-}
+import org.playframework.netty.http.{DefaultStreamedHttpResponse, DefaultWebSocketHttpResponse, StreamedHttpRequest}
 import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import org.slf4j.LoggerFactory
 import sttp.model.StatusCode
@@ -28,7 +23,7 @@ import sttp.tapir.server.netty.NettyResponseContent.{
 }
 import sttp.tapir.server.netty.internal.reactivestreams.{CancellingSubscriber, TapirStreamedHttpRequest}
 import sttp.tapir.server.netty.internal.ws.{WebSocketAutoPingHandler, WebSocketPingPongFrameHandler}
-import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route, TapirHttpStreamsServerHandler}
+import sttp.tapir.server.netty.{NettyConfig, NettyResponse, NettyServerRequest, Route}
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -253,14 +248,16 @@ class NettyServerHandler[F[_]](
       logger.info("Rejecting request, server is shutting down")
       writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
     } else {
-      // `100 Continue` is left to HttpStreamsServerHandler, so that it's sent only if the body is read, and clients don't upload bodies
-      // that are then discarded (#5503)
+      // `100 Continue` is left to HttpStreamsServerHandler, so that it's sent only if the body is, or might be, read, and clients don't upload bodies
+      // that are then discarded (#5503, see TapirHttpStreamsServerHandler)
       request match {
         case full: FullHttpRequest =>
           val req = full.retain()
           runRoute(req, () => req.release())
-        case req: StreamedHttpRequest =>
-          // tracking the request body subscription status to discard of it safely, if it's never used; validating the body's length
+        case req: TapirStreamedHttpRequest => runRoute(req)
+        case req: StreamedHttpRequest      =>
+          // from a custom pipeline with the library's handler: tracking the request body subscription status to discard of it safely, if it's
+          // never used; validating the body's length
           runRoute(new TapirStreamedHttpRequest(req))
         case _ => throw new UnsupportedOperationException(s"Unexpected Netty request type: ${request.getClass.getName}")
       }
@@ -315,7 +312,6 @@ class NettyServerHandler[F[_]](
             logger.error("Error when streaming HTTP response", future.cause())
           }
         })
-        continueIfBodyStreamed(ctx, req)
         ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
 
       },
@@ -344,23 +340,6 @@ class NettyServerHandler[F[_]](
         ctx.writeAndFlush(res).closeIfNeeded(req)
       }
     )
-
-  /** A streamed request body might be read only after the response headers are written (e.g. an echo). `HttpStreamsServerHandler` doesn't
-    * send `100 Continue` then, and the client would never send the body (#5503).
-    */
-  private def continueIfBodyStreamed(ctx: ChannelHandlerContext, req: HttpRequest): Unit = req match {
-    case r: TapirStreamedHttpRequest if r.isBodyStreamed =>
-      val streamsHandlerCtx = ctx.pipeline().context(classOf[HttpStreamsServerHandler])
-      if (streamsHandlerCtx != null) streamsHandlerCtx.handler() match {
-        case h: TapirHttpStreamsServerHandler       => h.continueIfExpected(streamsHandlerCtx, r.request)
-        case _ if HttpUtil.is100ContinueExpected(r) =>
-          // A custom pipeline with the library's handler. The 100 might then be sent twice, or in the middle of a pipelined preceding
-          // response, corrupting it; the connection is closed after the response.
-          val _ = streamsHandlerCtx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE))
-        case _ => ()
-      }
-    case _ => ()
-  }
 
   private def handleResponseWhenChannelClosed(
       ctx: ChannelHandlerContext,

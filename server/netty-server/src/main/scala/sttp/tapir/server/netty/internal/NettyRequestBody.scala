@@ -99,7 +99,7 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
     case RawBodyType.InputStreamBody =>
       monad.eval(RawValue(readAsStream(serverRequest, maxBytes)))
     case RawBodyType.InputStreamRangeBody =>
-      markBodyStreamed(serverRequest) // the stream is created on first use
+      markBodyReadLazily(serverRequest) // the stream is created on first use
       monad.unit(RawValue(InputStreamRange(() => readAsStream(serverRequest, maxBytes))))
     case RawBodyType.FileBody =>
       for {
@@ -114,11 +114,12 @@ private[netty] trait NettyRequestBody[F[_], S <: Streams[S]] extends RequestBody
       }
   }
 
-  /** Should be called when the request body is given to the server logic as a stream, which might be read only after the response headers
-    * are written.
+  /** Should be called when the request body is given to the server logic in a form which is read lazily, possibly only after the response
+    * headers are written. Not needed for bodies read while decoding the inputs. See
+    * [[sttp.tapir.server.netty.TapirHttpStreamsServerHandler]].
     */
-  protected def markBodyStreamed(serverRequest: ServerRequest): Unit = serverRequest.underlying match {
-    case r: TapirStreamedHttpRequest => r.markBodyStreamed()
+  protected def markBodyReadLazily(serverRequest: ServerRequest): Unit = serverRequest.underlying match {
+    case r: TapirStreamedHttpRequest => r.markBodyReadLazily()
     case _                           => ()
   }
 
