@@ -1,15 +1,12 @@
 package sttp.tapir.json.pickler
 
-import magnolia1.SealedTrait
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
-import sttp.tapir.Schema.annotations.{default, encodedName}
-import sttp.tapir.{Schema, SchemaType}
-import upickle.core.{ObjVisitor, Visitor}
 
 import Fixtures.*
 
+/** Sealed hierarchies and enums with parameters: discriminator field and value configuration, `oneOfUsingField`. */
 class PicklerCoproductTest extends AnyFlatSpec with Matchers {
 
   behavior of "Pickler derivation for coproducts"
