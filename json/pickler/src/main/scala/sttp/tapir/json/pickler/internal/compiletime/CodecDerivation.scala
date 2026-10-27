@@ -38,6 +38,7 @@ import sttp.tapir.json.pickler.internal.runtime.{CodecCombinators, LeafCodecs}
   *   - `alwaysEmitDiscriminator(true)` on case classes: a leaf written on its own carries its discriminator, so that a member of a sealed
   *     hierarchy is encoded the same way whether it is written through the parent or through its own pickler. It is also what makes
   *     per-leaf codecs composable into the hierarchy codec: jsoniter delegates to the leaf's implicit and the leaf writes the tag itself.
+  *     The leaf's schema documents the tag to match (`SchemaDerivation.deriveCaseClassSchema`).
   *   - `discriminatorFieldName(None)` on a hierarchy whose leaves are all singletons: such hierarchies are encoded as bare strings.
   *
   * ==`Either`==
@@ -47,9 +48,9 @@ import sttp.tapir.json.pickler.internal.runtime.{CodecCombinators, LeafCodecs}
   *
   * ==What is deliberately not supported==
   * tapir's `@default` annotation does not drive decoding: jsoniter fills a missing field only from a Scala default parameter and has no
-  * hook for anything else. Scala default parameters *are* honoured.
+  * hook for anything else. Scala default parameters *are* honoured; the schema half documents them, and rejects a `@default` without one.
   */
-trait CodecDerivation {
+private[pickler] trait CodecDerivation {
   this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & NameSupport & PlatformSupport & ImplicitPicklerSupport =>
 
   private[compiletime] object CTypes {
@@ -143,12 +144,12 @@ trait CodecDerivation {
     case Shape.Coproduct(_, leaves)   => hierarchyConfig[A](leaves, asEnumeration = false, env).map(cfg => List(makeUnit[A](cfg)))
     case Shape.EitherOf(l, r)         => MIO.pure(List(eitherUnit[A](l, r, env.config)))
     case Shape.NestedOption(i, e)     => MIO.pure(nestedOptionUnits[A](i, e, env.config, isRoot))
-    case Shape.Tuple()                => fail(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
-    case Shape.NonStringMap(key, _)   => fail(PicklerDerivationError.NonStringMapKey(key.Underlying.plainPrint))
+    case Shape.Tuple()                => fail(PicklerDerivationError.tupleNotSupported(Type[A].plainPrint))
+    case Shape.NonStringMap(key, _)   => fail(PicklerDerivationError.nonStringMapKey(key.Underlying.plainPrint))
     case _                            => MIO.pure(Nil)
   }
 
-  private def fail[T](error: PicklerDerivationError): MIO[T] = Log.error(error.message) >> MIO.fail(error)
+  private def fail[T](error: PicklerDerivationError): MIO[T] = Log.error(error.getMessage) >> MIO.fail(error)
 
   // Hand-written codecs from `LeafCodecs`, for leaf types tapir has a `Schema` for but `JsonCodecMaker` cannot derive.
 
@@ -250,7 +251,7 @@ trait CodecDerivation {
     case _: Shape.Product[?] | _: Shape.Enumeration[?] | _: Shape.Coproduct[?] =>
       implicit val CodecA: Type[JsonValueCodec[A]] = CTypes.CodecOf[A]
       Expr.summonImplicit[JsonValueCodec[A]].toOption match {
-        case Some(codec) => fail(PicklerDerivationError.CodecWithoutPickler(Type[A].plainPrint, codec.plainPrint))
+        case Some(codec) => fail(PicklerDerivationError.codecWithoutPickler(Type[A].plainPrint, codec.plainPrint))
         case None        => MIO.pure(())
       }
     case _ => MIO.pure(())
@@ -343,11 +344,11 @@ trait CodecDerivation {
     // Enumeration values are the cases' simple names, not discriminator values (`NameSupport.enumerationValue`);
     // `SchemaDerivation.deriveStringEnumSchema` documents the same literals.
     val values: Either[PicklerDerivationError, List[String]] =
-      if (asEnumeration) Right(leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; enumerationValue[Leaf] })
-      else discriminatorValues(leaves, env)
+      (if (asEnumeration) Right(leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; enumerationValue[Leaf] })
+       else discriminatorValues(leaves, env)).flatMap(distinctLeafValues[A](leaves, _))
     val jsoniterNames = leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; jsoniterLeafName[Leaf] }
 
-    if (leaves.isEmpty) fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))
+    if (leaves.isEmpty) fail(PicklerDerivationError.noChildrenInSealedTrait(Type[A].plainPrint))
     else
       values match {
         case Left(error)   => fail(error)

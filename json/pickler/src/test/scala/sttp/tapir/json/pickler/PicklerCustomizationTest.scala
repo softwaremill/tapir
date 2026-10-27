@@ -5,10 +5,12 @@ import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.{DecodeResult, SchemaType}
 
+import scala.compiletime.testing.typeCheckErrors
+
 import Fixtures.*
 
-/** Field-name configuration and annotations. Note that tapir's `@default` annotation is documentation only: Scala default parameters drive
-  * decoding.
+/** Field-name configuration and annotations. Note that Scala default parameters drive decoding; tapir's `@default` annotation only
+  * documents them.
   */
 class PicklerCustomizationTest extends AnyFlatSpec with Matchers {
 
@@ -53,30 +55,15 @@ class PicklerCustomizationTest extends AnyFlatSpec with Matchers {
     obj shouldBe Value(TopClass("field_a_value", InnerClass(7954)))
   }
 
-  it should "document @default in the schema but not use it to fill missing fields" in {
-    import generic.auto.* // for Pickler auto-derivation
+  it should "reject @default on a field without a Scala default, which decoding could not honour" in {
+    typeCheckErrors("Pickler.derived[ClassWithDefault]").map(_.message).mkString should include("requires a Scala default value")
+  }
 
-    // when
-    val pickler1 = Pickler.derived[ClassWithDefault]
-    val codecCc1 = pickler1.toCodec
-    val codecCc2 = Pickler.derived[ClassWithDefault2].toCodec
-    val codecCc3 = Pickler.derived[ClassWithDefault3].toCodec
-    val jsonStrCc11 = codecCc1.encode(ClassWithDefault("field-a-user-value", "msg104"))
-
-    // then: encoding is unaffected
-    jsonStrCc11 shouldBe """{"fieldA":"field-a-user-value","fieldB":"msg104"}"""
-    // the annotation lands in the schema
-    pickler1.schema.schemaType.asInstanceOf[SchemaType.SProduct[ClassWithDefault]].fields.head.schema.default.map(_._1) shouldBe
-      Some("field-a-default")
-    // but a missing field with only a tapir @default is a decode error
-    codecCc1.decode("""{"fieldB":"msg105"}""") shouldBe a[DecodeResult.Error]
-    codecCc2.decode("""{"fieldA":"msgCc12"}""") shouldBe a[DecodeResult.Error]
-    codecCc3.decode("""{"fieldA":{"$type":"ErrorNotFound"}, "fieldC": {"fieldInner": "deeper field inner"}}""") shouldBe
-      a[DecodeResult.Error]
-    // while a fully specified object decodes as before
-    codecCc3.decode(
-      """{"fieldA":{"$type":"ErrorNotFound"},"fieldB":{"fieldInner":"b","fieldInnerInt":1},"fieldC":{"fieldInner":"c","fieldInnerInt":2}}"""
-    ) shouldBe Value(ClassWithDefault3(ErrorNotFound, InnerCaseClass("b", 1), InnerCaseClass("c", 2)))
+  it should "document a Scala default parameter in the schema, as it may be missing when decoding" in {
+    val field =
+      Pickler.derived[ClassWithScalaDefault].schema.schemaType.asInstanceOf[SchemaType.SProduct[ClassWithScalaDefault]].fields.head
+    field.schema.isOptional shouldBe true
+    field.schema.default.map(_._1) shouldBe Some("field-a-default")
   }
 
   it should "apply Scala default parameters, ignoring a competing @default" in {

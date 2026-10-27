@@ -9,10 +9,10 @@ import hearth.MacroCommons
   * accepts a narrow set of tree shapes, so the trees have to be built by hand rather than with `Expr.quote` (see the notes on
   * `PlatformSupportScala3` for the shapes that were found to work).
   *
-  * Keeping these behind an interface is what leaves `CodecDerivation` platform-independent: a Scala 2 bundle would implement the same six
-  * methods against `scala.reflect.macros` (where jsoniter evaluates its config with `c.eval` and therefore accepts different shapes).
+  * They are declared here, against Hearth's abstract `MacroCommons` types, because the derivation traits are written against those; the
+  * implementation in `PlatformSupportScala3` needs `quotes.reflect`, whose concrete types the derivation traits cannot use.
   */
-trait PlatformSupport { this: MacroCommons =>
+private[pickler] trait PlatformSupport { this: MacroCommons =>
 
   /** `{ case "k1" => "v1"; case "k2" => "v2" }: PartialFunction[String, String]` — for `withFieldNameMapper`.
     *

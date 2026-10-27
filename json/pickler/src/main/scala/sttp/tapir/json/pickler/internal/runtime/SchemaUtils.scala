@@ -42,6 +42,7 @@ object SchemaUtils {
   // -- Products ---------------------------------------------------------------------------------------------------
 
   /** Build one product field. `encodedName` is the JSON name the macro computed (`@encodedName`, or the configured transformation).
+    * `scalaDefault` is the value of the parameter's Scala default, which the codec fills in for a missing field.
     *
     * `index` is the position of the parameter in the primary constructor, which for a case class is also its `Product` element index.
     * `SProductField` compares by name and schema only, so the accessor does not affect the test assertions — but it does drive
@@ -53,11 +54,12 @@ object SchemaUtils {
       encodedName: String,
       fieldSchema: Schema[Any],
       index: Int,
+      scalaDefault: Option[Any],
       annotations: List[Any]
   ): SProductField[T] =
     SProductField[T, Any](
       FieldName(scalaName, encodedName),
-      enrichSchema(fieldSchema, annotations),
+      enrichSchema(scalaDefault.fold(fieldSchema)(fieldSchema.default(_)), annotations),
       t => Some(t.asInstanceOf[Product].productElement(index))
     )
 
@@ -87,17 +89,7 @@ object SchemaUtils {
       subtypeIndex: T => Int
   ): Schema[T] = {
     val withDiscriminator: List[(Schema[Any], String)] = subtypesWithValues.map { case (child, value) =>
-      val enriched = child.schemaType match {
-        case p: SProduct[Any @unchecked] if !p.fields.exists(_.name.encodedName == discriminatorField) =>
-          val field = SProductField[Any, String](
-            FieldName(discriminatorField, discriminatorField),
-            Schema(SString[String]()).encodedDiscriminatorValue(value),
-            _ => Some(value)
-          )
-          child.copy(schemaType = p.copy(fields = p.fields :+ field))
-        case _ => child
-      }
-      enriched -> value
+      withDiscriminatorField(child, discriminatorField, value) -> value
     }
 
     val mapping: Map[String, SRef[?]] = withDiscriminator.flatMap { case (child, value) =>
@@ -114,6 +106,21 @@ object SchemaUtils {
     )
   }
 
+  /** Append the discriminator field to a product schema, unless it already has one. Also used for a leaf of a sealed hierarchy on its own,
+    * since its codec writes the discriminator too.
+    */
+  def withDiscriminatorField[T](schema: Schema[T], discriminatorField: String, value: String): Schema[T] =
+    schema.schemaType match {
+      case p: SProduct[T @unchecked] if !p.fields.exists(_.name.encodedName == discriminatorField) =>
+        val field = SProductField[T, String](
+          FieldName(discriminatorField, discriminatorField),
+          Schema(SString[String]()).encodedDiscriminatorValue(value),
+          _ => Some(value)
+        )
+        schema.copy(schemaType = p.copy(fields = p.fields :+ field))
+      case _ => schema
+    }
+
   /** Reference to a schema being derived further up the stack — how recursion terminates. */
   def refSchema[T](name: SName): Schema[T] = Schema[T](SRef[T](name))
 
@@ -128,7 +135,13 @@ object SchemaUtils {
 
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def collectionSchema[E](elementSchema: Schema[E]): Schema[Any] =
-    Schema[Any](SArray[Any, E](elementSchema)(_.asInstanceOf[Iterable[E]]), isOptional = true)
+    Schema[Any](
+      SArray[Any, E](elementSchema) {
+        case a: Array[?] => a.toIndexedSeq.asInstanceOf[Iterable[E]]
+        case i           => i.asInstanceOf[Iterable[E]]
+      },
+      isOptional = true
+    )
 
   /** Mirrors what `Schema.schemaForMap` generates, but with our own derived value schema.
     *

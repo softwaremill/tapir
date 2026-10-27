@@ -14,7 +14,7 @@ import sttp.tapir.json.pickler.PicklerConfiguration
   *   types (by `plainPrint`) for which no user `Pickler` is looked up: the root (a `given p = Pickler.derived[A]` would find itself) and,
   *   for `oneOfUsingField`, the mapped leaves (whose codecs must be derived here, with the overridden tags)
   */
-final case class DerivationEnv(
+final private[pickler] case class DerivationEnv(
     config: PicklerConfiguration,
     leafNameOverrides: Map[String, String] = Map.empty,
     implicitLookupExclusions: Set[String] = Set.empty
@@ -27,7 +27,7 @@ final case class DerivationEnv(
   * literals anyway), the schema half into the `Schema` constructors. There is therefore no second evaluation of the user's name
   * transformations at runtime, and no way for the two halves to disagree about a name.
   */
-trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
+private[pickler] trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
 
   /** The JSON name of a field: its `@encodedName` if present, otherwise `config.toEncodedName(scalaName)`. */
   protected def encodedFieldName[A: Type](
@@ -38,7 +38,7 @@ trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
     literalEncodedFieldName[A](param, scalaName) match {
       case Right(Some(explicit)) => Right(explicit)
       case Right(None)           => evaluating("toEncodedName", scalaName)(config.toEncodedName(scalaName))
-      case Left(detail)          => Left(PicklerDerivationError.InvalidAnnotation(detail))
+      case Left(detail)          => Left(PicklerDerivationError.invalidAnnotation(detail))
     }
 
   /** The configuration's functions are the user's code, evaluated by Hearth's interpreter; a body it cannot handle surfaces as an exception
@@ -46,7 +46,7 @@ trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
     */
   private def evaluating(function: String, input: String)(compute: => String): Either[PicklerDerivationError, String] =
     try Right(compute)
-    catch { case scala.util.control.NonFatal(e) => Left(PicklerDerivationError.ConfigurationFunctionFailed(function, input, e)) }
+    catch { case scala.util.control.NonFatal(e) => Left(PicklerDerivationError.configurationFunctionFailed(function, input, e)) }
 
   /** The `SName` of `A`: its type-level `@encodedName`, which replaces the name wholesale (type arguments included), or core's fully
     * qualified name plus the flattened, fully qualified type arguments.
@@ -78,6 +78,18 @@ trait NameSupport { this: MacroCommons & AnnotationSupport & PlatformSupport =>
     leaves.foldRight[Either[PicklerDerivationError, List[String]]](Right(Nil)) { case ((_, leaf), acc) =>
       import leaf.Underlying as Leaf
       for { tail <- acc; value <- discriminatorValue[Leaf](env) } yield value :: tail
+    }
+
+  /** `values` (one per leaf, in order), provided no two leaves share one. */
+  protected def distinctLeafValues[A: Type](
+      leaves: List[(String, ??<:[A])],
+      values: List[String]
+  ): Either[PicklerDerivationError, List[String]] =
+    values.find(v => values.count(_ == v) > 1) match {
+      case None        => Right(values)
+      case Some(value) =>
+        val clashing = leaves.zip(values).collect { case ((_, leaf), `value`) => leaf.Underlying.plainPrint }
+        Left(PicklerDerivationError.duplicateLeafValue(Type[A].plainPrint, value, clashing))
     }
 
   /** The bare string an enumeration case `A` is written as. */

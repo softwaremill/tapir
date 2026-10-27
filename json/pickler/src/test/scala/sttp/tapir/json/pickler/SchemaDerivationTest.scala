@@ -81,6 +81,13 @@ class SchemaDerivationTest extends AsyncFlatSpec with Matchers with Inside {
     )
   }
 
+  it should "hoist derived schemas rather than inlining them at every occurrence" in {
+    case class Simple(fieldA: Int)
+    case class Nested(first: Simple, second: Simple)
+    val fieldSchemas = Pickler.schemaFor[Nested].schemaType.asInstanceOf[SProduct[Nested]].fields.map(_.schema)
+    fieldSchemas.head should be theSameInstanceAs fieldSchemas(1)
+  }
+
   it should "find schema for case classes with collections" in {
     implicitlySchema[C].name shouldBe Some(SName("sttp.tapir.json.pickler.C"))
     implicitlySchema[C].schemaType shouldBe SProduct[C](
@@ -558,7 +565,7 @@ case class I(
     @encodedExample(1234)
     @format("int32")
     @validate[Int](Validator.max(100))
-    int: Int,
+    int: Int = 1234,
     noDesc: Long,
     @description("another optional boolean flag")
     @encodedName("alternativeBooleanName")

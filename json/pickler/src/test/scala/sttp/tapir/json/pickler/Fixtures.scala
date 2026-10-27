@@ -1,7 +1,6 @@
 package sttp.tapir.json.pickler
 
 import sttp.tapir.Schema.annotations.default
-import sttp.tapir.Schema.annotations.description
 import java.util.UUID
 import sttp.tapir.Schema.annotations.encodedName
 
@@ -11,9 +10,6 @@ import sttp.tapir.Schema.annotations.encodedName
 object Fixtures:
   enum ColorEnum:
     case Green, Pink
-
-  case class Book(author: String, title: String) derives Pickler
-  case class BookShelf(books: List[Book]) derives Pickler
 
   case class Response(color: ColorEnum, description: String)
 
@@ -40,24 +36,14 @@ object Fixtures:
 
   case class TopClass2(fieldA: String, fieldB: AnnotatedInnerClass)
   case class AnnotatedInnerClass(@encodedName("encoded_field-a") fieldA: String, fieldB: String)
-  case class ClassWithDefault2(@default("field-a-default-2") fieldA: String, @default(ErrorTimeout) fieldB: ErrorCode)
-  case class ClassWithDefault3(
-      fieldA: ErrorCode,
-      @description("desc1") @default(InnerCaseClass("def-field", 65)) fieldB: InnerCaseClass,
-      fieldC: InnerCaseClass
-  )
-  case class InnerCaseClass(fieldInner: String, @default(4) fieldInnerInt: Int)
   case class FlatClassWithOption(fieldA: String, fieldB: Option[Int], fieldC: Boolean)
   case class NestedClassWithOption(innerField: Option[FlatClassWithOption])
 
   case class FlatClassWithList(fieldA: String, fieldB: List[Int])
   case class NestedClassWithList(innerField: List[FlatClassWithList])
-  case class FlatClassWithArray(fieldA: String, fieldB: Array[Int])
-  case class NestedClassWithArray(innerField: Array[FlatClassWithArray])
   case class SimpleTestResult(msg: String)
   case class ClassWithEither(fieldA: String, fieldB: Either[String, SimpleTestResult])
   case class ClassWithMap(field: Map[String, SimpleTestResult])
-  case class ClassWithMapCustomKey(field: Map[UUID, SimpleTestResult])
   case class UserId(value: UUID) extends AnyVal
   case class UserName(name: String) extends AnyVal
   case class ClassWithValues(id: UserId, name: UserName, age: Int)
@@ -93,7 +79,3 @@ object Fixtures:
   sealed trait NotAllSealedVariant
   case object NotAllSealedVariantA extends NotAllSealedVariant
   case class NotAllSealedVariantB(innerField: Int) extends NotAllSealedVariant
-
-  enum NotAlphabetical:
-    case Xyz
-    case Fgh

@@ -4,7 +4,7 @@ Pickler is an experimental module that simplifies working with JSON, using a con
 
 In [other](json.md) tapir-JSON integrations, you have to keep the `Schema` (which is used for documentation) in sync with the library-specific configuration of JSON encoders/decoders. The more customizations you need, like special field name encoding, or preferred way to represent sealed hierarchies, the more configuration you need to repeat (which is specific to the chosen library, like Circe, jsoniter-scala, etc.).
 
-`Pickler[T]` takes care of this, generating a consistent pair of `Schema[T]` and `JsonCodec[T]` with a single point of customization. Both are produced by a **single macro expansion** from the same configuration, so the documented schema and the actual JSON cannot drift apart. Underneath, the JSON is handled by [jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala) codecs, but this is an implementation detail: the derivation decides every field name and discriminator value, and jsoniter generates the reader/writer for them.
+`Pickler[T]` derives a `Schema[T]` and a `JsonCodec[T]` together, from one configuration, so the docs always match the JSON. The JSON is read and written by [jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala).
 
 To use pickler, add the following dependency to your project:
 
@@ -26,7 +26,7 @@ case class Book(author: String, title: String, year: Int)
 
 val pickler: Pickler[Book] = Pickler.derived
 val codec: JsonCodec[Book] = pickler.toCodec
-val bookJsonStr = // { "author": "Herman Melville", "title": Moby Dick", "year": 1851 }
+val bookJsonStr = // { "author": "Herman Melville", "title": "Moby Dick", "year": 1851 }
   codec.encode(Book("Herman Melville", "Moby Dick", 1851))
 ```
 
@@ -69,7 +69,9 @@ given Pickler[Address] = Pickler.derived(using PicklerConfiguration.default.with
 val personPickler: Pickler[Person] = Pickler.derived
 ```
 
-Such an override has to be a `given`/`implicit val` (an already-typed value). An `inline given` or `inline def` whose body is itself `Pickler.derived[X]` is **not** picked up for nested types: it expands to a nested derivation, which the macro refuses in order not to derive every field type twice (or forever, for recursive types). A type alias and the type it aliases are treated as the same type, so a `given Pickler[UUID]` also applies to a field typed `Id` where `type Id = UUID`.
+The override must be a plain `given` or `implicit val`. An `inline given` or `inline def` that calls `Pickler.derived` is not used for nested types. A type alias and the type it aliases are treated as the same type, so a `given Pickler[UUID]` also applies to a field typed `Id` where `type Id = UUID`.
+
+A `given` pickler for a type with a sealed parent (e.g. a case of a sealed trait or enum) is not used when that type is nested in another type; provide one for the parent type instead.
 
 ## Automatic derivation
 
@@ -89,7 +91,7 @@ case class Person(name: String, address: Address)
 val pickler: Pickler[Person] = summon[Pickler[Person]]
 ```
 
-However, this can negatively impact compilation performance, as the same pickler might be derived multiple times, for each usage of a type. This can be improved by explicitly providing picklers (as described in the semi-auto section above) either for all, or selected types. It's important then to make sure that the manually-provided picklers are in the implicit scope at the usage sites.
+`generic.auto.*` derives the whole type graph again at every use site, which slows compilation. Prefer `derives Pickler` or a `given` pickler, at least for the types you use most often.
 
 ## Configuring pickler derivation
 
@@ -98,13 +100,13 @@ It is possible to configure schema and codec derivation by providing an implicit
 ```scala mdoc:compile-only
 import sttp.tapir.json.pickler.PicklerConfiguration
 
-given customConfiguration: PicklerConfiguration = 
+inline given customConfiguration: PicklerConfiguration = 
   PicklerConfiguration
     .default
     .withSnakeCaseMemberNames
 ```
 
-The configuration is read at **compile time**: field names and discriminator values are computed once, during derivation, and the same literals are placed in both the schema and the generated codec. The configuration must therefore be a `given` (or `implicit val`) whose right-hand side is built from `PicklerConfiguration.default` and its `with*` methods, defined in the same compilation unit as the derivation, or in an already compiled module. A function passed to `withToEncodedName` (or a custom `toDiscriminatorValue`) must itself be evaluable at compile time: keep it to `java.lang.String` method calls such as `_.toUpperCase` or `n => n.toLowerCase.concat("_")`; string `+` and `StringOps` extensions (`.reverse`, `.capitalize`) are not supported. The derivation reports a clear error when it cannot evaluate the configuration or a function in it. This applies equally to `Pickler.schemaFor[T]`, which derives only the schema.
+The configuration is evaluated at compile time. Define it as an `inline given`, built from `PicklerConfiguration.default` and its `with*` methods. A non-inline `given` works only if it is local to a method, comes from a compiled library, or `-Yretain-trees` is set. Functions passed to `withToEncodedName` or `toDiscriminatorValue` are also evaluated at compile time. They may only call `java.lang.String` methods (`_.toUpperCase`, `n => n.toLowerCase.concat("_")`); string `+` and `StringOps` (`.reverse`, `.capitalize`) don't work. This also applies to `Pickler.schemaFor[T]`.
 
 ## Enums / sealed traits / coproducts
 
@@ -113,8 +115,8 @@ Pickler derivation for coproduct types (enums with parameters / sealed hierarchi
 ```scala mdoc:compile-only
 import sttp.tapir.json.pickler.PicklerConfiguration
 
-// encodes a case object as { "$type": "MyType" }
-given PicklerConfiguration = PicklerConfiguration.default
+// encodes a case class MyType as { "$type": "MyType", ...fields }
+inline given PicklerConfiguration = PicklerConfiguration.default
 ```
 
 This behavior can be overridden either by changing the discriminator field name, or by using custom logic to get field value from base trait.
@@ -125,17 +127,17 @@ A discriminator field can be specified for coproducts by providing it in the con
 ```scala mdoc:compile-only
 import sttp.tapir.json.pickler.PicklerConfiguration
 
-// encodes a case object as { "who_am_i": "full.pkg.path.MyType" }
-given customConfiguration: PicklerConfiguration =
+// encodes a case class MyType as { "who_am_i": "full.pkg.path.MyType", ...fields }
+inline given customConfiguration: PicklerConfiguration =
   PicklerConfiguration
     .default
     .withDiscriminator("who_am_i")
     .withFullDiscriminatorValues 
 ```
 
-The discriminator will be added as a field to all coproduct child codecs and schemas, if it's not yet present. The schema of the added field will always be a `Schema.string`. Finally, the mapping between the discriminator field values and the child schemas will be generated using `Configuration.toDiscriminatorValue(childSchemaName)`.
+The discriminator will be added as a field to all coproduct child codecs and schemas, if it's not yet present. The schema of the added field will always be a `Schema.string`. Finally, the mapping between the discriminator field values and the child schemas will be generated using `PicklerConfiguration.toDiscriminatorValue(childSchemaName)`.
 
-Note that a case class which is a member of a sealed hierarchy carries its discriminator even when it is encoded on its own (through its own pickler), so that the two encodings agree.
+This also holds when a case class is encoded with its own pickler: the JSON and the schema both include the discriminator.
 
 Finally, if the discriminator is a field that's defined on the base trait (and hence in each implementation), the discriminator values can be specified explicitly using the `Pickler.oneOfUsingField` macro, for example (this will also generate the appropriate mappings):
 
@@ -170,7 +172,7 @@ Schemas generated by picklers can be customized using annotations, just like wit
 
 * `@encodedName` on a field determines the JSON field name; on a type, it replaces the type's name (and hence its discriminator value)
 
-Note that the `@default` annotation is **documentation only**: it is included in the schema, but a field missing from the JSON is not filled from it. Scala default parameter values *are* used when decoding a JSON object with a missing field.
+When decoding, a missing field gets its Scala default value. The schema marks such a field as optional and shows the default. `@default` only changes the documented default, and needs a Scala default value on the field (otherwise compilation fails).
 
 ## Enumerations
 
@@ -272,7 +274,7 @@ Fields of type `Option[T]` are serialised as the direct value `T`, and skipped i
 
 `Either[A, B]` is written as the bare `A` or `B` value (there is no tag), matching tapir's own `Schema[Either[A, B]]` and the `Codec.eitherRight` convention; decoding tries `B` first, then `A`.
 
-Given a `Pickler[T]`, picklers for wrappers can be built with `asOption`, `asIterable[C]` and `asArray`. These are equivalent to deriving the wrapper type directly (`Pickler.derived[List[T]]`), which is what automatic derivation does; there are no implicit picklers for wrappers in scope by default.
+Given a `Pickler[T]`, picklers for wrappers can be built with `asOption`, `asIterable[C]` and `asArray`. These are equivalent to deriving the wrapper type directly (`Pickler.derived[List[T]]`), which is what automatic derivation does; there are no `given` picklers for wrappers in scope by default.
 
 ## Using existing codecs
 
@@ -301,19 +303,27 @@ Note that a bare `given JsonValueCodec[X]` for a case class or sealed hierarchy 
 
 * Value classes (case classes extending `AnyVal`) are serialised as the wrapped value, and documented as such.
 * Tuples are not supported: a tuple would be documented as an object and written as an array. Use a case class.
-* A debugging log of the derivation can be enabled by importing `sttp.tapir.json.pickler.debug.logDerivationForPickler`, or with the scalac option `-Xmacro-settings:tapirPickler.logDerivation=true`. The derivation timeout (5 seconds by default) can be raised with `-Xmacro-settings:tapirPickler.timeout=<seconds>` (or a duration such as `30s`) for very large type graphs.
+* To log the derivation, import `sttp.tapir.json.pickler.debug.logDerivationForPickler`, or set `-Xmacro-settings:tapirPickler.logDerivation=true`.
+* The derivation times out after 60 seconds. Change this with `-Xmacro-settings:tapirPickler.timeout=<value>` (seconds, or a duration such as `30s`).
+* To change jsoniter-scala's decoding settings, put a `given ReaderConfig` in scope where the codec is created (`jsonBody`, `jsonQuery`, `toCodec`, …), e.g. `given ReaderConfig = Pickler.defaultReaderConfig.withMaxCharBufSize(16 * 1024 * 1024)`. Values inside an `Either` always use `Pickler.defaultReaderConfig`.
+* When decoding, a `Map` or `Set` with more than 1024 entries is rejected (jsoniter-scala's guard against hash-collision attacks). To allow more, provide a `given Pickler` for that type using `Pickler.fromSchemaAndCodec`, with a codec that has a higher `mapMaxInsertNumber` / `setMaxInsertNumber`.
+* `import sttp.tapir.json.pickler.given` brings a `given JsonCodec[T]` for every `T` with a `Pickler`. If another JSON integration's codecs (e.g. `sttp.tapir.json.circe.*`) are also imported, `JsonCodec[T]` becomes ambiguous for types supported by both.
 * `jsoniter-scala-macros` is a compile-time dependency of every project using this module: the generated code calls `JsonCodecMaker.make`, so it has to be on the compile classpath. It is pulled in transitively.
 
 ## Migrating from the µPickle-based pickler
 
-Up to and including tapir 1.13.x the pickler module was built on µPickle. The current module derives the schema and a jsoniter-scala codec in one macro expansion. The public API is largely unchanged (`Pickler.derived`, `derives Pickler`, `generic.auto.*`, `PicklerConfiguration`, `derivedEnumeration`, `oneOfUsingField`, `jsonBody`), with the following differences:
+Up to and including tapir 1.13.x the pickler module was built on µPickle. The public API is largely unchanged (`Pickler.derived`, `derives Pickler`, `generic.auto.*`, `PicklerConfiguration`, `oneOfUsingField`, `jsonBody`), with the following differences:
 
 * `Pickler[T]` is a trait with `schema` and `codec: JsonValueCodec[T]`, no longer a case class with `innerUpickle`. Custom instances are built with `Pickler.fromSchemaAndCodec`; µPickle `ReadWriter`s cannot be reused.
-* The `given` picklers for `Option`, collections, `Array`, `Either` and `Map[String, _]` are gone: `Pickler.derived[List[T]]` derives the wrapper directly, and `asOption` / `asIterable` / `asArray` remain for building them from an existing pickler.
+* There are no `given` picklers for primitives, `AnyVal` classes, `java.math.BigDecimal`/`BigInteger`, `Option`, collections, `Array`, `Either` or `Map[String, _]` (`summon[Pickler[Int]]` doesn't compile). They are derived as part of `Pickler.derived`, or directly, e.g. `Pickler.derived[List[T]]`. `asOption` / `asIterable` / `asArray` remain.
+* `generic.auto.picklerForCaseClass` is renamed to `generic.auto.picklerForType`.
+* Tuples are no longer supported; use a case class.
+* `derivedEnumeration[T].apply(encode, schemaType, default)` is removed; use `defaultStringBased` or `customStringBased`.
 * `Pickler.picklerForMap` takes the key parser as a second argument: `picklerForMap(_.toString, UUID.fromString)`.
 * `PicklerConfiguration` (and any function inside it) must be evaluable at compile time; see [Configuring pickler derivation](#configuring-pickler-derivation).
 * `Either[A, B]` is written **untagged** (the bare `A` or `B` value) instead of `[0, a]` / `[1, b]`, matching tapir's `Schema[Either]` and `Codec.eitherRight`.
-* The `@default` annotation no longer fills a missing field when decoding; only Scala default parameters do. It is still documented in the schema.
+* `@default` no longer fills missing fields when decoding, and now needs a Scala default value on the field. Scala default values are now shown in the schema.
 * `oneOfUsingField` must map every case of the hierarchy, and derives the cases itself: the picklers passed in the mapping only identify the cases.
 * Schema names of classes defined inside a method no longer contain a `<local ...>` segment, matching tapir core's `Schema.derived`.
 * Recursive types (directly, through collections/`Option`, or through a sealed hierarchy) are supported.
+* Maps and sets with more than 1024 entries are rejected when decoding (µPickle had no limit), see [Other notes](#other-notes).

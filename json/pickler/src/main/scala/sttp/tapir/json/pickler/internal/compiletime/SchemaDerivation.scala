@@ -1,8 +1,8 @@
 package sttp.tapir.json.pickler.internal.compiletime
 
 import hearth.MacroCommons
+import hearth.fp.data.NonEmptyList
 import hearth.fp.effect.*
-import hearth.fp.instances.*
 import hearth.fp.syntax.*
 import hearth.std.*
 import sttp.tapir.Schema
@@ -20,10 +20,10 @@ import sttp.tapir.json.pickler.internal.runtime.SchemaUtils
   * folded `PicklerConfiguration` and spliced as a literal — the same literal the codec half hands to `JsonCodecMaker`. The structure of the
   * schema is built by [[SchemaUtils]] at runtime, so that the macro reifies as little as possible.
   */
-trait SchemaDerivation {
+private[pickler] trait SchemaDerivation {
   this: MacroCommons & StdExtensions & TypeShape & AnnotationSupport & NameSupport & ImplicitPicklerSupport & PlatformSupport =>
 
-  /** Centralised `Type.of` instances — see the note on `PicklerMacrosImpl.PTypes` for why these are not `implicit val`s at their use sites.
+  /** Centralised `Type.of` instances — see the note on `PicklerMacros.PTypes` for why these are not `implicit val`s at their use sites.
     */
   private[compiletime] object STypes {
     def SchemaOf[A: Type]: Type[Schema[A]] = Type.of[Schema[A]]
@@ -32,13 +32,13 @@ trait SchemaDerivation {
     lazy val SNameT: Type[SName] = Type.of[SName]
     lazy val StringT: Type[String] = Type.of[String]
     lazy val AnyT: Type[Any] = Type.of[Any]
+    lazy val OptionAnyT: Type[Option[Any]] = Type.of[Option[Any]]
     lazy val ListAnyT: Type[List[Any]] = Type.of[List[Any]]
     lazy val ListStringT: Type[List[String]] = Type.of[List[String]]
     def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
     lazy val SchemaAnyPair: Type[(Schema[Any], String)] = Type.of[(Schema[Any], String)]
     lazy val SchemaAnyPairs: Type[List[(Schema[Any], String)]] = Type.of[List[(Schema[Any], String)]]
     lazy val IntT: Type[Int] = Type.of[Int]
-    def IndexFnOf[A: Type]: Type[A => Int] = Type.of[A => Int]
   }
 
   // -----------------------------------------------------------------------------------------------------------------
@@ -99,68 +99,38 @@ trait SchemaDerivation {
     }
 
   // -----------------------------------------------------------------------------------------------------------------
-  // Rule pipeline
+  // Pipeline
   // -----------------------------------------------------------------------------------------------------------------
 
-  abstract class SchemaRule(val name: String) extends Rule {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]]
-  }
-
+  /** Tried in order: the cached schema, an `SRef` for a type currently being derived, the schema of a user-supplied `Pickler[A]`, and
+    * finally structural derivation.
+    *
+    * A user-supplied `Pickler[A]` beats everything structural: it is the override mechanism, and the codec chain honours the same instance,
+    * so schema and JSON stay in step. Safe to summon early only because of the re-entrancy guard described in `ImplicitPicklerSupport`.
+    */
   def deriveSchemaFor[A: SchemaCtx]: MIO[Expr[Schema[A]]] =
     Log.namedScope(s"deriveSchema[${Type[A].prettyPrint}]") {
-      Rules(
-        UseCachedRule,
-        UseSelfRefWhenRecursiveRule,
-        // A user-supplied `Pickler[A]` beats everything structural: it is the override mechanism, and the codec chain
-        // honours the same instance, so schema and JSON stay in step. Safe to summon early only because of the
-        // re-entrancy guard described in `ImplicitPicklerSupport`.
-        UseUserPicklerRule,
-        StructuralRule
-      )(_[A]).flatMap {
-        case Right(result) => MIO.pure(result)
-        case Left(reasons) =>
-          val explanation = reasons.toListMap.view.map { case (rule, why) =>
-            if (why.isEmpty) s"  - ${rule.name}: not applicable"
-            else s"  - ${rule.name}: ${why.mkString("; ")}"
-          }.toList
-          failSchema(PicklerDerivationError.UnsupportedType(Type[A].plainPrint, explanation))
-      }
-    }
-
-  private def failSchema[T](error: PicklerDerivationError): MIO[T] = Log.error(error.message) >> MIO.fail(error)
-
-  private object UseCachedRule extends SchemaRule("use cached schema") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
       implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
-      sctx.cache.get0Ary[Schema[A]](sctx.cacheKey).map {
-        case Some(cached) => Rule.matched(cached)
-        case None         => Rule.yielded(s"${Type[A].plainPrint} is not cached")
+      sctx.cache.get0Ary[Schema[A]](sctx.cacheKey).flatMap {
+        case Some(cached) => MIO.pure(cached)
+        case None         =>
+          sctx.inProgress.get.flatMap { inProgress =>
+            if (inProgress.contains(sctx.cacheKey)) {
+              implicit val SNameT: Type[SName] = STypes.SNameT
+              val sName = sNameExpr[A]
+              MIO.pure(Expr.quote(SchemaUtils.refSchema[A](Expr.splice(sName))))
+            } else
+              userPickler[A](sctx.env).flatMap {
+                case Some(pickler) => setCachedAndGet[A](sctx.cache, Expr.quote(Expr.splice(pickler).schema))
+                case None          => deriveStructuralSchema[A]
+              }
+          }
       }
     }
-  }
 
-  private object UseSelfRefWhenRecursiveRule extends SchemaRule("emit SRef for a recursive type") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      sctx.inProgress.get.map { inProgress =>
-        if (inProgress.contains(sctx.cacheKey)) {
-          implicit val SNameT: Type[SName] = STypes.SNameT
-          val sName = sNameExpr[A]
-          Rule.matched(Expr.quote(SchemaUtils.refSchema[A](Expr.splice(sName))))
-        } else Rule.yielded(s"${Type[A].plainPrint} is not currently being derived")
-      }
-  }
+  private def failSchema[T](error: PicklerDerivationError): MIO[T] = Log.error(error.getMessage) >> MIO.fail(error)
 
-  private object UseUserPicklerRule extends SchemaRule("use the schema of a user-supplied Pickler") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] =
-      userPickler[A](sctx.env).flatMap {
-        case Some(pickler) =>
-          implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
-          setCachedAndGet[A](sctx.cache, Expr.quote(Expr.splice(pickler).schema)).map(Rule.matched)
-        case None => MIO.pure(Rule.yielded(s"no user-supplied Pickler[${Type[A].plainPrint}] in scope"))
-      }
-  }
-
-  /** The structural rule: dispatch on the [[Shape]] shared with `CodecDerivation`, so that both halves take a type apart identically.
+  /** Dispatch on the [[Shape]] shared with `CodecDerivation`, so that both halves take a type apart identically.
     *
     * Only the shapes that are not structural (`BuiltInScalar`, the Java numbers, `Opaque`) reach the implicit search for a `Schema[A]`.
     * That is where primitives, `String`, `java.time` types and any user-provided schema for a non-structural type are resolved —
@@ -173,28 +143,26 @@ trait SchemaDerivation {
     * The cost is that a user-supplied `given Schema[MyCaseClass]` does not override structural derivation: overriding is done by supplying
     * a `Pickler`, not a `Schema`, so that the codec follows suit.
     */
-  private object StructuralRule extends SchemaRule("derive from the type's shape") {
-    def apply[A: SchemaCtx]: MIO[Rule.Applicability[Expr[Schema[A]]]] = {
-      val shape = classify[A]
-      Log.info(s"${Type[A].prettyPrint} classified as ${shape.getClass.getSimpleName}") >> (shape match {
-        case Shape.BuiltInScalar() | Shape.JavaBigDecimal() | Shape.JavaBigInteger() | Shape.Opaque() => useImplicitSchema[A]
-        // tapir core declares no `Schema[Char]`, but jsoniter writes a `Char` as a one-character string. Supplying the
-        // matching `SString` here is what keeps the schema and the codec in agreement.
-        case Shape.CharScalar()           => MIO.pure(Expr.quote(SchemaUtils.stringLikeSchema[A]))
-        case Shape.ValueClass(inner)      => deriveValueClassSchema[A](inner)
-        case Shape.OptionOf(element)      => deriveOptionSchema[A](element)
-        case Shape.NestedOption(inner, _) => deriveOptionSchema[A](inner)
-        case Shape.EitherOf(left, right)  => deriveEitherSchema[A](left, right)
-        case Shape.StringMap(value)       => deriveMapSchema[A](value)
-        case Shape.NonStringMap(key, _)   => failSchema(PicklerDerivationError.NonStringMapKey(key.Underlying.plainPrint))
-        case Shape.Collection(element)    => deriveCollectionSchema[A](element)
-        case Shape.Tuple()                => failSchema(PicklerDerivationError.TupleNotSupported(Type[A].plainPrint))
-        case Shape.Singleton()            => guardingRecursion[A, Expr[Schema[A]]](deriveSingletonSchema[A])
-        case Shape.Product(_, params)     => guardingRecursion[A, Expr[Schema[A]]](deriveCaseClassSchema[A](params))
-        case Shape.Enumeration(_, leaves) => guardingRecursion[A, Expr[Schema[A]]](deriveStringEnumSchema[A](leaves))
-        case Shape.Coproduct(_, leaves)   => guardingRecursion[A, Expr[Schema[A]]](deriveCoproductSchema[A](leaves))
-      }).map(Rule.matched)
-    }
+  private def deriveStructuralSchema[A: SchemaCtx]: MIO[Expr[Schema[A]]] = {
+    val shape = classify[A]
+    Log.info(s"${Type[A].prettyPrint} classified as ${shape.getClass.getSimpleName}") >> (shape match {
+      case Shape.BuiltInScalar() | Shape.JavaBigDecimal() | Shape.JavaBigInteger() | Shape.Opaque() => useImplicitSchema[A]
+      // tapir core declares no `Schema[Char]`, but jsoniter writes a `Char` as a one-character string. Supplying the
+      // matching `SString` here is what keeps the schema and the codec in agreement.
+      case Shape.CharScalar()           => MIO.pure(Expr.quote(SchemaUtils.stringLikeSchema[A]))
+      case Shape.ValueClass(inner)      => deriveValueClassSchema[A](inner)
+      case Shape.OptionOf(element)      => deriveOptionSchema[A](element)
+      case Shape.NestedOption(inner, _) => deriveOptionSchema[A](inner)
+      case Shape.EitherOf(left, right)  => deriveEitherSchema[A](left, right)
+      case Shape.StringMap(value)       => deriveMapSchema[A](value)
+      case Shape.NonStringMap(key, _)   => failSchema(PicklerDerivationError.nonStringMapKey(key.Underlying.plainPrint))
+      case Shape.Collection(element)    => deriveCollectionSchema[A](element)
+      case Shape.Tuple()                => failSchema(PicklerDerivationError.tupleNotSupported(Type[A].plainPrint))
+      case Shape.Singleton()            => guardingRecursion[A, Expr[Schema[A]]](deriveSingletonSchema[A])
+      case Shape.Product(_, params)     => guardingRecursion[A, Expr[Schema[A]]](deriveCaseClassSchema[A](params))
+      case Shape.Enumeration(_, leaves) => guardingRecursion[A, Expr[Schema[A]]](deriveStringEnumSchema[A](leaves))
+      case Shape.Coproduct(_, leaves)   => guardingRecursion[A, Expr[Schema[A]]](deriveCoproductSchema[A](leaves))
+    })
   }
 
   private def useImplicitSchema[A: SchemaCtx]: MIO[Expr[Schema[A]]] = {
@@ -202,7 +170,15 @@ trait SchemaDerivation {
     Expr.summonImplicit[Schema[A]].toOption match {
       case Some(expr) => MIO.pure(expr)
       case None       =>
-        failSchema(PicklerDerivationError.UnsupportedType(Type[A].plainPrint, List(s"no implicit Schema[${Type[A].plainPrint}] in scope")))
+        val ignoredPickler =
+          if (hasSealedParent[A]) List("a Pickler for a subtype of a sealed hierarchy is not used; provide one for the parent instead")
+          else Nil
+        failSchema(
+          PicklerDerivationError.unsupportedType(
+            Type[A].plainPrint,
+            s"no implicit Schema[${Type[A].plainPrint}] in scope" :: ignoredPickler
+          )
+        )
     }
   }
 
@@ -272,45 +248,67 @@ trait SchemaDerivation {
     )
   }
 
+  /** A case class with a sealed parent also documents the discriminator field: its codec writes it (see `CodecDerivation`), also when used
+    * on its own.
+    */
   private def deriveCaseClassSchema[A: SchemaCtx](params: List[(String, Parameter)]): MIO[Expr[Schema[A]]] = {
     implicit val SchemaA: Type[Schema[A]] = STypes.SchemaOf[A]
     implicit val SNameT: Type[SName] = STypes.SNameT
     implicit val FieldT: Type[SProductField[A]] = STypes.ProductFieldOf[A]
+    implicit val StringT: Type[String] = STypes.StringT
 
     val name = sNameExpr[A]
     val annotations = typeAnnotationsExpr[A]
+    val discriminatorField = Expr(sctx.env.config.discriminator)
+    val discriminator: Either[PicklerDerivationError, Option[Expr[String]]] =
+      if (hasSealedParent[A]) discriminatorValue[A](sctx.env).map(v => Some(Expr(v))) else Right(None)
 
-    params
-      .foldLeft(MIO.pure(List.empty[Expr[SProductField[A]]])) { case (acc, (fieldName, param)) =>
-        acc.flatMap(fields => deriveFieldExpr[A](fieldName, param).map(fields :+ _))
-      }
-      .flatMap { fields =>
-        val fieldsList = fields.foldRight(Expr.quote(SchemaUtils.emptyFieldList[A])) { (field, tail) =>
-          Expr.quote(Expr.splice(field) :: Expr.splice(tail))
-        }
-        setCachedAndGet[A](
-          sctx.cache,
-          Expr.quote {
-            SchemaUtils.enrichSchema[A](
-              SchemaUtils.productSchema[A](Expr.splice(name), Expr.splice(fieldsList)),
-              Expr.splice(annotations)
+    discriminator
+      .fold(failSchema, MIO.pure)
+      .flatMap(discriminator =>
+        params
+          .foldLeft(MIO.pure(List.empty[Expr[SProductField[A]]])) { case (acc, (fieldName, param)) =>
+            acc.flatMap(fields => deriveFieldExpr[A](fieldName, param).map(fields :+ _))
+          }
+          .flatMap { fields =>
+            val fieldsList = fields.foldRight(Expr.quote(SchemaUtils.emptyFieldList[A])) { (field, tail) =>
+              Expr.quote(Expr.splice(field) :: Expr.splice(tail))
+            }
+            val product = Expr.quote {
+              SchemaUtils.enrichSchema[A](
+                SchemaUtils.productSchema[A](Expr.splice(name), Expr.splice(fieldsList)),
+                Expr.splice(annotations)
+              )
+            }
+            setCachedAndGet[A](
+              sctx.cache,
+              discriminator.fold(product) { value =>
+                Expr.quote(SchemaUtils.withDiscriminatorField[A](Expr.splice(product), Expr.splice(discriminatorField), Expr.splice(value)))
+              }
             )
           }
-        )
-      }
+      )
   }
 
   private def deriveFieldExpr[A: SchemaCtx](fieldName: String, param: Parameter): MIO[Expr[SProductField[A]]] = {
     import param.tpe.Underlying as Field
     implicit val AnyT: Type[Any] = STypes.AnyT
     implicit val FieldT: Type[SProductField[A]] = STypes.ProductFieldOf[A]
+    implicit val OptionAnyT: Type[Option[Any]] = STypes.OptionAnyT
 
     val scalaName = Expr(fieldName)
     val index = Expr(param.index)
     val annotations = collectAnnotationsExpr(allParamAnnotations[A](param, fieldName))
+    val scalaDefault = scalaDefaultExpr(param).fold(Expr.quote(Option.empty[Any]))(d => Expr.quote(Some(Expr.splice(d))))
 
     encodedFieldName[A](param, fieldName, sctx.env.config) match {
-      case Left(error)    => failSchema(error)
+      case Left(error)                                                                => failSchema(error)
+      case Right(_) if !param.hasDefault && hasDefaultAnnotation[A](param, fieldName) =>
+        failSchema(
+          PicklerDerivationError.invalidAnnotation(
+            s"@default on field '$fieldName' of ${Type[A].plainPrint} requires a Scala default value"
+          )
+        )
       case Right(encoded) =>
         val encodedName = Expr(encoded)
         deriveSchemaFor[Field](using sctx.nest[Field]).map { fieldSchema =>
@@ -320,11 +318,23 @@ trait SchemaDerivation {
               Expr.splice(encodedName),
               Expr.splice(fieldSchema).asInstanceOf[Schema[Any]],
               Expr.splice(index),
+              Expr.splice(scalaDefault),
               Expr.splice(annotations)
             )
           }
         }
     }
+  }
+
+  /** A call to the Scala default of a constructor parameter, if it has one. */
+  private def scalaDefaultExpr(param: Parameter): Option[Expr[Any]] = {
+    implicit val AnyT: Type[Any] = STypes.AnyT
+    def call(method: Method): Option[UntypedExpr] = method match {
+      case result: Method.Result[?]   => result.build().toOption.map(_.asUntyped)
+      case values: Method.ApplyValues => call(values(Map.empty))
+      case _                          => None
+    }
+    param.defaultValue.flatMap(call).map(_.asTyped[Any])
   }
 
   /** A sealed hierarchy with at least one non-singleton leaf: a discriminated coproduct over the **leaves** (`Shape.Coproduct`), each leaf
@@ -380,30 +390,25 @@ trait SchemaDerivation {
   }
 
   /** `(value: A) => value match { case _: Leaf0 => 0; case _: Leaf1 => 1; ... }`, the dispatch behind `SCoproduct.subtypeSchema` (and hence
-    * `Schema.applyValidation`). A type-test match, generated with Hearth's `Enum.matchOn`, is the only dispatch that handles parameterless
-    * Scala 3 enum cases (all one runtime class) and nested classes alike. `matchOn` sees one level of the hierarchy at a time, so
-    * intermediate sealed traits are descended recursively until a leaf is reached.
+    * `Schema.applyValidation`). A type-test match is the only dispatch that handles parameterless Scala 3 enum cases (all one runtime
+    * class, so matched by value) and nested classes alike. The cases are built over the leaves directly rather than with `Enum.matchOn`,
+    * which keys children by simple name and would drop one of two same-named leaves.
     */
   private def subtypeIndexExpr[A: Type](leaves: List[(String, ??<:[A])]): MIO[Expr[A => Int]] = {
     implicit val IntT: Type[Int] = STypes.IntT
-    implicit val FnT: Type[A => Int] = STypes.IndexFnOf[A]
-    val keys = leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; typeKey[Leaf] }
 
-    def indexOf[B: Type](value: Expr[B]): MIO[Expr[Int]] =
-      keys.indexOf(typeKey[B]) match {
-        case -1 =>
-          Enum.parse[B].toEither match {
-            case Right(e) =>
-              e.matchOn[MIO, Int](value) { matched =>
-                import matched.{Underlying as Child, value as child}
-                indexOf[Child](child)
-              }.map(_.getOrElse(Expr(-1)))
-            case Left(_) => MIO.pure(Expr(-1))
-          }
-        case index => MIO.pure(Expr(index))
-      }
+    def leafCase[Leaf: Type](index: Int): MatchCase[Expr[Int]] = {
+      val matched =
+        if (Type.isVal[Leaf] && !Type.isObject[Leaf]) Expr.singletonOf[Leaf].fold(MatchCase.typeMatch[Leaf]())(MatchCase.eqValue[Leaf](_))
+        else MatchCase.typeMatch[Leaf]()
+      matched.map(_ => Expr(index))
+    }
 
-    LambdaBuilder.of1[A]("value").traverse(indexOf[A](_)).map(_.build[Int])
+    val cases = leaves.zipWithIndex.map { case ((_, leaf), index) => import leaf.Underlying as Leaf; leafCase[Leaf](index) }
+    LambdaBuilder
+      .of1[A]("value")
+      .traverse(value => MIO.pure(NonEmptyList.fromList(cases).fold(Expr(-1))(value.matchOn[Int](_))))
+      .map(_.build[Int])
   }
 
   /** An all-singleton hierarchy (`Shape.Enumeration`): `SString` plus a `Validator.enumeration` of the singleton values — the schema
