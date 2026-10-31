@@ -1,9 +1,9 @@
 // {cat=OpenAPI documentation; effects=ZIO; server=ZIO HTTP; json=circe; docs=Scalar}: Exposing documentation using Scalar
 
-//> using dep com.softwaremill.sttp.tapir::tapir-core:1.14.0
-//> using dep com.softwaremill.sttp.tapir::tapir-scalar-bundle:1.14.0
-//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.14.0
-//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.14.0
+//> using dep com.softwaremill.sttp.tapir::tapir-core:1.14.1
+//> using dep com.softwaremill.sttp.tapir::tapir-scalar-bundle:1.14.1
+//> using dep com.softwaremill.sttp.tapir::tapir-json-circe:1.14.1
+//> using dep com.softwaremill.sttp.tapir::tapir-zio-http-server:1.14.1
 
 package sttp.tapir.examples.openapi
 
