@@ -85,19 +85,22 @@ This method may be used both with automatic and semi-automatic derivation.
 
 ### Derivation for recursive types
 
-In Scala3, any schemas for recursive types must not be cached. You may use a typed `implicit def`, or a `given` with
-a dummy dependency.
-
-For example:
+In Scala3, schemas for recursive types must be provided as a `given` with an empty parameter list, so that they are
+not cached. For example:
 
 ```scala mdoc:silent
 case class RecursiveTest(data: List[RecursiveTest])
 object RecursiveTest:
-  given f1Schema(using DummyImplicit): Schema[RecursiveTest] = Schema.derived[RecursiveTest]
+  given f1Schema: () => Schema[RecursiveTest] = Schema.derived[RecursiveTest]
 ```
 
-The implicit doesn't have to be defined in the companion object, just anywhere in scope. This applies to cases where
+The given doesn't have to be defined in the companion object, just anywhere in scope. This applies to cases where
 the schema is looked up implicitly, e.g. for `jsonBody`.
+
+```{note}
+The older `implicit def f1Schema: Schema[RecursiveTest] = ...` syntax works as well. A plain `given` (without `() =>`)
+or `derives Schema` compiles, but hangs at runtime for recursive types, and must be avoided.
+```
 
 ### Derivation for union types
 
