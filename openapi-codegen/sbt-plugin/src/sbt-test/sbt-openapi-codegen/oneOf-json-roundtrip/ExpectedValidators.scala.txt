@@ -109,7 +109,7 @@ object TapirGeneratedEndpointsValidators {
     (obj: ValidatedOneOf) => (obj match {
       case o: ValidatedOneOfA => ValidatedOneOfAValidator.apply(o)
       case o: ValidatedOneOfB => ValidatedOneOfBValidator.apply(o)
-      case _ => Nil
+      case o: ValidatedOneOfC => ValidatedOneOfCValidator.apply(o)
     }) match {
       case Nil => ValidationResult.Valid
       case errs =>
@@ -138,6 +138,16 @@ object TapirGeneratedEndpointsValidators {
     }
   )
   lazy val ValidatedOneOfBIValidator: Validator[Int] = Validator.min(0, exclusive = false)
+  lazy val ValidatedOneOfCValidator: Validator[ValidatedOneOfC] = Validator.custom(
+    (obj: ValidatedOneOfC) => obj.j.toSeq.flatMap(ValidatedOneOfCJValidator.apply) match {
+      case Nil => ValidationResult.Valid
+      case errs =>
+        val msgs: List[String] = "Object element validation failed for ValidatedOneOfC.j" +:
+          errs.flatMap(_.customMessage).toList
+        ValidationResult.Invalid(msgs)
+    }
+  )
+  lazy val ValidatedOneOfCJValidator: Validator[Int] = Validator.min(3, exclusive = true)
   lazy val ValidatedRecursiveValidator: Validator[ValidatedRecursive] = Validator.custom(
     (obj: ValidatedRecursive) => obj.self.toSeq.flatMap(ValidatedRecursiveSelfValidator.apply) match {
       case Nil => ValidationResult.Valid
