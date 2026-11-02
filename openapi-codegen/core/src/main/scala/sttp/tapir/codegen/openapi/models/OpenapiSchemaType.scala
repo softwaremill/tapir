@@ -299,7 +299,7 @@ object OpenapiSchemaType {
             )
           )
         else Right(s.asNumber -> Some(true))
-      case _ => Left(DecodingFailure(s"Expected boolean or or number for $exclusiveFieldName", c.history))
+      case _ => Left(DecodingFailure(s"Expected boolean or number for $exclusiveFieldName", c.history))
     }
 
   implicit val OpenapiSchemaNumericTypeDecoder: Decoder[OpenapiSchemaNumericType] = { (c: HCursor) =>
