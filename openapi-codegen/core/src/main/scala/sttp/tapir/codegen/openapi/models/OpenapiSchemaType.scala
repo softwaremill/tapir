@@ -280,16 +280,38 @@ object OpenapiSchemaType {
     }
   }
 
+  private def getLimitAndExclusive(
+      c: HCursor,
+      limitName: String,
+      exclusiveFieldName: String
+  ): Decoder.Result[(Option[JsonNumber], Option[Boolean])] =
+    c.downField(exclusiveFieldName).focus match {
+      case None =>
+        c.downField(limitName).as[Option[JsonNumber]].map(_ -> Option.empty[Boolean])
+      case Some(b) if b.isBoolean =>
+        c.downField(limitName).as[Option[JsonNumber]].map(_ -> b.asBoolean)
+      case Some(s) if s.isNumber =>
+        if (c.downField(limitName).focus.isDefined)
+          Left(
+            DecodingFailure(
+              s"Specifying a numeric value for $exclusiveFieldName is incompatible with providing $limitName (openapi >=3.1 syntax)",
+              c.history
+            )
+          )
+        else Right(s.asNumber -> Some(true))
+      case _ => Left(DecodingFailure(s"Expected boolean or number for $exclusiveFieldName", c.history))
+    }
+
   implicit val OpenapiSchemaNumericTypeDecoder: Decoder[OpenapiSchemaNumericType] = { (c: HCursor) =>
     for {
       p <- typeAndNullable(c)
         .ensure(DecodingFailure("Given type is not number/integer!", c.history))(v => v._1 == "number" || v._1 == "integer")
       (t, nb) = p
       f <- c.downField("format").as[Option[String]]
-      min <- c.downField("minimum").as[Option[JsonNumber]]
-      max <- c.downField("maximum").as[Option[JsonNumber]]
-      exclusiveMinimum <- c.downField("exclusiveMinimum").as[Option[Boolean]]
-      exclusiveMaximum <- c.downField("exclusiveMaximum").as[Option[Boolean]]
+      mins <- getLimitAndExclusive(c, "minimum", "exclusiveMinimum")
+      (min, exclusiveMinimum) = mins
+      maxs <- getLimitAndExclusive(c, "maximum", "exclusiveMaximum")
+      (max, exclusiveMaximum) = maxs
       multipleOf <- c.downField("multipleOf").as[Option[JsonNumber]]
       restrictions = NumericRestrictions(min, max, exclusiveMinimum, exclusiveMaximum, multipleOf)
     } yield {
