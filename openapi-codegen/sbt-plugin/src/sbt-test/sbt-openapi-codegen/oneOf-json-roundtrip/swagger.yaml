@@ -1144,6 +1144,8 @@ components:
       properties:
         j:
           type: integer
+          # openapi >=3.1 specifies exclusiveMinimum/exclusiveMaximum directly
+          exclusiveMinimum: 3
     ValidatedOneOf:
       title: ValidatedOneOf
       oneOf:
