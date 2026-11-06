@@ -8,7 +8,7 @@ import sttp.tapir.codegen.json.JsonSerdeLib.{Circe, Jsoniter}
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.{DefaultValueRenderer, OpenapiSchemaType, RenderConfig}
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
-import sttp.tapir.codegen.util.NameHelpers.{indent, safeVariableName}
+import sttp.tapir.codegen.util.NameHelpers.{formatClassName, indent, safeVariableName}
 import sttp.tapir.codegen.util.{DocUtils, JavaEscape, NameValidation, VersionedHelpers}
 import sttp.tapir.codegen.xml.{XmlSerdeGenerator, XmlSerdeLib}
 
@@ -103,7 +103,7 @@ class ClassDefinitionGenerator {
       )
 
     def nonClassyOneOfRepr(name: String, st: OpenapiSchemaOneOf): String = {
-      val tt = name.capitalize
+      val tt = formatClassName(name)
       val variants = st.types
         .map {
           case _: OpenapiSchemaBinary | _: OpenapiSchemaByte => s"case class ${tt}Bin(v: Array[Byte]) extends $tt"
@@ -115,7 +115,7 @@ class ClassDefinitionGenerator {
           case t: OpenapiSchemaNumericType                   => s"case class $tt${t.scalaType}(v: ${t.scalaType}) extends $tt"
           case _: OpenapiSchemaStringType                    => s"case class ${tt}String(v: String) extends $tt"
           case _: OpenapiSchemaAny                           => s"case class ${tt}Json(v: io.circe.Json) extends $tt"
-          case r: OpenapiSchemaRef                           => s"case class $tt${r.stripped}(v: ${r.stripped}) extends $tt"
+          case r: OpenapiSchemaRef                           => s"case class $tt${formatClassName(r.stripped)}(v: ${formatClassName(r.stripped)}) extends $tt"
         }
         .mkString("\n")
       s"""
@@ -159,7 +159,7 @@ class ClassDefinitionGenerator {
         .filterNot(s => PackageReuseContext.isReusedSchema(s._1, packageReuse))
         .map { case (name, maybeDiscriminator) =>
           val maybeBody = maybeDiscriminator.map(d => s" { def ${safeVariableName(d)}: String }").getOrElse("")
-          s"sealed trait $name$maybeBody"
+          s"sealed trait ${formatClassName(name)}$maybeBody"
         }
         .sorted
         .mkString("", "\n", "\n")
@@ -336,7 +336,7 @@ class ClassDefinitionGenerator {
       }
 
       resolvableNonClassyOneOfSchemas.filterNot(p => isTypeAlias(p._1)).foreach { case (name, st) =>
-        addModel(name.capitalize, nonClassyOneOfRepr(name, st))
+        addModel(formatClassName(name), nonClassyOneOfRepr(name, st))
       }
 
       Map("" -> mainContent) ++ modelFiles.map { case (k, v) => k -> v.mkString("\n") }.filter(_._2.nonEmpty)
@@ -449,7 +449,7 @@ class ClassDefinitionGenerator {
 
       val parents = adtInheritanceMap.getOrElse(schemaKey, Nil) match {
         case Nil => ""
-        case ps  => ps.map(_._1).mkString(" extends ", " with ", "")
+        case ps  => ps.map(p => formatClassName(p._1)).mkString(" extends ", " with ", "")
       }
       val discriminatorDefFields = adtInheritanceMap
         .getOrElse(schemaKey, Nil)

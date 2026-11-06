@@ -72,4 +72,16 @@ object NameHelpers {
     .zipWithIndex
     .map { case (part, 0) => part; case (part, _) => part.capitalize }
     .mkString
+
+  // Formats an OpenAPI schema name into a valid, safe Scala class name (e.g., "pet_1" -> "Pet1")
+  def formatClassName(name: String): String = {
+    safeVariableName(
+      name.replace('_', ' ')
+          .replace('-', ' ')
+          .replace('.', ' ')
+          .replace('+', ' ')
+          .capitalize
+          .replace(" ", "")
+    )
+  }
 }
