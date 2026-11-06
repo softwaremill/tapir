@@ -5,6 +5,9 @@ import sttp.tapir.Schema.annotations.description
 import java.util.UUID
 import sttp.tapir.Schema.annotations.encodedName
 
+/** Shared fixtures. Several assertions depend on these types' fully-qualified names (discriminator values, `SName`s), so moving or renaming
+  * them changes expected strings across the suites.
+  */
 object Fixtures:
   enum ColorEnum:
     case Green, Pink
