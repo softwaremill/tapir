@@ -163,6 +163,63 @@ class RootGeneratorSpec extends CompileCheckTestBase {
     )
 
     VersionCheck.runTest(jsonSerdeLib)(
+      it should s"compile endpoints referencing schemas with underscores using $jsonSerdeLib serdes" in {
+          val underscoreYaml =
+            """openapi: 3.1.0
+              |info:
+              |  title: Underscore Test
+              |  version: 1.0.0
+              |paths:
+              |  /pet:
+              |    post:
+              |      operationId: addPet
+              |      requestBody:
+              |        content:
+              |          application/json:
+              |            schema:
+              |              $ref: '#/components/schemas/pet_1'
+              |      responses:
+              |        '200':
+              |          description: ok
+              |          content:
+              |            application/json:
+              |              schema:
+              |                $ref: '#/components/schemas/pet_1'
+              |components:
+              |  schemas:
+              |    pet_1:
+              |      type: object
+              |      properties:
+              |        id_value:
+              |          type: integer
+              |        name:
+              |          type: string""".stripMargin
+
+          val doc = TestHelpers.parseYamlDocument(underscoreYaml).fold(err => fail(err.getMessage), identity)
+          val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
+
+          // Verifies the model was generated with the sanitized name
+          generated should include("case class Pet1")
+          // Verifies the endpoint correctly references the sanitized type
+          generated should include("jsonBody[Pet1]")
+          // Verifies the schema generation uses the sanitized type parameter
+          generated should include("Schema[Pet1]")
+
+          if (jsonSerdeLib == "zio") {
+            generated should include("JsonDecoder[Pet1]")
+            generated should include("DeriveJsonDecoder.gen[Pet1]")
+            generated should include("JsonEncoder[Pet1]")
+            generated should include("DeriveJsonEncoder.gen[Pet1]")
+            generated should not include "JsonDecoder[pet_1]"
+            assert(!generated.contains("JsonEncoder[pet_1]"))
+          }
+
+          // Verify that the ZIO serde output compiles with the sanitized model name.
+          if (jsonSerdeLib == "zio") generated.shouldCompile()
+      }
+    )
+
+    VersionCheck.runTest(jsonSerdeLib)(
       it should s"compile endpoints with date and duration default values using ${jsonSerdeLib} serdes" in {
         val doc = TestHelpers.parseYamlDocument(TestHelpers.dateAndDurationDefaultsYaml).fold(err => fail(err.getMessage), identity)
         val generated = gen(doc, useHeadTagForObjectNames = false, jsonSerdeLib = jsonSerdeLib)
