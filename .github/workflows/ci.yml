@@ -38,7 +38,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v7
-    - uses: sbt/setup-sbt@b113b960ba361e87e08ce02a390d51871b7ee459 # v1, specifically v1.5.13
+    - uses: sbt/setup-sbt@67d461eba2c4753196c230e02da850757ba4775e # v1, specifically v1.5.14
     - name: Set up JDK 
       uses: actions/setup-java@v6.1.0
       with:
@@ -188,7 +188,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - uses: sbt/setup-sbt@b113b960ba361e87e08ce02a390d51871b7ee459 # v1, specifically v1.5.13
+      - uses: sbt/setup-sbt@67d461eba2c4753196c230e02da850757ba4775e # v1, specifically v1.5.14
       - name: Set up JDK
         uses: actions/setup-java@v6.1.0
         with:
