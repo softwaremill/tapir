@@ -218,6 +218,7 @@ lazy val rawAllAggregates = core.projectRefs ++
   akkaHttpServer.projectRefs ++
   akkaGrpcServer.projectRefs ++
   pekkoHttpServer.projectRefs ++
+  pekkoHttpServerPekko2.projectRefs ++
   pekkoGrpcServer.projectRefs ++
   armeriaServer.projectRefs ++
   armeriaServerCats.projectRefs ++
@@ -1364,6 +1365,40 @@ lazy val pekkoHttpServer: ProjectMatrix = (projectMatrix in file("server/pekko-h
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions, settings = commonJvmSettings)
+  .dependsOn(serverCore, serverTests % Test)
+
+// Pekko 2 is not binary-compatible with Pekko 1.x, so it is published as a separate artifact.
+// The sources are shared with pekkoHttpServer; only PekkoBodyListener needs a version-specific copy
+// because `watchTermination()` became `watchTermination` in Pekko 2.
+lazy val pekkoHttpServerPekko2: ProjectMatrix = (projectMatrix in file("server/pekko-http-server-pekko2"))
+  .settings(
+    name := "tapir-pekko-http-server-pekko2",
+    // The shared source directory contains the Pekko 1 implementation; this module provides
+    // PekkoBodyListenerPekko2.scala instead.
+    Compile / unmanagedSources / excludeFilter := "PekkoBodyListener.scala",
+    Compile / unmanagedSourceDirectories ++= Seq(
+      (ThisBuild / baseDirectory).value / "server/pekko-http-server/src/main/scala"
+    ),
+    Test / unmanagedSourceDirectories ++= Seq(
+      (ThisBuild / baseDirectory).value / "server/pekko-http-server/src/test/scala"
+    ),
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-http" % Versions.pekko2Http,
+      "org.apache.pekko" %% "pekko-stream" % Versions.pekko2Streams,
+      "org.apache.pekko" %% "pekko-slf4j" % Versions.pekko2Streams,
+      // sttp-shared's pekko module only defines the PekkoStreams capability; it is currently
+      // compiled against Pekko 1.7.1 but is type-only and tested against Pekko 2 here.
+      "com.softwaremill.sttp.shared" %% "pekko" % Versions.sttpShared,
+      // Test-only: the shared SSE test uses sttp's Pekko client backend. Replace with a native
+      // Pekko HTTP client when sttp publishes a Pekko 2 build.
+      "com.softwaremill.sttp.client4" %% "pekko-http-backend" % Versions.sttp4 % Test
+    )
+  )
+  .jvmPlatform(
+    scalaVersions = scala2_13And3Versions,
+    // Pekko 2 requires Java 17; the shared Scala 2.13 settings target Java 11.
+    settings = commonJvmSettings ++ Seq(javaOutputVersion := "17")
+  )
   .dependsOn(serverCore, serverTests % Test)
 
 lazy val akkaGrpcServer: ProjectMatrix = (projectMatrix in file("server/akka-grpc-server"))
