@@ -14,6 +14,8 @@ your own Pekko version, use sbt exclusion. Mind the Scala version in artifact na
 "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % "@VERSION@" exclude("org.apache.pekko", "pekko-stream_2.12")
 ```
 
+For Pekko HTTP 2, use the separate artifact described in [Pekko 2](#pekko-2) below.
+
 Now import the object:
 
 ```scala mdoc:compile-only
@@ -120,3 +122,20 @@ val routes = PekkoHttpServerInterpreter().toRoute(sseEndpoint.serverLogicSuccess
 
 The interpreter can be configured by providing an `PekkoHttpServerOptions` value, see
 [server options](options.md) for details.
+
+## Pekko 2
+
+Pekko HTTP 2 is not binary compatible with Pekko HTTP 1.x. Use the separate artifact:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server-pekko2" % "@VERSION@"
+```
+
+The package and imports are unchanged. The Pekko 2 artifact is published for Scala 2.13 and 3, and
+requires Java 17+. It is not published for Scala 2.12. Do not put both the Pekko 1 and Pekko 2
+artifacts on the same classpath.
+
+The artifact currently targets Pekko HTTP `2.0.0-M2`; the version will be bumped to `2.0.0` once it is released.
+
+Pekko HTTP 2 enables HTTP/2 by default (`pekko.http.server.enable-http2 = on`). If your client or test
+backend only supports HTTP/1.1, set `pekko.http.server.enable-http2 = off`.
