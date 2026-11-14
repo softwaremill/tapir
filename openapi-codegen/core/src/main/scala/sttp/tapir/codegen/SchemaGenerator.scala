@@ -7,7 +7,7 @@ import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.util.JavaEscape
-import sttp.tapir.codegen.util.NameHelpers.indent
+import sttp.tapir.codegen.util.NameHelpers.{formatClassName, indent}
 
 import scala.collection.mutable
 
@@ -100,7 +100,7 @@ object SchemaGenerator {
     def parentImpl(name: String, t: OpenapiSchemaType)(fn: ((Boolean, Seq[String])) => String): ((Boolean, Seq[String])) => String =
       if (PackageReuseContext.isReusedSchema(name, packageReuse) && reffableType(t)) {
         { (_: (Boolean, Seq[String])) =>
-          s"implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = Refs.${shimSchemaName(name)}"
+          s"implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[${formatClassName(name)}] = Refs.${shimSchemaName(name)}"
         }
       } else fn
 
@@ -109,7 +109,7 @@ object SchemaGenerator {
         .map(_.schemas.toSeq.flatMap {
           case (name, e: OpenapiSchemaEnum) =>
             Some(name -> parentImpl(name, e)({ (_: (Boolean, Seq[String])) =>
-              s"implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derivedEnumeration.defaultStringBased"
+              s"implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[${formatClassName(name)}] = sttp.tapir.Schema.derivedEnumeration.defaultStringBased"
             }))
           case (name, obj: OpenapiSchemaObject)   => Some(name -> parentImpl(name, obj)(schemaForObject(name, _, obj)))
           case (name, schema: OpenapiSchemaMap)   => Some(name -> parentImpl(name, schema)(schemaForMapOrArray(name, _, schema.items)))
@@ -300,7 +300,7 @@ object SchemaGenerator {
       case s              => s.mkString("", "\n", "\n")
     }
     val (isRecursive, mutualRefs) = recursionParams
-    s"${subs}implicit ${decl(isRecursive)} ${schemaName(name)}: sttp.tapir.Schema[$name] = ${blockingMutualRefs(mutualRefs)("sttp.tapir.Schema.derived")}"
+    s"${subs}implicit ${decl(isRecursive)} ${schemaName(name)}: sttp.tapir.Schema[${formatClassName(name)}] = ${blockingMutualRefs(mutualRefs)("sttp.tapir.Schema.derived")}"
   }
   private def schemaForMapOrArray(name: String, recursionParams: (Boolean, Seq[String]), schema: OpenapiSchemaType): String = {
     val subs = schema match {
@@ -310,7 +310,7 @@ object SchemaGenerator {
     subs.fold("")("\n" + _)
   }
   private def schemaForEnum(name: String): String =
-    s"""implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[$name] = sttp.tapir.Schema.derivedEnumeration.defaultStringBased"""
+    s"""implicit lazy val ${schemaName(name)}: sttp.tapir.Schema[${formatClassName(name)}] = sttp.tapir.Schema.derivedEnumeration.defaultStringBased"""
 
   private def genADTSchema(
       name: String,
@@ -341,7 +341,7 @@ object SchemaGenerator {
           }
           .mkString(",\n")
         s"""{
-           |  val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[$name]]].value
+           |  val derived = implicitly[sttp.tapir.generic.Derived[sttp.tapir.Schema[${formatClassName(name)}]]].value
            |  derived.schemaType match {
            |    case s: sttp.tapir.SchemaType.SCoproduct[_] => derived.copy(schemaType = s.addDiscriminatorField(
            |      sttp.tapir.FieldName("${JavaEscape.escapeString(propertyName)}"),
@@ -356,7 +356,7 @@ object SchemaGenerator {
     }
 
     val (isRecursive, mutualRefs) = recursionParams
-    s"implicit ${decl(isRecursive)} ${schemaName(name)}: sttp.tapir.Schema[$name] = ${blockingMutualRefs(mutualRefs)(schemaImpl)}"
+    s"implicit ${decl(isRecursive)} ${schemaName(name)}: sttp.tapir.Schema[${formatClassName(name)}] = ${blockingMutualRefs(mutualRefs)(schemaImpl)}"
   }
 
   private def generateWrappedOneOfSchema(name: String, schema: OpenapiSchemaOneOf, fullModelPath: Option[String]): String = {
@@ -396,7 +396,7 @@ object SchemaGenerator {
        |    $subtypes
        |  )
        |  sttp.tapir.Schema(
-       |    schemaType = sttp.tapir.SchemaType.SCoproduct[$name](subtypes, None) {
+       |    schemaType = sttp.tapir.SchemaType.SCoproduct[${formatClassName(name)}](subtypes, None) {
        |      $cases
        |    },
        |    name = Some(sttp.tapir.Schema.SName("$fullName"))

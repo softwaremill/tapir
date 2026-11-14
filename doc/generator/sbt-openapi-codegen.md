@@ -197,6 +197,8 @@ param serdes.
 Models containing binary data cannot be re-used between json and multi-part form endpoints, due to having different
 representation types for the binary data
 
+Schema names are converted to Scala class names using UpperCamelCase naming conventions. This means that distinct OpenAPI schema names may produce the same Scala class name. For example, `pet_1` and `Pet1` both generate `Pet1`.
+
 We currently miss a few OpenApi features. Notable are:
 
 - anyOf

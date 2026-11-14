@@ -42,7 +42,8 @@ object SimpleTypes {
         // every document location being enumerated by NameValidation. See GHSA-gpcc-36pq-8qxr.
         val name = t.split('/').last
         NameValidation.validateName("schema $ref", name)
-        (name, false)
+        val className = sttp.tapir.codegen.util.NameHelpers.formatClassName(name)
+        (className, false)
       case x => throw new NotImplementedError(s"Not all simple types supported! Found $x")
     }
   }
