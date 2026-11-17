@@ -1,7 +1,6 @@
 package sttp.tapir.codegen.dedup
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.dedup.PackageReuseContext
 import sttp.tapir.codegen.security.SecurityWrapperDefn
 
 /** Describes a dependency package whose models may be reused via type aliases. */

@@ -1,7 +1,7 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "3.3.3",
+    scalaVersion := (if (sbtVersion.value.startsWith("1.")) "3.3.3" else "3.3.9"),
     version := "0.1",
     openapiJsonSerdeLib := "jsoniter",
     openapiXmlSerdeLib := "none",

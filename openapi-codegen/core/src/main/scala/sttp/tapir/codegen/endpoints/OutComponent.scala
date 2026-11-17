@@ -520,7 +520,7 @@ object OutComponent {
 
     def normalisedCode(code: String) = if (code == "default") "Default" else code
 
-    val Seq(headerMappingDefns: Seq[String], headerModelDefns: Seq[String], enumDefns: Seq[Seq[String]], headerClasses: Seq[String]) =
+    val headerObjects =
       headerNamesAndTypes
         .zip(many.map(_.code))
         .zip(paramNames)
@@ -528,11 +528,11 @@ object OutComponent {
           case ((s, c), _) if s.isEmpty && noHeaders =>
             val objName = statusCodeDisambigObjectName(c)
             if (c == "default")
-              Seq(s"statusCode.map($objName(_))(_.code)", "", Seq.empty[String], s"$objName")
-            else Seq(s"emptyOutputAs($objName)", "", Seq.empty[String], s"$objName.type")
+              (s"statusCode.map($objName(_))(_.code)", "", Seq.empty[String], s"$objName")
+            else (s"emptyOutputAs($objName)", "", Seq.empty[String], s"$objName.type")
           case ((s, c), _) if s.isEmpty =>
             val objName = s"$traitName$c"
-            Seq(s"emptyOutputAs($objName)", s"case object $objName extends $traitName", Seq.empty[String], s"$objName.type")
+            (s"emptyOutputAs($objName)", s"case object $objName extends $traitName", Seq.empty[String], s"$objName.type")
           case ((s, c), names) =>
             val className = s"$traitName$c"
             val (headerDefns, headerInlineEnums, headerTypes) = s.unzip3
@@ -541,9 +541,12 @@ object OutComponent {
               if (s.size == 1) s"$rawOutput.map($className(_))(_.${names.head})"
               else s"($rawOutput).map(($className.apply _).tupled)($className.unapply(_).get)"
             val fields = names.zip(headerTypes).map { case (n, t) => s"$n: $t" }.mkString(", ")
-            Seq(output, s"""case class $className($fields) extends $traitName""", headerInlineEnums.flatten.flatten, className)
+            (output, s"""case class $className($fields) extends $traitName""", headerInlineEnums.flatten.flatten, className)
         }
-        .transpose
+    val headerMappingDefns = headerObjects.map(_._1)
+    val headerModelDefns = headerObjects.map(_._2)
+    val enumDefns = headerObjects.map(_._3)
+    val headerClasses = headerObjects.map(_._4)
     val mappingsByCode = headerMappingDefns
       .zip(many.map(_.code))
       .map { case (s, c) => c -> s }

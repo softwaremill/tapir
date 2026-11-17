@@ -14,10 +14,10 @@ object OpenapiCodegenPlugin extends AutoPlugin {
 
   override def requires = plugins.JvmPlugin
 
-  override lazy val projectSettings: Seq[Setting[_]] =
+  override lazy val projectSettings: Seq[Setting[?]] =
     openapiCodegenScopedSettings(Compile) ++ openapiCodegenDefaultSettings
 
-  def openapiCodegenScopedSettings(conf: Configuration): Seq[Setting[_]] = inConfig(conf)(
+  def openapiCodegenScopedSettings(conf: Configuration): Seq[Setting[?]] = inConfig(conf)(
     Seq(
       generateTapirDefinitions := Def.task {
         val c = openapiOpenApiConfiguration.value
@@ -65,7 +65,7 @@ object OpenapiCodegenPlugin extends AutoPlugin {
       openapiAlwaysGenerateParamSupport.value,
       openapiAddDisambiguationCodes.value
     )
-  def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
+  def openapiCodegenDefaultSettings: Seq[Setting[?]] = Seq(
     openapiSwaggerFile := baseDirectory.value / "swagger.yaml",
     openapiPackage := "sttp.tapir.generated",
     openapiObject := "TapirGeneratedEndpoints",
