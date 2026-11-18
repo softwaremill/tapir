@@ -118,13 +118,11 @@ import java.time.Instant
   supervised:
     val backend = useInScope(HttpClientSyncBackend())(_.close())
 
-    val binding = useInScope(
-      NettySyncServer()
-        .host("localhost")
-        .port(8080)
-        .addEndpoints(List(loginServerEndpoint(backend), loginGoogleServerEndpoint(backend), secretPlaceServerEndpoint))
-        .start()
-    )(_.stop())
+    val binding = NettySyncServer()
+      .host("localhost")
+      .port(8080)
+      .addEndpoints(List(loginServerEndpoint(backend), loginGoogleServerEndpoint(backend), secretPlaceServerEndpoint))
+      .start()
 
     println(s"Go to: http://${binding.hostName}:${binding.port}/login")
     println("Press ENTER to exit ...")

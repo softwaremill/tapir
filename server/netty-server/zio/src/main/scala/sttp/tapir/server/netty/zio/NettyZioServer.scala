@@ -163,9 +163,7 @@ case class NettyZioServer[R](
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): RIO[R, Unit] = {
-    // unbinding first, so that new connections are refused (and e.g. routed by a load balancer to other instances) while draining
-    ZIO.suspend(nettyFutureToScala(ch.close())) *>
-      stopChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
+    stopChannelGroup(Some(ch), channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
       stopEventLoopGroup(eventLoopGroup, eventExecutor)
   }
 
@@ -176,16 +174,18 @@ case class NettyZioServer[R](
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): RIO[R, Unit] = {
-    stopChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
+    stopChannelGroup(None, channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
       stopEventLoopGroup(eventLoopGroup, eventExecutor)
   }
 
   private def stopChannelGroup(
+      serverChannel: Option[Channel],
       channelGroup: ChannelGroup,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ) = {
     ZIO.attempt(NettyShutdown.startDraining(channelGroup, isShuttingDown)) *>
+      ZIO.foreachDiscard(serverChannel)(ch => ZIO.suspend(nettyFutureToScala(ch.close()))) *>
       waitForClosedChannels(
         channelGroup,
         startNanos = System.nanoTime(),

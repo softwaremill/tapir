@@ -13,6 +13,8 @@ import ox.*
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client4.*
+import sttp.client4.ws.async.*
+import sttp.ws.WebSocket
 import sttp.model.*
 import sttp.shared.Identity
 import sttp.tapir.*
@@ -109,6 +111,30 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           finally conn.disconnect
         }
       },
+      // the connection is upgraded, hence it's not closed when draining, but when the client closes it, or when the timeout passes
+      createServerTest.testServerLogicWithStop(
+        endpoint
+          .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
+          .handleSuccess(_ => (in: Flow[String]) => in.map(m => s"echo: $m")),
+        "web socket is kept open during shutdown",
+        gracefulShutdownTimeout = Some(10.seconds)
+      ) { stopServer => (backend, baseUri) =>
+        basicRequest
+          .get(baseUri.scheme("ws"))
+          .response(asWebSocket { (ws: WebSocket[IO]) =>
+            for {
+              m1 <- ws.sendText("1") >> ws.receiveText()
+              runningStop <- stopServer.start
+              _ <- ServerGracefulShutdownTests.awaitConnectionsRefused(baseUri.port.get).timeout(5.seconds)
+              m2 <- ws.sendText("2") >> ws.receiveText()
+            } yield (List(m1, m2), runningStop)
+          })
+          .send(backend)
+          .flatMap(_.body match {
+            case Right((messages, runningStop)) => runningStop.joinWithNever.as(messages shouldBe List("echo: 1", "echo: 2"))
+            case Left(error)                    => IO(fail(error))
+          })
+      },
       // #5150: large InputStream responses previously caused StackOverflowError due to recursive readNextChunkIfNeeded
       createServerTest.testServerLogic(
         endpoint.get
@@ -139,12 +165,13 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         .randomPort
         .withDontShutdownEventLoopGroupOnClose
         .withGracefulShutdownTimeout(10.seconds)
-      val response = supervised {
+      val (requestArrived, response) = supervised {
         val binding = NettySyncServer(config).addEndpoint(slow).start()
         val response = basicRequest.get(uri"http://localhost:${binding.port}/slow").send(backend).unsafeToFuture()
-        requestReceived.await(10, TimeUnit.SECONDS).discard
-        response // the scope ends while the request is in flight
+        val requestArrived = requestReceived.await(10, TimeUnit.SECONDS)
+        (requestArrived, response) // the scope ends while the request is in flight
       }
+      assert(requestArrived)
       response.map(_.body shouldBe Right("done"))
     }
 

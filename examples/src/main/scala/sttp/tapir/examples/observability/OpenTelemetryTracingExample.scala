@@ -89,7 +89,7 @@ object OpenTelemetryTracingExample extends OxApp:
         .prependInterceptor(OpenTelemetryTracing(otel))
         .options
 
-    useInScope(NettySyncServer().options(serverOptions).addEndpoint(personEndpoint).start())(_.stop()).discard
+    NettySyncServer().options(serverOptions).addEndpoint(personEndpoint).start().discard
 
     logger.info(s"""Server started. Try it with: curl -X POST http://localhost:8080/person -d '{"name": "Jane"}'""")
     logger.info("Press ENTER key to exit.")

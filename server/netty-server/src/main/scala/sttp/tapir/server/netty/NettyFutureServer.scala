@@ -141,10 +141,9 @@ case class NettyFutureServer(
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Future[Unit] = {
-    // unbinding first, so that new connections are refused (and e.g. routed by a load balancer to other instances) while draining
+    NettyShutdown.startDraining(channelGroup, isShuttingDown)
     nettyFutureToScala(ch.close())
       .flatMap { _ =>
-        NettyShutdown.startDraining(channelGroup, isShuttingDown)
         waitForClosedChannels(
           channelGroup,
           startNanos = System.nanoTime(),

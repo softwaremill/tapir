@@ -29,7 +29,7 @@ import sttp.tapir.server.netty.sync.NettySyncServer
     .handleSuccess(name => s"Hello, $name!")
 
   supervised {
-    val serverBinding = useInScope(NettySyncServer().addEndpoint(helloWorld).start())(_.stop())
+    val serverBinding = NettySyncServer().addEndpoint(helloWorld).start()
     println(s"You can now make requests to http://${serverBinding.hostName}:${serverBinding.port}/hello?name=...!")
     never
   }

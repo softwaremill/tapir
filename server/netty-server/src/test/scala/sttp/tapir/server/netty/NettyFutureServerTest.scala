@@ -17,6 +17,7 @@ import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 class NettyFutureServerTest extends TestSuite with EitherValues {
   override def tests: Resource[IO, List[Test]] =
@@ -69,6 +70,15 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
             }
             .map(_ => succeed)
         }
+        .unsafeToFuture()
+    },
+    // the other tests use a shared event loop group, which isn't shut down when the server stops
+    Test("stopping a server which uses its own event loop group shouldn't wait for Netty's default quiet period of 2 seconds") {
+      import cats.effect.unsafe.implicits.global
+
+      IO.fromFuture(IO.delay(NettyFutureServer()(using ec).port(0).start()))
+        .flatMap(server => IO.fromFuture(IO.delay(server.stop())).timed)
+        .map { case (stopDuration, _) => stopDuration should be < 1.second }
         .unsafeToFuture()
     }
   )

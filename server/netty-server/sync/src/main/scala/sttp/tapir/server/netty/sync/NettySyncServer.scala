@@ -106,37 +106,55 @@ case class NettySyncServer(
   /** Runs the server in a fork of the current scope. Requests are handled in forks of a nested scope, owned by the server. Hence, when the
     * current scope ends, the server is stopped (draining in-flight requests) before the request-handling forks are interrupted. Otherwise,
     * Ox would interrupt them before running any finalizers, which might call `stop()`.
+    *
+    * If the server's scope fails (e.g. when request handling throws a fatal error), the server is stopped, and the current scope fails.
     */
   private def startInServerScope[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) =
     val started = new CompletableFuture[SA]()
     val stopRequested = new CompletableFuture[Unit]()
     val stopped = new CompletableFuture[Unit]()
-    forkUnsupervised {
-      try
-        unsupervised {
-          val server = forkUnsupervised {
+    forkDiscard {
+      unsupervised {
+        // the server's scope is run in a fork of a nested scope, so that it isn't interrupted when the current scope ends
+        val serverDone = new CompletableFuture[Unit]()
+        forkUnsupervised {
+          try
             supervised {
               val (socket, stop) = startUsingSocketOverride(socketOverride, inScopeRunner())
               started.complete(socket).discard
-              stopRequested.get().discard
-              stop()
+              try stopRequested.get().discard // also interrupted if the server's scope fails
+              finally
+                try
+                  stop()
+                  stopped.complete(()).discard
+                catch case NonFatal(e) => stopped.completeExceptionally(e).discard
             }
-          }
-          // when the enclosing scope ends, this fork is interrupted; instead of propagating the interruption to the server's scope (which
-          // would interrupt the requests in flight), requesting a graceful stop
-          def awaitServer(): Unit =
-            try server.join()
-            catch
-              case _: InterruptedException =>
-                stopRequested.complete(()).discard
-                awaitServer()
-          awaitServer()
-        }
-      catch
-        case e: Throwable =>
-          if !started.completeExceptionally(e) then logger.error("Error when stopping the server", e)
-      finally stopped.complete(()).discard
-    }.discard
+            serverDone.complete(()).discard
+          catch case e: Throwable => serverDone.completeExceptionally(e).discard
+        }.discard
+
+        // when the current scope ends, this fork is interrupted; instead of propagating the interruption to the server's scope (which would
+        // interrupt the requests in flight), requesting a graceful stop; returns if that happened
+        def awaitServer(stoppedByScopeEnd: Boolean): Boolean =
+          try
+            serverDone.get()
+            stoppedByScopeEnd
+          catch
+            case _: InterruptedException =>
+              stopRequested.complete(()).discard
+              awaitServer(stoppedByScopeEnd = true)
+
+        try
+          // there's no caller of `stop()` to report the failure to
+          if awaitServer(stoppedByScopeEnd = false) && stopped.isCompletedExceptionally then
+            logger.error("Error when stopping the server", stopped.exceptionNow())
+        catch
+          case e: ExecutionException =>
+            // start failures are reported by start(); other failures of the server's scope end the current scope
+            if !started.completeExceptionally(e.getCause) then throw e.getCause
+        finally stopped.complete(()).discard
+      }
+    }
 
     val socket =
       try started.get()
@@ -145,7 +163,8 @@ case class NettySyncServer(
       socket,
       () =>
         stopRequested.complete(()).discard
-        stopped.get().discard
+        try stopped.get().discard
+        catch case e: ExecutionException => throw e.getCause
     )
 
   private def startUsingSocketOverride[SA <: SocketAddress](
@@ -188,7 +207,11 @@ case class NettySyncServer(
         def run(): Unit =
           if runningFork.get() != Cancelled then
             try scalaPromise.success(callToExecute())
-            catch case NonFatal(e) => scalaPromise.failure(e)
+            catch
+              case e: Throwable =>
+                // also completing the promise on fatal errors & interruption (wrapped by the promise), so that a 500 is sent
+                scalaPromise.failure(e)
+                if !NonFatal(e) then throw e
 
         if options.interruptServerLogicWhenRequestCancelled then
           val forked = forkCancellable(run())
@@ -257,9 +280,8 @@ case class NettySyncServer(
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Unit =
-    // unbinding first, so that new connections are refused (and e.g. routed by a load balancer to other instances) while draining
-    ch.close().get()
     NettyShutdown.startDraining(channelGroup, isShuttingDown)
+    ch.close().get()
     waitForClosedChannels(
       channelGroup,
       startNanos = System.nanoTime(),

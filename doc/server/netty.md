@@ -107,7 +107,8 @@ customise the server socket, such as:
   `NettySyncServerBinding.stop()`, the server stops accepting new connections
   and closes idle ones right away. Then, it waits at most 10 seconds for
   in-flight requests to complete, closing each connection once its response is
-  sent; new requests on open connections are rejected with 503. Afterwards, all
+  sent; new requests on open connections are rejected with 503, or left
+  unanswered if pipelined behind in-flight requests. Afterwards, all
   server resources are closed. A `NettySyncServer` is also stopped this way
   when the scope in which it was started ends
 * server header

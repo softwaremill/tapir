@@ -9,8 +9,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 object NettyShutdown {
 
   /** Starts draining the server's connections: those with no requests in flight are closed at once; the others are closed once the
-    * responses to their in-flight requests are sent. Requests received from now on are rejected with a 503. Should be called once the
-    * server no longer accepts new connections.
+    * responses to their in-flight requests are sent. Requests received from now on aren't handled (see [[NettyServerHandler]]), and
+    * connections accepted from now on are closed at once.
+    *
+    * Should be followed by closing the server's channel, before waiting for the connections to close, so that while draining, new
+    * connections are refused (and e.g. routed by a load balancer to other instances).
     */
   def startDraining(channelGroup: ChannelGroup, isShuttingDown: AtomicBoolean): Unit = {
     isShuttingDown.set(true)

@@ -204,7 +204,9 @@ class NettyServerHandler[F[_]](
       }
       pendingResponses.enqueue(cancellationSwitch)
       requestsInFlight += 1
-      lastResponseSent = lastResponseSent.flatMap { _ =>
+      // the failure of a previous response is already handled, and mustn't prevent sending later ones
+      val previousResponsesSent = lastResponseSent.recover { case _ => () }(using eventLoopContext)
+      lastResponseSent = previousResponsesSent.flatMap { _ =>
         runningFuture
           .transform { result =>
             // keeping track of the response-completed future (which is available if a response with a body, or an error response, was
@@ -274,8 +276,18 @@ class NettyServerHandler[F[_]](
     }
 
     if (isShuttingDown.get()) {
-      logger.info("Rejecting request, server is shutting down")
-      writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
+      if (requestsInFlight == 0) {
+        logger.info("Rejecting request, server is shutting down")
+        writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
+      } else {
+        // A pipelined request: a 503 can't be written before the responses to the earlier requests. Instead, the request is dropped, and
+        // the connection is closed once those responses are sent. As with any unanswered pipelined request, the client can retry it.
+        logger.debug("Dropping a pipelined request, server is shutting down")
+        request match {
+          case r: StreamedHttpRequest => r.subscribe(new CancellingSubscriber)
+          case _                      => // the body is released by SimpleChannelInboundHandler
+        }
+      }
     } else {
       // `100 Continue` is left to HttpStreamsServerHandler, so that it's sent only if the body is, or might be, read, and clients don't
       // upload bodies that are then discarded (#5503, see TapirHttpStreamsServerHandler)
@@ -352,7 +364,7 @@ class NettyServerHandler[F[_]](
           val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST, buf)
           res.headers().set(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes())
           res.handleCloseAndKeepAliveHeaders(req)
-          ctx.writeAndFlush(res).closeIfNeeded(req)
+          ctx.writeAndFlush(res, responseContent.channelPromise).closeIfNeeded(req)
         }
       },
       noBodyHandler = () => {

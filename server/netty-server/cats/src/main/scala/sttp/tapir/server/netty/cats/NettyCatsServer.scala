@@ -140,9 +140,7 @@ case class NettyCatsServer[F[_]: Async](
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): F[Unit] = {
-    // unbinding first, so that new connections are refused (and e.g. routed by a load balancer to other instances) while draining
-    Async[F].defer(nettyFutureToScala(ch.close())) >>
-      shutdownChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
+    shutdownChannelGroup(Some(ch), channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
       stopEventLoopGroup(eventLoopGroup, eventExecutor)
   }
 
@@ -153,16 +151,18 @@ case class NettyCatsServer[F[_]: Async](
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): F[Unit] = {
-    shutdownChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
+    shutdownChannelGroup(None, channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
       stopEventLoopGroup(eventLoopGroup, eventExecutor)
   }
 
   private def shutdownChannelGroup(
+      serverChannel: Option[Channel],
       channelGroup: ChannelGroup,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ) = {
     Sync[F].delay(NettyShutdown.startDraining(channelGroup, isShuttingDown)) >>
+      serverChannel.fold(Async[F].unit)(ch => Async[F].defer(nettyFutureToScala(ch.close())).void) >>
       waitForClosedChannels(
         channelGroup,
         startNanos = System.nanoTime(),
