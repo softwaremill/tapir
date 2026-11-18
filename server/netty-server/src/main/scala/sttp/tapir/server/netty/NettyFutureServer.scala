@@ -8,7 +8,7 @@ import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.FutureUtil._
-import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, NettyShutdown}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
@@ -141,14 +141,17 @@ case class NettyFutureServer(
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Future[Unit] = {
-    isShuttingDown.set(true)
-    waitForClosedChannels(
-      channelGroup,
-      startNanos = System.nanoTime(),
-      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
-    ).flatMap { _ =>
-      nettyFutureToScala(ch.close()).flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
-    }
+    // unbinding first, so that new connections are refused (and e.g. routed by a load balancer to other instances) while draining
+    nettyFutureToScala(ch.close())
+      .flatMap { _ =>
+        NettyShutdown.startDraining(channelGroup, isShuttingDown)
+        waitForClosedChannels(
+          channelGroup,
+          startNanos = System.nanoTime(),
+          gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
+        )
+      }
+      .flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
   }
 
   private def stopRecovering(
@@ -158,7 +161,7 @@ case class NettyFutureServer(
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Future[Unit] = {
-    isShuttingDown.set(true)
+    NettyShutdown.startDraining(channelGroup, isShuttingDown)
     waitForClosedChannels(
       channelGroup,
       startNanos = System.nanoTime(),
@@ -168,8 +171,8 @@ case class NettyFutureServer(
 
   private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {
     if (config.shutdownEventLoopGroupOnClose) {
-      nettyFutureToScala(eventLoopGroup.shutdownGracefully())
-        .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
+      nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup))
+        .flatMap(_ => nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor)).map(_ => ()))
     } else Future.successful(())
   }
 

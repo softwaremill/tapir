@@ -72,6 +72,10 @@ class NettyServerHandler[F[_]](
   // connection is closed along with the response. A plain var, as it's only touched on the channel's event loop.
   private var requestTimeoutHandled = false
 
+  // Requests received, for which the response isn't fully sent yet. When the server is shutting down, the connection is closed once this
+  // drops to 0. A plain var, as it's only touched on the channel's event loop.
+  private var requestsInFlight = 0
+
   // Present only if a request timeout is set, and the pipeline has the HTTP codec registered under `ServerCodecHandlerName`. If absent, an
   // exceeded request timeout is always reported as 503.
   private var requestBodyTracker: Option[RequestBodyCompletionTracker] = None
@@ -87,6 +91,18 @@ class NettyServerHandler[F[_]](
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     channelGroup.add(ctx.channel)
     initHandler(ctx)
+    // a connection accepted just before the server stopped listening might miss the CloseIfIdle event
+    if (isShuttingDown.get()) {
+      val _ = ctx.close()
+    }
+  }
+
+  private def requestCompleted(ctx: ChannelHandlerContext): Unit = {
+    requestsInFlight -= 1
+    // a removed handler means that the connection was upgraded to a web socket, which isn't closed here
+    if (requestsInFlight == 0 && isShuttingDown.get() && !ctx.isRemoved) {
+      val _ = ctx.close()
+    }
   }
 
   private def initHandler(ctx: ChannelHandlerContext): Unit = {
@@ -144,6 +160,11 @@ class NettyServerHandler[F[_]](
             val _ = ctx.close()
           case _ => ()
         }
+      case NettyServerHandler.CloseIfIdle =>
+        if (requestsInFlight == 0) {
+          logger.debug("Closing idle connection, as the server is shutting down")
+          val _ = ctx.close()
+        }
       case _ =>
         super.userEventTriggered(ctx, evt)
     }
@@ -151,13 +172,15 @@ class NettyServerHandler[F[_]](
 
   override def channelRead0(ctx: ChannelHandlerContext, request: HttpRequest): Unit = {
 
-    def writeError500(req: HttpRequest, reason: Throwable): Unit = {
+    def writeError500(req: HttpRequest, reason: Throwable): ChannelFuture = {
       logger.error("Error while processing the request", reason)
       val res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
       res.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0)
       res.handleCloseAndKeepAliveHeaders(req)
 
-      ctx.writeAndFlush(res).closeIfNeeded(req)
+      val written = ctx.writeAndFlush(res)
+      written.closeIfNeeded(req)
+      written
     }
 
     def runRoute(req: HttpRequest, releaseReq: () => Any = () => ()): Unit = {
@@ -180,12 +203,13 @@ class NettyServerHandler[F[_]](
         }
       }
       pendingResponses.enqueue(cancellationSwitch)
+      requestsInFlight += 1
       lastResponseSent = lastResponseSent.flatMap { _ =>
         runningFuture
           .transform { result =>
-            // keeping track of the response-completed promise (which is available if a response with a body was provided), to
-            // properly cleanup the request body if needed later
-            var responseCompletedPromise: Option[ChannelPromise] = None
+            // keeping track of the response-completed future (which is available if a response with a body, or an error response, was
+            // written), to properly cleanup the request body, and to track the requests in flight
+            var responseCompletedPromise: Option[ChannelFuture] = None
             try {
               // #4131: the channel might be closed if the request timed out
               // both timeout & response-ready events (i.e., completing this future) are handled on the event loop's executor,
@@ -200,11 +224,11 @@ class NettyServerHandler[F[_]](
                       Success(())
                     } catch {
                       case NonFatal(ex) =>
-                        writeError500(req, ex)
+                        responseCompletedPromise = Some(writeError500(req, ex))
                         Failure(ex)
                     }
                   case Failure(NonFatal(ex)) =>
-                    writeError500(req, ex)
+                    responseCompletedPromise = Some(writeError500(req, ex))
                     Failure(ex)
                   case Failure(fatalException) => Failure(fatalException)
                 }
@@ -223,6 +247,11 @@ class NettyServerHandler[F[_]](
               }
             } finally {
               val _ = releaseReq()
+
+              responseCompletedPromise match {
+                case Some(p) => val _ = p.addListener((_: ChannelFuture) => requestCompleted(ctx))
+                case None    => requestCompleted(ctx)
+              }
 
               // #4539: if the request body was never subscribed to, we need to discard it safely
               // Doing so by subscribing & immediately cancelling the subscription.
@@ -491,4 +520,11 @@ class NettyServerHandler[F[_]](
       }
     }
   }
+}
+
+object NettyServerHandler {
+
+  /** A user event, which closes the connection if no requests are in flight. Fired on all connections when the server starts shutting down.
+    */
+  case object CloseIfIdle
 }

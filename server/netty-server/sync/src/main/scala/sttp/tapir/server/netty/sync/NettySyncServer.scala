@@ -10,12 +10,13 @@ import sttp.capabilities.WebSockets
 import sttp.shared.Identity
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, NettyShutdown}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.{CompletableFuture, ExecutionException}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
@@ -64,12 +65,16 @@ case class NettySyncServer(
   def port(p: Int): NettySyncServer = modifyConfig(_.port(p))
 
   /** Use only if you need to manage server lifecycle or concurrency scope manually. Otherwise, see [[startAndWait]].
+    *
+    * The server runs until it's stopped using the returned binding, or until the enclosing scope ends. In both cases, the server is stopped
+    * gracefully: in-flight requests are given up to [[NettyConfig.gracefulShutdownTimeout]] to complete.
+    *
     * @example
     *   {{{
     *   import ox.*
     *
     *   supervised {
-    *     val serverBinding = useInScope(server.start())(_.stop())
+    *     val serverBinding = server.start()
     *     println(s"Tapir is running on port ${serverBinding.port})
     *     never
     *   }
@@ -78,7 +83,7 @@ case class NettySyncServer(
     *   server binding, to be used to control stopping of the server or obtaining metadata like port.
     */
   def start()(using Ox): NettySyncServerBinding =
-    startUsingSocketOverride[InetSocketAddress](None, inScopeRunner()) match
+    startInServerScope[InetSocketAddress](None) match
       case (socket, stop) =>
         NettySyncServerBinding(socket, stop).tap: binding =>
           logger.info(s"Tapir Netty server started on ${binding.hostName}:${binding.port}")
@@ -88,14 +93,60 @@ case class NettySyncServer(
     */
   def startAndWait(): Unit =
     supervised {
-      useInScope(start())(_.stop()).discard
+      start().discard
       never
     }
 
+  /** As [[start]], but listens on the given Unix domain socket. */
   def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
-    startUsingSocketOverride(Some(new DomainSocketAddress(path.toFile)), inScopeRunner()) match
+    startInServerScope(Some(new DomainSocketAddress(path.toFile))) match
       case (socket, stop) =>
         NettySyncDomainSocketBinding(socket, stop)
+
+  /** Runs the server in a fork of the current scope. Requests are handled in forks of a nested scope, owned by the server. Hence, when the
+    * current scope ends, the server is stopped (draining in-flight requests) before the request-handling forks are interrupted. Otherwise,
+    * Ox would interrupt them before running any finalizers, which might call `stop()`.
+    */
+  private def startInServerScope[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) =
+    val started = new CompletableFuture[SA]()
+    val stopRequested = new CompletableFuture[Unit]()
+    val stopped = new CompletableFuture[Unit]()
+    forkUnsupervised {
+      try
+        unsupervised {
+          val server = forkUnsupervised {
+            supervised {
+              val (socket, stop) = startUsingSocketOverride(socketOverride, inScopeRunner())
+              started.complete(socket).discard
+              stopRequested.get().discard
+              stop()
+            }
+          }
+          // when the enclosing scope ends, this fork is interrupted; instead of propagating the interruption to the server's scope (which
+          // would interrupt the requests in flight), requesting a graceful stop
+          def awaitServer(): Unit =
+            try server.join()
+            catch
+              case _: InterruptedException =>
+                stopRequested.complete(()).discard
+                awaitServer()
+          awaitServer()
+        }
+      catch
+        case e: Throwable =>
+          if !started.completeExceptionally(e) then logger.error("Error when stopping the server", e)
+      finally stopped.complete(()).discard
+    }.discard
+
+    val socket =
+      try started.get()
+      catch case e: ExecutionException => throw e.getCause
+    (
+      socket,
+      () =>
+        stopRequested.complete(()).discard
+        stopped.get().discard
+    )
 
   private def startUsingSocketOverride[SA <: SocketAddress](
       socketOverride: Option[SA],
@@ -206,16 +257,17 @@ case class NettySyncServer(
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Unit =
-    isShuttingDown.set(true)
+    // unbinding first, so that new connections are refused (and e.g. routed by a load balancer to other instances) while draining
+    ch.close().get()
+    NettyShutdown.startDraining(channelGroup, isShuttingDown)
     waitForClosedChannels(
       channelGroup,
       startNanos = System.nanoTime(),
       gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
     )
-    ch.close().get()
     if config.shutdownEventLoopGroupOnClose then
-      val _ = eventLoopGroup.shutdownGracefully().get()
-      val _ = eventExecutor.shutdownGracefully().get()
+      val _ = NettyShutdown.shutdownExecutor(eventLoopGroup).get()
+      val _ = NettyShutdown.shutdownExecutor(eventExecutor).get()
 
   private def stopRecovering(
       eventLoopGroup: EventLoopGroup,
@@ -224,15 +276,15 @@ case class NettySyncServer(
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Unit =
-    isShuttingDown.set(true)
+    NettyShutdown.startDraining(channelGroup, isShuttingDown)
     waitForClosedChannels(
       channelGroup,
       startNanos = System.nanoTime(),
       gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
     )
     if config.shutdownEventLoopGroupOnClose then
-      val _ = eventLoopGroup.shutdownGracefully().get()
-      val _ = eventExecutor.shutdownGracefully().get()
+      val _ = NettyShutdown.shutdownExecutor(eventLoopGroup).get()
+      val _ = NettyShutdown.shutdownExecutor(eventExecutor).get()
 
 object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, NettyConfig.default)

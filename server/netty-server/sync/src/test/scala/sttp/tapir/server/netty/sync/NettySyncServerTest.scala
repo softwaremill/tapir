@@ -62,7 +62,8 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         new ServerIncompleteRequestBodyTests(nonInterruptingCreateServerTest).tests() ++
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
         additionalTests(createServerTest) ++
-        expectContinueTests(createServerTest, eventLoopGroup)
+        expectContinueTests(createServerTest, eventLoopGroup) ++
+        List(scopeEndTest(eventLoopGroup))
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -123,6 +124,29 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           .map(_.body.length shouldBe 10 * 1024 * 1024)
       }
     )
+
+  /** Sync-only: when the scope in which the server is started ends, in-flight requests should complete before they are interrupted. */
+  def scopeEndTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("Server completes in-flight requests when the enclosing scope ends") {
+      val requestReceived = new CountDownLatch(1)
+      val slow = endpoint.get.in("slow").out(stringBody).handleSuccess { _ =>
+        requestReceived.countDown()
+        Thread.sleep(2000)
+        "done"
+      }
+      val config = NettyConfig.default
+        .eventLoopGroup(eventLoopGroup)
+        .randomPort
+        .withDontShutdownEventLoopGroupOnClose
+        .withGracefulShutdownTimeout(10.seconds)
+      val response = supervised {
+        val binding = NettySyncServer(config).addEndpoint(slow).start()
+        val response = basicRequest.get(uri"http://localhost:${binding.port}/slow").send(backend).unsafeToFuture()
+        requestReceived.await(10, TimeUnit.SECONDS).discard
+        response // the scope ends while the request is in flight
+      }
+      response.map(_.body shouldBe Right("done"))
+    }
 
   /** Netty-only: RFC 9110 doesn't specify when exactly a 100 is sent with pipelining, or for a body that might be read later, and servers
     * differ. These test `TapirHttpStreamsServerHandler`, which is the same for all Netty interpreters, so they're run once, here, as they

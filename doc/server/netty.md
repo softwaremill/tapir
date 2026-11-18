@@ -104,10 +104,12 @@ customise the server socket, such as:
 * connection timeout
 * linger timeout
 * graceful shutdown timeout: when stopped e.g. using
-  `NettySyncServerBinding.stop()`, it's ensured that the server will wait at
-  most 10 seconds for in-flight requests to complete, while rejecting all new
-  requests with 503 during this period; afterwards, all server resources are
-  closed
+  `NettySyncServerBinding.stop()`, the server stops accepting new connections
+  and closes idle ones right away. Then, it waits at most 10 seconds for
+  in-flight requests to complete, closing each connection once its response is
+  sent; new requests on open connections are rejected with 503. Afterwards, all
+  server resources are closed. A `NettySyncServer` is also stopped this way
+  when the scope in which it was started ends
 * server header
 * maximum number of connections
 * custom netty pipeline & low-level logging handlers; a custom pipeline should

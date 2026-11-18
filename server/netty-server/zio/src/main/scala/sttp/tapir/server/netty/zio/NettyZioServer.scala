@@ -7,7 +7,7 @@ import io.netty.util.concurrent.DefaultEventExecutor
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
-import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, NettyShutdown}
 import sttp.tapir.server.netty.zio.internal.ZioUtil.{nettyChannelFutureToScala, nettyFutureToScala}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 import sttp.tapir.ztapir.{RIOMonadError, ZServerEndpoint}
@@ -163,12 +163,10 @@ case class NettyZioServer[R](
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): RIO[R, Unit] = {
-    stopChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
-      ZIO.suspend {
-        nettyFutureToScala(ch.close()).flatMap { _ =>
-          stopEventLoopGroup(eventLoopGroup, eventExecutor)
-        }
-      }
+    // unbinding first, so that new connections are refused (and e.g. routed by a load balancer to other instances) while draining
+    ZIO.suspend(nettyFutureToScala(ch.close())) *>
+      stopChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
+      stopEventLoopGroup(eventLoopGroup, eventExecutor)
   }
 
   private def stopRecovering(
@@ -187,7 +185,7 @@ case class NettyZioServer[R](
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ) = {
-    ZIO.attempt(isShuttingDown.set(true)) *>
+    ZIO.attempt(NettyShutdown.startDraining(channelGroup, isShuttingDown)) *>
       waitForClosedChannels(
         channelGroup,
         startNanos = System.nanoTime(),
@@ -197,8 +195,8 @@ case class NettyZioServer[R](
 
   private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {
     if (config.shutdownEventLoopGroupOnClose) {
-      nettyFutureToScala(eventLoopGroup.shutdownGracefully())
-        .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
+      nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup))
+        .flatMap(_ => nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor)).map(_ => ()))
     } else ZIO.succeed(())
   }
 }
