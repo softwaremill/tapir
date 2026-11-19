@@ -2211,17 +2211,23 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
 
-lazy val openapiCodegenSbt: ProjectMatrix = {
-  // the plugin depends on openapiCodegenCore, which is built with scala3; sbt's Scala can't read TASTy from a newer minor
-  require(
-    scala3.split('.').take(2).sameElements(scala3Sbt.split('.').take(2)),
-    s"scala3 ($scala3) and scala3Sbt ($scala3Sbt) must have the same minor version"
-  )
-  projectMatrix in file("openapi-codegen/sbt-plugin")
-}
+lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
   .enablePlugins(SbtPlugin)
   .jvmPlatform(scalaVersions = Seq(scala2_12, scala3Sbt), settings = commonJvmSettings)
   .settings(
+    // The plugin must be built with sbt's Scala version, which may be older than scala3 (used to build
+    // openapiCodegenCore). Scala can't read TASTy from a newer minor version, so the plugin compiles the core sources.
+    Compile / unmanagedSourceDirectories ++= {
+      val codegenCoreSources = (ThisBuild / baseDirectory).value / "openapi-codegen" / "core" / "src" / "main"
+      Seq(codegenCoreSources / "scala", codegenCoreSources / s"scala-${scalaBinaryVersion.value.takeWhile(_ != '.')}")
+    },
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %% "circe-yaml" % Versions.circeYaml
+    ),
+    libraryDependencies ++= (if (scalaBinaryVersion.value == "3") Nil
+                             else Seq(scalaOrganization.value % "scala-reflect" % scalaVersion.value)),
     name := "sbt-openapi-codegen",
     sbtPlugin := true,
     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
@@ -2244,7 +2250,6 @@ lazy val openapiCodegenSbt: ProjectMatrix = {
       }
     }
   )
-  .dependsOn(openapiCodegenCore)
 
 lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
   .enablePlugins(BuildInfoPlugin)
