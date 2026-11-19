@@ -76,6 +76,10 @@ class NettyServerHandler[F[_]](
   // drops to 0. A plain var, as it's only touched on the channel's event loop.
   private var requestsInFlight = 0
 
+  // Requests received, for which writing the response hasn't started yet. When the server is shutting down, only the last response
+  // has `Connection: close`, so that the responses to pipelined requests are still sent. Only touched on the channel's event loop.
+  private var responsesNotStarted = 0
+
   // Present only if a request timeout is set, and the pipeline has the HTTP codec registered under `ServerCodecHandlerName`. If absent, an
   // exceeded request timeout is always reported as 503.
   private var requestBodyTracker: Option[RequestBodyCompletionTracker] = None
@@ -204,11 +208,13 @@ class NettyServerHandler[F[_]](
       }
       pendingResponses.enqueue(cancellationSwitch)
       requestsInFlight += 1
+      responsesNotStarted += 1
       // the failure of a previous response is already handled, and mustn't prevent sending later ones
       val previousResponsesSent = lastResponseSent.recover { case _ => () }(using eventLoopContext)
       lastResponseSent = previousResponsesSent.flatMap { _ =>
         runningFuture
           .transform { result =>
+            responsesNotStarted -= 1
             // keeping track of the response-completed future (which is available if a response with a body, or an error response, was
             // written), to properly cleanup the request body, and to track the requests in flight
             var responseCompletedPromise: Option[ChannelFuture] = None
@@ -367,7 +373,7 @@ class NettyServerHandler[F[_]](
           ctx.writeAndFlush(res, responseContent.channelPromise).closeIfNeeded(req)
         }
       },
-      noBodyHandler = () => {
+      noBodyHandler = channelPromise => {
         val res = new DefaultFullHttpResponse(
           req.protocolVersion(),
           HttpResponseStatus.valueOf(serverResponse.code.code),
@@ -378,7 +384,7 @@ class NettyServerHandler[F[_]](
         res.handleContentLengthAndChunkedHeaders(Option(Unpooled.EMPTY_BUFFER.readableBytes()))
         res.handleCloseAndKeepAliveHeaders(req)
 
-        ctx.writeAndFlush(res).closeIfNeeded(req)
+        ctx.writeAndFlush(res, channelPromise).closeIfNeeded(req)
       }
     )
 
@@ -412,7 +418,7 @@ class NettyServerHandler[F[_]](
       wsHandler = (responseContent) => {
         val _ = responseContent.channelPromise.setFailure(channelPromiseFailure)
       },
-      noBodyHandler = () => ()
+      noBodyHandler = channelPromise => { val _ = channelPromise.setSuccess() }
     )
 
   private def initWsPipeline(
@@ -476,7 +482,7 @@ class NettyServerHandler[F[_]](
         chunkedFileHandler: (ChannelPromise, ChunkedFile) => Unit,
         reactiveStreamHandler: (ChannelPromise, Publisher[HttpContent]) => Unit,
         wsHandler: ReactiveWebSocketProcessorNettyResponseContent => Unit,
-        noBodyHandler: () => Unit
+        noBodyHandler: ChannelPromise => Unit
     ): ChannelPromise = {
       r.body match {
         case Some(function) => {
@@ -493,8 +499,9 @@ class NettyServerHandler[F[_]](
           values.channelPromise
         }
         case None =>
-          noBodyHandler()
-          ctx.newPromise().setSuccess() // no body - means that it's already sent
+          val channelPromise = ctx.newPromise()
+          noBodyHandler(channelPromise)
+          channelPromise
       }
     }
   }
@@ -518,7 +525,8 @@ class NettyServerHandler[F[_]](
     }
 
     def handleCloseAndKeepAliveHeaders(request: HttpRequest): Unit = {
-      if (!HttpUtil.isKeepAlive(request) || isShuttingDown.get())
+      // when shutting down, the connection is closed once the last response is sent (see requestCompleted)
+      if (!HttpUtil.isKeepAlive(request) || (isShuttingDown.get() && responsesNotStarted == 0))
         m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
       else if (request.protocolVersion.equals(HttpVersion.HTTP_1_0))
         m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
@@ -527,7 +535,7 @@ class NettyServerHandler[F[_]](
 
   private implicit class RichChannelFuture(cf: ChannelFuture) {
     def closeIfNeeded(request: HttpRequest): Unit = {
-      if (!HttpUtil.isKeepAlive(request) || isShuttingDown.get()) {
+      if (!HttpUtil.isKeepAlive(request)) {
         cf.addListener(ChannelFutureListener.CLOSE)
       }
     }

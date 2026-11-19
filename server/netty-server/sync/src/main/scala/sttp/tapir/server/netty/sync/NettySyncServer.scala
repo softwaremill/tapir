@@ -151,7 +151,9 @@ case class NettySyncServer(
         catch
           case e: ExecutionException =>
             // start failures are reported by start(); other failures of the server's scope end the current scope
-            if !started.completeExceptionally(e.getCause) then throw e.getCause
+            if !started.completeExceptionally(e.getCause) then
+              stopped.completeExceptionally(e.getCause).discard
+              throw e.getCause
         finally stopped.complete(()).discard
       }
     }
@@ -281,15 +283,25 @@ case class NettySyncServer(
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Unit =
     NettyShutdown.startDraining(channelGroup, isShuttingDown)
-    ch.close().get()
-    waitForClosedChannels(
-      channelGroup,
-      startNanos = System.nanoTime(),
-      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
-    )
-    if config.shutdownEventLoopGroupOnClose then
-      val _ = NettyShutdown.shutdownExecutor(eventLoopGroup).get()
-      val _ = NettyShutdown.shutdownExecutor(eventExecutor).get()
+    try
+      ch.close().get()
+      waitForClosedChannels(
+        channelGroup,
+        startNanos = System.nanoTime(),
+        gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
+      )
+      if config.shutdownEventLoopGroupOnClose then
+        val _ = NettyShutdown.shutdownExecutor(eventLoopGroup).get()
+        val _ = NettyShutdown.shutdownExecutor(eventExecutor).get()
+    catch
+      case e: InterruptedException =>
+        // the server's scope failed while draining: closing everything without waiting
+        ch.close().discard
+        channelGroup.close().discard
+        if config.shutdownEventLoopGroupOnClose then
+          NettyShutdown.shutdownExecutor(eventLoopGroup).discard
+          NettyShutdown.shutdownExecutor(eventExecutor).discard
+        throw e
 
   private def stopRecovering(
       eventLoopGroup: EventLoopGroup,

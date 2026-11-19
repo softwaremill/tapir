@@ -65,7 +65,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
         additionalTests(createServerTest) ++
         expectContinueTests(createServerTest, eventLoopGroup) ++
-        List(scopeEndTest(eventLoopGroup))
+        List(scopeEndTest(eventLoopGroup), fatalErrorTest(eventLoopGroup))
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -134,6 +134,76 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
             case Right((messages, runningStop)) => runningStop.joinWithNever.as(messages shouldBe List("echo: 1", "echo: 2"))
             case Left(error)                    => IO(fail(error))
           })
+      }, {
+        val handshakeReceived = new CountDownLatch(1)
+        val releaseHandshake = new CountDownLatch(1)
+        createServerTest.testServerLogicWithStop(
+          endpoint
+            .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
+            .handleSuccess { _ =>
+              handshakeReceived.countDown()
+              releaseHandshake.await(10, TimeUnit.SECONDS).discard
+              (in: Flow[String]) => in.map(m => s"echo: $m")
+            },
+          "web socket is kept open during shutdown, if the handshake is handled when the shutdown starts",
+          gracefulShutdownTimeout = Some(10.seconds)
+        ) { stopServer => (backend, baseUri) =>
+          for {
+            runningWs <- basicRequest
+              .get(baseUri.scheme("ws"))
+              .response(asWebSocket((ws: WebSocket[IO]) => ws.sendText("1") >> ws.receiveText()))
+              .send(backend)
+              .start
+            handshakeArrived <- IO.blocking(handshakeReceived.await(10, TimeUnit.SECONDS))
+            runningStop <- stopServer.start
+            _ <- ServerGracefulShutdownTests.awaitConnectionsRefused(baseUri.port.get).timeout(5.seconds)
+            _ <- IO(releaseHandshake.countDown())
+            response <- runningWs.joinWithNever
+            _ <- runningStop.joinWithNever
+          } yield {
+            (handshakeArrived shouldBe true): Unit
+            response.body shouldBe Right("echo: 1")
+          }
+        }
+      },
+      createServerTest.testServerLogicWithStop(
+        endpoint
+          .out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](OxStreams))
+          .handleSuccess(_ => (in: Flow[String]) => in),
+        "a request to a web socket endpoint without upgrade headers doesn't delay shutdown",
+        // longer than the socket's read timeout, so that the test fails if the connection is closed only when this passes
+        gracefulShutdownTimeout = Some(30.seconds)
+      ) { stopServer => (_, baseUri) =>
+        rawSocket(baseUri.port.get).use { socket =>
+          for {
+            _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
+            response <- readRawResponse(socket)
+            runningStop <- stopServer.start
+            afterStop <- IO.blocking(socket.getInputStream.read())
+            _ <- runningStop.joinWithNever
+          } yield {
+            (response shouldBe ((400, "Incorrect Web Socket handshake"))): Unit
+            afterStop shouldBe -1
+          }
+        }
+      },
+      // the only way for a request to fail, instead of resulting in a 500 response created by the exception interceptor
+      createServerTest.testServerLogic(
+        endpoint.get
+          .in(query[Boolean]("fail"))
+          .out(stringBody)
+          .handleSuccess(fail => if fail then throw new LinkageError("boom") else "ok"),
+        "respond with 500 to a request failing with a fatal error, and handle later requests on the same connection"
+      ) { (_, baseUri) =>
+        def request(fail: Boolean) = s"GET /?fail=$fail HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
+        rawSocket(baseUri.port.get).use { socket =>
+          for {
+            _ <- sendRaw(socket, request(fail = true))
+            response1 <- readRawResponse(socket)
+            _ <- sendRaw(socket, request(fail = false))
+            response2 <- readRawResponse(socket)
+          } yield List(response1, response2) shouldBe List((500, ""), (200, "ok"))
+        }
       },
       // #5150: large InputStream responses previously caused StackOverflowError due to recursive readNextChunkIfNeeded
       createServerTest.testServerLogic(
@@ -173,6 +243,31 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       }
       assert(requestArrived)
       response.map(_.body shouldBe Right("done"))
+    }
+
+  /** Sync-only: with server logic run in forks which aren't interrupted, their failure fails the server's scope. */
+  def fatalErrorTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("A fatal error in server logic ends the enclosing scope, once a 500 is sent") {
+      val error = new LinkageError("boom")
+      val failing = endpoint.get.out(stringBody).handleSuccess(_ => throw error)
+      val options = NettySyncServerOptions.default.copy(interruptServerLogicWhenRequestCancelled = false)
+      val config = NettyConfig.default
+        .eventLoopGroup(eventLoopGroup)
+        .randomPort
+        .withDontShutdownEventLoopGroupOnClose
+        .withGracefulShutdownTimeout(10.seconds)
+      val response = scala.concurrent.Promise[Response[Either[String, String]]]()
+      val scopeError =
+        try
+          supervised {
+            val binding = NettySyncServer(options, config).addEndpoint(failing).start()
+            response.completeWith(basicRequest.get(uri"http://localhost:${binding.port}").send(backend).unsafeToFuture())
+            sleep(10.seconds)
+          }
+          None
+        catch case e: Throwable => Some(e)
+      scopeError shouldBe Some(error)
+      response.future.map(_.code shouldBe StatusCode.InternalServerError)
     }
 
   /** Netty-only: RFC 9110 doesn't specify when exactly a 100 is sent with pipelining, or for a body that might be read later, and servers

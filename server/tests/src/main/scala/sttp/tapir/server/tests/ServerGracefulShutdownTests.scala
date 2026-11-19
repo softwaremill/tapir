@@ -95,8 +95,10 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
         for {
           _ <- sendRaw(socket, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII))
           response <- readRawResponse(socket)
-          _ <- stopServer
+          // in the background, as stopping the netty-sync server waits until the connection is closed
+          runningStop <- stopServer.start
           afterStop <- IO.blocking(socket.getInputStream.read())
+          _ <- runningStop.joinWithNever
         } yield {
           (response shouldBe ((200, "ok"))): Unit
           afterStop shouldBe -1
@@ -112,25 +114,26 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
               .flatMap(_ => sleeper.sleep(2.seconds))
               .flatMap(_ => pureResult("processing finished".asRight[Unit]))
           },
-        "Server completes in-flight requests, but not pipelined ones, during shutdown",
+        "Server completes in-flight pipelined requests, but doesn't handle new ones, during shutdown",
         gracefulShutdownTimeout = Some(10.seconds)
       ) { (stopServer) => (_, baseUri) =>
         val port = baseUri.port.get
         def request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
         rawSocket(port).use { socket =>
           for {
-            _ <- sendRaw(socket, request)
+            _ <- sendRaw(socket, request ++ request)
             requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
             runningStop <- stopServer.start
             _ <- awaitConnectionsRefused(port).timeout(2.seconds)
             _ <- sendRaw(socket, request)
-            response <- readRawResponse(socket)
-            afterResponse <- IO.blocking(socket.getInputStream.read())
+            response1 <- readRawResponse(socket)
+            response2 <- readRawResponse(socket)
+            afterResponses <- IO.blocking(socket.getInputStream.read())
             _ <- runningStop.join
           } yield {
             (requestArrived shouldBe true): Unit
-            (response shouldBe ((200, "processing finished"))): Unit
-            afterResponse shouldBe -1 // the pipelined request isn't answered, and the connection is closed
+            (List(response1, response2) shouldBe List.fill(2)((200, "processing finished"))): Unit
+            afterResponses shouldBe -1 // the request sent during shutdown isn't answered, and the connection is closed
           }
         }
       }

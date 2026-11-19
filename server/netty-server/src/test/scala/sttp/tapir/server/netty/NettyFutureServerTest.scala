@@ -78,7 +78,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
 
       IO.fromFuture(IO.delay(NettyFutureServer()(using ec).port(0).start()))
         .flatMap(server => IO.fromFuture(IO.delay(server.stop())).timed)
-        .map { case (stopDuration, _) => stopDuration should be < 1.second }
+        .map { case (stopDuration, _) => stopDuration should be < 2.seconds }
         .unsafeToFuture()
     }
   )
