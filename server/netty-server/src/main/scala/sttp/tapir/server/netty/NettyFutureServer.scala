@@ -107,11 +107,11 @@ case class NettyFutureServer(
       .map(ch =>
         (
           ch.localAddress().asInstanceOf[SA],
-          () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+          () => stop(Some(ch), eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
         )
       )
       .recoverWith { case e =>
-        stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+        stop(None, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
           .flatMap(_ => Future.failed(e))
       }
   }
@@ -134,7 +134,7 @@ case class NettyFutureServer(
     }
 
   private def stop(
-      ch: Channel,
+      serverChannel: Option[Channel],
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
       eventExecutor: DefaultEventExecutor,
@@ -142,7 +142,8 @@ case class NettyFutureServer(
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Future[Unit] = {
     NettyShutdown.startDraining(channelGroup, isShuttingDown)
-    nettyFutureToScala(ch.close())
+    serverChannel
+      .fold(Future.unit)(ch => nettyFutureToScala(ch.close()).map(_ => ()))
       .flatMap { _ =>
         waitForClosedChannels(
           channelGroup,
@@ -151,21 +152,6 @@ case class NettyFutureServer(
         )
       }
       .flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
-  }
-
-  private def stopRecovering(
-      eventLoopGroup: EventLoopGroup,
-      channelGroup: ChannelGroup,
-      eventExecutor: DefaultEventExecutor,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Future[Unit] = {
-    NettyShutdown.startDraining(channelGroup, isShuttingDown)
-    waitForClosedChannels(
-      channelGroup,
-      startNanos = System.nanoTime(),
-      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
-    ).flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
   }
 
   private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {

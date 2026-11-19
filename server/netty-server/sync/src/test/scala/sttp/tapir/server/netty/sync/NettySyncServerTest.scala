@@ -250,7 +250,8 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
   /** Sync-only: the server is started in a fork, from which a start failure is passed to the caller. */
   def startFailureTest(eventLoopGroup: NioEventLoopGroup): Test =
     Test("start() throws the error, if the server can't be started") {
-      val taken = new java.net.ServerSocket(0)
+      // the same address as the server's, as e.g. macOS allows binding to it, if the port is taken on the wildcard address
+      val taken = new java.net.ServerSocket(0, 50, java.net.InetAddress.getByName("localhost"))
       try
         val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).port(taken.getLocalPort).withDontShutdownEventLoopGroupOnClose
         // in a separate thread, so that the test fails instead of hanging, if start() doesn't return

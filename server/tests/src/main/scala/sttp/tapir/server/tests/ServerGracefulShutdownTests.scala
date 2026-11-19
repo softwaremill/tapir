@@ -106,7 +106,7 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
         }
       }
     }, {
-      val requestReceived = new CountDownLatch(1)
+      val requestReceived = new CountDownLatch(2) // both pipelined requests are handled before the shutdown starts
       val releaseRequests = new CountDownLatch(1)
       testServerLogicWithStop(
         endpoint
