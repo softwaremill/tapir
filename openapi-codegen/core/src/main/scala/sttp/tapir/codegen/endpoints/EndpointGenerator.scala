@@ -16,7 +16,6 @@ import sttp.tapir.codegen.util.ErrUtils.bail
 import sttp.tapir.codegen.util.NameHelpers.{indent, strippedToCamelCase}
 import sttp.tapir.codegen.util.{JavaEscape, Location}
 import sttp.tapir.codegen.validation.ValidationDefns
-import sttp.tapir.codegen.xml.XmlSerdeLib
 import sttp.tapir.codegen.xml.XmlSerdeLib.XmlSerdeLib
 
 case class EndpointTypes(security: Seq[String], in: Seq[String], err: Seq[String], out: Seq[String]) {

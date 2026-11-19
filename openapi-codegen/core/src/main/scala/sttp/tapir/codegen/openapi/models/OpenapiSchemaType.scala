@@ -241,13 +241,13 @@ object OpenapiSchemaType {
     val typeField = c.downField("type")
     for {
       tf <- typeField.as[String].map(Seq(_)).orElse(typeField.as[Seq[String]])
-      (t: String, nullableByType: Boolean) = tf match {
-        case Seq(t)                                       => t -> false
-        case seq if seq.size == 2 && seq.contains("null") => seq.find(_ != "null").getOrElse("null") -> true
-        case _ => DecodingFailure("Type lists are only supported for lists of length two where one type is 'null'", c.history)
+      typeAndNullability <- tf match {
+        case Seq(t)                                       => Right(t -> false)
+        case seq if seq.size == 2 && seq.contains("null") => Right(seq.find(_ != "null").getOrElse("null") -> true)
+        case _ => Left(DecodingFailure("Type lists are only supported for lists of length two where one type is 'null'", c.history))
       }
       nb <- c.downField("nullable").as[Option[Boolean]]
-    } yield (t, nullableByType || nb.contains(true))
+    } yield (typeAndNullability._1, typeAndNullability._2 || nb.contains(true))
   }
 
   implicit val OpenapiSchemaBooleanDecoder: Decoder[OpenapiSchemaBoolean] = { (c: HCursor) =>
@@ -466,18 +466,19 @@ object OpenapiSchemaType {
   }
 
   implicit val OpenapiSchemaAnyDecoder: Decoder[OpenapiSchemaAny] = { (c: HCursor) =>
+    // this is the last decoder tried in OpenapiSchemaTypeDecoder, so its error is the one reported to the user
+    val typeAndNb =
+      if (c.downField("type").succeeded) typeAndNullable(c).map { case (t, nb) => (Option(t), nb) }
+      else c.downField("nullable").as[Option[Boolean]].map(nb => (Option.empty[String], nb.contains(true)))
     for {
-      t <- c.downField("type").as[Option[String]]
-      p <- t match {
+      tnb <- typeAndNb
+      p <- tnb._1 match {
         case None           => Right(AnyType.Any)
         case Some("object") => Right(AnyType.Object)
         case Some("array")  => Right(AnyType.Array)
         case Some(t)        => Left(DecodingFailure(s"Fell back to any type; type $t is not handled", c.history))
       }
-      nb <- c.downField("nullable").as[Option[Boolean]]
-    } yield {
-      OpenapiSchemaAny(nb.getOrElse(false), p)
-    }
+    } yield OpenapiSchemaAny(tnb._2, p)
   }
 
   implicit lazy val OpenapiSchemaTypeDecoder: Decoder[OpenapiSchemaType] =

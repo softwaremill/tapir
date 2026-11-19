@@ -1,15 +1,13 @@
 package sttp.tapir.codegen.openapi.models
 
 import cats.implicits.toTraverseOps
-import cats.syntax.either._
 import OpenapiSchemaType.{
   OpenapiSchemaAllOf,
   OpenapiAnnotatedSchema,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
   OpenapiSchemaRefDecoder,
-  OpenapiSchemaString,
-  AccessRestrictions
+  OpenapiSchemaString
 }
 import io.circe.Json
 import sttp.tapir.codegen.util.NameHelpers.strippedToCamelCase
@@ -397,7 +395,11 @@ object OpenapiModels {
   import OpenapiSchemaType.OpenapiAnnotatedSchemaDecoder
   implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
   implicit def ResolvableDecoder[T: Decoder]: Decoder[Resolvable[T]] = { (c: HCursor) =>
-    c.as[T].map(Resolved(_)).orElse(c.as[OpenapiSchemaRef].map(r => Ref(r.name)))
+    c.as[T]
+      .fold[Decoder.Result[Resolvable[T]]](
+        _ => c.as[OpenapiSchemaRef].map(r => Ref(r.name)),
+        value => Right(Resolved(value))
+      )
   }
 
   private def extensionsFrom(c: HCursor, keys: Seq[String]): Map[String, Json] =

@@ -1,7 +1,7 @@
 lazy val root = (project in file("."))
   .enablePlugins(OpenapiCodegenPlugin)
   .settings(
-    scalaVersion := "3.3.1",
+    scalaVersion := "3.3.9",
     version := "0.1"
   )
 

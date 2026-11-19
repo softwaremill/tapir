@@ -164,8 +164,7 @@ object SchemaGenerator {
       if (acc.isEmpty) Seq(mappedNext)
       else if (acc.last.size + next.size >= maxLayerSize) acc :+ mappedNext
       else {
-        val first :+ last = acc
-        first :+ (last ++ mappedNext)
+        acc.init :+ (acc.last ++ mappedNext)
       }
     }
   }

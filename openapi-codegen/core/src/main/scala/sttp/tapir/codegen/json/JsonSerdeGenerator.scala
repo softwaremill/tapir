@@ -2,31 +2,8 @@ package sttp.tapir.codegen.json
 
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
 import sttp.tapir.codegen.openapi.models.OpenapiSchemaType
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{
-  OpenapiSchemaAllOf,
-  OpenapiSchemaAny,
-  OpenapiSchemaArray,
-  OpenapiSchemaBinary,
-  OpenapiSchemaBoolean,
-  OpenapiSchemaDate,
-  OpenapiSchemaDateTime,
-  OpenapiSchemaDuration,
-  OpenapiSchemaEnum,
-  OpenapiAnnotatedSchema,
-  OpenapiSchemaMap,
-  OpenapiSchemaNumericType,
-  OpenapiSchemaObject,
-  OpenapiSchemaOneOf,
-  OpenapiSchemaRef,
-  OpenapiSchemaSimpleType,
-  OpenapiSchemaString,
-  OpenapiSchemaStringType,
-  OpenapiSchemaUUID
-}
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.OpenapiSchemaOneOf
 import sttp.tapir.codegen.dedup.PackageReuseContext
-import sttp.tapir.codegen.util.NameHelpers.{addName, indent, uncapitalise}
-
-import scala.annotation.tailrec
 
 object JsonSerdeLib extends Enumeration {
   val Circe, Jsoniter, Zio = Value

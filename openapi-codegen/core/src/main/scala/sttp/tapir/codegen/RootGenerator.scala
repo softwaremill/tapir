@@ -4,7 +4,6 @@ import sttp.tapir.codegen.dedup.{GenerationMeta, PackageReuseContext}
 import sttp.tapir.codegen.endpoints.{Akka, EndpointDefs, EndpointDetails, EndpointGenerator, FS2, Pekko, StreamingImplementation, Zio}
 import sttp.tapir.codegen.json.JsonSerdeLib
 import sttp.tapir.codegen.openapi.models.OpenapiModels.OpenapiDocument
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType._
 import sttp.tapir.codegen.openapi.models.SpecificationExtensionRenderer
 import sttp.tapir.codegen.security.SecurityGenerator
 import sttp.tapir.codegen.util.ContentTypes

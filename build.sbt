@@ -13,7 +13,7 @@ import scala.sys.process.Process
 val scala2_12 = "2.12.21"
 val scala2_13 = "2.13.18"
 val scala3 = "3.9.0"
-val scala3Sbt = "3.8.4" // scala-steward:off the Scala version of sbt 2.0.x, which loads the openapi-codegen plugin
+val scala3Sbt = "3.9.0" // scala-steward:off the Scala version of sbt 2.1.x, which loads the openapi-codegen plugin
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -2168,6 +2168,10 @@ lazy val play29Client: ProjectMatrix = (projectMatrix in file("client/play29-cli
 
 import scala.jdk.CollectionConverters._
 
+// The codegen sources are compiled twice:
+// - here, with codegenScalaVersions (the latest Scala), for the CLI;
+// - in openapiCodegenSbt, with the Scala versions of sbt, as the plugin runs inside sbt. sbt's Scala may be older than
+//   scala3, and can't read TASTy from a newer minor version, so the plugin can't depend on this project.
 lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-codegen/core"))
   .jvmPlatform(scalaVersions = codegenScalaVersions, settings = commonJvmSettings)
   .settings(
@@ -2213,19 +2217,9 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
 
 lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
   .enablePlugins(SbtPlugin)
-  .jvmPlatform(scalaVersions = codegenScalaVersions, settings = commonJvmSettings)
+  .jvmPlatform(scalaVersions = Seq(scala2_12, scala3Sbt), settings = commonJvmSettings)
   .settings(
-    // This is surprising -- you would probably expect to just have 'val codegenScalaVersions = List(scala2_12, scala3Sbt)'
-    // If we try that, however, we get an error running `openapiCodegenSbt3/scripted` like the following:
-    // > Modules were resolved with conflicting cross-version suffixes in ProjectRef(uri("file:/..snip../tapir/"), "openapiCodegenCore3")
-    // >   io.circe:circe-parser _2.13, _3
-    // >   org.scala-lang.modules:scala-collection-compat _3, _2.13
-    // ... etc
-    scalaVersion := (if (scalaVersion.value.startsWith("3")) scala3Sbt else scalaVersion.value),
-    // The plugin is loaded by sbt (sbt 2.0.x runs on Scala 3.8), so it can't depend on the Scala 3 build of
-    // openapiCodegenCore, which is compiled with Scala 3.9 (and its tests need the Scala 3.9 builds of tapir modules).
-    // Instead, the plugin is built directly from the codegen-core sources, using the plugin's Scala version.
-    // Needs revisit when sbt runs on version 2.1.x which uses Scala 3.9
+    // compiling the codegen core sources; see the comment on openapiCodegenCore
     Compile / unmanagedSourceDirectories ++= {
       val codegenCoreSources = (ThisBuild / baseDirectory).value / "openapi-codegen" / "core" / "src" / "main"
       Seq(codegenCoreSources / "scala", codegenCoreSources / s"scala-${scalaBinaryVersion.value.takeWhile(_ != '.')}")
@@ -2245,19 +2239,11 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       .toSeq,
     scriptedBufferLog := false,
     sbtTestDirectory := sourceDirectory.value / "sbt-test",
-    libraryDependencies ++= (if (scalaBinaryVersion.value == "3") Nil
-                             else Seq("org.scala-lang" % "scala-compiler" % scalaVersion.value % Test)),
-    libraryDependencies ++= Seq(
-      scalaTest.value % Test,
-      scalaCheck.value % Test,
-      scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test
-    ),
     sbtPluginPublishLegacyMavenStyle := false, // required by sonatype central
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.12.4"
-        case _      => "2.0.0"
+        case _      => "2.1.0"
       }
     },
     scriptedSbt := {
@@ -2267,7 +2253,6 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       }
     }
   )
-  .dependsOn(core % Test, circeJson % Test, zioJson % Test)
 
 lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
   .enablePlugins(BuildInfoPlugin)
