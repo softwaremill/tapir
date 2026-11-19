@@ -116,25 +116,33 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
               .flatMap(_ => pureResult("processing finished".asRight[Unit]))
           },
         "Server completes in-flight pipelined requests, but doesn't handle new ones, during shutdown",
-        gracefulShutdownTimeout = Some(10.seconds)
+        // longer than the socket's read timeout, so that the test fails if the connection is closed only when this passes
+        gracefulShutdownTimeout = Some(30.seconds)
       ) { (stopServer) => (_, baseUri) =>
         val port = baseUri.port.get
         def request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII)
+        // with a body, which isn't read
+        def requestDuringShutdown =
+          "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\n\r\nhello".getBytes(StandardCharsets.US_ASCII)
         rawSocket(port).use { socket =>
           for {
             _ <- sendRaw(socket, request ++ request)
             requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
             runningStop <- stopServer.start
-            _ <- awaitConnectionsRefused(port).timeout(2.seconds)
-            _ <- sendRaw(socket, request)
+            _ <- awaitConnectionsRefused(port).timeout(5.seconds)
+            _ <- sendRaw(socket, requestDuringShutdown)
             _ <- IO(releaseRequests.countDown())
-            response1 <- readRawResponse(socket)
-            response2 <- readRawResponse(socket)
+            response1 <- readRawResponseWithHeaders(socket)
+            response2 <- readRawResponseWithHeaders(socket)
             afterResponses <- IO.blocking(socket.getInputStream.read())
             _ <- runningStop.joinWithNever
           } yield {
             (requestArrived shouldBe true): Unit
-            (List(response1, response2) shouldBe List.fill(2)((200, "processing finished"))): Unit
+            (List(response1, response2).map { case (code, _, body) => (code, body) } shouldBe List.fill(2)(
+              (200, "processing finished")
+            )): Unit
+            // only the last response closes the connection
+            (List(response1, response2).map(_._2.contains("connection: close")) shouldBe List(false, true)): Unit
             afterResponses shouldBe -1 // the request sent during shutdown isn't answered, and the connection is closed
           }
         }

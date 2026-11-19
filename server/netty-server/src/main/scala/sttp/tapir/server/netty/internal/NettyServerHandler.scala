@@ -215,8 +215,8 @@ class NettyServerHandler[F[_]](
         runningFuture
           .transform { result =>
             responsesNotStarted -= 1
-            // keeping track of the response-completed future (which is available if a response with a body, or an error response, was
-            // written), to properly cleanup the request body, and to track the requests in flight
+            // completed once the response is written (None if nothing was written); used to clean up the request body, and to track the
+            // requests in flight
             var responseCompletedPromise: Option[ChannelFuture] = None
             try {
               // #4131: the channel might be closed if the request timed out

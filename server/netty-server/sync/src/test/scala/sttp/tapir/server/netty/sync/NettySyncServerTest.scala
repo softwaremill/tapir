@@ -256,12 +256,12 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       .withGracefulShutdownTimeout(10.seconds)
 
     /** Returns the error with which the enclosing scope ended, and the server's port. */
-    def runServer(e: ServerEndpoint[OxStreams & WebSockets, Identity])(body: NettySyncServerBinding => Unit): (Option[Throwable], Int) =
+    def runServer(es: ServerEndpoint[OxStreams & WebSockets, Identity]*)(body: NettySyncServerBinding => Unit): (Option[Throwable], Int) =
       var port = 0
       val scopeError =
         try
           supervised {
-            val binding = NettySyncServer(options, config).addEndpoint(e).start()
+            val binding = NettySyncServer(options, config).addEndpoints(es.toList).start()
             port = binding.port
             body(binding)
             sleep(10.seconds)
@@ -270,8 +270,8 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         catch case e: Throwable => Some(e)
       (scopeError, port)
 
-    def send(port: Int): Future[Response[Either[String, String]]] =
-      basicRequest.get(uri"http://localhost:$port").send(backend).unsafeToFuture()
+    def send(port: Int, path: String = ""): Future[Response[Either[String, String]]] =
+      basicRequest.get(uri"http://localhost:$port/$path").send(backend).unsafeToFuture()
 
     List(
       Test("A fatal error in server logic ends the enclosing scope, once a 500 is sent, and stops the server") {
@@ -309,6 +309,26 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           scopeError shouldBe Some(error)
           Try(stopResult.get(15, TimeUnit.SECONDS)).failed.map(_.getCause) shouldBe Success(error)
           response.future.map(_.code shouldBe StatusCode.InternalServerError)
+        }
+      },
+      {
+        val error = new LinkageError("boom")
+        val slowReceived = new CountDownLatch(1)
+        val slow = endpoint.get.in("slow").out(stringBody).handleSuccess { _ =>
+          slowReceived.countDown()
+          Thread.sleep(30000) // interrupted when the server's scope fails
+          "done"
+        }
+        val failing = endpoint.get.in("fail").out(stringBody).handleSuccess(_ => throw error)
+        Test("When the server's scope fails, the requests which it interrupts get a 500") {
+          val slowResponse = scala.concurrent.Promise[Response[Either[String, String]]]()
+          val (scopeError, _) = runServer(slow, failing) { binding =>
+            slowResponse.completeWith(send(binding.port, "slow"))
+            slowReceived.await(10, TimeUnit.SECONDS).discard
+            send(binding.port, "fail").discard
+          }
+          scopeError shouldBe Some(error)
+          slowResponse.future.map(_.code shouldBe StatusCode.InternalServerError)
         }
       },
       // the other tests use a shared event loop group, which isn't shut down when the server stops

@@ -111,7 +111,7 @@ case class NettySyncServer(
     */
   private def startInServerScope[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) =
     val started = new CompletableFuture[SA]()
-    val stopRequested = new CompletableFuture[Boolean]() // true if requested by calling `stop()`
+    val stopRequested = new CompletableFuture[StopReason]()
     val stopped = new CompletableFuture[Unit]()
     forkDiscard {
       unsupervised {
@@ -121,25 +121,30 @@ case class NettySyncServer(
           catch case e: Throwable => serverStopped.completeExceptionally(e).discard
         }.discard
 
-        // when the current scope ends, this fork is interrupted: requesting a graceful stop, instead of interrupting the server's scope
+        // interrupted when the current scope ends
         def awaitServer(): Try[Unit] =
           try serverStopped.get()
           catch
             case _: InterruptedException =>
-              stopRequested.complete(false).discard
+              stopRequested.complete(StopReason.ScopeEnded).discard
               awaitServer()
+
+        // there's no caller of `stop()` to report the error to, and the current scope has already ended
+        def logIfScopeEnded(message: String, e: Throwable): Unit =
+          if stopRequested.getNow(StopReason.StopCalled) == StopReason.ScopeEnded then logger.error(message, e)
 
         try
           awaitServer() match
             case Success(_) => stopped.complete(()).discard
             case Failure(e) =>
               stopped.completeExceptionally(e).discard
-              if !stopRequested.join() then logger.error("Error when stopping the server", e) // no caller of `stop()` to report to
+              logIfScopeEnded("Error when stopping the server", e)
         catch
           case e: ExecutionException =>
             // start failures are reported by start(); other failures of the server's scope end the current scope
             if !started.completeExceptionally(e.getCause) then
               stopped.completeExceptionally(e.getCause).discard
+              logIfScopeEnded("Server failed while stopping", e.getCause)
               throw e.getCause
       }
     }
@@ -150,7 +155,7 @@ case class NettySyncServer(
     (
       socket,
       () =>
-        stopRequested.complete(true).discard
+        stopRequested.complete(StopReason.StopCalled).discard
         try stopped.get().discard
         catch case e: ExecutionException => throw e.getCause
     )
@@ -159,11 +164,12 @@ case class NettySyncServer(
   private def runServer[SA <: SocketAddress](
       socketOverride: Option[SA],
       started: CompletableFuture[SA],
-      stopRequested: CompletableFuture[Boolean]
+      stopRequested: CompletableFuture[StopReason]
   ): Try[Unit] =
+    // called once the server's scope ends, i.e. when request handling forks are done (interrupted if still running), so that their
+    // callbacks can still run on the event loops
     var close: () => Unit = () => ()
     var drained: Try[Unit] = Success(())
-    var closed: Try[Unit] = Success(())
     try
       supervised {
         val server = startUsingSocketOverride(socketOverride, inScopeRunner())
@@ -172,9 +178,12 @@ case class NettySyncServer(
         try stopRequested.get().discard // also interrupted if the server's scope fails
         finally drained = Try(server.drain())
       }
-    finally
-      // once request handling forks are done (interrupted if still running), so that their callbacks can still run on the event loops
-      closed = Try(close())
+    catch
+      case e: Throwable =>
+        drained.failed.foreach(e.addSuppressed)
+        Try(close()).failed.foreach(e.addSuppressed)
+        throw e
+    val closed = Try(close())
     drained.flatMap(_ => closed)
 
   private def startUsingSocketOverride[SA <: SocketAddress](
@@ -266,14 +275,12 @@ case class NettySyncServer(
       val channel = channelIdFuture.channel()
       RunningServer(
         channel.localAddress().asInstanceOf[SA],
-        drain = () => drain(Some(channel), channelGroup, isShuttingDown),
+        drain = () => drain(channel, channelGroup, isShuttingDown),
         close = () => close(Some(channel), eventLoopGroup, channelGroup, eventExecutor)
       )
     catch
       case NonFatal(startFailureCause) =>
-        try
-          drain(None, channelGroup, isShuttingDown)
-          close(None, eventLoopGroup, channelGroup, eventExecutor)
+        try close(None, eventLoopGroup, channelGroup, eventExecutor)
         catch case NonFatal(recoveryFailureCause) => startFailureCause.addSuppressed(recoveryFailureCause)
         throw startFailureCause
 
@@ -286,16 +293,16 @@ case class NettySyncServer(
     val _ = channelGroup.close().get()
 
   /** Stops accepting connections, and waits for the open ones to close, up to the graceful shutdown timeout. */
-  private def drain(serverChannel: Option[Channel], channelGroup: ChannelGroup, isShuttingDown: AtomicBoolean): Unit =
+  private def drain(serverChannel: Channel, channelGroup: ChannelGroup, isShuttingDown: AtomicBoolean): Unit =
     NettyShutdown.startDraining(channelGroup, isShuttingDown)
-    serverChannel.foreach(_.close().get().discard)
+    serverChannel.close().get().discard
     waitForClosedChannels(
       channelGroup,
       startNanos = System.nanoTime(),
       gracefulShutdownTimeoutNanos = config.gracefulShutdownTimeout.map(_.toNanos)
     )
 
-  /** Closes the remaining connections (if draining was interrupted), and releases the server's resources. */
+  /** Closes the server's channels, and releases its resources. */
   private def close(
       serverChannel: Option[Channel],
       eventLoopGroup: EventLoopGroup,
@@ -305,10 +312,14 @@ case class NettySyncServer(
     serverChannel.foreach(_.close().get().discard)
     channelGroup.close().get().discard
     if config.shutdownEventLoopGroupOnClose then
-      NettyShutdown.shutdownExecutor(eventLoopGroup).get().discard
-      NettyShutdown.shutdownExecutor(eventExecutor).get().discard
+      // no quiet period, as request handling forks are done
+      NettyShutdown.shutdownExecutor(eventLoopGroup, quietPeriodMillis = 0).get().discard
+      NettyShutdown.shutdownExecutor(eventExecutor, quietPeriodMillis = 0).get().discard
 
   private case class RunningServer[SA](socket: SA, drain: () => Unit, close: () => Unit)
+
+  private enum StopReason:
+    case StopCalled, ScopeEnded
 
 object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, NettyConfig.default)

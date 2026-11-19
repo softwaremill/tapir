@@ -152,7 +152,7 @@ case class NettyZioServer[R](
       ZIO.sleep(100.millis) *>
         waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
     } else {
-      ZIO.attempt(channelGroup.close()).unit
+      nettyFutureToScala(channelGroup.close()).unit
     }
 
   private def stop(
