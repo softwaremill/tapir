@@ -2168,6 +2168,10 @@ lazy val play29Client: ProjectMatrix = (projectMatrix in file("client/play29-cli
 
 import scala.jdk.CollectionConverters._
 
+// The codegen sources are compiled twice:
+// - here, with codegenScalaVersions (the latest Scala), for the CLI;
+// - in openapiCodegenSbt, with the Scala versions of sbt, as the plugin runs inside sbt. sbt's Scala may be older than
+//   scala3, and can't read TASTy from a newer minor version, so the plugin can't depend on this project.
 lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-codegen/core"))
   .jvmPlatform(scalaVersions = codegenScalaVersions, settings = commonJvmSettings)
   .settings(
@@ -2215,8 +2219,7 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
   .enablePlugins(SbtPlugin)
   .jvmPlatform(scalaVersions = Seq(scala2_12, scala3Sbt), settings = commonJvmSettings)
   .settings(
-    // The plugin must be built with sbt's Scala version, which may be older than scala3 (used to build
-    // openapiCodegenCore). Scala can't read TASTy from a newer minor version, so the plugin compiles the core sources.
+    // compiling the codegen core sources; see the comment on openapiCodegenCore
     Compile / unmanagedSourceDirectories ++= {
       val codegenCoreSources = (ThisBuild / baseDirectory).value / "openapi-codegen" / "core" / "src" / "main"
       Seq(codegenCoreSources / "scala", codegenCoreSources / s"scala-${scalaBinaryVersion.value.takeWhile(_ != '.')}")
