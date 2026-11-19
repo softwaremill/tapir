@@ -266,14 +266,14 @@ jobs:
   auto-merge-github-actions:
     # only for PRs by softwaremill-ci
     if: github.event.pull_request.user.login == 'softwaremill-ci'
-    needs: [ ci, mima, label ]
+    needs: [ ci, codegen-sbt-plugin, mima, label ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
     secrets: inherit
 
   auto-merge-dependabot:
     # only for PRs by dependabot[bot]
     if: github.event.pull_request.user.login == 'dependabot[bot]'
-    needs: [ ci, mima ]
+    needs: [ ci, codegen-sbt-plugin, mima ]
     uses: softwaremill/github-actions-workflows/.github/workflows/auto-merge.yml@main
     secrets:
       github-token: ${{ secrets.SOFTWAREMILL_CI_PR_TOKEN }}

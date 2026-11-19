@@ -4,7 +4,7 @@ import io.circe.Json
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.codegen.openapi.models.OpenapiModels.{Ref, ResolvableDecoder, Resolved}
-import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.typeAndNullable
+import sttp.tapir.codegen.openapi.models.OpenapiSchemaType.{AnyType, OpenapiSchemaAny, typeAndNullable}
 
 class DecoderSpec extends AnyFlatSpec with Matchers {
   "typeAndNullable" should "accept a single type and the nullable flag" in {
@@ -23,6 +23,17 @@ class DecoderSpec extends AnyFlatSpec with Matchers {
       val result = typeAndNullable(Json.obj("type" -> Json.arr(types.map(Json.fromString)*)).hcursor)
       result.left.map(_.message) shouldBe Left("Type lists are only supported for lists of length two where one type is 'null'")
     }
+  }
+
+  "OpenapiSchemaType decoder" should "decode a free-form schema made nullable with a type list" in {
+    Json.obj("type" -> Json.arr(Json.fromString("object"), Json.fromString("null"))).as[OpenapiSchemaType] shouldBe Right(
+      OpenapiSchemaAny(nullable = true, AnyType.Object)
+    )
+  }
+
+  it should "report unsupported type lists" in {
+    val result = Json.obj("type" -> Json.arr(Json.fromString("string"), Json.fromString("integer"))).as[OpenapiSchemaType]
+    result.left.map(_.message) shouldBe Left("Type lists are only supported for lists of length two where one type is 'null'")
   }
 
   "ResolvableDecoder" should "decode inline values before falling back to a reference" in {

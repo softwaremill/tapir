@@ -466,18 +466,19 @@ object OpenapiSchemaType {
   }
 
   implicit val OpenapiSchemaAnyDecoder: Decoder[OpenapiSchemaAny] = { (c: HCursor) =>
+    // this is the last decoder tried in OpenapiSchemaTypeDecoder, so its error is the one reported to the user
+    val typeAndNb =
+      if (c.downField("type").succeeded) typeAndNullable(c).map { case (t, nb) => (Option(t), nb) }
+      else c.downField("nullable").as[Option[Boolean]].map(nb => (Option.empty[String], nb.contains(true)))
     for {
-      t <- c.downField("type").as[Option[String]]
-      p <- t match {
+      tnb <- typeAndNb
+      p <- tnb._1 match {
         case None           => Right(AnyType.Any)
         case Some("object") => Right(AnyType.Object)
         case Some("array")  => Right(AnyType.Array)
         case Some(t)        => Left(DecodingFailure(s"Fell back to any type; type $t is not handled", c.history))
       }
-      nb <- c.downField("nullable").as[Option[Boolean]]
-    } yield {
-      OpenapiSchemaAny(nb.getOrElse(false), p)
-    }
+    } yield OpenapiSchemaAny(tnb._2, p)
   }
 
   implicit lazy val OpenapiSchemaTypeDecoder: Decoder[OpenapiSchemaType] =

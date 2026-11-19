@@ -14,6 +14,8 @@ Add the sbt plugin to the `project/plugins.sbt`:
 addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "@VERSION@")
 ```
 
+On sbt 2, the plugin requires sbt 2.1.0 or newer.
+
 Enable the plugin for your project in the `build.sbt`:
 
 ```scala

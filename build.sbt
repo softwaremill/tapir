@@ -2211,7 +2211,14 @@ lazy val openapiCodegenCore: ProjectMatrix = (projectMatrix in file("openapi-cod
   )
   .dependsOn(core % Test, circeJson % Test, jsoniterScala % Test, zioJson % Test)
 
-lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-codegen/sbt-plugin"))
+lazy val openapiCodegenSbt: ProjectMatrix = {
+  // the plugin depends on openapiCodegenCore, which is built with scala3; sbt's Scala can't read TASTy from a newer minor
+  require(
+    scala3.split('.').take(2).sameElements(scala3Sbt.split('.').take(2)),
+    s"scala3 ($scala3) and scala3Sbt ($scala3Sbt) must have the same minor version"
+  )
+  projectMatrix in file("openapi-codegen/sbt-plugin")
+}
   .enablePlugins(SbtPlugin)
   .jvmPlatform(scalaVersions = Seq(scala2_12, scala3Sbt), settings = commonJvmSettings)
   .settings(
