@@ -107,9 +107,10 @@ customise the server socket, such as:
   `NettySyncServerBinding.stop()`, the server stops accepting new connections
   and closes idle ones right away. Then, it waits at most 10 seconds for
   in-flight requests to complete, closing each connection once its last
-  response is sent; new requests on these connections aren't handled.
-  Afterwards, all server resources are closed. A `NettySyncServer` is also stopped this way
-  when the scope in which it was started ends
+  response is sent; new requests on these connections aren't handled. Web
+  socket connections stay open until the client closes them, or the timeout
+  passes. Afterwards, all server resources are closed. A `NettySyncServer` is
+  also stopped this way when the scope in which it was started ends
 * server header
 * maximum number of connections
 * custom netty pipeline & low-level logging handlers; a custom pipeline should

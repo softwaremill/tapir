@@ -47,7 +47,7 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
           requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
           runningStop <- stopServer.start
           result <- runningRequest.join.attempt
-          _ <- runningStop.join
+          _ <- runningStop.joinWithNever
         } yield {
           (requestArrived shouldBe true): Unit
           result.value.isSuccess shouldBe true
@@ -75,7 +75,7 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
           // well before the request completes
           refusedDuringStop <- awaitConnectionsRefused(port).timeout(2.seconds).attempt
           result <- runningRequest.joinWithNever
-          _ <- runningStop.join
+          _ <- runningStop.joinWithNever
         } yield {
           (refusedBeforeStop shouldBe false): Unit
           (requestArrived shouldBe true): Unit
@@ -106,12 +106,13 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
       }
     }, {
       val requestReceived = new CountDownLatch(1)
+      val releaseRequests = new CountDownLatch(1)
       testServerLogicWithStop(
         endpoint
           .out(plainBody[String])
           .serverLogic { _ =>
             m.eval(requestReceived.countDown())
-              .flatMap(_ => sleeper.sleep(2.seconds))
+              .flatMap(_ => m.blocking(releaseRequests.await(10, TimeUnit.SECONDS)))
               .flatMap(_ => pureResult("processing finished".asRight[Unit]))
           },
         "Server completes in-flight pipelined requests, but doesn't handle new ones, during shutdown",
@@ -126,10 +127,11 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
             runningStop <- stopServer.start
             _ <- awaitConnectionsRefused(port).timeout(2.seconds)
             _ <- sendRaw(socket, request)
+            _ <- IO(releaseRequests.countDown())
             response1 <- readRawResponse(socket)
             response2 <- readRawResponse(socket)
             afterResponses <- IO.blocking(socket.getInputStream.read())
-            _ <- runningStop.join
+            _ <- runningStop.joinWithNever
           } yield {
             (requestArrived shouldBe true): Unit
             (List(response1, response2) shouldBe List.fill(2)((200, "processing finished"))): Unit

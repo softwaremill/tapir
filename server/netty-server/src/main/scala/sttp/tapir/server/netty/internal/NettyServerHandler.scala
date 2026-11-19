@@ -77,7 +77,7 @@ class NettyServerHandler[F[_]](
   private var requestsInFlight = 0
 
   // Requests received, for which writing the response hasn't started yet. When the server is shutting down, only the last response
-  // has `Connection: close`, so that the responses to pipelined requests are still sent. Only touched on the channel's event loop.
+  // has `Connection: close`, so that the responses to pipelined requests are still sent.
   private var responsesNotStarted = 0
 
   // Present only if a request timeout is set, and the pipeline has the HTTP codec registered under `ServerCodecHandlerName`. If absent, an
@@ -287,7 +287,7 @@ class NettyServerHandler[F[_]](
         writeErrorThenClose(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE)
       } else {
         // A pipelined request: a 503 can't be written before the responses to the earlier requests. Instead, the request is dropped, and
-        // the connection is closed once those responses are sent. As with any unanswered pipelined request, the client can retry it.
+        // the connection is closed once those responses are sent.
         logger.debug("Dropping a pipelined request, server is shutting down")
         request match {
           case r: StreamedHttpRequest => r.subscribe(new CancellingSubscriber)
@@ -525,7 +525,6 @@ class NettyServerHandler[F[_]](
     }
 
     def handleCloseAndKeepAliveHeaders(request: HttpRequest): Unit = {
-      // when shutting down, the connection is closed once the last response is sent (see requestCompleted)
       if (!HttpUtil.isKeepAlive(request) || (isShuttingDown.get() && responsesNotStarted == 0))
         m.headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
       else if (request.protocolVersion.equals(HttpVersion.HTTP_1_0))

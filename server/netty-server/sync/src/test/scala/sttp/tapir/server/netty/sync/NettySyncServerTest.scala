@@ -30,8 +30,8 @@ import sttp.tapir.server.netty.{NettyConfig, NettySyncRequestTimeoutTests}
 import sttp.model.sse.ServerSentEvent
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import java.util.concurrent.{CountDownLatch, TimeUnit}
-import scala.util.Random
+import java.util.concurrent.{CompletableFuture, CountDownLatch, TimeUnit}
+import scala.util.{Random, Success, Try}
 import sttp.tapir.server.netty.OxServerSentEvents.parseBytesToSSE
 
 class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
@@ -65,7 +65,8 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         NettySyncRequestTimeoutTests(eventLoopGroup, backend).tests() ++
         additionalTests(createServerTest) ++
         expectContinueTests(createServerTest, eventLoopGroup) ++
-        List(scopeEndTest(eventLoopGroup), fatalErrorTest(eventLoopGroup))
+        List(scopeEndTest(eventLoopGroup)) ++
+        fatalErrorTests(eventLoopGroup)
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -246,29 +247,81 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
     }
 
   /** Sync-only: with server logic run in forks which aren't interrupted, their failure fails the server's scope. */
-  def fatalErrorTest(eventLoopGroup: NioEventLoopGroup): Test =
-    Test("A fatal error in server logic ends the enclosing scope, once a 500 is sent") {
-      val error = new LinkageError("boom")
-      val failing = endpoint.get.out(stringBody).handleSuccess(_ => throw error)
-      val options = NettySyncServerOptions.default.copy(interruptServerLogicWhenRequestCancelled = false)
-      val config = NettyConfig.default
-        .eventLoopGroup(eventLoopGroup)
-        .randomPort
-        .withDontShutdownEventLoopGroupOnClose
-        .withGracefulShutdownTimeout(10.seconds)
-      val response = scala.concurrent.Promise[Response[Either[String, String]]]()
+  def fatalErrorTests(eventLoopGroup: NioEventLoopGroup): List[Test] =
+    val options = NettySyncServerOptions.default.copy(interruptServerLogicWhenRequestCancelled = false)
+    val config = NettyConfig.default
+      .eventLoopGroup(eventLoopGroup)
+      .randomPort
+      .withDontShutdownEventLoopGroupOnClose
+      .withGracefulShutdownTimeout(10.seconds)
+
+    /** Returns the error with which the enclosing scope ended, and the server's port. */
+    def runServer(e: ServerEndpoint[OxStreams & WebSockets, Identity])(body: NettySyncServerBinding => Unit): (Option[Throwable], Int) =
+      var port = 0
       val scopeError =
         try
           supervised {
-            val binding = NettySyncServer(options, config).addEndpoint(failing).start()
-            response.completeWith(basicRequest.get(uri"http://localhost:${binding.port}").send(backend).unsafeToFuture())
+            val binding = NettySyncServer(options, config).addEndpoint(e).start()
+            port = binding.port
+            body(binding)
             sleep(10.seconds)
           }
           None
         catch case e: Throwable => Some(e)
-      scopeError shouldBe Some(error)
-      response.future.map(_.code shouldBe StatusCode.InternalServerError)
-    }
+      (scopeError, port)
+
+    def send(port: Int): Future[Response[Either[String, String]]] =
+      basicRequest.get(uri"http://localhost:$port").send(backend).unsafeToFuture()
+
+    List(
+      Test("A fatal error in server logic ends the enclosing scope, once a 500 is sent, and stops the server") {
+        val error = new LinkageError("boom")
+        val response = scala.concurrent.Promise[Response[Either[String, String]]]()
+        val (scopeError, port) = runServer(endpoint.get.out(stringBody).handleSuccess(_ => throw error)) { binding =>
+          response.completeWith(send(binding.port))
+        }
+        scopeError shouldBe Some(error)
+        ServerGracefulShutdownTests.connectionRefused(port).unsafeRunSync() shouldBe true
+        response.future.map(_.code shouldBe StatusCode.InternalServerError)
+      }, {
+        val error = new LinkageError("boom")
+        val requestReceived = new CountDownLatch(1)
+        val failRequest = new CountDownLatch(1)
+        val failing = endpoint.get.out(stringBody).handleSuccess { _ =>
+          requestReceived.countDown()
+          failRequest.await(10, TimeUnit.SECONDS).discard
+          throw error
+        }
+        Test("A fatal error in server logic while stopping ends the enclosing scope, and fails stop()") {
+          val response = scala.concurrent.Promise[Response[Either[String, String]]]()
+          // not using IO or Future, which don't complete on fatal errors
+          val stopResult = new CompletableFuture[Unit]()
+          val (scopeError, _) = runServer(failing) { binding =>
+            response.completeWith(send(binding.port))
+            requestReceived.await(10, TimeUnit.SECONDS).discard
+            Thread.startVirtualThread { () =>
+              try stopResult.complete(binding.stop()).discard
+              catch case e: Throwable => stopResult.completeExceptionally(e).discard
+            }.discard
+            ServerGracefulShutdownTests.awaitConnectionsRefused(binding.port).timeout(5.seconds).unsafeRunSync()
+            failRequest.countDown()
+          }
+          scopeError shouldBe Some(error)
+          Try(stopResult.get(15, TimeUnit.SECONDS)).failed.map(_.getCause) shouldBe Success(error)
+          response.future.map(_.code shouldBe StatusCode.InternalServerError)
+        }
+      },
+      // the other tests use a shared event loop group, which isn't shut down when the server stops
+      Test("stopping a server which uses its own event loop group shouldn't wait for Netty's default quiet period of 2 seconds") {
+        val stopMillis = supervised {
+          val binding = NettySyncServer().port(0).start()
+          val start = System.nanoTime()
+          binding.stop()
+          (System.nanoTime() - start) / 1_000_000
+        }
+        stopMillis should be < 2000L
+      }
+    )
 
   /** Netty-only: RFC 9110 doesn't specify when exactly a 100 is sent with pipelining, or for a body that might be read later, and servers
     * differ. These test `TapirHttpStreamsServerHandler`, which is the same for all Netty interpreters, so they're run once, here, as they
