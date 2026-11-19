@@ -13,7 +13,7 @@ import scala.sys.process.Process
 val scala2_12 = "2.12.21"
 val scala2_13 = "2.13.18"
 val scala3 = "3.9.0"
-val scala3Sbt = "3.9.0"
+val scala3Sbt = "3.9.0" // scala-steward:off the Scala version of sbt 2.1.x, which loads the openapi-codegen plugin
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -2215,19 +2215,6 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
   .enablePlugins(SbtPlugin)
   .jvmPlatform(scalaVersions = Seq(scala2_12, scala3Sbt), settings = commonJvmSettings)
   .settings(
-    // Keep the plugin's compiler baseline independent of future library compiler upgrades.
-    // Build directly from codegen-core sources with the plugin's explicit Scala version.
-    Compile / unmanagedSourceDirectories ++= {
-      val codegenCoreSources = (ThisBuild / baseDirectory).value / "openapi-codegen" / "core" / "src" / "main"
-      Seq(codegenCoreSources / "scala", codegenCoreSources / s"scala-${scalaBinaryVersion.value.takeWhile(_ != '.')}")
-    },
-    libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % Versions.circe,
-      "io.circe" %% "circe-generic" % Versions.circe,
-      "io.circe" %% "circe-yaml" % Versions.circeYaml
-    ),
-    libraryDependencies ++= (if (scalaBinaryVersion.value == "3") Nil
-                             else Seq(scalaOrganization.value % "scala-reflect" % scalaVersion.value)),
     name := "sbt-openapi-codegen",
     sbtPlugin := true,
     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
@@ -2236,14 +2223,6 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       .toSeq,
     scriptedBufferLog := false,
     sbtTestDirectory := sourceDirectory.value / "sbt-test",
-    libraryDependencies ++= (if (scalaBinaryVersion.value == "3") Nil
-                             else Seq("org.scala-lang" % "scala-compiler" % scalaVersion.value % Test)),
-    libraryDependencies ++= Seq(
-      scalaTest.value % Test,
-      scalaCheck.value % Test,
-      scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.7.0" % Test
-    ),
     sbtPluginPublishLegacyMavenStyle := false, // required by sonatype central
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
@@ -2258,7 +2237,7 @@ lazy val openapiCodegenSbt: ProjectMatrix = (projectMatrix in file("openapi-code
       }
     }
   )
-  .dependsOn(core % Test, circeJson % Test, zioJson % Test)
+  .dependsOn(openapiCodegenCore)
 
 lazy val openapiCodegenCli: ProjectMatrix = (projectMatrix in file("openapi-codegen/cli"))
   .enablePlugins(BuildInfoPlugin)
