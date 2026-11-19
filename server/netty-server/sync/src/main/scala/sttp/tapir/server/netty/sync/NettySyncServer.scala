@@ -67,8 +67,12 @@ case class NettySyncServer(
 
   /** Use only if you need to manage server lifecycle or concurrency scope manually. Otherwise, see [[startAndWait]].
     *
-    * The server runs until it's stopped using the returned binding, or until the enclosing scope ends. In both cases, the server is stopped
-    * gracefully: in-flight requests are given up to [[NettyConfig.gracefulShutdownTimeout]] to complete.
+    * The server runs until it's stopped using the returned binding, or until the enclosing scope ends (then, `stop()` doesn't need to be
+    * called). In both cases, the server is stopped gracefully: in-flight requests are given up to
+    * [[NettyConfig.gracefulShutdownTimeout]] to complete; the scope ends once that's done.
+    *
+    * If request handling fails with a fatal error, and [[NettySyncServerOptions.interruptServerLogicWhenRequestCancelled]] is `false`, the
+    * server is stopped, and the enclosing scope fails with that error.
     *
     * @example
     *   {{{
@@ -163,7 +167,8 @@ case class NettySyncServer(
             throw new IllegalStateException("Stopping the server failed", e.getCause)
     )
 
-  /** Runs the server in its own scope, until a stop is requested. Returns the outcome of stopping, or throws if the server's scope fails. */
+  /** Runs the server in its own scope, until a stop is requested. Returns the outcome of stopping, or throws if the server's scope fails.
+    */
   private def runServer[SA <: SocketAddress](
       socketOverride: Option[SA],
       started: CompletableFuture[SA],
@@ -336,9 +341,16 @@ object NettySyncServer:
   def apply(serverOptions: NettySyncServerOptions, config: NettyConfig): NettySyncServer =
     NettySyncServer(Vector.empty, Vector.empty, serverOptions, config)
 
+/** @param stop
+  *   Stops the server gracefully, and waits until it's stopped. Can be called more than once. Errors are thrown wrapped in an
+  *   `IllegalStateException`.
+  */
 case class NettySyncServerBinding(localSocket: InetSocketAddress, stop: () => Unit):
   def hostName: String = localSocket.getHostName
   def port: Int = localSocket.getPort
 
+/** @param stop
+  *   As in [[NettySyncServerBinding]].
+  */
 case class NettySyncDomainSocketBinding(localSocket: DomainSocketAddress, stop: () => Unit):
   def path: String = localSocket.path()
