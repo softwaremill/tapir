@@ -66,7 +66,8 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         additionalTests(createServerTest) ++
         expectContinueTests(createServerTest, eventLoopGroup) ++
         List(scopeEndTest(eventLoopGroup)) ++
-        fatalErrorTests(eventLoopGroup)
+        fatalErrorTests(eventLoopGroup) ++
+        List(quietPeriodTest)
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -246,6 +247,18 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       response.map(_.body shouldBe Right("done"))
     }
 
+  /** Sync-only: the other tests use a shared event loop group, which isn't shut down when the server stops. */
+  def quietPeriodTest: Test =
+    Test("stopping a server which uses its own event loop group shouldn't wait for Netty's default quiet period of 2 seconds") {
+      val stopMillis = supervised {
+        val binding = NettySyncServer().port(0).start()
+        val start = System.nanoTime()
+        binding.stop()
+        (System.nanoTime() - start) / 1_000_000
+      }
+      stopMillis should be < 2000L
+    }
+
   /** Sync-only: with server logic run in forks which aren't interrupted, their failure fails the server's scope. */
   def fatalErrorTests(eventLoopGroup: NioEventLoopGroup): List[Test] =
     val options = NettySyncServerOptions.default.copy(interruptServerLogicWhenRequestCancelled = false)
@@ -257,11 +270,16 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
     /** Returns the error with which the enclosing scope ended, and the server's port. */
     def runServer(es: ServerEndpoint[OxStreams & WebSockets, Identity]*)(body: NettySyncServerBinding => Unit): (Option[Throwable], Int) =
+      runServerStoppedBy(start = server => server.start())(es*)(body)
+
+    def runServerStoppedBy(start: NettySyncServer => Ox ?=> NettySyncServerBinding)(es: ServerEndpoint[OxStreams & WebSockets, Identity]*)(
+        body: NettySyncServerBinding => Unit
+    ): (Option[Throwable], Int) =
       var port = 0
       val scopeError =
         try
           supervised {
-            val binding = NettySyncServer(options, config).addEndpoints(es.toList).start()
+            val binding = start(NettySyncServer(options, config).addEndpoints(es.toList))
             port = binding.port
             body(binding)
             sleep(10.seconds)
@@ -283,6 +301,15 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         scopeError shouldBe Some(error)
         ServerGracefulShutdownTests.connectionRefused(port).unsafeRunSync() shouldBe true
         response.future.map(_.code shouldBe StatusCode.InternalServerError)
+      }, {
+        val error = new LinkageError("boom")
+        Test("A fatal error in server logic ends the enclosing scope with that error, also when the server is stopped in a finalizer") {
+          val (scopeError, _) =
+            runServerStoppedBy(start = server => useInScope(server.start())(_.stop()))(
+              endpoint.get.out(stringBody).handleSuccess(_ => throw error)
+            ) { binding => send(binding.port).discard }
+          scopeError shouldBe Some(error)
+        }
       }, {
         val error = new LinkageError("boom")
         val requestReceived = new CountDownLatch(1)
@@ -307,7 +334,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
             failRequest.countDown()
           }
           scopeError shouldBe Some(error)
-          Try(stopResult.get(15, TimeUnit.SECONDS)).failed.map(_.getCause) shouldBe Success(error)
+          Try(stopResult.get(15, TimeUnit.SECONDS)).failed.map(_.getCause.getCause) shouldBe Success(error)
           response.future.map(_.code shouldBe StatusCode.InternalServerError)
         }
       },
@@ -330,16 +357,6 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
           scopeError shouldBe Some(error)
           slowResponse.future.map(_.code shouldBe StatusCode.InternalServerError)
         }
-      },
-      // the other tests use a shared event loop group, which isn't shut down when the server stops
-      Test("stopping a server which uses its own event loop group shouldn't wait for Netty's default quiet period of 2 seconds") {
-        val stopMillis = supervised {
-          val binding = NettySyncServer().port(0).start()
-          val start = System.nanoTime()
-          binding.stop()
-          (System.nanoTime() - start) / 1_000_000
-        }
-        stopMillis should be < 2000L
       }
     )
 

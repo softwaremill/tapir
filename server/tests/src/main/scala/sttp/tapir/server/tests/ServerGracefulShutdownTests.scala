@@ -55,12 +55,13 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
       }
     }, {
       val requestReceived = new CountDownLatch(1)
+      val releaseRequest = new CountDownLatch(1)
       testServerLogicWithStop(
         endpoint
           .out(plainBody[String])
           .serverLogic { _ =>
             m.eval(requestReceived.countDown())
-              .flatMap(_ => sleeper.sleep(4.seconds))
+              .flatMap(_ => m.blocking(releaseRequest.await(10, TimeUnit.SECONDS)))
               .flatMap(_ => pureResult("processing finished".asRight[Unit]))
           },
         "Server refuses new connections during shutdown",
@@ -72,8 +73,8 @@ class ServerGracefulShutdownTests[F[_], OPTIONS, ROUTE](createServerTest: Create
           runningRequest <- basicRequest.get(uri"$baseUri").send(backend).start
           requestArrived <- IO.blocking(requestReceived.await(10, TimeUnit.SECONDS))
           runningStop <- stopServer.start
-          // well before the request completes
-          refusedDuringStop <- awaitConnectionsRefused(port).timeout(2.seconds).attempt
+          refusedDuringStop <- awaitConnectionsRefused(port).timeout(5.seconds).attempt
+          _ <- IO(releaseRequest.countDown())
           result <- runningRequest.joinWithNever
           _ <- runningStop.joinWithNever
         } yield {

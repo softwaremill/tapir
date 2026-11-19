@@ -129,7 +129,7 @@ case class NettyCatsServer[F[_]: Async](
       Temporal[F].sleep(100.millis) >>
         waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
     } else {
-      Sync[F].delay(nettyFutureToScala(channelGroup.close())).void
+      nettyFutureToScala(channelGroup.close()).void
     }
 
   private def stop(

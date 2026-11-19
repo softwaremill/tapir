@@ -17,6 +17,7 @@ import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CompletableFuture, ExecutionException}
+import scala.concurrent.duration.Duration
 import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -131,7 +132,7 @@ case class NettySyncServer(
 
         // there's no caller of `stop()` to report the error to, and the current scope has already ended
         def logIfScopeEnded(message: String, e: Throwable): Unit =
-          if stopRequested.getNow(StopReason.StopCalled) == StopReason.ScopeEnded then logger.error(message, e)
+          if stopRequested.isDone && stopRequested.join() == StopReason.ScopeEnded then logger.error(message, e)
 
         try
           awaitServer() match
@@ -143,7 +144,9 @@ case class NettySyncServer(
           case e: ExecutionException =>
             // start failures are reported by start(); other failures of the server's scope end the current scope
             if !started.completeExceptionally(e.getCause) then
-              stopped.completeExceptionally(e.getCause).discard
+              // not the same exception: `stop()` might be called in a finalizer of the current scope, and Ox can't add an exception as
+              // suppressed to itself
+              stopped.completeExceptionally(new IllegalStateException("The server failed", e.getCause)).discard
               logIfScopeEnded("Server failed while stopping", e.getCause)
               throw e.getCause
       }
@@ -313,8 +316,8 @@ case class NettySyncServer(
     channelGroup.close().get().discard
     if config.shutdownEventLoopGroupOnClose then
       // no quiet period, as request handling forks are done
-      NettyShutdown.shutdownExecutor(eventLoopGroup, quietPeriodMillis = 0).get().discard
-      NettyShutdown.shutdownExecutor(eventExecutor, quietPeriodMillis = 0).get().discard
+      NettyShutdown.shutdownExecutor(eventLoopGroup, quietPeriod = Duration.Zero).get().discard
+      NettyShutdown.shutdownExecutor(eventExecutor, quietPeriod = Duration.Zero).get().discard
 
   private case class RunningServer[SA](socket: SA, drain: () => Unit, close: () => Unit)
 

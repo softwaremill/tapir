@@ -5,6 +5,7 @@ import io.netty.util.concurrent.{EventExecutorGroup, Future => NettyFuture}
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import scala.concurrent.duration._
 
 object NettyShutdown {
 
@@ -19,12 +20,14 @@ object NettyShutdown {
     }
   }
 
-  /** Shuts down the given executor (group), once the server's channels are closed. Tasks that are already queued still run.
+  private val ShutdownTimeout = 15.seconds
+
+  /** Shuts down the given executor (group). Call once the server's channels are closed.
     *
-    * @param quietPeriodMillis
+    * @param quietPeriod
     *   tasks submitted within this period still run (Netty's default is 2 seconds). Non-zero if requests might still be running, e.g. past
     *   the graceful shutdown timeout, so that their cleanup still runs on the event loop.
     */
-  def shutdownExecutor(executor: EventExecutorGroup, quietPeriodMillis: Long = 100): NettyFuture[_] =
-    executor.shutdownGracefully(quietPeriodMillis, 15000, TimeUnit.MILLISECONDS)
+  def shutdownExecutor(executor: EventExecutorGroup, quietPeriod: FiniteDuration = 100.millis): NettyFuture[_] =
+    executor.shutdownGracefully(quietPeriod.toMillis, ShutdownTimeout.toMillis, TimeUnit.MILLISECONDS)
 }
