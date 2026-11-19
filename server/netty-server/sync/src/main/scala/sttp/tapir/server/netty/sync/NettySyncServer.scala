@@ -88,10 +88,9 @@ case class NettySyncServer(
     *   server binding, to be used to control stopping of the server or obtaining metadata like port.
     */
   def start()(using Ox): NettySyncServerBinding =
-    startInServerScope[InetSocketAddress](None) match
-      case (socket, stop) =>
-        NettySyncServerBinding(socket, stop).tap: binding =>
-          logger.info(s"Tapir Netty server started on ${binding.hostName}:${binding.port}")
+    val (socket, stop) = startInServerScope[InetSocketAddress](None)
+    NettySyncServerBinding(socket, stop).tap: binding =>
+      logger.info(s"Tapir Netty server started on ${binding.hostName}:${binding.port}")
 
   /** Starts the server and blocks current virtual thread. Ensures graceful shutdown if the running server gets interrupted. Use [[start]]
     * if you need to manually control concurrency scope or server lifecycle.
@@ -104,214 +103,173 @@ case class NettySyncServer(
 
   /** As [[start]], but listens on the given Unix domain socket. */
   def startUsingDomainSocket(path: Path)(using Ox): NettySyncDomainSocketBinding =
-    startInServerScope(Some(new DomainSocketAddress(path.toFile))) match
-      case (socket, stop) =>
-        NettySyncDomainSocketBinding(socket, stop)
+    val (socket, stop) = startInServerScope(Some(new DomainSocketAddress(path.toFile)))
+    NettySyncDomainSocketBinding(socket, stop)
 
-  /** Runs the server in a fork of the current scope. Requests are handled in forks of a nested scope, owned by the server. Hence, when the
-    * current scope ends, the server is stopped (draining in-flight requests) before the request-handling forks are interrupted. Otherwise,
-    * Ox would interrupt them before running any finalizers, which might call `stop()`.
+  /** Runs the server on a thread which isn't interrupted when the current scope ends. Requests are handled in forks of the server's own
+    * scope, so that they can complete while draining. Otherwise, Ox would interrupt them before running any finalizers.
     *
-    * If the server's scope fails (e.g. when request handling throws a fatal error), the server is stopped, and the current scope fails.
+    * A fork of the current scope waits for the server to stop. When the current scope ends, the fork is interrupted, and requests the
+    * stop. If the server's scope fails (e.g. when request handling throws a fatal error), the fork fails the current scope.
+    *
+    * @return
+    *   the bound address, and a function which stops the server.
     */
   private def startInServerScope[SA <: SocketAddress](socketOverride: Option[SA])(using Ox): (SA, () => Unit) =
     val started = new CompletableFuture[SA]()
-    val stopRequested = new CompletableFuture[StopReason]()
-    val stopped = new CompletableFuture[Unit]()
+    val stopRequested = new CompletableFuture[Unit]()
+    // the outcome of stopping; completed exceptionally if the server's scope fails
+    val stopped = new CompletableFuture[Try[Unit]]()
+
     forkDiscard {
       unsupervised {
-        val serverStopped = new CompletableFuture[Try[Unit]]()
         forkUnsupervised {
-          try serverStopped.complete(runServer(socketOverride, started, stopRequested)).discard
-          catch case e: Throwable => serverStopped.completeExceptionally(e).discard
+          try stopped.complete(runServer(socketOverride, started, stopRequested)).discard
+          catch case e: Throwable => stopped.completeExceptionally(e).discard
         }.discard
 
-        // interrupted when the current scope ends
-        def awaitServer(): Try[Unit] =
-          try serverStopped.get()
+        // a thread is interrupted at most once, so the second get() waits until the server is stopped
+        val (outcome, scopeEnded) =
+          try (Try(stopped.get()), false)
           catch
             case _: InterruptedException =>
-              stopRequested.complete(StopReason.ScopeEnded).discard
-              awaitServer()
+              stopRequested.complete(()).discard
+              (Try(stopped.get()), true)
 
-        try
-          awaitServer() match
-            case Success(_) => stopped.complete(()).discard
-            case Failure(e) =>
-              stopped.completeExceptionally(e).discard
-              // there's no caller of `stop()` to report the error to
-              if stopRequested.join() == StopReason.ScopeEnded then logger.error("Error when stopping the server", e)
-        catch
-          case e: ExecutionException =>
-            // start failures are reported by start(); other failures of the server's scope end the current scope
-            if !started.completeExceptionally(e.getCause) then
-              stopped.completeExceptionally(e.getCause).discard
-              // also logging, as the error is lost if the current scope has already ended
-              logger.error("The server failed", e.getCause)
-              throw e.getCause
+        outcome match
+          case Success(Success(_)) => ()
+          // otherwise, the error is thrown from stop()
+          case Success(Failure(e)) => if scopeEnded then logger.error("Error when stopping the server", e)
+          // start failures are thrown from start()
+          case Failure(e: ExecutionException) if !started.completeExceptionally(e.getCause) =>
+            // also logging, as the error is lost if the current scope has already ended
+            logger.error("The server failed", e.getCause)
+            throw e.getCause
+          case Failure(_) => ()
       }
     }
 
     val socket =
       try started.get()
       catch case e: ExecutionException => throw e.getCause
-    (
-      socket,
-      () =>
-        stopRequested.complete(StopReason.StopCalled).discard
-        try stopped.get().discard
-        catch
-          case e: ExecutionException =>
-            // a new exception on each call: `stop()` might be called again, e.g. in a finalizer of a scope which already failed with the
-            // exception thrown previously, and Ox can't add an exception as suppressed to itself
-            throw new IllegalStateException("Stopping the server failed", e.getCause)
-    )
+    val stop = () =>
+      stopRequested.complete(()).discard
+      val outcome =
+        try stopped.get()
+        catch case e: ExecutionException => Failure(e.getCause)
+      // a new exception on each call: `stop()` might be called again, e.g. in a finalizer of a scope which already failed with the
+      // exception thrown previously, and Ox can't add an exception as suppressed to itself
+      outcome.failed.foreach(e => throw new IllegalStateException("Stopping the server failed", e))
+    (socket, stop)
 
-  /** Runs the server in its own scope, until a stop is requested. Returns the outcome of stopping, or throws if the server's scope fails.
+  /** Binds the server, and runs it in its own scope until a stop is requested. Returns the outcome of stopping, or throws if the server's
+    * scope fails (including when binding fails).
     */
   private def runServer[SA <: SocketAddress](
       socketOverride: Option[SA],
       started: CompletableFuture[SA],
-      stopRequested: CompletableFuture[StopReason]
+      stopRequested: CompletableFuture[Unit]
   ): Try[Unit] =
-    // called once the server's scope ends, i.e. when request handling forks are done (interrupted if still running), so that their
-    // callbacks can still run on the event loops
-    var close: () => Unit = () => ()
+    val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
+    val eventExecutor = new DefaultEventExecutor()
+    val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
+    val isShuttingDown = new AtomicBoolean(false)
+    var serverChannel: Option[Channel] = None
     var drained: Try[Unit] = Success(())
+    // called once the server's scope ends, i.e. when request-handling forks are done (interrupted if still running), so that their
+    // callbacks can still run on the event loops
+    def close(): Try[Unit] = Try(closeServer(serverChannel, eventLoopGroup, channelGroup, eventExecutor))
+
     try
       supervised {
-        val server = startUsingSocketOverride(socketOverride, inScopeRunner())
-        close = server.close
-        started.complete(server.socket).discard
+        val runner = inScopeRunner()
+        val serverRoute = route(runner)
+        val channel = NettyBootstrap(
+          config,
+          new NettyServerHandler(serverRoute, unsafeRunF(runner), channelGroup, isShuttingDown, config),
+          eventLoopGroup,
+          socketOverride
+        ).sync().channel()
+        serverChannel = Some(channel)
+        started.complete(channel.localAddress().asInstanceOf[SA]).discard
         try stopRequested.get().discard // also interrupted if the server's scope fails
-        finally drained = Try(server.drain())
+        finally drained = Try(drain(channel, channelGroup, isShuttingDown))
       }
     catch
       case e: Throwable =>
         drained.failed.foreach(e.addSuppressed)
-        Try(close()).failed.foreach(e.addSuppressed)
+        close().failed.foreach(e.addSuppressed)
         throw e
-    val closed = Try(close())
+    val closed = close()
     drained.flatMap(_ => closed)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](
-      socketOverride: Option[SA],
-      inScopeRunner: InScopeRunner
-  ): RunningServer[SA] =
+  private def route(inScopeRunner: InScopeRunner): Route[Identity] =
     val endpointRoute = serverEndpoints match {
       case Vector() => Vector.empty
       case _        => Vector(NettySyncServerInterpreter(options).toRoute(serverEndpoints.toList, inScopeRunner))
     }
-    val allRoutes = endpointRoute ++ otherRoutes
-    val route = allRoutes match {
+    endpointRoute ++ otherRoutes match {
       case Vector()  => Route.empty
       case Vector(r) => r
       case many      => Route.combine(many)
     }
-    startUsingSocketOverride(route, socketOverride, inScopeRunner)
 
-  private def startUsingSocketOverride[SA <: SocketAddress](
-      route: Route[Identity],
-      socketOverride: Option[SA],
-      inScopeRunner: InScopeRunner
-  ): RunningServer[SA] =
-    val eventLoopGroup = config.eventLoopConfig.initEventLoopGroup()
+  private def unsafeRunF(inScopeRunner: InScopeRunner)(
+      callToExecute: () => Identity[ServerResponse[NettyResponse]]
+  ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
+    val scalaPromise = Promise[ServerResponse[NettyResponse]]()
 
-    def unsafeRunF(
-        callToExecute: () => Identity[ServerResponse[NettyResponse]]
-    ): (Future[ServerResponse[NettyResponse]], () => Future[Unit]) =
-      val scalaPromise = Promise[ServerResponse[NettyResponse]]()
+    // used to cancel the fork, possible states:
+    // - Cancelled: needed if cancellation happens after the fork starts, but before it is set in the atomic reference
+    // - CancellableFork: used when cancellation using interruption is enabled
+    // - None: means that the fork was not set yet
+    object Cancelled
+    val runningFork = new AtomicReference[None.type | CancellableFork[Unit] | Cancelled.type](None)
+    // #4747: we are creating forks using the concurrency scope within which the netty server is running
+    // however, this is called on a Netty-managed thread, hence we need to use the inScopeRunner
+    inScopeRunner.async {
+      def run(): Unit =
+        if runningFork.get() != Cancelled then
+          try scalaPromise.success(callToExecute())
+          catch
+            case e: Throwable =>
+              // a Promise boxes fatal errors & interruption, so a 500 is still sent
+              scalaPromise.failure(e)
+              if !NonFatal(e) then throw e
 
-      // used to cancel the fork, possible states:
-      // - Cancelled: needed if cancellation happens after the fork starts, but before it is set in the atomic reference
-      // - CancellableFork: used when cancellation using interruption is enabled
-      // - None: means that the fork was not set yet
-      object Cancelled
-      val runningFork = new AtomicReference[None.type | CancellableFork[Unit] | Cancelled.type](None)
-      // #4747: we are creating forks using the concurrency scope within which the netty server is running
-      // however, this is called on a Netty-managed thread, hence we need to use the inScopeRunner
-      inScopeRunner.async {
-        def run(): Unit =
-          if runningFork.get() != Cancelled then
-            try scalaPromise.success(callToExecute())
-            catch
-              case e: Throwable =>
-                // a Promise boxes fatal errors & interruption, so a 500 is still sent
-                scalaPromise.failure(e)
-                if !NonFatal(e) then throw e
-
-        if options.interruptServerLogicWhenRequestCancelled then
-          val forked = forkCancellable(run())
-          // we only update the state if it's not cancelled already
-          runningFork.getAndAccumulate(forked, (cur, giv) => if cur != Cancelled then giv else cur) match {
-            case None                     => // common "happy path" case
-            case _: CancellableFork[Unit] => throw new IllegalStateException("Another fork was already set")
-            case Cancelled                => forked.cancelNow() // cancellation happened before the fork was set
-          }
-        else forkDiscard(run())
-      }
-
-      (
-        scalaPromise.future,
-        () => {
-          runningFork.getAndSet(Cancelled) match {
-            case fork: CancellableFork[Unit] => fork.cancelNow()
-            case _                           => // skip - fork not yet set
-          }
-          Future.unit
+      if options.interruptServerLogicWhenRequestCancelled then
+        val forked = forkCancellable(run())
+        // we only update the state if it's not cancelled already
+        runningFork.getAndAccumulate(forked, (cur, giv) => if cur != Cancelled then giv else cur) match {
+          case None                     => // common "happy path" case
+          case _: CancellableFork[Unit] => throw new IllegalStateException("Another fork was already set")
+          case Cancelled                => forked.cancelNow() // cancellation happened before the fork was set
         }
-      )
+      else forkDiscard(run())
+    }
 
-    val eventExecutor = new DefaultEventExecutor()
-    val channelGroup = new DefaultChannelGroup(eventExecutor) // thread safe
-    val isShuttingDown: AtomicBoolean = new AtomicBoolean(false)
-
-    val channelIdFuture = NettyBootstrap(
-      config,
-      new NettyServerHandler(
-        route,
-        unsafeRunF,
-        channelGroup,
-        isShuttingDown,
-        config
-      ),
-      eventLoopGroup,
-      socketOverride
+    (
+      scalaPromise.future,
+      () => {
+        runningFork.getAndSet(Cancelled) match {
+          case fork: CancellableFork[Unit] => fork.cancelNow()
+          case _                           => // skip - fork not yet set
+        }
+        Future.unit
+      }
     )
-    try
-      channelIdFuture.sync()
-      val channel = channelIdFuture.channel()
-      RunningServer(
-        channel.localAddress().asInstanceOf[SA],
-        drain = () => drain(channel, channelGroup, isShuttingDown),
-        close = () => close(Some(channel), eventLoopGroup, channelGroup, eventExecutor)
-      )
-    catch
-      case NonFatal(startFailureCause) =>
-        try close(None, eventLoopGroup, channelGroup, eventExecutor)
-        catch case NonFatal(recoveryFailureCause) => startFailureCause.addSuppressed(recoveryFailureCause)
-        throw startFailureCause
-
-  private def waitForClosedChannels(
-      channelGroup: ChannelGroup,
-      startNanos: Long,
-      gracefulShutdownTimeoutNanos: Option[Long]
-  ): Unit =
-    while !channelGroup.isEmpty && gracefulShutdownTimeoutNanos.exists(_ >= System.nanoTime() - startNanos) do Thread.sleep(100)
-    val _ = channelGroup.close().get()
 
   /** Stops accepting connections, and waits for the open ones to close, up to the graceful shutdown timeout. */
   private def drain(serverChannel: Channel, channelGroup: ChannelGroup, isShuttingDown: AtomicBoolean): Unit =
     NettyShutdown.startDraining(channelGroup, isShuttingDown)
     serverChannel.close().get().discard
-    waitForClosedChannels(
-      channelGroup,
-      startNanos = System.nanoTime(),
-      gracefulShutdownTimeoutNanos = config.gracefulShutdownTimeout.map(_.toNanos)
-    )
+    val startNanos = System.nanoTime()
+    val timeoutNanos = config.gracefulShutdownTimeout.map(_.toNanos)
+    while !channelGroup.isEmpty && timeoutNanos.exists(_ >= System.nanoTime() - startNanos) do Thread.sleep(100)
+    channelGroup.close().get().discard
 
   /** Closes the server's channels, and releases its resources. */
-  private def close(
+  private def closeServer(
       serverChannel: Option[Channel],
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
@@ -323,11 +281,6 @@ case class NettySyncServer(
       // no quiet period, as request handling forks are done
       NettyShutdown.shutdownExecutor(eventLoopGroup, quietPeriod = Duration.Zero).get().discard
       NettyShutdown.shutdownExecutor(eventExecutor, quietPeriod = Duration.Zero).get().discard
-
-  private case class RunningServer[SA](socket: SA, drain: () => Unit, close: () => Unit)
-
-  private enum StopReason:
-    case StopCalled, ScopeEnded
 
 object NettySyncServer:
   def apply(): NettySyncServer = NettySyncServer(Vector.empty, Vector.empty, NettySyncServerOptions.default, NettyConfig.default)
