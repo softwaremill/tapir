@@ -134,11 +134,11 @@ case class NettyZioServer[R](
       .map(ch =>
         (
           ch.localAddress().asInstanceOf[SA],
-          () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+          () => stop(Some(ch), eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
         )
       )
       .catchAll { e =>
-        stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout) *>
+        stop(None, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout) *>
           ZIO.fail(e)
       }
   } yield binding
@@ -156,25 +156,14 @@ case class NettyZioServer[R](
     }
 
   private def stop(
-      ch: Channel,
+      serverChannel: Option[Channel],
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
       eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): RIO[R, Unit] = {
-    stopChannelGroup(Some(ch), channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
-      stopEventLoopGroup(eventLoopGroup, eventExecutor)
-  }
-
-  private def stopRecovering(
-      eventLoopGroup: EventLoopGroup,
-      channelGroup: ChannelGroup,
-      eventExecutor: DefaultEventExecutor,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): RIO[R, Unit] = {
-    stopChannelGroup(None, channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
+    stopChannelGroup(serverChannel, channelGroup, isShuttingDown, gracefulShutdownTimeout) *>
       stopEventLoopGroup(eventLoopGroup, eventExecutor)
   }
 

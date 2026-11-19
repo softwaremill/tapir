@@ -111,11 +111,11 @@ case class NettyCatsServer[F[_]: Async](
       .map(ch =>
         (
           ch.localAddress().asInstanceOf[SA],
-          () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+          () => stop(Some(ch), eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
         )
       )
       .recoverWith { case e =>
-        stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+        stop(None, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
           .flatMap(_ => Async[F].raiseError(e))
       }
   }
@@ -133,25 +133,14 @@ case class NettyCatsServer[F[_]: Async](
     }
 
   private def stop(
-      ch: Channel,
+      serverChannel: Option[Channel],
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
       eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): F[Unit] = {
-    shutdownChannelGroup(Some(ch), channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
-      stopEventLoopGroup(eventLoopGroup, eventExecutor)
-  }
-
-  private def stopRecovering(
-      eventLoopGroup: EventLoopGroup,
-      channelGroup: ChannelGroup,
-      eventExecutor: DefaultEventExecutor,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): F[Unit] = {
-    shutdownChannelGroup(None, channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
+    shutdownChannelGroup(serverChannel, channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
       stopEventLoopGroup(eventLoopGroup, eventExecutor)
   }
 

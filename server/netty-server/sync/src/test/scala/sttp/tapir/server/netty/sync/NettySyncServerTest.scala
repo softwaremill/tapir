@@ -67,7 +67,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
         expectContinueTests(createServerTest, eventLoopGroup) ++
         List(scopeEndTest(eventLoopGroup)) ++
         fatalErrorTests(eventLoopGroup) ++
-        List(quietPeriodTest)
+        List(quietPeriodTest, startFailureTest(eventLoopGroup))
 
     tests.foreach { t =>
       if (testNameFilter.forall(filter => t.name.contains(filter))) {
@@ -245,6 +245,19 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
       }
       assert(requestArrived)
       response.map(_.body shouldBe Right("done"))
+    }
+
+  /** Sync-only: the server is started in a fork, from which a start failure is passed to the caller. */
+  def startFailureTest(eventLoopGroup: NioEventLoopGroup): Test =
+    Test("start() throws the error, if the server can't be started") {
+      val taken = new java.net.ServerSocket(0)
+      try
+        val config = NettyConfig.default.eventLoopGroup(eventLoopGroup).port(taken.getLocalPort).withDontShutdownEventLoopGroupOnClose
+        // in a separate thread, so that the test fails instead of hanging, if start() doesn't return
+        val result = new CompletableFuture[Try[Int]]()
+        Thread.startVirtualThread(() => result.complete(Try(supervised(NettySyncServer(config).start().port))).discard).discard
+        result.get(10, TimeUnit.SECONDS).failed.get shouldBe a[java.io.IOException] // not wrapped
+      finally taken.close()
     }
 
   /** Sync-only: the other tests use a shared event loop group, which isn't shut down when the server stops. */

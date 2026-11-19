@@ -130,24 +130,20 @@ case class NettySyncServer(
               stopRequested.complete(StopReason.ScopeEnded).discard
               awaitServer()
 
-        // there's no caller of `stop()` to report the error to, and the current scope has already ended
-        def logIfScopeEnded(message: String, e: Throwable): Unit =
-          if stopRequested.isDone && stopRequested.join() == StopReason.ScopeEnded then logger.error(message, e)
-
         try
           awaitServer() match
             case Success(_) => stopped.complete(()).discard
             case Failure(e) =>
               stopped.completeExceptionally(e).discard
-              logIfScopeEnded("Error when stopping the server", e)
+              // there's no caller of `stop()` to report the error to
+              if stopRequested.join() == StopReason.ScopeEnded then logger.error("Error when stopping the server", e)
         catch
           case e: ExecutionException =>
             // start failures are reported by start(); other failures of the server's scope end the current scope
             if !started.completeExceptionally(e.getCause) then
-              // not the same exception: `stop()` might be called in a finalizer of the current scope, and Ox can't add an exception as
-              // suppressed to itself
-              stopped.completeExceptionally(new IllegalStateException("The server failed", e.getCause)).discard
-              logIfScopeEnded("Server failed while stopping", e.getCause)
+              stopped.completeExceptionally(e.getCause).discard
+              // also logging, as the error is lost if the current scope has already ended
+              logger.error("The server failed", e.getCause)
               throw e.getCause
       }
     }
@@ -160,7 +156,11 @@ case class NettySyncServer(
       () =>
         stopRequested.complete(StopReason.StopCalled).discard
         try stopped.get().discard
-        catch case e: ExecutionException => throw e.getCause
+        catch
+          case e: ExecutionException =>
+            // a new exception on each call: `stop()` might be called again, e.g. in a finalizer of a scope which already failed with the
+            // exception thrown previously, and Ox can't add an exception as suppressed to itself
+            throw new IllegalStateException("Stopping the server failed", e.getCause)
     )
 
   /** Runs the server in its own scope, until a stop is requested. Returns the outcome of stopping, or throws if the server's scope fails. */
