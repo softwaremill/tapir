@@ -427,6 +427,26 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     ex.getMessage should include("GHSA-gpcc")
   }
 
+  it should "reject a server URL template group that is not a declared variable" in {
+    val server = OpenapiServer(
+      "https://{java.lang.Runtime.getRuntime.halt(0)}.example.com",
+      variables = Map("dummy" -> OpenapiServerEnum(Nil, Some("x")))
+    )
+    val ex = intercept[IllegalArgumentException](ServersGenerator.genServerDefinitions(Seq(server), isScala3))
+    ex.getMessage should include("GHSA-jcgp")
+  }
+
+  it should "reject a unicode-escaped backtick in a quoted identifier" in {
+    // Built at runtime: this test file is itself compiled by Scala 2.12, which would turn a literal escape into a backtick.
+    val backtick = "\\" + "u0060"
+    val evil = s"""a$backtick; println("PWNED"); case object ${backtick}b"""
+    val server = OpenapiServer(
+      "https://{env}.example.com",
+      variables = Map("env" -> OpenapiServerEnum(List("prod", evil), Some("prod")))
+    )
+    intercept[IllegalArgumentException](ServersGenerator.genServerDefinitions(Seq(server), isScala3))
+  }
+
   // --- helpers for endpoint generation ---
 
   private def okResponse: OpenapiResponseDef =

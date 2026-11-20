@@ -28,9 +28,10 @@ object NameHelpers {
   // therefore cannot be safely emitted as an identifier and could otherwise break out of the quoting to inject
   // arbitrary code, so we reject it rather than emit it raw. See GHSA-gpcc-36pq-8qxr.
   private def backtickQuoteOrReject(kind: String, s: String): String =
-    if (s.isEmpty || s.exists(c => c == '`' || c.isControl))
+    // Backslashes are rejected too: Scala 2.12 translates ``` into a backtick before lexing.
+    if (s.isEmpty || s.exists(c => c == '`' || c == '\\' || c.isControl))
       throw new IllegalArgumentException(
-        s"Cannot generate a safe Scala identifier from $kind '$s': it must be non-empty and must not contain backticks or control characters (see GHSA-gpcc-36pq-8qxr)"
+        s"Cannot generate a safe Scala identifier from $kind '$s': it must be non-empty and must not contain backticks, backslashes or control characters (see GHSA-gpcc-36pq-8qxr)"
       )
     else s"`$s`"
 
