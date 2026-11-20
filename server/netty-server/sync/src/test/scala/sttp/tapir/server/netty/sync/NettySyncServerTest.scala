@@ -263,7 +263,7 @@ class NettySyncServerTest extends AsyncFunSuite with BeforeAndAfterAll {
 
   /** Sync-only: the other tests use a shared event loop group, which isn't shut down when the server stops. */
   def quietPeriodTest: Test =
-    Test("stopping a server which uses its own event loop group shouldn't wait for Netty's default quiet period of 2 seconds") {
+    Test("stopping a server which uses its own event loop group shouldn't use a quiet period") {
       val stopMillis = supervised {
         val binding = NettySyncServer().port(0).start()
         val start = System.nanoTime()

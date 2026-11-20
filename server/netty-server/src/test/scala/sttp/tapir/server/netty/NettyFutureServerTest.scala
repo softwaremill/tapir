@@ -73,7 +73,7 @@ class NettyFutureServerTest extends TestSuite with EitherValues {
         .unsafeToFuture()
     },
     // the other tests use a shared event loop group, which isn't shut down when the server stops
-    Test("stopping a server which uses its own event loop group shouldn't wait for Netty's default quiet period of 2 seconds") {
+    Test("stopping a server which uses its own event loop group should use a short quiet period, not Netty's default of 2 seconds") {
       import cats.effect.unsafe.implicits.global
 
       IO.fromFuture(IO.delay(NettyFutureServer()(using ec).port(0).start()))
