@@ -15,7 +15,7 @@ import sttp.tapir.integ.cats.effect.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.cats.internal.CatsUtil.{nettyChannelFutureToScala, nettyFutureToScala}
-import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, NettyShutdown}
 import sttp.tapir.server.netty.{NettyConfig, NettyResponse, Route}
 
 import java.net.{InetSocketAddress, SocketAddress}
@@ -111,11 +111,11 @@ case class NettyCatsServer[F[_]: Async](
       .map(ch =>
         (
           ch.localAddress().asInstanceOf[SA],
-          () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+          () => stop(Some(ch), eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
         )
       )
       .recoverWith { case e =>
-        stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+        stop(None, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
           .flatMap(_ => Async[F].raiseError(e))
       }
   }
@@ -129,40 +129,29 @@ case class NettyCatsServer[F[_]: Async](
       Temporal[F].sleep(100.millis) >>
         waitForClosedChannels(channelGroup, startNanos, gracefulShutdownTimeoutNanos)
     } else {
-      Sync[F].delay(nettyFutureToScala(channelGroup.close())).void
+      nettyFutureToScala(channelGroup.close()).void
     }
 
   private def stop(
-      ch: Channel,
+      serverChannel: Option[Channel],
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
       eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): F[Unit] = {
-    shutdownChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
-      Async[F].defer {
-        nettyFutureToScala(ch.close()).flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
-      }
-  }
-
-  private def stopRecovering(
-      eventLoopGroup: EventLoopGroup,
-      channelGroup: ChannelGroup,
-      eventExecutor: DefaultEventExecutor,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): F[Unit] = {
-    shutdownChannelGroup(channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
+    shutdownChannelGroup(serverChannel, channelGroup, isShuttingDown, gracefulShutdownTimeout) >>
       stopEventLoopGroup(eventLoopGroup, eventExecutor)
   }
 
   private def shutdownChannelGroup(
+      serverChannel: Option[Channel],
       channelGroup: ChannelGroup,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ) = {
-    Sync[F].delay(isShuttingDown.set(true)) >>
+    Sync[F].delay(NettyShutdown.startDraining(channelGroup, isShuttingDown)) >>
+      serverChannel.fold(Async[F].unit)(ch => Async[F].defer(nettyFutureToScala(ch.close())).void) >>
       waitForClosedChannels(
         channelGroup,
         startNanos = System.nanoTime(),
@@ -172,8 +161,8 @@ case class NettyCatsServer[F[_]: Async](
 
   private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {
     if (config.shutdownEventLoopGroupOnClose) {
-      nettyFutureToScala(eventLoopGroup.shutdownGracefully())
-        .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
+      nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup))
+        .flatMap(_ => nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor)).map(_ => ()))
     } else Async[F].unit
   }
 }

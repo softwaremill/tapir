@@ -8,7 +8,7 @@ import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.model.ServerResponse
 import sttp.tapir.server.netty.internal.FutureUtil._
-import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler}
+import sttp.tapir.server.netty.internal.{NettyBootstrap, NettyServerHandler, NettyShutdown}
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.file.{Path, Paths}
@@ -107,11 +107,11 @@ case class NettyFutureServer(
       .map(ch =>
         (
           ch.localAddress().asInstanceOf[SA],
-          () => stop(ch, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+          () => stop(Some(ch), eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
         )
       )
       .recoverWith { case e =>
-        stopRecovering(eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
+        stop(None, eventLoopGroup, channelGroup, eventExecutor, isShuttingDown, config.gracefulShutdownTimeout)
           .flatMap(_ => Future.failed(e))
       }
   }
@@ -134,42 +134,30 @@ case class NettyFutureServer(
     }
 
   private def stop(
-      ch: Channel,
+      serverChannel: Option[Channel],
       eventLoopGroup: EventLoopGroup,
       channelGroup: ChannelGroup,
       eventExecutor: DefaultEventExecutor,
       isShuttingDown: AtomicBoolean,
       gracefulShutdownTimeout: Option[FiniteDuration]
   ): Future[Unit] = {
-    isShuttingDown.set(true)
-    waitForClosedChannels(
-      channelGroup,
-      startNanos = System.nanoTime(),
-      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
-    ).flatMap { _ =>
-      nettyFutureToScala(ch.close()).flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
-    }
-  }
-
-  private def stopRecovering(
-      eventLoopGroup: EventLoopGroup,
-      channelGroup: ChannelGroup,
-      eventExecutor: DefaultEventExecutor,
-      isShuttingDown: AtomicBoolean,
-      gracefulShutdownTimeout: Option[FiniteDuration]
-  ): Future[Unit] = {
-    isShuttingDown.set(true)
-    waitForClosedChannels(
-      channelGroup,
-      startNanos = System.nanoTime(),
-      gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
-    ).flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
+    NettyShutdown.startDraining(channelGroup, isShuttingDown)
+    serverChannel
+      .fold(Future.unit)(ch => nettyFutureToScala(ch.close()).map(_ => ()))
+      .flatMap { _ =>
+        waitForClosedChannels(
+          channelGroup,
+          startNanos = System.nanoTime(),
+          gracefulShutdownTimeoutNanos = gracefulShutdownTimeout.map(_.toNanos)
+        )
+      }
+      .flatMap { _ => stopEventLoopGroup(eventLoopGroup, eventExecutor) }
   }
 
   private def stopEventLoopGroup(eventLoopGroup: EventLoopGroup, eventExecutor: DefaultEventExecutor) = {
     if (config.shutdownEventLoopGroupOnClose) {
-      nettyFutureToScala(eventLoopGroup.shutdownGracefully())
-        .flatMap(_ => nettyFutureToScala(eventExecutor.shutdownGracefully()).map(_ => ()))
+      nettyFutureToScala(NettyShutdown.shutdownExecutor(eventLoopGroup))
+        .flatMap(_ => nettyFutureToScala(NettyShutdown.shutdownExecutor(eventExecutor)).map(_ => ()))
     } else Future.successful(())
   }
 

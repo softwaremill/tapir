@@ -62,6 +62,16 @@ type inference.
 To learn more about handling concurrency and streaming with Ox and `Flow`s, see
 its [documentation](https://ox.softwaremill.com/).
 
+### Stopping the server
+
+A server started using `start()` runs until the scope in which it was started
+ends, or until `stop()` is called on the returned binding. In both cases, it's
+stopped gracefully (see the graceful shutdown timeout
+[below](#server-socket-configuration)). Calling `stop()` is needed only to stop
+the server before its scope ends, e.g. when that scope lasts for the whole
+application. Alternatively, start the server in a nested scope, which ends when
+the server should stop.
+
 ## Configuration
 
 The interpreters can be configured by providing an
@@ -104,10 +114,13 @@ customise the server socket, such as:
 * connection timeout
 * linger timeout
 * graceful shutdown timeout: when stopped e.g. using
-  `NettySyncServerBinding.stop()`, it's ensured that the server will wait at
-  most 10 seconds for in-flight requests to complete, while rejecting all new
-  requests with 503 during this period; afterwards, all server resources are
-  closed
+  `NettySyncServerBinding.stop()`, the server stops accepting new connections
+  and closes idle ones right away. Then, it waits at most 10 seconds for
+  in-flight requests to complete, closing each connection once its last
+  response is sent; new requests on these connections aren't handled. Web
+  socket connections stay open until the client closes them, or the timeout
+  passes. Afterwards, all server resources are closed. See also
+  [stopping the server](#stopping-the-server)
 * server header
 * maximum number of connections
 * custom netty pipeline & low-level logging handlers; a custom pipeline should

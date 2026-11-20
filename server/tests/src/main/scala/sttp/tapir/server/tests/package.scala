@@ -35,7 +35,11 @@ package object tests {
     }
 
   /** Reads a single response, returning its status code and body. Doesn't read past the end of the response. */
-  def readRawResponse(socket: Socket): IO[(Int, String)] = IO.blocking {
+  def readRawResponse(socket: Socket): IO[(Int, String)] =
+    readRawResponseWithHeaders(socket).map { case (statusCode, _, body) => (statusCode, body) }
+
+  /** As [[readRawResponse]], also returning the headers, lower-cased. */
+  def readRawResponseWithHeaders(socket: Socket): IO[(Int, List[String], String)] = IO.blocking {
     val in = socket.getInputStream
     val statusCode = readRawLine(in).split(' ')(1).toInt
     val headers = Iterator.continually(readRawLine(in)).takeWhile(_.nonEmpty).map(_.toLowerCase).toList
@@ -60,7 +64,7 @@ package object tests {
           case None => in.readAllBytes() // delimited by closing the connection
         }
 
-    (statusCode, new String(body, StandardCharsets.UTF_8))
+    (statusCode, headers, new String(body, StandardCharsets.UTF_8))
   }
 
   private def readRawLine(in: InputStream): String = {
