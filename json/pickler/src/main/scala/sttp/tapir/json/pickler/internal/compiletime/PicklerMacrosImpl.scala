@@ -1,0 +1,386 @@
+package sttp.tapir.json.pickler.internal.compiletime
+
+import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
+import hearth.MacroCommons
+import hearth.fp.DirectStyle.RunSafe
+import hearth.fp.data.NonEmptyVector
+import hearth.fp.effect.*
+import hearth.std.*
+import sttp.tapir.Schema
+import sttp.tapir.json.pickler.{CreateDerivedEnumerationPickler, Pickler, PicklerConfiguration}
+import sttp.tapir.json.pickler.internal.runtime.PicklerFactories
+
+/** Core, platform-independent derivation logic for [[Pickler]].
+  *
+  * This trait holds no `Quotes`/`Context` of its own — it is mixed into the platform bundle (`PicklerMacros`), which supplies Hearth's cake
+  * and the [[PlatformSupport]] implementation. That separation is what allows the same logic to be reused from a Scala 2 macro bundle later
+  * without touching this file.
+  *
+  * ==Structure==
+  * The schema half ([[SchemaDerivation]]) walks the type graph and hoists one `lazy val` per schema into a shared `ValDefsCache`. The codec
+  * half ([[CodecDerivation]]) walks the same graph and emits one `JsonCodecMaker.make` per case class / sealed hierarchy, configured from
+  * the *same* [[DerivationEnv]]. A single `toValDefs.use` wraps the whole instance expression, so every hoisted definition sits at instance
+  * scope and is built once. All four entry points go through [[runDerivation]], which owns that plumbing.
+  */
+trait PicklerMacrosImpl
+    extends DerivationTimeout
+    with TypeShape
+    with AnnotationSupport
+    with NameSupport
+    with ImplicitPicklerSupport
+    with SchemaDerivation
+    with CodecDerivation {
+  this: MacroCommons & StdExtensions & LoadStandardExtensionsOnce & PlatformSupport =>
+
+  override protected def derivationSettingsNamespace: String = "tapirPickler"
+
+  /** Centralised `Type.of[...]` instances.
+    *
+    * These must not be written as `implicit val`s in the scope where they are also the implicit being summoned: Hearth resolves `Type[A]`
+    * implicits lazily via cross-quotes, so a self-referential definition causes a stack overflow at macro-expansion time with no usable
+    * stack trace. Keeping every `Type.of` behind a method/lazy val on this object, and assigning it to a local `implicit val` at each use
+    * site, avoids that.
+    */
+  private[compiletime] object PTypes {
+    def SchemaOf[A: Type]: Type[Schema[A]] = Type.of[Schema[A]]
+    def PicklerOf[A: Type]: Type[Pickler[A]] = Type.of[Pickler[A]]
+    def CodecOf[A: Type]: Type[JsonValueCodec[A]] = Type.of[JsonValueCodec[A]]
+    def EnumBuilderOf[A: Type]: Type[CreateDerivedEnumerationPickler[A]] = Type.of[CreateDerivedEnumerationPickler[A]]
+    def ListOf[A: Type]: Type[List[A]] = Type.of[List[A]]
+    lazy val Config: Type[PicklerConfiguration] = Type.of[PicklerConfiguration]
+    lazy val StringT: Type[String] = Type.of[String]
+    lazy val LogDerivation: Type[Pickler.LogDerivation] = Type.of[Pickler.LogDerivation]
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // Entry points
+  // ---------------------------------------------------------------------------------------------------------------
+
+  /** Full type class instance: `Schema` + `JsonValueCodec`, derived together. */
+  def derivePickler[A: Type](configExpr: Expr[PicklerConfiguration]): Expr[Pickler[A]] = {
+    implicit val SchemaA: Type[Schema[A]] = PTypes.SchemaOf[A]
+    implicit val PicklerA: Type[Pickler[A]] = PTypes.PicklerOf[A]
+    implicit val CodecA: Type[JsonValueCodec[A]] = PTypes.CodecOf[A]
+
+    runDerivation[A, Pickler[A]]("Pickler.derived", "Pickler") { (cache, runSafe) =>
+      val (schemaExpr, codecExpr) = runSafe {
+        for {
+          env <- environment(configExpr, root = typeKey[A])
+          schema <- deriveSchemaRecursively[A](cache, env)
+          codec <- deriveCodec[A](env)
+        } yield (schema, codec)
+      }
+      Expr.quote(PicklerFactories.instance[A](Expr.splice(schemaExpr), Expr.splice(codecExpr)))
+    }
+  }
+
+  /** Schema-only entry point. Like the others it needs the configuration at compile time: the names it splices are computed from it. */
+  def deriveSchemaOnly[A: Type](configExpr: Expr[PicklerConfiguration]): Expr[Schema[A]] = {
+    implicit val SchemaA: Type[Schema[A]] = PTypes.SchemaOf[A]
+    runDerivation[A, Schema[A]]("Pickler.schemaFor", "Schema") { (cache, runSafe) =>
+      runSafe {
+        for {
+          env <- environment(configExpr, root = typeKey[A])
+          schema <- deriveSchemaRecursively[A](cache, env)
+        } yield schema
+      }
+    }
+  }
+
+  /** `Pickler.derivedEnumeration[A]`: the builder behind `defaultStringBased` / `customStringBased`.
+    *
+    * The default schema and codec are exactly what `derivePickler` produces for `A` (an all-singleton hierarchy is a string enumeration on
+    * both sides); the builder additionally receives the singleton values, from which `customStringBased` builds a runtime string codec and
+    * the matching enumeration validator. Nothing about the user's `encode` function is needed at compile time.
+    */
+  def deriveEnumerationBuilder[A: Type](configExpr: Expr[PicklerConfiguration]): Expr[CreateDerivedEnumerationPickler[A]] = {
+    implicit val SchemaA: Type[Schema[A]] = PTypes.SchemaOf[A]
+    implicit val CodecA: Type[JsonValueCodec[A]] = PTypes.CodecOf[A]
+    implicit val BuilderA: Type[CreateDerivedEnumerationPickler[A]] = PTypes.EnumBuilderOf[A]
+    implicit val ListA: Type[List[A]] = PTypes.ListOf[A]
+    val macroName = "Pickler.derivedEnumeration"
+
+    runDerivation[A, CreateDerivedEnumerationPickler[A]](macroName, "enumeration Pickler") { (cache, runSafe) =>
+      val (valuesExpr, schemaExpr, codecExpr) = runSafe {
+        for {
+          children <- enumerationCases[A](macroName)
+          env <- environment(configExpr, root = typeKey[A])
+          schema <- deriveSchemaRecursively[A](cache, env)
+          codec <- deriveCodec[A](env)
+        } yield (singletonValuesExpr[A](children), schema, codec)
+      }
+      Expr.quote(PicklerFactories.enumerationBuilder[A](Expr.splice(valuesExpr), Expr.splice(schemaExpr), Expr.splice(codecExpr)))
+    }
+  }
+
+  /** The leaves of `A`, provided `A` is a sealed hierarchy whose leaves are all singletons. */
+  private def enumerationCases[A: Type](macroName: String): MIO[List[(String, ??<:[A])]] =
+    classify[A] match {
+      case Shape.Enumeration(_, leaves)                 => MIO.pure(leaves)
+      case Shape.Coproduct(_, leaves) if leaves.isEmpty => fail(PicklerDerivationError.NoChildrenInSealedTrait(Type[A].plainPrint))
+      case Shape.Coproduct(_, leaves)                   =>
+        fail(PicklerDerivationError.NotAnEnumeration(Type[A].plainPrint, nonSingletonLeaves(leaves)))
+      case _ => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
+    }
+
+  /** `Pickler.oneOfUsingField[A, V](extractor, asString)(v1 -> pickler1, ...)`.
+    *
+    * The discriminator value of each leaf is `asString(v)`, decided by the user rather than by the configuration; the discriminator *field*
+    * is the configured one (`$type` by default). Not core's `Schema.oneOfUsingField`: that documents a discriminator field named after the
+    * extractor (`code` for `_.code`), which the JSON does not contain.
+    *
+    * Apart from those values, this *is* `Pickler.derived[A]`: both halves are derived structurally, with `DerivationEnv.leafNameOverrides`
+    * set to `asString(v)` per leaf. The child picklers in the mapping only tell us which leaf each value selects; neither their schemas nor
+    * their codecs are used. Taking them would let the two halves drift (a child pickler derived under another configuration would document
+    * field names the codec does not write), and a leaf codec derived on its own writes its configuration-derived tag, not the overridden
+    * one. jsoniter needs the values as literals, which is why the keys and `asString` are evaluated at expansion time.
+    *
+    * The mapping must cover every leaf exactly once.
+    *
+    * `extractor` is accepted for API compatibility with core's `Schema.oneOfUsingField`; nothing is derived from it, since the JSON does
+    * not carry that field.
+    */
+  def deriveOneOfUsingField[A: Type, V: Type](
+      extractor: Expr[A => V],
+      asString: Expr[V => String],
+      mapping: VarArgs[(V, Pickler[? <: A])],
+      configExpr: Expr[PicklerConfiguration]
+  ): Expr[Pickler[A]] = {
+    implicit val SchemaA: Type[Schema[A]] = PTypes.SchemaOf[A]
+    implicit val PicklerA: Type[Pickler[A]] = PTypes.PicklerOf[A]
+    implicit val CodecA: Type[JsonValueCodec[A]] = PTypes.CodecOf[A]
+    implicit val StringT: Type[String] = PTypes.StringT
+    val macroName = "Pickler.oneOfUsingField"
+    val _ = extractor
+
+    runDerivation[A, Pickler[A]](macroName, "Pickler (oneOfUsingField)") { (cache, runSafe) =>
+      val (schemaExpr, codecExpr) = runSafe {
+        for {
+          leaves <- classify[A] match {
+            case Shape.Coproduct(_, leaves) => MIO.pure(leaves)
+            // An all-singleton hierarchy is a bare string: there is no object to put a discriminator in.
+            case Shape.Enumeration(_, _) => fail(PicklerDerivationError.EnumerationInOneOfUsingField(Type[A].plainPrint))
+            case _                       => fail(PicklerDerivationError.NotASealedHierarchy(Type[A].plainPrint, macroName))
+          }
+          entries <- parseOneOfMapping[A, V](mapping)
+          overrides <- entries.foldLeft(MIO.pure(Map.empty[String, String])) { case (acc, (key, child)) =>
+            acc.flatMap { m =>
+              // `asString(key)` is beta-reduced and the *body* evaluated, rather than evaluating the lambda and
+              // calling it: Hearth materialises an evaluated lambda as a reflective proxy that cannot be applied.
+              val applied = betaReduce[V, String](asString, key)
+              import child.Underlying as Child
+              val leaf = typeKey[Child]
+              applied.semiEval.left
+                .flatMap(reasons => constantInterpolation(applied).toRight(reasons))
+                .fold(
+                  reasons =>
+                    fail(PicklerDerivationError.OneOfMappingNotStatic(s"${applied.plainPrint}: ${reasons.toVector.mkString("; ")}")),
+                  value =>
+                    if (m.contains(leaf))
+                      fail(PicklerDerivationError.AmbiguousOneOfMapping(Type[A].plainPrint, s"$leaf is mapped more than once"))
+                    else if (m.values.exists(_ == value))
+                      fail(PicklerDerivationError.AmbiguousOneOfMapping(Type[A].plainPrint, s"several cases map to '$value'"))
+                    else MIO.pure(m + (leaf -> value))
+                )
+            }
+          }
+          _ <- {
+            val unmapped = leaves.map { case (_, leaf) => import leaf.Underlying as Leaf; typeKey[Leaf] }.filterNot(overrides.contains)
+            if (unmapped.isEmpty) MIO.pure(()) else fail(PicklerDerivationError.IncompleteOneOfMapping(Type[A].plainPrint, unmapped))
+          }
+          _ <- Log.info(s"Discriminator values from oneOfUsingField: ${overrides.mkString("{", ", ", "}")}")
+          // The leaves' schemas and codecs must be derived here, with the overridden tags; a `given Pickler[Leaf]` in
+          // scope would otherwise be picked up and write the configuration-derived tag instead.
+          env <- environment(configExpr, root = typeKey[A], leafNameOverrides = overrides, alsoExclude = overrides.keySet)
+          schema <- deriveSchemaRecursively[A](cache, env)
+          codec <- deriveCodec[A](env)
+        } yield (schema, codec)
+      }
+      Expr.quote(PicklerFactories.instance[A](Expr.splice(schemaExpr), Expr.splice(codecExpr)))
+    }
+  }
+
+  private def fail[T](error: PicklerDerivationError): MIO[T] = Log.error(error.message) >> MIO.fail(error)
+
+  /** `(key, leaf type)` for every `key -> pickler` / `(key, pickler)` element of the mapping.
+    *
+    * Done with Hearth's `DestructuredExpr` so that both tuple spellings, and both Scala versions, decompose the same way: the key is the
+    * single argument applied to the receiver (`ArrowAssoc(key)`) or the first of two applied to `Tuple2.apply`; the leaf type is the static
+    * type argument of the pickler expression.
+    */
+  private def parseOneOfMapping[A: Type, V: Type](mapping: VarArgs[(V, Pickler[? <: A])]): MIO[List[(Expr[V], ??)]] = {
+    import DestructuredExpr.MethodCall.{AppliedInstance, AppliedValues}
+    val PicklerCtor = Type.Ctor1.of[Pickler]
+
+    def argsOf(node: DestructuredExpr): List[DestructuredExpr] = node match {
+      case mc: DestructuredExpr.MethodCall =>
+        mc.applied.flatMap {
+          case ai: AppliedInstance => ai.value match { case r: DestructuredExpr.MethodCall => argsOf(r); case _ => Nil }
+          case av: AppliedValues   => av.args
+          case _                   => Nil
+        }
+      case _ => Nil
+    }
+
+    def entry(node: DestructuredExpr): Either[String, (Expr[V], ??)] = argsOf(node) match {
+      case List(key, pickler) =>
+        import pickler.tpe.Underlying as P
+        PicklerCtor.unapply(Type[P]) match {
+          case Some(leaf) => Right((key.toUntypedExpr.asTyped[V], leaf.Underlying.as_??))
+          case None       => Left(s"expected a Pickler, got ${Type[P].plainPrint}")
+        }
+      case _ => Left(s"expected `key -> pickler`, got ${node.plainPrint}")
+    }
+
+    // `Expr[Seq[X]]` *is* Hearth's `VarArgs[X]` on Scala 3 (and `Seq[Expr[X]]` on Scala 2), so this split is what
+    // makes the element-wise parse cross-platform.
+    val elements: List[Expr[(V, Pickler[? <: A])]] = mapping.toList
+    val parsed = elements.map(element => entry(DestructuredExpr.parseUntyped(element.asUntyped)))
+    parsed.collectFirst { case Left(reason) => reason } match {
+      case Some(reason) => fail(PicklerDerivationError.OneOfMappingNotStatic(reason))
+      case None         => MIO.pure(parsed.collect { case Right(e) => e })
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // Runner
+  // ---------------------------------------------------------------------------------------------------------------
+
+  /** The plumbing every entry point shares: the `Nothing`/`Any` guard, the log scope, the `ValDefsCache` and its `toValDefs.use` wrapper,
+    * loading of the standard extensions, and `runToExprOrFail` with the rendering flags and timeout.
+    *
+    * `body` receives the cache and a `runSafe`, derives whatever it derives, and returns the final expression; every hoisted definition
+    * ends up in scope around it.
+    */
+  private def runDerivation[A: Type, Out: Type](macroName: String, what: String)(
+      body: (MLocal[ValDefsCache], RunSafe[MIO]) => Expr[Out]
+  ): Expr[Out] = {
+    // On Scala 3 an unconstrained type parameter is inferred as `Any`, which is almost never what the user meant.
+    if (Type[A] =:= Type.of[Nothing].asInstanceOf[Type[A]] || Type[A] =:= Type.of[Any].asInstanceOf[Type[A]])
+      Environment.reportErrorAndAbort(
+        s"$macroName: type parameter was inferred as ${Type[A].prettyPrint}, which is likely unintended.\n" +
+          s"Provide an explicit type parameter, e.g.: $macroName[MyType]"
+      )
+
+    val rendering = if (shouldWeLogDerivation) RenderFrom(Log.Level.Info) else DontRender
+
+    Log
+      .namedScope(s"Deriving $what for ${Type[A].prettyPrint} at: ${Environment.currentPosition.prettyPrint}") {
+        MIO.scoped { runSafe =>
+          val cache = ValDefsCache.mlocal
+          runSafe(ensureStandardExtensionsLoaded())
+          // The schema is derived before the codec, sequentially: the two share Hearth-internal MLocal state, and
+          // parallelising them has previously produced silently wrong codegen for parameterised Scala 3 enums in a
+          // comparable derivation.
+          val result = body(cache, runSafe)
+          val vals = runSafe(cache.get)
+          vals.toValDefs.use(_ => result)
+        }
+      }
+      .flatTap(result => Log.info(s"Derived final $what: ${result.prettyPrint}"))
+      .runToExprOrFail(macroName, infoRendering = rendering, errorRendering = rendering, timeout = derivationTimeout)(
+        renderDerivationErrorMessage
+      )
+  }
+
+  /** The [[DerivationEnv]] for one expansion: the folded configuration, plus the root (and anything else the caller names) excluded from
+    * user-pickler lookup.
+    */
+  private def environment(
+      configExpr: Expr[PicklerConfiguration],
+      root: String,
+      leafNameOverrides: Map[String, String] = Map.empty,
+      alsoExclude: Set[String] = Set.empty
+  ): MIO[DerivationEnv] =
+    foldConfiguration(configExpr).map(config => DerivationEnv(config, leafNameOverrides, alsoExclude + root))
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // Configuration
+  // ---------------------------------------------------------------------------------------------------------------
+
+  /** Fold the `PicklerConfiguration` expression to a value.
+    *
+    * Both halves *need* the value: `toEncodedName` and `toDiscriminatorValue` are invoked during expansion and the results spliced as
+    * literals (see [[NameSupport]]). `semiEval` handles the common shapes directly (`PicklerConfiguration.default`, `.with*` chains,
+    * lambdas such as `_.toUpperCase`). When the expression is merely a reference to a `given`/`implicit val` — which is what an implicit
+    * parameter usually is — the definition is followed to its right-hand side and that is evaluated instead, as far as the tree is
+    * available.
+    */
+  private def foldConfiguration(configExpr: Expr[PicklerConfiguration]): MIO[PicklerConfiguration] = {
+    implicit val ConfigT: Type[PicklerConfiguration] = PTypes.Config
+
+    def attempt(expr: Expr[PicklerConfiguration], depth: Int): Either[String, PicklerConfiguration] =
+      dropNamedArgs(expr).semiEval match {
+        case Right(value)  => Right(value)
+        case Left(reasons) =>
+          dereferenceStable(expr) match {
+            case Some(rhs) if depth < 8 => attempt(rhs, depth + 1)
+            case _                      => Left(reasons.toVector.mkString("; "))
+          }
+      }
+
+    attempt(configExpr, 0) match {
+      case Right(value) => Log.info(s"Configuration folded at compile time: $value") >> MIO.pure(value)
+      case Left(reason) => fail(PicklerDerivationError.ConfigurationNotStatic(configExpr.plainPrint, reason))
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // Schema chain entry
+  // ---------------------------------------------------------------------------------------------------------------
+
+  /** Entry into the schema rule pipeline.
+    *
+    * The `inProgress` set is created here, once per expansion, so that the recursion guard has the same lifetime as the `ValDefsCache` it
+    * cooperates with.
+    */
+  private def deriveSchemaRecursively[A: Type](cache: MLocal[ValDefsCache], env: DerivationEnv): MIO[Expr[Schema[A]]] = {
+    val inProgress: MLocal[Set[String]] = MLocal(Set.empty[String])(identity)((a, b) => a ++ b)
+    deriveSchemaFor[A](using SchemaCtx(Type[A], env, cache, inProgress))
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // Diagnostics
+  // ---------------------------------------------------------------------------------------------------------------
+
+  /** Logging is enabled either by importing `sttp.tapir.json.pickler.debug.logDerivationForPickler` or by the scalac option
+    * `-Xmacro-settings:tapirPickler.logDerivation=true`. A `lazy val`: the answer cannot change within one expansion, and the implicit
+    * search is not free.
+    */
+  lazy val shouldWeLogDerivation: Boolean = {
+    implicit val LogDerivationT: Type[Pickler.LogDerivation] = PTypes.LogDerivation
+    def importedIntoScope = Expr.summonImplicit[Pickler.LogDerivation].isDefined
+    def setGlobally = (for {
+      data <- Environment.typedSettings.toOption
+      namespace <- data.get(derivationSettingsNamespace)
+      shouldLog <- namespace.get("logDerivation").flatMap(_.asBoolean)
+    } yield shouldLog).getOrElse(false)
+
+    importedIntoScope || setGlobally
+  }
+
+  private def renderDerivationErrorMessage(errorLogs: String, errors: NonEmptyVector[Throwable]): String = {
+    val errorsRendered = errors
+      .map { e =>
+        val msg = Option(e.getMessage).getOrElse(e.getClass.getName)
+        msg.split("\n").toList match {
+          case head :: tail => (("  - " + head) :: tail.map("    " + _)).mkString("\n")
+          case _            => "  - " + msg
+        }
+      }
+      .mkString("\n")
+    val hint =
+      "Enable debug logging with: import sttp.tapir.json.pickler.debug.logDerivationForPickler " +
+        s"or the scalac option -Xmacro-settings:$derivationSettingsNamespace.logDerivation=true"
+    if (errorLogs.nonEmpty)
+      s"""Pickler derivation failed with the following errors:
+         |$errorsRendered
+         |and the following logs:
+         |$errorLogs
+         |$hint""".stripMargin
+    else
+      s"""Pickler derivation failed with the following errors:
+         |$errorsRendered
+         |$hint""".stripMargin
+  }
+}
