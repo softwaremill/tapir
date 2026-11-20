@@ -78,17 +78,29 @@ object ServersGenerator {
         case (e, _, _)                 => s"_$e: String"
       }
       .mkString(", ")
-    val urlStringFormat = server.variables
-      .map { case (k, _) => k -> safeVariableName(k) }
-      .foldLeft(server.url.replace("{", "${")) { case (acc, (next, v)) =>
-        acc.replace(s"$${$next}", s"$${_$v}")
-      }
+    val urlStringFormat = urlTemplateToInterpolation(server.url, server.variables.keySet)
     s"""${genDescription(server.description)}object `${server.url}` {
        |${indent(2)(enums)}
        |  def uri($enumParams): sttp.model.Uri =
        |    uri"$urlStringFormat"
        |}""".stripMargin
   }
+  // Turns `{name}` groups of the (untrusted) URL template into `${_name}` interpolations. Only declared variables may
+  // become interpolations: any other `{...}` group would be emitted as an arbitrary Scala expression inside
+  // `uri"..."`. See GHSA-jcgp-9vr3-262m.
+  private def urlTemplateToInterpolation(url: String, variables: Set[String]): String =
+    """\{([^{}]*)\}""".r.replaceAllIn(
+      url,
+      m => {
+        val name = m.group(1)
+        if (!variables.contains(name))
+          throw new IllegalArgumentException(
+            s"Unsafe server URL '$url': '{$name}' is not a declared server variable (see GHSA-jcgp-9vr3-262m)"
+          )
+        java.util.regex.Matcher.quoteReplacement(s"$${_${safeVariableName(name)}}")
+      }
+    )
+
   private def genDescription(description: Option[String]): String =
     // Neutralise the (untrusted) description before emitting it into a block comment: double every backslash so a
     // `*/` unicode escape cannot be reconstructed by Scala 2's unicode pre-scan (which runs before comment

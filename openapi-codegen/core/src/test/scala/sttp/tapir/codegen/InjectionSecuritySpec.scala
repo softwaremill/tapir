@@ -427,6 +427,15 @@ class InjectionSecuritySpec extends CompileCheckTestBase {
     ex.getMessage should include("GHSA-gpcc")
   }
 
+  it should "reject a server URL template group that is not a declared variable" in {
+    val server = OpenapiServer(
+      "https://{java.lang.Runtime.getRuntime.halt(0)}.example.com",
+      variables = Map("dummy" -> OpenapiServerEnum(Nil, Some("x")))
+    )
+    val ex = intercept[IllegalArgumentException](ServersGenerator.genServerDefinitions(Seq(server), isScala3))
+    ex.getMessage should include("GHSA-jcgp")
+  }
+
   // --- helpers for endpoint generation ---
 
   private def okResponse: OpenapiResponseDef =
